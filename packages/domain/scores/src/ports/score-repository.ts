@@ -1,4 +1,13 @@
-import type { IssueId, ProjectId, RepositoryError, ScoreId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type {
+  IssueId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  ScoreId,
+  SessionId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
@@ -20,21 +29,49 @@ export interface ScoreListPage {
 }
 
 export interface ScoreRepositoryShape {
-  findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
+  findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError>
   save(score: Score): Effect.Effect<void, RepositoryError>
+  assignIssueIfUnowned(input: {
+    readonly scoreId: ScoreId
+    readonly issueId: IssueId
+    readonly updatedAt: Date
+  }): Effect.Effect<boolean, RepositoryError>
+  delete(id: ScoreId): Effect.Effect<void, RepositoryError>
+  /**
+   * Checks whether a canonical persisted evaluation score already exists in the
+   * current live-monitoring turn scope. When `sessionId` is present the scope
+   * is session-based; otherwise it falls back to the specific trace id.
+   */
+  existsByEvaluationIdAndScope(input: {
+    readonly projectId: ProjectId
+    readonly evaluationId: string
+    readonly traceId: TraceId
+    readonly sessionId?: SessionId | null
+  }): Effect.Effect<boolean, RepositoryError>
+  /**
+   * Checks whether a canonical persisted evaluation score already exists for
+   * one concrete `(evaluationId, traceId)` pair.
+   */
+  existsByEvaluationIdAndTraceId(input: {
+    readonly projectId: ProjectId
+    readonly evaluationId: string
+    readonly traceId: TraceId
+  }): Effect.Effect<boolean, RepositoryError>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
+  /** When `sourceId` is omitted, lists all scores for the project with the given `source` (e.g. every annotation). */
   listBySourceId(input: {
     readonly projectId: ProjectId
     readonly source: ScoreSource
-    readonly sourceId: string
+    readonly sourceId?: string
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listByTraceId(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId
+    readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listBySessionId(input: {
@@ -52,6 +89,16 @@ export interface ScoreRepositoryShape {
     readonly issueId: IssueId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
+  /**
+   * Finds an existing queue-backed draft annotation by (queueId, traceId).
+   * Only returns draft annotations (draftedAt != null), never published rows.
+   * Used for idempotency in system queue annotate workflows.
+   */
+  findQueueDraftByTraceId(input: {
+    readonly projectId: ProjectId
+    readonly queueId: string
+    readonly traceId: TraceId
+  }): Effect.Effect<Score | null, RepositoryError>
 }
 
 export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(

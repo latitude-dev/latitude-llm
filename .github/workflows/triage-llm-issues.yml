@@ -1,0 +1,185 @@
+name: Triage LLM Issues to Linear
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # runs every 10 minutes
+  workflow_dispatch: # allow manual trigger for testing
+
+concurrency:
+  group: triage-llm-to-linear
+  cancel-in-progress: false
+
+jobs:
+  triage-llm-to-linear:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Find and triage LLM issues
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Find all open issues with "llm" label (not time-limited to handle missed runs)
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'llm',
+              per_page: 100
+            });
+            
+            // Limit to 10 issues per run to avoid hitting downstream rate limits
+            const issuesToProcess = issues.slice(0, 10);
+            
+            if (issuesToProcess.length === 0) {
+              console.log('No open LLM issues to triage');
+              return;
+            }
+            
+            // Cache the Linear team ID to avoid querying for every issue
+            let cachedTeamId = null;
+            
+            try {
+              // Find the team with identifier "AGE" in Linear
+              const teamsQuery = `
+                query {
+                  teams(filter: { key: { eq: "AGE" } }) {
+                    nodes {
+                      id
+                      name
+                      key
+                    }
+                  }
+                }
+              `;
+              
+              const teamsResponse = await fetch('https://api.linear.app/graphql', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': process.env.LINEAR_API_KEY
+                },
+                body: JSON.stringify({ query: teamsQuery })
+              });
+              
+              if (!teamsResponse.ok) {
+                throw new Error(`Linear API returned ${teamsResponse.status}: ${await teamsResponse.text()}`);
+              }
+              
+              const teamsData = await teamsResponse.json();
+              
+              if (!teamsData.data?.teams?.nodes?.length) {
+                throw new Error('Could not find team with identifier "AGE" in Linear');
+              }
+              
+              const team = teamsData.data.teams.nodes[0];
+              cachedTeamId = team.id;
+              console.log(`Found team "${team.name}" (${team.key}) with ID: ${cachedTeamId}`);
+            } catch (error) {
+              console.error('Failed to find Linear team:', error);
+              // Fail fast if we can't find the team - no point processing issues
+              throw error;
+            }
+            
+            for (const issue of issuesToProcess) {
+              // Check if issue already has a Linear triage comment (prevents duplicates on retry)
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+              
+              const hasLinearComment = comments.some(comment => 
+                comment.body?.includes('<!-- linear-triaged -->')
+              );
+              
+              if (hasLinearComment) {
+                console.log(`Skipping issue #${issue.number}: already has a Linear triage comment`);
+                continue;
+              }
+              
+              console.log(`Processing issue #${issue.number}: ${issue.title}`);
+              
+              try {
+                // Create Linear issue
+                const createIssueQuery = `
+                  mutation CreateIssue($input: IssueCreateInput!) {
+                    issueCreate(input: $input) {
+                      success
+                      issue {
+                        id
+                        identifier
+                        url
+                      }
+                    }
+                  }
+                `;
+                
+                const issueInput = {
+                  title: issue.title,
+                  description: `**GitHub Issue:** ${issue.html_url}\n\n---\n\n${issue.body || ''}`,
+                  teamId: cachedTeamId
+                };
+                
+                const createResponse = await fetch('https://api.linear.app/graphql', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': process.env.LINEAR_API_KEY
+                  },
+                  body: JSON.stringify({
+                    query: createIssueQuery,
+                    variables: { input: issueInput }
+                  })
+                });
+                
+                if (!createResponse.ok) {
+                  throw new Error(`Linear API returned ${createResponse.status}: ${await createResponse.text()}`);
+                }
+                
+                const createData = await createResponse.json();
+                
+                if (!createData.data?.issueCreate?.success) {
+                  throw new Error(`Failed to create Linear issue: ${JSON.stringify(createData.errors || createData)}`);
+                }
+                
+                const linearIssue = createData.data.issueCreate.issue;
+                console.log(`Created Linear issue ${linearIssue.identifier}: ${linearIssue.url}`);
+                
+                // Add comment to GitHub issue with hidden marker for duplicate detection
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `<!-- linear-triaged -->\nThis issue has been triaged and automatically converted to a Linear issue [${linearIssue.identifier}](${linearIssue.url}) on the **AGE** team for processing.\n\nClosing as completed.`
+                });
+                
+                // Close the GitHub issue
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed',
+                  state_reason: 'completed'
+                });
+                
+                console.log(`Successfully triaged issue #${issue.number} to Linear ${linearIssue.identifier}`);
+                
+              } catch (error) {
+                console.error(`Error processing issue #${issue.number} (${issue.title}):`, error);
+                // Don't fail the whole workflow if one issue fails
+                // Add a comment indicating the failure
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `<!-- linear-triage-failed -->\n⚠️ Attempted to triage this issue to Linear, but encountered an error:\n\n\`\`\`\n${error.message}\n\`\`\`\n\nPlease check the workflow logs and ensure the Linear API key is configured correctly.`
+                });
+              }
+            }
+            
+            console.log(`Processed ${issuesToProcess.length} issues (limited to 10 per run)`);

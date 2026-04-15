@@ -10,13 +10,15 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@domain/shared": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "bullmq": "catalog:",
     "effect": "catalog:",
     "ioredis": "catalog:",

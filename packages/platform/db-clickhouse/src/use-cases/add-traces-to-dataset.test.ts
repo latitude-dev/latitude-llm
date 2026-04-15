@@ -6,6 +6,7 @@ import {
   DatasetRowRepository,
   type DatasetRowRepositoryShape,
 } from "@domain/datasets"
+import { OutboxEventWriter } from "@domain/events"
 import {
   type ChSqlClient,
   DatasetId,
@@ -15,16 +16,17 @@ import {
   RepositoryError,
   SEED_API_KEY_ID,
   SessionId,
+  SimulationId,
   SpanId,
   TraceId,
-} from "@domain/shared"
+} from "@domain/shared/seeding"
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { DatasetRowRepositoryLive } from "../repositories/dataset-row-repository.ts"
@@ -41,16 +43,20 @@ const ch = setupTestClickHouse()
 
 function makeFakeTraceRepository(traces: TraceDetail[]) {
   return createFakeTraceRepository({
-    findByTraceIds: () => Effect.succeed(traces),
+    listByTraceIds: () => Effect.succeed(traces),
   }).repository
 }
 
 const runWithLive = <A, E>(
-  effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient>,
+  effect: Effect.Effect<
+    A,
+    E,
+    DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter
+  >,
 ) =>
   Effect.runPromise(
     effect.pipe(
-      withPostgres(DatasetRepositoryLive, pg.adminPostgresClient, ORG_ID),
+      withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pg.adminPostgresClient, ORG_ID),
       withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID),
       withClickHouse(TraceRepositoryLive, ch.client, ORG_ID),
     ),
@@ -65,7 +71,9 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     datasetRepo = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* DatasetRepository
-      }).pipe(withPostgres(DatasetRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      }).pipe(
+        withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pg.adminPostgresClient, ORG_ID),
+      ),
     )
 
     rowRepo = await Effect.runPromise(
@@ -99,7 +107,11 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
   })
 
   const runWithOverrides = <A, E>(
-    effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient>,
+    effect: Effect.Effect<
+      A,
+      E,
+      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter
+    >,
     services: {
       datasetRepo: (typeof DatasetRepository)["Service"]
       rowRepo: DatasetRowRepositoryShape
@@ -111,6 +123,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         Effect.provideService(DatasetRepository, services.datasetRepo),
         Effect.provideService(DatasetRowRepository, services.rowRepo),
         Effect.provideService(TraceRepository, services.traceRepo),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
       ),
     )
@@ -187,6 +200,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         costTotalMicrocents: 0,
         sessionId: SessionId(""),
         userId: ExternalUserId(""),
+        simulationId: SimulationId(""),
         tags: [],
         metadata: {},
         models: [],

@@ -14,18 +14,18 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "devDependencies": {
     "vitest": "catalog:"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.1029.0",
     "@domain/shared": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
-    "flydrive": "^1.2.0"
+    "flydrive": "^2.1.0"
   }
 }

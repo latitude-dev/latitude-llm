@@ -1,0 +1,25 @@
+from latitude_telemetry.util import StrEnum
+
+
+class Instrumentors(StrEnum):
+    AlephAlpha = "alephalpha"
+    Anthropic = "anthropic"
+    Bedrock = "bedrock"
+    Cohere = "cohere"
+    CrewAI = "crewai"
+    DSPy = "dspy"
+    GoogleGenerativeAI = "googlegenerativeai"
+    Groq = "groq"
+    Haystack = "haystack"
+    Langchain = "langchain"
+    LiteLLM = "litellm"
+    LlamaIndex = "llamaindex"
+    MistralAI = "mistralai"
+    Ollama = "ollama"
+    OpenAI = "openai"
+    Replicate = "replicate"
+    Sagemaker = "sagemaker"
+    Together = "together"
+    Transformers = "transformers"
+    VertexAI = "vertexai"
+    Watsonx = "watsonx"

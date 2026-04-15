@@ -5,16 +5,14 @@ import {
   ISSUE_DISCOVERY_SEARCH_RATIO,
   IssueProjectionRepository,
 } from "@domain/issues"
-import { RepositoryError } from "@domain/shared"
-import { Effect, Layer, ServiceMap } from "effect"
+import { toRepositoryError } from "@domain/shared"
+import { Effect, Layer } from "effect"
 import { Bm25Operator, type WeaviateClient } from "weaviate-client"
-import { getCollectionForTenant, WeaviateCollection } from "../collections.ts"
+import { getCollectionForTenant, issuesCollectionTenantName, WeaviateCollection } from "../collections.ts"
+import { WvQueryClient } from "../wv-query-client.ts"
 
-class WeaviateClientService extends ServiceMap.Service<WeaviateClientService, { readonly client: WeaviateClient }>()(
-  "@platform/db-weaviate/WeaviateClient",
-) {}
-
-function getIssuesCollection(client: WeaviateClient, tenantName: string) {
+function getIssuesCollection(client: WeaviateClient, organizationId: string, projectId: string) {
+  const tenantName = issuesCollectionTenantName({ organizationId, projectId })
   return getCollectionForTenant(
     {
       tenantName,
@@ -27,13 +25,13 @@ function getIssuesCollection(client: WeaviateClient, tenantName: string) {
 export const IssueProjectionRepositoryLive = Layer.effect(
   IssueProjectionRepository,
   Effect.gen(function* () {
-    const { client } = yield* WeaviateClientService
+    const wvQueryClient = yield* WvQueryClient
 
     return {
       upsert: (input) =>
-        Effect.tryPromise({
-          try: async () => {
-            const collection = await getIssuesCollection(client, input.tenantName)
+        wvQueryClient
+          .query(async (client, organizationId) => {
+            const collection = await getIssuesCollection(client, organizationId, input.projectId)
             const exists = await collection.data.exists(input.uuid)
             if (exists) {
               await collection.data.replace({
@@ -54,18 +52,13 @@ export const IssueProjectionRepositoryLive = Layer.effect(
                 vectors: input.vector,
               })
             }
-          },
-          catch: (cause) =>
-            new RepositoryError({
-              cause,
-              operation: "IssueProjectionRepository.upsert",
-            }),
-        }),
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "IssueProjectionRepository.upsert"))),
 
       delete: (input) =>
-        Effect.tryPromise({
-          try: async () => {
-            const collection = await getIssuesCollection(client, input.tenantName)
+        wvQueryClient
+          .query(async (client, organizationId) => {
+            const collection = await getIssuesCollection(client, organizationId, input.projectId)
             const exists = await collection.data.exists(input.uuid)
             if (!exists) {
               // Note: if this happens the vector db is out of sync
@@ -77,20 +70,20 @@ export const IssueProjectionRepositoryLive = Layer.effect(
             await collection.data.deleteById(input.uuid)
             const count = await collection.length()
             if (count === 0) {
-              await collection.tenants.remove(input.tenantName)
+              await collection.tenants.remove(
+                issuesCollectionTenantName({
+                  organizationId,
+                  projectId: input.projectId,
+                }),
+              )
             }
-          },
-          catch: (cause) =>
-            new RepositoryError({
-              cause,
-              operation: "IssueProjectionRepository.delete",
-            }),
-        }),
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "IssueProjectionRepository.delete"))),
 
       hybridSearch: (input) =>
-        Effect.tryPromise({
-          try: async () => {
-            const collection = await getIssuesCollection(client, input.tenantName)
+        wvQueryClient
+          .query(async (client, organizationId) => {
+            const collection = await getIssuesCollection(client, organizationId, input.projectId)
             const { objects } = await collection.query.hybrid(input.query, {
               vector: input.vector,
               alpha: ISSUE_DISCOVERY_SEARCH_RATIO,
@@ -106,22 +99,14 @@ export const IssueProjectionRepositoryLive = Layer.effect(
 
             if (objects.length === 0) return []
 
-            // TODO: implement search in PG issues repository
-            // missing filtering this candidates
-            // Check v1 for implementation details:
             return objects.map((object) => ({
               uuid: object.uuid,
               title: object.properties.title,
               description: object.properties.description,
               score: object.metadata?.score ?? 0,
             }))
-          },
-          catch: (cause) =>
-            new RepositoryError({
-              cause,
-              operation: "IssueProjectionRepository.hybridSearch",
-            }),
-        }),
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "IssueProjectionRepository.hybridSearch"))),
     }
   }),
 )

@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server"
+import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
@@ -7,11 +8,12 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
+import type { AppEnv } from "./types.ts"
 import { logger } from "./utils/logger.ts"
 
 const { nodeEnv } = loadDevelopmentEnvironments(import.meta.url)
@@ -20,25 +22,30 @@ const startServer = async () => {
     serviceName: "api",
   })
 
-  const app = new OpenAPIHono()
+  const app = new OpenAPIHono<AppEnv>()
   const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
-  // Register global error handler
   app.use(
     honoLogger((message: string, ...rest: string[]) => {
-      console.log(message, ...rest)
+      logger.info(message, ...rest)
     }),
   )
+
+  // Add Hono OpenTelemetry middleware
+  app.use(otel())
+
   app.onError(honoErrorHandler)
 
-  // OpenAPIHono extends Hono — the cast is safe
   registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
 
-  registerRoutes({
-    app,
+  const queuePublisher = await getQueuePublisher()
+
+  registerRoutes(app, {
     database: getPostgresClient(),
     clickhouse: getClickhouseClient(),
     redis: getRedisClient(),
+    queuePublisher,
+    logTouchBuffer: true,
   })
 
   // Register security scheme via the OpenAPI registry

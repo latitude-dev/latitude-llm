@@ -1,12 +1,15 @@
 import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { DatasetRow, InsertRowFieldValue, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
+import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
+import type { RowNotFoundError } from "../errors.ts"
 
 export interface DatasetRowRepositoryShape {
   findExistingTraceIds(args: {
     readonly datasetId: DatasetId
     readonly traceIds: readonly TraceId[]
   }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError>
+  // TODO(repositories): rename insertBatch -> saveBatch so repository write
+  // verbs converge on save/saveBatch instead of insert/insertBatch.
   insertBatch(args: {
     readonly datasetId: DatasetId
     readonly version: number

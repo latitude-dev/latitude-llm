@@ -1,6 +1,18 @@
 import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import type { Trace, TraceDetail, TraceDistinctColumn } from "@domain/spans"
-import { TraceRepository } from "@domain/spans"
+import type {
+  Trace,
+  TraceCohortSummary,
+  TraceDetail,
+  TraceDistinctColumn,
+  TraceMetrics,
+  TraceTimeHistogramBucket,
+} from "@domain/spans"
+import {
+  getTraceCohortSummaryUseCase,
+  mergeTraceHistogramTimeFilters,
+  resolveTraceCohortFilters,
+  TraceRepository,
+} from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -8,7 +20,6 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -31,6 +42,7 @@ export interface TraceRecord {
   readonly costTotalMicrocents: number
   readonly sessionId: string
   readonly userId: string
+  readonly simulationId: string
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]
@@ -40,7 +52,7 @@ export interface TraceRecord {
   readonly rootSpanName: string
 }
 
-const serializeTrace = (trace: Trace): TraceRecord => ({
+export const toTraceRecord = (trace: Trace): TraceRecord => ({
   organizationId: trace.organizationId,
   projectId: trace.projectId,
   traceId: trace.traceId,
@@ -61,6 +73,7 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
   costTotalMicrocents: trace.costTotalMicrocents,
   sessionId: trace.sessionId,
   userId: trace.userId,
+  simulationId: trace.simulationId,
   tags: trace.tags,
   metadata: trace.metadata,
   models: trace.models,
@@ -78,7 +91,7 @@ export interface TraceDetailRecord extends TraceRecord {
 }
 
 const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
-  ...serializeTrace(trace),
+  ...toTraceRecord(trace),
   systemInstructions: trace.systemInstructions,
   inputMessages: trace.inputMessages,
   outputMessages: trace.outputMessages,
@@ -97,7 +110,6 @@ interface TraceListResult {
 }
 
 export const listTracesByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -115,7 +127,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        return yield* repo.findByProjectId({
+        return yield* repo.listByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: {
@@ -130,17 +142,16 @@ export const listTracesByProject = createServerFn({ method: "GET" })
     )
 
     if (!page.nextCursor) {
-      return { traces: page.items.map(serializeTrace), hasMore: page.hasMore }
+      return { traces: page.items.map(toTraceRecord), hasMore: page.hasMore }
     }
     return {
-      traces: page.items.map(serializeTrace),
+      traces: page.items.map(toTraceRecord),
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
     }
   })
 
 export const countTracesByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
@@ -158,8 +169,86 @@ export const countTracesByProject = createServerFn({ method: "GET" })
     )
   })
 
+export const getTraceMetricsByProject = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<TraceMetrics | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.aggregateMetricsByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+export const getTraceCohortSummaryByProject = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<TraceCohortSummary> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const { effectiveRangeStartIso, effectiveRangeEndIso, effectiveFilters } = resolveTraceCohortFilters(
+      data.filters,
+      Date.now(),
+    )
+
+    return Effect.runPromise(
+      getTraceCohortSummaryUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        filters: effectiveFilters,
+        effectiveRangeStartIso,
+        effectiveRangeEndIso,
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+const traceHistogramInputSchema = z.object({
+  projectId: z.string(),
+  filters: filterSetSchema.optional(),
+  rangeStartIso: z.string(),
+  rangeEndIso: z.string(),
+  bucketSeconds: z
+    .number()
+    .int()
+    .positive()
+    .max(90 * 24 * 60 * 60),
+})
+
+export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
+  .inputValidator(traceHistogramInputSchema)
+  .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
+    const startMs = Date.parse(data.rangeStartIso)
+    const endMs = Date.parse(data.rangeEndIso)
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return []
+    }
+
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.histogramByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          filters: mergedFilters,
+          bucketSeconds: data.bucketSeconds,
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
@@ -168,11 +257,13 @@ export const getTraceDetail = createServerFn({ method: "GET" })
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        const detail = yield* repo.findByTraceId({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          traceId: TraceId(data.traceId),
-        })
+        const detail = yield* repo
+          .findByTraceId({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            traceId: TraceId(data.traceId),
+          })
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return detail ? serializeTraceDetail(detail) : null
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
@@ -188,7 +279,6 @@ export const getTraceDetail = createServerFn({ method: "GET" })
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
 export const getTraceDistinctValues = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),

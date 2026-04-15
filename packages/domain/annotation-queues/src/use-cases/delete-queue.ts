@@ -1,0 +1,52 @@
+import type { ProjectId, RepositoryError } from "@domain/shared"
+import { Data, Effect } from "effect"
+import type { AnnotationQueue } from "../entities/annotation-queue.ts"
+import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
+
+export class DeleteQueueNotFoundError extends Data.TaggedError("DeleteQueueNotFoundError")<{
+  readonly queueId: string
+}> {
+  readonly httpStatus = 404
+  get httpMessage() {
+    return "Annotation queue not found"
+  }
+}
+
+export interface DeleteQueueInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+}
+
+export interface DeleteQueueResult {
+  readonly queue: AnnotationQueue
+}
+
+export type DeleteQueueError = RepositoryError | DeleteQueueNotFoundError
+
+export const deleteQueueUseCase = (
+  input: DeleteQueueInput,
+): Effect.Effect<DeleteQueueResult, DeleteQueueError, AnnotationQueueRepository> =>
+  Effect.gen(function* () {
+    const repo = yield* AnnotationQueueRepository
+
+    const existing = yield* repo.findByIdInProject({
+      projectId: input.projectId,
+      queueId: input.queueId,
+    })
+
+    if (!existing) {
+      return yield* new DeleteQueueNotFoundError({ queueId: input.queueId })
+    }
+
+    const now = new Date()
+    const deleted: AnnotationQueue = {
+      ...existing,
+      assignees: [...existing.assignees],
+      deletedAt: now,
+      updatedAt: now,
+    }
+
+    const saved = yield* repo.save(deleted)
+
+    return { queue: saved }
+  })

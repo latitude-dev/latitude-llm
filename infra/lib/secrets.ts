@@ -174,6 +174,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["weaviate-api-key"] = weaviateApiKey.secret
   secretVersions["weaviate-api-key"] = weaviateApiKey.secretVersion
 
+  const voyageApiKey = createSingleSecret(
+    baseName,
+    "voyage-api-key",
+    "Voyage API key",
+    process.env.LAT_VOYAGE_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["voyage-api-key"] = voyageApiKey.secret
+  secretVersions["voyage-api-key"] = voyageApiKey.secretVersion
+
   const mailgunApiKey = createSingleSecret(
     baseName,
     "mailgun-api-key",
@@ -294,6 +305,50 @@ export function createApplicationSecrets(baseName: string, environment: string):
   )
   secrets["datadog-site"] = datadogSite.secret
   secretVersions["datadog-site"] = datadogSite.secretVersion
+
+  const posthogApiKey = createSingleSecret(
+    baseName,
+    "posthog-api-key",
+    "PostHog project API key (phc_...) for product analytics",
+    process.env.LAT_POSTHOG_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["posthog-api-key"] = posthogApiKey.secret
+  secretVersions["posthog-api-key"] = posthogApiKey.secretVersion
+
+  const latitudeTelemetryApiKey = createSingleSecret(
+    baseName,
+    "latitude-telemetry-api-key",
+    "Latitude Telemetry API key",
+    process.env.LAT_LATITUDE_TELEMETRY_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["latitude-telemetry-api-key"] = latitudeTelemetryApiKey.secret
+  secretVersions["latitude-telemetry-api-key"] = latitudeTelemetryApiKey.secretVersion
+
+  const latitudeTelemetryProjectSlug = createSingleSecret(
+    baseName,
+    "latitude-telemetry-project-slug",
+    "Latitude Telemetry project slug",
+    process.env.LAT_LATITUDE_TELEMETRY_PROJECT_SLUG ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secret
+  secretVersions["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secretVersion
+
+  const turnstileSecretKey = createSingleSecret(
+    baseName,
+    "turnstile-secret-key",
+    "Cloudflare Turnstile secret key for bot protection",
+    process.env.LAT_TURNSTILE_SECRET_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["turnstile-secret-key"] = turnstileSecretKey.secret
+  secretVersions["turnstile-secret-key"] = turnstileSecretKey.secretVersion
 
   return {
     secrets,

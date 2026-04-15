@@ -1,4 +1,4 @@
-import { OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { type MembershipId, OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -10,10 +10,11 @@ import { createFakeMembershipRepository } from "../testing/fake-membership-repos
 import { createFakeOrganizationRepository } from "../testing/fake-organization-repository.ts"
 import { cleanupUserMembershipsUseCase } from "./cleanup-user-memberships.ts"
 
-const USER_ID = "user_1"
-const OTHER_USER_ID = "user_2"
-const ORG_1 = OrganizationId("org_1")
-const ORG_2 = OrganizationId("org_2")
+/** Valid CUID-shaped ids (entity factories validate via Zod). */
+const USER_ID = "ye9d77pxi50nh1gyqljkffnb"
+const OTHER_USER_ID = "uzm4d8pb5k0bd2oug9ud2xjs"
+const ORG_1 = OrganizationId("iapkf6osmlm7mbw9kulosua4")
+const ORG_2 = OrganizationId("yvl1e78evmwfs2mosyjb08rc")
 
 const createTestLayers = () => {
   const { repository: orgRepo, organizations } = createFakeOrganizationRepository()
@@ -43,7 +44,7 @@ const seedOrganization = (
 }
 
 const seedMembership = (
-  memberships: Map<string, ReturnType<typeof createMembership>>,
+  memberships: Map<MembershipId, ReturnType<typeof createMembership>>,
   orgId: OrganizationId,
   userId: string,
 ) => {

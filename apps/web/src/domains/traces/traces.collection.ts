@@ -1,15 +1,26 @@
 import type { FilterSet } from "@domain/shared"
+import {
+  pickTraceHistogramBucketSeconds,
+  resolveTraceHistogramRangeIso,
+  type TraceCohortSummary,
+  type TraceTimeHistogramBucket,
+} from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
+  getTraceCohortSummaryByProject,
   getTraceDetail,
   getTraceDistinctValues,
+  getTraceMetricsByProject,
+  getTraceTimeHistogramByProject,
   listTracesByProject,
   type TraceDetailRecord,
   type TraceRecord,
 } from "./traces.functions.ts"
+
+export const traceDetailQueryKey = (projectId: string, traceId: string) => ["traceDetail", projectId, traceId] as const
 
 const BATCH_SIZE = 50
 
@@ -74,6 +85,94 @@ export function useTracesCount({ projectId, filters }: { readonly projectId: str
   return { totalCount, isLoading }
 }
 
+export function useTraceMetrics({ projectId, filters }: { readonly projectId: string; readonly filters?: FilterSet }) {
+  return useQuery({
+    queryKey: ["traces-metrics", projectId, filters],
+    queryFn: () =>
+      getTraceMetricsByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+  })
+}
+
+export function useTraceCohortSummary({
+  projectId,
+  filters,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+}) {
+  return useQuery<TraceCohortSummary>({
+    queryKey: ["traces-cohort-summary", projectId, filters],
+    queryFn: () =>
+      getTraceCohortSummaryByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+    enabled: projectId.length > 0,
+  })
+}
+
+export function useTraceTimeHistogram({
+  projectId,
+  filters,
+  rangeStartIso: rangeStartIsoOverride,
+  rangeEndIso: rangeEndIsoOverride,
+}: {
+  readonly projectId: string
+  readonly filters: FilterSet
+  readonly rangeStartIso?: string
+  readonly rangeEndIso?: string
+}) {
+  const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
+    const nowMs = Date.now()
+    const { rangeStartIso: rs, rangeEndIso: re } = resolveTraceHistogramRangeIso(filters, nowMs)
+    const effectiveRangeStartIso = rangeStartIsoOverride ?? rs
+    const effectiveRangeEndIso = rangeEndIsoOverride ?? re
+    const startMs = Date.parse(effectiveRangeStartIso)
+    const endMs = Date.parse(effectiveRangeEndIso)
+    const bs =
+      Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+        ? pickTraceHistogramBucketSeconds(startMs, endMs)
+        : 60
+    return {
+      rangeStartIso: effectiveRangeStartIso,
+      rangeEndIso: effectiveRangeEndIso,
+      bucketSeconds: bs,
+      queryKey: ["traces-histogram", projectId, filters, effectiveRangeStartIso, effectiveRangeEndIso, bs] as const,
+    }
+  }, [projectId, filters, rangeStartIsoOverride, rangeEndIsoOverride])
+
+  const query = useQuery({
+    queryKey,
+    queryFn: (): Promise<readonly TraceTimeHistogramBucket[]> =>
+      getTraceTimeHistogramByProject({
+        data: {
+          projectId,
+          rangeStartIso,
+          rangeEndIso,
+          bucketSeconds,
+          ...(Object.keys(filters).length > 0 ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+  })
+
+  return {
+    ...query,
+    rangeStartIso,
+    rangeEndIso,
+    bucketSeconds,
+  }
+}
+
 export function useTraceDistinctValues({
   projectId,
   column,
@@ -90,14 +189,23 @@ export function useTraceDistinctValues({
   })
 }
 
-export function useTraceDetail({ projectId, traceId }: { readonly projectId: string; readonly traceId: string }) {
+export function useTraceDetail({
+  projectId,
+  traceId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly enabled?: boolean
+}) {
   return useQuery({
-    queryKey: ["traceDetail", projectId, traceId],
+    queryKey: traceDetailQueryKey(projectId, traceId),
     // getTraceDetail returns `never` at the type level to satisfy TanStack Start's
     // Serialize constraint (see traces.functions.ts); cast back to the actual type
     queryFn: async () => {
       const result = await getTraceDetail({ data: { projectId, traceId } })
       return result as TraceDetailRecord | null
     },
+    enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
 }

@@ -1,5 +1,6 @@
 import { RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
+import { ISSUE_DISCOVERY_MAX_CANDIDATES, ISSUE_DISCOVERY_SEARCH_RATIO } from "../constants.ts"
 import type {
   DeleteIssueProjectionInput,
   HybridSearchInput,
@@ -12,7 +13,8 @@ interface StoredProjection {
   title: string
   description: string
   vector: number[]
-  tenantName: string
+  organizationId: string
+  projectId: string
 }
 
 const cosineSimilarity = (a: number[], b: number[]): number => {
@@ -35,21 +37,28 @@ const bm25TermScore = (term: string, text: string): number => {
   return tf / (tf + 1)
 }
 
-export const createFakeIssueProjectionRepository = () => {
-  const store = new Map<string, StoredProjection>()
+interface CreateFakeIssueProjectionRepositoryOptions {
+  readonly organizationId?: string
+  readonly store?: Map<string, StoredProjection>
+}
 
-  const keyOf = (tenantName: string, uuid: string) => `${tenantName}::${uuid}`
+export const createFakeIssueProjectionRepository = ({
+  organizationId = "org1",
+  store = new Map<string, StoredProjection>(),
+}: CreateFakeIssueProjectionRepositoryOptions = {}) => {
+  const keyOf = (projectId: string, uuid: string) => `${organizationId}_${projectId}::${uuid}`
 
   const service = {
     upsert: (input: UpsertIssueProjectionInput) =>
       Effect.try({
         try: () => {
-          store.set(keyOf(input.tenantName, input.uuid), {
+          store.set(keyOf(input.projectId, input.uuid), {
             uuid: input.uuid,
             title: input.title,
             description: input.description,
             vector: input.vector,
-            tenantName: input.tenantName,
+            organizationId,
+            projectId: input.projectId,
           })
         },
         catch: (cause) => new RepositoryError({ cause, operation: "IssueProjectionRepository.upsert" }),
@@ -58,7 +67,7 @@ export const createFakeIssueProjectionRepository = () => {
     delete: (input: DeleteIssueProjectionInput) =>
       Effect.try({
         try: () => {
-          store.delete(keyOf(input.tenantName, input.uuid))
+          store.delete(keyOf(input.projectId, input.uuid))
         },
         catch: (cause) => new RepositoryError({ cause, operation: "IssueProjectionRepository.delete" }),
       }),
@@ -69,7 +78,7 @@ export const createFakeIssueProjectionRepository = () => {
           const candidates: (StoredProjection & { score: number })[] = []
 
           for (const projection of store.values()) {
-            if (projection.tenantName !== input.tenantName) continue
+            if (projection.organizationId !== organizationId || projection.projectId !== input.projectId) continue
 
             const vectorScore = cosineSimilarity(input.vector, projection.vector)
 
@@ -83,14 +92,14 @@ export const createFakeIssueProjectionRepository = () => {
               }
             }
 
-            const combined = input.alpha * vectorScore + (1 - input.alpha) * bm25Score
+            const combined = ISSUE_DISCOVERY_SEARCH_RATIO * vectorScore + (1 - ISSUE_DISCOVERY_SEARCH_RATIO) * bm25Score
 
             candidates.push({ ...projection, score: combined })
           }
 
           candidates.sort((a, b) => b.score - a.score)
 
-          return candidates.slice(0, input.limit).map((c) => ({
+          return candidates.slice(0, ISSUE_DISCOVERY_MAX_CANDIDATES).map((c) => ({
             uuid: c.uuid,
             title: c.title,
             description: c.description,

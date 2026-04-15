@@ -1,54 +1,25 @@
+import { OutboxEventWriter } from "@domain/events"
 import {
   type ConflictError,
-  type OrganizationId,
   type ProjectId,
   type RepositoryError,
   SqlClient,
+  toRepositoryError,
+  toSlug,
   type ValidationError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import { createProject } from "../entities/project.ts"
+import { InvalidProjectNameError } from "../errors.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
+  readonly actorUserId?: string
 }
 
-const toSlug = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-
-export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
-  readonly name: string
-  readonly slug: string
-  readonly organizationId: OrganizationId
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `Project '${this.name}' or slug '${this.slug}' already exists in this organization`
-  }
-}
-
-export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
-  readonly field: string
-  readonly message: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.message
-  }
-}
-
-export type CreateProjectError =
-  | RepositoryError
-  | ValidationError
-  | ConflictError
-  | ProjectAlreadyExistsError
-  | InvalidProjectNameError
+export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError
 
 export const createProjectUseCase = (input: CreateProjectInput) =>
   Effect.gen(function* () {
@@ -71,7 +42,6 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
     }
 
     const trimmedSlug = toSlug(trimmedName)
-
     if (!trimmedSlug || trimmedSlug.length === 0) {
       return yield* new InvalidProjectNameError({
         field: trimmedSlug,
@@ -82,40 +52,59 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
     if (trimmedSlug.length > 256) {
       return yield* new InvalidProjectNameError({
         field: trimmedSlug,
-        message: "Slug exceeds 256 characters",
+        message: "Slug exceeds 256 characters, try with a shorter project name.",
       })
     }
-
-    const project = createProject({
-      id: input.id,
-      organizationId,
-      name: trimmedName,
-      slug: trimmedSlug,
-    })
 
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
+        const outboxEventWriter = yield* OutboxEventWriter
 
-        const nameExists = yield* repo.existsByName(trimmedName)
-        if (nameExists) {
-          return yield* new ProjectAlreadyExistsError({
-            name: trimmedName,
-            slug: trimmedSlug,
-            organizationId,
+        // Generate unique slug by appending numbers if needed
+        let uniqueSlug = trimmedSlug
+        let found = false
+        for (let i = 1; i <= 100; i++) {
+          const exists = yield* repo.existsBySlug(uniqueSlug)
+          if (!exists) {
+            found = true
+            break
+          }
+          uniqueSlug = `${trimmedSlug}-${i}`
+        }
+
+        if (!found) {
+          return yield* new InvalidProjectNameError({
+            field: trimmedSlug,
+            message: "Could not generate a unique project slug, try with a different project name.",
           })
         }
 
-        const slugExists = yield* repo.existsBySlug(trimmedSlug)
-        if (slugExists) {
-          return yield* new ProjectAlreadyExistsError({
-            name: trimmedName,
-            slug: trimmedSlug,
-            organizationId,
-          })
-        }
+        const project = createProject({
+          id: input.id,
+          organizationId,
+          name: trimmedName,
+          slug: uniqueSlug,
+        })
 
         yield* repo.save(project)
+
+        // Publish ProjectCreated event for downstream provisioning
+        yield* outboxEventWriter
+          .write({
+            eventName: "ProjectCreated",
+            aggregateType: "project",
+            aggregateId: project.id,
+            organizationId: project.organizationId,
+            payload: {
+              organizationId: project.organizationId,
+              actorUserId: input.actorUserId ?? "",
+              projectId: project.id,
+              name: project.name,
+              slug: project.slug,
+            },
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
         return project
       }),

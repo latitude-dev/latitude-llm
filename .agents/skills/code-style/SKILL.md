@@ -1,3 +1,8 @@
+---
+name: code-style
+description: Biome formatting, import style, strict TypeScript, naming (including React file names), or generated files.
+---
+
 # Code style, TypeScript, and naming
 
 **When to use:** Biome formatting, import style, strict TypeScript, naming (including React file names), or generated files. For **where** domain code lives, see [architecture-boundaries](../architecture-boundaries/SKILL.md).

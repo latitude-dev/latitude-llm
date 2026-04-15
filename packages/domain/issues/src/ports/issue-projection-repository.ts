@@ -9,24 +9,22 @@ export interface IssueProjectionCandidate {
 }
 
 export interface UpsertIssueProjectionInput {
+  readonly projectId: string
   readonly uuid: string
   readonly title: string
   readonly description: string
   readonly vector: number[]
-  readonly tenantName: string
 }
 
 export interface DeleteIssueProjectionInput {
+  readonly projectId: string
   readonly uuid: string
-  readonly tenantName: string
 }
 
 export interface HybridSearchInput {
+  readonly projectId: string
   readonly query: string
   readonly vector: number[]
-  readonly tenantName: string
-  readonly alpha: number
-  readonly limit: number
 }
 
 export type IssuesCollectionProperties = {

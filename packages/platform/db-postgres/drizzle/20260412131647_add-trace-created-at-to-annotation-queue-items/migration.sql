@@ -1,0 +1,3 @@
+ALTER TABLE "latitude"."annotation_queue_items" ADD COLUMN "trace_created_at" timestamp with time zone NOT NULL;--> statement-breakpoint
+DROP INDEX "latitude"."annotation_queue_items_queue_progress_idx";--> statement-breakpoint
+CREATE INDEX "annotation_queue_items_queue_progress_idx" ON "latitude"."annotation_queue_items" ("organization_id","project_id","queue_id","completed_at","trace_created_at","trace_id");

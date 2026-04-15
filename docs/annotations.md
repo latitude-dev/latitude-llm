@@ -2,7 +2,7 @@
 
 Annotations are human-reviewed scores.
 
-Human-created annotations are the strongest human signal in the reliability system, and annotations may exist as drafts before they become final scores.
+Human-created annotations are the strongest human signal in the reliability system, and annotations may exist as drafts before they become published scores.
 
 They are used for:
 
@@ -42,28 +42,31 @@ Rules:
 - draft annotations still use `source = "annotation"`
 - draft state is represented by `draftedAt`, not by a sentinel error value
 - human-created drafts are written to Postgres immediately, so they remain visible on refresh while the user is still editing
-- human-created drafts finalize on a debounced timeout after the last edit; the initial default is `5 minutes`
-- human-created draft finalization is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id, not by browser-local timers or persisted due-work scans
+- human-created drafts publish on a debounced timeout after the last edit; the initial default is `5 minutes`
+- human-editable draft publication is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id, not by browser-local timers or persisted due-work scans
 - system-created queue drafts still use the queue CUID as `source_id`
 - they are created by a separate validation/annotation task that runs after `system-annotation-queues:flag` has flagged the trace for that system queue
-- system-created queue drafts do not use the automatic finalization path; they wait for explicit human review
-- drafts do not participate in issue discovery or evaluation alignment until `draftedAt` is cleared
-- once a draft is finalized, it should no longer be edited; it may still be deleted later
+- system-created queue drafts do not use the automatic publication path; they wait for explicit human review
+- drafts do not participate in issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
+- once a draft is published, it should no longer be edited; it may still be deleted later
 - drafts exist to support immediate managed review without relying on temporary browser-only or Redis-only state
 
 ## Manual Issue Selection
 
-When annotations are created through Latitude-managed UI, the annotator can choose one of three issue intents:
+When annotations are created through Latitude-managed UI, the annotator can choose one of two issue intents:
 
 - leave issue assignment automatic and let discovery decide
 - link the annotation to an existing issue
-- create a new issue inline while annotating
 
-Explicit link/create choices are human overrides:
+Inline manual issue creation from the annotation flow is intentionally deferred for now to keep the managed annotation UX and ownership rules simpler.
 
-- they bypass similarity-based issue discovery for that annotation score
-- they write canonical ownership directly through `scores.issue_id`
-- manually created or manually linked issues remain immediately visible
+Explicit link choices are human overrides:
+
+- while the annotation is still drafted, they store editable issue intent on the canonical score row
+- once published, they bypass similarity-based candidate selection for that annotation score
+- publication writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write, projection sync, and ClickHouse analytics sync
+- explicitly linked issues remain immediately visible only after publication
 
 ## Managed Queue Review
 
@@ -73,7 +76,7 @@ Annotation behavior in that screen must support:
 
 - conversation-level annotations when no specific message/text selection is needed
 - message-level or text-range annotations created directly from the conversation view
-- existing draft annotations that are already attached to the trace and waiting for finalization or human review
+- existing draft annotations that are already attached to the trace and waiting for publication or human review
 - persisted highlights after the annotation is stored
 - clicking a persisted highlight to focus the matching annotation card in the annotation list
 
@@ -151,12 +154,12 @@ Important v2 carry-forward:
 2. write or update the canonical Postgres score row, keeping `draftedAt` set while the annotation is still a draft
 3. preserve raw human text in metadata
 4. enrich the canonical feedback when needed
-5. while `draftedAt` is still set, keep the score out of issue discovery, evaluation alignment, and ClickHouse analytics
-6. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
-7. if the annotator linked an existing issue, keep direct `issue_id` ownership on the canonical score row
-8. if the annotator created a new issue inline, persist it and keep direct `issue_id` ownership on the canonical score row
-9. if the finalized annotation is failed and non-errored with no direct issue ownership, run issue discovery against the enriched canonical score
-10. if the finalized annotation is now immutable and ready for analytics save, save it to ClickHouse analytics
+5. while `draftedAt` is still set, keep the score out of issue discovery, issue-centroid mutation, Weaviate projection sync, evaluation alignment, and ClickHouse analytics
+6. if the annotator selected an existing issue while drafting, keep that `issue_id` only as editable draft intent
+7. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
+8. if the published annotation had a linked issue selected while drafted and is failed/non-errored, write `IssueDiscoveryRequested` carrying that selected `issueId`
+9. if the published annotation has no linked issue and is failed/non-errored, write `IssueDiscoveryRequested` without `issueId` so centralized issue handling can choose between known-issue routing and full similarity discovery
+10. if the published annotation is now immutable and ready for analytics save without issue mutation, save it to ClickHouse analytics
 
 ## Relationship To Issues
 
@@ -164,7 +167,8 @@ Human-reviewed annotations are the highest-confidence source of truth.
 
 Because of that:
 
-- annotations can create visible issues immediately
+- published annotations can create visible issues immediately
+- explicitly linked annotations become issue-backed evidence immediately after publication
 - annotations should have the highest centroid weight
 - issues with linked annotations should always remain visible in the product
 - draft annotations do not create visible issues immediately because `draftedAt` keeps them out of issue discovery

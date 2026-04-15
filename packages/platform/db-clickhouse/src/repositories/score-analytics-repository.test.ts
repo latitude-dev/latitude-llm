@@ -39,6 +39,22 @@ async function insertScores(rows: ReturnType<typeof makeScoreRow>[]) {
   await ch.client.insert({ table: "scores", values: rows, format: "JSONEachRow" })
 }
 
+const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
+
+const daysAgoDateTime = (days: number, hour: number): string => {
+  const value = new Date()
+  value.setUTCHours(hour, 0, 0, 0)
+  value.setUTCDate(value.getUTCDate() - days)
+  return toClickHouseDateTime64(value)
+}
+
+const daysAgoBucket = (days: number): string => {
+  const value = new Date()
+  value.setUTCHours(12, 0, 0, 0)
+  value.setUTCDate(value.getUTCDate() - days)
+  return value.toISOString().slice(0, 10)
+}
+
 describe("ScoreAnalyticsRepository", () => {
   let repo: ScoreAnalyticsRepositoryShape
 
@@ -65,6 +81,33 @@ describe("ScoreAnalyticsRepository", () => {
       await insertScores([makeScoreRow({ id })])
       const exists = await Effect.runPromise(repo.existsById(id as ScoreId))
       expect(exists).toBe(true)
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // delete (lightweight DELETE — rows masked from SELECTs)
+  // ------------------------------------------------------------------
+
+  describe("delete", () => {
+    it("hides the score from existsById and aggregates after lightweight delete", async () => {
+      const id = "dddddddddddddddddddddddd"
+      await insertScores([makeScoreRow({ id, value: 0.99, passed: true, cost: 999, tokens: 10, duration: 1 })])
+
+      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(true)
+
+      const beforeAgg = await Effect.runPromise(
+        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
+      )
+      const countBefore = beforeAgg.totalScores
+
+      await Effect.runPromise(repo.delete(id as ScoreId))
+
+      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(false)
+
+      const afterAgg = await Effect.runPromise(
+        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
+      )
+      expect(afterAgg.totalScores).toBe(countBefore - 1)
     })
   })
 
@@ -158,21 +201,21 @@ describe("ScoreAnalyticsRepository", () => {
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-14 10:00:00.000",
+          created_at: daysAgoDateTime(2, 10),
           value: 0.5,
           passed: true,
         }),
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-14 18:00:00.000",
+          created_at: daysAgoDateTime(2, 18),
           value: 0.7,
           passed: true,
         }),
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-15 08:00:00.000",
+          created_at: daysAgoDateTime(1, 8),
           value: 0.3,
           passed: false,
         }),
@@ -190,9 +233,9 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
       expect(trend.length).toBeGreaterThanOrEqual(2)
-      const day14 = trend.find((b) => b.bucket.startsWith("2026-03-14"))
-      expect(day14).toBeDefined()
-      expect(day14?.totalScores).toBe(2)
+      const twoDaysAgo = trend.find((bucket) => bucket.bucket.startsWith(daysAgoBucket(2)))
+      expect(twoDaysAgo).toBeDefined()
+      expect(twoDaysAgo?.totalScores).toBe(2)
     })
   })
 
@@ -203,9 +246,9 @@ describe("ScoreAnalyticsRepository", () => {
   describe("trendByProject", () => {
     beforeEach(async () => {
       await insertScores([
-        makeScoreRow({ created_at: "2026-03-10 10:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-10 14:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-11 08:00:00.000" }),
+        makeScoreRow({ created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ created_at: daysAgoDateTime(2, 14) }),
+        makeScoreRow({ created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
@@ -340,6 +383,8 @@ describe("ScoreAnalyticsRepository", () => {
       const aggA = aggs.find((a) => (a.issueId as string) === issueA)
       expect(aggA).toBeDefined()
       expect(aggA?.totalOccurrences).toBe(3)
+      expect(aggA?.firstSeenAt.toISOString()).toBe("2026-03-10T10:00:00.000Z")
+      expect(aggA?.lastSeenAt.toISOString()).toBe("2026-03-25T10:00:00.000Z")
     })
 
     it("returns empty for no issue ids", async () => {
@@ -363,9 +408,9 @@ describe("ScoreAnalyticsRepository", () => {
 
     beforeEach(async () => {
       await insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-14 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-14 18:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-15 08:00:00.000" }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 18) }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
@@ -379,9 +424,149 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
       expect(trend.length).toBeGreaterThanOrEqual(2)
-      const day14 = trend.find((b) => b.bucket.startsWith("2026-03-14"))
-      expect(day14).toBeDefined()
-      expect(day14?.count).toBe(2)
+      const twoDaysAgo = trend.find((bucket) => bucket.bucket.startsWith(daysAgoBucket(2)))
+      expect(twoDaysAgo).toBeDefined()
+      expect(twoDaysAgo?.count).toBe(2)
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // issue page analytics helpers
+  // ------------------------------------------------------------------
+
+  describe("issue page analytics reads", () => {
+    const issueA = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const issueB = "bbbbbbbbbbbbbbbbbbbbbbbb"
+    const traceA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    const traceB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    const from = new Date("2026-04-08T00:00:00.000Z")
+    const to = new Date("2026-04-10T23:59:59.999Z")
+
+    beforeEach(async () => {
+      await insertScores([
+        makeScoreRow({
+          issue_id: issueA,
+          trace_id: traceA,
+          source: "evaluation",
+          source_id: "eval_source_a",
+          created_at: "2026-04-08 10:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueA,
+          trace_id: traceA,
+          source: "evaluation",
+          source_id: "eval_source_a",
+          created_at: "2026-04-09 10:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueB,
+          trace_id: traceB,
+          source: "custom",
+          source_id: "custom_source_b",
+          created_at: "2026-04-10 09:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueB,
+          trace_id: traceB,
+          source: "custom",
+          source_id: "custom_source_b",
+          created_at: "2026-04-01 09:00:00.000",
+        }),
+      ])
+    })
+
+    it("lists issue window metrics within the selected range and score filters", async () => {
+      const metrics = await Effect.runPromise(
+        repo.listIssueWindowMetrics({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          filters: {
+            "score.source": [{ op: "eq", value: "evaluation" }],
+          },
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(metrics).toEqual([
+        {
+          issueId: IssueId(issueA),
+          occurrences: 2,
+          firstSeenAt: new Date("2026-04-08T10:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
+        },
+      ])
+    })
+
+    it("builds grouped histogram and per-issue trends for the requested issue ids", async () => {
+      const histogram = await Effect.runPromise(
+        repo.histogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: { from, to },
+        }),
+      )
+      const trend = await Effect.runPromise(
+        repo.trendByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(histogram).toEqual([
+        { bucket: "2026-04-08", count: 1 },
+        { bucket: "2026-04-09", count: 1 },
+        { bucket: "2026-04-10", count: 1 },
+      ])
+      expect(trend).toEqual([
+        {
+          issueId: IssueId(issueA),
+          buckets: [
+            { bucket: "2026-04-08", count: 1 },
+            { bucket: "2026-04-09", count: 1 },
+          ],
+        },
+        {
+          issueId: IssueId(issueB),
+          buckets: [{ bucket: "2026-04-10", count: 1 }],
+        },
+      ])
+    })
+
+    it("counts distinct traces inside the selected issue window", async () => {
+      const total = await Effect.runPromise(
+        repo.countDistinctTracesByTimeRange({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(total).toBe(2)
+    })
+
+    it("lists distinct traces for one issue newest-first with pagination", async () => {
+      const page = await Effect.runPromise(
+        repo.listTracesByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueA),
+          limit: 1,
+          offset: 0,
+        }),
+      )
+
+      expect(page.items).toEqual([
+        {
+          traceId: TraceId(traceA),
+          lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
+        },
+      ])
+      expect(page.hasMore).toBe(false)
+      expect(page.limit).toBe(1)
+      expect(page.offset).toBe(0)
     })
   })
 
@@ -415,6 +600,11 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("excludes simulations in trend queries", async () => {
+      const recentDate = daysAgoDateTime(1, 12)
+      await insertScores([
+        makeScoreRow({ simulation_id: simId, value: 0.5, passed: true, created_at: recentDate }),
+        makeScoreRow({ simulation_id: "", value: 0.9, passed: true, created_at: recentDate }),
+      ])
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
       const trend = await Effect.runPromise(
         repo.trendByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, days: 30, options }),

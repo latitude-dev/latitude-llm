@@ -1,6 +1,6 @@
 import type { ScoreMetadata, ScoreSource } from "@domain/scores"
 import { sql } from "drizzle-orm"
-import { bigint, boolean, doublePrecision, index, jsonb, text, varchar } from "drizzle-orm/pg-core"
+import { bigint, boolean, doublePrecision, index, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const scores = latitudeSchema.table(
@@ -32,6 +32,8 @@ export const scores = latitudeSchema.table(
     cost: bigint("cost", { mode: "number" }).notNull().default(0), // total LLM cost in microcents
 
     draftedAt: tzTimestamp("drafted_at"), // set while the score is still editable or awaiting human confirmation
+    /** User who created this score (nullable for system-generated scores). */
+    annotatorId: cuid("annotator_id"),
     ...timestamps(),
   },
   (t) => [
@@ -43,6 +45,9 @@ export const scores = latitudeSchema.table(
     index("scores_source_lookup_idx")
       .on(t.organizationId, t.projectId, t.source, t.sourceId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
+    uniqueIndex("scores_canonical_evaluation_trace_idx")
+      .on(t.organizationId, t.projectId, t.sourceId, t.traceId)
+      .where(sql`${t.source} = 'evaluation' AND ${t.draftedAt} IS NULL AND ${t.traceId} IS NOT NULL`),
     index("scores_issue_lookup_idx")
       .on(t.organizationId, t.projectId, t.issueId, t.createdAt, t.id)
       .where(sql`${t.issueId} IS NOT NULL AND ${t.draftedAt} IS NULL`),

@@ -21,38 +21,44 @@ interface SelectTriggerProps extends React.ComponentPropsWithoutRef<typeof Selec
 
 const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.Trigger>, SelectTriggerProps>(
   ({ className, children, size = "default", removable, onRemove, ...props }, ref) => (
-    <SelectPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex w-full items-center justify-between rounded-md border border-input bg-transparent",
-        "px-3 shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring",
-        "disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-        font.size.h5,
-        {
-          "h-8 py-1": size === "small",
-          "h-9 py-2": size === "default",
-        },
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <div className="flex items-center gap-1">
-        {removable && (
-          <button
-            type="button"
-            className="rounded-sm opacity-50 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove?.()
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+    // `asChild` avoids invalid HTML (button inside button): Radix merges trigger behavior onto this div.
+    <SelectPrimitive.Trigger ref={ref} asChild {...props}>
+      <div
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Radix Trigger uses asChild and merges combobox role, aria-*, and keyboard behavior onto this div.
+        tabIndex={0}
+        className={cn(
+          "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md border border-input bg-transparent text-left",
+          "px-3 shadow-sm ring-offset-background placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring",
+          "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
+          font.size.h5,
+          {
+            "h-8 py-1": size === "small",
+            "h-9 py-2": size === "default",
+          },
+          className,
         )}
-        <SelectPrimitive.Icon asChild>
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </SelectPrimitive.Icon>
+      >
+        {children}
+        <div className="flex shrink-0 items-center gap-1">
+          {removable ? (
+            <button
+              type="button"
+              aria-label="Clear selection"
+              className="cursor-pointer rounded-sm opacity-50 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove?.()
+              }}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ) : (
+            <SelectPrimitive.Icon asChild>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </SelectPrimitive.Icon>
+          )}
+        </div>
       </div>
     </SelectPrimitive.Trigger>
   ),
@@ -63,22 +69,28 @@ interface SelectValueProps {
   selected: unknown
   options: readonly { label: string; value: unknown; icon?: React.ReactNode }[]
   placeholder?: string
+  placeholderIcon?: React.ReactNode
 }
 
-function SelectValue({ selected, options, placeholder }: SelectValueProps) {
+function SelectValue({ selected, options, placeholder, placeholderIcon }: SelectValueProps) {
   const match = options.find((o) => String(o.value) === String(selected))
   if (!match) {
     return (
-      <span className="text-muted-foreground">
-        <Text.H5 color="foregroundMuted">{placeholder ?? "Select an option"}</Text.H5>
-      </span>
+      <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-hidden text-left text-muted-foreground">
+        {placeholderIcon ? <span className="shrink-0">{placeholderIcon}</span> : null}
+        <Text.H5 color="foregroundMuted" noWrap ellipsis>
+          {placeholder ?? "Select an option"}
+        </Text.H5>
+      </div>
     )
   }
   return (
-    <span className="flex items-center gap-2 truncate">
-      {match.icon}
-      <Text.H5>{match.label}</Text.H5>
-    </span>
+    <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-hidden text-left">
+      {match.icon ? <span className="shrink-0">{match.icon}</span> : null}
+      <Text.H5 display="block" noWrap ellipsis>
+        {match.label}
+      </Text.H5>
+    </div>
   )
 }
 
@@ -129,19 +141,21 @@ const SelectItem = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.It
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex w-full cursor-default select-none items-center justify-start rounded-md py-1.5 pl-3 pr-8 text-left text-sm outline-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...(disabled ? { disabled: true } : {})}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <Check className="h-4 w-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
       {icon && <span className="pr-2">{icon}</span>}
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <span className="flex-1 text-left">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      </span>
     </SelectPrimitive.Item>
   ),
 )

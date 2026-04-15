@@ -310,6 +310,20 @@ describe("resolveAttributes", () => {
       expect(result.tokensOutput).toBe(200)
     })
 
+    it("resolves Vercel AI Responses-style inputTokens / outputTokens", () => {
+      const attrs: OtlpKeyValue[] = [
+        intAttr("ai.usage.inputTokens", 9191),
+        intAttr("ai.usage.outputTokens", 93),
+        intAttr("ai.usage.cachedInputTokens", 4429),
+        intAttr("ai.usage.inputTokenDetails.cacheWriteTokens", 4761),
+      ]
+      const result = resolveAttributes(attrs, "unset")
+      expect(result.tokensInput).toBe(1)
+      expect(result.tokensCacheRead).toBe(4429)
+      expect(result.tokensCacheCreate).toBe(4761)
+      expect(result.tokensOutput).toBe(93)
+    })
+
     it("resolves cache and reasoning tokens", () => {
       const attrs: OtlpKeyValue[] = [
         intAttr("gen_ai.usage.input_tokens", 1000),
@@ -499,6 +513,32 @@ describe("resolvePerformance", () => {
       expect(result.timeToFirstTokenNs).toBe(200_000_000)
     })
 
+    it("computes TTFT from ai.stream.firstChunk event timestamp", () => {
+      const events: OtlpEvent[] = [{ name: "ai.stream.firstChunk", timeUnixNano: "1710590401200000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(1_200_000_000)
+    })
+
+    it("uses ai.response.msToFirstChunk from event attributes and converts ms to ns", () => {
+      const events: OtlpEvent[] = [
+        {
+          name: "ai.stream.firstChunk",
+          timeUnixNano: "1710590401200000000",
+          attributes: [floatAttr("ai.response.msToFirstChunk", 1984.1441250005737)],
+        },
+      ]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "",
+      })
+      expect(result.timeToFirstTokenNs).toBe(1_984_144_125)
+    })
+
     it("picks the earliest completion event when multiple exist", () => {
       const events: OtlpEvent[] = [
         { name: "gen_ai.content.completion", timeUnixNano: "1710590400800000000" },
@@ -543,6 +583,22 @@ describe("resolvePerformance", () => {
         startTimeUnixNano: "1710590400000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(123_000_000)
+    })
+
+    it("event TTFT attribute takes precedence over event timestamp delta", () => {
+      const events: OtlpEvent[] = [
+        {
+          name: "ai.stream.firstChunk",
+          timeUnixNano: "1710590405000000000",
+          attributes: [floatAttr("ai.response.msToFirstChunk", 321)],
+        },
+      ]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(321_000_000)
     })
   })
 

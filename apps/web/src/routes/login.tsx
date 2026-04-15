@@ -1,12 +1,13 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import z from "zod"
+import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-import { WEB_BASE_URL } from "../lib/auth-config.ts"
+import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
 
 const loginSearchParams = z.object({
@@ -33,6 +34,13 @@ function LoginPage() {
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
   const [email, setEmail] = useState(prefilledEmail ?? "")
+  const captchaTokenRef = useRef<string | undefined>(undefined)
+  const handleCaptchaVerify = useCallback((token: string) => {
+    captchaTokenRef.current = token
+  }, [])
+  const handleCaptchaExpire = useCallback(() => {
+    captchaTokenRef.current = undefined
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -56,6 +64,7 @@ function LoginPage() {
           email: emailValue,
           callbackURL,
           newUserCallbackURL: redirectPath ?? "/welcome",
+          captchaToken: captchaTokenRef.current,
         },
       })
 
@@ -82,6 +91,9 @@ function LoginPage() {
         callbackURL,
         newUserCallbackURL,
         errorCallbackURL: LOGIN_URL,
+        fetchOptions: captchaTokenRef.current
+          ? { headers: { "x-captcha-response": captchaTokenRef.current } }
+          : undefined,
       })
 
       if (signInError) {
@@ -156,6 +168,15 @@ function LoginPage() {
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </label>
+
+            {TURNSTILE_SITE_KEY && (
+              <Turnstile
+                siteKey={TURNSTILE_SITE_KEY}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+                onError={handleCaptchaExpire}
+              />
+            )}
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive">

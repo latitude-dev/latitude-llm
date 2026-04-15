@@ -5,48 +5,57 @@
  * different per-million-token rates.
  */
 
-export type TokenType = "input" | "output" | "reasoning" | "cacheRead" | "cacheWrite"
+import { z } from "zod"
 
-export type TokenUsage = {
-  readonly input: number
-  readonly output: number
-  readonly reasoning?: number | undefined
-  readonly cacheRead?: number | undefined
-  readonly cacheWrite?: number | undefined
-}
+export const tokenTypeSchema = z.enum(["input", "output", "reasoning", "cacheRead", "cacheWrite"])
+export type TokenType = z.infer<typeof tokenTypeSchema>
 
-export type ModelCostTier = {
-  readonly input: number
-  readonly output: number
-  readonly reasoning?: number | undefined
-  readonly cacheRead?: number | undefined
-  readonly cacheWrite?: number | undefined
-  readonly tokensRangeStart?: number | undefined
-}
+export const tokenUsageSchema = z.object({
+  input: z.number(),
+  output: z.number(),
+  reasoning: z.number().optional(),
+  cacheRead: z.number().optional(),
+  cacheWrite: z.number().optional(),
+})
+export type TokenUsage = z.infer<typeof tokenUsageSchema>
 
-export type ModelCostSpec = ModelCostTier | ModelCostTier[]
+export const modelCostTierSchema = z.object({
+  input: z.number(),
+  output: z.number(),
+  reasoning: z.number().optional(),
+  cacheRead: z.number().optional(),
+  cacheWrite: z.number().optional(),
+  tokensRangeStart: z.number().optional(),
+})
+export type ModelCostTier = z.infer<typeof modelCostTierSchema>
 
-export type CostLookupResult = {
-  readonly cost: ModelCostSpec
-  readonly costImplemented: boolean
-}
+export const modelCostSpecSchema = z.union([modelCostTierSchema, z.array(modelCostTierSchema)])
+export type ModelCostSpec = z.infer<typeof modelCostSpecSchema>
 
-export type TokenCostEntry = {
-  readonly tokens: number
-  readonly cost: number
-}
+export const costLookupResultSchema = z.object({
+  cost: modelCostSpecSchema,
+  costImplemented: z.boolean(),
+})
+export type CostLookupResult = z.infer<typeof costLookupResultSchema>
 
-export type CostBreakdown = {
-  readonly input: {
-    readonly direct: TokenCostEntry
-    readonly cacheRead: TokenCostEntry
-    readonly cacheWrite: TokenCostEntry
-  }
-  readonly output: {
-    readonly direct: TokenCostEntry
-    readonly reasoning: TokenCostEntry
-  }
-}
+export const tokenCostEntrySchema = z.object({
+  tokens: z.number(),
+  cost: z.number(),
+})
+export type TokenCostEntry = z.infer<typeof tokenCostEntrySchema>
+
+export const costBreakdownSchema = z.object({
+  input: z.object({
+    direct: tokenCostEntrySchema,
+    cacheRead: tokenCostEntrySchema,
+    cacheWrite: tokenCostEntrySchema,
+  }),
+  output: z.object({
+    direct: tokenCostEntrySchema,
+    reasoning: tokenCostEntrySchema,
+  }),
+})
+export type CostBreakdown = z.infer<typeof costBreakdownSchema>
 
 function getCostPerToken(tier: ModelCostTier, tokenType: TokenType): number {
   if (tokenType === "input") return tier.input
@@ -129,7 +138,7 @@ export function computeCostBreakdown(costSpec: ModelCostSpec, usage: TokenUsage)
   const reasoning = sanitizeTokenCount(usage.reasoning)
   const output = sanitizeTokenCount(usage.output)
 
-  return {
+  return costBreakdownSchema.parse({
     input: {
       direct: {
         tokens: input,
@@ -154,5 +163,5 @@ export function computeCostBreakdown(costSpec: ModelCostSpec, usage: TokenUsage)
         cost: computeTokenCost(costSpec, reasoning, "reasoning"),
       },
     },
-  }
+  })
 }

@@ -9,8 +9,15 @@ export interface InfiniteTableColumn<T> {
   render: (row: T, rowIndex: number) => ReactNode
   align?: "start" | "end"
   resizable?: boolean
+  /** Minimum width (px); used for resize limits and header measurement. */
   minWidth?: number
+  /** Preferred starting width (px) for the first layout lock; the column can later be resized smaller. */
+  width?: number
   sortKey?: string
+  /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
+  renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
+  /** Whether to apply text ellipsis overflow on the cell. Defaults to `true`. */
+  ellipsis?: boolean
 }
 
 export interface InfiniteTableSelection {
@@ -37,12 +44,19 @@ export interface ExpandedRows<T> {
   isLoading?: boolean
 }
 
-export interface InfiniteTableProps<T> {
+export interface InfiniteTableSharedProps<T> {
   data: readonly T[]
   isLoading?: boolean
   columns: InfiniteTableColumn<T>[]
   getRowKey: (row: T) => string
-  onRowClick?: (row: T) => void
+  getRowClassName?: (
+    row: T,
+    context: {
+      isActive: boolean
+      isExpanded: boolean
+      isSubRow: boolean
+    },
+  ) => string | undefined
   activeRowKey?: string
   activeRowAutoScroll?: boolean
   selection?: InfiniteTableSelection
@@ -55,3 +69,16 @@ export interface InfiniteTableProps<T> {
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>
 }
+
+export type InfiniteTableProps<T> =
+  | (InfiniteTableSharedProps<T> & {
+      onRowClick: (row: T) => void
+      getRowAriaLabel: (row: T) => string
+      /** Semantic role for clickable rows (`link` when the action navigates). Defaults to `button`. */
+      rowInteractionRole?: "button" | "link"
+    })
+  | (InfiniteTableSharedProps<T> & {
+      onRowClick?: undefined
+      getRowAriaLabel?: undefined
+      rowInteractionRole?: undefined
+    })

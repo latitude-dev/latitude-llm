@@ -1,6 +1,11 @@
+---
+
+## name: database-postgres
+description: Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, psql / reset, or platform mappers (toDomain* / toInsertRow).
+
 # Postgres, SqlClient, schema, migrations, mappers
 
-**When to use:** Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, `psql` / reset, or platform mappers (`toDomain*` / `toInsertRow`).
+**When to use:** Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, `psql` / reset, or platform mappers (`toDomain`* / `toInsertRow`).
 
 ## Database patterns (Postgres)
 
@@ -17,7 +22,7 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 
 - **Domain Layer** (`@domain/shared`): `SqlClient` interface with `transaction()` and `query()` methods
 - **Platform Layer** (`@platform/db-postgres`): `SqlClientLive` implementation with automatic RLS context setting
-- **App Layer** (`apps/*`): Boundaries provide `SqlClientLive` with the request's organization context
+- **App Layer** (`apps/`*): Boundaries provide `SqlClientLive` with the request's organization context
 
 **Key behaviors:**
 
@@ -25,6 +30,7 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 - RLS policies filter all queries by this organization ID at the database level
 - Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
 - Domain errors propagate through Effect error channel; database errors become `RepositoryError`
+- On effect failure, `SqlClientLive` still awaits the Drizzle transaction promise so the connection returns to the pool; if the driver surfaces a **different** error than the Effect failure (for example rollback/commit), that secondary error is logged via `@repo/observability` while the original failure remains the propagated error
 
 **Usage in boundaries (apps):**
 
@@ -185,6 +191,10 @@ pnpm --filter @platform/db-postgres pg:migrate
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
 
+## Repository port naming
+
+Domain repository ports and method naming conventions (including Effect result shapes and when to use `listBy`* vs `findBy*`) live in [docs/repositories.md](../../../docs/repositories.md). Prefer that vocabulary for new Postgres-backed ports and when renaming existing methods.
+
 ## Mapper conventions
 
 When writing `toDomain*` and `toInsertRow` functions in platform repositories:
@@ -192,4 +202,5 @@ When writing `toDomain*` and `toInsertRow` functions in platform repositories:
 - **Never hardcode field values.** Every field on the domain entity must be read from the DB row (`row.fieldName`), not assigned a literal (`null`, `""`, `new Date()`). If a field has no backing column, that is a schema gap — add the column or remove the field from the domain type.
 - **Never use `as EntityType` casts** on mapper return values. These bypass TypeScript's structural check and hide type mismatches. Let the return type be inferred or explicitly annotated — the compiler will catch missing or incompatible fields.
 - **Never coerce nullable columns** with `?? fallback` to satisfy a non-nullable domain type. Surface the mismatch: either make the column `notNull()` or make the domain field nullable.
-- **`toInsertRow` must round-trip.** Every field written by `toInsertRow` should be readable by `toDomain*`, and vice versa. A field present in the domain type but absent from `toInsertRow` means data is silently discarded on write.
+- `**toInsertRow` must round-trip.** Every field written by `toInsertRow` should be readable by `toDomain`*, and vice versa. A field present in the domain type but absent from `toInsertRow` means data is silently discarded on write.
+

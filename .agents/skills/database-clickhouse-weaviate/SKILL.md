@@ -1,3 +1,8 @@
+---
+name: database-clickhouse-weaviate
+description: ClickHouse queries, Goose migrations, chdb test schema, Weaviate collections/migrations, or telemetry storage paths.
+---
+
 # ClickHouse and Weaviate
 
 **When to use:** ClickHouse queries, Goose migrations, chdb test schema, Weaviate collections/migrations, or telemetry storage paths.
@@ -105,7 +110,7 @@ Execution safety:
 
 Use the dedicated Weaviate package for connection and schema bootstrapping:
 
-- **Connection API:** `packages/platform/db-weaviate/src/client.ts` — `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
+- **Connection API:** `packages/platform/db-weaviate/src/client.ts` — `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks. For the general platform pattern (Effect-first client, tagged errors, env, layer wiring), see [architecture-boundaries](../architecture-boundaries/SKILL.md) — *Platform adapters: Effect-based clients*.
 - **Collection definitions:** `packages/platform/db-weaviate/src/collections.ts` — define all collections in code via `defineWeaviateCollections([...])`.
 - **Migration logic:** `packages/platform/db-weaviate/src/migrations.ts` — idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
 - **Manual migration command:** `pnpm --filter @platform/db-weaviate wv:migrate` — entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.

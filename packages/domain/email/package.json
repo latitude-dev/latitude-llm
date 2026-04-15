@@ -14,13 +14,14 @@
   "dependencies": {
     "@react-email/components": "^1.0.9",
     "effect": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@react-email/preview-server": "5.2.9",
     "@types/react": "catalog:",
     "react-email": "5.2.9",
-    "typescript": "^5.7.0"
+    "typescript": "^5.9.3"
   }
 }

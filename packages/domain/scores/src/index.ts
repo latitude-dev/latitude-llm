@@ -28,20 +28,25 @@ export {
   type Score,
   type ScoreMetadata,
   type ScoreSource,
-  scoreIdSchema,
   scoreMetadataSchemas,
   scoreSchema,
   scoreSourceSchema,
   scoreValueSchema,
 } from "./entities/score.ts"
+export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
+  type IssueTracePage,
+  type IssueTraceSummary,
+  type IssueTrendSeries,
+  type IssueWindowMetric,
   type ScoreAggregate,
   type ScoreAnalyticsOptions,
   ScoreAnalyticsRepository,
   type ScoreAnalyticsRepositoryShape,
+  type ScoreAnalyticsTimeRange,
   type ScoreTrendBucket,
   type SessionScoreRollup,
   type TraceScoreRollup,
@@ -65,16 +70,12 @@ export {
   listSourceScoresUseCase,
 } from "./use-cases/list-scores.ts"
 export {
-  type SaveScoreAnalyticsError,
-  type SaveScoreAnalyticsInput,
-  saveScoreAnalyticsInputSchema,
-  saveScoreAnalyticsUseCase,
+  type SyncScoreAnalyticsInput,
+  syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
 export {
   type BaseWriteScoreInput,
   baseWriteScoreInputSchema,
-  ScoreDraftClosedError,
-  ScoreDraftUpdateConflictError,
   type WriteScoreError,
   type WriteScoreInput,
   writeScoreInputSchema,

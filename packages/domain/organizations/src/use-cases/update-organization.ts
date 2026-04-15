@@ -1,4 +1,4 @@
-import type { NotFoundError, OrganizationSettings, RepositoryError } from "@domain/shared"
+import type { OrganizationSettings } from "@domain/shared"
 import { SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Organization } from "../entities/organization.ts"
@@ -8,8 +8,6 @@ export interface UpdateOrganizationInput {
   readonly name?: string | undefined
   readonly settings?: OrganizationSettings | undefined
 }
-
-export type UpdateOrganizationError = NotFoundError | RepositoryError
 
 export const updateOrganizationUseCase = (input: UpdateOrganizationInput) =>
   Effect.gen(function* () {

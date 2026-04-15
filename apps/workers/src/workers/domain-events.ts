@@ -1,7 +1,13 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
+import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
+import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
+import { hash } from "@repo/utils"
 import { Data, Effect } from "effect"
 
 class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
@@ -10,9 +16,6 @@ class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
 }> {}
 
 const logger = createLogger("domain-events")
-
-export const TRACE_END_DEBOUNCE_MS = 5 * 60 * 1000
-export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
 
 type EventHandlerMap = {
   [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
@@ -28,60 +31,104 @@ export const createDomainEventsWorker = ({
   publisher: QueuePublisherShape
 }) => {
   const handlers: EventHandlerMap = {
-    MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
+    MagicLinkEmailRequested: (event) =>
+      hash(event.payload.magicLinkUrl).pipe(
+        Effect.flatMap((magicLinkHash) =>
+          pub.publish("magic-link-email", "send", event.payload, {
+            dedupeKey: `emails:magic-link:${magicLinkHash}`,
+          }),
+        ),
+      ),
 
-    UserDeletionRequested: (event) => pub.publish("user-deletion", "delete", event.payload),
+    InvitationEmailRequested: (event) =>
+      hash(event.payload.invitationUrl).pipe(
+        Effect.flatMap((invitationHash) =>
+          pub.publish("invitation-email", "send", event.payload, {
+            dedupeKey: `emails:invitation:${invitationHash}`,
+          }),
+        ),
+      ),
+
+    UserDeletionRequested: (event) =>
+      pub.publish("user-deletion", "delete", event.payload, {
+        dedupeKey: `users:deletion:${event.payload.userId}`,
+      }),
 
     SpanIngested: (event) =>
-      pub.publish("live-traces", "end", event.payload, {
-        dedupeKey: `live-traces:end:${event.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
-        debounceMs: TRACE_END_DEBOUNCE_MS,
-      }),
-
-    TraceEnded: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload),
-          pub.publish("live-annotation-queues", "curate", event.payload),
-          pub.publish("system-annotation-queues", "flag", event.payload),
-        ],
-        { concurrency: "unbounded" },
-      ).pipe(Effect.asVoid),
-
-    ScoreImmutable: (event) =>
-      Effect.all(
-        [
-          pub.publish("analytic-scores", "save", {
-            organizationId: event.payload.organizationId,
-            projectId: event.payload.projectId,
-            scoreId: event.payload.scoreId,
+          pub.publish("live-evaluations", "enqueue", event.payload, {
+            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
-          ...(event.payload.issueId === null
-            ? []
-            : [
-                pub.publish(
-                  "issues",
-                  "refresh",
-                  {
-                    organizationId: event.payload.organizationId,
-                    projectId: event.payload.projectId,
-                    issueId: event.payload.issueId,
-                  },
-                  {
-                    dedupeKey: `issues:refresh:${event.payload.issueId}`,
-                    debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
-                  },
-                ),
-              ]),
+          pub.publish("live-annotation-queues", "curate", event.payload, {
+            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
+          }),
+          pub.publish("system-annotation-queues", "fanOut", event.payload, {
+            dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
+          }),
+          pub.publish(
+            "projects",
+            "checkFirstTrace",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              traceId: event.payload.traceId,
+            },
+            { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
+
+    ScoreCreated: (event) =>
+      Effect.all([
+        pub.publish("issues", "discovery", event.payload, {
+          dedupeKey: `issues:discovery:${event.payload.scoreId}`,
+        }),
+        pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
+        }),
+        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
+          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
+        }),
+      ]),
+
+    ScoreAssignedToIssue: (event) =>
+      pub.publish("issues", "refresh", event.payload, {
+        dedupeKey: `issues:refresh:${event.payload.issueId}`,
+        debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+      }),
 
     OrganizationCreated: (event) =>
-      pub.publish("api-keys", "create", {
-        organizationId: event.payload.organizationId,
-        name: "Default API Key",
+      pub.publish(
+        "api-keys",
+        "create",
+        {
+          organizationId: event.payload.organizationId,
+          name: DEFAULT_API_KEY_NAME,
+        },
+        {
+          dedupeKey: `api-keys:create:${event.payload.organizationId}`,
+        },
+      ),
+
+    ProjectCreated: (event) =>
+      pub.publish("projects", "provision", event.payload, {
+        dedupeKey: `projects:provision:${event.payload.projectId}`,
       }),
+
+    UserSignedUp: () => Effect.void,
+    MemberJoined: () => Effect.void,
+    MemberInvited: () => Effect.void,
+    ApiKeyCreated: () => Effect.void,
+    DatasetCreated: () => Effect.void,
+    EvaluationConfigured: () => Effect.void,
+    AnnotationQueueItemCompleted: () => Effect.void,
+    ProjectDeleted: () => Effect.void,
+    FirstTraceReceived: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {
@@ -106,9 +153,35 @@ export const createDomainEventsWorker = ({
         return Effect.fail(err)
       }
 
-      // Force type in runtime
       const handler = maybeHandler as EventHandlerFn
-      return handler(event)
+      const primary = handler(event)
+
+      if (!isPostHogTracked(event.name)) {
+        return primary
+      }
+
+      // PostHog fan-out is fire-and-forget: its failure must never propagate
+      // through Effect.all and cause the primary handler to be retried (which
+      // would double-run effects like api-key creation or project provisioning).
+      const analytics = pub
+        .publish(
+          "posthog-analytics",
+          "track",
+          {
+            eventName: event.name,
+            organizationId: event.organizationId,
+            payload: event.payload,
+            occurredAt: envelope.occurredAt.toISOString(),
+          },
+          { dedupeKey: `posthog:${envelope.id}` },
+        )
+        .pipe(
+          Effect.catch((e: unknown) =>
+            Effect.sync(() => logger.warn(`posthog fan-out publish failed for ${event.name}`, e)),
+          ),
+        )
+
+      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
   })
 }

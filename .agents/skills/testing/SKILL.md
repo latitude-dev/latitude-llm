@@ -1,3 +1,8 @@
+---
+name: testing
+description: Writing or debugging tests, choosing unit vs integration style, Postgres/ClickHouse tests, regenerating ClickHouse test schema, or exporting test helpers from packages without pulling test code into production bundles.
+---
+
 # Testing conventions and in-memory databases
 
 **When to use:** Writing or debugging tests, choosing unit vs integration style, Postgres/ClickHouse tests, regenerating ClickHouse test schema, or **exporting test helpers from packages** without pulling test code into production bundles.

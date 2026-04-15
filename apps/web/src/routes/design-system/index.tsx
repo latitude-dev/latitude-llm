@@ -1,5 +1,9 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  Avatar,
+  AvatarGroup,
+  Badge,
+  BarChart,
   Button,
   Card,
   CardContent,
@@ -7,16 +11,23 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  ChartSkeleton,
   Checkbox,
   CopyButton,
+  type DateRange,
+  DateRangePicker,
   FormField,
   GitHubIcon,
   GoogleIcon,
+  HistogramSkeleton,
   Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
   Input,
   Label,
   LatitudeLogo,
   RichTextEditor,
+  Status,
   Text,
   useMountEffect,
 } from "@repo/ui"
@@ -85,6 +96,50 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <Text.H5>Heading 5</Text.H5>
           <Text.H6>Heading 6</Text.H6>
           <Text.Mono>const status = "ready";</Text.Mono>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Avatar & AvatarGroup"
+        description="Hash-colored initials, optional image, and stacked group with overflow."
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-2">
+              <Text.H6 weight="semibold">Sizes</Text.H6>
+              <div className="flex items-center gap-3">
+                <Avatar name="Ada Lovelace" size="sm" />
+                <Avatar name="Grace Hopper" size="md" />
+                <Avatar name="Margaret Hamilton" size="lg" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Text.H6 weight="semibold">Stacked ring (AvatarGroup)</Text.H6>
+              <Avatar name="Queue assignee" size="md" stacked />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">AvatarGroup (3 visible + overflow)</Text.H6>
+            <AvatarGroup
+              size="md"
+              items={[
+                { id: "1", name: "Alex Rivera" },
+                { id: "2", name: "Sam Chen" },
+                { id: "3", name: "Jordan Lee" },
+                { id: "4", name: "Taylor Kim" },
+                { id: "5", name: "Riley Patel" },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Badge uppercase</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="outline" size="small" uppercase noWrap>
+                live
+              </Badge>
+            </div>
+          </div>
         </div>
       </ShowcaseSection>
 
@@ -198,6 +253,39 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Date Range Picker"
+        description="V1-inspired calendar popover with presets, adapted to the v2 design system."
+      >
+        <DateRangePickerShowcase />
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Status"
+        description="Compact pill statuses with semantic variants and a leading dot."
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Status label="Neutral" variant="neutral" />
+            <Status label="Info" variant="info" />
+            <Status label="Success" variant="success" />
+            <Status label="Warning" variant="warning" />
+            <Status label="Destructive" variant="destructive" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Truncation</Text.H6>
+            <div className="max-w-64">
+              <Status
+                label="This is a longer status label that truncates cleanly in constrained layouts"
+                variant="info"
+              />
+            </div>
+          </div>
+        </div>
+      </ShowcaseSection>
+
       <ShowcaseSection theme={theme} title="Checkbox" description="Selection control with indeterminate state.">
         <CheckboxShowcase />
       </ShowcaseSection>
@@ -221,6 +309,46 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
             <CopyButton value="cuid_abc123def456" />
           </div>
         </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Charts"
+        description="ECharts bar chart with CSS-variable theming; skeleton for loading states."
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">BarChart</Text.H6>
+            <BarChart
+              colorScheme={theme}
+              height={200}
+              ariaLabel="Sample requests per day"
+              data={[
+                { category: "Mon", value: 120 },
+                { category: "Tue", value: 84 },
+                { category: "Wed", value: 162 },
+                { category: "Thu", value: 95 },
+                { category: "Fri", value: 140 },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">ChartSkeleton</Text.H6>
+            <ChartSkeleton minHeight={160} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">HistogramSkeleton</Text.H6>
+            <HistogramSkeleton height={160} />
+          </div>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Infinite Table"
+        description="Virtualized list with sortable headers and an optional second row via renderSubheader."
+      >
+        <InfiniteTableSubheaderDemo />
       </ShowcaseSection>
 
       <Card className={`relative overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
@@ -252,6 +380,54 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           </Text.H6>
         </CardFooter>
       </Card>
+    </div>
+  )
+}
+
+type DemoRow = { id: string; name: string; amount: number }
+
+const demoTableColumns: InfiniteTableColumn<DemoRow>[] = [
+  {
+    key: "name",
+    header: "Name",
+    render: (r) => r.name,
+    renderSubheader: () => (
+      <Text.H6 color="foregroundMuted" className="truncate">
+        —
+      </Text.H6>
+    ),
+  },
+  {
+    key: "amount",
+    header: "Amount",
+    align: "end",
+    sortKey: "amount",
+    render: (r) => r.amount,
+    renderSubheader: () => (
+      <Text.H6 color="foregroundMuted" className="truncate">
+        subtotal
+      </Text.H6>
+    ),
+  },
+]
+
+function InfiniteTableSubheaderDemo() {
+  const data: DemoRow[] = [
+    { id: "a", name: "Northwind", amount: 120 },
+    { id: "b", name: "Contoso", amount: 84 },
+    { id: "c", name: "Fabrikam", amount: 210 },
+  ]
+
+  return (
+    <div className="h-[200px] min-h-0 flex flex-col rounded-lg border border-border/60">
+      <InfiniteTable
+        data={data}
+        columns={demoTableColumns}
+        getRowKey={(r) => r.id}
+        sorting={{ column: "amount", direction: "desc" }}
+        defaultSorting={{ column: "amount", direction: "desc" }}
+        onSortChange={() => {}}
+      />
     </div>
   )
 }
@@ -305,6 +481,89 @@ function RichTextEditorShowcase() {
       <div className="flex flex-col gap-1">
         <Text.H6 weight="bold">Plain text</Text.H6>
         <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
+      </div>
+    </div>
+  )
+}
+
+function startOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function endOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(23, 59, 59, 999)
+  return next
+}
+
+function subtractDays(days: number): Date {
+  const next = new Date()
+  next.setDate(next.getDate() - days)
+  return next
+}
+
+function formatRangePreview(range?: DateRange) {
+  if (range?.from && range?.to) {
+    return `${range.from.toLocaleString()} - ${range.to.toLocaleString()}`
+  }
+
+  if (range?.from) {
+    return `From ${range.from.toLocaleString()}`
+  }
+
+  if (range?.to) {
+    return `Until ${range.to.toLocaleString()}`
+  }
+
+  return "No range selected"
+}
+
+function DateRangePickerShowcase() {
+  const presets = [
+    {
+      id: "today",
+      label: "Today",
+      range: {
+        from: startOfLocalDay(new Date()),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+    {
+      id: "last-7-days",
+      label: "Last 7 days",
+      range: {
+        from: startOfLocalDay(subtractDays(7)),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+    {
+      id: "last-30-days",
+      label: "Last 30 days",
+      range: {
+        from: startOfLocalDay(subtractDays(30)),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+  ] as const
+  const [range, setRange] = useState<DateRange | undefined>(presets[1].range)
+  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>(presets[1].id)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <DateRangePicker
+        value={range}
+        presets={presets}
+        selectedPresetId={selectedPresetId}
+        placeholder="All time"
+        onChange={({ range: nextRange, source, presetId }) => {
+          setRange(nextRange)
+          setSelectedPresetId(source === "preset" ? presetId : undefined)
+        }}
+      />
+      <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+        <Text.H6 color="foregroundMuted">{formatRangePreview(range)}</Text.H6>
       </div>
     </div>
   )

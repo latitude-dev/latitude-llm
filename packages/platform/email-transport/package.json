@@ -10,15 +10,17 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@domain/email": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "nodemailer": "^8.0.4"
+    "nodemailer": "^8.0.5"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.0"
+    "@repo/vitest-config": "workspace:*",
+    "@types/nodemailer": "^6.4.0",
+    "vitest": "catalog:"
   }
 }

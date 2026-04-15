@@ -1,9 +1,10 @@
-// Phantom type helper: returns an empty object at runtime but carries type T
-// at compile time. This lets us define the registry as a single const object
-
 import type { DomainEvent } from "@domain/events"
 
-// from which both TopicRegistry (the type) and TOPIC_NAMES (runtime) are derived.
+/**
+ * Phantom type helper: returns an empty object at runtime but carries type T
+ * at compile time. This lets us define the registry as a single const object
+ * from which both TopicRegistry (the type) and TOPIC_NAMES (runtime) are derived.
+ */
 function payloads<T extends Record<string, unknown>>(): T {
   return {} as T
 }
@@ -23,9 +24,16 @@ const _registry = {
       readonly magicLinkUrl: string
       readonly emailFlow: string | null
       readonly organizationId: string
+    }
+  }>(),
+
+  "invitation-email": payloads<{
+    send: {
+      readonly email: string
+      readonly invitationUrl: string
+      readonly organizationId: string
       readonly organizationName: string
-      readonly inviterName: string | null
-      readonly invitationId: string | null
+      readonly inviterName: string
     }
   }>(),
 
@@ -66,6 +74,12 @@ const _registry = {
   }>(),
 
   issues: payloads<{
+    discovery: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+      readonly issueId: string | null
+    }
     refresh: {
       readonly organizationId: string
       readonly projectId: string
@@ -73,16 +87,22 @@ const _registry = {
     }
   }>(),
 
-  "analytic-scores": payloads<{
-    save: {
+  evaluations: payloads<{
+    align: {
       readonly organizationId: string
       readonly projectId: string
-      readonly scoreId: string
+      readonly issueId: string
+      readonly evaluationId: string
     }
   }>(),
 
   "annotation-scores": payloads<{
-    publish: {
+    publishHumanAnnotation: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+    }
+    markReviewStarted: {
       readonly organizationId: string
       readonly projectId: string
       readonly scoreId: string
@@ -112,15 +132,23 @@ const _registry = {
   }>(),
 
   "system-annotation-queues": payloads<{
-    flag: {
+    fanOut: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
     }
-    annotate: {
+  }>(),
+
+  projects: payloads<{
+    provision: {
       readonly organizationId: string
       readonly projectId: string
-      readonly queueId: string
+      readonly name: string
+      readonly slug: string
+    }
+    checkFirstTrace: {
+      readonly organizationId: string
+      readonly projectId: string
       readonly traceId: string
     }
   }>(),
@@ -129,6 +157,31 @@ const _registry = {
     create: {
       readonly organizationId: string
       readonly name: string
+    }
+  }>(),
+
+  "annotation-queues": payloads<{
+    bulkImport: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly queueId: string
+      readonly selection:
+        | { readonly mode: "selected"; readonly traceIds: readonly string[] }
+        | { readonly mode: "all"; readonly filters?: Record<string, unknown> }
+        | {
+            readonly mode: "allExcept"
+            readonly traceIds: readonly string[]
+            readonly filters?: Record<string, unknown>
+          }
+    }
+  }>(),
+
+  "posthog-analytics": payloads<{
+    track: {
+      readonly eventName: string
+      readonly organizationId: string
+      readonly payload: Record<string, unknown>
+      readonly occurredAt: string
     }
   }>(),
 }

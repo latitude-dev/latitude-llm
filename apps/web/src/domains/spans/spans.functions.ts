@@ -1,13 +1,12 @@
-import { NotFoundError, OrganizationId, SpanId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
-import { SpanRepository } from "@domain/spans"
-import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
+import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export interface SpanRecord {
   readonly organizationId: string
@@ -15,6 +14,7 @@ export interface SpanRecord {
   readonly traceId: string
   readonly spanId: string
   readonly parentSpanId: string
+  readonly simulationId: string
   readonly name: string
   readonly serviceName: string
   readonly kind: SpanKind
@@ -77,6 +77,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   traceId: span.traceId,
   spanId: span.spanId,
   parentSpanId: span.parentSpanId,
+  simulationId: span.simulationId,
   name: span.name,
   serviceName: span.serviceName,
   kind: span.kind,
@@ -135,7 +136,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 })
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ traceId: z.string() }))
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
@@ -143,14 +143,45 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.findByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
+        return yield* repo.listByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
     return spans.map(serializeSpan)
   })
 
+export const mapConversationToSpans = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .handler(
+    async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+      const traceId = TraceId(data.traceId)
+
+      return Effect.runPromise(
+        Effect.gen(function* () {
+          const traceRepo = yield* TraceRepository
+          const spanRepo = yield* SpanRepository
+
+          const [traceDetail, spans] = yield* Effect.all([
+            traceRepo
+              .findByTraceId({
+                organizationId: orgId,
+                projectId: ProjectId(data.projectId),
+                traceId,
+              })
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+            spanRepo.findMessagesForTrace({ organizationId: orgId, traceId }),
+          ])
+
+          if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
+
+          return buildConversationSpanMaps(traceDetail.allMessages, spans)
+        }).pipe(withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId)),
+      )
+    },
+  )
+
 export const getSpanDetail = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ traceId: z.string(), spanId: z.string() }))
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
     const { organizationId } = await requireSession()
@@ -165,8 +196,5 @@ export const getSpanDetail = createServerFn({ method: "GET" })
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
-    if (!span) {
-      throw new NotFoundError({ entity: "Span", id: data.spanId })
-    }
     return serializeSpanDetail(span)
   })

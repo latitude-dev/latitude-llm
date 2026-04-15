@@ -1,3 +1,8 @@
+---
+name: web-frontend
+description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
+---
+
 # Web app frontend (`apps/web`)
 
 **When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
@@ -127,16 +132,48 @@ export const useProjectsCollection = (...) => useLiveQuery(...)
 
 Collection files live in `apps/web/src/domains/*/collection.ts`.
 
-**Route guards** — Use `beforeLoad` for auth checks and redirects:
+**Route middleware vs route data**
+
+- Use `beforeLoad` for middleware-style checks that should block the route tree early: auth redirects, authorization gates, and other preconditions.
+- Use `loader` for data the route or layout actually renders. This keeps rendered data in TanStack Router's loader lifecycle, so it can use `staleTime`, `useLoaderData({ select })`, and avoid unnecessary refetching on same-route search-param navigations.
+- If the same lookup is both your guard and your rendered data source, prefer doing that work in `loader` once instead of duplicating it across `beforeLoad` and `loader`.
+- When multiple descendant routes need parent loader data, prefer a small route-scoped wrapper around `getRouteApi("...")` instead of repeating the route id string in every file.
+
+```typescript
+export const Route = createFileRoute("/admin")({
+  beforeLoad: async () => {
+    const session = await getSession()
+    if (!session?.user.isAdmin) throw redirect({ to: "/" })
+  },
+})
+```
 
 ```typescript
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  staleTime: Infinity,
+  loader: async () => {
     const session = await getSession()
     if (!session) throw redirect({ to: "/login" })
-    return { user: session.user }
+
+    const sessionData = session.session as Record<string, unknown>
+    const organizationId =
+      typeof sessionData.activeOrganizationId === "string" ? sessionData.activeOrganizationId : null
+    if (!organizationId) throw redirect({ to: "/welcome" })
+
+    return {
+      user: session.user,
+      organizationId,
+    }
   },
 })
+```
+
+```typescript
+const authenticatedRoute = getRouteApi("/_authenticated")
+
+export function useAuthenticatedUser() {
+  return authenticatedRoute.useLoaderData({ select: (data) => data.user })
+}
 ```
 
 **Key rules:**

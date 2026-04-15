@@ -10,7 +10,7 @@ import { ChSqlClientLive } from "./ch-sql-client.ts"
  * @example
  * ```ts
  * effect.pipe(
- *   withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+ *   withClickHouse(Layer.mergeAll(DatasetRowRepositoryLive, TraceRepositoryLive), client, orgId),
  * )
  * ```
  */

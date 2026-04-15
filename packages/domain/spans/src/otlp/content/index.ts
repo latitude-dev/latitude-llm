@@ -2,6 +2,7 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
+import { parseClaudeCode } from "./claude-code.ts"
 import { parseGenAICurrent } from "./genai.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
 import { parseOpenInference } from "./openinference.ts"
@@ -51,8 +52,18 @@ const PARSERS: readonly ContentParser[] = [
     parse: parseVercel,
   },
   {
-    canHandle: (attrs) => hasKey(attrs, "gen_ai.prompt") || hasKey(attrs, "gen_ai.completion"),
+    // Handles both JSON string format (gen_ai.prompt = "[...]") and
+    // flattened indexed format (gen_ai.prompt.0.role, gen_ai.prompt.0.content)
+    canHandle: (attrs) =>
+      hasKey(attrs, "gen_ai.prompt") ||
+      hasKey(attrs, "gen_ai.completion") ||
+      hasKeyPrefix(attrs, "gen_ai.prompt.") ||
+      hasKeyPrefix(attrs, "gen_ai.completion."),
     parse: parseGenAIDeprecated,
+  },
+  {
+    canHandle: (attrs) => hasKey(attrs, "user_prompt"), // Claude Code
+    parse: parseClaudeCode,
   },
 ]
 

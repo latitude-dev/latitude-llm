@@ -217,18 +217,21 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to publish `live-traces:end`
 - `TraceEnded`: published directly into `domain-events` by `live-traces:end` through `createEventsPublisher(queuePublisher)` after its debounce window elapses; consumed by the `domain-events` dispatcher to publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
-- `ScoreImmutable`: written transactionally after a canonical score row reaches immutability; consumed by the `domain-events` dispatcher to publish `analytic-scores:save`, and to publish `issues:refresh` as well when the immutable score already carries an `issue_id`
+- `IssueDiscoveryRequested`: written transactionally after a canonical failed non-errored score becomes eligible for centralized issue handling; the payload carries the canonical `scoreId` plus an optional selected `issueId`, and the `domain-events` dispatcher consumes it by publishing the deduped `issues:discovery` task
+- `IssueRefreshRequested`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be debounced; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
 - `SpanIngested` and `TraceEnded` stay on direct `createEventsPublisher(queuePublisher)` publication because they are high-volume append-only flows whose upstream writes are already durable before publication.
-- `ScoreImmutable` intentionally uses the transactional outbox rail so score persistence and immutable-save intent are atomic; this avoids losing immutable-score analytics save intent if a process crashes between score commit and queue publication.
+- `IssueDiscoveryRequested` and `IssueRefreshRequested` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with the downstream `issues:discovery` enqueue or debounced refresh request.
+- ClickHouse analytics sync and Weaviate projection sync are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
 
 Initial reliability topic/task contracts:
 
 - `live-traces` / `end`: debounced end-of-trace detection keyed by `(organizationId, projectId, traceId)`; each new `SpanIngested` event for the same trace replaces/reschedules the pending task using BullMQ-backed dedupe/debounce, with the debounce window defined by a named constant whose initial default is `5 minutes`
-- `analytic-scores` / `save`: retry-safe ClickHouse analytics save for one canonical immutable score, keyed by the canonical score id
-- `annotation-scores` / `publish`: debounced finalization of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
+- `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
+- `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
+- `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
 - `live-evaluations` / `enqueue`: lists active evaluations for one ended trace and publishes `execute` tasks for matches
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 - `live-annotation-queues` / `curate`: materializes live queue membership for one ended trace
@@ -237,10 +240,10 @@ Initial reliability topic/task contracts:
 
 Initial reliability workflows:
 
-- `issue-discovery`: multi-activity workflow for create-or-match issue discovery, assignment, projection sync, and post-immutability publication
+- `issue-discovery`: multi-activity workflow for create-or-match similarity discovery after the centralized `issues:discovery` gate decides the score still needs retrieval/rerank work, plus a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
 - `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
 
-Issue name/description regeneration (`issue-refresh`) is a single-step debounced task, not a multi-step orchestration. It uses a BullMQ delayed job via the `@domain/queue` topic/task abstraction with dedupe/debounce options, not a Temporal workflow.
+Issue handling now has two queue-backed steps before/after the workflow boundary: `issues:discovery` is a single-step gate for centralized direct-routing decisions, while `issues:refresh` is a single-step debounced task for subsequent detail regeneration of existing issues. The initial name/description for a brand-new issue must still be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. Only the branch that still needs similarity retrieval starts the Temporal `issue-discovery` workflow.
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -366,6 +369,11 @@ Manual ignore behavior is separate from `keepMonitoring`:
 
 - when an issue is manually ignored, its linked evaluations are archived immediately
 - `keepMonitoring` only governs what happens on issue resolution, not on issue ignore
+
+> Temporary implementation note: until the evaluations dashboard exists, issue-driven
+> "stop monitoring" actions in the product UI and issue lifecycle flows soft delete
+> linked evaluations instead of moving them into the archived/read-only state. The
+> intended long-term behavior remains archival once that dashboard ships.
 
 ### Post-MVP Provider/Model Settings
 
@@ -504,14 +512,14 @@ Even before the full runtime exists, MVP must already treat this as the real arc
 
 Evaluations generated from issues (by user demand) are the mainline flow of the reliability system.
 
-Issue discovery and issue creation do not automatically generate evaluations. Instead, the issue table row and issue details modal/page expose a `Generate evaluation` action. Issues may have several linked evaluations, and each time a user triggers that action, the server starts the `evaluation-alignment` workflow, returns a `jobId` immediately, and the frontend polls a dedicated status endpoint that reads a Redis key for that job while the initial generation/alignment pipeline runs in the background.
+Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `evaluation-alignment` workflow, returns a `jobId` immediately, and the frontend polls a dedicated status endpoint that reads a Redis key for that job while the initial generation/alignment pipeline runs in the background. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
 
 After explicit creation, automatic dynamic realignment remains unchanged for each linked evaluation: the system still refreshes alignment asynchronously as new annotations arrive.
 
 To generate or realign an evaluation for an issue, annotation-derived truth follows these minimum rules:
 
 - drafts and errored scores must never be used as alignment examples
-- alignment reads only finalized, non-errored canonical Postgres scores
+- alignment reads only published, non-errored canonical Postgres scores
 
 1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue; the minimum required positive-example count is `1`
 2. negative examples where the issue is absent, using this priority order among non-draft, non-errored scores when they exist:
@@ -598,8 +606,8 @@ Useful v1 defaults to review before implementing v2, even if they are later re-t
 - optimizer stagnation cap: `10`
 - default seed: `310700`
 - curated dataset bounds: `4` to `1000` rows
-- train/test split: `0.7`
-- validation slice from testset: `0.5`
+- train split: `0.7`
+- validation split: `0.3`
 
 Legacy v1 reference paths for this section:
 
@@ -622,7 +630,7 @@ Important v2 corrections relative to v1:
 - keep learnable feedback as a first-class concept, but redefine the invariant checks around script/runtime contracts rather than prompt provider/model/config compatibility
 - keep the narrow RPC payload design, but send script hashes / example ids / trajectory ids rather than prompt-document-specific payloads
 - do not copy prompt-specific scope semantics, prompt commit forking, or provider/model pinning as a hard optimizer invariant
-- do not assume v1 already had true multi-objective optimization just because GEPA exposed Pareto settings; the actual adapter only supplied a single scalar score, so v2 must implement real ordered objectives for alignment (MCC), cost, and duration
+- do not assume v1 already had true multi-objective optimization just because GEPA exposed Pareto settings; the actual adapter only supplied a single scalar score, and v2 continues to optimize on that scalar correctness signal
 - prefer deterministic sampling/seeding for v2 reliability work rather than copying v1's more ad-hoc randomness
 
 The initial baseline for a brand new issue-linked evaluation should be a sample script that performs a simple `llm()`-as-judge evaluation using:
@@ -687,8 +695,8 @@ Archived and deleted are different states:
 - archived evaluations remain visible in the UI in read-only mode and do not run anymore
 - deleted evaluations are soft deleted, removed from management UI, and do not run anymore
 - deleted evaluations still count in historical aggregates and score analytics
-- issue-linked evaluations are archived immediately when the issue is manually ignored
-- issue-linked evaluations may also be archived when the issue is manually resolved, according to the confirmation-modal toggle defaulted from `keepMonitoring`
+- issue-linked evaluations are archived immediately when the issue is manually ignored in the target design; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
+- issue-linked evaluations may also be archived when the issue is manually resolved, according to the confirmation-modal toggle defaulted from `keepMonitoring`; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
 - `keepMonitoring` only applies to issue resolution; it does not affect the manual ignore path
 
 ### Evaluation Model
@@ -884,7 +892,7 @@ Annotations are not a standalone canonical fact table. They are scores with:
 
 ### Draft Annotations
 
-Annotations may exist as drafts before they become final scores.
+Annotations may exist as drafts before they become published scores.
 
 Rules:
 
@@ -892,23 +900,25 @@ Rules:
 - draft state is represented by `draftedAt`, not by fake error strings
 - human-created UI annotations are written as drafts in Postgres immediately so they remain visible on refresh while the user is still editing
 - system-created annotation queues may also create draft annotations before a human has reviewed the trace
-- draft annotations do not enter issue discovery or alignment until `draftedAt` is cleared
-- a human-reviewed annotation can later confirm, edit, or replace a draft while it is still drafted; once finalized, it should only support deletion
+- draft annotations do not enter issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- if a draft annotation carries `issueId`, treat that value as editable draft intent only until publication clears `draftedAt`
+- a human-reviewed annotation can later confirm, edit, or replace a draft while it is still drafted; once published, it should only support deletion
 
 ### Annotation Issue Intent
 
-When an annotation is created through Latitude-managed UI, the annotator must be able to choose one of three issue paths:
+When an annotation is created through Latitude-managed UI, the annotator can currently choose one of two issue paths:
 
 - leave the annotation unlinked and let issue discovery decide
 - link the annotation to an existing issue explicitly
-- create a new issue inline while annotating
+
+Inline manual issue creation from the annotation flow is intentionally cancelled for now to keep the managed annotation UX and ownership rules simpler while Phase 11 finishes.
 
 Rules:
 
-- explicit link/create choices are human overrides and bypass similarity-based issue discovery for that annotation score
-- linking an existing issue writes the canonical `score.issue_id` directly
-- inline issue creation persists the new issue immediately and assigns the annotation score to it directly
-- manually created or manually linked annotation issues are immediately visible in the product
+- explicit link choices are human overrides and bypass similarity-based candidate selection for that annotation score once the draft is published
+- while the annotation is still drafted, a selected existing issue is stored only as editable draft intent on the canonical score row
+- publication of that linked draft writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task then performs the canonical ownership claim, centroid update, `IssueRefreshRequested` write, and Weaviate/ClickHouse sync after the Postgres transaction commits
+- explicitly linked annotation issues are immediately visible in the product only after publication
 
 ### Annotation Enrichment
 
@@ -925,7 +935,7 @@ Concrete v1 carry-forward notes:
 
 - v1 persisted the generalized/enriched reason so later discovery and reassignment work could reuse it instead of re-running enrichment every time
 - the enrichment step assembled surrounding trace/message context and asked an LLM to generalize the raw human annotation into clusterable language
-- v1 delayed discovery by `60` seconds for editable human results with no linked issue so the annotation could still be revised first; v2 keeps the same general idea through draft rows in Postgres, with the final debounce defined as a named constant
+- v1 delayed discovery by `60` seconds for editable human results with no linked issue so the annotation could still be revised first; v2 keeps the same general idea through draft rows in Postgres, with the publish debounce defined as a named constant
 
 ### Annotation Score Metadata
 
@@ -1011,7 +1021,7 @@ System-created default queues:
 #### Tool Call Errors
 
 - description: a tool call failed or returned an error state
-- instructions: review traces where a tool span errored, a tool execution failed, a malformed tool interaction occurred, or the conversation includes a tool-result message that clearly indicates failure. This queue is primarily detected through deterministic rules rather than the low-cost flagger model.
+- instructions: review traces where the conversation history shows failed tool results, malformed tool interactions, or another clear tool-call failure signal. In the initial deterministic implementation, `Tool Call Errors` inspects conversation history directly rather than relying on trace-level error counters or the low-cost flagger model.
 
 #### Resource Outliers
 
@@ -1062,6 +1072,33 @@ This queue is detected entirely through deterministic checks rather than the low
 
 5. **Trace-level rollup** — if any in-scope GenAI span fails the above checks, the trace is flagged for this queue. The draft annotation should reference the specific span(s) and the failure reason (missing output, empty, or degenerate repetition).
 
+#### Thrashing
+
+- description: the agent cycles between tools without making progress
+- instructions: review traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
+
+The flagger for this queue receives a structured payload derived from the trace's span tree rather than raw conversation messages alone. The payload must include the ordered tool call sequence so the flagger can detect repetition and cycling patterns:
+
+```typescript
+type ThrashingFlaggerPayload = {
+  conversation_excerpt: Array<{ role: string; content: string }>; // last N assistant/user turns for goal context
+  system_prompt_excerpt: string; // leading portion of the system prompt, truncated to a fixed token budget
+  turn_count: number; // total conversation turns in the trace
+  tool_call_sequence: Array<{
+    tool_name: string;
+    call_index: number; // zero-based position in the full trace tool call order
+    outcome: "success" | "error" | "empty_result";
+  }>; // most recent SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS entries (tail); summary below reflects the full trace
+  tool_call_summary: {
+    total_calls: number;
+    failed_calls: number;
+    repeated_tool_calls: Array<{ tool_name: string; call_count: number }>; // tools invoked more than once, sorted by call_count desc
+    tools_available: string[]; // tool names declared in the trace context
+    tools_used: string[]; // deduplicated tool names actually invoked
+  };
+};
+```
+
 Queue population flows:
 
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table
@@ -1074,7 +1111,7 @@ Queue population flows:
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors`, `Resource Outliers`, `Output Schema Validation`, and `Empty Response`
-- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
+- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages and the most recent `SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS` tool-call entries (tail), plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue; the aggregate tool-call summary (`total_calls`, `failed_calls`, `repeated_tool_calls`, etc.) always reflects the full trace even when the detailed sequence is truncated
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
 - `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
@@ -1302,10 +1339,10 @@ Its text format is intentionally part of the reliability design:
 Score lifecycle states:
 
 - draft: `draftedAt != null`
-- passed final: `draftedAt = null`, `passed = true`, `errored = false`
+- passed published: `draftedAt = null`, `passed = true`, `errored = false`
 - failed awaiting issue assignment: `draftedAt = null`, `passed = false`, `errored = false`, `issueId = null`
-- failed final: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
-- errored final: `draftedAt = null`, `errored = true`
+- failed published: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
+- errored published: `draftedAt = null`, `errored = true`
 
 Rules:
 
@@ -1378,7 +1415,7 @@ type EvaluationScoreMetadata = BaseScoreMetadata & {
 };
 
 type AnnotationScoreMetadata = BaseScoreMetadata & {
-  rawFeedback: string; // original feedback text before enrichment; human-authored for human drafts/final annotations, model-authored for system-created drafts
+  rawFeedback: string; // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
   messageIndex?: number; // optional index in the canonical `TraceDetail.allMessages` conversation; omit for conversation-level annotations
   partIndex?: number; // optional raw GenAI `parts[]` index inside the target message
   startOffset?: number; // optional start offset for substring annotations within a textual part
@@ -1413,7 +1450,7 @@ export const scores = latitudeSchema.table(
     sourceId: varchar("source_id", { length: 128 }).notNull(), // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link
-    issueId: cuid("issue_id"), // optional issue CUID assignment
+    issueId: cuid("issue_id"), // optional issue CUID assignment; draft annotations may carry editable issue intent here before publication
 
     value: doublePrecision("value").notNull(), // normalized [0, 1] score value
     passed: boolean("passed").notNull(), // true if passed, false if failed or errored
@@ -1454,7 +1491,7 @@ export const scores = latitudeSchema.table(
     index("scores_issue_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.issueId} IS NULL`),
-    index("scores_draft_finalization_idx")
+    index("scores_draft_publish_idx")
       .on(t.updatedAt, t.id)
       .where(sql`${t.draftedAt} IS NOT NULL`),
   ],
@@ -1466,6 +1503,7 @@ Postgres-specific rules:
 - `simulation_id` and `issue_id` are nullable in Postgres; do not use empty-string sentinels there
 - `errored` is maintained in application/domain code on every create or update
 - drafts update the same canonical Postgres row in place instead of deleting and recreating scores
+- `issue_id` on a draft annotation may represent user-editable issue intent; canonical issue ownership, centroid mutation, and downstream visibility happen only after `draftedAt = null`
 - once a score is no longer a draft, it may later be deleted, but it should not be edited again; failed non-errored scores may still receive later `issue_id` assignment before they become fully immutable
 - new Postgres `scores` rows must use repository conventions: `latitudeSchema`, `cuid("id")`, `tzTimestamp(...)`, `...timestamps()`, `organizationRLSPolicy("scores")`, and no foreign keys
 
@@ -1478,7 +1516,7 @@ Required Postgres indexes:
 - btree on `(organization_id, project_id, session_id, created_at, id)` with a partial predicate `session_id IS NOT NULL` for session drilldowns
 - btree on `(organization_id, project_id, span_id, created_at, id)` with a partial predicate `span_id IS NOT NULL` for span-scoped score hydration
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL AND errored = false AND passed = false AND issue_id IS NULL` for issue-discovery work selection
-- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans and other draft-aware annotation maintenance
+- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-publication scans and other draft-aware annotation maintenance
 - do not add GIN/JSONB indexes on `metadata`, and do not add Postgres text-search indexes on `feedback` or `error` in the scores foundation phase
 
 These draft-aware score indexes are the minimal annotation-editing and queue-review foundation; keep reusing canonical `scores` rows rather than introducing a standalone annotation table.
@@ -1554,6 +1592,8 @@ ClickHouse-specific rules:
 - do not allow duplicate rows for the same score id; analytics must remain correct without `FINAL`
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
+Phase 10 integration tests for “delete after publish” should assert the chosen behavior end-to-end.
+
 ClickHouse deployments in this repository have both `unclustered/` and `clustered/` migration variants. The `scores` analytics table must follow the same pattern:
 
 - `unclustered/`: keep the schema above with `CREATE TABLE IF NOT EXISTS scores` and `ENGINE = MergeTree()`
@@ -1568,7 +1608,7 @@ ClickHouse fixed-width identifier rule:
 - use `FixedString(128)` for bounded non-CUID identifiers such as `session_id` and `source_id`
 - use `FixedString(32)` for trace ids and `FixedString(16)` for span ids
 
-### Score Finalization And Projection
+### Score Publication And Projection
 
 All score writes happen in Postgres first.
 
@@ -1577,19 +1617,19 @@ Publication rules:
 - if a score is a draft (`draftedAt != null`), do not write it to ClickHouse analytics
 - if a score is non-draft and either passed or errored, write it to ClickHouse analytics immediately because it is already immutable
 - if a score is non-draft, failed, and non-errored, keep it only in Postgres until issue discovery or direct issue assignment sets `issue_id`
-- when a draft becomes non-draft and still has `issue_id = null`, it may now participate in issue discovery
+- when a draft is published and still has `issue_id = null`, it may now participate in issue discovery
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - publishing to ClickHouse analytics must be retry-safe and preserve at-most-one row per score id
-- the canonical Postgres write transaction should request immutable-score analytics save through a transactional `ScoreImmutable` domain event; the downstream `analytic-scores:save` task must re-fetch the canonical score row and insert into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale save requests become no-ops
+- the canonical Postgres write transaction must not talk to ClickHouse directly; after that transaction commits, the caller must run the shared `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale sync attempts become no-ops
 
 Draft-specific rules:
 
 - human-created UI annotations are written as drafts in Postgres immediately so refresh-safe reads do not depend on local memory or Redis
-- draft finalization uses a debounced timeout after the last edit; the initial default is `5 minutes`
-- human-editable draft finalization should be driven by a debounced `annotation-scores` topic task `publish` keyed by the canonical score id rather than by browser-local timers or persisted due-work scans
+- draft publication uses a debounced timeout after the last edit; the initial default is `5 minutes`
+- human-editable draft publication should be driven by a debounced `annotation-scores` topic task `publish` keyed by the canonical score id rather than by browser-local timers or persisted due-work scans
 - system-created queue annotations are also drafts, but they use `draftedAt` instead of faking an error state
-- system-created queue drafts do not use the automatic finalization path; they stay draft until explicit human review resolves them
-- once a draft is finalized, it may be deleted later but should no longer be edited
+- system-created queue drafts do not use the automatic publication path; they stay draft until explicit human review resolves them
+- once a draft is published, it may be deleted later but should no longer be edited
 
 Delete behavior:
 
@@ -1635,7 +1675,7 @@ Issues are the entrypoint for:
 Issue creation eligibility in MVP:
 
 - annotations are the primary signal
-- during annotation creation, a human may also link an annotation to an existing issue or create a new issue inline; those explicit human paths bypass similarity discovery for that annotation score
+- during annotation creation, a human may also link an annotation to an existing issue explicitly; that human path bypasses similarity discovery for that annotation score
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
@@ -1677,18 +1717,18 @@ Manual resolution behavior:
 
 ### Manual Creation From Annotations
 
-Issue discovery is not the only way an issue can be created or assigned.
+Issue discovery is not the only way an issue can be assigned.
 
 When annotating a conversation in managed UI, the annotator may:
 
-- create a new issue inline
 - link the annotation to an existing issue
 
-For those explicit human actions:
+For that explicit human action:
 
-- do not run similarity search for that annotation score
-- assign canonical ownership directly through `scores.issue_id`
-- treat the issue as annotation-backed evidence for visibility and follow-up monitoring
+- do not run similarity search for that annotation score once the draft is published
+- keep any selected issue as editable draft intent while the annotation is still drafted
+- publication assigns canonical ownership through `scores.issue_id`, updates the issue centroid, and then requests debounced issue-detail refresh plus direct projection/analytics sync
+- treat the issue as annotation-backed evidence for visibility and follow-up monitoring only after publication
 
 ### Issue Clusterization
 
@@ -1705,15 +1745,21 @@ Issue discovery must remain close to the original proposal and to the proven par
 9. rerank candidates with VoyageAI `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
 11. if a candidate passes thresholds, assign the score to that issue in Postgres
-12. otherwise create a new issue, assign the score to it in Postgres, and generate its name/description
+12. otherwise call a separate retryable issue-details-generation activity to synchronously generate the initial issue name/description from that first score, outside the final create/assign transaction, then persist the new issue with those details and assign the score to it in Postgres
 13. once the score has `issue_id`, project the now-immutable score into ClickHouse
 
 All similarity, rerank, visibility, and debounce thresholds must be configurable constants defined inside the owning domain package rather than as scattered inline literals.
 
 Discovery/refresh execution rules:
 
-- eligible non-draft failed non-errored scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
-- issue name/description regeneration should run through a debounced BullMQ task on the `issue-refresh` topic once the refresh window elapses
+- eligible non-draft failed non-errored scores should write `IssueDiscoveryRequested` after commit rather than running issue-routing, embeddings, or search inline in request or annotation-edit paths
+- the `domain-events` dispatcher should publish a deduped `issues:discovery` task from `IssueDiscoveryRequested`; that task rechecks eligibility and either assigns a selected/linked issue directly or starts the `issue-discovery` workflow only when similarity search is still required
+- the very first name/description for a brand-new issue must be generated synchronously inside `issue-discovery` before the issue row is first persisted
+- the synchronous first-generation step must happen in its own workflow activity, outside and before the final create/assign transaction, so LLM generation retries do not hold the ownership-write transaction open and the first persisted issue row already carries the generated name/description
+- subsequent issue name/description regeneration should run through a debounced BullMQ task on the `issues:refresh` topic once the refresh window elapses
+- the debounced `issues:refresh` path must generate from the last `25` assigned issue occurrences plus the current persisted issue name/description as the stabilization baseline
+- after generation, `issues:refresh` must re-lock and re-read the canonical issue row before saving any new details so it does not overwrite newer centroid or lifecycle updates
+- after `issues:refresh` persists changed issue details, it must upsert the Weaviate issue projection again; if the issue no longer exists or the generated details are unchanged, it should skip the projection write
 - workflows and debounced tasks should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
 
 Proven v1 retrieval defaults to carry forward and revalidate:
@@ -1753,7 +1799,8 @@ Concurrency and ownership rules learned from v1:
 - revalidate under lock before the final assignment write
 - only save the score to ClickHouse after that final Postgres ownership write makes it immutable
 - do not recreate the v1 race where one failing result could end up attached to multiple active issues at once; in v2, canonical ownership must be the single `scores.issue_id` contract
-- preserve resolved-issue rematching so regressions can be surfaced again, but do not blindly copy all other inactive/ignored matching behavior without an explicit product decision
+- do not let two parallel no-match discovery flows for different scores turn into duplicate visible issues for the same emerging problem; the intended solution can live in the later denoising/provisional workflow rather than the Phase 11 MVP flow, but the product must still absorb that noise before it reaches the main issue surface
+- preserve resolved-issue and ignored-issue rematching so regressions can be surfaced and ignored ownership stays stable across future matching scores
 
 Legacy v1 reference paths for this section:
 
@@ -1836,7 +1883,8 @@ Post-MVP, the system may adopt a stronger buffered/provisional creation workflow
 
 - newly created issue candidates are persisted immediately
 - provisional issues stay hidden from the main UI until they reach a promotion threshold, receive annotation evidence, or are explicitly promoted
-- annotation-linked issues remain immediately visible
+- published annotation-linked issues remain immediately visible
+- the stronger workflow may also absorb duplicate/noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - this stronger workflow is a post-MVP discovery policy, not a change to the canonical issue entity shape
 
 ### Issue Monitoring
@@ -1845,7 +1893,7 @@ Issues are initially discovered from human annotations and failed evaluation/cus
 
 Because humans cannot annotate everything, users can generate evaluations from issues when they want to monitor active issues on live traffic.
 
-Issue discovery never auto-creates those evaluations. The issue table row and the issue details modal/page must expose a `Generate evaluation` action, and issues may accumulate several linked evaluations over time.
+Issue discovery never auto-creates those evaluations. The managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations. Issues may still accumulate several linked evaluations over time.
 
 That action is asynchronous:
 
@@ -1864,8 +1912,8 @@ If monitoring continues after resolution and new failures appear, the issue beco
 
 Issue lifecycle effects on linked evaluations:
 
-- manual ignore archives linked evaluations immediately
-- manual resolution uses the confirmation-modal toggle, defaulted from `keepMonitoring`, to decide whether linked evaluations stay active or archive
+- manual ignore archives linked evaluations immediately in the target design; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
+- manual resolution uses the confirmation-modal toggle, defaulted from `keepMonitoring`, to decide whether linked evaluations stay active or archive; until the evaluations dashboard exists, the temporary implementation soft deletes them when the user chooses not to keep monitoring
 
 ### Issue Model
 
@@ -1920,6 +1968,10 @@ Issue naming and centroid semantics:
 - they must stay generic enough to group scores that point to the same underlying problem even when the exact background details differ
 - they should not overfit to one conversation, one user message, or one concrete example
 - the centroid is generated from the clustered score feedback embeddings and drives semantic matching; the text fields help both human understanding and BM25 matching
+- synchronous first-generation and later asynchronous `issues:refresh` regeneration must both call the same shared issue-details generation use case so prompt logic, score selection, and stabilization behavior live in one place
+- for existing issues, that shared use case should generate from the last `25` assigned issue occurrences' canonical feedback, using the previous issue `name` and `description` as baseline context so the model avoids unnecessary churn and may keep the current details unchanged when they already capture the underlying issue well
+- for brand-new issues, that shared use case must accept optional explicit occurrence input as an array of issue occurrences, because the synchronous first-generation path runs before the score is yet linked to the new issue and therefore cannot rely only on repository-loaded assigned issue occurrences
+- after asynchronous issue detail regeneration changes the canonical Postgres `name` or `description`, the Weaviate issue projection must be upserted again so BM25-searchable text stays in sync with Postgres
 
 Search projection in Weaviate:
 
@@ -2039,56 +2091,159 @@ export async function getIssuesCollection({ tenantName }: { tenantName: string }
 
 This code is preserved verbatim as a v1 reference. Do not copy it blindly into v2 without also applying the intentional v2 changes documented above, especially the project-scoped tenant name and UUID-backed Postgres/Weaviate linkage.
 
-### Issue Table
+### Issues Page
 
 Each project has an `Issues` page.
 
-Before the table:
+Its overall shell should mirror the project `Traces` page:
 
-- a tab menu with `Active`, `Regressed`, and `Archived`
-- count per tab
-- search bar that performs hybrid search without rerank
-- date range selector
+- a top action row
+- an aggregate-counts-plus-histogram analytics panel
+- an infinitely paginated issues table
+- a right-side details drawer opened from table row click
 
-The search query embedding should be cached for one day in Redis.
+#### Actions Row
 
-Issue management actions:
+The top action row uses the same left-end / spacer / right-end layout pattern as the project `Traces` page.
 
-- resolve/unresolve/ignore/unignore are available from the issue product surface
-- `Generate evaluation` is available per issue and starts a background `evaluation-alignment` workflow run
-- manual resolve opens a confirmation modal with a keep-monitoring toggle
-- that toggle defaults from `keepMonitoring` and can be overridden before confirming the resolution
+On the left end side:
+
+1. a time range selector, using the same component family as the `Traces` page
+2. a `Columns` selector, using the same component family as the `Traces` page
+
+In the middle:
+
+- flexible empty space
+
+On the right end side:
+
+1. a tab menu with `Active` and `Archived`
+2. a search bar that performs issue hybrid search without rerank
+
+Action-row semantics:
+
+- the time range selector defaults to all time, meaning no time filter on the table or aggregate counts
+- the time range is applied to score `created_at` in ClickHouse, not to issue-row timestamps in Postgres
+- the columns selector only affects which columns are visible in the issues table
+- the `Active` / `Archived` tab filters the issues table only; it does not affect the analytics panel
+- the page exposes no additional shared trace-filter builder; the Issues action row is limited to time range, columns, lifecycle tab, and search
+- the search query embedding should rely on the shared AI-layer Redis cache
+
+#### Issues Page Read Orchestration
+
+The issues page list read is intentionally multi-store and must not be simplified into a single Postgres query.
+
+Read responsibilities:
+
+- ClickHouse owns score-backed time filtering, analytics, and per-issue occurrence/trend metrics
+- Weaviate owns issue hybrid search and similarity scores
+- Postgres owns canonical issue rows, lifecycle group filtering, and linked evaluation hydration
+
+Execution order:
+
+1. Build the score-backed ClickHouse predicate from the selected time range.
+2. Build the canonical issue-row Postgres predicate from lifecycle group state (`Active` / `Archived`).
+3. If search text is present, run Weaviate hybrid search without rerank, rely on the shared AI-layer Redis cache for the query embedding, and capture the matched issue UUIDs plus similarity scores.
+4. Run ClickHouse reads first to determine the issue ids that match the selected time range and to compute the issue-page analytics data needed for the panel and table.
+5. Intersect the ClickHouse candidate issue ids with the Weaviate search candidates when search text is present.
+6. Query canonical Postgres issues using `IN (...)` clauses on the matched issue ids / UUIDs and apply the lifecycle-group filter there.
+7. Hydrate linked evaluations from Postgres after the canonical issue rows are known.
+8. Perform final table ordering and pagination after merging Postgres rows with ClickHouse metrics and optional Weaviate similarity scores, so the cross-store sort keys are preserved.
+
+Control application rules:
+
+- the selected time range applies to the final issues table and the analytics panel through ClickHouse-backed issue candidate selection
+- search applies to the final issues table and the analytics panel through Weaviate candidate selection
+- lifecycle-group filtering in Postgres does not affect the analytics panel
+- no generic trace-filter builder or filter drawer is part of the Issues page surface
+- Postgres score rows must not be used for issue-page filtering or aggregations
+
+#### Analytics Panel
+
+The analytics block should reuse the same aggregate-counts-plus-histogram component pattern as the `Traces` page.
+
+Aggregate counts:
+
+1. new issues count
+2. escalating issues count
+3. regressed issues count
+4. resolved issues count
+5. seen occurrences count
+
+Aggregate-count rules:
+
+- the aggregate counts use the full selected time-range semantics on score `created_at`
+- no time selected means all time
+- only `from` selected means `created_at >= from`
+- only `to` selected means `created_at <= to`
+- both selected means a bounded time range
+- search and the selected time range affect these counts
+- the `Active` / `Archived` tab does not
+
+Histogram rules:
+
+- show the total occurrences of all matched issues by day
+- if both `from` and `to` are selected, render that exact range
+- if neither is selected, render the last 7 days ending today
+- if exactly one endpoint is selected, render the last 7 days ending at that selected endpoint
+- the histogram uses the same matched issue set as the analytics counts, meaning search and the selected time range apply, but the lifecycle-group tab does not
+
+#### Issues Table
+
+The issues table is infinitely paginated, following the same general table pattern as the `Traces` page. After fetching the current page, the next page should be prefetched in the background.
+
+Table interaction rules:
+
+- no bulk-selection checkbox or bulk-action bar is shown in this UI revision
+- row click opens the issue details drawer
+- default sorting is by last seen descending, then occurrences descending
+- when search text is present, similarity score descending is also preserved as an additional tie-breaker
+- the `Occurrences` column is user-sortable in ascending or descending order
 
 Issues table columns:
 
-- checkbox for bulk actions
-- `Name` with lifecycle tags and linked evaluation derived alignment tags when present
-- `Seen at`: last seen / age, like `11d ago / 3y old`
-- `Occurrences`: full-history count
-- `Trend`: mini bar chart for the last 14 days
+- `Issue`: issue name plus lifecycle tags; truncate/ellipsis the issue name so the column does not consume more than one third of the table width
+- `Trend`: mini histogram of issue occurrences for the last 14 days by day; use the same end-day selection logic as the analytics histogram, but always render exactly 14 daily buckets
+- `Seen at`: last seen / age, like `11d ago / 3y old`; this display uses full-history issue timestamps and is not re-based by the page-level time range, lifecycle-tab, or search controls
+- `Occurrences`: occurrence count for the selected time range; the column header also shows the sum of occurrences across all matched issues, not only the issues visible on the current page
+- `Affected traces`: `occurrences / total traces in the selected time window`, expressed as a percentage and capped at `100%`
+- `Evaluations`: linked evaluations shown as truncated tags containing the evaluation name plus alignment MCC percentage; if no evaluations are linked, show `-`
 
-Sorting:
+#### Issue Details Drawer
 
-- by last seen descending, then occurrences descending
+Clicking an issue row opens a right-side drawer, following the same interaction pattern as the `Traces` details drawer.
 
-Pagination:
+Drawer rules:
 
-- limit/offset
+- page-level time range, lifecycle-tab, and search controls do not apply inside this drawer; everything shown here uses full history
+- the header left side contains the close button and previous/next navigation buttons, mirroring the `Traces` details drawer chrome
+- the header right side contains an ignore/unignore secondary button and a resolve/unresolve primary button
 
-### Issue Details
+Drawer body sections:
 
-Row click opens a modal with:
+1. issue name and description
+2. a summary row with issue status, `Seen at`, and total occurrences
+3. a collapsible 14-day trend histogram ending today
+4. a collapsible linked evaluations section
+5. a collapsible mini traces list table
 
-- full name and description
-- `Generate evaluation` button
-- pending generation/alignment status when the current issue has a polled background job in flight
-- linked evaluations and their derived alignment (MCC)
-- last seen / first seen timestamps
-- total occurrences
-- 30-day occurrences chart
-- trace/session table with timestamp, preview, and duration
+Linked evaluations section behavior:
 
-The trace/session table uses keyset pagination and sorts by newest first.
+- render one evaluation row per linked evaluation
+- each evaluation row has two subrows:
+  1. evaluation name
+  2. last alignment date, alignment MCC percentage, and a manual realign action
+- if a realignment is currently in progress, replace the realign action with a loading spinner and the text `Aligning...`
+- each linked evaluation row also includes an archive action with a confirmation modal explaining that archiving it will stop monitoring this issue through that evaluation
+- when there are no linked evaluations, show a `Monitor issue` button here
+- when there is already at least one linked evaluation, do not show another monitor-generation button in the managed UI
+- `Monitor issue` reuses the asynchronous `evaluation-alignment` workflow kickoff plus polling flow defined above
+
+Mini traces table behavior:
+
+- use the same infinite-table family as the `Traces` page
+- show only timestamp and duration columns
+- list full-history seen traces for the issue, newest first
 
 ## Simulations
 
@@ -2492,7 +2647,7 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phase 9 can start once Phase 8 exposes base reads.
 
-- [x] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse save for finalized immutable scores only.
+- [x] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse save for published immutable scores only.
 - [x] Implement the project-scoped public `/scores` API for score ingestion, defaulting to custom scores while reserving `_evaluation: true` for later locally executed Latitude evaluation uploads, including arbitrary custom metadata storage.
 - [x] Implement the internal score writer used by evaluation execution and simulations, with Postgres-first writes and immutable-score analytics save into ClickHouse only when save rules are satisfied.
 - [x] Enforce exact metadata validation for evaluation, annotation, and custom scores before persistence.
@@ -2525,15 +2680,15 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with Phase 9 once phases 0, 3, and 8 land.
 
-- [ ] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
-- [ ] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
-- [ ] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, inline manual issue creation, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
-- [ ] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
-- [ ] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
-- [ ] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
-- [ ] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based finalization through `annotation-scores:publish`, deletion after finalization, and reliable reopening of message-level and text-range anchors.
+- [x] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
+- [x] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
+- [x] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, debounced draft publication through `annotation-scores:publish` keyed by the canonical score id, and post-publication immutability after the debounce window closes.
+- [x] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
+- [x] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
+- [x] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
+- [x] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based publication through `annotation-scores:publish`, deletion after publication, and reliable reopening of message-level and text-range anchors. Not done out of scope, tested manually that annotations UI worked.
 
-**Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue creation/linking preserves human ownership without relying on similarity discovery.
+**Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue linking preserves human ownership without relying on similarity discovery.
 
 ### (LAT-468) Phase 11 - Issues Discovery And Cluster Maintenance
 
@@ -2543,17 +2698,26 @@ Row click opens a detailed view with:
 
 Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core/src/voyage/index.ts`, `packages/core/src/services/issues/results/validate.ts`, `packages/core/src/services/issues/discover.ts`, `packages/core/src/services/issues/shared.ts`. Checkout branch `latitude-v1` in the old repository before using.
 
-- [ ] Implement score eligibility validation for issue discovery, including the explicit exclusion of errored scores, drafted scores with `draftedAt != null`, missing canonical feedback, already-owned scores, and any source classes explicitly excluded from clustering.
-- [ ] Implement direct issue assignment on canonical Postgres score rows for scores generated by issue-linked evaluations and for annotation scores that were explicitly linked or created by a human.
-- [ ] Implement feedback embedding with `voyage-4-large` at `2048` dimensions and caching.
-- [ ] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
-- [ ] Implement reranking with `rerank-2.5`, configurable thresholds, and the v1-style search sequence of hybrid retrieval first and rerank second.
-- [ ] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, retrieval/rerank, issue creation or assignment, Weaviate projection sync, and post-immutability ClickHouse save, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable.
-- [ ] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
-- [ ] Implement asynchronous issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue-refresh` topic with dedupe/debounce options, using retry-safe coordination between Postgres state and Weaviate projection updates.
-- [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
-- [ ] Implement immutable-score save into ClickHouse after issue assignment without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
-- [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue rematching, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
+- [x] Implement score eligibility validation for issue discovery, including the explicit exclusion of errored scores, drafted scores with `draftedAt != null`, missing canonical feedback, already-owned scores, and any source classes explicitly excluded from clustering.
+- [x] Centralize known-issue routing for failed non-errored non-draft scores behind `IssueDiscoveryRequested` plus a deduped `issues:discovery` task, so selected annotation issue intent and issue-linked evaluation routing are resolved in one place before either direct assignment or the Temporal `issue-discovery` workflow starts.
+- [x] Implement feedback embedding with `voyage-4-large` at `2048` dimensions and caching.
+  - [x] Add Voyage embedding support to the shared AI service surface (`AI.embed`) via `@platform/ai-voyage`.
+  - [x] Wire issue-discovery embedding calls to enforce `voyage-4-large` with `2048` dimensions.
+  - [x] Wire embedding caching in the issue-discovery embedding flow.
+- [x] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
+- [x] Implement reranking with `rerank-2.5`, fixed threshold constants, and the v1-style search sequence of hybrid retrieval first and rerank second.
+  - [x] Add Voyage reranking support to the shared AI service surface (`AI.rerank`) via `@platform/ai-voyage`.
+  - [x] Wire issue-discovery rerank calls to enforce `rerank-2.5`.
+  - [x] Implement and verify the retrieval order: hybrid retrieval first, rerank second.
+- [x] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
+- [x] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, matched-issue resolution against canonical Postgres state, synchronous first issue-details generation inside the create-from-score path for brand-new issues, separate issue creation and existing-issue assignment mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Weaviate issue search in workflow/activity code.
+  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, canonical matched-issue resolution, separate create-from-score and assign-to-issue mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
+  - [x] Lock the canonical issue row during existing-issue assignment so concurrent discovery workflows updating the same issue serialize centroid mutations instead of losing one occurrence.
+  - [x] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
+- [x] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issues:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned occurrences plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
+- [x] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
+- [x] Implement immutable-score save into ClickHouse after issue assignment through the shared direct `syncScoreAnalyticsUseCase` path, without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
+- [x] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
 
 **Exit gate**: new failed scores can match existing issues or create new ones; issue centroids move correctly over time; canonical score ownership cannot race into multiple active issues; issue visibility is denoised without reintroducing the v1 merge system.
 
@@ -2565,19 +2729,19 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
 
 Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizations`, `packages/core/src/services/optimizations/optimizers/evaluate.ts`, `packages/core/src/services/optimizations/optimizers/propose.ts`. Checkout branch `latitude-v1` in the old repository before using.
 
-- [ ] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
-- [ ] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
-- [ ] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `evaluation-alignment` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
-- [ ] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
-- [ ] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
-- [ ] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
-- [ ] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
-- [ ] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
-- [ ] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
-- [ ] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
-- [ ] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
-- [ ] Implement curated example sizing plus deterministic train/test/validation splitting for alignment runs using the configured bounds and defaults from this spec.
-- [ ] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
+- [x] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
+- [x] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
+- [x] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `evaluation-alignment` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
+- [x] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
+- [x] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
+- [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
+- [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
+- [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
+- [x] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
+- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
+- [x] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
+- [x] Implement curated example sizing plus deterministic balanced train/validation splitting for alignment runs using the configured bounds and defaults from this spec.
+- [x] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
 
 **Exit gate**: users can generate evaluations from issues when needed through background jobs with Redis-backed polling feedback and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
 
@@ -2603,15 +2767,21 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: can run in parallel with Phase 13 once phases 11 and 12 land.
 
-- [ ] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
-- [ ] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
-- [ ] Implement project-level issue search with hybrid search, no rerank, and one-day cached query embeddings.
-- [ ] Build the Issues page in `apps/web` with `Active`, `Regressed`, and `Archived` tabs, counts, search, date filter, and bulk actions, backed by issue server functions/collections, including the manual resolve confirmation modal with the keep-monitoring toggle defaulted from `keepMonitoring`, plus a per-row `Generate evaluation` action that starts a background job and polls its status.
-- [ ] Build the issue details modal/page with a `Generate evaluation` action, linked evaluations and their alignment state, pending generation/alignment status for in-flight jobs, seen-at data, trend chart, and trace/session drilldown table.
-- [ ] Surface linked evaluation names and alignment tags inside issue rows and details.
-- [ ] Add lifecycle regression tests covering bulk actions, `Generate evaluation` entry points in rows/details, Redis-backed polling feedback for in-flight generation, linked-evaluation listing, ignore-driven archival, resolve defaults from `keepMonitoring`, and regression reopening behavior.
+- [x] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
+- [x] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
+- [x] Implement the issues-page read contract that splits time range, search, and lifecycle controls across ClickHouse, Weaviate, and Postgres; runs ClickHouse first, invokes Weaviate only when search text is present, and then queries canonical Postgres issues through `IN (...)` clauses while preserving cross-store sort keys for final pagination.
+- [x] Implement ClickHouse-backed issue-page analytics reads for histogram buckets, lifecycle aggregate counts, per-issue occurrences in the selected time range, per-issue last seen values, per-issue 14-day trend buckets, and the selected-window total trace count used by `Affected traces`.
+- [x] Implement project-level issue search with Weaviate hybrid search, no rerank, shared AI-layer Redis caching for query embeddings, and propagation of search similarity scores into the final table ordering.
+- [x] Implement the `apps/web` issues domain server functions and collections for the new issues-page state model, including time-range state, columns state, Active/Archived lifecycle tab state, search state, infinite pagination, and next-page prefetch.
+- [x] Build the issues-page action row in `apps/web` so it mirrors the Traces-page structure with time range, columns, Active/Archived tabs, and search.
+- [x] Build the issues-page analytics panel in `apps/web` using the Traces-page aggregate-plus-histogram component pattern, including the default 7-day histogram fallback rules and aggregate counts for `new`, `escalating`, `regressed`, `resolved`, and `seen occurrences`.
+- [x] Build the infinitely paginated issues table in `apps/web` with columns `Issue`, `Trend`, `Seen at`, `Occurrences`, `Affected traces`, and `Evaluations`, including lifecycle tags, issue-name truncation, occurrence subheader aggregation, occurrence sorting, linked evaluation tags, and row-click drawer opening.
+- [x] Build the issue details drawer in `apps/web` with Traces-style close/navigation chrome, ignore/unignore and resolve/unresolve header actions, full-history summary data, a collapsible 14-day trend histogram, a collapsible linked evaluations section, and a collapsible infinitely paginated mini traces table.
+- [x] Integrate drawer-side monitoring and evaluation controls so `Monitor issue` appears only when no linked evaluations exist, monitor-generation kickoff polls background status until the resulting evaluation appears, linked evaluations show alignment metadata, manual realign shows `Aligning...` while in flight, and per-evaluation archive actions require confirmation.
+- [x] Keep the Phase 14 issue management surface web-only for now: implement search, analytics, drawer reads, lifecycle commands, and monitor-generation status through `apps/web` server functions and do not expose public `apps/api` issue routes yet.
+- [x] Add backend regression coverage for bulk lifecycle actions, the multi-store control split, analytics-vs-table control application rules, hybrid search ordering, ClickHouse-backed issue-trace pagination, ignore-driven archival, resolve defaults from `keepMonitoring`, regression reopening behavior, and the web-private issue read orchestration; do not add dedicated React/UI tests for this product surface.
 
-**Exit gate**: users can find, inspect, and manage issues end-to-end; issue lifecycle state is visible and consistent across APIs and UI; issues expose explicit monitor-generation entry points with background kickoff plus polling feedback; ignoring an issue archives its linked evaluations immediately, while resolution follows `keepMonitoring`.
+**Exit gate**: users can filter, search, inspect, and manage issues end to end through an Issues page that mirrors the Traces page shell; analytics, search, and table rows stay consistent across ClickHouse, Weaviate, and Postgres reads; the issue drawer exposes lifecycle and monitoring controls with the specified full-history behavior; and the managed issue surface remains web-only until a later phase explicitly introduces a public API contract.
 
 ### (LAT-472) Phase 15 - Evaluations Product Surface And API
 
@@ -2648,14 +2818,16 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: this is the final MVP phase; no later MVP phase should start after it.
 
-- [ ] Implement annotation queue persistence and orchestration for manual and live queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for live queues, default sampling loaded from named constants when creating live queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
-- [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for live queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
-- [ ] Connect manual trace/session selection, system-created queue population, and live filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched live queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for live queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
-- [ ] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
-- [ ] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
-- [ ] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace, system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `system-annotation-queues:annotate` task published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, live incremental materialization through `live-annotation-queues:curate`, default live queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates.
+- [x] Implement annotation queue persistence and orchestration for manual and live queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for live queues, default sampling loaded from named constants when creating live queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
+- [x] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for live queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
+- [x] Connect manual trace/session selection, system-created queue population, and live filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item (deferred to dedicated sessions redesign phase), the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched live queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for live queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
+- [x] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
+- [x] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
+- [x] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace (deferred to sessions redesign), system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `system-annotation-queues:annotate` task published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, live incremental materialization through `live-annotation-queues:curate` (post-MVP), default live queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates. (Unit tests exist; e2e tests deferred to post-MVP hardening.)
 
 **Exit gate**: annotation queues are no longer just a base model; managed annotation workflows exist before MVP; default system-created queues provide immediate project value; both the queue-management page and the focused queue-review screen are usable end to end.
+
+**Post-MVP note**: Sessions bulk action (resolving session to newest trace for queue insertion) is deferred to a dedicated sessions redesign phase where sessions become an independent section from traces.
 
 --- **MVP** ---
 
@@ -2755,9 +2927,10 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [ ] Design the stronger buffered/provisional issue creation workflow on top of the existing issue model.
 - [ ] Persist provisional issues and hide them from the main UI until promotion rules pass.
 - [ ] Define and implement promotion rules based on evidence thresholds, annotation evidence, and explicit manual promotion.
+- [ ] Ensure the stronger denoising/provisional workflow absorbs duplicate or noisy concurrent no-match issue candidates before they become visible in the main Issues UI.
 - [ ] Validate that the stronger denoising workflow reduces duplicate/noisy issues without reintroducing the v1 merge system.
 
-**Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging.
+**Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging, and duplicate/noisy concurrent no-match issue candidates are absorbed before they become visible in the main issue surface.
 
 ### (LAT-486) Phase 25 - Provider/Model Settings And Hosted Execution Configuration
 

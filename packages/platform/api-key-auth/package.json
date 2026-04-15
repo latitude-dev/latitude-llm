@@ -1,0 +1,27 @@
+{
+  "name": "@platform/api-key-auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --dir src"
+  },
+  "dependencies": {
+    "@domain/api-keys": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
+  }
+}

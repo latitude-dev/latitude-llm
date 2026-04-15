@@ -33,6 +33,7 @@ function buildBaseScoreInput() {
     tokens: 42,
     cost: 1_000,
     draftedAt: null,
+    annotatorId: null,
     createdAt: new Date("2026-03-24T00:00:00.000Z"),
     updatedAt: new Date("2026-03-24T00:00:00.000Z"),
   }
@@ -109,6 +110,21 @@ describe("annotationScoreSchema", () => {
       sourceId: "API",
       metadata: {
         rawFeedback: "This whole conversation handled the request correctly.",
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts message anchor metadata without persisting resolved text (coordinates only)", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      source: "annotation",
+      sourceId: "UI",
+      metadata: {
+        rawFeedback: "Bad tone",
+        messageIndex: 1,
+        partIndex: 0,
       },
     })
 
@@ -193,7 +209,7 @@ describe("customScoreSchema", () => {
 })
 
 describe("score constants", () => {
-  it("keeps the draft finalization debounce at five minutes", () => {
+  it("keeps the draft publish debounce at five minutes", () => {
     expect(SCORE_PUBLICATION_DEBOUNCE).toBe(300_000)
   })
 })

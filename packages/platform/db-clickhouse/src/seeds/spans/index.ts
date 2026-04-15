@@ -1,7 +1,8 @@
-import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared"
+import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
+import { fixedTraceSeeders } from "./fixed-traces.ts"
 import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
 
 const TRACE_COUNT = 2000
@@ -49,8 +50,8 @@ export const runSpansSeed = (
   })
 
 const seedSpans: Seeder = {
-  name: "spans",
+  name: "spans/generated-ambient-telemetry",
   run: (ctx) => runSpansSeed(ctx),
 }
 
-export const spanSeeders: Seeder[] = [seedSpans]
+export const spanSeeders: Seeder[] = [...fixedTraceSeeders, seedSpans]

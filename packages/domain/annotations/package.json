@@ -10,9 +10,21 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/scores": "workspace:*"
+    "@domain/ai": "workspace:*",
+    "@domain/events": "workspace:*",
+    "@domain/queue": "workspace:*",
+    "@domain/scores": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
+    "effect": "catalog:",
+    "rosetta-ai": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

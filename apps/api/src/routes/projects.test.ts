@@ -1,21 +1,8 @@
 import { generateId } from "@domain/shared"
 import { projects } from "@platform/db-postgres/schema/projects"
-import {
-  closeInMemoryPostgres,
-  createApiKeyAuthHeaders,
-  createInMemoryPostgres,
-  type InMemoryPostgres,
-} from "@platform/testkit"
-import type { Hono } from "hono"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
-import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
-import { createProtectedApp, createTenantSetup, TEST_ENCRYPTION_KEY_HEX } from "../test-utils/create-test-app.ts"
-import { createProjectsRoutes } from "./projects.ts"
-
-interface ProjectsRoutesTestContext extends TestContext {
-  app: Hono
-  database: InMemoryPostgres
-}
+import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
+import { describe, expect, it } from "vitest"
+import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
 
 const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, name: string) => {
   const id = generateId()
@@ -32,30 +19,9 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
 }
 
 describe("Projects Routes Integration", () => {
-  let app: Hono
-  let database: InMemoryPostgres
+  setupTestApi()
 
-  beforeAll(async () => {
-    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
-    database = await createInMemoryPostgres()
-
-    const { app: root, protectedRoutes } = createProtectedApp(database)
-    protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
-    root.route("/v1/organizations", protectedRoutes)
-    app = root
-  })
-
-  beforeEach<ProjectsRoutesTestContext>((context) => {
-    context.app = app
-    context.database = database
-  })
-
-  afterAll(async () => {
-    await destroyTouchBuffer()
-    await closeInMemoryPostgres(database)
-  })
-
-  it<ProjectsRoutesTestContext>("GET /v1/organizations/:organizationId/projects isolates organization projects", async ({
+  it<ApiTestContext>("GET /v1/organizations/:organizationId/projects isolates organization projects", async ({
     app,
     database,
   }) => {
@@ -79,7 +45,7 @@ describe("Projects Routes Integration", () => {
     expect(ids).not.toContain(tenantBProject.id)
   })
 
-  it<ProjectsRoutesTestContext>("DELETE /v1/organizations/:organizationId/projects/:id does not delete cross-tenant project", async ({
+  it<ApiTestContext>("DELETE /v1/organizations/:organizationId/projects/:id does not delete cross-tenant project", async ({
     app,
     database,
   }) => {

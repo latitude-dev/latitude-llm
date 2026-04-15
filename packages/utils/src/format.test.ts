@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest"
-import { formatCount, formatPrice } from "./format.ts"
+import { formatCount, formatPrice, isBlankCHString, normalizeCHString, parseCHDate } from "./format.ts"
 
 describe("formatCount", () => {
   it("returns small numbers as-is", () => {
     expect(formatCount(0)).toBe("0")
     expect(formatCount(42)).toBe("42")
     expect(formatCount(999)).toBe("999")
+  })
+
+  it("limits fractional small numbers to two decimal places", () => {
+    expect(formatCount(74.333333333333)).toBe("74.33")
+    expect(formatCount(74.3)).toBe("74.3")
+    expect(formatCount(0.12)).toBe("0.12")
+    expect(formatCount(1.005)).toBe("1.01")
   })
 
   it("formats thousands", () => {
@@ -28,6 +35,40 @@ describe("formatCount", () => {
   })
 })
 
+describe("normalizeCHString", () => {
+  it("treats nullish as empty", () => {
+    expect(normalizeCHString(undefined)).toBe("")
+    expect(normalizeCHString(null)).toBe("")
+    expect(isBlankCHString(undefined)).toBe(true)
+  })
+
+  it("strips NUL padding from FixedString-style values", () => {
+    expect(normalizeCHString("abc\0\0")).toBe("abc")
+    expect(normalizeCHString("\0\0")).toBe("")
+    expect(isBlankCHString("\0\0")).toBe(true)
+  })
+
+  it("strips zero-width/BOM and trims", () => {
+    expect(normalizeCHString("\u200Bx\uFEFF")).toBe("x")
+    expect(normalizeCHString("  id  ")).toBe("id")
+  })
+})
+
+describe("parseCHDate", () => {
+  it("parses ClickHouse datetime strings as UTC", () => {
+    expect(parseCHDate("2026-03-25 10:00:00.123").toISOString()).toBe("2026-03-25T10:00:00.123Z")
+  })
+
+  it("accepts already-normalized ISO timestamps", () => {
+    expect(parseCHDate("2026-03-25T10:00:00.123Z").toISOString()).toBe("2026-03-25T10:00:00.123Z")
+  })
+
+  it("returns the provided fallback on invalid input", () => {
+    const fallback = new Date("2026-01-01T00:00:00.000Z")
+    expect(parseCHDate("not-a-date", { fallback })).toBe(fallback)
+  })
+})
+
 describe("formatPrice", () => {
   it("formats zero", () => {
     expect(formatPrice(0)).toBe("$0")
@@ -40,5 +81,11 @@ describe("formatPrice", () => {
 
   it("formats very small prices with 3 decimals", () => {
     expect(formatPrice(0.003)).toBe("$0.003")
+  })
+
+  it("shows enough decimals for very small values", () => {
+    expect(formatPrice(0.0000075)).toBe("$0.0000075")
+    expect(formatPrice(0.0001)).toBe("$0.0001")
+    expect(formatPrice(0.0009)).toBe("$0.0009")
   })
 })

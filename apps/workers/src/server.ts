@@ -7,25 +7,38 @@ import {
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
+import {
+  createLogger,
+  initializeObservability,
+  recordSpanExceptionForDatadog,
+  shutdownObservability,
+  trace,
+} from "@repo/observability"
+import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
-import { createAnalyticScoresWorker } from "./workers/analytic-scores.ts"
+import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
+import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
+import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
+import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
+import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
+import { createProjectsWorker } from "./workers/projects.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
+
+const log = createLogger("workers")
 
 const bootstrap = async () => {
   await initializeObservability({
@@ -33,12 +46,32 @@ const bootstrap = async () => {
   })
 
   const pgClient = getPostgresClient(10)
-  const logger = createLogger("workers")
+  const logger = log
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
   const healthServer = createServer((req, res) => {
-    if (req.url === "/health" && req.method === "GET") {
+    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname
+
+    if (pathname === "/health/observability-test" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ service: "workers", observabilityTest: "armed" }))
+      return
+    }
+
+    if (pathname === "/health/observability-test/error" && req.method === "GET") {
+      const err = new LatitudeObservabilityTestError("workers")
+      logger.error(err)
+      const span = trace.getActiveSpan()
+      if (span) {
+        recordSpanExceptionForDatadog(span, err)
+      }
+      res.writeHead(500, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ name: err.name, message: err.message }))
+      return
+    }
+
+    if (pathname === "/health" && req.method === "GET") {
       const status = ready ? 200 : 503
       res.writeHead(status, { "Content-Type": "application/json" })
       res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
@@ -68,7 +101,22 @@ const bootstrap = async () => {
       ),
     )
 
-    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+    const queueConsumer = await Effect.runPromise(
+      createBullMqQueueConsumer({
+        redis: bullMqConfig,
+        onWorkerIncident: (incident) => {
+          if (incident.kind === "worker_error") {
+            logger.error("BullMQ worker infrastructure error", incident.queue, incident.error)
+            return
+          }
+          if (incident.kind === "job_failed") {
+            logger.error("BullMQ job failed", incident.queue, incident.job, incident.error)
+            return
+          }
+          logger.warn("BullMQ job stalled", incident.queue, incident.jobId)
+        },
+      }),
+    )
     const workflowStarter = await getWorkflowStarter()
 
     const ctx = {
@@ -80,17 +128,21 @@ const bootstrap = async () => {
 
     createDomainEventsWorker(ctx)
     createMagicLinkEmailWorker(ctx)
+    createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
     createDatasetExportWorker(ctx)
     createLiveTracesWorker(ctx)
-    createIssuesWorker(ctx)
-    createAnalyticScoresWorker(ctx)
+    await createIssuesWorker(ctx)
+    createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
+    createAnnotationQueuesWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)
     createSystemAnnotationQueuesWorker(ctx)
+    createProjectsWorker(ctx)
+    createPostHogAnalyticsWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())
@@ -117,6 +169,11 @@ const bootstrap = async () => {
       await Effect.runPromise(consumers.outboxConsumer.stop())
       await Effect.runPromise(consumers.queueConsumer.stop())
       await Effect.runPromise(queuePublisher.close())
+      // Flush in-flight PostHog events before process exit. No-op when the
+      // integration isn't configured.
+      await getPostHogClient()
+        .shutdown()
+        .catch((error) => logger.warn("PostHog shutdown failed", error))
     } catch (error) {
       logger.error("Error during shutdown (workers may not have started)", error)
     }
@@ -136,6 +193,6 @@ const bootstrap = async () => {
 }
 
 void bootstrap().catch((error) => {
-  console.error(error)
+  log.error("Failed to bootstrap workers", error)
   process.exit(1)
 })

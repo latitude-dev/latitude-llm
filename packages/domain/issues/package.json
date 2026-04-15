@@ -14,15 +14,20 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/ai": "workspace:*",
+    "@domain/events": "workspace:*",
+    "@domain/evaluations": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/scores": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
     "vitest": "catalog:"
   }
 }

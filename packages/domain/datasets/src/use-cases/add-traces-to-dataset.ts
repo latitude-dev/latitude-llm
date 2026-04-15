@@ -4,7 +4,7 @@ import type { TraceDetail, TraceListCursor } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { MAX_TRACES_PER_DATASET_IMPORT } from "../constants.ts"
-import { TooManyTracesError } from "../entities/dataset.ts"
+import { TooManyTracesError } from "../errors.ts"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 import { createDataset } from "./create-dataset.ts"
@@ -45,7 +45,7 @@ function collectAllTraceIds(args: { readonly organizationId: OrganizationId; rea
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const page = yield* repo.findByProjectId({
+      const page = yield* repo.listByProjectId({
         organizationId: args.organizationId,
         projectId: args.projectId,
         options: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) },
@@ -88,7 +88,7 @@ function fetchTraces(args: {
 }) {
   return Effect.gen(function* () {
     const repo = yield* TraceRepository
-    return yield* repo.findByTraceIds(args)
+    return yield* repo.listByTraceIds(args)
   })
 }
 
@@ -110,7 +110,7 @@ export function addTracesToDataset(args: {
     })
     if (traceIds.length === 0) return EMPTY_RESULT
     if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
-      yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
+      return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
     }
 
     const existingTraceIds = yield* rowRepo.findExistingTraceIds({
@@ -161,7 +161,7 @@ export function createDatasetFromTraces(args: {
         return { datasetId: dataset.id, ...EMPTY_RESULT }
       }
       if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
-        yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
+        return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
       }
 
       const traces = yield* fetchTraces({

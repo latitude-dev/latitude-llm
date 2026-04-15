@@ -1,4 +1,4 @@
-import { cuidSchema, SimulationId } from "@domain/shared"
+import { cuidSchema, simulationIdSchema } from "@domain/shared"
 import { z } from "zod"
 import {
   SIMULATION_DATASET_CUSTOM_SENTINEL,
@@ -6,12 +6,6 @@ import {
   SIMULATION_NAME_MAX_LENGTH,
   SIMULATION_THRESHOLD_CUSTOM_SENTINEL,
 } from "../constants.ts"
-
-// ---------------------------------------------------------------------------
-// SimulationId schema
-// ---------------------------------------------------------------------------
-
-export const simulationIdSchema = cuidSchema.transform(SimulationId)
 
 // ---------------------------------------------------------------------------
 // SimulationMetadata
@@ -82,6 +76,3 @@ export const simulationSchema = z
   })
 
 export type Simulation = z.infer<typeof simulationSchema>
-
-/** @knipignore - TODO: unignore once used */
-export { SIMULATION_DATASET_CUSTOM_SENTINEL }

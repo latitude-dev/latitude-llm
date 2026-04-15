@@ -1,20 +1,33 @@
-import { Toaster, useMountEffect } from "@repo/ui"
+import { Toaster } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
+import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
+import { getThemePreference } from "../domains/theme/theme.functions.ts"
+import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
+import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
+import { useThemePreference } from "../lib/theme.ts"
+import { useRootThemePreference } from "./-root-route-data.ts"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
   "Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production."
 const URL = "https://app.latitude.so"
-const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
 const AgentationToolbar = import.meta.env.DEV
   ? lazy(() => import("agentation").then((module) => ({ default: module.Agentation })))
   : null
 
 export const Route = createRootRoute({
+  errorComponent: ({ error, info, reset }) => (
+    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
+  ),
+  loader: async () => {
+    const theme = await getThemePreference()
+
+    return { theme }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -46,15 +59,23 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  const initialTheme = useRootThemePreference()
+  const { theme } = useThemePreference(initialTheme)
+
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={theme === "dark" ? "dark" : undefined}
+      style={{ colorScheme: theme }}
+      suppressHydrationWarning
+    >
       <head>
         <HeadContent />
       </head>
       <body>
-        <HostThemeSync />
+        <PostHogProvider />
         <AppQueryProvider>
-          {children}
+          <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />
           {AgentationToolbar !== null ? (
             <Suspense fallback={null}>
@@ -66,30 +87,4 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </body>
     </html>
   )
-}
-
-function HostThemeSync() {
-  useMountEffect(() => {
-    const root = document.documentElement
-    const media = window.matchMedia(HOST_THEME_MEDIA_QUERY)
-
-    const applyTheme = (isDark: boolean) => {
-      root.classList.toggle("dark", isDark)
-      root.style.colorScheme = isDark ? "dark" : "light"
-    }
-
-    applyTheme(media.matches)
-
-    const onThemeChange = (event: MediaQueryListEvent) => {
-      applyTheme(event.matches)
-    }
-
-    media.addEventListener("change", onThemeChange)
-
-    return () => {
-      media.removeEventListener("change", onThemeChange)
-    }
-  })
-
-  return null
 }

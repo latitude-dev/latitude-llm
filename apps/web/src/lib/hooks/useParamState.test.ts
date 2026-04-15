@@ -1,13 +1,65 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
-import { useParamState } from "./useParamState.ts"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-function setUrl(search: string) {
-  window.history.replaceState(null, "", search || window.location.pathname)
+type MockNavigateOptions = {
+  to: string
+  replace?: boolean
+  search?: Record<string, unknown> | ((prev: Record<string, unknown>) => Record<string, unknown>)
 }
 
-afterEach(() => setUrl(""))
+/**
+ * Minimal TanStack Router mock for this hook. We only need `navigate()` and we
+ * model it by updating the current URL search string the same way the hook
+ * expects in production.
+ */
+const mockNavigate = vi.fn(async ({ replace, search }: MockNavigateOptions) => {
+  const prevSearch = Object.fromEntries(new URLSearchParams(window.location.search).entries())
+  const nextSearch = typeof search === "function" ? search(prevSearch) : (search ?? prevSearch)
+  const nextParams = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(nextSearch)) {
+    if (value === undefined) continue
+    nextParams.set(key, String(value))
+  }
+
+  const nextUrl = nextParams.toString()
+    ? `${window.location.pathname}?${nextParams.toString()}${window.location.hash}`
+    : `${window.location.pathname}${window.location.hash}`
+
+  if (replace) {
+    window.history.replaceState(null, "", nextUrl)
+  } else {
+    window.history.pushState(null, "", nextUrl)
+  }
+})
+
+vi.mock("@tanstack/react-router", () => ({
+  useRouter: () => ({
+    navigate: mockNavigate,
+  }),
+}))
+
+import { useParamState } from "./useParamState.ts"
+
+/**
+ * `useParamState` now updates local React state immediately, but still mirrors
+ * the URL in a microtask. Flush microtasks inside `act` when a test needs to
+ * observe the final URL.
+ */
+async function actWithParamFlush(fn: () => void) {
+  await act(async () => {
+    fn()
+    await Promise.resolve()
+  })
+}
+
+function setUrl(search: string, pathname = window.location.pathname) {
+  window.history.replaceState(null, "", search ? `${pathname}${search}` : pathname)
+}
+
+afterEach(() => setUrl("", "/"))
+afterEach(() => mockNavigate.mockClear())
 
 function setup<T extends boolean | number | string>(paramKey: string, defaultValue: T) {
   return renderHook(() => useParamState(paramKey, defaultValue))
@@ -28,15 +80,41 @@ describe("useParamState", () => {
 
     it("updates value and URL on set", async () => {
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(result.current[0]).toBe("sessions")
+      expect(window.location.search).toBe("?tab=sessions")
+    })
+
+    it("commits search updates against the current absolute pathname", async () => {
+      setUrl("", "/projects/demo")
+      const { result } = setup("tab", "traces")
+
+      await actWithParamFlush(() => result.current[1]("sessions"))
+
+      expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: "/projects/demo" }))
+    })
+
+    it("updates local state before the URL flush runs", async () => {
+      const { result } = setup("tab", "traces")
+
+      act(() => {
+        result.current[1]("sessions")
+      })
+
+      expect(result.current[0]).toBe("sessions")
+      expect(window.location.search).toBe("")
+
+      await act(async () => {
+        await Promise.resolve()
+      })
+
       expect(window.location.search).toBe("?tab=sessions")
     })
 
     it("removes param from URL when set to defaultValue", async () => {
       setUrl("?tab=sessions")
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("traces"))
+      await actWithParamFlush(() => result.current[1]("traces"))
       expect(result.current[0]).toBe("traces")
       expect(window.location.search).toBe("")
     })
@@ -44,7 +122,7 @@ describe("useParamState", () => {
     it("supports functional updater", async () => {
       setUrl("?count=hello")
       const { result } = setup("greeting", "hi")
-      await act(() => result.current[1]((prev) => `${prev}!`))
+      await actWithParamFlush(() => result.current[1]((prev) => `${prev}!`))
       expect(result.current[0]).toBe("hi!")
     })
   })
@@ -82,7 +160,7 @@ describe("useParamState", () => {
     it("removes param when set to defaultValue", async () => {
       setUrl("?open=true")
       const { result } = setup("open", false)
-      await act(() => result.current[1](false))
+      await actWithParamFlush(() => result.current[1](false))
       expect(window.location.search).toBe("")
     })
   })
@@ -139,7 +217,7 @@ describe("useParamState", () => {
     it("preserves other params when removing one", async () => {
       setUrl("?tab=sessions&page=3")
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("traces"))
+      await actWithParamFlush(() => result.current[1]("traces"))
       expect(window.location.search).toContain("page=3")
       expect(window.location.search).not.toContain("tab=")
     })
@@ -170,14 +248,14 @@ describe("useParamState", () => {
     it("defaults to replace (no new history entry)", async () => {
       const initialLength = window.history.length
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(window.history.length).toBe(initialLength)
     })
 
     it("pushes a new history entry with history: 'push'", async () => {
       const initialLength = window.history.length
       const { result } = renderHook(() => useParamState("tab", "traces", { history: "push" }))
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(window.history.length).toBe(initialLength + 1)
     })
   })
@@ -193,9 +271,10 @@ describe("useParamState", () => {
       })
 
       const countBefore = renderCount
-      await act(() => {
+      await act(async () => {
         result.current.setSortBy("date")
         result.current.setSortDir("desc")
+        await Promise.resolve()
       })
       const countAfter = renderCount
 
@@ -208,15 +287,41 @@ describe("useParamState", () => {
     })
   })
 
-  describe("popstate synchronization", () => {
+  describe("shared store synchronization", () => {
+    it("keeps hooks with the same param key in sync", async () => {
+      const first = renderHook(() => useParamState("tab", "traces"))
+      const second = renderHook(() => useParamState("tab", "traces"))
+
+      await actWithParamFlush(() => first.result.current[1]("sessions"))
+
+      expect(first.result.current[0]).toBe("sessions")
+      expect(second.result.current[0]).toBe("sessions")
+      expect(window.location.search).toBe("?tab=sessions")
+    })
+  })
+
+  describe("location synchronization", () => {
+    it("updates when history.replaceState changes the URL", async () => {
+      const { result } = setup("tab", "traces")
+      expect(result.current[0]).toBe("traces")
+
+      await act(async () => {
+        window.history.replaceState(null, "", "?tab=other")
+        await Promise.resolve()
+      })
+
+      expect(result.current[0]).toBe("other")
+    })
+
     it("updates when popstate fires", async () => {
       setUrl("?tab=sessions")
       const { result } = setup("tab", "traces")
       expect(result.current[0]).toBe("sessions")
 
-      await act(() => {
+      await act(async () => {
         setUrl("?tab=other")
         window.dispatchEvent(new PopStateEvent("popstate"))
+        await Promise.resolve()
       })
       expect(result.current[0]).toBe("other")
     })

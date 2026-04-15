@@ -1,7 +1,7 @@
 import type { DatasetId, ProjectId } from "@domain/shared"
 import { ValidationError } from "@domain/shared"
 import { Effect } from "effect"
-import { DuplicateDatasetNameError } from "../entities/dataset.ts"
+import { DuplicateDatasetNameError } from "../errors.ts"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 
 /**

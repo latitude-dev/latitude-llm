@@ -10,7 +10,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "dotenv": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fast-json-stable-stringify": "catalog:"
   }
 }

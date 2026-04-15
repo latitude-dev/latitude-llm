@@ -9,13 +9,42 @@ import type {
   TaskPayload,
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
+import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Layer } from "effect"
 import { Redis } from "ioredis"
+
+import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-incidents.ts"
+
+const tracer = trace.getTracer("bullmq")
+
+const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
+
+const incidentToLogFields = (incident: BullMqWorkerIncident) => {
+  if (incident.kind === "worker_error") {
+    return {
+      kind: incident.kind,
+      queue: incident.queue,
+      error: serializeError(incident.error),
+    }
+  }
+  if (incident.kind === "job_failed") {
+    return {
+      kind: incident.kind,
+      queue: incident.queue,
+      job: incident.job,
+      error: serializeError(incident.error),
+    }
+  }
+  return { kind: incident.kind, queue: incident.queue, jobId: incident.jobId }
+}
 
 interface BullMqJobData {
   readonly payload: unknown
 }
+
+export type { BullMqFailedJobContext, BullMqWorkerIncident } from "./worker-incidents.ts"
 
 export interface BullMqRedisConfig {
   readonly redis: {
@@ -23,6 +52,8 @@ export interface BullMqRedisConfig {
     readonly port: number
     readonly password?: string
   }
+  /** Optional sink for worker incidents (errors, failed jobs, stalls) for alerting and dashboards. */
+  readonly onWorkerIncident?: (incident: BullMqWorkerIncident) => void
 }
 
 export const createBullMqQueuePublisher = (
@@ -98,10 +129,23 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
     }
 
     const DEFAULT_CONCURRENCY = 10
+    const services = yield* Effect.services<never>()
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, AnyTaskHandlers>()
     const concurrencyOverrides = new Map<QueueName, number>()
     let isRunning = false
+    const emitIncident = config.onWorkerIncident
+
+    const logIncident = (incident: BullMqWorkerIncident) => {
+      emitIncident?.(incident)
+      void Effect.runPromiseExitWith(services)(
+        Effect.logError("BullMQ worker incident", incidentToLogFields(incident)),
+      ).then((exit) => {
+        if (exit._tag === "Failure") {
+          console.error("Effect.logError failed after BullMQ incident", Cause.squash(exit.cause))
+        }
+      })
+    }
 
     const start = () => {
       const missing = TOPIC_NAMES.filter((t) => !subscriptions.has(t))
@@ -133,7 +177,35 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                   throw new Error(`Missing payload for task "${task}" on topic "${queue}"`)
                 }
 
-                await Effect.runPromise(handler(payload))
+                // Wrap handler execution with OTel instrumentation
+                await tracer.startActiveSpan(
+                  `bullmq.${queue}.${task}`,
+                  {
+                    attributes: {
+                      "messaging.system": "bullmq",
+                      "messaging.destination": queue,
+                      "messaging.operation": "process",
+                      "messaging.message_id": job.id,
+                      "messaging.bullmq.task": task,
+                      "messaging.bullmq.attempts_made": job.attemptsMade,
+                    },
+                  },
+                  async (span) => {
+                    try {
+                      await Effect.runPromiseWith(services)(handler(payload))
+                      span.setStatus({ code: SpanStatusCode.OK })
+                    } catch (error) {
+                      const err = recordSpanExceptionForDatadog(span, error)
+                      span.setStatus({
+                        code: SpanStatusCode.ERROR,
+                        message: err.message,
+                      })
+                      throw err
+                    } finally {
+                      span.end()
+                    }
+                  },
+                )
               },
               {
                 connection: new Redis(redisConfig),
@@ -145,7 +217,20 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
             )
 
             worker.on("error", (error) => {
-              void Effect.runPromise(Effect.logError(`BullMQ worker error on queue ${queue}: ${error}`))
+              logIncident({ kind: "worker_error", queue, error: toError(error) })
+            })
+
+            worker.on("failed", (job, error) => {
+              logIncident({
+                kind: "job_failed",
+                queue,
+                job: failedJobContextFromJob(job),
+                error: toError(error),
+              })
+            })
+
+            worker.on("stalled", (jobId) => {
+              logIncident({ kind: "job_stalled", queue, jobId })
             })
 
             workers.set(queue, worker)

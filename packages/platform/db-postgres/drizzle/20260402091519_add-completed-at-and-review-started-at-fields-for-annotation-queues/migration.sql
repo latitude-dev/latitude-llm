@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."annotation_queue_items" ADD COLUMN "completed_by" varchar(24);--> statement-breakpoint
+ALTER TABLE "latitude"."annotation_queue_items" ADD COLUMN "review_started_at" timestamp with time zone;

@@ -4,6 +4,25 @@ Issues are the main observability entities of the reliability system.
 
 They group similar failed, non-errored, non-draft scores into actionable failure patterns.
 
+## Domain errors (`@domain/issues` reference pattern)
+
+Repository-wide rules and a per-package `errors.ts` inventory are in [`docs/domain-errors.md`](./domain-errors.md).
+
+The `packages/domain/issues` package is the **reference implementation** for how domain-specific errors should be organized in this repository. When adding a new `packages/domain/*` package or growing error surfaces in an existing one, mirror this layout before inventing a different structure.
+
+**Where to look**
+
+- `packages/domain/issues/src/errors.ts` — all package-level `Data.TaggedError` classes for this domain
+- Use-cases import those classes from `../errors.ts` and fail with `yield* new SomeSpecificError({ ... })` inside `Effect.gen`
+
+**Conventions**
+
+- **One file per package** at `src/errors.ts` for errors that are shared across multiple use-cases in that package. Errors that truly belong to a single use-case can stay in that use-case file until a second consumer appears (see `AGENTS.md` domain conventions).
+- **Specific class names** for business rules (`ScoreNotFoundForDiscoveryError`, `DraftScoreNotEligibleForDiscoveryError`), not generic `NotFoundError` / `BadRequestError` from `@domain/shared` when the failure is part of the domain vocabulary.
+- **HTTP metadata on every class**: each error implements `HttpError` with `httpStatus` and `httpMessage` (static `readonly` fields or a getter when the message depends on fields). See `.agents/skills/effect-and-errors/SKILL.md`.
+- **Union types per flow**: export a union (for example `CheckEligibilityError`) that lists exactly the errors a use-case or small group of use-cases can return, so callers and tests stay typed end-to-end.
+- **Shared infrastructure errors** stay in `@domain/shared` (`RepositoryError`, `ValidationError`, generic `NotFoundError`, etc.); **domain semantics** live in the domain package’s `errors.ts`.
+
 ## Storage Split
 
 - Postgres stores the issue row and lifecycle state.
@@ -17,14 +36,16 @@ Issue discovery uses the existing Temporal-backed workflow abstraction in `apps/
 
 The main contracts are:
 
-- `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs issue assignment
+- `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs similarity retrieval after the centralized `issues:discovery` gate runs
+- `issues:discovery` as a deduped single-step task that rechecks canonical score eligibility and chooses between selected/linked issue assignment or the fallback Temporal workflow
 - `issues:refresh` as a debounced single-step task for one issue whose name/description debounce window has elapsed
 
 Rules:
 
-- eligible non-draft failed non-errored scores start `issue-discovery` after commit instead of running embedding/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that event
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
+- `IssueRefreshRequested` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - issue-generated evaluation creation is also asynchronous: kickoff returns a `jobId`, and the frontend polls a status endpoint backed by a Redis job-status key for that alignment run
 
@@ -74,11 +95,11 @@ Important state timestamps:
 Issue creation eligibility:
 
 - annotations are the primary signal
-- annotation flows can also link to an existing issue or create a new issue inline; those explicit human choices bypass discovery for that score
+- annotation flows can also link to an existing issue explicitly; that human choice is carried as selected issue intent once the draft is published and then resolved by the centralized `issues:discovery` task
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
-## Manual Creation From Annotations
+## Manual Linking From Annotations
 
 Issue discovery is not the only entrypoint.
 
@@ -86,21 +107,23 @@ When annotating in managed UI, the annotator may:
 
 - leave issue assignment automatic
 - link the annotation to an existing issue
-- create a new issue inline
 
-For explicit link/create actions:
+Inline manual issue creation from the annotation flow is intentionally deferred for now to keep the managed annotation UX and ownership rules simpler.
 
-- skip similarity-based discovery for that annotation score
-- write canonical ownership directly through `scores.issue_id`
-- treat the issue as annotation-backed evidence immediately
+For explicit link actions:
+
+- while the annotation is still drafted, keep the selected issue only as editable draft intent
+- skip similarity-based candidate selection for that annotation score once the draft is published
+- publication writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write, and projection/analytics sync
+- treat the issue as annotation-backed evidence immediately after publication
 
 ## Discovery Pipeline
 
 Issue discovery should follow the original proposal closely:
 
 1. observe a non-draft failed, non-errored canonical score in Postgres
-2. if the score comes from an issue-linked evaluation, assign directly and stop
-3. validate eligibility for issue discovery
+2. publish `IssueDiscoveryRequested` after the canonical Postgres write commits
+3. let the deduped `issues:discovery` task recheck canonical eligibility and decide whether a selected issue or issue-linked evaluation should be assigned directly before any similarity search runs
 4. enrich annotation-originated feedback first when needed
 5. embed canonical feedback with `voyage-4-large` at `2048` dimensions
 6. run hybrid search in Weaviate using vector similarity plus BM25
@@ -108,16 +131,31 @@ Issue discovery should follow the original proposal closely:
 8. filter out candidates that do not pass the minimum similarity threshold across the hybrid search stage
 9. rerank candidates with `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
-11. match an existing issue or create a new issue
-12. write `scores.issue_id` in Postgres
-13. project the now-immutable score row into ClickHouse
-14. refresh issue name/description asynchronously on debounce
+11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
+12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
+13. match an existing issue or create a new issue when the centralized gate did not already route to a known issue
+14. if the final selected candidate is stale, delete its projection object asynchronously
+15. write `scores.issue_id` in Postgres
+16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
+17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
+18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
 
 Execution rules:
 
-- `issue-discovery` runs after an eligible non-draft failed non-errored score exists and still has no `issue_id`
+- `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
+- scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
+- `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
+- in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
+- the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
+- the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
+- after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
+- after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
+- both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
+- the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
+- resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
 
 Concrete v1 mechanics worth carrying forward:
 
@@ -125,7 +163,7 @@ Concrete v1 mechanics worth carrying forward:
 - hybrid search used the same canonical feedback as both the keyword query and the embedding source
 - the proven v1 defaults were `alpha = 0.75`, minimum similarity `0.8`, minimum BM25 matches `1`, initial candidate limit `1000`, rerank limit `20`, and minimum rerank relevance `0.3`
 - even a single candidate still went through reranking so the threshold could reject it
-- once an evaluation was linked to an issue, later failures from that evaluation bypassed discovery and assigned directly
+- once an evaluation is linked to an issue, live monitor failures may already be written with `scores.issue_id` claimed at creation time; unowned evaluation-originated failures that still reach `issues:discovery` should have the centralized gate resolve the linked issue directly before similarity search starts
 
 Current v2 starting defaults layered on top of those v1 learnings:
 
@@ -213,6 +251,7 @@ The system may also support a stronger buffered/provisional workflow on top of t
 - persist newly created issue candidates immediately
 - keep provisional issues hidden until they pass promotion rules
 - promote them when enough evidence accumulates, when annotation evidence lands, or when a user explicitly promotes them
+- let the stronger provisional workflow absorb duplicate or noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - keep the core issue entity shape unchanged
 
 ## Naming
@@ -222,7 +261,7 @@ Issue names and descriptions are summaries, not the cluster identity itself.
 The actual cluster identity is driven by:
 
 - centroid state
-- incoming evidence stream
+- incoming occurrence stream
 - assignment history
 
 Required Postgres indexes on the issue row:
@@ -232,7 +271,7 @@ Required Postgres indexes on the issue row:
 - do not add Postgres text-search indexes on `name` or `description`; issue search lives in Weaviate
 - do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by the Weaviate projection and centroid updates are driven by explicit ownership events
 
-Names/descriptions are generated from evidence and refreshed on debounce.
+Names/descriptions are generated from occurrences and refreshed on debounce.
 
 They may use:
 
@@ -253,14 +292,15 @@ Issue-linked evaluation creation is explicit:
 
 - issue discovery and issue creation do not automatically create evaluations
 - issues may have several linked evaluations
-- the issue table row and issue details modal/page expose `Generate evaluation`
+- the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
 - each trigger publishes a background generation/alignment job, returns a `jobId`, and then the frontend polls its Redis-backed status until the resulting evaluation is ready
 - once created, automatic debounced realignment continues as new annotations arrive
 
 Once an issue-linked evaluation exists:
 
-- failed, non-errored monitor scores do not re-enter discovery
-- they assign `scores.issue_id` directly
+- failed, non-errored monitor scores that already carried `scores.issue_id` at write time do not re-enter discovery
+- failed, non-errored monitor scores that stayed unowned still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts and then claims `scores.issue_id`
+- errored monitor scores stay out of discovery entirely because `errored = true` makes them ineligible
 - they can move a resolved issue into `regressed`
 
 ## Weaviate Projection
@@ -367,25 +407,53 @@ Weaviate object ids are UUID-based, so the issue row should store a dedicated `u
 
 ## Product Surface
 
-The project `Issues` page includes:
+The project `Issues` page mirrors the project `Traces` page shell:
 
-- `Active`, `Regressed`, and `Archived` tabs
-- per-tab counts
-- hybrid search without rerank
-- date range selector
-- bulk actions for resolve/unresolve/ignore/unignore
-- a manual resolve confirmation modal whose keep-monitoring toggle defaults from `keepMonitoring`
-- a per-row `Generate evaluation` action that starts a background job and shows polled in-flight status
-- an issues table with `Name`, `Seen at`, `Occurrences`, and `Trend`
+- a top action row
+- a shared aggregate-counts-plus-histogram analytics panel
+- an infinitely paginated issues table
+- a right-side issue details drawer opened from row click
 
-`Seen at` should combine recency and age, for example `11d ago / 3y old`.
+Action-row behavior:
 
-Issue details include:
+- left side: time range selector and columns selector
+- right side: `Active` / `Archived` tabs plus hybrid search without rerank
+- the time range filters score `created_at` in ClickHouse, not issue-row timestamps in Postgres
+- the lifecycle tabs affect the issues table only, not the analytics panel
+- the page does not expose the generic Traces filter builder or filter drawer
+- issue search relies on the shared AI-layer Redis cache for embeddings; the issues domain does not add an extra embedding cache on top
+- the managed Issues surface is web-only for now; there is no public `apps/api` issues contract yet
 
-- full name and description
-- `Generate evaluation` button
-- pending generation/alignment status when the current issue has a polled background job in flight
-- linked evaluations with derived alignment (MCC)
-- last seen / first seen / occurrence counts
-- 30-day trend chart
-- trace/session drilldown table
+Read orchestration:
+
+- ClickHouse owns score-backed time-range filtering, occurrence analytics, and issue trend metrics
+- Weaviate owns hybrid search and similarity scores
+- Postgres owns canonical issue rows, lifecycle grouping, and linked evaluation hydration
+- issue-page reads query ClickHouse first, run Weaviate only when search text is present, and then hydrate canonical Postgres issues through `IN (...)` issue-id / issue-uuid clauses
+
+Analytics panel behavior:
+
+- aggregate counts show `new`, `escalating`, `regressed`, `resolved`, and total seen occurrences
+- the histogram shows matched issue occurrences by day
+- when no full range is selected, the histogram falls back to a 7-day window ending today or ending at the single selected endpoint
+
+Issues table behavior:
+
+- no bulk-selection UI is shown in this revision, even though backend bulk lifecycle actions may still exist for API parity
+- default sorting is last seen descending, then occurrences descending, with search similarity preserved as an additional tie-breaker when search text is present
+- visible columns are `Issue`, `Trend`, `Seen at`, `Occurrences`, `Affected traces`, and `Evaluations`
+- `Issue` shows the issue name plus lifecycle tags, with truncation
+- `Seen at` combines recency and age, for example `11d ago / 3y old`
+- `Occurrences` uses the selected time range and its column header also shows the sum across all matched issues
+- `Affected traces` is the occurrences count divided by the total number of traces in the selected time window, capped at `100%`
+- `Evaluations` shows linked evaluation tags with truncated names plus alignment MCC percentage, or `-` when none are linked
+
+Issue details drawer behavior:
+
+- page-level time range, lifecycle-tab, and search controls do not apply inside the drawer; drawer reads use full history
+- the header uses the same close and previous/next navigation pattern as the `Traces` details drawer
+- the header actions are ignore/unignore and resolve/unresolve
+- the body includes issue name/description, a summary row, a collapsible 14-day trend histogram ending today, a collapsible linked-evaluations section, and a collapsible infinitely paginated mini traces table
+- linked evaluations show name, last alignment date, MCC, manual realign, and per-evaluation archive actions
+- while a realignment is in flight, the UI shows `Aligning...`
+- when an issue has no linked evaluations, the drawer shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button

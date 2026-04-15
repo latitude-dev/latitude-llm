@@ -103,7 +103,7 @@ export function parseEnvOptional(
   const value = process.env[name]
 
   if (value === undefined || value.length === 0) {
-    return Effect.succeed(undefined)
+    return Effect.void as Effect.Effect<undefined>
   }
 
   if (expectedType === "string") {

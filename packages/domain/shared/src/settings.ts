@@ -1,14 +1,19 @@
 import { Effect, ServiceMap } from "effect"
+import { z } from "zod"
 import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 
-export type OrganizationSettings = {
-  keepMonitoring?: boolean | undefined
-}
+export const organizationSettingsSchema = z.object({
+  keepMonitoring: z.boolean().optional(),
+})
 
-export type ProjectSettings = {
-  keepMonitoring?: boolean | undefined
-}
+export const projectSettingsSchema = z.object({
+  keepMonitoring: z.boolean().optional(),
+})
+
+export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>
+
+export type ProjectSettings = z.infer<typeof projectSettingsSchema>
 
 export type ResolvedSettings = {
   readonly keepMonitoring: boolean

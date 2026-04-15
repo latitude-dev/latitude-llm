@@ -24,7 +24,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@better-auth/core": "^1.5.6",
@@ -43,14 +43,16 @@
     "@domain/users": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:",
-    "stripe": "^20.4.0"
+    "stripe": "^22.0.1"
   },
   "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
     "@better-auth/cli": "^1.4.22",
     "@electric-sql/pglite": "0.3.15",
     "@types/pg": "catalog:",

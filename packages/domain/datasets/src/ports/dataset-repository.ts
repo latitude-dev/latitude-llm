@@ -1,6 +1,7 @@
 import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { Dataset, DatasetNotFoundError, DatasetVersion } from "../entities/dataset.ts"
+import type { Dataset, DatasetVersion } from "../entities/dataset.ts"
+import type { DatasetNotFoundError } from "../errors.ts"
 
 export const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
 export type DatasetListSortBy = (typeof DATASET_LIST_SORT_COLUMNS)[number]

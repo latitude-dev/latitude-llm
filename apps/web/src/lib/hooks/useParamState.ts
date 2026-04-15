@@ -1,32 +1,5 @@
-import { type SetStateAction, useSyncExternalStore } from "react"
-
-/**
- * useParamState — a useState-like hook backed by URL search parameters.
- *
- * Use this for ephemeral UI state that should be reflected in the URL (active
- * tab, open panels, sort columns, selected row IDs, etc.). Do NOT use
- * router.navigate for this — navigate is for actual page transitions (e.g.
- * opening a dataset after creation). useParamState bypasses the router
- * entirely, so it avoids TanStack Router's reconciliation overhead.
- *
- * Design decisions:
- *
- * - Uses `useSyncExternalStore` to treat the URL as an external store. This
- *   is the React-blessed way to subscribe to non-React state; it handles
- *   concurrent mode, avoids tearing, and provides an SSR snapshot.
- *
- * - The URL is the source of truth. Reads always parse `window.location.search`
- *   so there's no stale-closure risk and no local state to sync.
- *
- * - When the resolved value equals `defaultValue`, the param is removed from
- *   the URL entirely (via `Object.is` comparison), keeping URLs clean.
- *
- * - Writes are batched: multiple setters called in the same synchronous handler
- *   (e.g. `setSortBy(x); setSortDirection(y)`) produce only one React render.
- *   Each write updates `history` immediately so subsequent reads within the
- *   same tick see the latest URL, but the subscriber notification is deferred
- *   to a microtask so React processes all changes in a single pass.
- */
+import { useRouter } from "@tanstack/react-router"
+import { type SetStateAction, useEffect, useRef, useState } from "react"
 
 type ParamStateValue = boolean | number | string
 
@@ -38,25 +11,41 @@ type ParamStateValue = boolean | number | string
  */
 type WidenLiteral<T> = T extends string ? string : T extends number ? number : T extends boolean ? boolean : T
 
-const PARAM_STATE_CHANGE_EVENT = "param-state-change"
+type ParamStateSyncDetail = {
+  paramKey: string
+  rawValue: string | null
+  sourceId: number
+}
 
 /**
- * Shared subscription function for `useSyncExternalStore`. Listens to:
- * - `popstate`: browser back/forward navigation
- * - `param-state-change`: our custom event dispatched after writes
- *
- * Because this function is referentially stable (module-level), every
- * `useParamState` instance shares the same two listeners rather than
- * each hook adding its own pair.
+ * Pending URL writes are keyed by param so several setters in the same tick can
+ * collapse into a single router navigation.
  */
-function subscribe(onStoreChange: () => void) {
-  window.addEventListener("popstate", onStoreChange)
-  window.addEventListener(PARAM_STATE_CHANGE_EVENT, onStoreChange)
-  return () => {
-    window.removeEventListener("popstate", onStoreChange)
-    window.removeEventListener(PARAM_STATE_CHANGE_EVENT, onStoreChange)
-  }
+type PendingUrlUpdate = {
+  searchValue: ParamStateValue | null
+  history: "push" | "replace"
 }
+
+/** Broadcast name used to fan out same-key updates to hook instances in this tab. */
+const PARAM_STATE_SYNC_EVENT = "param-state-sync"
+/** Broadcast name used to notify hooks when any history write changes the URL. */
+const LOCATION_CHANGE_EVENT = "param-state-location-change"
+/** In-memory snapshot of the latest raw value for each known param key. */
+const latestRawValuesByKey = new Map<string, string | null>()
+/** Queue of URL writes waiting to be flushed after React has updated local state. */
+const pendingUrlUpdates = new Map<string, PendingUrlUpdate>()
+
+/** Ensures the history monkey-patch is installed only once per page. */
+let historyPatched = false
+/** Guards the microtask that flushes pending URL updates. */
+let urlFlushScheduled = false
+/** Invalidates stale flush microtasks after external navigation wins. */
+let urlFlushVersion = 0
+/** Simple instance id generator so senders can ignore their own sync events. */
+let nextSourceId = 0
+
+/** Narrow router shape used by this hook when committing URL changes. */
+type ParamStateRouter = Pick<ReturnType<typeof useRouter>, "navigate">
 
 /**
  * Coerces a raw URL string value back to the type implied by `defaultValue`.
@@ -81,11 +70,33 @@ function parseParamValue<T extends ParamStateValue>(rawValue: string, defaultVal
   return rawValue as WidenLiteral<T>
 }
 
-/** Reads a single param from the current URL, falling back to `defaultValue` if absent. */
-function readParam<T extends ParamStateValue>(paramKey: string, defaultValue: T): WidenLiteral<T> {
-  const params = new URLSearchParams(window.location.search)
-  const rawValue = params.get(paramKey)
+/** Reads a raw search param string directly from the current browser URL. */
+function readRawParam(paramKey: string) {
+  return new URLSearchParams(window.location.search).get(paramKey)
+}
 
+/**
+ * Returns the freshest raw value we know for a param.
+ * While a local write is still pending, the in-memory snapshot wins; otherwise
+ * the browser URL becomes authoritative again.
+ */
+function getCurrentRawValue(paramKey: string) {
+  if (pendingUrlUpdates.has(paramKey) && latestRawValuesByKey.has(paramKey)) {
+    return latestRawValuesByKey.get(paramKey) ?? null
+  }
+
+  const rawValue = readRawParam(paramKey)
+  latestRawValuesByKey.set(paramKey, rawValue)
+  return rawValue
+}
+
+/** Updates the in-memory snapshot so newly mounted hooks see the latest local value. */
+function setCurrentRawValue(paramKey: string, rawValue: string | null) {
+  latestRawValuesByKey.set(paramKey, rawValue)
+}
+
+/** Reads a single param value, falling back to `defaultValue` if absent. */
+function readParam<T extends ParamStateValue>(rawValue: string | null, defaultValue: T): WidenLiteral<T> {
   if (rawValue === null) {
     return defaultValue as unknown as WidenLiteral<T>
   }
@@ -93,53 +104,108 @@ function readParam<T extends ParamStateValue>(paramKey: string, defaultValue: T)
   return parseParamValue(rawValue, defaultValue)
 }
 
-function buildUrl(params: URLSearchParams): string {
-  const search = params.toString()
-  return search
-    ? `${window.location.pathname}?${search}${window.location.hash}`
-    : `${window.location.pathname}${window.location.hash}`
+/**
+ * Applies the optional runtime validator so malformed URL values never escape
+ * into component state.
+ */
+function resolveValue<T extends ParamStateValue, R extends WidenLiteral<T>>(
+  rawValue: string | null,
+  defaultValue: T,
+  validate?: (value: WidenLiteral<T>) => value is R,
+) {
+  const parsed = readParam(rawValue, defaultValue)
+  if (validate && !validate(parsed)) return defaultValue as unknown as R
+  return parsed as R
 }
 
 /**
- * Microtask-based batching flag. When multiple params are written in the same
- * synchronous call stack (e.g. `setSortBy(); setSortDirection()`), the first
- * write schedules a microtask to dispatch the change event. Subsequent writes
- * in the same tick see the flag and skip scheduling, so only one event fires
- * after all writes complete. This prevents intermediate renders with partially
- * updated URLs and avoids duplicate network requests from query hooks.
+ * Flushes all queued URL writes through TanStack Router so search updates follow
+ * the router's supported navigation lifecycle instead of mutating history
+ * behind its back.
  */
-let flushScheduled = false
+function flushPendingUrlUpdates(router: ParamStateRouter, flushVersion: number) {
+  if (pendingUrlUpdates.size === 0) return
 
-/**
- * Writes a single param to the URL and schedules a batched notification.
- * The URL is updated synchronously (so reads within the same tick reflect
- * the new value), but the event that triggers React re-renders is deferred
- * to a microtask.
- */
-function writeParam(paramKey: string, serialized: string | undefined, history: "push" | "replace") {
-  const params = new URLSearchParams(window.location.search)
+  const updates = Array.from(pendingUrlUpdates.entries())
+  const replace = !updates.some(([, update]) => update.history === "push")
+  const currentPathname = window.location.pathname || "/"
 
-  if (serialized === undefined) {
-    params.delete(paramKey)
-  } else {
-    params.set(paramKey, serialized)
-  }
-
-  const url = buildUrl(params)
-
-  if (history === "push") {
-    window.history.pushState(window.history.state, "", url)
-  } else {
-    window.history.replaceState(window.history.state, "", url)
-  }
-
-  if (!flushScheduled) {
-    flushScheduled = true
-    queueMicrotask(() => {
-      flushScheduled = false
-      window.dispatchEvent(new Event(PARAM_STATE_CHANGE_EVENT))
+  void router
+    .navigate({
+      // Use the concrete current pathname instead of "." because relative
+      // current-route navigation can resolve against pathless layout routes.
+      to: currentPathname,
+      replace,
+      resetScroll: false,
+      hashScrollIntoView: false,
+      search: (prev: Record<string, unknown>) => {
+        const nextSearch = { ...prev } as Record<string, unknown>
+        for (const [paramKey, update] of updates) {
+          if (update.searchValue === null) {
+            delete nextSearch[paramKey]
+          } else {
+            nextSearch[paramKey] = update.searchValue
+          }
+        }
+        return nextSearch
+      },
     })
-  }
+    .finally(() => {
+      if (flushVersion !== urlFlushVersion) return
+      pendingUrlUpdates.clear()
+    })
+}
+
+/** Discards queued URL writes when the browser location changes externally. */
+function cancelPendingUrlFlush() {
+  pendingUrlUpdates.clear()
+  urlFlushScheduled = false
+  urlFlushVersion++
+}
+
+/** Queues a param write so the URL can update after local React state has updated. */
+function scheduleUrlFlush(
+  router: ParamStateRouter,
+  paramKey: string,
+  searchValue: ParamStateValue | null,
+  history: "push" | "replace",
+) {
+  const existing = pendingUrlUpdates.get(paramKey)
+  pendingUrlUpdates.set(paramKey, {
+    searchValue,
+    history: existing?.history === "push" || history === "push" ? "push" : "replace",
+  })
+
+  if (urlFlushScheduled) return
+
+  urlFlushScheduled = true
+  const scheduledVersion = ++urlFlushVersion
+  queueMicrotask(() => {
+    if (scheduledVersion !== urlFlushVersion) return
+
+    urlFlushScheduled = false
+    flushPendingUrlUpdates(router, scheduledVersion)
+  })
+}
+
+/** Installs a single history patch so direct `pushState`/`replaceState` calls are observable. */
+function ensureLocationTracking() {
+  if (historyPatched) return
+
+  const originalPushState = window.history.pushState.bind(window.history)
+  const originalReplaceState = window.history.replaceState.bind(window.history)
+
+  window.history.pushState = ((...args) => {
+    originalPushState(...args)
+    window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
+  }) as History["pushState"]
+
+  window.history.replaceState = ((...args) => {
+    originalReplaceState(...args)
+    window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
+  }) as History["replaceState"]
+
+  historyPatched = true
 }
 
 type ParamStateOptions = {
@@ -168,32 +234,90 @@ export function useParamState<T extends ParamStateValue, R extends WidenLiteral<
   defaultValue: T,
   options?: ParamStateOptions & { validate?: (value: WidenLiteral<T>) => value is R },
 ): [R, (next: SetStateAction<R>) => void] {
+  /** Router instance used to commit supported same-route search updates. */
+  const router = useRouter()
+  /** Chosen history mode for URL mirroring; local state updates always remain synchronous. */
   const historyMode = options?.history ?? "replace"
+  /** Optional caller-provided guard that narrows the returned value type. */
   const validate = options?.validate
+  /** Stable instance id so same-key broadcasts can skip the sender. */
+  const [sourceId] = useState(() => nextSourceId++)
+  /** The rendered value lives in local React state for immediate UI response. */
+  const [value, setValue] = useState<R>(() => resolveValue(getCurrentRawValue(paramKey), defaultValue, validate))
+  /** Tracks the latest committed value so functional updaters stay in sync across events. */
+  const valueRef = useRef(value)
+  valueRef.current = value
+  /** Holds the latest validator without forcing browser listener re-subscription. */
+  const validateRef = useRef(validate)
+  validateRef.current = validate
 
-  const value = useSyncExternalStore(
-    subscribe,
-    () => {
-      const parsed = readParam(paramKey, defaultValue)
-      // If validate rejects the parsed value (e.g. URL was manually tampered),
-      // fall back to defaultValue so downstream code never sees an invalid state.
-      if (validate && !validate(parsed)) return defaultValue as unknown as R
-      return parsed as R
-    },
-    () => defaultValue as unknown as R,
-  )
+  // TODO(frontend-use-effect-policy): this hook must subscribe to browser events to mirror URL/history state.
+  useEffect(() => {
+    ensureLocationTracking()
 
+    /**
+     * Applies an incoming raw value from either the browser URL or a sibling
+     * hook instance, updating both the shared snapshot and local React state.
+     */
+    const syncFromRawValue = (rawValue: string | null) => {
+      setCurrentRawValue(paramKey, rawValue)
+      const nextValue = resolveValue(rawValue, defaultValue, validateRef.current)
+      if (Object.is(valueRef.current, nextValue)) return
+
+      valueRef.current = nextValue
+      setValue(nextValue)
+    }
+
+    /** Handles synchronous same-tab broadcasts from other `useParamState` instances. */
+    const handleSyncEvent = (event: Event) => {
+      const detail = (event as CustomEvent<ParamStateSyncDetail>).detail
+      if (detail.paramKey !== paramKey) return
+      if (detail.sourceId === sourceId) return
+
+      syncFromRawValue(detail.rawValue)
+    }
+
+    /** Re-reads the current URL after back/forward or direct history mutations. */
+    const handleLocationChange = () => {
+      const nextRawValue = readRawParam(paramKey)
+      cancelPendingUrlFlush()
+      syncFromRawValue(nextRawValue)
+    }
+
+    syncFromRawValue(getCurrentRawValue(paramKey))
+    window.addEventListener(PARAM_STATE_SYNC_EVENT, handleSyncEvent)
+    window.addEventListener(LOCATION_CHANGE_EVENT, handleLocationChange)
+    window.addEventListener("popstate", handleLocationChange)
+
+    return () => {
+      window.removeEventListener(PARAM_STATE_SYNC_EVENT, handleSyncEvent)
+      window.removeEventListener(LOCATION_CHANGE_EVENT, handleLocationChange)
+      window.removeEventListener("popstate", handleLocationChange)
+    }
+  }, [defaultValue, paramKey, sourceId])
+
+  /** Updates local state immediately, then mirrors that change to peers and the URL. */
   const setParamValue = (nextValue: SetStateAction<R>) => {
-    // Read from the URL (not from `value`) to get the latest state, since
-    // another setter in the same tick may have already updated the URL.
-    const currentValue = readParam(paramKey, defaultValue) as R
+    const currentValue = valueRef.current
     const resolvedValue = typeof nextValue === "function" ? (nextValue as (prev: R) => R)(currentValue) : nextValue
+    const isDefaultValue = Object.is(resolvedValue, defaultValue)
+    const rawValue = isDefaultValue ? null : String(resolvedValue)
+    const searchValue = isDefaultValue ? null : (resolvedValue as ParamStateValue)
+    if (getCurrentRawValue(paramKey) === rawValue) return
 
-    // When the value matches the default, remove the param from the URL
-    // to keep URLs clean (e.g. `?` instead of `?tab=traces`).
-    const serialized = Object.is(resolvedValue, defaultValue) ? undefined : String(resolvedValue)
-
-    writeParam(paramKey, serialized, historyMode)
+    setCurrentRawValue(paramKey, rawValue)
+    valueRef.current = resolvedValue
+    setValue(resolvedValue)
+    window.dispatchEvent(
+      new CustomEvent<ParamStateSyncDetail>(PARAM_STATE_SYNC_EVENT, {
+        detail: {
+          paramKey,
+          rawValue,
+          sourceId,
+        },
+      }),
+    )
+    scheduleUrlFlush(router, paramKey, searchValue, historyMode)
   }
 
   return [value, setParamValue]

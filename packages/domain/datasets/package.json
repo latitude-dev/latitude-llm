@@ -14,13 +14,15 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/events": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/papaparse": "^5.5.2"

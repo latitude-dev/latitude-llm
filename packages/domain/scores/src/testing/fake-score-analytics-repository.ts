@@ -17,6 +17,8 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: (id) => Effect.succeed(inserted.includes(id)),
+    // TODO(repositories): rename insert -> save to match the repository port
+    // once the public write verb cleanup lands.
     insert: (score) => {
       inserted.push(score.id)
       return Effect.void
@@ -29,6 +31,22 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     rollupBySessionIds: () => Effect.succeed([]),
     aggregateByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.succeed([]),
+    listIssueWindowMetrics: () => Effect.succeed([]),
+    histogramByIssues: () => Effect.succeed([]),
+    trendByIssues: () => Effect.succeed([]),
+    countDistinctTracesByTimeRange: () => Effect.succeed(0),
+    listTracesByIssue: () =>
+      Effect.succeed({
+        items: [],
+        hasMore: false,
+        limit: 25,
+        offset: 0,
+      }),
+    delete: (id) =>
+      Effect.sync(() => {
+        const index = inserted.indexOf(id)
+        if (index !== -1) inserted.splice(index, 1)
+      }),
     ...overrides,
   }
 

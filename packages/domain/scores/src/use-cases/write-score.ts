@@ -1,15 +1,6 @@
-import {
-  BadRequestError,
-  cuidSchema,
-  generateId,
-  OutboxEventWriter,
-  ProjectId,
-  type RepositoryError,
-  ScoreId,
-  SqlClient,
-  toRepositoryError,
-} from "@domain/shared"
-import { Data, Effect } from "effect"
+import { OutboxEventWriter } from "@domain/events"
+import { BadRequestError, cuidSchema, generateId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import { Effect } from "effect"
 import { z } from "zod"
 import {
   annotationScoreSchema,
@@ -19,8 +10,10 @@ import {
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
+import { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "../errors.ts"
 import { isImmutableScore } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
+import { syncScoreAnalyticsUseCase } from "./save-score-analytics.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
   organizationId: true,
@@ -42,6 +35,7 @@ export const baseWriteScoreInputSchema = baseWritableScoreSchema.extend({
   tokens: baseScoreSchema.shape.tokens.default(0),
   cost: baseScoreSchema.shape.cost.default(0),
   draftedAt: baseScoreSchema.shape.draftedAt.default(null),
+  annotatorId: baseScoreSchema.shape.annotatorId.default(null),
 })
 export type BaseWriteScoreInput = z.input<typeof baseWriteScoreInputSchema>
 
@@ -76,23 +70,6 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
       }),
   })
 
-export class ScoreDraftClosedError extends Data.TaggedError("ScoreDraftClosedError")<{
-  readonly scoreId: string
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "Scores can only be edited while they remain drafts"
-}
-
-export class ScoreDraftUpdateConflictError extends Data.TaggedError("ScoreDraftUpdateConflictError")<{
-  readonly scoreId: string
-  readonly field: "projectId" | "source" | "sourceId"
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `Draft score ${this.scoreId} cannot change ${this.field}`
-  }
-}
-
 export type WriteScoreError = RepositoryError | BadRequestError | ScoreDraftClosedError | ScoreDraftUpdateConflictError
 
 const validateDraftUpdate = (existingScore: Score, input: ParsedWriteScoreInput) => {
@@ -111,6 +88,18 @@ const validateDraftUpdate = (existingScore: Score, input: ParsedWriteScoreInput)
   return null
 }
 
+const scoreCreatedDiscoveryPayloadIssueId = (score: Score, existingScore: Score | null): string | null => {
+  if (
+    existingScore !== null &&
+    existingScore.draftedAt !== null &&
+    existingScore.issueId !== null &&
+    score.issueId === null
+  ) {
+    return existingScore.issueId
+  }
+  return null
+}
+
 const buildScore = ({
   input,
   organizationId,
@@ -125,7 +114,7 @@ const buildScore = ({
   return parseOrBadRequest(
     scoreSchema,
     {
-      id: input.id ?? ScoreId(generateId()),
+      id: input.id ?? generateId<"ScoreId">(),
       organizationId,
       projectId: input.projectId,
       sessionId: input.sessionId,
@@ -145,6 +134,7 @@ const buildScore = ({
       tokens: input.tokens,
       cost: input.cost,
       draftedAt: input.draftedAt,
+      annotatorId: existingScore?.annotatorId ?? input.annotatorId,
       createdAt: existingScore?.createdAt ?? now,
       updatedAt: now,
     },
@@ -157,12 +147,16 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
     const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
     const sqlClient = yield* SqlClient
 
-    return yield* sqlClient.transaction(
+    const score = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
 
-        const existingScore = parsedInput.id ? yield* scoreRepository.findById(parsedInput.id) : null
+        const existingScore = parsedInput.id
+          ? yield* scoreRepository
+              .findById(parsedInput.id)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+          : null
 
         if (existingScore && existingScore.draftedAt === null) {
           return yield* new ScoreDraftClosedError({ scoreId: existingScore.id })
@@ -183,23 +177,29 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
 
         yield* scoreRepository.save(score)
 
-        if (isImmutableScore(score)) {
-          yield* outboxEventWriter
-            .write({
-              eventName: "ScoreImmutable",
-              aggregateId: score.id,
-              organizationId: score.organizationId,
-              payload: {
-                organizationId: score.organizationId,
-                projectId: score.projectId,
-                scoreId: score.id,
-                issueId: score.issueId,
-              },
-            })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
-        }
+        yield* outboxEventWriter.write({
+          eventName: "ScoreCreated",
+          aggregateType: "score",
+          aggregateId: score.id,
+          organizationId: score.organizationId,
+          payload: {
+            organizationId: score.organizationId,
+            projectId: score.projectId,
+            scoreId: score.id,
+            issueId: scoreCreatedDiscoveryPayloadIssueId(score, existingScore),
+          },
+        })
 
         return score
       }),
     )
+
+    if (isImmutableScore(score)) {
+      yield* syncScoreAnalyticsUseCase({
+        organizationId: score.organizationId,
+        scoreId: score.id,
+      })
+    }
+
+    return score
   })

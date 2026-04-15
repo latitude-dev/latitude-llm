@@ -1,18 +1,25 @@
-import { DropdownMenu, DropdownMenuTrigger, LatitudeLogo } from "@repo/ui"
-import { extractLeadingEmoji } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
-import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
+import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
-import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
-import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-import { getAvatarBackgroundColor, getAvatarTextColor } from "../lib/avatar.ts"
+import { resetPostHog } from "../lib/posthog/posthog-client.ts"
+import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
+import { useThemePreference } from "../lib/theme.ts"
+import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
-  beforeLoad: async () => {
+  staleTime: Infinity,
+  remountDeps: () => "authenticated-layout",
+  // Keep rendered layout data in `loader` instead of `beforeLoad`.
+  // `beforeLoad` is best for middleware-style redirects/preconditions, while
+  // `loader` participates in TanStack Router's cache (`staleTime`) and can be
+  // consumed via `useLoaderData({ select })` without refetching on same-route
+  // search-param navigations.
+  loader: async () => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -33,99 +40,34 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 })
 
-function UserAvatar({ name }: { name: string }) {
-  const trimmed = name.trim()
-  const initials =
-    trimmed.length === 0
-      ? "?"
-      : trimmed
-          .split(/\s+/)
-          .map((part) => part[0])
-          .filter(Boolean)
-          .slice(0, 2)
-          .join("")
-          .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
-
-  const initial = trimmed.charAt(0).toUpperCase()
-
-  return (
-    <div
-      className="w-6 h-6 rounded-full flex items-center justify-center"
-      style={{
-        backgroundColor: getAvatarBackgroundColor(initial),
-        color: getAvatarTextColor(initial),
-      }}
-    >
-      <span className="text-xs font-medium leading-none">{initials}</span>
-    </div>
-  )
-}
-
-function ProjectBreadcrumb({ projectId }: { projectId: string }) {
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
-    [projectId],
-  )
-
-  const { data: allProjects } = useProjectsCollection()
-  const hasMultipleProjects = (allProjects?.length ?? 0) > 1
-
-  if (!project) return null
-
-  const [emoji, title] = extractLeadingEmoji(project.name)
-
-  return (
-    <>
-      <span className="text-muted-foreground text-sm select-none">/</span>
-      {hasMultipleProjects ? (
-        <button type="button" className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors">
-          {emoji && <span className="text-sm">{emoji}</span>}
-          <span className="text-sm font-medium text-muted-foreground">{title}</span>
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-        </button>
-      ) : (
-        <span className="text-sm font-medium text-muted-foreground px-2 py-1">
-          {emoji && `${emoji} `}
-          {title}
-        </span>
-      )}
-    </>
-  )
-}
-
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() =>
-    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
-  )
-
-  const toggle = () => {
-    const next = !isDark
-    document.documentElement.classList.toggle("dark", next)
-    document.documentElement.style.colorScheme = next ? "dark" : "light"
-    setIsDark(next)
-  }
+  const initialTheme = useRootThemePreference()
+  const { theme, setTheme } = useThemePreference(initialTheme)
+  const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={toggle}
-      className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+      variant="ghost"
+      size="icon"
+      aria-label={`Switch to ${nextTheme} mode`}
+      title={`Switch to ${nextTheme} mode`}
+      aria-pressed={theme === "dark"}
+      className="h-8 w-8 group-hover:text-foreground"
+      onClick={() => setTheme(nextTheme)}
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </button>
+      <Icon icon={theme === "dark" ? Sun : Moon} size="sm" />
+    </Button>
   )
 }
 
 function NavHeader() {
-  const { user, organizationId } = Route.useRouteContext()
+  const user = Route.useLoaderData({ select: (data) => data.user })
+  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
-  const routerState = useRouterState()
-  const pathname = routerState.location.pathname
-  const projectMatch = pathname.match(/\/projects\/([^/]+)/)
-  const currentProjectId = projectMatch?.[1] ?? null
 
   if (!org) return null
 
@@ -155,21 +97,19 @@ function NavHeader() {
               })) ?? []
             }
             trigger={() => (
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <span className="text-sm font-medium text-foreground">{org.name}</span>
-                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </DropdownMenuTrigger>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+              >
+                <span className="text-sm font-medium text-foreground">{org.name}</span>
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+              </button>
             )}
           />
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
         )}
-        {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
+        <BreadcrumbTrail />
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
@@ -192,18 +132,20 @@ function NavHeader() {
               label: "Log out",
               type: "destructive",
               onClick: () => {
-                void authClient.signOut().then(() => {
+                void authClient.signOut().then(async () => {
+                  // Reset PostHog AFTER sign-out so events captured during the
+                  // logout flow stay attributed. The next user starts anonymous
+                  // until PostHogIdentity remounts with a new key.
+                  await resetPostHog()
                   void router.navigate({ to: "/login" })
                 })
               },
             },
           ]}
           trigger={() => (
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="cursor-pointer">
-                <UserAvatar name={user.name?.trim() ? user.name : user.email} />
-              </button>
-            </DropdownMenuTrigger>
+            <button type="button" className="cursor-pointer">
+              <Avatar name={user.name?.trim() ? user.name : user.email} size="sm" imageSrc={user.image ?? undefined} />
+            </button>
           )}
         />
       </div>
@@ -212,10 +154,23 @@ function NavHeader() {
 }
 
 function AuthenticatedLayout() {
+  const user = Route.useLoaderData({ select: (data) => data.user })
+  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
+  const { data: allOrgs } = useOrganizationsCollection()
+  const org = allOrgs?.find((o) => o.id === organizationId)
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      <PostHogIdentity
+        key={user.id}
+        userId={user.id}
+        userEmail={user.email}
+        userName={user.name}
+        organizationId={organizationId}
+        organizationName={org?.name}
+      />
       <NavHeader />
-      <main className="w-full flex-grow min-h-0 h-full relative overflow-y-auto">
+      <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />
       </main>
     </div>

@@ -10,6 +10,7 @@ export const annotationQueues = latitudeSchema.table(
     projectId: cuid("project_id").notNull(), // owning project
     system: boolean("system").notNull().default(false), // true when the queue definition is provisioned by the system
     name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
+    slug: varchar("slug", { length: 140 }).notNull(), // unique queue slug within the project
     description: text("description").notNull(),
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
@@ -25,6 +26,10 @@ export const annotationQueues = latitudeSchema.table(
     unique("annotation_queues_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)
       .nullsNotDistinct(),
+    unique("annotation_queues_unique_slug_per_project_idx")
+      .on(t.organizationId, t.projectId, t.slug, t.deletedAt)
+      .nullsNotDistinct(),
+    index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
 
@@ -36,7 +41,12 @@ export const annotationQueueItems = latitudeSchema.table(
     projectId: cuid("project_id").notNull(), // owning project
     queueId: cuid("queue_id").notNull(),
     traceId: varchar("trace_id", { length: 32 }).notNull(), // ClickHouse trace id of the queued trace
+    traceCreatedAt: tzTimestamp("trace_created_at").notNull(), // the trace's startTime from ClickHouse
     completedAt: tzTimestamp("completed_at"), // set when a reviewer marks the queue item as fully annotated
+    /** User who marked the item complete (nullable until completed). */
+    completedBy: cuid("completed_by"),
+    /** First time the reviewer opened the focused queue item (nullable until opened). */
+    reviewStartedAt: tzTimestamp("review_started_at"),
     ...timestamps(),
   },
   (t) => [
@@ -46,7 +56,7 @@ export const annotationQueueItems = latitudeSchema.table(
       t.projectId,
       t.queueId,
       t.completedAt,
-      t.createdAt,
+      t.traceCreatedAt,
       t.traceId,
     ),
     unique("annotation_queue_items_unique_trace_per_queue_idx").on(t.organizationId, t.projectId, t.queueId, t.traceId),

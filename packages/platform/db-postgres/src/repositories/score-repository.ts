@@ -2,6 +2,7 @@ import type { Score, ScoreListOptions, ScoreSource } from "@domain/scores"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
 import {
   type IssueId,
+  NotFoundError,
   type ProjectId,
   type ScoreId,
   type SessionId,
@@ -37,6 +38,7 @@ const toDomainScore = (row: typeof scores.$inferSelect): Score =>
     tokens: row.tokens,
     cost: row.cost,
     draftedAt: row.draftedAt,
+    annotatorId: row.annotatorId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -62,6 +64,7 @@ const toInsertRow = (score: Score): typeof scores.$inferInsert => ({
   tokens: score.tokens,
   cost: score.cost,
   draftedAt: score.draftedAt,
+  annotatorId: score.annotatorId,
   createdAt: score.createdAt,
   updatedAt: score.updatedAt,
 })
@@ -114,11 +117,40 @@ export const ScoreRepositoryLive = Layer.effect(
         )
     }
 
+    const existsCanonicalEvaluationScore = (input: {
+      readonly projectId: ProjectId
+      readonly evaluationId: string
+      readonly whereClause: SQL<unknown>
+    }) =>
+      sqlClient
+        .query((db) =>
+          db
+            .select({ id: scores.id })
+            .from(scores)
+            .where(
+              and(
+                eq(scores.projectId, input.projectId),
+                eq(scores.source, "evaluation"),
+                eq(scores.sourceId, input.evaluationId),
+                isNull(scores.draftedAt),
+                input.whereClause,
+              ),
+            )
+            .limit(1),
+        )
+        .pipe(Effect.map((rows) => rows[0] !== undefined))
+
     return {
       findById: (id: ScoreId) =>
         sqlClient
           .query((db) => db.select().from(scores).where(eq(scores.id, id)).limit(1))
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Score", id }))
+              return Effect.succeed(toDomainScore(row))
+            }),
+          ),
 
       save: (score: Score) =>
         Effect.gen(function* () {
@@ -146,10 +178,41 @@ export const ScoreRepositoryLive = Layer.effect(
                   tokens: row.tokens,
                   cost: row.cost,
                   draftedAt: row.draftedAt,
+                  annotatorId: row.annotatorId,
                   updatedAt: row.updatedAt,
                 },
               }),
           )
+        }),
+
+      assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .update(scores)
+              .set({
+                issueId,
+                updatedAt,
+              })
+              .where(and(eq(scores.id, scoreId), isNull(scores.issueId)))
+              .returning({ id: scores.id }),
+          )
+          .pipe(Effect.map((rows) => rows.length > 0)),
+
+      delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
+
+      existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) =>
+        existsCanonicalEvaluationScore({
+          projectId,
+          evaluationId,
+          whereClause: sessionId ? eq(scores.sessionId, sessionId as string) : eq(scores.traceId, traceId as string),
+        }),
+
+      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+        existsCanonicalEvaluationScore({
+          projectId,
+          evaluationId,
+          whereClause: eq(scores.traceId, traceId as string),
         }),
 
       listByProjectId: ({
@@ -172,31 +235,39 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly source: ScoreSource
-        readonly sourceId: string
+        readonly sourceId?: string
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          sourceId !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId))
+            : and(eq(scores.projectId, projectId), eq(scores.source, source))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listByTraceId: ({
         projectId,
         traceId,
+        source,
         options,
       }: {
         readonly projectId: ProjectId
         readonly traceId: TraceId
+        readonly source?: ScoreSource
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          source !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string), eq(scores.source, source))
+            : and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listBySessionId: ({
         projectId,
@@ -245,6 +316,33 @@ export const ScoreRepositoryLive = Layer.effect(
             eq(scores.projectId, projectId),
           options,
         }),
+
+      findQueueDraftByTraceId: ({
+        projectId,
+        queueId,
+        traceId,
+      }: {
+        readonly projectId: ProjectId
+        readonly queueId: string
+        readonly traceId: TraceId
+      }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .select()
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.projectId, projectId),
+                  eq(scores.source, "annotation"),
+                  eq(scores.sourceId, queueId),
+                  eq(scores.traceId, traceId as string),
+                  isNotNull(scores.draftedAt),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
     }
   }),
 )

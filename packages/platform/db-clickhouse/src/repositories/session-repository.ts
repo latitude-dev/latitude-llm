@@ -5,12 +5,14 @@ import {
   ExternalUserId,
   type FilterSet,
   SessionId,
+  SimulationId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
-import type { Session, SessionListPage } from "@domain/spans"
-import { SessionRepository } from "@domain/spans"
+import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
+import { emptySessionMetrics, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
@@ -42,7 +44,8 @@ const LIST_SELECT = `
   maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
-  groupUniqArrayIfMerge(service_names) AS service_names
+  groupUniqArrayIfMerge(service_names) AS service_names,
+  argMaxIfMerge(simulation_id)         AS simulation_id
 `
 
 type SessionListRow = {
@@ -71,14 +74,63 @@ type SessionListRow = {
   models: string[]
   providers: string[]
   service_names: string[]
+  simulation_id: string
+}
+
+type SessionMetricsRow = {
+  row_count: string
+  duration_min: string
+  duration_max: string
+  duration_avg: string
+  duration_median: string
+  duration_sum: string
+  cost_min: string
+  cost_max: string
+  cost_avg: string
+  cost_median: string
+  cost_sum: string
+  span_min: string
+  span_max: string
+  span_avg: string
+  span_median: string
+  span_sum: string
+}
+
+const toSessionNumericRollup = (min: string, max: string, avg: string, median: string, sum: string) => ({
+  min: Number(min),
+  max: Number(max),
+  avg: Number(avg),
+  median: Number(median),
+  sum: Number(sum),
+})
+
+const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
+  if (!row || Number(row.row_count) === 0) return emptySessionMetrics()
+  return {
+    durationNs: toSessionNumericRollup(
+      row.duration_min,
+      row.duration_max,
+      row.duration_avg,
+      row.duration_median,
+      row.duration_sum,
+    ),
+    costTotalMicrocents: toSessionNumericRollup(
+      row.cost_min,
+      row.cost_max,
+      row.cost_avg,
+      row.cost_median,
+      row.cost_sum,
+    ),
+    spanCount: toSessionNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+  }
 }
 
 const toDomainSession = (row: SessionListRow): Session => ({
-  organizationId: toOrganizationId(row.organization_id),
-  projectId: toProjectId(row.project_id),
-  sessionId: SessionId(row.session_id),
+  organizationId: toOrganizationId(normalizeCHString(row.organization_id)),
+  projectId: toProjectId(normalizeCHString(row.project_id)),
+  sessionId: SessionId(normalizeCHString(row.session_id)),
   traceCount: Number(row.trace_count),
-  traceIds: row.trace_ids,
+  traceIds: row.trace_ids.map(normalizeCHString),
   spanCount: Number(row.span_count),
   errorCount: Number(row.error_count),
   startTime: new Date(row.start_time),
@@ -93,12 +145,13 @@ const toDomainSession = (row: SessionListRow): Session => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
-  userId: ExternalUserId(row.user_id ?? ""),
-  tags: row.tags,
+  userId: ExternalUserId(normalizeCHString(row.user_id)),
+  simulationId: SimulationId(normalizeCHString(row.simulation_id)),
+  tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},
-  models: row.models,
-  providers: row.providers,
-  serviceNames: row.service_names,
+  models: row.models.map(normalizeCHString),
+  providers: row.providers.map(normalizeCHString),
+  serviceNames: row.service_names.map(normalizeCHString),
 })
 
 interface SortColumn {
@@ -152,30 +205,29 @@ export const SessionRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-    return {
-      findByProjectId: ({ organizationId, projectId, options }) => {
-        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-        const cmp = orderDir === "DESC" ? "<" : ">"
-        const limit = options.limit ?? 50
+    const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
+      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+      const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+      const cmp = orderDir === "DESC" ? "<" : ">"
+      const limit = options.limit ?? 50
 
-        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
+      const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
-        const havingParts: string[] = [...havingClauses]
-        if (options.cursor) {
-          havingParts.push(
-            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+      const havingParts: string[] = [...havingClauses]
+      if (options.cursor) {
+        havingParts.push(
+          `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
               OR (${sort.expr} = {cursorSortValue:${sort.chType}}
                   AND session_id ${cmp} {cursorSessionId:String}))`,
-          )
-        }
-        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        )
+      }
+      const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${LIST_SELECT}
                       FROM sessions
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -184,38 +236,41 @@ export const SessionRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: limit + 1,
-                ...filterParams,
-                ...(options.cursor
-                  ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorSessionId: options.cursor.sessionId,
-                    }
-                  : {}),
-              },
-              format: "JSONEachRow",
-            })
-            return result.json<SessionListRow>()
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              limit: limit + 1,
+              ...filterParams,
+              ...(options.cursor
+                ? {
+                    cursorSortValue: options.cursor.sortValue,
+                    cursorSessionId: options.cursor.sessionId,
+                  }
+                : {}),
+            },
+            format: "JSONEachRow",
           })
-          .pipe(
-            Effect.map((rows): SessionListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toDomainSession)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
-          )
-      },
+          return result.json<SessionListRow>()
+        })
+        .pipe(
+          Effect.map((rows): SessionListPage => {
+            const hasMore = rows.length > limit
+            const pageRows = hasMore ? rows.slice(0, limit) : rows
+            const items = pageRows.map(toDomainSession)
+            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+            if (!last) return { items, hasMore }
+            return {
+              items,
+              hasMore,
+              nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+        )
+    }
+
+    return {
+      listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
@@ -247,6 +302,55 @@ export const SessionRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => Number(rows[0]?.total ?? 0)),
             Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+          )
+      },
+
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        count() AS row_count,
+                        min(duration_ns) AS duration_min,
+                        max(duration_ns) AS duration_max,
+                        avg(duration_ns) AS duration_avg,
+                        quantileTDigest(0.5)(duration_ns) AS duration_median,
+                        sum(duration_ns) AS duration_sum,
+                        min(cost_total_microcents) AS cost_min,
+                        max(cost_total_microcents) AS cost_max,
+                        avg(cost_total_microcents) AS cost_avg,
+                        quantileTDigest(0.5)(cost_total_microcents) AS cost_median,
+                        sum(cost_total_microcents) AS cost_sum,
+                        min(span_count) AS span_min,
+                        max(span_count) AS span_max,
+                        avg(span_count) AS span_avg,
+                        quantileTDigest(0.5)(span_count) AS span_median,
+                        sum(span_count) AS span_sum
+                      FROM (
+                        SELECT session_id, ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                      )`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SessionMetricsRow>()
+          })
+          .pipe(
+            Effect.map((rows) => toSessionMetrics(rows[0])),
+            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
           )
       },
 

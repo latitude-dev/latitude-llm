@@ -1,4 +1,4 @@
-import type { RepositoryError } from "@domain/shared"
+import type { NotFoundError, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { PublicInvitationPreview } from "../entities/public-invitation-preview.ts"
 
@@ -10,6 +10,6 @@ export class InvitationRepository extends ServiceMap.Service<
      */
     findPublicPendingPreviewById: (
       invitationId: string,
-    ) => Effect.Effect<PublicInvitationPreview | null, RepositoryError>
+    ) => Effect.Effect<PublicInvitationPreview, NotFoundError | RepositoryError>
   }
 >()("@domain/organizations/InvitationRepository") {}

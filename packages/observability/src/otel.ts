@@ -1,6 +1,10 @@
+import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { NodeSDK } from "@opentelemetry/sdk-node"
+import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base"
+import { parseEnv } from "@platform/env"
+import { Effect } from "effect"
 import type { TracesConfig } from "./types.ts"
 
 const appendResourceAttribute = (key: string, value: string) => {
@@ -26,14 +30,49 @@ export const startTracing = async ({
   appendResourceAttribute("service.name", serviceName)
   appendResourceAttribute("deployment.environment", environment)
 
+  const serviceVersion = process.env.DD_VERSION?.trim() || process.env.DD_GIT_COMMIT_SHA?.trim()
+  if (serviceVersion) {
+    appendResourceAttribute("service.version", serviceVersion)
+  }
+
+  const apiKey = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_API_KEY", "string", ""))
+  const projectSlug = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string", ""))
+  const latitudeIngestBase = Effect.runSync(
+    parseEnv("LAT_LATITUDE_TELEMETRY_INGEST_URL", "string", "https://ingest.latitude.so"),
+  )
+  const spanProcessors: SpanProcessor[] = [
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({
+        url: tracesConfig.endpoint,
+        headers: tracesConfig.headers,
+      }),
+    ),
+  ]
+
+  if (apiKey !== "" && projectSlug !== "") {
+    const latitudeIngestTracesUrl = `${latitudeIngestBase.replace(/\/$/, "")}/v1/traces`
+    spanProcessors.push(
+      new LatitudeSpanProcessor(apiKey, projectSlug, {
+        serviceName,
+        exporter: new OTLPTraceExporter({
+          url: latitudeIngestTracesUrl,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "X-Latitude-Project": projectSlug,
+          },
+          timeoutMillis: 30_000,
+        }),
+      }),
+    )
+  }
+
   const sdk = new NodeSDK({
-    traceExporter: new OTLPTraceExporter({
-      url: tracesConfig.endpoint,
-      headers: tracesConfig.headers,
-    }),
+    spanProcessors,
     instrumentations: [getNodeAutoInstrumentations()],
   })
 
-  await sdk.start()
+  sdk.start()
+
   return () => sdk.shutdown()
 }

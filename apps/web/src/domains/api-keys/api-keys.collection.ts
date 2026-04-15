@@ -60,6 +60,13 @@ export function deleteApiKeyMutation(id: string) {
   return apiKeysCollection.delete(id)
 }
 
+export async function insertApiKeyMutation(name: string): Promise<void> {
+  await createApiKey({
+    data: { name },
+  })
+  await queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
+}
+
 export const useApiKeysCollection = () => {
   return useLiveQuery((query) => query.from({ apiKey: apiKeysCollection }))
 }

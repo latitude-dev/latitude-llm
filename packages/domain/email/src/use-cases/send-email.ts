@@ -1,6 +1,7 @@
 import type { Effect } from "effect"
 import type { EmailContent } from "../entities/email.ts"
-import type { EmailSendError, EmailSender } from "../ports/email-sender.ts"
+import type { EmailSendError } from "../errors.ts"
+import type { EmailSender } from "../ports/email-sender.ts"
 
 /**
  * Send email use case

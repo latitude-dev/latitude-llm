@@ -1,57 +1,32 @@
-import type { DatasetId, DatasetVersionId, OrganizationId, ProjectId } from "@domain/shared"
-import { Data } from "effect"
+import { datasetIdSchema, datasetVersionIdSchema, organizationIdSchema, projectIdSchema } from "@domain/shared"
+import { z } from "zod"
 
-export interface Dataset {
-  readonly id: DatasetId
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly name: string
-  readonly description: string | null
-  readonly fileKey: string | null
-  readonly currentVersion: number
-  readonly latestVersionId: DatasetVersionId | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export const datasetSchema = z.object({
+  id: datasetIdSchema,
+  organizationId: organizationIdSchema,
+  projectId: projectIdSchema,
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  fileKey: z.string().nullable(),
+  currentVersion: z.number().int().nonnegative(),
+  latestVersionId: datasetVersionIdSchema.nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
 
-export interface DatasetVersion {
-  readonly id: DatasetVersionId
-  readonly datasetId: DatasetId
-  readonly version: number
-  readonly rowsInserted: number
-  readonly rowsUpdated: number
-  readonly rowsDeleted: number
-  readonly source: string
-  readonly actorId: string | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export type Dataset = z.infer<typeof datasetSchema>
 
-export class DatasetNotFoundError extends Data.TaggedError("DatasetNotFoundError")<{
-  readonly datasetId: string
-}> {
-  readonly httpStatus = 404
-  get httpMessage() {
-    return `Dataset ${this.datasetId} not found`
-  }
-}
+export const datasetVersionSchema = z.object({
+  id: datasetVersionIdSchema,
+  datasetId: datasetIdSchema,
+  version: z.number().int().positive(),
+  rowsInserted: z.number().int().nonnegative(),
+  rowsUpdated: z.number().int().nonnegative(),
+  rowsDeleted: z.number().int().nonnegative(),
+  source: z.string().min(1),
+  actorId: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
 
-export class DuplicateDatasetNameError extends Data.TaggedError("DuplicateDatasetNameError")<{
-  readonly projectId: string
-  readonly name: string
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `A dataset named "${this.name}" already exists in this project`
-  }
-}
-
-export class TooManyTracesError extends Data.TaggedError("TooManyTracesError")<{
-  readonly count: number
-  readonly limit: number
-}> {
-  readonly httpStatus = 422
-  get httpMessage() {
-    return `Selection contains ${this.count} traces, but the limit is ${this.limit}`
-  }
-}
+export type DatasetVersion = z.infer<typeof datasetVersionSchema>

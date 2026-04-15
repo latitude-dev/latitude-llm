@@ -1,101 +1,200 @@
-import { appendFileSync } from "node:fs"
+import { EvaluationRepository } from "@domain/evaluations"
+import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { type Score, ScoreRepository, syncScoreAnalyticsUseCase } from "@domain/scores"
+import { IssueId, type RepositoryError, ScoreId } from "@domain/shared"
 import { Effect } from "effect"
+import type { CheckEligibilityError } from "../errors.ts"
+import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
+import { IssueRepository } from "../ports/issue-repository.ts"
+import { checkEligibilityUseCase } from "./check-eligibility.ts"
+import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface DiscoverIssueInput {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
+  readonly issueId: string | null
 }
 
-export interface EligibilityResult {
-  readonly eligible: boolean
-  readonly scoreId: string
-}
+type DiscoverIssueSkipReason = CheckEligibilityError["_tag"]
 
-export const recheckEligibilityUseCase = (input: DiscoverIssueInput, logFile?: string) =>
+export type DiscoverIssueStartedWorkflow = "issueDiscoveryWorkflow" | "assignScoreToKnownIssueWorkflow"
+
+export type DiscoverIssueResult =
+  | {
+      readonly action: "skipped"
+      readonly reason: DiscoverIssueSkipReason
+    }
+  | {
+      readonly action: "already-assigned"
+      readonly issueId: string
+    }
+  | {
+      readonly action: "workflow-started"
+      readonly workflow: DiscoverIssueStartedWorkflow
+      readonly scoreId: string
+    }
+
+export type DiscoverIssueError = RepositoryError | ScoreAlreadyOwnedByIssueError
+
+const resolveKnownIssueId = ({ issueId, projectId }: { readonly issueId: string; readonly projectId: string }) =>
   Effect.gen(function* () {
-    yield* writeLog(
-      logFile,
-      `1/4 recheckEligibility: I am score ${input.scoreId}, checking if I'm eligible for discovery...`,
-    )
-    yield* Effect.sleep("500 millis")
-    const result = { eligible: true, scoreId: input.scoreId } satisfies EligibilityResult
-    yield* writeLog(
-      logFile,
-      `1/4 recheckEligibility: I am score ${input.scoreId}, verdict: eligible=${result.eligible}`,
-    )
-    return result
+    const issueRepository = yield* IssueRepository
+    const issue = yield* issueRepository
+      .findById(IssueId(issueId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (issue === null || issue.projectId !== projectId) {
+      return null
+    }
+
+    return issue.id
   })
 
-export interface RetrievalResult {
-  readonly matchedIssueId: string | null
-  readonly similarityScore: number
-}
-
-export const retrieveAndRerankUseCase = (input: DiscoverIssueInput, logFile?: string) =>
+const resolveLinkedIssueId = (score: Score) =>
   Effect.gen(function* () {
-    yield* writeLog(
-      logFile,
-      `2/4 retrieveAndRerank: I am score ${input.scoreId}, searching Weaviate for similar issues...`,
-    )
-    yield* Effect.sleep("1 seconds")
-    const result = { matchedIssueId: null, similarityScore: 0.2 } satisfies RetrievalResult
-    yield* writeLog(
-      logFile,
-      `2/4 retrieveAndRerank: I am score ${input.scoreId}, found matchedIssueId=${result.matchedIssueId ?? "none"}, similarity=${result.similarityScore}`,
-    )
-    return result
+    if (score.source !== "evaluation") {
+      return null
+    }
+
+    const evaluationRepository = yield* EvaluationRepository
+    const evaluation = yield* evaluationRepository
+      .findById(score.sourceId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (evaluation === null || evaluation.projectId !== score.projectId) {
+      return null
+    }
+
+    return yield* resolveKnownIssueId({
+      issueId: evaluation.issueId,
+      projectId: score.projectId,
+    })
   })
 
-export interface AssignmentResult {
-  readonly issueId: string
-  readonly action: "created" | "assigned"
-}
+const startDiscoveryWorkflow = (workflowStarter: WorkflowStarterShape, input: DiscoverIssueInput) =>
+  workflowStarter.start(
+    "issueDiscoveryWorkflow",
+    {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+    },
+    {
+      workflowId: `issues:discovery:${input.scoreId}`,
+    },
+  )
 
-export const createOrAssignIssueUseCase = (
-  input: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly scoreId: string
-    readonly matchedIssueId: string | null
-  },
-  logFile?: string,
+const startAssignScoreToKnownIssueWorkflow = (
+  workflowStarter: WorkflowStarterShape,
+  input: DiscoverIssueInput,
+  issueId: string,
 ) =>
+  workflowStarter.start(
+    "assignScoreToKnownIssueWorkflow",
+    {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      issueId,
+    },
+    {
+      workflowId: `issues:assign-known:${input.scoreId}`,
+    },
+  )
+
+const loadAssignedScoreOrSkip = (scoreId: string) =>
   Effect.gen(function* () {
-    const intent = input.matchedIssueId
-      ? `assigning to existing issue ${input.matchedIssueId}`
-      : "no match, creating new issue"
-    yield* writeLog(logFile, `3/4 createOrAssignIssue: I am score ${input.scoreId}, ${intent}...`)
-    yield* Effect.sleep("500 millis")
-    const action = input.matchedIssueId ? ("assigned" as const) : ("created" as const)
-    const issueId = input.matchedIssueId ?? `issue-${Date.now()}`
-    yield* writeLog(
-      logFile,
-      `3/4 createOrAssignIssue: I am score ${input.scoreId}, result: action=${action}, issueId=${issueId}`,
-    )
-    return { issueId, action } satisfies AssignmentResult
+    const scoreRepository = yield* ScoreRepository
+    const currentScore = yield* scoreRepository
+      .findById(ScoreId(scoreId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (currentScore?.issueId != null) {
+      return {
+        action: "already-assigned",
+        issueId: currentScore.issueId,
+        score: currentScore,
+      } as const
+    }
+
+    return yield* new ScoreAlreadyOwnedByIssueError({ scoreId })
   })
 
-export const syncProjectionsUseCase = (
-  input: { readonly organizationId: string; readonly issueId: string },
-  logFile?: string,
-) =>
+const asSkipped = (reason: DiscoverIssueSkipReason) =>
+  Effect.succeed({
+    action: "skipped",
+    reason,
+  } as const)
+
+export const discoverIssueUseCase = (input: DiscoverIssueInput) =>
   Effect.gen(function* () {
-    yield* writeLog(
-      logFile,
-      `4/4 syncProjections: I am issue ${input.issueId}, syncing Weaviate centroid + ClickHouse analytics...`,
-    )
-    yield* Effect.sleep("500 millis")
-    yield* writeLog(
-      logFile,
-      `4/4 syncProjections: I am issue ${input.issueId}, projections up to date. Discovery complete!`,
-    )
-  })
+    const workflowStarter = yield* WorkflowStarter
 
-function writeLog(logFile: string | undefined, message: string) {
-  return Effect.sync(() => {
-    if (!logFile) return
+    const eligibilityResult = yield* checkEligibilityUseCase(input).pipe(
+      Effect.map((score) => ({ action: "ready", score }) as const),
+      Effect.catchTag("ScoreAlreadyOwnedByIssueError", () => loadAssignedScoreOrSkip(input.scoreId)),
+      Effect.catchTag("ScoreNotFoundForDiscoveryError", () => asSkipped("ScoreNotFoundForDiscoveryError")),
+      Effect.catchTag("ScoreDiscoveryOrganizationMismatchError", () =>
+        asSkipped("ScoreDiscoveryOrganizationMismatchError"),
+      ),
+      Effect.catchTag("ScoreDiscoveryProjectMismatchError", () => asSkipped("ScoreDiscoveryProjectMismatchError")),
+      Effect.catchTag("DraftScoreNotEligibleForDiscoveryError", () =>
+        asSkipped("DraftScoreNotEligibleForDiscoveryError"),
+      ),
+      Effect.catchTag("ErroredScoreNotEligibleForDiscoveryError", () =>
+        asSkipped("ErroredScoreNotEligibleForDiscoveryError"),
+      ),
+      Effect.catchTag("MissingScoreFeedbackForDiscoveryError", () =>
+        asSkipped("MissingScoreFeedbackForDiscoveryError"),
+      ),
+      Effect.catchTag("PassedScoreNotEligibleForDiscoveryError", () =>
+        asSkipped("PassedScoreNotEligibleForDiscoveryError"),
+      ),
+    )
 
-    appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`)
+    if (eligibilityResult.action === "skipped") {
+      return eligibilityResult satisfies DiscoverIssueResult
+    }
+
+    if (eligibilityResult.action === "already-assigned") {
+      yield* syncIssueProjectionsUseCase({
+        organizationId: input.organizationId,
+        issueId: eligibilityResult.issueId,
+      })
+      yield* syncScoreAnalyticsUseCase({
+        organizationId: input.organizationId,
+        scoreId: input.scoreId,
+      })
+
+      return {
+        action: "already-assigned",
+        issueId: eligibilityResult.issueId,
+      } satisfies DiscoverIssueResult
+    }
+
+    const score = eligibilityResult.score
+    const selectedIssueId =
+      input.issueId === null
+        ? yield* resolveLinkedIssueId(score)
+        : yield* resolveKnownIssueId({
+            issueId: input.issueId,
+            projectId: score.projectId,
+          })
+
+    if (selectedIssueId === null) {
+      yield* startDiscoveryWorkflow(workflowStarter, input)
+      return {
+        action: "workflow-started",
+        workflow: "issueDiscoveryWorkflow",
+        scoreId: score.id,
+      } satisfies DiscoverIssueResult
+    }
+
+    yield* startAssignScoreToKnownIssueWorkflow(workflowStarter, input, selectedIssueId)
+    return {
+      action: "workflow-started",
+      workflow: "assignScoreToKnownIssueWorkflow",
+      scoreId: score.id,
+    } satisfies DiscoverIssueResult
   })
-}

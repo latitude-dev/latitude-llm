@@ -1,32 +1,70 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 
-const { recheckEligibility, retrieveAndRerank, createOrAssignIssue, syncProjections } = proxyActivities<
-  typeof activities
->({ startToCloseTimeout: "5 minutes" })
+const {
+  checkEligibility,
+  embedScoreFeedback,
+  hybridSearchIssues,
+  rerankIssueCandidates,
+  resolveMatchedIssue,
+  createIssueFromScore,
+  assignScoreToIssue,
+  syncIssueProjections,
+  syncScoreAnalytics,
+} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
 
 export const issueDiscoveryWorkflow = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
-  readonly logFile?: string
 }) => {
-  const eligibility = await recheckEligibility(input, input.logFile)
-  if (!eligibility.eligible) return { action: "skipped" as const, reason: "not-eligible" }
+  const eligibility = await checkEligibility(input)
+  if (eligibility.status === "skipped") {
+    return { action: "skipped" as const, reason: eligibility.reason }
+  }
 
-  const retrieval = await retrieveAndRerank(input, input.logFile)
+  const embeddedScoreFeedback = await embedScoreFeedback(input)
 
-  const assignment = await createOrAssignIssue(
-    {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      scoreId: input.scoreId,
-      matchedIssueId: retrieval.matchedIssueId,
-    },
-    input.logFile,
-  )
+  const hybridSearch = await hybridSearchIssues({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    query: embeddedScoreFeedback.feedback,
+    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+  })
 
-  await syncProjections({ organizationId: input.organizationId, issueId: assignment.issueId }, input.logFile)
+  const retrieval = await rerankIssueCandidates({
+    query: embeddedScoreFeedback.feedback,
+    candidates: hybridSearch.candidates,
+  })
+
+  const matchedIssue = await resolveMatchedIssue({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    matchedIssueUuid: retrieval.matchedIssueUuid,
+  })
+
+  const assignment =
+    matchedIssue.issueId === null
+      ? await createIssueFromScore({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          scoreId: input.scoreId,
+          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+        })
+      : await assignScoreToIssue({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          scoreId: input.scoreId,
+          issueId: matchedIssue.issueId,
+          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+        })
+
+  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
+
+  await syncScoreAnalytics({
+    organizationId: input.organizationId,
+    scoreId: input.scoreId,
+  })
 
   return { action: assignment.action, issueId: assignment.issueId }
 }

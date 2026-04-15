@@ -83,7 +83,7 @@ const buildListDataQueryOffset = (versionClause: string, searchClause: string, s
 }
 
 /**
- * Keyset: same shape as traces `findByProjectId` (trace-repository.ts) — cursor goes in HAVING
+ * Keyset: same shape as traces `listByProjectId` (trace-repository.ts) — cursor goes in HAVING
  * using SELECT aliases (`created_at`), not repeated aggregates like `min(created_at)` (that nested
  * aggregate error). ClickHouse allows aliases from SELECT in HAVING.
  */
@@ -163,6 +163,8 @@ export const DatasetRowRepositoryLive = Layer.effect(
           return new Set(result.map((r) => TraceId(r.trace_id)))
         }),
 
+      // TODO(repositories): rename insertBatch -> saveBatch so repository write
+      // verbs converge on save/saveBatch instead of insert/insertBatch.
       insertBatch: (args) =>
         chSqlClient.query(async (client, organizationId) => {
           const values = args.rows.map((row) => ({

@@ -2,13 +2,24 @@ import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { join } from "node:path"
 import { parseEnv } from "@platform/env"
-import { loadTemporalConfig, runTemporalWorker } from "@platform/workflows-temporal"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
+import { loadTemporalConfig } from "@platform/workflows-temporal"
+import { runTemporalWorker } from "@platform/workflows-temporal/worker"
+import {
+  createLogger,
+  initializeObservability,
+  recordSpanExceptionForDatadog,
+  shutdownObservability,
+  trace,
+} from "@repo/observability"
+import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
+import { getClickhouseClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
+
+const log = createLogger("workflows")
 
 function resolveWorkflowsPath(): string {
   const override = process.env.LAT_TEMPORAL_WORKFLOWS_PATH
@@ -31,12 +42,32 @@ const bootstrap = async () => {
     serviceName: "workflows",
   })
 
-  const logger = createLogger("workflows")
+  const logger = log
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKFLOWS_HEALTH_PORT", "number", 9091))
   const healthServer = createServer((req, res) => {
-    if (req.url === "/health" && req.method === "GET") {
+    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname
+
+    if (pathname === "/health/observability-test" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ service: "workflows", observabilityTest: "armed" }))
+      return
+    }
+
+    if (pathname === "/health/observability-test/error" && req.method === "GET") {
+      const err = new LatitudeObservabilityTestError("workflows")
+      logger.error(err)
+      const span = trace.getActiveSpan()
+      if (span) {
+        recordSpanExceptionForDatadog(span, err)
+      }
+      res.writeHead(500, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ name: err.name, message: err.message }))
+      return
+    }
+
+    if (pathname === "/health" && req.method === "GET") {
       const status = ready ? 200 : 503
       res.writeHead(status, { "Content-Type": "application/json" })
       res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
@@ -92,6 +123,7 @@ const bootstrap = async () => {
     }
 
     await shutdownObservability()
+    await getClickhouseClient().close()
     process.exit(0)
   }
 
@@ -104,6 +136,6 @@ const bootstrap = async () => {
 }
 
 void bootstrap().catch((error) => {
-  console.error(error)
+  log.error("Failed to bootstrap workflows worker", error)
   process.exit(1)
 })

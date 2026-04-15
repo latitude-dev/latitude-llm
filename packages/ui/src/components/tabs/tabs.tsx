@@ -5,15 +5,24 @@ import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 
-const tabsListVariants = cva("relative flex flex-row gap-2", {
+const tabsListVariants = cva("relative flex flex-row", {
   variants: {
     variant: {
       secondary: "",
-      bordered: "w-fit rounded-lg border border-border bg-secondary p-1",
+      bordered: "w-fit border border-border bg-secondary",
+    },
+    size: {
+      md: "gap-2",
+      sm: "gap-1",
     },
   },
+  compoundVariants: [
+    { variant: "bordered", size: "md", className: "rounded-lg p-1" },
+    { variant: "bordered", size: "sm", className: "h-8 items-center rounded-md p-0.5" },
+  ],
   defaultVariants: {
     variant: "secondary",
+    size: "md",
   },
 })
 
@@ -26,8 +35,12 @@ const tabTriggerVariants = cva(
         bordered: "border border-transparent bg-transparent",
       },
       hideLabels: {
-        true: "h-8 w-8",
-        false: "h-8 gap-1 px-2",
+        true: "",
+        false: "",
+      },
+      size: {
+        md: "",
+        sm: "",
       },
       active: {
         true: "",
@@ -35,6 +48,12 @@ const tabTriggerVariants = cva(
       },
     },
     compoundVariants: [
+      { size: "md", hideLabels: true, className: "h-8 w-8" },
+      { size: "md", hideLabels: false, className: "h-8 gap-1 px-2" },
+      { size: "sm", variant: "secondary", hideLabels: true, className: "h-8 w-8" },
+      { size: "sm", variant: "secondary", hideLabels: false, className: "h-8 gap-1 px-2" },
+      { size: "sm", variant: "bordered", hideLabels: true, className: "h-6.5 w-6.5" },
+      { size: "sm", variant: "bordered", hideLabels: false, className: "h-6.5 gap-1 px-2" },
       {
         variant: "secondary",
         hideLabels: true,
@@ -81,6 +100,7 @@ const tabTriggerVariants = cva(
     defaultVariants: {
       variant: "secondary",
       hideLabels: false,
+      size: "md",
       active: false,
     },
   },
@@ -102,6 +122,8 @@ export type TabOption<T extends string = string> = {
   readonly id: T
   readonly label: string
   readonly icon?: ReactNode
+  /** Extra content appended to the tab's tooltip (e.g. a HotkeyBadge). When hideLabels is true the label is automatically prepended. */
+  readonly tooltip?: ReactNode
 }
 
 export type TabsProps<T extends string = string> = {
@@ -115,9 +137,10 @@ type SlidingIndicatorParams<T extends string> = {
   readonly active: T
   readonly options: readonly TabOption<T>[]
   readonly variant: Exclude<TabsProps<T>["variant"], null | undefined>
+  readonly size: Exclude<TabsProps<T>["size"], null | undefined>
 }
 
-function useSlidingIndicator<T extends string>({ active, options, variant }: SlidingIndicatorParams<T>) {
+function useSlidingIndicator<T extends string>({ active, options, variant, size }: SlidingIndicatorParams<T>) {
   const listRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Map<T, HTMLButtonElement>>(new Map())
   const indicatorRef = useRef<HTMLDivElement>(null)
@@ -196,7 +219,7 @@ function useSlidingIndicator<T extends string>({ active, options, variant }: Sli
       resizeObserver.disconnect()
       resizeObserverRef.current = null
     }
-  }, [options, updateIndicator, variant])
+  }, [options, updateIndicator, variant, size])
 
   useMountEffect(() => {
     return () => {
@@ -224,11 +247,15 @@ export function Tabs<T extends string>({
   onSelect,
   hideLabels = false,
   variant = "secondary",
+  size = "md",
 }: TabsProps<T>) {
+  const resolvedVariant = variant ?? "secondary"
+  const resolvedSize = size ?? "md"
   const { indicatorRef, isIndicatorAnimated, isIndicatorVisible, listRef, setTabRef, tabRefs } = useSlidingIndicator({
     active,
     options,
-    variant: variant ?? "secondary",
+    variant: resolvedVariant,
+    size: resolvedSize,
   })
 
   const onKeyDown = useCallback(
@@ -263,10 +290,15 @@ export function Tabs<T extends string>({
   )
 
   return (
-    <div className={cn(tabsListVariants({ variant }))} role="tablist" onKeyDown={onKeyDown} ref={listRef}>
+    <div
+      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize }))}
+      role="tablist"
+      onKeyDown={onKeyDown}
+      ref={listRef}
+    >
       <div
         aria-hidden="true"
-        className={cn(tabIndicatorVariants({ variant }), {
+        className={cn(tabIndicatorVariants({ variant: resolvedVariant }), {
           hidden: !isIndicatorVisible,
           "transition-[transform,width,height] duration-200 ease-in-out": isIndicatorAnimated,
         })}
@@ -283,7 +315,14 @@ export function Tabs<T extends string>({
             aria-selected={isActive}
             aria-label={hideLabels ? option.label : undefined}
             tabIndex={isActive ? 0 : -1}
-            className={cn(tabTriggerVariants({ variant, active: isActive, hideLabels }))}
+            className={cn(
+              tabTriggerVariants({
+                variant: resolvedVariant,
+                size: resolvedSize,
+                active: isActive,
+                hideLabels,
+              }),
+            )}
             onClick={() => onSelect(option.id)}
           >
             {hideLabels ? (
@@ -303,7 +342,21 @@ export function Tabs<T extends string>({
         if (hideLabels) {
           return (
             <Tooltip key={option.id} trigger={trigger} asChild>
-              <Text.H6>{option.label}</Text.H6>
+              {option.tooltip ? (
+                <>
+                  {option.label} {option.tooltip}
+                </>
+              ) : (
+                <Text.H6>{option.label}</Text.H6>
+              )}
+            </Tooltip>
+          )
+        }
+
+        if (option.tooltip) {
+          return (
+            <Tooltip key={option.id} trigger={trigger} asChild>
+              {option.tooltip}
             </Tooltip>
           )
         }

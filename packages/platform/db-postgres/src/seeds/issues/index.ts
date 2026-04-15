@@ -1,37 +1,34 @@
-import { SEED_ISSUE_ID, SEED_ISSUE_UUID, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared"
+import { SEED_ISSUE_FIXTURES, SEED_ORG_ID, SEED_PROJECT_ID, seedDateDaysAgo } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { issues } from "../../schema/issues.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-const issueRows = [
-  {
-    id: SEED_ISSUE_ID,
-    uuid: SEED_ISSUE_UUID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    name: "Secret leakage in final answers",
-    description:
-      "The agent exposes private tokens, API keys, or other sensitive information in its final answer. " +
-      "This pattern appears across different conversations where the agent is asked to interact with " +
-      "external services or manage credentials on behalf of the user.",
-    centroid: {
-      base: new Array<number>(2048).fill(0),
-      mass: 0,
-      model: "voyage-4-large",
-      decay: 14 * 24 * 60 * 60,
-      weights: { annotation: 1.0, evaluation: 0.8, custom: 0.8 },
-    },
-    clusteredAt: new Date("2026-03-23T14:15:00.000Z"),
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-03-23T14:15:00.000Z"),
-    updatedAt: new Date("2026-03-23T14:15:00.000Z"),
-  },
-] as const
+const baseCentroid = {
+  base: new Array<number>(2048).fill(0),
+  mass: 0,
+  model: "voyage-4-large",
+  decay: 14 * 24 * 60 * 60,
+  weights: { annotation: 1.0, evaluation: 0.8, custom: 0.8 },
+} as const
+
+const issueRows = SEED_ISSUE_FIXTURES.map((issue) => ({
+  id: issue.id,
+  uuid: issue.uuid,
+  organizationId: SEED_ORG_ID,
+  projectId: SEED_PROJECT_ID,
+  name: issue.name,
+  description: issue.description,
+  centroid: baseCentroid,
+  clusteredAt: seedDateDaysAgo(issue.clusteredDaysAgo, 14, 15),
+  escalatedAt: issue.escalatedDaysAgo === null ? null : seedDateDaysAgo(issue.escalatedDaysAgo, 9, 0),
+  resolvedAt: issue.resolvedDaysAgo === null ? null : seedDateDaysAgo(issue.resolvedDaysAgo, 11, 30),
+  ignoredAt: issue.ignoredDaysAgo === null ? null : seedDateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+  createdAt: seedDateDaysAgo(issue.createdDaysAgo, 14, 15),
+  updatedAt: seedDateDaysAgo(issue.updatedDaysAgo, 16, 30),
+}))
 
 const seedIssues: Seeder = {
-  name: "issues/canonical-lifecycle-samples",
+  name: "issues/acme-support-issue-families",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
@@ -43,7 +40,7 @@ const seedIssues: Seeder = {
           })
         }
 
-        console.log(`  -> issues: ${issueRows.length} canonical lifecycle samples`)
+        console.log(`  -> issues: ${issueRows.length} Acme support issue families`)
       },
       catch: (error) => new SeedError({ reason: "Failed to seed issues", cause: error }),
     }).pipe(Effect.asVoid),

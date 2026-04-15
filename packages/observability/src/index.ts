@@ -1,10 +1,18 @@
+import type { Span, Tracer } from "@opentelemetry/api"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
+
+export type { Span, Tracer }
+
 import { getEnvironment, getTracesConfig, isObservabilityEnabled } from "./config.ts"
-import { createLogger as createLoggerWithState, emitLog, serializeError } from "./logger.ts"
+import { createLogger as createLoggerWithState, emitLog, serializeError as serializeErrorImpl } from "./logger.ts"
 import { startTracing } from "./otel.ts"
 import { getObservabilityState } from "./state.ts"
 import type { InitializeObservabilityOptions } from "./types.ts"
 
+export { recordSpanExceptionForDatadog } from "./record-span-exception.ts"
+export { trace, SpanStatusCode }
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)
+export const serializeError = serializeErrorImpl
 
 export const initializeObservability = async ({ serviceName }: InitializeObservabilityOptions): Promise<void> => {
   const state = getObservabilityState()
@@ -33,7 +41,7 @@ export const initializeObservability = async ({ serviceName }: InitializeObserva
     const tracesConfig = getTracesConfig()
     if (!tracesConfig) {
       emitLog(state, "warn", "observability", [
-        "LAT_OBSERVABILITY_ENABLED=true but no exporter is configured. Set LAT_DATADOG_API_KEY or LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT.",
+        "LAT_OBSERVABILITY_ENABLED=true but LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT is not configured.",
       ])
       state.initialized = true
       return
@@ -58,7 +66,7 @@ export const initializeObservability = async ({ serviceName }: InitializeObserva
     delete state.initialization
     state.initialized = false
     state.enabled = false
-    emitLog(state, "error", "observability", ["Failed to initialize observability", serializeError(error)])
+    emitLog(state, "error", "observability", ["Failed to initialize observability", serializeErrorImpl(error)])
   }
 }
 

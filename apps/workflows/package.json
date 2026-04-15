@@ -10,11 +10,28 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/annotation-queues": "workspace:*",
+    "@domain/annotations": "workspace:*",
+    "@domain/ai": "workspace:*",
+    "@domain/evaluations": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/optimizations": "workspace:*",
+    "@domain/queue": "workspace:*",
+    "@domain/scores": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
+    "@platform/ai": "workspace:*",
+    "@platform/ai-vercel": "workspace:*",
+    "@platform/ai-voyage": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-clickhouse": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@platform/db-weaviate": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/op-gepa": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
@@ -24,6 +41,7 @@
     "tsx": "catalog:"
   },
   "devDependencies": {
+    "@platform/testkit": "workspace:*",
     "tsup": "^8.0.0"
   }
 }

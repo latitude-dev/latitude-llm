@@ -10,12 +10,13 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --dir src",
     "update:models-dev": "tsx scripts/update-models-dev-data.ts"
   },
   "dependencies": {
     "@repo/utils": "workspace:*",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"

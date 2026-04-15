@@ -4,7 +4,7 @@ import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { magicLink, organization as organizationPlugin } from "better-auth/plugins"
+import { captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
 import { Effect } from "effect"
 import Stripe from "stripe"
 import type { PostgresClient } from "./client.ts"
@@ -46,13 +46,15 @@ export interface BetterAuthConfig {
       email: string
       role: string
       organization: { name: string }
-      inviter: { user: { name?: string | null; email: string } }
+      inviter: { user: { id: string; name?: string | null; email: string } }
     },
     request?: Request,
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
+  readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
+  readonly captchaSecretKey?: string
   readonly extraPlugins?: BetterAuthOptions["plugins"]
 }
 
@@ -84,7 +86,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   const stripeClient =
     stripeSecretKey && stripeWebhookSecret
       ? new Stripe(stripeSecretKey, {
-          apiVersion: "2026-02-25.clover",
+          apiVersion: "2026-03-25.dahlia",
         })
       : null
 
@@ -109,13 +111,35 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            await config.onUserCreated?.({ id: user.id, email: user.email, name: user.name })
+          },
+        },
+      },
+      member: {
+        create: {
+          after: async (member: { organizationId: string; userId: string; role: string }) => {
+            await config.onMemberCreated?.({
+              organizationId: member.organizationId,
+              userId: member.userId,
+              role: member.role,
+            })
+          },
+        },
+      },
+    },
     socialProviders: {
       ...(googleClientId &&
         googleClientSecret && {
-          google: {
+          google: async () => ({
             clientId: googleClientId,
             clientSecret: googleClientSecret,
-          },
+            /** Keep `users.image` in sync with Google profile photos on each sign-in. */
+            overrideUserInfoOnSignIn: true,
+          }),
         }),
       ...(githubClientId &&
         githubClientSecret && {
@@ -150,6 +174,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               organization: { name: data.organization.name },
               inviter: {
                 user: {
+                  id: data.inviter.user.id,
                   name: data.inviter.user.name,
                   email: data.inviter.user.email,
                 },
@@ -166,6 +191,15 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         expiresIn: 3600,
         allowedAttempts: 5,
       }),
+      ...(config.captchaSecretKey
+        ? [
+            captcha({
+              provider: "cloudflare-turnstile",
+              secretKey: config.captchaSecretKey,
+              endpoints: ["/sign-in/magic-link", "/sign-in/social"],
+            }),
+          ]
+        : []),
       ...(config.extraPlugins ?? []),
       ...(stripeClient && stripeWebhookSecret
         ? [

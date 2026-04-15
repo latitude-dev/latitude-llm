@@ -1,6 +1,6 @@
 import { createApiKey } from "@domain/api-keys"
-import { SEED_API_KEY_ID, SEED_ORG_ID } from "@domain/shared"
-import { hashToken } from "@repo/utils"
+import { SEED_API_KEY_ID, SEED_ORG_ID } from "@domain/shared/seeding"
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import type { SeedContext, Seeder } from "../types.ts"
 
@@ -11,7 +11,7 @@ const seedApiKeys: Seeder = {
   name: "api-keys/default-key",
   run: (ctx: SeedContext) =>
     Effect.gen(function* () {
-      const tokenHash = yield* hashToken(SEED_API_KEY_TOKEN)
+      const tokenHash = yield* hash(SEED_API_KEY_TOKEN)
       const apiKey = createApiKey({
         id: SEED_API_KEY_ID,
         organizationId: SEED_ORG_ID,

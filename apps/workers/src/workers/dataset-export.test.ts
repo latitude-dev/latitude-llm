@@ -1,6 +1,5 @@
 import { DatasetRowRepository } from "@domain/datasets"
 import type { EmailMessage, EmailSender } from "@domain/email"
-import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { DatasetId, DatasetRowId, OrganizationId } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { datasets } from "@platform/db-postgres/schema/datasets"
@@ -8,33 +7,8 @@ import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
+import { TestQueueConsumer } from "../testing/index.ts"
 import { createDatasetExportWorker } from "./dataset-export.ts"
-
-type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
-
-class TestQueueConsumer implements QueueConsumer {
-  private readonly registered = new Map<QueueName, AnyTaskHandlers>()
-
-  subscribe<T extends QueueName>(queue: T, handlers: TaskHandlers<T>): void {
-    this.registered.set(queue, handlers as unknown as AnyTaskHandlers)
-  }
-
-  start() {
-    return Effect.void
-  }
-
-  stop() {
-    return Effect.void
-  }
-
-  async dispatchTask(queue: QueueName, task: string, payload: unknown): Promise<void> {
-    const handlers = this.registered.get(queue)
-    if (!handlers) throw new Error(`No handlers registered for queue ${queue}`)
-    const handler = handlers[task]
-    if (!handler) throw new Error(`No handler for task ${task} on queue ${queue}`)
-    await Effect.runPromise(handler(payload))
-  }
-}
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()

@@ -18,19 +18,17 @@ export const colors = {
     destructiveMutedForeground: "bg-destructive-muted-foreground",
     successMutedForeground: "bg-success-muted-foreground",
     successMuted: "bg-success-muted",
-    latte: "bg-latte",
   },
   backgroundHoverColors: {
     accentForeground: "hover:bg-accent-foreground",
-    latte: "hover:bg-latte",
     destructive: "hover:bg-destructive",
   },
   borderHoverColors: {
     accentForeground: "hover:border-accent-foreground",
-    latte: "hover:border-latte",
     destructive: "hover:border-destructive",
   },
   textColors: {
+    inherit: "text-inherit",
     white: "text-white",
     foreground: "text-foreground",
     background: "text-background",
@@ -52,11 +50,6 @@ export const colors = {
     successMuted: "text-success-muted",
     warningForeground: "text-warning-foreground",
     warningMutedForeground: "text-warning-muted-foreground",
-    latteInputForeground: "text-latte-input-foreground",
-    latteOutputForeground: "text-latte-output-foreground",
-    latteOutputForegroundMuted: "text-latte-output-foreground/50",
-    latteBackground: "text-latte",
-    latteBadgeBorder: "text-latte-badge-border",
   },
   darkTextColors: {
     white: "dark:text-white",
@@ -76,9 +69,6 @@ export const colors = {
     secondaryForeground: "dark:text-secondary-foreground",
     warningForeground: "dark:text-warning-foreground",
     warningMutedForeground: "dark:text-warning-muted-foreground",
-    latteInputForeground: "dark:text-latte-input-foreground",
-    latteOutputForeground: "dark:text-latte-output-foreground",
-    latteOutputForegroundMuted: "dark:text-latte-output-foreground/50",
   },
   borderColors: {
     transparent: "border-transparent",
@@ -98,13 +88,11 @@ export const colors = {
     warningMutedForeground: "border-warning-muted-foreground",
     destructiveMutedForeground: "border-destructive-muted-foreground",
     purpleForeground: "border-purple-foreground",
-    latte: "border-latte-border",
   },
   proseColors: {
     foreground: "prose-foreground",
     foregroundMuted: "prose-foreground-muted",
     primary: "prose-primary",
-    latte: "prose-latte",
   },
 }
 export type TextColor = keyof typeof colors.textColors

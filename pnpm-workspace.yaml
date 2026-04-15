@@ -1,16 +1,20 @@
 packages:
   - apps/*
   - packages/**
+  - "!packages/telemetry/python/**"
+  - "!packages/telemetry/typescript/**"
   - infra
 
 catalog:
   '@biomejs/biome': 2.4.6
-  '@clickhouse/client': 1.17.0
-  '@hono/node-server': 1.19.6
+  '@clickhouse/client': 1.18.2
+  '@hono/node-server': 1.19.13
+  '@latitude-data/telemetry': 3.0.0-alpha.3
+  '@opentelemetry/api': ^1.9.0
   '@paralleldrive/cuid2': 3.3.0
-  '@temporalio/client': 1.15.0
-  '@temporalio/worker': 1.15.0
-  '@temporalio/workflow': 1.15.0
+  '@temporalio/client': 1.16.0
+  '@temporalio/worker': 1.16.0
+  '@temporalio/workflow': 1.16.0
   '@types/node': 22.14.1
   '@types/pg': 8.16.0
   '@types/react': 19.2.14
@@ -20,9 +24,10 @@ catalog:
   bullmq: 5.28.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
-  drizzle-orm: 1.0.0-beta.15-859cf75
-  effect: 4.0.0-beta.0
-  hono: 4.9.12
+  drizzle-orm: 1.0.0-beta.20
+  fast-json-stable-stringify: 2.1.0
+  effect: 4.0.0-beta.4
+  hono: 4.12.12
   ioredis: 5.8.2
   pg: 8.16.0
   react: 19.2.4
@@ -31,10 +36,11 @@ catalog:
   protobufjs: 7.5.4
   tsx: 4.21.0
   turbo: 2.5.8
-  typescript: 5.8.3
-  vite: 7.3.1
+  typescript: 5.9.3
+  vite: 8.0.5
   vitest: 4.1.0
   zod: 4.3.6
+  voyageai: 0.2.1
   weaviate-client: 3.11.0
 
 ignoredBuiltDependencies:

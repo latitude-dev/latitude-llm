@@ -1,6 +1,18 @@
-import { OrganizationId, SqlClient } from "@domain/shared"
+import { ConcurrentSqlTransactionError, OrganizationId, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+const { sqlClientLogErrorMock } = vi.hoisted(() => ({
+  sqlClientLogErrorMock: vi.fn(),
+}))
+
+vi.mock("@repo/observability", () => ({
+  createLogger: () => ({
+    error: sqlClientLogErrorMock,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
+}))
 
 class TestError extends Data.TaggedError("TestError")<{ message: string }> {}
 
@@ -18,7 +30,10 @@ interface MockClientState {
   txInstances: Operator[]
 }
 
-function createMockPostgresClient(state: MockClientState): PostgresClient {
+function createMockPostgresClient(
+  state: MockClientState,
+  options?: { simulateDistinctTransactionCompletionError?: boolean },
+): PostgresClient {
   const mockTx: MockTx = {
     id: Symbol("tx"),
     execute: async (stmt: unknown) => {
@@ -34,7 +49,14 @@ function createMockPostgresClient(state: MockClientState): PostgresClient {
     transaction: async (fn) => {
       state.transactionCallCount += 1
       state.txInstances.push(txAsOperator)
-      return fn(txAsOperator as Parameters<Parameters<PostgresClient["transaction"]>[0]>[0])
+      try {
+        return await fn(txAsOperator as Parameters<Parameters<PostgresClient["transaction"]>[0]>[0])
+      } catch (e) {
+        if (options?.simulateDistinctTransactionCompletionError) {
+          throw new Error("simulated rollback/commit failure after effect error")
+        }
+        throw e
+      }
     },
   }
   return client
@@ -75,6 +97,7 @@ describe("SqlClientLive", () => {
       executedStatements: [],
       txInstances: [],
     }
+    sqlClientLogErrorMock.mockClear()
   })
 
   afterEach(() => {
@@ -223,11 +246,9 @@ describe("SqlClientLive", () => {
             return null
           })
           return yield* sql.transaction(
-            Effect.gen(function* () {
-              return yield* sql.query(async (_tx, oid) => {
-                seenOrgIds.push(oid)
-                return null
-              })
+            sql.query(async (_tx, oid) => {
+              seenOrgIds.push(oid)
+              return null
             }),
           )
         }),
@@ -256,12 +277,12 @@ describe("SqlClientLive", () => {
   })
 
   describe("concurrent transaction detection", () => {
-    it("dies when two transaction() calls are started concurrently on the same SqlClient", async () => {
+    it("fails with ConcurrentSqlTransactionError when two transaction() calls start concurrently on the same SqlClient", async () => {
       const client = createMockPostgresClient(state)
       const orgId = OrganizationId("org-concurrent")
 
       // Run two transaction() calls with concurrency: 2 on the same SqlClient.
-      // The second fiber sees txOpening === true and should die.
+      // The second fiber sees txOpening === true and should fail on the error channel.
       const layer = SqlClientLive(client, orgId)
       const effect = Effect.gen(function* () {
         const sqlClient = yield* SqlClient
@@ -271,7 +292,27 @@ describe("SqlClientLive", () => {
         })
       }).pipe(Effect.provide(layer))
 
-      await expect(Effect.runPromise(effect)).rejects.toThrow("concurrent transaction() calls detected")
+      await expect(Effect.runPromise(effect)).rejects.toBeInstanceOf(ConcurrentSqlTransactionError)
+    })
+
+    it("allows catching ConcurrentSqlTransactionError for retry or graceful handling", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-catch-concurrent")
+      const layer = SqlClientLive(client, orgId)
+
+      const effect = Effect.gen(function* () {
+        const sqlClient = yield* SqlClient
+        const shape = sqlClient as import("@domain/shared").SqlClientShape<Operator>
+        return yield* Effect.all([shape.transaction(Effect.succeed("a")), shape.transaction(Effect.succeed("b"))], {
+          concurrency: 2,
+        })
+      }).pipe(
+        Effect.catchTag("ConcurrentSqlTransactionError", () => Effect.succeed("handled" as const)),
+        Effect.provide(layer),
+      )
+
+      const result = await Effect.runPromise(effect)
+      expect(result).toBe("handled")
     })
 
     it("allows sequential transaction() calls on the same SqlClient after one completes", async () => {
@@ -325,6 +366,19 @@ describe("SqlClientLive", () => {
 
       expect(result).toBe("after-fail")
       expect(state.transactionCallCount).toBe(1)
+    })
+
+    it("logs when the driver reports a distinct error after effect failure", async () => {
+      const client = createMockPostgresClient(state, { simulateDistinctTransactionCompletionError: true })
+      const orgId = OrganizationId("org-distinct-db-error")
+
+      const failOnce = runWithSqlClient(client, orgId, (sql) =>
+        sql.transaction(Effect.fail(new TestError({ message: "business rule" }))),
+      )
+      await expect(failOnce).rejects.toThrow("business rule")
+
+      expect(sqlClientLogErrorMock).toHaveBeenCalledTimes(1)
+      expect(sqlClientLogErrorMock.mock.calls[0]?.[0]).toContain("completing transaction after effect failure")
     })
   })
 })

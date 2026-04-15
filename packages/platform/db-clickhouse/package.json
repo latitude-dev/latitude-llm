@@ -5,6 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "ch:create": "bash clickhouse/scripts/create.sh",
@@ -20,11 +24,12 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
     "@domain/datasets": "workspace:*",
+    "@domain/events": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
@@ -36,7 +41,9 @@
   "devDependencies": {
     "@platform/db-postgres": "workspace:*",
     "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "dotenv": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   }
 }

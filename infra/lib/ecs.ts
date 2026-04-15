@@ -71,6 +71,16 @@ export function createEcs(
     })
   }
 
+  // Log group for datadog-agent sidecar
+  const datadogLogGroup = new aws.cloudwatch.LogGroup(`${name}-datadog-agent-logs`, {
+    name: `/ecs/${name}/datadog-agent`,
+    retentionInDays: config.name === "staging" ? 7 : 30,
+    tags: {
+      Name: `${name}-datadog-agent-logs`,
+      Environment: config.name,
+    },
+  })
+
   const executionRole = new aws.iam.Role(`${name}-execution-role`, {
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
@@ -138,6 +148,33 @@ export function createEcs(
         "Resource": ["${s3Bucket.arn}", "${s3Bucket.arn}/*"]
       }]
     }`,
+  })
+
+  // Cross-region inference profiles (e.g. eu.amazon.nova-lite-v1:0) and direct foundation
+  // model IDs both require InvokeModel on inference-profile and foundation-model ARNs.
+  // Read actions are required for inference profile discovery per AWS Bedrock docs.
+  // @see https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-prereq.html
+  new aws.iam.RolePolicy(`${name}-bedrock-policy`, {
+    role: taskRole.name,
+    policy: JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+          Resource: [
+            "arn:aws:bedrock:*::foundation-model/*",
+            "arn:aws:bedrock:*:*:inference-profile/*",
+            "arn:aws:bedrock:*:*:application-inference-profile/*",
+          ],
+        },
+        {
+          Effect: "Allow",
+          Action: ["bedrock:GetInferenceProfile", "bedrock:ListInferenceProfiles"],
+          Resource: ["arn:aws:bedrock:*:*:inference-profile/*", "arn:aws:bedrock:*:*:application-inference-profile/*"],
+        },
+      ],
+    }),
   })
 
   const taskDefinitions: Record<string, EcsTaskDefinition> = {}
@@ -269,6 +306,10 @@ function createTaskDefinition(
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
+  // Resource allocation for Datadog Agent sidecar container
+  const DATADOG_AGENT_CPU = 256
+  const DATADOG_AGENT_MEMORY = 512
+
   const protocol = "https"
   const webUrl = `${protocol}://${config.domains.web}`
   const apiUrl = `${protocol}://${config.domains.api}`
@@ -291,6 +332,7 @@ function createTaskDefinition(
       secrets["clickhouse-db"].arn,
       secrets["weaviate-url"].arn,
       secrets["weaviate-api-key"].arn,
+      secrets["voyage-api-key"].arn,
       secrets["mailgun-api-key"].arn,
       secrets["mailgun-domain"].arn,
       secrets["mailgun-from"].arn,
@@ -302,6 +344,10 @@ function createTaskDefinition(
       secrets["temporal-api-key"].arn,
       secrets["datadog-api-key"].arn,
       secrets["datadog-site"].arn,
+      secrets["latitude-telemetry-api-key"].arn,
+      secrets["latitude-telemetry-project-slug"].arn,
+      secrets["turnstile-secret-key"].arn,
+      secrets["posthog-api-key"].arn,
       s3Bucket.id,
     ])
     .apply(
@@ -320,6 +366,7 @@ function createTaskDefinition(
         clickhouseDbArn,
         weaviateUrlArn,
         weaviateApiKeyArn,
+        voyageApiKeyArn,
         mailgunApiKeyArn,
         mailgunDomainArn,
         mailgunFromArn,
@@ -331,6 +378,10 @@ function createTaskDefinition(
         temporalApiKeyArn,
         datadogApiKeyArn,
         datadogSiteArn,
+        latitudeTelemetryApiKeyArn,
+        latitudeTelemetryProjectSlugArn,
+        turnstileSecretKeyArn,
+        posthogApiKeyArn,
         s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
@@ -353,11 +404,22 @@ function createTaskDefinition(
           { name: "LAT_WEB_URL", value: webUrl },
           { name: "LAT_API_URL", value: apiUrl },
           { name: "LAT_INGEST_URL", value: ingestUrl },
+          { name: "LAT_LATITUDE_TELEMETRY_INGEST_URL", value: ingestUrl },
           { name: "LAT_BETTER_AUTH_URL", value: apiUrl },
           { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
           { name: "VITE_LAT_WEB_URL", value: webUrl },
+          { name: "DD_TRACE_ENABLED", value: "true" },
+          { name: "DD_ENV", value: config.name },
+          { name: "DD_SERVICE", value: serviceConfig.name },
+          { name: "LAT_OBSERVABILITY_ENVIRONMENT", value: config.name },
+          { name: "DD_DOGSTATSD_HOST", value: "localhost" },
+          { name: "DD_DOGSTATSD_PORT", value: "8125" },
+          { name: "DD_AGENT_HOST", value: "localhost" },
+          { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
+          { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
+          { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -371,12 +433,15 @@ function createTaskDefinition(
           { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
           { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
           { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
+          { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
           { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
-          { name: "LAT_DATADOG_API_KEY", valueFrom: datadogApiKeyArn },
-          { name: "LAT_DATADOG_SITE", valueFrom: datadogSiteArn },
+          { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+          { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
+          { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
+          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
         ]
 
         // Service-specific environment variables
@@ -386,8 +451,16 @@ function createTaskDefinition(
           { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
         ]
 
+        // Temporal's worker runs webpack to bundle workflows at startup; V8's default
+        // container-derived heap (~half of this task's container memory) is too small and OOMs.
+        const workflowsMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
+
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
-          workflows: [{ name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" }, ...temporalEnvVars],
+          workflows: [
+            { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
+            { name: "NODE_OPTIONS", value: `--max-old-space-size=${workflowsMaxOldSpaceMb}` },
+            ...temporalEnvVars,
+          ],
           workers: temporalEnvVars,
         }
 
@@ -446,15 +519,103 @@ function createTaskDefinition(
             retries: 3,
             startPeriod: 60,
           },
+          dependsOn: [
+            {
+              containerName: "datadog-agent",
+              condition: "START",
+            },
+          ],
         }
-        return JSON.stringify([def])
+
+        const datadogAgentDef = {
+          name: "datadog-agent",
+          image: "public.ecr.aws/datadog/agent:latest",
+          essential: false,
+          cpu: DATADOG_AGENT_CPU,
+          memory: DATADOG_AGENT_MEMORY,
+          portMappings: [
+            {
+              containerPort: 8125,
+              protocol: "udp",
+            },
+            {
+              containerPort: 8126,
+              protocol: "tcp",
+            },
+            {
+              containerPort: 4318,
+              protocol: "tcp",
+            },
+            {
+              containerPort: 4317,
+              protocol: "tcp",
+            },
+          ],
+          environment: [
+            { name: "DD_APM_ENABLED", value: "true" },
+            { name: "DD_APM_RECEIVER_PORT", value: "8126" },
+            { name: "DD_DOGSTATSD_NON_LOCAL_TRAFFIC", value: "true" },
+            { name: "DD_DOGSTATSD_PORT", value: "8125" },
+            { name: "DD_ECS_TASK_COLLECTION_ENABLED", value: "true" },
+            { name: "DD_CONTAINER_EXCLUDE", value: "name:datadog-agent" },
+            { name: "DD_ENV", value: config.name },
+            { name: "DD_SERVICE", value: serviceConfig.name },
+            { name: "ECS_FARGATE", value: "true" },
+            { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
+            { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
+            { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT", value: "0.0.0.0:4317" },
+            { name: "DD_LOG_LEVEL", value: "debug" },
+          ],
+          secrets: [
+            { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
+            { name: "DD_SITE", valueFrom: datadogSiteArn },
+          ],
+          logConfiguration: {
+            logDriver: "awslogs",
+            options: {
+              "awslogs-group": `/ecs/${name}/datadog-agent`,
+              "awslogs-region": config.region,
+              "awslogs-stream-prefix": "datadog-agent",
+            },
+          },
+          healthCheck: {
+            command: ["CMD-SHELL", "agent health || exit 1"],
+            interval: 30,
+            timeout: 5,
+            retries: 3,
+            startPeriod: 15,
+          },
+        }
+
+        return JSON.stringify([def, datadogAgentDef])
       },
     )
 
+  // Calculate valid Fargate CPU/memory combination
+  // Fargate only supports specific predefined values
+  const totalCpu = serviceConfig.cpu + DATADOG_AGENT_CPU
+  const totalMemory = serviceConfig.memory + DATADOG_AGENT_MEMORY
+
+  // Valid Fargate CPU values: 256, 512, 1024, 2048, 4096, 8192, 16384
+  const validCpuValues = [256, 512, 1024, 2048, 4096, 8192, 16384]
+  const taskCpu = validCpuValues.find((cpu) => cpu >= totalCpu) ?? 16384
+
+  // Memory must be at least double the CPU (in MB) and in valid ranges
+  const minMemoryForCpu: Record<number, number> = {
+    256: 512,
+    512: 1024,
+    1024: 2048,
+    2048: 4096,
+    4096: 8192,
+    8192: 16384,
+    16384: 32768,
+  }
+  const taskMemory = Math.max(totalMemory, minMemoryForCpu[taskCpu] ?? 32768)
+
   return new aws.ecs.TaskDefinition(`${name}-${serviceConfig.name}-task`, {
     family: `${name}-${serviceConfig.name}`,
-    cpu: serviceConfig.cpu.toString(),
-    memory: serviceConfig.memory.toString(),
+    cpu: taskCpu.toString(),
+    memory: taskMemory.toString(),
     networkMode: "awsvpc",
     requiresCompatibilities: ["FARGATE"],
     executionRoleArn: executionRole.arn,
@@ -479,6 +640,7 @@ function createMigrationTaskDefinition(
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
   const taskFamily = `${name}-migrations`
+  const latitudeTelemetryIngestUrl = `https://${config.domains.ingest}`
 
   const containerDefinitions = pulumi
     .all([
@@ -491,6 +653,9 @@ function createMigrationTaskDefinition(
       secrets["clickhouse-db"].arn,
       secrets["weaviate-url"].arn,
       secrets["weaviate-api-key"].arn,
+      secrets["voyage-api-key"].arn,
+      secrets["latitude-telemetry-api-key"].arn,
+      secrets["latitude-telemetry-project-slug"].arn,
     ])
     .apply(
       ([
@@ -503,6 +668,9 @@ function createMigrationTaskDefinition(
         clickhouseDbArn,
         weaviateUrlArn,
         weaviateApiKeyArn,
+        voyageApiKeyArn,
+        latitudeTelemetryApiKeyArn,
+        latitudeTelemetryProjectSlugArn,
       ]) => {
         const def = {
           name: "migrations",
@@ -518,7 +686,10 @@ function createMigrationTaskDefinition(
               "awslogs-stream-prefix": "migrations",
             },
           },
-          environment: [{ name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" }],
+          environment: [
+            { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
+            { name: "LAT_LATITUDE_TELEMETRY_INGEST_URL", value: latitudeTelemetryIngestUrl },
+          ],
           secrets: [
             { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbSecretArn },
             { name: "CLICKHOUSE_MIGRATION_URL", valueFrom: clickhouseMigrationUrlArn },
@@ -527,6 +698,9 @@ function createMigrationTaskDefinition(
             { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
             { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
             { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
+            { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
+            { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+            { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           ],
         }
         return JSON.stringify([def])

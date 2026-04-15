@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, forwardRef } from "react"
+import { type ButtonHTMLAttributes, Children, forwardRef, isValidElement, type ReactNode } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
@@ -62,7 +62,8 @@ const buttonVariantsConfig = cva(
         default: "min-h-8 px-3 py-buttonDefaultVertical",
         sm: "h-8 rounded-lg px-3 text-xs",
         lg: "h-10 rounded-lg px-8",
-        icon: "h-9 w-9",
+        icon: "h-8 w-8 p-0",
+        "icon-xs": "h-5 w-5 p-0 rounded-md",
         full: "min-h-8 w-full px-3 py-buttonDefaultVertical",
       },
     },
@@ -80,9 +81,53 @@ export interface ButtonProps
   isLoading?: boolean
 }
 
+function getElementDisplayName(type: unknown): string {
+  if (typeof type === "string") {
+    return type
+  }
+
+  if (typeof type === "function") {
+    const componentType = type as { displayName?: string; name?: string }
+    return componentType.displayName ?? componentType.name ?? ""
+  }
+
+  if (typeof type === "object" && type !== null) {
+    return "displayName" in type && typeof type.displayName === "string"
+      ? type.displayName
+      : "name" in type && typeof type.name === "string"
+        ? type.name
+        : ""
+  }
+
+  return ""
+}
+
+function isLeadingIconLikeChild(child: unknown): boolean {
+  if (!isValidElement(child)) {
+    return false
+  }
+
+  const displayName = getElementDisplayName(child.type)
+  return displayName === "svg" || displayName === "Icon" || displayName.endsWith("Icon")
+}
+
+function stripLeadingIconChild(children: ReactNode): ReactNode {
+  const childArray = Children.toArray(children)
+  const firstMeaningfulChildIndex = childArray.findIndex(
+    (child) => !(typeof child === "string" && child.trim().length === 0),
+  )
+
+  if (firstMeaningfulChildIndex < 0 || !isLeadingIconLikeChild(childArray[firstMeaningfulChildIndex])) {
+    return childArray
+  }
+
+  return childArray.filter((_, index) => index !== firstMeaningfulChildIndex)
+}
+
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
     const effectiveVariant = variant ?? "default"
+    const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
 
     if (asChild) {
       return (
@@ -96,11 +141,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           )}
           {...props}
         >
-          {children}
+          {visibleChildren}
         </Slot>
       )
     }
-
     return (
       <button
         ref={ref}
@@ -127,7 +171,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             {isLoading && (
               <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
             )}
-            {children}
+            {visibleChildren}
           </div>
         </div>
       </button>

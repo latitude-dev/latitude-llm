@@ -8,6 +8,20 @@ export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly httpMessage = "Internal server error"
 }
 
+/**
+ * Raised when two `SqlClient.transaction()` calls overlap on the same client
+ * instance (e.g. `Effect.all(..., { concurrency: 2 })`). Callers should run
+ * transactions sequentially or use separate SqlClient layer instances.
+ */
+// Empty payload: concurrent use is purely a client lifecycle mistake.
+export class ConcurrentSqlTransactionError extends Data.TaggedError("ConcurrentSqlTransactionError")<{
+  readonly _void?: undefined
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage =
+    "Concurrent transaction requests on the same database client are not allowed. Run transactions sequentially or use separate client instances."
+}
+
 export class ValidationError extends Data.TaggedError("ValidationError")<{
   readonly field: string
   readonly message: string
@@ -69,6 +83,7 @@ export class PermissionError extends Data.TaggedError("PermissionError")<{
 
 export type DomainError =
   | RepositoryError
+  | ConcurrentSqlTransactionError
   | ValidationError
   | NotFoundError
   | ConflictError
@@ -84,3 +99,21 @@ export const isNotFoundError = (error: unknown): error is NotFoundError => error
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError
 
 export const isValidationError = (error: unknown): error is ValidationError => error instanceof ValidationError
+
+export class CacheError extends Data.TaggedError("CacheError")<{
+  readonly message: string
+  readonly cause?: unknown
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return this.message
+  }
+}
+
+export class StorageError extends Data.TaggedError("StorageError")<{
+  readonly cause: unknown
+  readonly operation: string
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Storage operation failed"
+}

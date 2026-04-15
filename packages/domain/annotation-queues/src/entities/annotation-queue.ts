@@ -1,8 +1,7 @@
-import { cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
-import { traceIdSchema } from "@domain/spans"
+import { annotationQueueIdSchema, cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
-import { ANNOTATION_QUEUE_NAME_MAX_LENGTH } from "../constants.ts"
+import { ANNOTATION_QUEUE_NAME_MAX_LENGTH, ANNOTATION_QUEUE_SLUG_MAX_LENGTH } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -56,11 +55,12 @@ export function isSystemQueue(queue: Pick<AnnotationQueue, "system">): boolean {
 // ---------------------------------------------------------------------------
 
 export const annotationQueueSchema = z.object({
-  id: cuidSchema,
+  id: annotationQueueIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
   system: z.boolean(),
   name: z.string().min(1).max(ANNOTATION_QUEUE_NAME_MAX_LENGTH),
+  slug: z.string().min(1).max(ANNOTATION_QUEUE_SLUG_MAX_LENGTH),
   description: z.string(),
   instructions: z.string(),
   settings: annotationQueueSettingsSchema,
@@ -73,20 +73,3 @@ export const annotationQueueSchema = z.object({
 })
 
 export type AnnotationQueue = z.infer<typeof annotationQueueSchema>
-
-// ---------------------------------------------------------------------------
-// Annotation Queue Item entity
-// ---------------------------------------------------------------------------
-
-export const annotationQueueItemSchema = z.object({
-  id: cuidSchema,
-  organizationId: cuidSchema,
-  projectId: cuidSchema,
-  queueId: cuidSchema,
-  traceId: traceIdSchema,
-  completedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-
-export type AnnotationQueueItem = z.infer<typeof annotationQueueItemSchema>

@@ -1,5 +1,5 @@
 import { InvitationRepository } from "@domain/organizations"
-import { SqlClient, type SqlClientShape } from "@domain/shared"
+import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -29,16 +29,16 @@ export const InvitationRepositoryLive = Layer.effect(
               .limit(1),
           )
           .pipe(
-            Effect.map((results) => {
+            Effect.flatMap((results) => {
               const [row] = results
               if (!row || row.expiresAt < now) {
-                return null
+                return Effect.fail(new NotFoundError({ entity: "Invitation", id: invitationId }))
               }
-              return {
+              return Effect.succeed({
                 inviteeEmail: row.email.trim().toLowerCase(),
                 organizationName: row.organizationName,
                 inviterName: row.inviterName,
-              }
+              })
             }),
           )
       },

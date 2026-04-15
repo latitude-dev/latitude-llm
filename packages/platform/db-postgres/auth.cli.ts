@@ -23,7 +23,7 @@ import Stripe from "stripe"
 const pool = new pg.Pool({ connectionString: "postgresql://localhost:5432/dummy" })
 const db = drizzle(pool)
 
-const stripeClient = new Stripe("sk_test_dummy", { apiVersion: "2026-02-25.clover" })
+const stripeClient = new Stripe("sk_test_dummy", { apiVersion: "2026-03-25.dahlia" })
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", usePlural: true }),

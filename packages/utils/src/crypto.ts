@@ -1,4 +1,5 @@
 import { Data, Effect } from "effect"
+import stringify from "fast-json-stable-stringify"
 import { hexDecode, hexEncode } from "./base64.ts"
 
 export class CryptoError extends Data.TaggedError("CryptoError")<{
@@ -6,30 +7,45 @@ export class CryptoError extends Data.TaggedError("CryptoError")<{
   readonly cause: unknown
 }> {}
 
-const ALGORITHM = "AES-GCM"
-const IV_LENGTH = 12
-const AUTH_TAG_LENGTH = 16
+export const toBuffer = (bytes: Uint8Array): Uint8Array<ArrayBuffer> =>
+  bytes.buffer instanceof ArrayBuffer
+    ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    : new Uint8Array(bytes)
+
+const textEncoder = new TextEncoder()
+export const encodeUtf8 = (value: string): Uint8Array<ArrayBuffer> => toBuffer(textEncoder.encode(value))
 
 /**
- * Hash a plaintext string using SHA-256.
- * Returns a hex-encoded hash suitable for indexed lookups.
+ * Produce a deterministic SHA-256 hex digest for any JSON-compatible value.
+ *
+ * Uses the Web Crypto API (`crypto.subtle`) so this module stays safe to load
+ * in browser bundles (no `node:crypto`).
+ *
+ * **Strings** are hashed as raw UTF-8 (no JSON wrapping), so token-style
+ * secrets match a plain SHA-256 of the bytes. **Non-strings** use
+ * `fast-json-stable-stringify` so objects get sorted keys and stable hashing.
  */
-export const hashToken = (plaintext: string): Effect.Effect<string, CryptoError> =>
+export const hash = (value: unknown): Effect.Effect<string, CryptoError> =>
   Effect.tryPromise({
     try: async () => {
-      const data = new TextEncoder().encode(plaintext)
+      const payload = typeof value === "string" ? value : stringify(value)
+      const data = encodeUtf8(payload)
       const hashBuffer = await crypto.subtle.digest("SHA-256", data)
       return hexEncode(new Uint8Array(hashBuffer))
     },
-    catch: (cause) => new CryptoError({ operation: "hashToken", cause }),
+    catch: (cause) => new CryptoError({ operation: "hash", cause }),
   })
+
+const ALGORITHM = "AES-GCM"
+const IV_LENGTH = 12
+const AUTH_TAG_LENGTH = 16
 
 /**
  * Import a raw key buffer for AES-GCM operations.
  */
 const importKey = (key: Uint8Array): Effect.Effect<CryptoKey, CryptoError> =>
   Effect.tryPromise({
-    try: () => crypto.subtle.importKey("raw", key, { name: ALGORITHM }, false, ["encrypt", "decrypt"]),
+    try: () => crypto.subtle.importKey("raw", toBuffer(key), { name: ALGORITHM }, false, ["encrypt", "decrypt"]),
     catch: (cause) => new CryptoError({ operation: "importKey", cause }),
   })
 
@@ -42,9 +58,9 @@ const importKey = (key: Uint8Array): Effect.Effect<CryptoKey, CryptoError> =>
  */
 export const encrypt = (plaintext: string, key: Uint8Array): Effect.Effect<string, CryptoError> =>
   Effect.gen(function* () {
-    const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+    const iv = toBuffer(crypto.getRandomValues(new Uint8Array(IV_LENGTH)))
     const cryptoKey = yield* importKey(key)
-    const data = new TextEncoder().encode(plaintext)
+    const data = encodeUtf8(plaintext)
 
     const encrypted = yield* Effect.tryPromise({
       try: () => crypto.subtle.encrypt({ name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 }, cryptoKey, data),
@@ -77,9 +93,9 @@ export const decrypt = (ciphertext: string, key: Uint8Array): Effect.Effect<stri
       return yield* new CryptoError({ operation: "decrypt", cause: "Invalid ciphertext format" })
     }
 
-    const iv = hexDecode(ivHex)
-    const authTag = hexDecode(authTagHex)
-    const encrypted = hexDecode(encryptedHex)
+    const iv = toBuffer(hexDecode(ivHex))
+    const authTag = toBuffer(hexDecode(authTagHex))
+    const encrypted = toBuffer(hexDecode(encryptedHex))
 
     if (iv.length !== IV_LENGTH) {
       return yield* new CryptoError({ operation: "decrypt", cause: "Invalid IV length" })
@@ -95,7 +111,8 @@ export const decrypt = (ciphertext: string, key: Uint8Array): Effect.Effect<stri
     combined.set(authTag, encrypted.length)
 
     const decrypted = yield* Effect.tryPromise({
-      try: () => crypto.subtle.decrypt({ name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 }, cryptoKey, combined),
+      try: () =>
+        crypto.subtle.decrypt({ name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 }, cryptoKey, toBuffer(combined)),
       catch: (cause) => new CryptoError({ operation: "decrypt", cause }),
     })
 

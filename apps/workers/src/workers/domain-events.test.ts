@@ -1,36 +1,14 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
+import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { createDomainEventsWorker, ISSUE_REFRESH_DEBOUNCE_MS, TRACE_END_DEBOUNCE_MS } from "./domain-events.ts"
-
-type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
-
-class TestQueueConsumer implements QueueConsumer {
-  handlers: AnyTaskHandlers | null = null
-  start() {
-    return Effect.void
-  }
-  stop() {
-    return Effect.void
-  }
-  subscribe<T extends QueueName>(_queue: T, handlers: TaskHandlers<T>) {
-    this.handlers = handlers as unknown as AnyTaskHandlers
-  }
-
-  async dispatchTask(task: string, payload: unknown): Promise<void> {
-    const handler = this.handlers?.[task]
-    if (!handler) throw new Error(`No handler for task ${task}`)
-    await Effect.runPromise(handler(payload))
-  }
-
-  dispatchTaskEffect(task: string, payload: unknown): Effect.Effect<void, unknown> {
-    const handler = this.handlers?.[task]
-    if (!handler) throw new Error(`No handler for task ${task}`)
-    return handler(payload)
-  }
-}
+import { TestQueueConsumer } from "../testing/index.ts"
+import { createDomainEventsWorker } from "./domain-events.ts"
 
 const makeEnvelope = (name: string, payload: Record<string, unknown>, organizationId = "org-1"): EventEnvelope => ({
   id: `evt-${Date.now()}`,
@@ -44,20 +22,28 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
   occurredAt: envelope.occurredAt.toISOString(),
 })
 
+const setupDispatcher = () => {
+  const consumer = new TestQueueConsumer()
+  const { publisher, published } = createFakeQueuePublisher()
+
+  createDomainEventsWorker({ consumer, publisher })
+
+  return { consumer, published }
+}
+
 describe("domain-events dispatcher", () => {
   it("routes MagicLinkEmailRequested to magic-link-email:send", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({ consumer, publisher })
+    const { consumer, published } = setupDispatcher()
+    const magicLinkHash = await Effect.runPromise(hash("https://x"))
 
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("magic-link-email")
@@ -65,15 +51,14 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.payload).toEqual({
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)
   })
 
   it("routes OrganizationCreated to api-keys:create with default key name", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({ consumer, publisher })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope(
       "OrganizationCreated",
@@ -81,32 +66,28 @@ describe("domain-events dispatcher", () => {
       "org-new",
     )
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("api-keys")
-    expect(published[0]?.task).toBe("create")
-    expect(published[0]?.payload).toEqual({
+    const apiKeysPublish = published.find((p) => p.queue === "api-keys")
+    expect(apiKeysPublish?.task).toBe("create")
+    expect(apiKeysPublish?.payload).toEqual({
       organizationId: "org-new",
-      name: "Default API Key",
+      name: DEFAULT_API_KEY_NAME,
     })
+    expect(apiKeysPublish?.options?.dedupeKey).toBe("api-keys:create:org-new")
+    // OrganizationCreated is whitelisted for PostHog.
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("UserDeletionRequested", {
       organizationId: "org-1",
       userId: "u-1",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("user-deletion")
@@ -115,43 +96,33 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       userId: "u-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+  it("routes SpanIngested to 4 targets including firstTrace check", async () => {
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
+      organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("live-traces")
-    expect(published[0]?.task).toBe("end")
-    expect(published[0]?.payload).toEqual({
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-    expect(published[0]?.options?.dedupeKey).toBe("live-traces:end:org-1:proj-1:trace-abc")
-    expect(published[0]?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "live-annotation-queues:curate",
+      "live-evaluations:enqueue",
+      "projects:checkFirstTrace",
+      "system-annotation-queues:fanOut",
+    ])
+
+    const firstTrace = published.find((p) => p.task === "checkFirstTrace")
+    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
   })
 
-  it("routes TraceEnded to 3 targets", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+  it("rejects legacy TraceEnded events", async () => {
+    const { consumer } = setupDispatcher()
 
     const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
@@ -159,27 +130,54 @@ describe("domain-events dispatcher", () => {
       traceId: "trace-abc",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    const result = await Effect.runPromise(
+      consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope)).pipe(
+        Effect.match({
+          onFailure: (error) => ({
+            ok: false as const,
+            error: error as { _tag: string; name: string },
+          }),
+          onSuccess: () => ({ ok: true as const, error: null }),
+        }),
+      ),
+    )
 
-    expect(published).toHaveLength(3)
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "live-annotation-queues:curate",
-      "live-evaluations:enqueue",
-      "system-annotation-queues:flag",
-    ])
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error._tag).toBe("UnhandledEventError")
+      expect(result.error.name).toBe("TraceEnded")
+    }
+  })
+
+  it("routes ProjectCreated to projects:provision", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope(
+      "ProjectCreated",
+      { organizationId: "org-1", projectId: "proj-1", name: "Project", slug: "project" },
+      "org-1",
+    )
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const projectsPublish = published.find((p) => p.queue === "projects")
+    expect(projectsPublish?.task).toBe("provision")
+    expect(projectsPublish?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      name: "Project",
+      slug: "project",
+    })
+    expect(projectsPublish?.options?.dedupeKey).toBe("projects:provision:proj-1")
+    // ProjectCreated is whitelisted for PostHog.
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
   it("fails on unhandled events", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer } = setupDispatcher()
 
     const envelope = makeEnvelope("UnknownEvent", { foo: "bar" })
-    const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
+    const effect = consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     const result = await Effect.runPromise(
       effect.pipe(
@@ -200,57 +198,119 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes ScoreImmutable to analytic-scores:save and issue refresh when issue ownership exists", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
+  it("routes ScoreAssignedToIssue to issues:refresh with dedupe and debounce", async () => {
+    const { consumer, published } = setupDispatcher()
 
-    createDomainEventsWorker({ consumer, publisher })
-
-    const envelope = makeEnvelope("ScoreImmutable", {
+    const envelope = makeEnvelope("ScoreAssignedToIssue", {
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-1",
       issueId: "issue-42",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(2)
-    expect(published[0]?.queue).toBe("analytic-scores")
-    expect(published[0]?.task).toBe("save")
+    expect(published).toHaveLength(1)
+    expect(published[0]?.queue).toBe("issues")
+    expect(published[0]?.task).toBe("refresh")
     expect(published[0]?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-1",
+      issueId: "issue-42",
     })
-    expect(published[1]?.queue).toBe("issues")
-    expect(published[1]?.task).toBe("refresh")
-    expect(published[1]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[1]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+    expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
+    expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("routes ScoreImmutable to analytic-scores:save without issue refresh when no issue is attached", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
+  it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {
+    const { consumer, published } = setupDispatcher()
 
-    createDomainEventsWorker({ consumer, publisher })
+    const envelope = makeEnvelope("OrganizationCreated", { organizationId: "org-ph", name: "PH", slug: "ph" }, "org-ph")
 
-    const envelope = makeEnvelope("ScoreImmutable", {
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    // One to the primary handler (api-keys:create) and one to posthog-analytics.
+    const byQueue = published.map((p) => `${p.queue}:${p.task}`).sort()
+    expect(byQueue).toEqual(["api-keys:create", "posthog-analytics:track"])
+
+    const ph = published.find((p) => p.queue === "posthog-analytics")
+    expect(ph?.payload).toMatchObject({
+      eventName: "OrganizationCreated",
+      organizationId: "org-ph",
+      payload: { organizationId: "org-ph", name: "PH", slug: "ph" },
+    })
+    expect(ph?.options?.dedupeKey).toBe(`posthog:${envelope.id}`)
+  })
+
+  it("does NOT fan out non-whitelisted events to posthog-analytics", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    // SpanIngested is handled but deliberately excluded from the PostHog whitelist.
+    const envelope = makeEnvelope("SpanIngested", {
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-2",
+      traceId: "trace-x",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
+  })
+
+  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("ScoreCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
       issueId: null,
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("analytic-scores")
-    expect(published[0]?.task).toBe("save")
-    expect(published[0]?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      scoreId: "score-2",
-    })
+    // Primary handler publishes to issues + annotation-scores; ScoreCreated is
+    // also in the PostHog whitelist so a third publish goes to posthog-analytics.
+    const primary = published.filter((p) => p.queue !== "posthog-analytics")
+    expect(primary).toEqual([
+      {
+        queue: "issues",
+        task: "discovery",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          dedupeKey: "issues:discovery:score-3",
+        },
+      },
+      {
+        queue: "annotation-scores",
+        task: "publishHumanAnnotation",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+        },
+      },
+      {
+        queue: "annotation-scores",
+        task: "markReviewStarted",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          dedupeKey: "annotation-scores:mark-review-started:score-3",
+        },
+      },
+    ])
   })
 })
