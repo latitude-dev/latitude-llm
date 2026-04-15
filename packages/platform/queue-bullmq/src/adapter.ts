@@ -76,7 +76,7 @@ export const createBullMqQueuePublisher = (
     const getQueue = (name: QueueName): Queue => {
       let queue = queues.get(name)
       if (!queue) {
-        queue = new Queue(name, { connection, prefix: '{bull}' })
+        queue = new Queue(name, { connection, prefix: "{bull}" })
         queues.set(name, queue)
       }
       return queue
@@ -208,7 +208,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               },
               {
                 connection: new Redis(redisConfig),
-                prefix: '{bull}',
+                prefix: "{bull}",
                 concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
                 removeOnComplete: { count: 1000 },
                 removeOnFail: { count: 1000 },
