@@ -10,6 +10,10 @@ const STATE_VARIANTS = {
   ignored: "outlineMuted",
 } as const
 
+export function issueLifecycleBadgeVariantForState(state: string): ComponentProps<typeof Badge>["variant"] {
+  return STATE_VARIANTS[state as keyof typeof STATE_VARIANTS] ?? "outline"
+}
+
 interface IssueExtraBadge {
   readonly key: string
   readonly label: string

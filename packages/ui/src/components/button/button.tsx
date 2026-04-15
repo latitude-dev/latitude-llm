@@ -1,6 +1,14 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, Children, forwardRef, isValidElement, type ReactNode } from "react"
+import {
+  type ButtonHTMLAttributes,
+  Children,
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
@@ -170,18 +178,38 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
 
     if (asChild) {
+      const onlyChild = Children.only(visibleChildren)
+      if (!isValidElement(onlyChild)) {
+        throw new Error("Button asChild requires a single React element child.")
+      }
+      const childProps = onlyChild.props as {
+        readonly className?: string
+        readonly children?: ReactNode
+      }
       return (
-        <Slot
-          ref={ref}
-          className={cn(
-            buttonContainerVariants({ variant }),
-            buttonVariantsConfig({ variant, size }),
-            className,
-            isLoading && "animate-pulse",
-          )}
-          {...props}
-        >
-          {visibleChildren}
+        <Slot {...props}>
+          {cloneElement(onlyChild as ReactElement<Record<string, unknown>>, {
+            ref,
+            className: cn(childProps.className, buttonContainerVariants({ variant }), isLoading && "animate-pulse"),
+            children: (
+              <span
+                className={cn(
+                  buttonVariantsConfig({ variant, size }),
+                  "relative z-[1] flex max-w-full flex-row items-center gap-x-1.5",
+                  className,
+                )}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    {stripLeadingIconChild(childProps.children)}
+                  </>
+                ) : (
+                  childProps.children
+                )}
+              </span>
+            ),
+          })}
         </Slot>
       )
     }

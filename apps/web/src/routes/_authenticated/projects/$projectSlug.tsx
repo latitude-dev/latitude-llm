@@ -1,6 +1,6 @@
 import { CopyableText } from "@repo/ui"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { DatabaseIcon, LayersIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, HomeIcon, LayersIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
@@ -31,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
+  const isHomeActive = pathname.startsWith(`/projects/${projectSlug}/home`)
   const isTracesActive =
     pathname === `/projects/${projectSlug}` ||
     pathname === `/projects/${projectSlug}/` ||
@@ -56,6 +57,13 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     >
       {({ collapsed }) => (
         <>
+          <NavItem
+            icon={HomeIcon}
+            label="Home"
+            to={`/projects/${projectSlug}/home`}
+            active={isHomeActive}
+            collapsed={collapsed}
+          />
           <NavItem
             icon={TextAlignStartIcon}
             label="Traces"
