@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi"
 import { defaults, type EnvironmentConfig, productionConfig, stagingConfig } from "./config.ts"
 import { createAlb } from "./lib/alb.ts"
 import { createBastion } from "./lib/bastion.ts"
-import { createCertificate, createDnsRecords } from "./lib/dns.ts"
+import { createCertificate, createDnsRecords, createHostedZone, createTryLatitudeDnsRecords } from "./lib/dns.ts"
 import { createEcs } from "./lib/ecs.ts"
 import { createGithubActionsOidc } from "./lib/github-actions.ts"
 import { createRds } from "./lib/rds.ts"
@@ -46,6 +46,14 @@ const vpcEndpoints = createVpcEndpoints(
   vpc.publicRouteTable.id,
   securityGroups.vpcEndpoints,
 )
+
+const tryLatitudeZone = environment === "production"
+  ? createHostedZone(name, envConfig, "trylatitude.com")
+  : undefined
+
+if (tryLatitudeZone) {
+  createTryLatitudeDnsRecords(name, tryLatitudeZone.zone)
+}
 
 const certificate = createCertificate(name, envConfig, hostedZoneId, domainName)
 
@@ -125,4 +133,9 @@ export const outputs = {
   bastionInstanceId: bastion.instance.id,
 
   domains: envConfig.domains,
+
+  ...(tryLatitudeZone ? {
+    tryLatitudeZoneId: tryLatitudeZone.zone.zoneId,
+    tryLatitudeNameServers: tryLatitudeZone.zone.nameServers,
+  } : {}),
 }
