@@ -5,12 +5,15 @@
 # ---------------------------------------------------------------------------
 FROM node:25-slim AS base
 
-# Install pnpm using npm (corepack was removed from Node.js 25)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
-  npm install -g pnpm@10.30.3 && \
-  rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
+
+# Install pnpm — version is read from package.json's packageManager field
+# so it stays in sync automatically (no more manual bumps in Dockerfile).
+COPY package.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
+  PNPM_VERSION=$(node -p "require('./package.json').packageManager.split('@')[1]") && \
+  npm install -g "pnpm@${PNPM_VERSION}" && \
+  rm -rf /var/lib/apt/lists/*
 
 # Enable pipefail for proper error handling in piped commands
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
