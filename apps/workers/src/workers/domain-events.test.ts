@@ -308,7 +308,7 @@ describe("domain-events dispatcher", () => {
           issueId: null,
         },
         options: {
-          dedupeKey: "issues:discovery:score-3",
+          dedupeKey: `issues:discovery:score-3:${envelope.id}`,
         },
       },
       {
@@ -337,6 +337,51 @@ describe("domain-events dispatcher", () => {
           dedupeKey: "annotation-scores:mark-review-started:score-3",
         },
       },
+    ])
+  })
+
+  it("uses per-event dedupe keys for repeated ScoreCreated events on the same score", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const firstEnvelope: EventEnvelope = {
+      id: "evt-score-created-1",
+      event: {
+        name: "ScoreCreated",
+        organizationId: "org-1",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+      },
+      occurredAt: new Date(),
+    }
+
+    const secondEnvelope: EventEnvelope = {
+      id: "evt-score-created-2",
+      event: {
+        name: "ScoreCreated",
+        organizationId: "org-1",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+      },
+      occurredAt: new Date(),
+    }
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(firstEnvelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(secondEnvelope))
+
+    const issueDiscoveryPublishes = published.filter((p) => p.queue === "issues" && p.task === "discovery")
+
+    expect(issueDiscoveryPublishes).toHaveLength(2)
+    expect(issueDiscoveryPublishes.map((p) => p.options?.dedupeKey)).toEqual([
+      "issues:discovery:score-3:evt-score-created-1",
+      "issues:discovery:score-3:evt-score-created-2",
     ])
   })
 })

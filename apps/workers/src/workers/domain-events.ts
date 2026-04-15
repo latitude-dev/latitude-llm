@@ -17,11 +17,18 @@ class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
 
 const logger = createLogger("domain-events")
 
-type EventHandlerMap = {
-  [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
+type EventDispatchContext = {
+  readonly envelopeId: string
 }
 
-type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
+type EventHandlerMap = {
+  [E in keyof EventPayloads]: (
+    event: DomainEvent<E, EventPayloads[E]>,
+    context: EventDispatchContext,
+  ) => Effect.Effect<void, unknown>
+}
+
+type EventHandlerFn = (e: DomainEvent, context: EventDispatchContext) => Effect.Effect<void, unknown>
 
 export const createDomainEventsWorker = ({
   consumer,
@@ -96,18 +103,20 @@ export const createDomainEventsWorker = ({
 
     TraceEnded: (event) => publishTraceEndedFanOut(event.payload),
 
-    ScoreCreated: (event) =>
-      Effect.all([
-        pub.publish("issues", "discovery", event.payload, {
-          dedupeKey: `issues:discovery:${event.payload.scoreId}`,
-        }),
-        pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
-        }),
-        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
-        }),
-      ]),
+    ScoreCreated: (event, context) =>
+      Effect.gen(function* () {
+        yield* Effect.all([
+          pub.publish("issues", "discovery", event.payload, {
+            dedupeKey: `issues:discovery:${event.payload.scoreId}:${context.envelopeId}`,
+          }),
+          pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
+            debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+          }),
+          pub.publish("annotation-scores", "markReviewStarted", event.payload, {
+            dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
+          }),
+        ])
+      }),
 
     ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
@@ -167,7 +176,7 @@ export const createDomainEventsWorker = ({
       }
 
       const handler = maybeHandler as EventHandlerFn
-      const primary = handler(event)
+      const primary = handler(event, { envelopeId: envelope.id })
 
       if (!isPostHogTracked(event.name)) {
         return primary
