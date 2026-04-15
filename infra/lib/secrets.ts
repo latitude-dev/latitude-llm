@@ -350,6 +350,28 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["turnstile-secret-key"] = turnstileSecretKey.secret
   secretVersions["turnstile-secret-key"] = turnstileSecretKey.secretVersion
 
+  const bullBoardUsername = createSingleSecret(
+    baseName,
+    "bull-board-username",
+    "Bull Board dashboard username",
+    process.env.LAT_BULL_BOARD_USERNAME ?? "admin",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["bull-board-username"] = bullBoardUsername.secret
+  secretVersions["bull-board-username"] = bullBoardUsername.secretVersion
+
+  const bullBoardPassword = createSingleSecret(
+    baseName,
+    "bull-board-password",
+    "Bull Board dashboard password",
+    process.env.LAT_BULL_BOARD_PASSWORD ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["bull-board-password"] = bullBoardPassword.secret
+  secretVersions["bull-board-password"] = bullBoardPassword.secretVersion
+
   return {
     secrets,
     secretVersions,

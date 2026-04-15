@@ -21,6 +21,7 @@ import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
+import { basicAuth } from "hono/basic-auth"
 import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
@@ -87,6 +88,10 @@ const bootstrap = async () => {
     const { TOPIC_NAMES } = await import("@domain/queue")
     const { createBullBoardQueues } = await import("@platform/queue-bullmq")
     const bullBoardQueues = createBullBoardQueues(bullMqConfig, TOPIC_NAMES)
+
+    const bullBoardUser = Effect.runSync(parseEnv("LAT_BULL_BOARD_USERNAME", "string"))
+    const bullBoardPass = Effect.runSync(parseEnv("LAT_BULL_BOARD_PASSWORD", "string"))
+    app.use("/bull-board/*", basicAuth({ username: bullBoardUser, password: bullBoardPass }))
 
     const serverAdapter = new HonoAdapter("/bull-board")
     createBullBoard({
