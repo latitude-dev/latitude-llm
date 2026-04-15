@@ -22,6 +22,12 @@ const INT_TO_STATUS: Record<number, TraceStatus> = {
   2: "error",
 }
 
+const STATUS_TO_INT: Record<string, number> = {
+  unset: 0,
+  ok: 1,
+  error: 2,
+}
+
 const LIST_SELECT = `
   organization_id,
   project_id,
@@ -147,6 +153,7 @@ export const TraceRepositoryLive = Layer.effect(
                         AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
                         AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
                       GROUP BY organization_id, project_id, trace_id
+                      HAVING {hasStatus:Bool} = false OR overall_status = {statusValue:Int16}
                       ORDER BY start_time DESC
                       LIMIT {limit:UInt32}
                       OFFSET {offset:UInt32}`,
@@ -159,6 +166,8 @@ export const TraceRepositoryLive = Layer.effect(
                 startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
                 hasStartTo: options.startTimeTo !== undefined,
                 startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                hasStatus: options.status !== undefined && options.status !== "",
+                statusValue: STATUS_TO_INT[options.status ?? ""] ?? 0,
                 limit: options.limit ?? 50,
                 offset: options.offset ?? 0,
               },

@@ -24,6 +24,7 @@ export interface TraceRepositoryShape {
 
 export interface TraceListOptions {
   readonly traceId?: string
+  readonly status?: string
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly limit?: number

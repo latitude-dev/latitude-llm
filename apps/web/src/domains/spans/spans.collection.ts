@@ -47,14 +47,29 @@ export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: st
 
 interface TracesFilter {
   readonly traceId?: string
+  readonly status?: string
+  readonly startTimeFrom?: string
+  readonly startTimeTo?: string
 }
 
-const makeTracesCollection = ({ projectId, filter }: { projectId: string; filter?: TracesFilter }) =>
+const filterCacheKey = (filter: TracesFilter): string =>
+  [filter.traceId ?? "", filter.status ?? "", filter.startTimeFrom ?? "", filter.startTimeTo ?? ""].join("|")
+
+const makeTracesCollection = ({ projectId, filter }: { projectId: string; filter: TracesFilter }) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["traces", projectId, filter?.traceId ?? ""],
-      queryFn: () => listTracesByProject({ data: { projectId, traceId: filter?.traceId } }),
+      queryKey: ["traces", projectId, filterCacheKey(filter)],
+      queryFn: () =>
+        listTracesByProject({
+          data: {
+            projectId,
+            ...(filter.traceId ? { traceId: filter.traceId } : {}),
+            ...(filter.status ? { status: filter.status } : {}),
+            ...(filter.startTimeFrom ? { startTimeFrom: filter.startTimeFrom } : {}),
+            ...(filter.startTimeTo ? { startTimeTo: filter.startTimeTo } : {}),
+          },
+        }),
       getKey: (item: TraceRecord): string => item.traceId,
     }),
   )
@@ -63,7 +78,7 @@ type TracesCollection = ReturnType<typeof makeTracesCollection>
 const projectCollectionsCache: Record<string, TracesCollection> = {}
 
 const getTracesCollection = (projectId: string, filter: TracesFilter): TracesCollection => {
-  const cacheKey = `${projectId}:${filter.traceId ?? ""}`
+  const cacheKey = `${projectId}:${filterCacheKey(filter)}`
   if (!projectCollectionsCache[cacheKey]) {
     projectCollectionsCache[cacheKey] = makeTracesCollection({ projectId, filter })
   }
