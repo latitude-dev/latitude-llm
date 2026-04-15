@@ -1,4 +1,4 @@
-import { trace, type Tracer } from "@opentelemetry/api"
+import { type Tracer, trace } from "@opentelemetry/api"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
 
 /**
