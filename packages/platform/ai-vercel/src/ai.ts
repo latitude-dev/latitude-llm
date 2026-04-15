@@ -10,11 +10,13 @@ import {
   type GenerateInput,
   type GenerateResult,
 } from "@domain/ai"
-import { runWithAiTelemetry } from "@platform/ai-latitude"
+import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { generateText, Output } from "ai"
 import { Effect, Layer } from "effect"
 import { resolveAmazonBedrockModelId } from "./bedrock-nova-inference-model-id.ts"
+
+const latitudeTracer = getLatitudeTracer("vercelai")
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
 type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
@@ -183,6 +185,7 @@ export const AIGenerateLive = Layer.effect(
                   ...(providerOptions !== undefined ? { providerOptions } : {}),
                   experimental_telemetry: {
                     isEnabled: true,
+                    tracer: latitudeTracer,
                   },
                 }
 

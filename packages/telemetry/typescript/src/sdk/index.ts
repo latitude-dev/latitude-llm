@@ -1,4 +1,5 @@
 export { capture } from "./context.ts"
+export { getLatitudeTracer } from "./tracer.ts"
 
 export { initLatitude } from "./init.ts"
 export type { InstrumentationType } from "./instrumentations.ts"
