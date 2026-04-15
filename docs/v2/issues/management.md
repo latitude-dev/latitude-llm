@@ -61,7 +61,7 @@ The keep monitoring toggle determines what happens to linked evaluations after r
 - **Enabled**: Linked evaluations stay active so they can detect regressions. If the issue reappears, it moves to **Regressed** state.
 - **Disabled**: Linked evaluations are archived when the issue resolves.
 
-The toggle defaults from your project's `keepMonitoring` setting, falling back to the organization-level setting when the project doesn't have one set. You can override the default for each specific resolve action.
+The toggle defaults from your project settings, falling back to the organization-level setting when the project doesn't have one set. You can override the default for each specific resolve action.
 
 ## Working with Regressed Issues
 
@@ -81,7 +81,7 @@ When an issue regresses:
 
 Ignoring an issue is separate from resolving it:
 
-- Ignoring **immediately archives** all linked evaluations. The `keepMonitoring` setting does not apply
+- Ignoring **immediately archives** all linked evaluations, regardless of the keep monitoring setting
 - Ignored issues are hidden from default views but can be un-ignored later
 - Use ignore for issues that aren't worth tracking, not for issues that have been fixed
 
