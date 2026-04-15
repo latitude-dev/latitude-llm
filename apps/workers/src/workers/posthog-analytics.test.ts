@@ -88,7 +88,7 @@ describe("posthog-analytics worker", () => {
     createPostHogAnalyticsWorker({ consumer, posthog })
 
     await consumer.dispatch("track", {
-      eventName: "TraceEnded",
+      eventName: "SpanIngested",
       organizationId: "org-1",
       payload: { organizationId: "org-1", projectId: "p", traceId: "t" },
       occurredAt: "2026-04-13T12:00:00.000Z",

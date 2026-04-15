@@ -100,7 +100,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to live-traces:end and firstTrace check", async () => {
+  it("routes SpanIngested to debounced evaluations, annotation queues, and immediate firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
@@ -111,68 +111,36 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["live-traces:end", "projects:checkFirstTrace"])
-
-    const firstTrace = published.find((p) => p.task === "checkFirstTrace")
-    const liveTracesEnd = published.find((p) => p.queue === "live-traces")
-
-    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
-    expect(liveTracesEnd?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-    expect(liveTracesEnd?.options).toEqual({
-      dedupeKey: "live-traces:end:org-1:proj-1:trace-abc",
-      debounceMs: TRACE_END_DEBOUNCE_MS,
-    })
-  })
-
-  it("routes TraceEnded to evaluations and both annotation-queue consumers", async () => {
-    const { consumer, published } = setupDispatcher()
-
-    const envelope = makeEnvelope("TraceEnded", {
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
-
     expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
       "live-annotation-queues:curate",
       "live-evaluations:enqueue",
+      "projects:checkFirstTrace",
       "system-annotation-queues:fanOut",
     ])
 
     const liveEvaluations = published.find((p) => p.queue === "live-evaluations")
     const liveAnnotationQueues = published.find((p) => p.queue === "live-annotation-queues")
     const systemAnnotationQueues = published.find((p) => p.queue === "system-annotation-queues")
+    const firstTrace = published.find((p) => p.task === "checkFirstTrace")
 
     expect(liveEvaluations?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
     })
-    expect(liveAnnotationQueues?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-    expect(systemAnnotationQueues?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
     expect(liveEvaluations?.options).toEqual({
       dedupeKey: "evaluations:live:enqueue:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(liveAnnotationQueues?.options).toEqual({
       dedupeKey: "annotation-queues:live:curate:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(systemAnnotationQueues?.options).toEqual({
       dedupeKey: "annotation-queues:system:fan-out:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
     })
+    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
   })
 
   it("routes ProjectCreated to projects:provision", async () => {
@@ -282,75 +250,63 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
 
-  it("routes ScoreDraftSaved to annotation-scores publish and markReviewStarted", async () => {
+  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted with status-aware dedupe", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("ScoreDraftSaved", {
+    const envelope = makeEnvelope("ScoreCreated", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
       issueId: null,
+      status: "published",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toEqual([
-      {
-        queue: "annotation-scores",
-        task: "publishHumanAnnotation",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "annotation-scores:publish-human:score-3",
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
-        },
-      },
-      {
-        queue: "annotation-scores",
-        task: "markReviewStarted",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "annotation-scores:mark-review-started:score-3",
-        },
-      },
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "annotation-scores:markReviewStarted",
+      "annotation-scores:publishHumanAnnotation",
+      "issues:discovery",
     ])
+
+    const discovery = published.find((p) => p.task === "discovery")
+    expect(discovery?.options?.dedupeKey).toBe("issues:discovery:score-3:published")
+
+    const publish = published.find((p) => p.task === "publishHumanAnnotation")
+    expect(publish?.options).toEqual({
+      dedupeKey: "annotation-scores:publish-human:score-3",
+      debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+    })
+
+    const review = published.find((p) => p.task === "markReviewStarted")
+    expect(review?.options?.dedupeKey).toBe("annotation-scores:mark-review-started:score-3")
   })
 
-  it("routes ScorePublished to issues:discovery", async () => {
+  it("uses distinct discovery dedupe keys for draft vs published scores", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("ScorePublished", {
+    const draftEnvelope = makeEnvelope("ScoreCreated", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
       issueId: null,
+      status: "draft",
     })
 
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+    const publishedEnvelope = makeEnvelope("ScoreCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+      issueId: null,
+      status: "published",
+    })
 
-    expect(published).toEqual([
-      {
-        queue: "issues",
-        task: "discovery",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "issues:discovery:score-3",
-        },
-      },
-    ])
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(draftEnvelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(publishedEnvelope))
+
+    const discoveryPublishes = published.filter((p) => p.task === "discovery")
+    const dedupeKeys = discoveryPublishes.map((p) => p.options?.dedupeKey)
+    expect(dedupeKeys).toContain("issues:discovery:score-3:draft")
+    expect(dedupeKeys).toContain("issues:discovery:score-3:published")
   })
 })

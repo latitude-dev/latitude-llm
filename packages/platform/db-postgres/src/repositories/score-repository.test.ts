@@ -71,7 +71,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(persistedRows).toHaveLength(0)
   })
 
-  it("writes ScoreDraftSaved for draft writes and ScorePublished for published writes", async () => {
+  it("writes ScoreCreated with status=draft for draft writes and status=published for published writes", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const scoreId = "ssssssssssssssssssssssss"
 
@@ -100,7 +100,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
       )
 
     expect(draftOutboxRows).toHaveLength(1)
-    expect(draftOutboxRows[0]?.eventName).toBe("ScoreDraftSaved")
+    expect(draftOutboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(draftOutboxRows[0]?.payload).toMatchObject({ status: "draft" })
 
     const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
@@ -138,10 +139,11 @@ describe("ScoreRepositoryLive + score use cases", () => {
       )
 
     expect(publicationRequests).toHaveLength(2)
-    expect(publicationRequests.map((r) => r.eventName)).toEqual(["ScoreDraftSaved", "ScorePublished"])
+    expect(publicationRequests.every((r) => r.eventName === "ScoreCreated")).toBe(true)
+    expect(publicationRequests.map((r) => (r.payload as { status: string }).status)).toEqual(["draft", "published"])
   })
 
-  it("queues ScorePublished for failed non-draft scores that still need issue assignment", async () => {
+  it("queues ScoreCreated with status=published for failed non-draft scores that still need issue assignment", async () => {
     const organizationId = "ffffffffffffffffffffffff"
 
     const score = await Effect.runPromise(
@@ -162,16 +164,17 @@ describe("ScoreRepositoryLive + score use cases", () => {
       .where(and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, score.id as string)))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScorePublished")
+    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId,
       projectId: customProjectId,
       scoreId: score.id,
       issueId: null,
+      status: "published",
     })
   })
 
-  it("still writes ScorePublished when the score already carries issueId (discovery worker noops)", async () => {
+  it("still writes ScoreCreated when the score already carries issueId (discovery worker noops)", async () => {
     const organizationId = "rrrrrrrrrrrrrrrrrrrrrrrr"
 
     const score = await Effect.runPromise(
@@ -193,7 +196,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       .where(and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, score.id as string)))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScorePublished")
+    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
   })
 
   it("claims score issue ownership only once with assignIssueIfUnowned", async () => {

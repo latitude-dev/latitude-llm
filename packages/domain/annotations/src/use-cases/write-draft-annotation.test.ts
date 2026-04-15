@@ -158,7 +158,7 @@ describe("persistDraftAnnotation", () => {
 
     expect(events).toEqual([
       expect.objectContaining({
-        eventName: "ScoreDraftSaved",
+        eventName: "ScoreCreated",
         payload: expect.objectContaining({
           organizationId: cuid,
           projectId: projectCuid,
@@ -244,7 +244,7 @@ describe("persistDraftAnnotation", () => {
     expect(score.metadata.rawFeedback).toBe("Issue with refund policy")
   })
 
-  it("writes ScoreDraftSaved for draft persistence", async () => {
+  it("writes ScoreCreated for draft persistence", async () => {
     const { events, layer } = createTestLayers()
 
     await Effect.runPromise(
@@ -261,7 +261,7 @@ describe("persistDraftAnnotation", () => {
 
     expect(events).toEqual([
       expect.objectContaining({
-        eventName: "ScoreDraftSaved",
+        eventName: "ScoreCreated",
         payload: expect.objectContaining({
           organizationId: cuid,
           projectId: projectCuid,
@@ -303,7 +303,7 @@ describe("persistDraftAnnotation", () => {
     expect(updated.feedback).toBe("Updated AI feedback")
     expect(updated.metadata.rawFeedback).toBe("Updated AI feedback")
     expect(store.size).toBe(1)
-    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreDraftSaved")).toHaveLength(2)
+    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")).toHaveLength(2)
   })
 
   it("supports queue-backed drafts with source=annotation and queue sourceId", async () => {
@@ -325,6 +325,6 @@ describe("persistDraftAnnotation", () => {
     expect(score.sourceId).toBe(queueId)
     expect(score.draftedAt).not.toBeNull()
     expect(store.size).toBe(1)
-    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreDraftSaved")).toHaveLength(1)
+    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")).toHaveLength(1)
   })
 })

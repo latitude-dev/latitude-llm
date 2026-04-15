@@ -31,7 +31,6 @@ import { describe, expect, it } from "vitest"
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
 import { createLiveEvaluationsWorker } from "./live-evaluations.ts"
-import { createLiveTracesWorker } from "./live-traces.ts"
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -395,7 +394,6 @@ const setupPipeline = (options?: {
   const eventsPublisher = createEventsPublisher(harness.publisher)
 
   createDomainEventsWorker({ consumer, publisher: harness.publisher })
-  createLiveTracesWorker({ consumer, eventsPublisher })
   createLiveEvaluationsWorker({
     consumer,
     publisher: harness.publisher,
@@ -430,7 +428,7 @@ const publishSpanIngested = async (
 }
 
 describe("live monitoring pipeline activation", () => {
-  it("debounces repeated SpanIngested events and runs the full TraceEnded pipeline through execute persistence", async () => {
+  it("debounces repeated SpanIngested events and runs the full evaluation pipeline through execute persistence", async () => {
     const projectId = fill("a", 24)
     const traceId = fill("b", 32)
     const spanId = fill("c", 16)
@@ -484,39 +482,27 @@ describe("live monitoring pipeline activation", () => {
     await publishSpanIngested(eventsPublisher, { projectId, traceId })
     await publishSpanIngested(eventsPublisher, { projectId, traceId })
 
-    expect(
-      harness.published.filter((message) => message.queue === "live-traces" && message.task === "end"),
-    ).toHaveLength(2)
-    expect(harness.getPendingDelayed("live-traces")).toEqual([
+    // SpanIngested debounces directly into the downstream queues — no intermediate live-traces hop.
+    expect(harness.getPendingDelayed("live-evaluations")).toEqual([
       {
-        queue: "live-traces",
-        task: "end",
+        queue: "live-evaluations",
+        task: "enqueue",
         payload: {
           organizationId: ORGANIZATION_ID,
           projectId,
           traceId,
         },
         options: {
-          dedupeKey: `live-traces:end:${ORGANIZATION_ID}:${projectId}:${traceId}`,
+          dedupeKey: `evaluations:live:enqueue:${ORGANIZATION_ID}:${projectId}:${traceId}`,
           debounceMs: TRACE_END_DEBOUNCE_MS,
         },
       },
     ])
 
-    await harness.flushDelayed("live-traces")
+    await harness.flushDelayed("live-evaluations")
+    await harness.flushDelayed("live-annotation-queues")
+    await harness.flushDelayed("system-annotation-queues")
 
-    const traceEndedDispatches = harness.published.filter(
-      (message) =>
-        message.queue === "domain-events" &&
-        message.task === "dispatch" &&
-        typeof message.payload === "object" &&
-        message.payload !== null &&
-        "event" in message.payload &&
-        typeof message.payload.event === "object" &&
-        message.payload.event !== null &&
-        "name" in message.payload.event &&
-        message.payload.event.name === "TraceEnded",
-    )
     const enqueuePublishes = harness.published.filter(
       (message) => message.queue === "live-evaluations" && message.task === "enqueue",
     )
@@ -524,20 +510,7 @@ describe("live monitoring pipeline activation", () => {
       (message) => message.queue === "live-evaluations" && message.task === "execute",
     )
 
-    expect(traceEndedDispatches).toHaveLength(1)
-    expect(enqueuePublishes).toHaveLength(1)
-    expect(harness.published).toContainEqual({
-      queue: "live-evaluations",
-      task: "enqueue",
-      payload: {
-        organizationId: ORGANIZATION_ID,
-        projectId,
-        traceId,
-      },
-      options: {
-        dedupeKey: `evaluations:live:enqueue:${ORGANIZATION_ID}:${projectId}:${traceId}`,
-      },
-    })
+    expect(enqueuePublishes).toHaveLength(2)
     expect(harness.published).toContainEqual({
       queue: "live-annotation-queues",
       task: "curate",
@@ -548,6 +521,7 @@ describe("live monitoring pipeline activation", () => {
       },
       options: {
         dedupeKey: `annotation-queues:live:curate:${ORGANIZATION_ID}:${projectId}:${traceId}`,
+        debounceMs: TRACE_END_DEBOUNCE_MS,
       },
     })
     expect(harness.published).toContainEqual({
@@ -560,6 +534,7 @@ describe("live monitoring pipeline activation", () => {
       },
       options: {
         dedupeKey: `annotation-queues:system:fan-out:${ORGANIZATION_ID}:${projectId}:${traceId}`,
+        debounceMs: TRACE_END_DEBOUNCE_MS,
       },
     })
     expect(executePublishes).toEqual([
@@ -629,7 +604,7 @@ describe("live monitoring pipeline activation", () => {
     })
   })
 
-  it("applies turn selection while skipping paused, archived, and deleted evaluations after TraceEnded fan-out", async () => {
+  it("applies turn selection while skipping paused, archived, and deleted evaluations after SpanIngested debounce", async () => {
     const projectId = fill("f", 24)
     const traceId = fill("g", 32)
     const priorTraceId = fill("h", 32)
@@ -724,7 +699,7 @@ describe("live monitoring pipeline activation", () => {
     })
 
     await publishSpanIngested(eventsPublisher, { projectId, traceId })
-    await harness.flushDelayed("live-traces")
+    await harness.flushDelayed("live-evaluations")
 
     const executePublishes = harness.published.filter(
       (message) => message.queue === "live-evaluations" && message.task === "execute",

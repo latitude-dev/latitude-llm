@@ -21,22 +21,12 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  TraceEnded: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly traceId: string
-  }
-  ScoreDraftSaved: {
+  ScoreCreated: {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
     readonly issueId: string | null
-  }
-  ScorePublished: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly scoreId: string
-    readonly issueId: string | null
+    readonly status: "draft" | "published"
   }
   ScoreAssignedToIssue: {
     readonly organizationId: string
