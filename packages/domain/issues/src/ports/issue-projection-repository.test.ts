@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { ISSUE_DISCOVERY_MAX_CANDIDATES } from "../constants.ts"
+import { ISSUE_DISCOVERY_SEARCH_CANDIDATES } from "../constants.ts"
 import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 
 const organizationId = "org1"
@@ -146,7 +146,7 @@ describe("IssueProjectionRepository (fake)", () => {
       )
 
       expect(results.length).toBe(5)
-      expect(results.length).toBeLessThanOrEqual(ISSUE_DISCOVERY_MAX_CANDIDATES)
+      expect(results.length).toBeLessThanOrEqual(ISSUE_DISCOVERY_SEARCH_CANDIDATES)
     })
 
     it("filters by tenant name", async () => {

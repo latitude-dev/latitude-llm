@@ -17,6 +17,7 @@
   "dependencies": {
     "@domain/issues": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "weaviate-client": "catalog:"

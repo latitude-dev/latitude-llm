@@ -36,6 +36,8 @@ import {
   SEED_WARRANTY_SIMULATION_ID,
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
+  seedIssueOccurrenceSpanId,
+  seedIssueOccurrenceTraceId,
   seedTimestampDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -56,6 +58,10 @@ function requiredAt<T>(items: readonly T[], index: number): T {
 
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string {
   return seedTimestampDaysAgo(daysAgo, hour, minute)
+}
+
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
+  return sourceId === "seed-issue-scout" ? "UI" : "API"
 }
 
 function annotationValue(passed: boolean, tier: string): number {
@@ -296,25 +302,38 @@ const simulationAnalyticsRows = [
   },
 ] as const
 
-const issueOccurrenceAnalyticsRows = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => ({
-  id: seedScoreId(occurrence.idPrefix, i),
-  organization_id: SEED_ORG_ID,
-  project_id: SEED_PROJECT_ID,
-  session_id: "",
-  trace_id: "",
-  span_id: "",
-  source: occurrence.source,
-  source_id: occurrence.sourceId,
-  simulation_id: "",
-  issue_id: occurrence.issueId,
-  value: occurrence.value,
-  passed: occurrence.passed,
-  errored: occurrence.errored,
-  duration: occurrence.duration,
-  tokens: occurrence.tokens,
-  cost: occurrence.cost,
-  created_at: createdAtFromDaysAgo(occurrence.daysAgo, occurrence.hour, occurrence.minute),
-}))
+const issueOccurrenceAnalyticsRows = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
+  const seededSource =
+    occurrence.source === "custom"
+      ? {
+          source: "annotation" as const,
+          sourceId: annotationSeedSourceId(occurrence.sourceId),
+        }
+      : {
+          source: occurrence.source,
+          sourceId: occurrence.sourceId,
+        }
+
+  return {
+    id: seedScoreId(occurrence.idPrefix, i),
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "",
+    trace_id: seedIssueOccurrenceTraceId(i),
+    span_id: seedIssueOccurrenceSpanId(i),
+    source: seededSource.source,
+    source_id: seededSource.sourceId,
+    simulation_id: "",
+    issue_id: occurrence.issueId,
+    value: occurrence.value,
+    passed: occurrence.passed,
+    errored: occurrence.errored,
+    duration: occurrence.duration,
+    tokens: occurrence.tokens,
+    cost: occurrence.cost,
+    created_at: createdAtFromDaysAgo(occurrence.daysAgo, occurrence.hour, occurrence.minute),
+  }
+})
 
 const allAnalyticsRows = [
   ...lifecycleAnalyticsRows,

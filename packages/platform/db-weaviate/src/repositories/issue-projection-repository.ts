@@ -1,13 +1,12 @@
 import {
-  ISSUE_DISCOVERY_MAX_CANDIDATES,
-  ISSUE_DISCOVERY_MIN_KEYWORDS,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   IssueProjectionRepository,
 } from "@domain/issues"
 import { toRepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
-import { Bm25Operator, type WeaviateClient } from "weaviate-client"
+import type { WeaviateClient } from "weaviate-client"
 import { getCollectionForTenant, issuesCollectionTenantName, WeaviateCollection } from "../collections.ts"
 import { WvQueryClient } from "../wv-query-client.ts"
 
@@ -87,19 +86,17 @@ export const IssueProjectionRepositoryLive = Layer.effect(
             const { objects } = await collection.query.hybrid(input.query, {
               vector: input.vector,
               alpha: ISSUE_DISCOVERY_SEARCH_RATIO,
-              maxVectorDistance: 1 - ISSUE_DISCOVERY_MIN_SIMILARITY,
-              bm25Operator: Bm25Operator.or({
-                minimumMatch: ISSUE_DISCOVERY_MIN_KEYWORDS,
-              }),
               fusionType: "RelativeScore",
-              limit: ISSUE_DISCOVERY_MAX_CANDIDATES,
+              limit: ISSUE_DISCOVERY_SEARCH_CANDIDATES,
               returnProperties: ["title", "description"],
               returnMetadata: ["score"],
             })
 
-            if (objects.length === 0) return []
+            const thresholdFilteredObjects = [...objects]
+              .filter((object) => (object.metadata?.score ?? 0) >= ISSUE_DISCOVERY_MIN_SIMILARITY)
+              .sort((left, right) => (right.metadata?.score ?? 0) - (left.metadata?.score ?? 0))
 
-            return objects.map((object) => ({
+            return thresholdFilteredObjects.map((object) => ({
               uuid: object.uuid,
               title: object.properties.title,
               description: object.properties.description,

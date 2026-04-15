@@ -217,6 +217,14 @@ function fixedSpanHex(prefix: string, index: number): string {
   return `${prefix}${index.toString(16).padStart(6, "0")}${"0".repeat(8)}`
 }
 
+export function seedIssueOccurrenceTraceId(index: number): string {
+  return fixedTraceHex("ef", index)
+}
+
+export function seedIssueOccurrenceSpanId(index: number): string {
+  return fixedSpanHex("ef", index)
+}
+
 /** 48 annotation trace IDs (Issue 1: 0-15, Issue 2: 16-37, Issue 3: 38-47). */
 export const SEED_ANNOTATION_TRACE_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedTraceHex("af", i))
 export const SEED_ANNOTATION_SPAN_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedSpanHex("af", i))

@@ -1,14 +1,12 @@
 import {
-  ISSUE_DISCOVERY_MAX_CANDIDATES,
-  ISSUE_DISCOVERY_MIN_KEYWORDS,
-  ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   IssueProjectionRepository,
 } from "@domain/issues"
 import { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { Bm25Operator, type WeaviateClient } from "weaviate-client"
+import type { WeaviateClient } from "weaviate-client"
 import { issuesCollectionTenantName } from "../collections.ts"
 import { withWeaviate } from "../with-weaviate.ts"
 import { IssueProjectionRepositoryLive } from "./issue-projection-repository.ts"
@@ -154,10 +152,20 @@ describe("IssueProjectionRepositoryLive", () => {
     expect(state.hybridCalls).toHaveLength(1)
   })
 
-  it("uses Weaviate hybrid search with RelativeScore fusion and BM25", async () => {
+  it("uses Weaviate hybrid search with RelativeScore fusion ordered by fused score", async () => {
     const state = createWeaviateClientStub({
       tenantExists: true,
       hybridObjects: [
+        {
+          uuid: "issue-2",
+          properties: {
+            title: "Secret leakage",
+            description: "Agent exposed API tokens in tool output",
+          },
+          metadata: {
+            score: 0.89,
+          },
+        },
         {
           uuid: "issue-1",
           properties: {
@@ -165,7 +173,17 @@ describe("IssueProjectionRepositoryLive", () => {
             description: "Agent exposed API tokens",
           },
           metadata: {
-            score: 0.91,
+            score: 0.97,
+          },
+        },
+        {
+          uuid: "issue-3",
+          properties: {
+            title: "Prompt injection",
+            description: "Model followed unsafe hidden instructions",
+          },
+          metadata: {
+            score: 0.62,
           },
         },
       ],
@@ -186,24 +204,25 @@ describe("IssueProjectionRepositoryLive", () => {
       options: {
         vector: [1, 0],
         alpha: ISSUE_DISCOVERY_SEARCH_RATIO,
-        maxVectorDistance: 1 - ISSUE_DISCOVERY_MIN_SIMILARITY,
         fusionType: "RelativeScore",
-        limit: ISSUE_DISCOVERY_MAX_CANDIDATES,
+        limit: ISSUE_DISCOVERY_SEARCH_CANDIDATES,
         returnProperties: ["title", "description"],
         returnMetadata: ["score"],
       },
     })
-    expect((state.hybridCalls[0]?.options as { bm25Operator?: unknown }).bm25Operator).toEqual(
-      Bm25Operator.or({
-        minimumMatch: ISSUE_DISCOVERY_MIN_KEYWORDS,
-      }),
-    )
+    expect(state.hybridCalls[0]?.options as Record<string, unknown>).not.toHaveProperty("maxVectorDistance")
     expect(results).toEqual([
       {
         uuid: "issue-1",
         title: "Token leakage",
         description: "Agent exposed API tokens",
-        score: 0.91,
+        score: 0.97,
+      },
+      {
+        uuid: "issue-2",
+        title: "Secret leakage",
+        description: "Agent exposed API tokens in tool output",
+        score: 0.89,
       },
     ])
   })

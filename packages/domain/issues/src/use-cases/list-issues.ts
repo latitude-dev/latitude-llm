@@ -431,6 +431,7 @@ export const listIssuesUseCase = (
         hasSearch: parsed.search !== undefined,
       },
     )
+
     const occurrencesSum = tableCandidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0)
     const pageCandidates = tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit)
     const pageIssueIds = pageCandidates.map((candidate) => candidate.issue.id)

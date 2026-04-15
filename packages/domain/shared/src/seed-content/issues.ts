@@ -2045,12 +2045,41 @@ function buildExtraOccurrenceDays(issue: SeedIssueFixture, index: number): reado
   })
 }
 
+function firstSentence(text: string): string {
+  const sentence = text.split(".")[0]?.trim()
+  return sentence && sentence.length > 0 ? sentence : text.trim()
+}
+
+function lowercaseFirst(text: string): string {
+  if (text.length === 0) {
+    return text
+  }
+
+  return `${text[0]?.toLowerCase() ?? ""}${text.slice(1)}`
+}
+
+function buildExtraIssueOccurrenceFeedback(input: {
+  readonly issue: SeedIssueFixture
+  readonly sourceId: string
+  readonly severity: string
+  readonly occurrenceIndex: number
+}): string {
+  const sourceLabel = input.sourceId === "seed-issue-scout" ? "Seed issue scout" : "Backlog audit"
+  const scenario = lowercaseFirst(firstSentence(input.issue.description))
+  const issueLabel = input.issue.name.toLowerCase()
+  const evidenceLabel =
+    input.occurrenceIndex === 0 ? "found another seeded conversation" : "confirmed another seeded conversation"
+
+  return `${sourceLabel} ${evidenceLabel} where ${scenario}. The case remained a ${input.severity}-severity example of ${issueLabel}.`
+}
+
 const extraIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = extraIssueFixtures.flatMap((issue, index) => {
   const sourceId = index % 2 === 0 ? "seed-issue-scout" : "backlog-audit"
   const idPrefix = `x${index.toString(36)}`
   const severity = index % 4 === 0 ? "high" : index % 4 === 1 ? "medium" : "low"
+  const occurrenceDays = buildExtraOccurrenceDays(issue, index)
 
-  return buildExtraOccurrenceDays(issue, index).map((daysAgo, occurrenceIndex) => ({
+  return occurrenceDays.map((daysAgo, occurrenceIndex) => ({
     issueId: issue.id,
     source: "custom" as const,
     sourceId,
@@ -2063,13 +2092,18 @@ const extraIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = extraIss
     passed: false,
     errored: false,
     error: null,
-    feedback: `Seeded long-tail issue evidence captured another instance of ${issue.name.toLowerCase()}.`,
+    feedback: buildExtraIssueOccurrenceFeedback({
+      issue,
+      sourceId,
+      severity,
+      occurrenceIndex,
+    }),
     metadata: {
       importName: sourceId,
       reviewer: index % 2 === 0 ? "seed-quality" : "ops-triage",
       batch: `extra-issues-${Math.floor(index / 4) + 1}`,
       severity,
-      expectedVisibility: buildExtraOccurrenceDays(issue, index).length >= 3 ? "visible" : "denoised",
+      expectedVisibility: occurrenceDays.length >= 3 ? "visible" : "denoised",
     },
     duration: 0,
     tokens: 0,

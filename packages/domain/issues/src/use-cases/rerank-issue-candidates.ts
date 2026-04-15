@@ -1,7 +1,16 @@
 import { AI } from "@domain/ai"
 import { Effect } from "effect"
-import { MIN_RERANK_RELEVANCE, RERANK_MODEL } from "../constants.ts"
+import {
+  ISSUE_DISCOVERY_MIN_RELEVANCE,
+  ISSUE_DISCOVERY_RERANK_CANDIDATES,
+  ISSUE_DISCOVERY_RERANK_MODEL,
+} from "../constants.ts"
 import type { IssueProjectionCandidate } from "../ports/issue-projection-repository.ts"
+
+const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
+
+const buildRerankDocument = (candidate: IssueProjectionCandidate): string =>
+  [collapseWhitespace(candidate.title), collapseWhitespace(candidate.description)].join("\n\n")
 
 export interface RerankIssueCandidatesInput {
   readonly query: string
@@ -15,7 +24,11 @@ export interface RetrievalResult {
 
 export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) =>
   Effect.gen(function* () {
-    if (input.candidates.length === 0) {
+    const limitedCandidates = [...input.candidates]
+      .sort((left, right) => right.score - left.score)
+      .slice(0, ISSUE_DISCOVERY_RERANK_CANDIDATES)
+
+    if (limitedCandidates.length === 0) {
       return {
         matchedIssueUuid: null,
         similarityScore: 0,
@@ -25,19 +38,19 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
     const ai = yield* AI
     const reranked = yield* ai.rerank({
       query: input.query,
-      documents: input.candidates.map((candidate) => candidate.description),
-      model: RERANK_MODEL,
+      documents: limitedCandidates.map(buildRerankDocument),
+      model: ISSUE_DISCOVERY_RERANK_MODEL,
       telemetry: {
         spanName: "rerank-issue-candidates",
         tags: ["issues", "rerank"],
         metadata: {
-          candidateCount: input.candidates.length,
+          candidateCount: limitedCandidates.length,
         },
       },
     })
 
     const best = reranked
-      .filter((item) => item.relevanceScore >= MIN_RERANK_RELEVANCE)
+      .filter((item) => item.relevanceScore >= ISSUE_DISCOVERY_MIN_RELEVANCE)
       .sort((left, right) => right.relevanceScore - left.relevanceScore)[0]
 
     if (!best) {
@@ -47,7 +60,7 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
       } satisfies RetrievalResult
     }
 
-    const matchedIssue = input.candidates[best.index]
+    const matchedIssue = limitedCandidates[best.index]
     if (!matchedIssue) {
       return {
         matchedIssueUuid: null,

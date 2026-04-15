@@ -120,4 +120,27 @@ describe("seed timeline helpers", () => {
     expect(installationCounts.get(0) ?? 0).toBeLessThan(20)
     expect(installationCounts.has(1)).toBe(false)
   })
+
+  it("assigns deterministic trace ids to seeded issue occurrences and keeps long-tail feedback issue-specific", async () => {
+    vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
+    vi.resetModules()
+
+    const { seedIssueOccurrenceSpanId, seedIssueOccurrenceTraceId } = await import("./seeds.ts")
+    const { SEED_ADDITIONAL_ISSUE_OCCURRENCES } = await import("./seed-content/issues.ts")
+
+    const traceIds = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((_, index) => seedIssueOccurrenceTraceId(index))
+    const spanIds = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((_, index) => seedIssueOccurrenceSpanId(index))
+    const longTailFeedback = SEED_ADDITIONAL_ISSUE_OCCURRENCES.filter((occurrence) => {
+      const importName = occurrence.metadata.importName
+      return importName === "seed-issue-scout" || importName === "backlog-audit"
+    }).map((occurrence) => occurrence.feedback)
+
+    expect(new Set(traceIds).size).toBe(SEED_ADDITIONAL_ISSUE_OCCURRENCES.length)
+    expect(new Set(spanIds).size).toBe(SEED_ADDITIONAL_ISSUE_OCCURRENCES.length)
+    expect(longTailFeedback.length).toBeGreaterThan(0)
+    expect(longTailFeedback.every((feedback) => !feedback.startsWith("Seeded long-tail issue evidence captured"))).toBe(
+      true,
+    )
+    expect(longTailFeedback.every((feedback) => feedback.includes("seeded conversation"))).toBe(true)
+  })
 })

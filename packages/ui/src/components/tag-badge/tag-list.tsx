@@ -1,7 +1,7 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { Tooltip } from "../tooltip/tooltip.tsx"
-import { TagBadge } from "./tag-badge.tsx"
+import { TagBadge, TagBadgeList } from "./tag-badge.tsx"
 
 /** Gap between flex items in pixels (matches gap-1 / 0.25rem at 16px base). */
 const GAP_PX = 4
@@ -107,11 +107,7 @@ export const TagList = memo(function TagList({ tags }: TagListProps) {
           </span>
         }
       >
-        <div className="flex flex-col gap-1">
-          {hiddenTags.map((tag) => (
-            <TagBadge key={tag} tag={tag} />
-          ))}
-        </div>
+        <TagBadgeList tags={hiddenTags} />
       </Tooltip>
     </div>
   )

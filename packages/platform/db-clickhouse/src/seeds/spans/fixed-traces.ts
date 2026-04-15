@@ -4,6 +4,7 @@ import {
   COMBINATION_DATASET_ROWS,
   type DatasetRow,
   ISSUE_2_ADDITIONAL_NEGATIVES,
+  SEED_ADDITIONAL_ISSUE_OCCURRENCES,
   SEED_ALIGNMENT_FIXTURE_SPAN_IDS,
   SEED_ALIGNMENT_FIXTURE_TRACE_IDS,
   SEED_ANNOTATION_SPAN_IDS,
@@ -11,6 +12,7 @@ import {
   SEED_API_KEY_ID,
   SEED_COMBINATION_SIMULATION_SPAN_IDS,
   SEED_COMBINATION_SIMULATION_TRACE_IDS,
+  SEED_ISSUE_FIXTURES_BY_ID,
   SEED_LIFECYCLE_SPAN_IDS,
   SEED_LIFECYCLE_TRACE_IDS,
   SEED_ORG_ID,
@@ -20,6 +22,8 @@ import {
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
   seedDateDaysAgo,
+  seedIssueOccurrenceSpanId,
+  seedIssueOccurrenceTraceId,
   WARRANTY_DATASET_ROWS,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -168,6 +172,37 @@ function buildAlignmentFixtureSpans(): SpanRow[] {
   })
 }
 
+function buildIssueOccurrenceTraceSpans(): SpanRow[] {
+  return SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
+    const issue = SEED_ISSUE_FIXTURES_BY_ID.get(occurrence.issueId)
+    const issueName = issue?.name ?? "seeded issue"
+    const time = generateTime(occurrence.daysAgo, occurrence.hour, occurrence.minute)
+    const userPrompt =
+      occurrence.source === "evaluation"
+        ? `Run the seeded monitor case for ${issueName.toLowerCase()}.`
+        : `Review the seeded audit case for ${issueName.toLowerCase()}.`
+
+    return createFixedSpan({
+      traceId: seedIssueOccurrenceTraceId(i),
+      spanId: seedIssueOccurrenceSpanId(i),
+      startTime: time.start,
+      endTime: time.end,
+      userPrompt,
+      assistantResponse: occurrence.feedback,
+      systemInstruction: SUPPORT_AGENT_SYSTEM_PROMPT,
+      serviceName: "acme-support-agent",
+      tags: ["support", "issue-occurrence", occurrence.source],
+      metadata: {
+        story: "issue-occurrence-corpus",
+        issueId: occurrence.issueId,
+        issueName,
+        source: occurrence.source,
+        sourceId: occurrence.sourceId,
+      },
+    })
+  })
+}
+
 function buildLifecycleSpans(): SpanRow[] {
   const specs = [
     {
@@ -246,6 +281,7 @@ function buildSimulationTraceSpans(opts: {
 const allFixedSpans = [
   ...buildAnnotationTraceSpans(),
   ...buildAlignmentFixtureSpans(),
+  ...buildIssueOccurrenceTraceSpans(),
   ...buildLifecycleSpans(),
   ...buildSimulationTraceSpans({
     rows: WARRANTY_DATASET_ROWS,
