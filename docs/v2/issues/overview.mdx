@@ -1,5 +1,5 @@
 ---
-title: Issues
+title: Issues Overview
 description: Understand how Latitude discovers and tracks failure patterns in your agent
 ---
 
@@ -10,7 +10,10 @@ Issues are recurring failure patterns that Latitude discovers automatically from
 ## The Issues Page
 
 <Frame>
-  <img src="/images/issues/issues-list.png" alt="Issues page showing discovered failure patterns with status, trends, and occurrence data" />
+  <img
+    src="/images/issues/issues-list.png"
+    alt="Issues page showing discovered failure patterns with status, trends, and occurrence data"
+  />
 </Frame>
 
 The Issues page shows all discovered failure patterns for your project. At the top, summary cards show key counts: regressions, escalating issues, active issues, new issues, and total events. A histogram below shows issue occurrences over time.
@@ -42,7 +45,10 @@ Scores from evaluations that are already linked to an issue skip this matching a
 Click any issue to open the detail drawer:
 
 <Frame>
-  <img src="/images/issues/issue-detail.png" alt="Issue detail drawer showing status, trend, linked evaluation, and trace logs" />
+  <img
+    src="/images/issues/issue-detail.png"
+    alt="Issue detail drawer showing status, trend, linked evaluation, and trace logs"
+  />
 </Frame>
 
 The drawer shows:
@@ -59,13 +65,13 @@ The header provides **Ignore** and **Resolve** actions, plus navigation arrows t
 
 Each issue has a lifecycle state that tells you where it stands:
 
-| State | Meaning |
-| --- | --- |
-| **New** | Discovered less than 7 days ago |
+| State          | Meaning                                                                  |
+| -------------- | ------------------------------------------------------------------------ |
+| **New**        | Discovered less than 7 days ago                                          |
 | **Escalating** | Occurrences are increasing significantly compared to the recent baseline |
-| **Resolved** | No recent occurrences, or manually resolved by your team |
-| **Regressed** | New occurrences appeared after the issue was previously resolved |
-| **Ignored** | Manually ignored. Hidden from default views but can be restored |
+| **Resolved**   | No recent occurrences, or manually resolved by your team                 |
+| **Regressed**  | New occurrences appeared after the issue was previously resolved         |
+| **Ignored**    | Manually ignored. Hidden from default views but can be restored          |
 
 An issue can be in multiple states at once. For example, an issue can be both **New** and **Escalating** if it was discovered recently and is already growing.
 
@@ -96,12 +102,12 @@ As more failures match an issue or a team member annotates a related trace, the 
 
 ## How Issues Connect to Other Features
 
-| Feature | Relationship |
-| --- | --- |
-| **[Scores](../scores/overview)** | Failed scores feed into issue discovery. Each issue groups scores with similar failure feedback |
-| **[Evaluations](../evaluations/overview)** | Issues can generate monitoring evaluations. Evaluation failures link back to their issue |
-| **[Annotations](../annotations/overview)** | Human annotations confirm issue detections and improve evaluation alignment |
-| **[Alignment](../evaluations/alignment)** | Annotations on issue-linked traces produce alignment metrics for the issue's evaluations |
+| Feature                                    | Relationship                                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **[Scores](../scores/overview)**           | Failed scores feed into issue discovery. Each issue groups scores with similar failure feedback |
+| **[Evaluations](../evaluations/overview)** | Issues can generate monitoring evaluations. Evaluation failures link back to their issue        |
+| **[Annotations](../annotations/overview)** | Human annotations confirm issue detections and improve evaluation alignment                     |
+| **[Alignment](../evaluations/alignment)**  | Annotations on issue-linked traces produce alignment metrics for the issue's evaluations        |
 
 ## Next Steps
 

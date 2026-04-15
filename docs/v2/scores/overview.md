@@ -1,5 +1,5 @@
 ---
-title: Scores
+title: Scores Overview
 description: Understand how scores work as the universal measurement unit in Latitude
 ---
 
@@ -11,12 +11,12 @@ Scores are the universal measurement unit in Latitude. Every verdict on your age
 
 A score is a verdict attached to a trace. Every score has:
 
-| Field | Description |
-| --- | --- |
-| **Value** | A number between 0 and 1 |
-| **Pass / Fail** | Whether the interaction met expectations |
-| **Feedback** | Text explaining the verdict |
-| **Source** | Where the score came from: evaluation, annotation, or custom |
+| Field           | Description                                                  |
+| --------------- | ------------------------------------------------------------ |
+| **Value**       | A number between 0 and 1                                     |
+| **Pass / Fail** | Whether the interaction met expectations                     |
+| **Feedback**    | Text explaining the verdict                                  |
+| **Source**      | Where the score came from: evaluation, annotation, or custom |
 
 Scores can also carry resource usage fields like duration, token count, and cost.
 
