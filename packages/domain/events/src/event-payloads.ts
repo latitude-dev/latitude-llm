@@ -26,7 +26,13 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  ScoreCreated: {
+  ScoreDraftSaved: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+    readonly issueId: string | null
+  }
+  ScorePublished: {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string

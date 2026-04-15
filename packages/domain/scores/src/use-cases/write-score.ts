@@ -88,7 +88,7 @@ const validateDraftUpdate = (existingScore: Score, input: ParsedWriteScoreInput)
   return null
 }
 
-const scoreCreatedDiscoveryPayloadIssueId = (score: Score, existingScore: Score | null): string | null => {
+const scoreDiscoveryPayloadIssueId = (score: Score, existingScore: Score | null): string | null => {
   if (
     existingScore !== null &&
     existingScore.draftedAt !== null &&
@@ -99,6 +99,9 @@ const scoreCreatedDiscoveryPayloadIssueId = (score: Score, existingScore: Score 
   }
   return null
 }
+
+const scoreEventName = (score: Score): "ScoreDraftSaved" | "ScorePublished" =>
+  score.draftedAt === null ? "ScorePublished" : "ScoreDraftSaved"
 
 const buildScore = ({
   input,
@@ -178,7 +181,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         yield* scoreRepository.save(score)
 
         yield* outboxEventWriter.write({
-          eventName: "ScoreCreated",
+          eventName: scoreEventName(score),
           aggregateType: "score",
           aggregateId: score.id,
           organizationId: score.organizationId,
@@ -186,7 +189,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
             organizationId: score.organizationId,
             projectId: score.projectId,
             scoreId: score.id,
-            issueId: scoreCreatedDiscoveryPayloadIssueId(score, existingScore),
+            issueId: scoreDiscoveryPayloadIssueId(score, existingScore),
           },
         })
 
