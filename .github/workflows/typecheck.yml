@@ -32,8 +32,5 @@ jobs:
       - name: Create .env.test from example
         run: cp .env.example .env.test
 
-      - name: Build telemetry package
-        run: pnpm --filter @latitude-data/telemetry build
-
       - name: Typecheck
         run: pnpm typecheck
