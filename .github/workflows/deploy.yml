@@ -364,11 +364,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build telemetry package
-        run: pnpm --filter @latitude-data/telemetry build
-
       - name: Build all apps
-        run: pnpm --filter "@app/*" build
+        run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
@@ -743,11 +740,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build telemetry package
-        run: pnpm --filter @latitude-data/telemetry build
-
       - name: Build all apps
-        run: pnpm --filter "@app/*" build
+        run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}

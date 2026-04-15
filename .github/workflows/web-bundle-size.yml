@@ -30,11 +30,8 @@ jobs:
       - name: Create .env.production from example
         run: cp .env.example .env.production
 
-      - name: Build telemetry package
-        run: pnpm --filter @latitude-data/telemetry build
-
       - name: Build web app
-        run: pnpm --filter @app/web build
+        run: pnpm turbo run build --filter @app/web
 
       - name: Enforce client bundle size limit
         run: pnpm --filter @app/web check:bundle-size

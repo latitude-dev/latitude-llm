@@ -37,36 +37,33 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
   pnpm install --frozen-lockfile --ignore-scripts --offline
 
-# Build the telemetry workspace package so downstream apps can resolve it
-RUN pnpm --filter @latitude-data/telemetry build
-
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-api
 
-RUN pnpm --filter @app/api build
+RUN pnpm turbo run build --filter @app/api
 
 # ---------------------------------------------------------------------------
 # Build ingest — compile ingest app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-ingest
 
-RUN pnpm --filter @app/ingest build
+RUN pnpm turbo run build --filter @app/ingest
 
 # ---------------------------------------------------------------------------
 # Build workers — compile workers app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-workers
 
-RUN pnpm --filter @app/workers build
+RUN pnpm turbo run build --filter @app/workers
 
 # ---------------------------------------------------------------------------
 # Build workflows — Temporal worker app
 # ---------------------------------------------------------------------------
 FROM source AS build-workflows
 
-RUN pnpm --filter @app/workflows build
+RUN pnpm turbo run build --filter @app/workflows
 
 # ---------------------------------------------------------------------------
 # Build web — compile web app (turbo builds dependencies automatically)
@@ -79,16 +76,14 @@ ARG VITE_LAT_TURNSTILE_SITE_KEY
 ARG VITE_LAT_POSTHOG_KEY
 ARG VITE_LAT_POSTHOG_HOST
 
-RUN pnpm --filter @app/web build
+RUN pnpm turbo run build --filter @app/web
 
 # ---------------------------------------------------------------------------
 # Build migrations — compile packages needed for migrations
 # ---------------------------------------------------------------------------
 FROM source AS build-migrations
 
-RUN pnpm --filter @platform/db-postgres build && \
-  pnpm --filter @platform/db-clickhouse build && \
-  pnpm --filter @platform/db-weaviate build
+RUN pnpm turbo run build --filter @platform/db-postgres --filter @platform/db-clickhouse --filter @platform/db-weaviate
 
 # ---------------------------------------------------------------------------
 # Runtime base — shared runtime settings and cleanup helper
