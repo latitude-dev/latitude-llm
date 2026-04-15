@@ -14,18 +14,18 @@ interface SignupMagicLinkEmailProps {
 
 export function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLinkEmailProps) {
   return (
-    <ContainerLayout previewText="Complete your Latitude account">
-      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${userName},`}</EmailText>
+    <ContainerLayout previewText={`Hi ${userName}, confirm your email to get started`}>
+      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hey ${userName}, let's get you set up`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        You&apos;re almost there. Use this link to finish creating your Latitude account and set up your workspace.
+        Thanks for signing up for Latitude. Confirm your email address by tapping the button below, and we&apos;ll have your workspace ready in seconds.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={magicLinkUrl} label="Continue to Latitude" />
+        <EmailButton href={magicLinkUrl} label="Confirm and Get Started" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>
-        This link will expire in 1 hour and can only be used once.
+        For security, this link is valid for 1 hour and works only once.
       </EmailText>
     </ContainerLayout>
   )

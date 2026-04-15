@@ -13,7 +13,7 @@ export interface SignupMagicLinkEmailData {
 export async function signupMagicLinkTemplate(data: SignupMagicLinkEmailData): Promise<RenderedEmail> {
   return {
     html: await renderEmail(<SignupMagicLinkEmail userName={data.userName} magicLinkUrl={data.magicLinkUrl} />),
-    subject: "Finish setting up your Latitude account",
-    text: `Complete your Latitude signup: ${data.magicLinkUrl}`,
+    subject: `${data.userName}, one step left to activate your Latitude account`,
+    text: `Hi ${data.userName}, confirm your email to get started with Latitude: ${data.magicLinkUrl}`,
   }
 }
