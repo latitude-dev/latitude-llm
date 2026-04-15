@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
-import { printFixtureCatalog, sendLiveMonitorSeedData } from "../index.ts"
+import { printFixtureCatalog, sendLiveSeedData } from "../index.ts"
 
 const USAGE = `
-Usage: pnpm seed:live-monitor [options]
+Usage: pnpm seed:live-seeds [options]
 
 Options:
   --fixtures <a,b,c>             Comma-separated fixture keys to send
@@ -106,8 +106,8 @@ const options = {
   ...(values.seed ? { seed: values.seed } : {}),
 }
 
-void sendLiveMonitorSeedData(options).catch((error: unknown) => {
-  console.error("Failed to send live-monitor seed traces:")
+void sendLiveSeedData(options).catch((error: unknown) => {
+  console.error("Failed to send live-seed traces:")
   console.error(error)
   process.exitCode = 1
 })

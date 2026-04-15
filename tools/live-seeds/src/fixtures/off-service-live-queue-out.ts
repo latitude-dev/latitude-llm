@@ -1,5 +1,5 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -43,7 +43,7 @@ const FOLLOW_UP_EXCHANGES = [
   },
 ] as const
 
-export const offServiceLiveQueueOutFixture: LiveMonitorFixtureDefinition = {
+export const offServiceLiveQueueOutFixture: LiveSeedFixtureDefinition = {
   key: "off-service-live-queue-out",
   description:
     "Non-support high-cost trace that still clears the live-queue filter but should sample out of the seeded high-cost queue.",

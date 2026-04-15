@@ -1,5 +1,5 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -57,7 +57,7 @@ const OPTIONAL_CLOSING = [
   },
 ] as const
 
-export const offServiceLiveQueueInFixture: LiveMonitorFixtureDefinition = {
+export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
   key: "off-service-live-queue-in",
   description:
     "Non-support trace that should skip live evaluations by filter but still sample into the seeded live high-cost queue.",

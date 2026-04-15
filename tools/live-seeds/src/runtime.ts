@@ -28,10 +28,10 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
-import { liveMonitorFixtureKeys, liveMonitorFixtures } from "./fixtures.ts"
+import { liveSeedFixtureKeys, liveSeedFixtures } from "./fixtures.ts"
 import { type BuiltTraceSpan, buildTraceRequests } from "./otlp.ts"
 import { createSeededRng } from "./random.ts"
-import type { LiveMonitorFixtureDefinition, LiveMonitorGeneratedTrace } from "./types.ts"
+import type { LiveSeedFixtureDefinition, LiveSeedGeneratedTrace } from "./types.ts"
 
 const HIGH_COST_LIVE_QUEUE_SLUG = "high-cost-traces"
 const FRUSTRATION_SYSTEM_QUEUE_SLUG = "frustration"
@@ -58,27 +58,27 @@ export type SeedTargets = {
   readonly systemQueuesBySlug: Readonly<Record<string, AnnotationQueue>>
 }
 
-export type LiveMonitorSamplePreview = {
+export type LiveSeedSamplePreview = {
   readonly evaluations: Readonly<Record<string, boolean>>
   readonly liveQueue?: boolean
   readonly systemQueues?: Readonly<Record<string, boolean>>
 }
 
-export type ResolvedLiveMonitorTrace = {
-  readonly fixture: LiveMonitorFixtureDefinition
+export type ResolvedLiveSeedTrace = {
+  readonly fixture: LiveSeedFixtureDefinition
   readonly instanceIndex: number
-  readonly generatedTrace: LiveMonitorGeneratedTrace
+  readonly generatedTrace: LiveSeedGeneratedTrace
   readonly traceId: string
-  readonly samples: LiveMonitorSamplePreview
+  readonly samples: LiveSeedSamplePreview
 }
 
-export type LiveMonitorRunPlan = {
+export type LiveSeedRunPlan = {
   readonly seed: string
   readonly runId: string
-  readonly traces: readonly ResolvedLiveMonitorTrace[]
+  readonly traces: readonly ResolvedLiveSeedTrace[]
 }
 
-export type SendLiveMonitorSeedDataOptions = {
+export type SendLiveSeedDataOptions = {
   readonly fixtureKeys?: readonly string[]
   readonly ingestBaseUrl: string
   readonly timeScale: number
@@ -88,7 +88,7 @@ export type SendLiveMonitorSeedDataOptions = {
   readonly seed?: string
 }
 
-export type BuildLiveMonitorRunPlanOptions = {
+export type BuildLiveSeedRunPlanOptions = {
   readonly fixtureKeys?: readonly string[]
   readonly countPerFixture: number
   readonly timeScale: number
@@ -101,7 +101,7 @@ export type DispatchResolvedTracesOptions = {
   readonly parallelTraces: number
   readonly runId: string
   readonly postTraceSpan?: (input: {
-    readonly trace: ResolvedLiveMonitorTrace
+    readonly trace: ResolvedLiveSeedTrace
     readonly span: BuiltTraceSpan
   }) => Promise<void>
 }
@@ -148,24 +148,24 @@ function labelForEvaluation(evaluationId: string): string {
   return label
 }
 
-function resolveSelectedFixtures(keys?: readonly string[]): readonly LiveMonitorFixtureDefinition[] {
+function resolveSelectedFixtures(keys?: readonly string[]): readonly LiveSeedFixtureDefinition[] {
   if (!keys || keys.length === 0) {
-    return liveMonitorFixtures
+    return liveSeedFixtures
   }
 
-  const fixturesByKey = new Map(liveMonitorFixtures.map((fixture) => [fixture.key, fixture]))
+  const fixturesByKey = new Map(liveSeedFixtures.map((fixture) => [fixture.key, fixture]))
 
   return keys.map((key) => {
     const fixture = fixturesByKey.get(key)
     if (!fixture) {
-      throw new Error(`Unknown fixture "${key}". Valid fixtures: ${[...liveMonitorFixtureKeys].sort().join(", ")}`)
+      throw new Error(`Unknown fixture "${key}". Valid fixtures: ${[...liveSeedFixtureKeys].sort().join(", ")}`)
     }
     return fixture
   })
 }
 
 function runIdForSeed(seed: string): string {
-  return hashHex(`seed-live-monitor:${seed}`, 8)
+  return hashHex(`seed-live-seeds:${seed}`, 8)
 }
 
 function getAgentProfile(serviceName: string): AgentProfile {
@@ -210,7 +210,7 @@ function buildSeedStyleMetadata(
   return metadata
 }
 
-function buildTraceDispatchContext(trace: ResolvedLiveMonitorTrace): TraceDispatchContext {
+function buildTraceDispatchContext(trace: ResolvedLiveSeedTrace): TraceDispatchContext {
   const profile = getAgentProfile(trace.generatedTrace.serviceName)
   const rng = createSeededRng(
     `dispatch-context:${trace.traceId}:${trace.fixture.key}:${trace.instanceIndex.toString()}`,
@@ -344,10 +344,10 @@ async function sampleSystemQueue(target: AnnotationQueue, traceId: string): Prom
 }
 
 async function computeSamplePreview(
-  fixture: LiveMonitorFixtureDefinition,
+  fixture: LiveSeedFixtureDefinition,
   targets: SeedTargets,
   traceId: string,
-): Promise<LiveMonitorSamplePreview> {
+): Promise<LiveSeedSamplePreview> {
   const evaluationEntries = await Promise.all(
     SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
       const evaluation = targets.evaluationsById[evaluationId]
@@ -383,10 +383,7 @@ async function computeSamplePreview(
   }
 }
 
-function samplePreviewMatchesRequirements(
-  fixture: LiveMonitorFixtureDefinition,
-  preview: LiveMonitorSamplePreview,
-): boolean {
+function samplePreviewMatchesRequirements(fixture: LiveSeedFixtureDefinition, preview: LiveSeedSamplePreview): boolean {
   const includeIds = fixture.sampling.includeEvaluationIds ?? []
   const excludeIds = fixture.sampling.excludeEvaluationIds ?? []
 
@@ -418,14 +415,14 @@ function samplePreviewMatchesRequirements(
 }
 
 async function findTraceIdForFixtureInstance(
-  fixture: LiveMonitorFixtureDefinition,
+  fixture: LiveSeedFixtureDefinition,
   targets: SeedTargets,
   runSeed: string,
   instanceIndex: number,
-): Promise<{ readonly traceId: string; readonly preview: LiveMonitorSamplePreview }> {
+): Promise<{ readonly traceId: string; readonly preview: LiveSeedSamplePreview }> {
   for (let attempt = 0; attempt < MAX_TRACE_ID_SEARCH_ATTEMPTS; attempt += 1) {
     const traceId = hashHex(
-      `seed-live-monitor:${runSeed}:${fixture.key}:${instanceIndex.toString()}:${attempt.toString()}`,
+      `seed-live-seeds:${runSeed}:${fixture.key}:${instanceIndex.toString()}:${attempt.toString()}`,
       32,
     )
     const preview = await computeSamplePreview(fixture, targets, traceId)
@@ -444,7 +441,7 @@ function scaleMs(value: number, timeScale: number, minimumMs = 0): number {
   return Math.max(minimumMs, Math.round(value * timeScale))
 }
 
-function scaleGeneratedTrace(trace: LiveMonitorGeneratedTrace, timeScale: number): LiveMonitorGeneratedTrace {
+function scaleGeneratedTrace(trace: LiveSeedGeneratedTrace, timeScale: number): LiveSeedGeneratedTrace {
   return {
     ...trace,
     startDelayMs: scaleMs(trace.startDelayMs, timeScale),
@@ -456,7 +453,7 @@ function scaleGeneratedTrace(trace: LiveMonitorGeneratedTrace, timeScale: number
   }
 }
 
-function getTraceDispatchWindowMs(trace: LiveMonitorGeneratedTrace): number {
+function getTraceDispatchWindowMs(trace: LiveSeedGeneratedTrace): number {
   const spanWindowMs = trace.spans.reduce(
     (currentMax, span) => Math.max(currentMax, span.offsetMs + span.durationMs),
     0,
@@ -464,7 +461,7 @@ function getTraceDispatchWindowMs(trace: LiveMonitorGeneratedTrace): number {
   return trace.startDelayMs + spanWindowMs
 }
 
-export async function buildLiveMonitorRunPlan(options: BuildLiveMonitorRunPlanOptions): Promise<LiveMonitorRunPlan> {
+export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions): Promise<LiveSeedRunPlan> {
   const fixtures = resolveSelectedFixtures(options.fixtureKeys)
   const runId = runIdForSeed(options.seed)
 
@@ -494,7 +491,7 @@ export async function buildLiveMonitorRunPlan(options: BuildLiveMonitorRunPlanOp
           generatedTrace,
           traceId,
           samples: preview,
-        } satisfies ResolvedLiveMonitorTrace
+        } satisfies ResolvedLiveSeedTrace
       }),
     ),
   )
@@ -506,13 +503,8 @@ export async function buildLiveMonitorRunPlan(options: BuildLiveMonitorRunPlanOp
   }
 }
 
-function printFixturePlan(
-  plan: LiveMonitorRunPlan,
-  ingestBaseUrl: string,
-  provisioned: boolean,
-  parallelTraces: number,
-) {
-  console.log("Live-monitor seed run plan:")
+function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisioned: boolean, parallelTraces: number) {
+  console.log("Live-seed run plan:")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
   console.log(`  - project slug: ${SEED_PROJECT_SLUG}`)
   console.log(`  - system queue provisioning: ${provisioned ? "enabled" : "skipped"}`)
@@ -522,7 +514,7 @@ function printFixturePlan(
   console.log(`  - total traces: ${plan.traces.length.toString()}`)
   console.log(`  - parallel trace runners: ${parallelTraces.toString()}`)
 
-  for (const fixture of liveMonitorFixtures) {
+  for (const fixture of liveSeedFixtures) {
     const matchingTraces = plan.traces.filter((trace) => trace.fixture.key === fixture.key)
     if (matchingTraces.length === 0) {
       continue
@@ -607,7 +599,7 @@ async function runWithConcurrency<T>(
 }
 
 export async function dispatchResolvedTraces(
-  traces: readonly ResolvedLiveMonitorTrace[],
+  traces: readonly ResolvedLiveSeedTrace[],
   options: DispatchResolvedTracesOptions,
 ): Promise<DispatchResolvedTracesResult> {
   const dispatchStartedAt = Date.now()
@@ -661,13 +653,13 @@ export async function dispatchResolvedTraces(
 }
 
 export function printFixtureCatalog(): void {
-  console.log("Available live-monitor fixtures:")
-  for (const fixture of liveMonitorFixtures) {
+  console.log("Available live-seed fixtures:")
+  for (const fixture of liveSeedFixtures) {
     console.log(`  - ${fixture.key}: ${fixture.description}`)
   }
 }
 
-export async function sendLiveMonitorSeedData(options: SendLiveMonitorSeedDataOptions): Promise<void> {
+export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promise<void> {
   const seed = options.seed ?? randomUUID().replaceAll("-", "")
 
   if (options.provisionSystemQueues) {
@@ -675,7 +667,7 @@ export async function sendLiveMonitorSeedData(options: SendLiveMonitorSeedDataOp
   }
 
   const targets = await loadSeedTargets()
-  const plan = await buildLiveMonitorRunPlan({
+  const plan = await buildLiveSeedRunPlan({
     ...(options.fixtureKeys ? { fixtureKeys: options.fixtureKeys } : {}),
     countPerFixture: options.countPerFixture,
     timeScale: options.timeScale,

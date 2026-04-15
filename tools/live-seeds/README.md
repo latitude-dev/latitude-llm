@@ -1,4 +1,4 @@
-# `@tools/seeds`
+# `@tools/live-seeds`
 
 Utility package for development-only seeding workflows that are easier to express as scripts than as database seed rows.
 
@@ -8,9 +8,9 @@ The database seeds still live in the regular DB packages. This package is for pr
 
 Today this package contains one main tool:
 
-- `seed:live-monitor`: sends OTLP traces to the ingest service using the default seeded organization, project, and API key
+- `seed:live-seeds`: sends OTLP traces to the ingest service using the default seeded organization, project, and API key
 
-This is useful when you want to test the full live-monitoring path end to end:
+This is useful when you want to test the full live ingestion path end to end:
 
 - ingest receives spans
 - `SpanIngested` is emitted
@@ -20,7 +20,7 @@ This is useful when you want to test the full live-monitoring path end to end:
 - live annotation queues curate traces
 - system annotation queues fan out to workflows
 
-The live-monitor script is generator-backed rather than a simple fixture replayer:
+The live-seeds script is generator-backed rather than a simple fixture replayer:
 
 - each fixture defines its own randomized trace generator
 - every generated trace keeps the fixture's sampling and behavioral contract
@@ -77,64 +77,64 @@ pnpm dev
 Run from the package directory:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --help
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --help
 ```
 
 List all fixtures:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --list-fixtures
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --list-fixtures
 ```
 
 Run one generated trace per fixture:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds
 ```
 
 Run a subset:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --fixtures warranty-eval-in,combination-eval-and-live-queue-in,tool-call-error
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue-in,tool-call-error
 ```
 
 Run multiple randomized traces for each selected fixture:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --fixtures warranty-eval-in,tool-call-error --count-per-fixture 25 --parallel-traces 6
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --fixtures warranty-eval-in,tool-call-error --count-per-fixture 25 --parallel-traces 6
 ```
 
 Run the exact same generated corpus again:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --count-per-fixture 10 --parallel-traces 4 --seed live-monitor-demo-001
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --count-per-fixture 10 --parallel-traces 4 --seed live-seeds-demo-001
 ```
 
 Use a custom ingest URL:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --ingest-url http://127.0.0.1:3002
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --ingest-url http://127.0.0.1:3002
 ```
 
 Speed up the within-trace timing:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --time-scale 0.5
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --time-scale 0.5
 ```
 
 Skip system queue provisioning:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --no-provision-system-queues
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --no-provision-system-queues
 ```
 
 ## CLI Options
@@ -172,8 +172,8 @@ Each fixture represents a scenario family rather than one literal trace. Every r
 If you want a small smoke run first:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --fixtures warranty-eval-in,combination-eval-and-live-queue-in,off-service-live-queue-in,tool-call-error
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue-in,off-service-live-queue-in,tool-call-error
 ```
 
 That gives you:
@@ -186,15 +186,15 @@ That gives you:
 If you want a broader manual validation run:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --count-per-fixture 5 --parallel-traces 4
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --count-per-fixture 5 --parallel-traces 4
 ```
 
 If you want the full matrix at scale with reproducible output:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --count-per-fixture 20 --parallel-traces 8 --seed live-monitor-scale-001
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --count-per-fixture 20 --parallel-traces 8 --seed live-seeds-scale-001
 ```
 
 ## Example Run
@@ -202,8 +202,8 @@ pnpm seed:live-monitor --count-per-fixture 20 --parallel-traces 8 --seed live-mo
 Example:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --fixtures warranty-eval-in,frustration-in,tool-call-error --count-per-fixture 3 --parallel-traces 2 --seed example-run-01
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --fixtures warranty-eval-in,frustration-in,tool-call-error --count-per-fixture 3 --parallel-traces 2 --seed example-run-01
 ```
 
 Typical flow:
@@ -262,14 +262,14 @@ The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS`
 
 ## Package Layout
 
-- `src/scripts/send-live-monitor.ts`: CLI entrypoint
-- `src/live-monitor/fixtures.ts`: generator-backed fixture registry
-- `src/live-monitor/fixtures/`: per-fixture generator modules
-- `src/live-monitor/runtime.ts`: queue provisioning, target loading, sample-aware trace ID search, run planning, and dispatch orchestration
-- `src/live-monitor/otlp.ts`: OTLP request builders and message helpers
-- `src/live-monitor/random.ts`: seeded RNG used for reproducible generation
-- `src/live-monitor/types.ts`: shared fixture and generated-trace types
+- `src/scripts/send-live-seeds.ts`: CLI entrypoint
+- `src/fixtures.ts`: generator-backed fixture registry
+- `src/fixtures/`: per-fixture generator modules
+- `src/runtime.ts`: queue provisioning, target loading, sample-aware trace ID search, run planning, and dispatch orchestration
+- `src/otlp.ts`: OTLP request builders and message helpers
+- `src/random.ts`: seeded RNG used for reproducible generation
+- `src/types.ts`: shared fixture and generated-trace types
 
-## Future Additions
+## Scope
 
-This package is intended to hold other development-facing seed tools over time, especially workflows that need to interact with live services instead of only inserting rows directly into the database.
+This package is intentionally dedicated to live ingestion seeding. Database row seeds still belong in the DB packages, while this tool focuses on generating and sending realistic live traces through the ingest pipeline.

@@ -8,7 +8,7 @@ export type SamplingPlan = {
   readonly systemQueueSamples?: Readonly<Record<string, boolean>>
 }
 
-export type LiveMonitorGeneratedTrace = {
+export type LiveSeedGeneratedTrace = {
   readonly startDelayMs: number
   readonly sessionId: string
   readonly userId: string
@@ -32,11 +32,11 @@ export type FixtureGenerationContext = {
   readonly runSeed: string
 }
 
-export type LiveMonitorFixtureDefinition = {
+export type LiveSeedFixtureDefinition = {
   readonly key: string
   readonly description: string
   readonly sampling: SamplingPlan
   readonly deterministicSystemMatches: readonly string[]
   readonly llmSystemIntents: readonly string[]
-  readonly generateTrace: (context: FixtureGenerationContext) => LiveMonitorGeneratedTrace
+  readonly generateTrace: (context: FixtureGenerationContext) => LiveSeedGeneratedTrace
 }

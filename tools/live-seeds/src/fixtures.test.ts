@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { LIVE_QUEUE_COST_THRESHOLD_USD, SUPPORT_SERVICE_NAME } from "./fixtures/common.ts"
-import { liveMonitorFixtures } from "./fixtures.ts"
+import { liveSeedFixtures } from "./fixtures.ts"
 import { createSeededRng } from "./random.ts"
 
 function totalTraceCostUsd(trace: {
@@ -9,8 +9,8 @@ function totalTraceCostUsd(trace: {
   return trace.spans.reduce((sum, span) => sum + span.usage.totalCostUsd, 0)
 }
 
-describe("liveMonitorFixtures", () => {
-  for (const fixture of liveMonitorFixtures) {
+describe("liveSeedFixtures", () => {
+  for (const fixture of liveSeedFixtures) {
     it(`generates deterministic but varied traces for ${fixture.key}`, () => {
       const traceA = fixture.generateTrace({
         rng: createSeededRng(`test:${fixture.key}:seed-a`),

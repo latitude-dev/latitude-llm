@@ -1,5 +1,5 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -19,7 +19,7 @@ const INVALID_JSON_RESPONSES = [
   '{"status":"failed","retryCount":3,,}',
 ] as const
 
-export const outputSchemaFixture: LiveMonitorFixtureDefinition = {
+export const outputSchemaFixture: LiveSeedFixtureDefinition = {
   key: "output-schema",
   description:
     "Low-cost non-support trace that should deterministically match the Output Schema Validation system queue.",

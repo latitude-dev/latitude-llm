@@ -1,5 +1,5 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -43,7 +43,7 @@ const OPTIONAL_THIRD_TURN = [
   },
 ] as const
 
-export const frustrationInFixture: LiveMonitorFixtureDefinition = {
+export const frustrationInFixture: LiveSeedFixtureDefinition = {
   key: "frustration-in",
   description:
     "Low-cost non-support trace written to look like a strong Frustration match and to sample into the Frustration system queue.",

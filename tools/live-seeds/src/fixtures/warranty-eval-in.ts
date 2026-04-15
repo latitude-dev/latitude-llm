@@ -5,7 +5,7 @@ import {
   SEED_RETURNS_EVALUATION_ID,
 } from "@domain/shared/seeding"
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -37,7 +37,7 @@ const CLOSING_RESPONSES = [
   "Done. I've added the discount and attached the formal denial wording to your case summary.",
 ] as const
 
-export const warrantyEvalInFixture: LiveMonitorFixtureDefinition = {
+export const warrantyEvalInFixture: LiveSeedFixtureDefinition = {
   key: "warranty-eval-in",
   description:
     "Support trace that should execute only the seeded warranty monitor while staying below the live high-cost queue threshold.",

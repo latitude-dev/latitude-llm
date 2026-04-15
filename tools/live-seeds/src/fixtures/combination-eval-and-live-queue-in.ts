@@ -5,7 +5,7 @@ import {
   SEED_RETURNS_EVALUATION_ID,
 } from "@domain/shared/seeding"
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   COMBINATION_RISK_EXAMPLES,
@@ -37,7 +37,7 @@ const CLOSING_RESPONSES = [
   "Yes, that pairing is one of the most common upsell bundles for customers who want the highest-performance setup.",
 ] as const
 
-export const combinationEvalAndLiveQueueInFixture: LiveMonitorFixtureDefinition = {
+export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
   key: "combination-eval-and-live-queue-in",
   description:
     "Support trace that should execute the dangerous-combination monitor and also qualify for the seeded live high-cost queue.",

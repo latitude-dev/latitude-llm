@@ -15,9 +15,9 @@ import {
   userTextMessage,
 } from "./otlp.ts"
 import {
-  buildLiveMonitorRunPlan,
+  buildLiveSeedRunPlan,
   dispatchResolvedTraces,
-  type ResolvedLiveMonitorTrace,
+  type ResolvedLiveSeedTrace,
   type SeedTargets,
 } from "./runtime.ts"
 
@@ -91,7 +91,7 @@ function createResolvedTrace(input: {
   readonly instanceIndex: number
   readonly startDelayMs: number
   readonly spans: readonly SeedSpanDefinition[]
-}): ResolvedLiveMonitorTrace {
+}): ResolvedLiveSeedTrace {
   return {
     fixture: warrantyEvalInFixture,
     instanceIndex: input.instanceIndex,
@@ -115,17 +115,17 @@ function createResolvedTrace(input: {
   }
 }
 
-describe("buildLiveMonitorRunPlan", () => {
+describe("buildLiveSeedRunPlan", () => {
   it("expands fixtures by count and stays reproducible for a fixed seed", async () => {
     const targets = createSeedTargets()
-    const planA = await buildLiveMonitorRunPlan({
+    const planA = await buildLiveSeedRunPlan({
       fixtureKeys: ["warranty-eval-in", "tool-call-error"],
       countPerFixture: 2,
       timeScale: 1,
       seed: "repeatable-seed",
       targets,
     })
-    const planB = await buildLiveMonitorRunPlan({
+    const planB = await buildLiveSeedRunPlan({
       fixtureKeys: ["warranty-eval-in", "tool-call-error"],
       countPerFixture: 2,
       timeScale: 1,
@@ -133,7 +133,7 @@ describe("buildLiveMonitorRunPlan", () => {
       targets,
     })
 
-    const summarize = (plan: Awaited<ReturnType<typeof buildLiveMonitorRunPlan>>) =>
+    const summarize = (plan: Awaited<ReturnType<typeof buildLiveSeedRunPlan>>) =>
       plan.traces.map((trace) => ({
         fixtureKey: trace.fixture.key,
         instanceIndex: trace.instanceIndex,

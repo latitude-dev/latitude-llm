@@ -1,5 +1,5 @@
 {
-  "name": "@tools/seeds",
+  "name": "@tools/live-seeds",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
-    "seed:live-monitor": "node --import tsx src/scripts/send-live-monitor.ts"
+    "seed:live-seeds": "node --import tsx src/scripts/send-live-seeds.ts"
   },
   "dependencies": {
     "@domain/annotation-queues": "workspace:*",

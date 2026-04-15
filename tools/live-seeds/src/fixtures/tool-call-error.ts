@@ -1,5 +1,5 @@
 import { assistantTextMessage, assistantToolCallMessage, toolResponseMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -31,7 +31,7 @@ const TOOL_SCENARIOS = [
   },
 ] as const
 
-export const toolCallErrorFixture: LiveMonitorFixtureDefinition = {
+export const toolCallErrorFixture: LiveSeedFixtureDefinition = {
   key: "tool-call-error",
   description: "Low-cost non-support trace that should deterministically match the Tool Call Errors system queue.",
   sampling: {

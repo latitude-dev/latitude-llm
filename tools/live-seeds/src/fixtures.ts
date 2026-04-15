@@ -8,7 +8,7 @@ import { supportEvalsOutFixture } from "./fixtures/support-evals-out.ts"
 import { toolCallErrorFixture } from "./fixtures/tool-call-error.ts"
 import { warrantyEvalInFixture } from "./fixtures/warranty-eval-in.ts"
 
-export const liveMonitorFixtures = [
+export const liveSeedFixtures = [
   warrantyEvalInFixture,
   supportEvalsOutFixture,
   combinationEvalAndLiveQueueInFixture,
@@ -20,4 +20,4 @@ export const liveMonitorFixtures = [
   outputSchemaFixture,
 ] as const
 
-export const liveMonitorFixtureKeys = liveMonitorFixtures.map((fixture) => fixture.key)
+export const liveSeedFixtureKeys = liveSeedFixtures.map((fixture) => fixture.key)

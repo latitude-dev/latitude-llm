@@ -5,7 +5,7 @@ import {
   SEED_RETURNS_EVALUATION_ID,
 } from "@domain/shared/seeding"
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -47,7 +47,7 @@ const FOLLOW_UP_EXCHANGES = [
   },
 ] as const
 
-export const supportEvalsOutFixture: LiveMonitorFixtureDefinition = {
+export const supportEvalsOutFixture: LiveSeedFixtureDefinition = {
   key: "support-evals-out",
   description:
     "Support trace that still matches the seeded service filter but should sample out of all seeded live evaluations.",

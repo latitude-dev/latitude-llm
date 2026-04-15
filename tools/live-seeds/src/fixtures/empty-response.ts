@@ -1,5 +1,5 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
-import type { LiveMonitorFixtureDefinition } from "../types.ts"
+import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
   buildTraceFromTurns,
   createGeneratedTrace,
@@ -15,7 +15,7 @@ const EMPTY_RESPONSE_PROMPTS = [
 
 const EMPTY_RESPONSES = ["...", "...", ""] as const
 
-export const emptyResponseFixture: LiveMonitorFixtureDefinition = {
+export const emptyResponseFixture: LiveSeedFixtureDefinition = {
   key: "empty-response",
   description: "Low-cost non-support trace that should deterministically match the Empty Response system queue.",
   sampling: {

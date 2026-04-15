@@ -7,7 +7,7 @@ import {
 } from "@domain/shared/seeding"
 import type { SeedMessage, SeedSpanDefinition, SeedSystemPart } from "../otlp.ts"
 import type { SeededRng } from "../random.ts"
-import type { LiveMonitorGeneratedTrace } from "../types.ts"
+import type { LiveSeedGeneratedTrace } from "../types.ts"
 
 type UsageProfile = "tiny" | "low" | "medium" | "high" | "veryHigh"
 
@@ -99,7 +99,7 @@ export const QA_TRIAGE_SYSTEM_INSTRUCTIONS: readonly SeedSystemPart[] = [
 const SUPPORT_USER_NAMES = ["wile", "petra", "daria", "miguel", "samir", "lucy"] as const
 const EMPLOYEE_USER_NAMES = ["alice", "marco", "ina", "ben", "noah", "riley"] as const
 
-const FIXTURE_SCOPE_NAME = "@tools/seeds/live-monitor"
+const FIXTURE_SCOPE_NAME = "@tools/live-seeds"
 
 function partCharCount(part: SeedMessage["parts"][number]): number {
   switch (part.type) {
@@ -229,7 +229,7 @@ export function createGeneratedTrace(input: {
     readonly highCost?: boolean
     readonly supportService?: boolean
   }
-}): LiveMonitorGeneratedTrace {
+}): LiveSeedGeneratedTrace {
   const identity = createTraceIdentity(input.rng, input.fixtureKey, input.family)
   const modelInfo = input.modelInfo
   const startDelayRange = input.startDelayRangeMs ?? [0, 1_500]

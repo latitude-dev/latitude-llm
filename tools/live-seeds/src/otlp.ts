@@ -189,7 +189,7 @@ export function buildTraceRequests(input: {
 }): readonly BuiltTraceSpan[] {
   const provider = input.provider ?? "openai"
   const model = input.model ?? "gpt-4o-mini"
-  const scopeName = input.scopeName ?? "@tools/seeds/live-monitor"
+  const scopeName = input.scopeName ?? "@tools/live-seeds"
   const scopeVersion = input.scopeVersion ?? "1.0.0"
 
   const spanIds = input.spans.map((span, index) => hashHex(`${input.traceId}:${span.label}:${index.toString()}`, 16))
