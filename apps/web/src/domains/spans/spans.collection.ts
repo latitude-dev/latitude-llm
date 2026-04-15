@@ -45,7 +45,7 @@ export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: st
   })
 }
 
-export interface TracesFilter {
+interface TracesFilter {
   readonly traceId?: string
 }
 
