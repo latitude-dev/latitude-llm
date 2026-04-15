@@ -403,6 +403,12 @@ const setupPipeline = (options?: {
     logger,
     ...(options?.runLiveEvaluation ? { runLiveEvaluation: options.runLiveEvaluation } : {}),
   })
+  consumer.subscribe("live-annotation-queues", {
+    curate: () => Effect.void,
+  })
+  consumer.subscribe("system-annotation-queues", {
+    fanOut: () => Effect.void,
+  })
 
   return { eventsPublisher, harness, logger }
 }
