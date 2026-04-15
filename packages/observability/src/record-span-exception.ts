@@ -12,10 +12,12 @@ const normalizeStack = (stack: string): string => stack.replaceAll("file://", ""
 
 export function recordSpanExceptionForDatadog(span: Span, error: unknown): Error {
   const err = toError(error)
-  span.recordException(err)
+  const stack = normalizeStack(err.stack ?? "")
+
+  span.recordException({ name: err.name, message: err.message, stack })
   span.setAttributes({
     "error.message": err.message,
-    "error.stack": normalizeStack(err.stack ?? ""),
+    "error.stack": stack,
     "error.type": err.constructor.name,
   })
   return err
