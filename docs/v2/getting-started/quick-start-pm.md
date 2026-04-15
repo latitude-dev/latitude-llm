@@ -45,22 +45,25 @@ Annotation queues are where your team provides human judgment on agent interacti
 - **Frustration** — Clear user dissatisfaction
 - **Forgetting** — The agent loses conversation context
 - **Laziness** — The agent avoids doing the requested work
-- **NSFW** — Inappropriate content
+- **Inappropriate Content** — Sexual or otherwise not-safe-for-work content
+- **Trashing** — The agent cycles between tools without making progress
 - **Tool Call Errors** — Failed tool invocations
 - **Resource Outliers** — Unusually high latency or cost
+- **Output Schema Validation** — Structured output didn't conform to the declared schema
+- **Empty Response** — The assistant returned an empty or degenerate response
 
-Open a queue and click into it to start reviewing. The review screen shows:
+Open a queue and click into it to start reviewing. The review screen shows three sections:
 
-1. **Left**: Metadata and existing annotations for this trace
-2. **Center**: The full conversation
-3. **Right**: Annotations panel — create new annotations or review existing ones
+1. **Metadata** — Timestamp, duration, tokens, cost, and existing scores for the current trace
+2. **Conversation** — The full message exchange between user and agent
+3. **Annotations** — Queue instructions, existing annotations, and a button to create new ones
 
 To annotate:
 
 - Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level annotation
 - Mark it as positive (thumbs up) or negative (thumbs down)
 - Write feedback describing what you observed
-- Optionally link it to an existing issue or create a new one
+- Optionally link it to an existing issue, or leave issue assignment automatic
 - Click "Fully Annotated" when you've finished reviewing the trace
 
 ## Understanding Issues

@@ -55,7 +55,7 @@ Click into a queue to enter the review screen:
 
 1. Read the conversation in the center panel
 2. Create an annotation — mark it as positive (thumbs up) or negative (thumbs down) with feedback
-3. Optionally link the annotation to an existing issue or create a new one
+3. Optionally link the annotation to an existing issue, or leave issue assignment automatic
 4. Mark the item as fully annotated and move to the next
 
 Your annotations feed into issue discovery and evaluation alignment.

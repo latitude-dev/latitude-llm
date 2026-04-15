@@ -121,11 +121,21 @@ When the "Make this queue live" toggle is enabled, additional configuration appe
 
 ## The Review Experience
 
-When a reviewer opens a queue, they see a focused review interface with three sections:
+When you click into a queue, you see its items — the traces waiting for review. Each row shows the trace name, when it was created, its review status, and who reviewed it.
 
-1. **Metadata** — Timestamp, duration, tokens, cost, and existing scores for the current trace grouped by source
-2. **Conversation** — The full message exchange, with support for message-level or text-range selection to create annotations. Persisted highlights show where annotations are anchored.
-3. **Annotations** — Queue name and instructions at the top, followed by the list of annotations for this trace and a button to create conversation-level annotations
+<Frame>
+  <img src="/images/annotations/queue-list.png" alt="Queue items list showing traces pending review with status and reviewer columns" />
+</Frame>
+
+Click on a trace to open the focused review interface with three sections:
+
+1. **Metadata** (left) — Timestamp, duration, tokens, cost, model, tags, and metadata for the current trace
+2. **Conversation** (center) — The full message exchange, with support for message-level or text-range selection to create annotations
+3. **Annotations** (right) — Queue instructions at the top, followed by existing annotations and controls to create new ones
+
+<Frame>
+  <img src="/images/annotations/queue-review.png" alt="Queue review screen showing metadata, conversation, and annotation panels" />
+</Frame>
 
 The reviewer works through the queue sequentially:
 
