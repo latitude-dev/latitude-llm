@@ -2,6 +2,12 @@ import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/ema
 import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import { createTransport } from "nodemailer"
+import { Resend } from "resend"
+
+interface ResendConfig {
+  readonly apiKey: string | undefined
+  readonly from: string | undefined
+}
 
 interface MailgunApiConfig {
   readonly apiKey: string | undefined
@@ -25,12 +31,14 @@ interface MailpitConfig {
 }
 
 export interface EmailTransportConfig {
+  readonly provider?: EmailProvider
+  readonly resend?: Partial<ResendConfig>
   readonly mailgun?: Partial<MailgunApiConfig>
   readonly smtp?: Partial<SmtpConfig>
   readonly mailpit?: Partial<MailpitConfig>
 }
 
-type EmailProvider = "mailgun" | "smtp" | "mailpit"
+type EmailProvider = "resend" | "mailgun" | "smtp" | "mailpit"
 
 type SendFn = (message: EmailMessage, from: string) => Promise<void>
 
@@ -42,12 +50,31 @@ interface ResolvedProvider {
 
 /** Env-derived email transport inputs (before optional caller overrides). */
 export interface EmailTransportEnvResolved {
+  readonly provider: EmailProvider
+  readonly resend: ResendConfig
   readonly mailgun: MailgunApiConfig
   readonly smtp: SmtpConfig
   readonly mailpit: MailpitConfig
 }
 
 export type EmailTransportEnvError = MissingEnvValueError | InvalidEnvValueError
+
+const VALID_PROVIDERS: ReadonlySet<string> = new Set(["resend", "mailgun", "smtp", "mailpit"])
+
+const providerFromEnv: Effect.Effect<EmailProvider, EmailTransportEnvError> = Effect.gen(function* () {
+  const raw = yield* parseEnv("LAT_EMAIL_PROVIDER", "string", "mailpit")
+  if (!VALID_PROVIDERS.has(raw)) {
+    throw new Error(`LAT_EMAIL_PROVIDER must be one of: resend, mailgun, smtp, mailpit (got '${raw}')`)
+  }
+  return raw as EmailProvider
+})
+
+const resendConfigFromEnv: Effect.Effect<ResendConfig, EmailTransportEnvError> = Effect.gen(function* () {
+  const apiKey = yield* parseEnvOptional("LAT_RESEND_API_KEY", "string")
+  const from = yield* parseEnvOptional("LAT_RESEND_FROM", "string")
+
+  return { apiKey, from }
+})
 
 const mailgunApiConfigFromEnv: Effect.Effect<MailgunApiConfig, EmailTransportEnvError> = Effect.gen(function* () {
   const apiKey = yield* parseEnvOptional("LAT_MAILGUN_API_KEY", "string")
@@ -86,12 +113,19 @@ const mailpitConfigFromEnv: Effect.Effect<MailpitConfig, EmailTransportEnvError>
  */
 export const emailTransportEnvConfig: Effect.Effect<EmailTransportEnvResolved, EmailTransportEnvError> = Effect.gen(
   function* () {
+    const provider = yield* providerFromEnv
+    const resend = yield* resendConfigFromEnv
     const mailgun = yield* mailgunApiConfigFromEnv
     const smtp = yield* smtpConfigFromEnv
     const mailpit = yield* mailpitConfigFromEnv
-    return { mailgun, smtp, mailpit }
+    return { provider, resend, mailgun, smtp, mailpit }
   },
 )
+
+const mergeResendConfig = (base: ResendConfig, override: Partial<ResendConfig> | undefined): ResendConfig => {
+  if (!override) return base
+  return { ...base, ...override }
+}
 
 const mergeMailgunConfig = (
   base: MailgunApiConfig,
@@ -109,6 +143,25 @@ const mergeSmtpConfig = (base: SmtpConfig, override: Partial<SmtpConfig> | undef
 const mergeMailpitConfig = (base: MailpitConfig, override: Partial<MailpitConfig> | undefined): MailpitConfig => {
   if (!override) return base
   return { ...base, ...override }
+}
+
+const createResendSendFn = (apiKey: string): SendFn => {
+  const resend = new Resend(apiKey)
+
+  return async (message, from) => {
+    const { error } = await resend.emails.send({
+      from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      ...(message.text ? { text: message.text } : {}),
+      ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+    })
+
+    if (error) {
+      throw new Error(`Resend API error: ${error.message}`)
+    }
+  }
 }
 
 const createMailgunSendFn = (apiKey: string, domain: string, region: "us" | "eu"): SendFn => {
@@ -179,40 +232,59 @@ const createMailpitSendFn = (host: string, port: number): SendFn => {
 }
 
 const resolveProvider = ({
+  provider,
+  resend,
   mailgun,
   smtp,
   mailpit,
 }: {
+  provider: EmailProvider
+  resend: ResendConfig
   mailgun: MailgunApiConfig
   smtp: SmtpConfig
   mailpit: MailpitConfig
 }): ResolvedProvider => {
-  if (mailgun.apiKey && mailgun.domain) {
-    return {
-      provider: "mailgun",
-      sendFn: createMailgunSendFn(mailgun.apiKey, mailgun.domain, mailgun.region),
-      from: mailgun.from ?? `postmaster@${mailgun.domain}`,
+  switch (provider) {
+    case "resend": {
+      if (!resend.apiKey) throw new Error("LAT_EMAIL_PROVIDER is 'resend' but LAT_RESEND_API_KEY is not set")
+      return {
+        provider: "resend",
+        sendFn: createResendSendFn(resend.apiKey),
+        from: resend.from,
+      }
     }
-  }
-
-  if (smtp.host && smtp.user && smtp.pass) {
-    return {
-      provider: "smtp",
-      sendFn: createSmtpSendFn(smtp.host, smtp.port, smtp.user, smtp.pass),
-      from: smtp.from,
+    case "mailgun": {
+      if (!mailgun.apiKey || !mailgun.domain)
+        throw new Error("LAT_EMAIL_PROVIDER is 'mailgun' but LAT_MAILGUN_API_KEY or LAT_MAILGUN_DOMAIN is not set")
+      return {
+        provider: "mailgun",
+        sendFn: createMailgunSendFn(mailgun.apiKey, mailgun.domain, mailgun.region),
+        from: mailgun.from ?? `postmaster@${mailgun.domain}`,
+      }
     }
-  }
-
-  return {
-    provider: "mailpit",
-    sendFn: createMailpitSendFn(mailpit.host, mailpit.port),
-    from: mailpit.from,
+    case "smtp": {
+      if (!smtp.host || !smtp.user || !smtp.pass)
+        throw new Error("LAT_EMAIL_PROVIDER is 'smtp' but LAT_SMTP_HOST, LAT_SMTP_USER, or LAT_SMTP_PASS is not set")
+      return {
+        provider: "smtp",
+        sendFn: createSmtpSendFn(smtp.host, smtp.port, smtp.user, smtp.pass),
+        from: smtp.from,
+      }
+    }
+    case "mailpit":
+      return {
+        provider: "mailpit",
+        sendFn: createMailpitSendFn(mailpit.host, mailpit.port),
+        from: mailpit.from,
+      }
   }
 }
 
 export const createEmailTransportSender = (config?: EmailTransportConfig): EmailSender => {
   const env = Effect.runSync(emailTransportEnvConfig)
   const resolved = resolveProvider({
+    provider: config?.provider ?? env.provider,
+    resend: mergeResendConfig(env.resend, config?.resend),
     mailgun: mergeMailgunConfig(env.mailgun, config?.mailgun),
     smtp: mergeSmtpConfig(env.smtp, config?.smtp),
     mailpit: mergeMailpitConfig(env.mailpit, config?.mailpit),

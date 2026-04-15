@@ -229,6 +229,28 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["mailgun-region"] = mailgunRegion.secret
   secretVersions["mailgun-region"] = mailgunRegion.secretVersion
 
+  const resendApiKey = createSingleSecret(
+    baseName,
+    "resend-api-key",
+    "Resend API key",
+    process.env.LAT_RESEND_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["resend-api-key"] = resendApiKey.secret
+  secretVersions["resend-api-key"] = resendApiKey.secretVersion
+
+  const resendFrom = createSingleSecret(
+    baseName,
+    "resend-from",
+    "Resend from email address",
+    process.env.LAT_RESEND_FROM ?? `noreply@${environment}.latitude.so`,
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["resend-from"] = resendFrom.secret
+  secretVersions["resend-from"] = resendFrom.secretVersion
+
   const googleOauthClientId = createSingleSecret(
     baseName,
     "google-oauth-client-id",
