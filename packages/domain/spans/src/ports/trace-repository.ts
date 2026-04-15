@@ -23,6 +23,7 @@ export interface TraceRepositoryShape {
 }
 
 export interface TraceListOptions {
+  readonly traceId?: string
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly limit?: number

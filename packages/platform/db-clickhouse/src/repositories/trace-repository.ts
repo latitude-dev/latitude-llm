@@ -143,6 +143,7 @@ export const TraceRepositoryLive = Layer.effect(
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        AND ({hasTraceId:Bool} = false OR trace_id LIKE {traceIdPattern:String})
                         AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
                         AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
                       GROUP BY organization_id, project_id, trace_id
@@ -152,6 +153,8 @@ export const TraceRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
+                hasTraceId: options.traceId !== undefined && options.traceId !== "",
+                traceIdPattern: options.traceId ? `%${options.traceId}%` : "%",
                 hasStartFrom: options.startTimeFrom !== undefined,
                 startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
                 hasStartTo: options.startTimeTo !== undefined,

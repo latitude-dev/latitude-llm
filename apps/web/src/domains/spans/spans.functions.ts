@@ -211,7 +211,7 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
 
 export const listTracesByProject = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string().optional() }))
   .handler(async ({ data }): Promise<TraceRecord[]> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -221,7 +221,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
         return yield* repo.findByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          options: { limit: 200 },
+          options: { ...(data.traceId ? { traceId: data.traceId } : {}), limit: 200 },
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )

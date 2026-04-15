@@ -1,5 +1,6 @@
 import {
   Container,
+  Input,
   Table,
   TableBlankSlate,
   TableBody,
@@ -13,6 +14,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { useDeferredValue, useState } from "react"
 import { useTracesCollection } from "../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
@@ -26,12 +28,24 @@ function StatusBadge({ status }: { status: string }) {
 
 function TracesPage() {
   const { projectId } = Route.useParams()
-  const { data: traces } = useTracesCollection(projectId)
+  const [traceIdSearch, setTraceIdSearch] = useState("")
+  const deferredTraceId = useDeferredValue(traceIdSearch)
+  const filter = deferredTraceId ? { traceId: deferredTraceId } : {}
+  const { data: traces } = useTracesCollection({ projectId, filter })
 
   return (
     <Container className="py-8">
       <TableWithHeader
         title="Traces"
+        actions={
+          <Input
+            placeholder="Filter by Trace ID..."
+            value={traceIdSearch}
+            onChange={(e) => setTraceIdSearch(e.target.value)}
+            size="sm"
+            className="w-64"
+          />
+        }
         table={
           !traces ? (
             <TableSkeleton cols={8} rows={5} />
