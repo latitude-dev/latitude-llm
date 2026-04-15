@@ -282,10 +282,10 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
 
-  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted", async () => {
+  it("routes ScoreDraftSaved to annotation-scores publish and markReviewStarted", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("ScoreCreated", {
+    const envelope = makeEnvelope("ScoreDraftSaved", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
@@ -294,23 +294,7 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    // Primary handler publishes to issues + annotation-scores; ScoreCreated is
-    // also in the PostHog whitelist so a third publish goes to posthog-analytics.
-    const primary = published.filter((p) => p.queue !== "posthog-analytics")
-    expect(primary).toEqual([
-      {
-        queue: "issues",
-        task: "discovery",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "issues:discovery:score-3",
-        },
-      },
+    expect(published).toEqual([
       {
         queue: "annotation-scores",
         task: "publishHumanAnnotation",
@@ -321,6 +305,7 @@ describe("domain-events dispatcher", () => {
           issueId: null,
         },
         options: {
+          dedupeKey: "annotation-scores:publish-human:score-3",
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
         },
       },
@@ -335,6 +320,35 @@ describe("domain-events dispatcher", () => {
         },
         options: {
           dedupeKey: "annotation-scores:mark-review-started:score-3",
+        },
+      },
+    ])
+  })
+
+  it("routes ScorePublished to issues:discovery", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("ScorePublished", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+      issueId: null,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([
+      {
+        queue: "issues",
+        task: "discovery",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          dedupeKey: "issues:discovery:score-3",
         },
       },
     ])

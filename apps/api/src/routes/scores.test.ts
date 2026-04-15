@@ -102,7 +102,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
+    expect(publicationRequests[0]?.eventName).toBe("ScorePublished")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -175,7 +175,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
+    expect(publicationRequests[0]?.eventName).toBe("ScorePublished")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -262,7 +262,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(outboxRows).toHaveLength(1)
-    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(outboxRows[0]?.eventName).toBe("ScorePublished")
     expect(outboxRows[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -314,7 +314,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(outboxRows).toHaveLength(1)
-    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(outboxRows[0]?.eventName).toBe("ScorePublished")
     expect(outboxRows[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -396,7 +396,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(outboxRows).toHaveLength(1)
-    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(outboxRows[0]?.eventName).toBe("ScorePublished")
     expect(outboxRows[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -457,7 +457,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
+    expect(publicationRequests[0]?.eventName).toBe("ScorePublished")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,

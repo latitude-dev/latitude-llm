@@ -49,6 +49,25 @@ export const createDomainEventsWorker = ({
       { concurrency: "unbounded" },
     ).pipe(Effect.asVoid)
 
+  const publishScoreDraftSavedFanOut = (payload: EventPayloads["ScoreDraftSaved"]) =>
+    Effect.all(
+      [
+        pub.publish("annotation-scores", "publishHumanAnnotation", payload, {
+          dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+        }),
+        pub.publish("annotation-scores", "markReviewStarted", payload, {
+          dedupeKey: `annotation-scores:mark-review-started:${payload.scoreId}`,
+        }),
+      ],
+      { concurrency: "unbounded" },
+    ).pipe(Effect.asVoid)
+
+  const publishScorePublishedFanOut = (payload: EventPayloads["ScorePublished"]) =>
+    pub.publish("issues", "discovery", payload, {
+      dedupeKey: `issues:discovery:${payload.scoreId}`,
+    })
+
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
       hash(event.payload.magicLinkUrl).pipe(
@@ -96,18 +115,8 @@ export const createDomainEventsWorker = ({
 
     TraceEnded: (event) => publishTraceEndedFanOut(event.payload),
 
-    ScoreCreated: (event) =>
-      Effect.all([
-        pub.publish("issues", "discovery", event.payload, {
-          dedupeKey: `issues:discovery:${event.payload.scoreId}`,
-        }),
-        pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
-        }),
-        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
-        }),
-      ]),
+    ScoreDraftSaved: (event) => publishScoreDraftSavedFanOut(event.payload),
+    ScorePublished: (event) => publishScorePublishedFanOut(event.payload),
 
     ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
