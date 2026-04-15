@@ -21,13 +21,27 @@ let cachedModels: Model[] | null = null
  * are mapped here. Unknown providers pass through unchanged.
  */
 const PROVIDER_ALIASES: Record<string, string> = {
-  amazon_bedrock: "bedrock",
+  amazon_bedrock: "amazon-bedrock",
   google_vertex: "google-vertex",
   anthropic_vertex: "anthropic-vertex",
 }
 
 function resolveProviderName(provider: string): string {
   return PROVIDER_ALIASES[provider] ?? provider
+}
+
+/**
+ * Bedrock regional inference profiles prepend a geography prefix
+ * (`eu.`, `us.`, `apac.`) to the foundation model ID. Strip it
+ * so cost lookups match the base model ID in models.dev.
+ *
+ * @example "eu.amazon.nova-micro-v1:0" → "amazon.nova-micro-v1:0"
+ * @example "us.anthropic.claude-sonnet-4-6" → "anthropic.claude-sonnet-4-6"
+ */
+const BEDROCK_REGION_PREFIX_RE = /^(?:eu|us|apac)\./
+
+function stripBedrockRegionPrefix(modelId: string): string {
+  return modelId.replace(BEDROCK_REGION_PREFIX_RE, "")
 }
 
 /**
@@ -90,10 +104,25 @@ export function getModelsForProvider(provider: string): Model[] {
 
 /**
  * Find a specific model within a provider's model list.
+ *
+ * For Bedrock models, tries the original model ID first (some models in
+ * models.dev include the regional prefix), then falls back to stripping
+ * the prefix (`eu.`, `us.`, `apac.`) for models that don't.
  */
 export function getModelForProvider(provider: string, modelId: string): Model | undefined {
   const models = getModelsForProvider(provider)
-  return findModel(models, modelId)
+  const match = findModel(models, modelId)
+  if (match) return match
+
+  const resolvedProvider = resolveProviderName(provider).toLowerCase()
+  if (resolvedProvider === "amazon-bedrock") {
+    const stripped = stripBedrockRegionPrefix(modelId)
+    if (stripped !== modelId) {
+      return findModel(models, stripped)
+    }
+  }
+
+  return undefined
 }
 
 /**
