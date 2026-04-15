@@ -62,15 +62,6 @@ Analytics dashboards use the same [filter system](../observability/filters) as t
 
 This lets you answer targeted questions like "What's the failure rate for GPT-4 traces in production this week?"
 
-## How Analytics Data Flows
-
-Latitude uses a dual-storage approach for score data:
-
-- **Real-time reads** (individual scores, draft-aware editing, score details) come from the primary database for immediate consistency
-- **Aggregate analytics** (time-series charts, rollups, trend calculations) come from an optimized analytics store designed for fast aggregation
-
-This means your dashboards stay responsive even as score volume grows, while individual score interactions remain immediately consistent.
-
 ## Next Steps
 
 - [Scores Overview](./overview): How the score model works

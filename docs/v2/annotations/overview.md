@@ -1,5 +1,5 @@
 ---
-title: Annotations
+title: Annotations Overview
 description: Review your agent's interactions and provide human feedback
 ---
 
@@ -48,16 +48,16 @@ Annotations are the foundation of Latitude's reliability loop. They serve three 
 
 - **Validate issues**: When Latitude discovers an issue from evaluation failures, annotations from your team confirm whether those detections are real problems or false positives.
 
-- **Capture qualitative feedback**: Annotations record *why* something was good or bad in the reviewer's own words, providing context that automated scores alone can't capture.
+- **Capture qualitative feedback**: Annotations record _why_ something was good or bad in the reviewer's own words, providing context that automated scores alone can't capture.
 
 ## How Annotations Connect to Other Features
 
-| Feature | Relationship |
-| --- | --- |
-| **[Scores](../scores/overview)** | Each annotation produces a score that feeds into analytics and dashboards |
-| **[Issues](../issues/overview)** | Failed annotations enter the issue discovery pipeline, where similar failures are clustered into trackable issues |
-| **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy |
-| **[Alignment](../evaluations/alignment)** | When human and machine scores overlap on the same traces, Latitude computes alignment metrics (MCC, confusion matrix) |
+| Feature                                    | Relationship                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **[Scores](../scores/overview)**           | Each annotation produces a score that feeds into analytics and dashboards                                             |
+| **[Issues](../issues/overview)**           | Failed annotations enter the issue discovery pipeline, where similar failures are clustered into trackable issues     |
+| **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy                                                    |
+| **[Alignment](../evaluations/alignment)**  | When human and machine scores overlap on the same traces, Latitude computes alignment metrics (MCC, confusion matrix) |
 
 ## Next Steps
 
