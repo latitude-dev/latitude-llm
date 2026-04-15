@@ -165,13 +165,13 @@ describe("domain-events dispatcher", () => {
       traceId: "trace-abc",
     })
     expect(liveEvaluations?.options).toEqual({
-      dedupeKey: "evaluations:live:enqueue:trace-abc",
+      dedupeKey: "evaluations:live:enqueue:org-1:proj-1:trace-abc",
     })
     expect(liveAnnotationQueues?.options).toEqual({
-      dedupeKey: "annotation-queues:live:curate:trace-abc",
+      dedupeKey: "annotation-queues:live:curate:org-1:proj-1:trace-abc",
     })
     expect(systemAnnotationQueues?.options).toEqual({
-      dedupeKey: "annotation-queues:system:fan-out:trace-abc",
+      dedupeKey: "annotation-queues:system:fan-out:org-1:proj-1:trace-abc",
     })
   })
 

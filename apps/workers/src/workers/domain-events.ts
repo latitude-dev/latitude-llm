@@ -30,17 +30,20 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
+  const buildTraceEndedDedupeKey = (prefix: string, payload: EventPayloads["TraceEnded"]) =>
+    `${prefix}:${payload.organizationId}:${payload.projectId}:${payload.traceId}`
+
   const publishTraceEndedFanOut = (payload: EventPayloads["TraceEnded"]) =>
     Effect.all(
       [
         pub.publish("live-evaluations", "enqueue", payload, {
-          dedupeKey: `evaluations:live:enqueue:${payload.traceId}`,
+          dedupeKey: buildTraceEndedDedupeKey("evaluations:live:enqueue", payload),
         }),
         pub.publish("live-annotation-queues", "curate", payload, {
-          dedupeKey: `annotation-queues:live:curate:${payload.traceId}`,
+          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:live:curate", payload),
         }),
         pub.publish("system-annotation-queues", "fanOut", payload, {
-          dedupeKey: `annotation-queues:system:fan-out:${payload.traceId}`,
+          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:system:fan-out", payload),
         }),
       ],
       { concurrency: "unbounded" },

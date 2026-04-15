@@ -527,6 +527,18 @@ describe("live monitoring pipeline activation", () => {
     expect(traceEndedDispatches).toHaveLength(1)
     expect(enqueuePublishes).toHaveLength(1)
     expect(harness.published).toContainEqual({
+      queue: "live-evaluations",
+      task: "enqueue",
+      payload: {
+        organizationId: ORGANIZATION_ID,
+        projectId,
+        traceId,
+      },
+      options: {
+        dedupeKey: `evaluations:live:enqueue:${ORGANIZATION_ID}:${projectId}:${traceId}`,
+      },
+    })
+    expect(harness.published).toContainEqual({
       queue: "live-annotation-queues",
       task: "curate",
       payload: {
@@ -535,7 +547,7 @@ describe("live monitoring pipeline activation", () => {
         traceId,
       },
       options: {
-        dedupeKey: `annotation-queues:live:curate:${traceId}`,
+        dedupeKey: `annotation-queues:live:curate:${ORGANIZATION_ID}:${projectId}:${traceId}`,
       },
     })
     expect(harness.published).toContainEqual({
@@ -547,7 +559,7 @@ describe("live monitoring pipeline activation", () => {
         traceId,
       },
       options: {
-        dedupeKey: `annotation-queues:system:fan-out:${traceId}`,
+        dedupeKey: `annotation-queues:system:fan-out:${ORGANIZATION_ID}:${projectId}:${traceId}`,
       },
     })
     expect(executePublishes).toEqual([
