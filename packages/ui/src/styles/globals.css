@@ -74,6 +74,8 @@
 
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-muted: hsl(var(--secondary-muted));
+  --color-secondary-muted-hover: hsl(var(--secondary-muted-hover));
 
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
@@ -89,6 +91,7 @@
 
   --color-destructive-muted: hsl(var(--destructive-muted));
   --color-destructive-muted-foreground: hsl(var(--destructive-muted-foreground));
+  --color-destructive-muted-hover: hsl(var(--destructive-muted-hover));
 
   --color-warning-muted: hsl(var(--warning-muted));
   --color-warning-muted-foreground: hsl(var(--warning-muted-foreground));
@@ -204,6 +207,8 @@
   --primary-muted-hover: 210 100% 97%;
   --secondary: 210 20% 98%;
   --secondary-foreground: 221 39% 11%;
+  --secondary-muted: 210 20% 96%;
+  --secondary-muted-hover: 210 18% 93%;
   --yellow: 41 96% 91%;
   --purple: 289 51% 92%;
   --purple-foreground: 289 51% 14%;
@@ -216,6 +221,7 @@
   --destructive-foreground: 0 0% 98%;
   --destructive-muted: 0 93% 94%;
   --destructive-muted-foreground: 0 74% 42%;
+  --destructive-muted-hover: 0 90% 90%;
   --success: 142 72% 29%;
   --success-foreground: 120 87% 97%;
   --success-muted: 141 84% 93%;
@@ -255,6 +261,8 @@
   --primary-muted-hover: 210 100% 16%;
   --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 98%;
+  --secondary-muted: 0 0% 14%;
+  --secondary-muted-hover: 0 0% 18%;
   --yellow: 41 90% 14%;
   --purple: 289 51% 14%;
   --purple-foreground: 289 51% 65%;
@@ -267,6 +275,7 @@
   --destructive-foreground: 0 0% 98%;
   --destructive-muted: 0 75% 15%;
   --destructive-muted-foreground: 0 75% 56%;
+  --destructive-muted-hover: 0 72% 20%;
   --success: 142 76% 36%;
   --success-foreground: 120 87% 97%;
   --success-muted: 141 84% 10%;

@@ -24,6 +24,9 @@ const buttonContainerVariants = cva(
         secondary: "bg-secondary hover:bg-secondary/80",
         ghost: "bg-transparent shadow-none hover:shadow-none",
         link: "bg-transparent shadow-none underline-offset-4 hover:underline hover:shadow-none",
+        "primary-soft": "bg-transparent shadow-none hover:shadow-none",
+        "destructive-soft": "bg-transparent shadow-none hover:shadow-none",
+        "secondary-soft": "bg-transparent shadow-none hover:shadow-none",
       },
     },
     defaultVariants: {
@@ -51,16 +54,22 @@ const buttonVariantsConfig = cva(
         outline:
           "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none",
         secondary: cn(
-          "border-0 bg-secondary text-secondary-foreground group-hover:bg-secondary/90",
+          "border-0 bg-secondary text-secondary-foreground [&_svg]:text-muted-foreground group-hover:bg-secondary/90",
           insetFaceHighlight,
         ),
         ghost:
           "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
+        "primary-soft":
+          "border-0 bg-primary-muted text-primary shadow-none group-hover:bg-primary-muted-hover group-hover:shadow-none group-active:bg-primary-muted group-hover:group-active:bg-primary-muted [&_svg]:text-primary/70",
+        "destructive-soft":
+          "border-0 bg-destructive-muted text-destructive-muted-foreground shadow-none group-hover:bg-destructive-muted-hover group-hover:shadow-none group-active:bg-destructive-muted group-hover:group-active:bg-destructive-muted [&_svg]:text-destructive-muted-foreground/85",
+        "secondary-soft":
+          "border-0 bg-secondary-muted text-secondary-foreground shadow-none group-hover:bg-secondary-muted-hover group-hover:shadow-none group-active:bg-secondary-muted group-hover:group-active:bg-secondary-muted [&_svg]:text-muted-foreground",
       },
       size: {
         default: "min-h-8 px-3 py-buttonDefaultVertical",
-        sm: "h-8 rounded-lg px-3 text-xs",
+        sm: "h-7 rounded-lg px-2 text-xs",
         lg: "h-10 rounded-lg px-8",
         icon: "h-8 w-8 p-0",
         "icon-xs": "h-5 w-5 p-0 rounded-md",
@@ -153,19 +162,22 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         aria-busy={isLoading ? "true" : undefined}
       >
-        {effectiveVariant !== "outline" && effectiveVariant !== "ghost" && effectiveVariant !== "link" && (
-          <div
-            className={cn(
-              "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
-              effectiveVariant === "destructive"
-                ? "bg-destructive/30"
-                : effectiveVariant === "default"
-                  ? "bg-primary/20"
-                  : "bg-foreground/10",
-            )}
-            aria-hidden
-          />
-        )}
+        {effectiveVariant !== "outline" &&
+          effectiveVariant !== "ghost" &&
+          effectiveVariant !== "link" &&
+          !effectiveVariant.endsWith("-soft") && (
+            <div
+              className={cn(
+                "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
+                effectiveVariant === "destructive"
+                  ? "bg-destructive/30"
+                  : effectiveVariant === "default"
+                    ? "bg-primary/20"
+                    : "bg-foreground/10",
+              )}
+              aria-hidden
+            />
+          )}
         <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
           <div className="flex max-w-full flex-row items-center gap-x-1.5">
             {isLoading && (
