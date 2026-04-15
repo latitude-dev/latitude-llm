@@ -61,40 +61,13 @@ const ROLE_MOCKUPS: Record<OnboardingRole, string> = {
   other: "/onboarding/role-product.png",
 }
 
-const ROLE_TESTIMONIALS: Record<
-  OnboardingRole,
-  { readonly quote: string; readonly name: string; readonly title: string }
-> = {
-  engineer: {
-    quote:
-      "Latitude ties LLM calls to tools and spans in one place—we cut debug time without spelunking logs or reproducing flaky sessions for our team now.",
-    name: "Alex Chen",
-    title: "Staff Engineer @ Northwind Labs",
-  },
-  "data-ai-ml": {
-    quote:
-      "We label runs in Latitude and watch quality trend—drift surfaces early, not in quarterly reviews after the wrong fix already shipped broadly now.",
-    name: "Jordan Okonkwo",
-    title: "ML Lead @ Riverstone Analytics",
-  },
-  "product-manager": {
-    quote:
-      "Latitude shows latency, cost, and errors for our AI in prod—we catch regressions before customers hit support or see quality slipping in-app now.",
-    name: "Sam Rivera",
-    title: "Product Lead @ Harbor Apps",
-  },
-  founder: {
-    quote:
-      "I see AI cost, failures, and whether behavior matches our pitch—Latitude puts spend, reliability, and risk in one dashboard for leadership teams.",
-    name: "Casey Park",
-    title: "CEO @ Lantern Systems",
-  },
-  other: {
-    quote:
-      "We wanted one LLM observability home—Latitude unifies traces, spend, and failures so we stop juggling five tools and three dashboards daily here.",
-    name: "Riley Brooks",
-    title: "Head of Ops @ Meridian Co.",
-  },
+/** Right-panel headline for each role (step 1). */
+const ROLE_PANEL_TITLES: Record<OnboardingRole, string> = {
+  engineer: "Instrument once and start seeing live traces in Latitude right away",
+  "data-ai-ml": "Label traces, watch trends, detect outliers & monitor issues within one platform",
+  "product-manager": "Keep track of latency, cost, and errors in collaborative environment",
+  founder: "Review the entire pipeline: cost, failures, behaviour and team contributions",
+  other: "Discover the most advanced issue detection system on the market",
 }
 
 const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
@@ -211,7 +184,14 @@ export function OnboardingFlow({
   )
   const slugForSnippets = project?.slug?.trim() ? project.slug : "your-project-slug"
 
-  const codingAgentPrompt = getCodingAgentTelemetryPrompt()
+  const codingAgentPrompt = useMemo(
+    () =>
+      getCodingAgentTelemetryPrompt({
+        projectId,
+        projectSlug: slugForSnippets,
+      }),
+    [projectId, slugForSnippets],
+  )
 
   const integrationTabOptions = useMemo(() => {
     const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
@@ -349,11 +329,6 @@ export function OnboardingFlow({
                 <Button onClick={() => setStep("provider")}>Next</Button>
               </div>
             </div>
-
-            <div className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 pt-8">
-              <div className="h-1.5 w-5 rounded-full bg-primary" />
-              <div className="h-1.5 w-1.5 rounded-full bg-border" />
-            </div>
           </div>
         ) : (
           <div className="mx-auto w-full max-w-[560px]">
@@ -390,8 +365,8 @@ export function OnboardingFlow({
                 <div className="flex flex-col gap-2">
                   <Text.H5M>Prompt</Text.H5M>
                   <Text.H5 color="foregroundMuted">
-                    Run the first line in your project terminal, then paste both lines into your coding agent. Use{" "}
-                    <span className="font-medium text-foreground">Manual</span> for provider-specific snippets.
+                    Two-line prompt: v2 telemetry docs plus the project id and slug for ingest config.{" "}
+                    <span className="font-medium text-foreground">Manual</span> has copy-paste snippets by provider.
                   </Text.H5>
                   <CodeBlock value={codingAgentPrompt} copyable />
                 </div>
@@ -453,28 +428,17 @@ export function OnboardingFlow({
       <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24">
           {step === "role" ? (
-            <div className="h-fit w-full flex flex-col gap-0 justify-center items-start">
-              <div className="max-w-[591px] flex flex-col gap-6">
-                <Text.H3M color="foregroundMuted">"{ROLE_TESTIMONIALS[role].quote}"</Text.H3M>
-                <div className="flex flex-row items-center gap-3">
-                  <img
-                    src="/onboarding/testimonial-avatar.png"
-                    alt=""
-                    className="h-10 w-10 rounded-full object-cover"
-                  />
-                  <div className="flex flex-col">
-                    <Text.H5M>{ROLE_TESTIMONIALS[role].name}</Text.H5M>
-                    <Text.H6 color="foregroundMuted">{ROLE_TESTIMONIALS[role].title}</Text.H6>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-10 w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
+            <div className="mx-auto flex h-fit w-full max-w-[591px] flex-col items-center justify-center gap-4">
+              <div className="w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
                 <img
                   src={ROLE_MOCKUPS[role]}
                   alt={`${role} preview`}
                   className="h-full w-full object-cover object-left-top"
                 />
               </div>
+              <Text.H5 color="foregroundMuted" align="center">
+                {ROLE_PANEL_TITLES[role]}
+              </Text.H5>
             </div>
           ) : (
             <div className="h-fit w-full flex flex-col gap-0 justify-center items-start">
