@@ -12,6 +12,10 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@bull-board/api": "catalog:",
+    "@bull-board/hono": "catalog:",
+    "@hono/node-server": "catalog:",
+    "hono": "catalog:",
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",

@@ -210,16 +210,17 @@ export function createEcs(
         assignPublicIp: false,
       },
       loadBalancers:
-        ["web", "api", "ingest"].includes(serviceConfig.name) &&
-        albTargetGroupArns[serviceConfig.name] &&
         serviceConfig.port
-          ? [
-              {
-                targetGroupArn: albTargetGroupArns[serviceConfig.name],
+          ? Object.entries(albTargetGroupArns)
+              .filter(([key]) => {
+                if (serviceConfig.name === "workers") return key === "bullBoard"
+                return key === serviceConfig.name
+              })
+              .map(([_, arn]) => ({
+                targetGroupArn: arn,
                 containerName: serviceConfig.name,
-                containerPort: serviceConfig.port,
-              },
-            ]
+                containerPort: serviceConfig.port!,
+              }))
           : undefined,
       deploymentController: {
         type: "ECS",

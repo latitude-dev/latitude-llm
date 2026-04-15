@@ -74,6 +74,7 @@ export function createDnsRecords(
     web: config.domains.web,
     api: config.domains.api,
     ingest: config.domains.ingest,
+    bullBoard: config.domains.bullBoard,
   }
 
   for (const [key, domain] of Object.entries(domains)) {
