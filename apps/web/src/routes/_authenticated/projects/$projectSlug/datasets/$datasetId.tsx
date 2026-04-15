@@ -608,7 +608,13 @@ function DatasetRowsView({
                     if (file) handleImportFile(file)
                   }}
                 />
-                <Button variant="outline" size="sm" onClick={handleAddRow} disabled={saving}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={handleAddRow}
+                  disabled={saving}
+                >
                   <CirclePlus className="h-4 w-4" />
                   Add row
                 </Button>

@@ -132,7 +132,7 @@ export function UploadBlankSlate({
                         <FileUp className="h-4 w-4" />
                         Choose file
                       </Button>
-                      <Button variant="outline" onClick={openAddRowModal}>
+                      <Button variant="outline" onClick={openAddRowModal} className="whitespace-nowrap">
                         <CirclePlus className="h-4 w-4" />
                         Add row
                       </Button>
