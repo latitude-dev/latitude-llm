@@ -3,6 +3,7 @@ packages:
   - packages/**
   - "!packages/telemetry/python/**"
   - infra
+  - tools/*
 
 catalog:
   '@biomejs/biome': 2.4.6
