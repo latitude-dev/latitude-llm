@@ -1,5 +1,4 @@
 import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
-import { trace as traceApi } from "@opentelemetry/api"
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { NodeSDK } from "@opentelemetry/sdk-node"
@@ -74,23 +73,6 @@ export const startTracing = async ({
   })
 
   sdk.start()
-
-  // Debug: verify that the "ai" tracer (used by Vercel AI SDK v7's
-  // OpenTelemetryIntegration) produces recording spans through the
-  // global TracerProvider.  If this logs false, AI generation spans
-  // will be silently lost.
-  const aiTracer = traceApi.getTracer("ai")
-  const probe = aiTracer.startSpan("latitude.debug.ai-tracer-probe")
-  const recording = probe.isRecording()
-  probe.end()
-  if (!recording) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[observability] AI SDK tracer probe is NOT recording – " +
-        "ai.generateText spans will be missing. " +
-        "Check @opentelemetry/api version alignment.",
-    )
-  }
 
   return () => sdk.shutdown()
 }
