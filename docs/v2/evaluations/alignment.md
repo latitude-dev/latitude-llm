@@ -21,7 +21,7 @@ Alignment gives you that signal. When alignment drops, it's time to review your 
 
 Alignment is computed when both an **evaluation** and a **human annotation** have scored the same trace. Latitude compares their pass/fail verdicts and computes metrics from a stored **confusion matrix**.
 
-The only persisted alignment primitive is the confusion matrix — all derived metrics (MCC, accuracy, F1) are computed from those stored counts on read.
+The only persisted alignment primitive is the confusion matrix. All derived metrics (MCC, accuracy, F1) are computed from those stored counts on read.
 
 ### Matthews Correlation Coefficient (MCC)
 
@@ -29,19 +29,19 @@ MCC is the primary alignment metric. It's a balanced measure that works well eve
 
 | MCC Range | Interpretation |
 | --- | --- |
-| 0.7 to 1.0 | Strong alignment — evaluation reliably matches human judgment |
-| 0.4 to 0.7 | Moderate alignment — evaluation is useful but has blind spots |
-| 0.0 to 0.4 | Weak alignment — evaluation needs recalibration |
-| Below 0.0 | Negative correlation — evaluation is systematically wrong |
+| 0.7 to 1.0 | Strong alignment: evaluation reliably matches human judgment |
+| 0.4 to 0.7 | Moderate alignment: evaluation is useful but has blind spots |
+| 0.0 to 0.4 | Weak alignment: evaluation needs recalibration |
+| Below 0.0 | Negative correlation: evaluation is systematically wrong |
 
 ### Confusion Matrix
 
 The confusion matrix breaks down agreement into four categories:
 
-- **True Positive** — Both evaluation and human say "pass"
-- **True Negative** — Both say "fail"
-- **False Positive** — Evaluation says "pass" but human says "fail" (evaluation is too lenient)
-- **False Negative** — Evaluation says "fail" but human says "pass" (evaluation is too strict)
+- **True Positive**: Both evaluation and human say "pass"
+- **True Negative**: Both say "fail"
+- **False Positive**: Evaluation says "pass" but human says "fail" (evaluation is too lenient)
+- **False Negative**: Evaluation says "fail" but human says "pass" (evaluation is too strict)
 
 This tells you the *direction* of disagreement, not just the magnitude. Accuracy and F1 are also derivable from the same counts.
 
@@ -58,7 +58,7 @@ Each evaluation's detail page shows alignment metrics when annotation data exist
 
 When you generate an evaluation from an issue, alignment is core to the generation process:
 
-1. Latitude collects annotation-derived ground truth — at least one failed, non-draft, non-errored annotation linked to the issue (positive examples), plus available negative examples
+1. Latitude collects annotation-derived ground truth: at least one failed, non-draft, non-errored annotation linked to the issue (positive examples), plus available negative examples
 2. The optimizer generates candidate scripts and evaluates them against this ground truth
 3. The best script is selected based on ordered objectives: maximize MCC, then minimize cost, then minimize duration
 4. The confusion matrix is stored on the evaluation
@@ -69,24 +69,24 @@ There is no minimum negative-example count. A monitor can be created from a sing
 
 Once an evaluation exists, Latitude keeps it calibrated:
 
-- **Incremental refresh** — When the script hash hasn't changed, new examples are evaluated and added to the existing confusion matrix
-- **Full re-optimization** — When alignment (MCC) degrades beyond a tolerance threshold, the optimizer runs a full pass
-- **Debounced scheduling** — Metric recomputation at most once per hour; full re-optimization at most once every eight hours
-- **Manual realignment** — Available from the evaluation dashboard, rate-limited
+- **Incremental refresh**: When the script hash hasn't changed, new examples are evaluated and added to the existing confusion matrix
+- **Full re-optimization**: When alignment (MCC) degrades beyond a tolerance threshold, the optimizer runs a full pass
+- **Debounced scheduling**: Metric recomputation at most once per hour; full re-optimization at most once every eight hours
+- **Manual realignment**: Available from the evaluation dashboard, rate-limited
 
 ## Improving Alignment
 
 When alignment is low:
 
-1. **Review the confusion matrix** — Is the evaluation too strict or too lenient?
-2. **Examine false positives and false negatives** — Look at specific traces where the evaluation and human disagree. What did the evaluation miss?
-3. **Add more annotations** — More human-reviewed traces give the optimizer better signal for realignment
-4. **Trigger manual realignment** — After adding annotations, use the realignment button to refresh
+1. **Review the confusion matrix**: Is the evaluation too strict or too lenient?
+2. **Examine false positives and false negatives**: Look at specific traces where the evaluation and human disagree. What did the evaluation miss?
+3. **Add more annotations**: More human-reviewed traces give the optimizer better signal for realignment
+4. **Trigger manual realignment**: After adding annotations, use the realignment button to refresh
 
 This iterative calibration process is how you keep automated evaluations trustworthy over time.
 
 ## Next Steps
 
-- [Annotations](../annotations/overview) — How human review produces the ground truth for alignment
-- [Annotation Queues](../annotations/annotation-queues) — Building focused review backlogs
-- [Issues](../issues/overview) — How failed evaluations become trackable issues
+- [Annotations](../annotations/overview): How human review produces the ground truth for alignment
+- [Annotation Queues](../annotations/annotation-queues): Building focused review backlogs
+- [Issues](../issues/overview): How failed evaluations become trackable issues

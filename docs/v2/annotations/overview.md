@@ -5,7 +5,7 @@ description: Understand how human review workflows produce scores in Latitude
 
 # Annotations Overview
 
-Annotations are the human review workflow in Latitude. When your team reviews a trace and provides feedback, that's an annotation. Each annotation produces a [score](../scores/overview) — the universal measurement unit that feeds into issues, alignment, and analytics.
+Annotations are the human review workflow in Latitude. When your team reviews a trace and provides feedback, that's an annotation. Each annotation produces a [score](../scores/overview): the universal measurement unit that feeds into issues, alignment, and analytics.
 
 ## What Is an Annotation
 
@@ -44,11 +44,11 @@ Annotations capture *why* an interaction was good or bad in the reviewer's own w
 
 #### Feedback Enrichment
 
-Raw annotation feedback is often short — things like "bad answer" or "wrong price." These brief notes are valuable but don't cluster well for issue discovery.
+Raw annotation feedback is often short: things like "bad answer" or "wrong price." These brief notes are valuable but don't cluster well for issue discovery.
 
 To solve this, Latitude enriches annotation feedback before using it for issue clustering:
 
-1. **Your original text is always preserved** in the score's metadata — it's never lost or overwritten
+1. **Your original text is always preserved** in the score's metadata. It's never lost or overwritten
 2. **The canonical feedback field** is enriched with surrounding conversation context (what the user asked, what the agent said, what went wrong)
 3. **Issue discovery uses the enriched version** for semantic similarity and text matching, so short human notes still cluster with related failures
 
@@ -63,9 +63,9 @@ Annotations start as **drafts**. A draft annotation:
 - Does not participate in analytics, issue discovery, or evaluation alignment
 - Can be edited and revised while the draft is still active
 
-Draft finalization happens automatically after a debounced timeout — by default, 5 minutes after the last edit. This gives reviewers time to revise without requiring an explicit "publish" action.
+Draft finalization happens automatically after a debounced timeout: by default, 5 minutes after the last edit. This gives reviewers time to revise without requiring an explicit "publish" action.
 
-System-created queue drafts (proposed by Latitude's classification system) do not auto-finalize — they wait for explicit human review.
+System-created queue drafts (proposed by Latitude's classification system) do not auto-finalize. They wait for explicit human review.
 
 Once finalized, a score becomes immutable. It can be deleted later but should not be edited.
 
@@ -73,8 +73,8 @@ Once finalized, a score becomes immutable. It can be deleted later but should no
 
 When creating an annotation through Latitude's UI, the annotator can:
 
-- **Leave issue assignment automatic** — Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one)
-- **Link to an existing issue** — Explicitly associate the annotation with a known failure pattern, bypassing automatic discovery for that score
+- **Leave issue assignment automatic**: Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one)
+- **Link to an existing issue**: Explicitly associate the annotation with a known failure pattern, bypassing automatic discovery for that score
 
 Explicit link choices are human overrides that take effect when the draft is finalized.
 
@@ -82,15 +82,15 @@ Explicit link choices are human overrides that take effect when the draft is fin
 
 The typical annotation workflow in Latitude:
 
-1. **Traces enter annotation queues** — Either automatically (through queue filters or system classification) or manually (through bulk selection)
-2. **Reviewers open queue items** — They see the full conversation and any existing scores
-3. **Reviewers create annotations** — They mark interactions as positive or negative with feedback
-4. **Drafts finalize automatically** — After the debounce timeout, annotations become immutable scores
-5. **Scores drive improvements** — They power analytics, issue discovery, and evaluation alignment
+1. **Traces enter annotation queues**: Either automatically (through queue filters or system classification) or manually (through bulk selection)
+2. **Reviewers open queue items**: They see the full conversation and any existing scores
+3. **Reviewers create annotations**: They mark interactions as positive or negative with feedback
+4. **Drafts finalize automatically**: After the debounce timeout, annotations become immutable scores
+5. **Scores drive improvements**: They power analytics, issue discovery, and evaluation alignment
 
 ## Next Steps
 
-- [Annotation Queues](./annotation-queues) — Managed review backlogs for systematic annotation
-- [Inline Annotations](./inline-annotations) — Annotating directly from trace views
-- [Scores](../scores/overview) — How the universal score model works
-- [Evaluation Alignment](../evaluations/alignment) — How annotations calibrate automated evaluations
+- [Annotation Queues](./annotation-queues): Managed review backlogs for systematic annotation
+- [Inline Annotations](./inline-annotations): Annotating directly from trace views
+- [Scores](../scores/overview): How the universal score model works
+- [Evaluation Alignment](../evaluations/alignment): How annotations calibrate automated evaluations

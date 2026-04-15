@@ -13,10 +13,10 @@ An evaluation is a **JavaScript-like sandboxed script** that receives a trace's 
 
 Each evaluation consists of:
 
-- **A name** — A descriptive identifier (e.g., "Jailbreak Detection", "Answer Completeness")
-- **A description** — A longer explanation of what the evaluation checks for
-- **A script** — The logic that analyzes a trace and produces a verdict
-- **A trigger configuration** — Which traces the evaluation should run against, how often, and at what sample rate
+- **A name**: A descriptive identifier (e.g., "Jailbreak Detection", "Answer Completeness")
+- **A description**: A longer explanation of what the evaluation checks for
+- **A script**: The logic that analyzes a trace and produces a verdict
+- **A trigger configuration**: Which traces the evaluation should run against, how often, and at what sample rate
 
 ## How Evaluations Work
 
@@ -31,11 +31,11 @@ Each evaluation consists of:
 
 Evaluation scripts run inside a host-controlled sandbox with access to:
 
-- `Passed(score?, feedback)` — Return a passing verdict. Feedback is always required. Score defaults to `1` if omitted.
-- `Failed(score?, feedback)` — Return a failing verdict. Feedback is always required. Score defaults to `0` if omitted.
-- `llm(prompt, options?)` — Make an LLM call through Latitude's managed infrastructure. Accepts a string prompt and optional configuration (temperature, maxTokens, schema).
-- `parse(value, schema)` — Validate an unknown value against a Zod schema.
-- `zod` — The Zod schema library for structured validation.
+- `Passed(score?, feedback)`: Return a passing verdict. Feedback is always required. Score defaults to `1` if omitted.
+- `Failed(score?, feedback)`: Return a failing verdict. Feedback is always required. Score defaults to `0` if omitted.
+- `llm(prompt, options?)`: Make an LLM call through Latitude's managed infrastructure. Accepts a string prompt and optional configuration (temperature, maxTokens, schema).
+- `parse(value, schema)`: Validate an unknown value against a Zod schema.
+- `zod`: The Zod schema library for structured validation.
 
 A simple evaluation script might look like:
 
@@ -46,7 +46,7 @@ if (lastMessage.role === 'assistant') {
   if (length <= 500) {
     return Passed(`Response is concise at ${length} characters`)
   }
-  return Failed(`Response is ${length} characters — consider being more concise`)
+  return Failed(`Response is ${length} characters. Consider being more concise`)
 }
 ```
 
@@ -74,7 +74,7 @@ if (parsed.valid && result.on_topic) {
 return Failed(result.feedback)
 ```
 
-The script never talks directly to the outside world — all external capabilities are exposed as host-controlled functions. The same scripts run both in backend monitoring and in the [simulation CLI](../simulations/cli).
+The script never talks directly to the outside world. All external capabilities are exposed as host-controlled functions. The same scripts run both in backend monitoring and in the [simulation CLI](../simulations/cli).
 
 ## Creating Evaluations
 
@@ -90,13 +90,13 @@ You can write evaluation scripts directly. This is useful for domain-specific ch
 
 Evaluations have a clear lifecycle:
 
-- **Active** — Running on matching traces in real time. An active evaluation has `sampling > 0`.
-- **Paused** — Temporarily disabled by setting `sampling` to `0`. Configuration is preserved; resume by setting sampling back to a positive value.
-- **Archived** — Read-only. Archived evaluations are visible in the UI but never trigger. When an issue is manually ignored, its linked evaluations are archived immediately.
-- **Deleted** — Soft-deleted from the management UI but still represented in historical analytics.
+- **Active**: Running on matching traces in real time. An active evaluation has `sampling > 0`.
+- **Paused**: Temporarily disabled by setting `sampling` to `0`. Configuration is preserved; resume by setting sampling back to a positive value.
+- **Archived**: Read-only. Archived evaluations are visible in the UI but never trigger. When an issue is manually ignored, its linked evaluations are archived immediately.
+- **Deleted**: Soft-deleted from the management UI but still represented in historical analytics.
 
 ## Next Steps
 
-- [Triggers](./triggers) — Configure which traces an evaluation monitors
-- [Alignment](./alignment) — Measure how well evaluations agree with human judgment
-- [Issues](../issues/overview) — How evaluation failures become trackable issues
+- [Triggers](./triggers): Configure which traces an evaluation monitors
+- [Alignment](./alignment): Measure how well evaluations agree with human judgment
+- [Issues](../issues/overview): How evaluation failures become trackable issues

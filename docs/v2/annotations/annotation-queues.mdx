@@ -15,9 +15,9 @@ Annotation queues are managed review backlogs that route traces to human reviewe
 
 An annotation queue is a collection of traces waiting for human review, with configuration that controls:
 
-- **Which traces enter the queue** — Filter criteria and curation rules
-- **Who reviews them** — Assigned reviewers from your team
-- **What reviewers see** — Queue-specific instructions and review context
+- **Which traces enter the queue**: Filter criteria and curation rules
+- **Who reviews them**: Assigned reviewers from your team
+- **What reviewers see**: Queue-specific instructions and review context
 
 Each queue has a name, description, instructions for reviewers, and configuration. Queues are scoped to a project.
 
@@ -57,26 +57,26 @@ Every project starts with **default system queues** that automatically classify 
   </Accordion>
 
   <Accordion title="Tool Call Errors">
-    Detects failed or errored tool invocations. Flags traces where the conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. Uses deterministic rules — no LLM needed.
+    Detects failed or errored tool invocations. Flags traces where the conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. Uses deterministic rules. No LLM needed.
   </Accordion>
 
   <Accordion title="Resource Outliers">
-    Detects unusually high latency, time to first token, token usage, or cost. Flags traces where resource consumption materially exceeds project norms based on percentile and median baselines. Uses deterministic rules — no LLM needed.
+    Detects unusually high latency, time to first token, token usage, or cost. Flags traces where resource consumption materially exceeds project norms based on percentile and median baselines. Uses deterministic rules. No LLM needed.
   </Accordion>
 
   <Accordion title="Output Schema Validation">
-    Detects structured-output responses that don't conform to the declared schema. Flags traces where a GenAI span was configured to produce structured output and the actual response either failed to parse as JSON or was visibly truncated before completion. Uses deterministic rules — no LLM needed.
+    Detects structured-output responses that don't conform to the declared schema. Flags traces where a GenAI span was configured to produce structured output and the actual response either failed to parse as JSON or was visibly truncated before completion. Uses deterministic rules. No LLM needed.
   </Accordion>
 
   <Accordion title="Empty Response">
-    Detects empty or degenerate assistant responses. Flags traces where the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text. Uses deterministic rules — no LLM needed.
+    Detects empty or degenerate assistant responses. Flags traces where the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text. Uses deterministic rules. No LLM needed.
   </Accordion>
 </AccordionGroup>
 
-System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first — only sampled-in traces are evaluated further. Then each queue runs its classifier:
+System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first: only sampled-in traces are evaluated further. Then each queue runs its classifier:
 
 - **Tool Call Errors**, **Output Schema Validation**, **Empty Response**, and **Resource Outliers** use **deterministic rules** (no LLM needed)
-- **Jailbreaking**, **Refusal**, **Frustration**, **Forgetting**, **Laziness**, **Inappropriate Content**, and **Trashing** will use lightweight LLM-based classifiers — these are under active development and will roll out incrementally
+- **Jailbreaking**, **Refusal**, **Frustration**, **Forgetting**, **Laziness**, **Inappropriate Content**, and **Trashing** will use lightweight LLM-based classifiers. These are under active development and will roll out incrementally
 
 When a trace is flagged, a separate validation step using the full conversation context confirms the match and creates a draft annotation before the trace enters the queue.
 
@@ -110,18 +110,18 @@ Each queue is configured with:
 | --- | --- |
 | **Name** | A descriptive name for the queue (e.g., "Customer support review", "Jailbreak investigation") |
 | **Description** | A short summary that appears in the queue list |
-| **Instructions** | Guidance for annotators reviewing traces in this queue — helps reviewers understand what to look for and how to assess interactions |
+| **Instructions** | Guidance for annotators reviewing traces in this queue. It helps reviewers understand what to look for and how to assess interactions |
 | **Assignees** | Team members responsible for reviewing this queue |
-| **Make this queue live** | When enabled, the queue processes new traces automatically based on filters. When disabled, the queue is manual — you add traces to it explicitly. |
+| **Make this queue live** | When enabled, the queue processes new traces automatically based on filters. When disabled, the queue is manual. You add traces to it explicitly. |
 
 When the "Make this queue live" toggle is enabled, additional configuration appears:
 
-- **Filters** — Define which traces should enter the queue using the [shared filter system](../observability/filters)
-- **Sample rate** — What percentage of matching traces to include (defaults to 10%)
+- **Filters**: Define which traces should enter the queue using the [shared filter system](../observability/filters)
+- **Sample rate**: What percentage of matching traces to include (defaults to 10%)
 
 ## The Review Experience
 
-When you click into a queue, you see its items — the traces waiting for review. Each row shows the trace name, when it was created, its review status, and who reviewed it.
+When you click into a queue, you see its items: the traces waiting for review. Each row shows the trace name, when it was created, its review status, and who reviewed it.
 
 <Frame>
   <img src="/images/annotations/queue-list.png" alt="Queue items list showing traces pending review with status and reviewer columns" />
@@ -129,9 +129,9 @@ When you click into a queue, you see its items — the traces waiting for review
 
 Click on a trace to open the focused review interface with three sections:
 
-1. **Metadata** (left) — Timestamp, duration, tokens, cost, model, tags, and metadata for the current trace
-2. **Conversation** (center) — The full message exchange, with support for message-level or text-range selection to create annotations
-3. **Annotations** (right) — Queue instructions at the top, followed by existing annotations and controls to create new ones
+1. **Metadata** (left): Timestamp, duration, tokens, cost, model, tags, and metadata for the current trace
+2. **Conversation** (center): The full message exchange, with support for message-level or text-range selection to create annotations
+3. **Annotations** (right): Queue instructions at the top, followed by existing annotations and controls to create new ones
 
 <Frame>
   <img src="/images/annotations/queue-review.png" alt="Queue review screen showing metadata, conversation, and annotation panels" />
@@ -163,11 +163,11 @@ The review interface supports keyboard navigation for efficient annotation.
 
 Each queue tracks progress through:
 
-- **Total items** — How many traces are in the queue
-- **Completed items** — How many have been marked as fully annotated
-- **Completion percentage** — Derived from the two counters above
+- **Total items**: How many traces are in the queue
+- **Completed items**: How many have been marked as fully annotated
+- **Completion percentage**: Derived from the two counters above
 
-Queue completion is tracked separately from annotation creation — creating annotations does not automatically mark a queue item complete.
+Queue completion is tracked separately from annotation creation. Creating annotations does not automatically mark a queue item complete.
 
 ## Queues and Evaluation Alignment
 
@@ -175,13 +175,13 @@ A powerful pattern for improving evaluation alignment:
 
 1. Create a live queue filtered to traces where a specific evaluation has scored
 2. Have reviewers annotate those traces independently
-3. Check the evaluation's alignment dashboard — it now has overlapping human and machine scores
+3. Check the evaluation's alignment dashboard. It now has overlapping human and machine scores
 4. Use the alignment metrics to identify where the evaluation needs improvement
 
 This systematic approach to generating alignment data ensures your evaluations stay calibrated over time.
 
 ## Next Steps
 
-- [Inline Annotations](./inline-annotations) — Annotating outside of queues
-- [Annotations Overview](./overview) — How the annotation system works
-- [Evaluation Alignment](../evaluations/alignment) — Using annotations to calibrate evaluations
+- [Inline Annotations](./inline-annotations): Annotating outside of queues
+- [Annotations Overview](./overview): How the annotation system works
+- [Evaluation Alignment](../evaluations/alignment): Using annotations to calibrate evaluations

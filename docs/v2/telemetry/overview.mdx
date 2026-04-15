@@ -1,6 +1,6 @@
 ---
 title: Telemetry Overview
-description: Connect your LLM stack to Latitude's observability platform with Telemetry — see traces, add scores and annotations, and run evaluations.
+description: Connect your LLM stack to Latitude's observability platform with Telemetry. See traces, add scores and annotations, and run evaluations.
 ---
 
 Latitude Telemetry instruments your AI application and sends traces to Latitude. Built entirely on **OpenTelemetry**, it works alongside your existing observability stack (Datadog, Sentry, Jaeger, etc.) without conflicts or vendor lock-in.
@@ -9,7 +9,7 @@ Once connected, every LLM execution becomes a trace in Latitude that you can ins
 
 ## Quick Start
 
-One function sets up everything — auto-instrumentation, the Latitude exporter, and async context propagation:
+One function sets up everything: auto-instrumentation, the Latitude exporter, and async context propagation:
 
 <Tabs>
   <Tab title="TypeScript">
@@ -64,11 +64,11 @@ One function sets up everything — auto-instrumentation, the Latitude exporter,
   </Tab>
 </Tabs>
 
-That's it — your LLM calls now appear as traces in Latitude.
+That's it. Your LLM calls now appear as traces in Latitude.
 
 ## Adding Context with `capture()`
 
-Auto-instrumentation traces LLM calls without any extra code. Use `capture()` when you want to attach business context — user IDs, session IDs, tags, or metadata — to group and filter traces in Latitude.
+Auto-instrumentation traces LLM calls without any extra code. Use `capture()` when you want to attach business context such as user IDs, session IDs, tags, or metadata to group and filter traces in Latitude.
 
 <Tabs>
   <Tab title="TypeScript">
@@ -133,7 +133,7 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
 </Tabs>
 
 <Info>
-`capture()` does **not** create spans — it only attaches context to spans created by auto-instrumentation. Wrap the request or agent entrypoint once; you don't need to wrap every internal step.
+`capture()` does **not** create spans. It only attaches context to spans created by auto-instrumentation. Wrap the request or agent entrypoint once; you don't need to wrap every internal step.
 </Info>
 
 ## Streaming
@@ -183,7 +183,7 @@ Latitude Telemetry is built on OpenTelemetry standards:
 2. **`LatitudeSpanProcessor`** filters for LLM-relevant spans (`gen_ai.*`, `ai.*`, `openinference.*` attributes) and exports them to Latitude via OTLP.
 3. **`capture()`** uses OpenTelemetry's native `context.with()` to attach Latitude-specific attributes (user, session, tags) to spans within its scope.
 
-If you already run OpenTelemetry for other backends, you can add `LatitudeSpanProcessor` alongside your existing processors — see the [TypeScript SDK](typescript) or [Python SDK](python) reference for advanced setup.
+If you already run OpenTelemetry for other backends, you can add `LatitudeSpanProcessor` alongside your existing processors. See the [TypeScript SDK](typescript) or [Python SDK](python) reference for advanced setup.
 
 ## Supported Integrations
 
@@ -204,7 +204,7 @@ If you already run OpenTelemetry for other backends, you can add `LatitudeSpanPr
 
 | Framework | Instrumentation | Package (TS) | Package (Python) |
 |---|---|---|---|
-| [Vercel AI SDK](frameworks/vercel-ai-sdk) | — | `ai` | — |
+| [Vercel AI SDK](frameworks/vercel-ai-sdk) | - | `ai` | - |
 | [LangChain](frameworks/langchain) | `"langchain"` | `langchain` | `langchain-core` |
 | [LlamaIndex](frameworks/llamaindex) | `"llamaindex"` | `llamaindex` | `llama-index` |
 

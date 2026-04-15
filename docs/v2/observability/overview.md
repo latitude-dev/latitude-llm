@@ -5,7 +5,7 @@ description: Understand how Latitude captures and organizes your agent's interac
 
 # Observability Overview
 
-Latitude captures every interaction your AI agent has — from individual LLM calls to multi-turn conversations — and makes them searchable, scoreable, and actionable.
+Latitude captures every interaction your AI agent has, from individual LLM calls to multi-turn conversations, and makes them searchable, scoreable, and actionable.
 
 ## Three Levels of Telemetry
 
@@ -26,7 +26,7 @@ Each span captures:
 
 ### Traces
 
-A **trace** is a complete interaction from start to finish, composed of one or more spans. When a user sends a message and your agent responds — including any intermediate LLM calls, tool uses, and retrieval steps — that entire sequence is one trace.
+A **trace** is a complete interaction from start to finish, composed of one or more spans. When a user sends a message and your agent responds (including any intermediate LLM calls, tool uses, and retrieval steps), that entire sequence is one trace.
 
 Traces are the primary unit that most reliability features operate on:
 
@@ -60,7 +60,7 @@ Once connected:
 
 ## Trace Completion
 
-Latitude does not consider a trace complete the instant a span arrives. Instead, it uses a debounce window — if no new spans arrive for a trace within 5 minutes, the trace is considered done.
+Latitude does not consider a trace complete the instant a span arrives. Instead, it uses a debounce window. If no new spans arrive for a trace within 5 minutes, the trace is considered done.
 
 This matters because:
 
@@ -94,11 +94,11 @@ The trace dashboard provides rich filtering through a shared filter system. You 
 | Token usage | Input and output tokens |
 | Custom metadata | Any `metadata.*` fields you send |
 
-These same filters power evaluation triggers and live annotation queues — when you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
+These same filters power evaluation triggers and live annotation queues. When you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
 
 ## Next Steps
 
-- [Traces](./traces) — Understand the trace model and lifecycle in detail
-- [Sessions](./sessions) — Learn about session-level aggregation
-- [Filters](./filters) — Learn how the shared filter system works
-- [Scores](../scores/overview) — See how scores attach to your telemetry
+- [Traces](./traces): Understand the trace model and lifecycle in detail
+- [Sessions](./sessions): Learn about session-level aggregation
+- [Filters](./filters): Learn how the shared filter system works
+- [Scores](../scores/overview): See how scores attach to your telemetry

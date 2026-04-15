@@ -5,7 +5,7 @@ description: Understand the trace model, lifecycle, and how to work with traces 
 
 # Traces
 
-A trace represents one complete interaction between a user and your agent. It's the primary unit that Latitude's reliability features operate on — evaluations, annotations, issues, and simulations all reference traces.
+A trace represents one complete interaction between a user and your agent. It's the primary unit that Latitude's reliability features operate on: evaluations, annotations, issues, and simulations all reference traces.
 
 <Frame>
   <img src="/images/traces/traces-overview.png" alt="Traces page showing a list of traces with metadata" />
@@ -13,7 +13,7 @@ A trace represents one complete interaction between a user and your agent. It's 
 
 ## What's in a Trace
 
-A trace is composed of one or more **spans** — the individual operations your agent performed. A typical trace might include:
+A trace is composed of one or more **spans**: the individual operations your agent performed. A typical trace might include:
 
 - An incoming user message
 - One or more LLM calls
@@ -23,15 +23,15 @@ A trace is composed of one or more **spans** — the individual operations your 
 
 Latitude materializes traces from raw spans, giving you:
 
-- **Root span name** — The top-level operation name
-- **Overall status** — OK or error, derived from constituent spans
-- **Total duration** — End-to-end timing
-- **Aggregated tokens** — Total input and output tokens across all LLM calls
-- **Aggregated cost** — Total cost across all provider calls
-- **Span count** — How many individual operations were involved
-- **Error count** — How many spans errored
-- **Models and providers** — Which LLMs and providers were used
-- **Tags and metadata** — Custom labels and structured metadata
+- **Root span name**: The top-level operation name
+- **Overall status**: OK or error, derived from constituent spans
+- **Total duration**: End-to-end timing
+- **Aggregated tokens**: Total input and output tokens across all LLM calls
+- **Aggregated cost**: Total cost across all provider calls
+- **Span count**: How many individual operations were involved
+- **Error count**: How many spans errored
+- **Models and providers**: Which LLMs and providers were used
+- **Tags and metadata**: Custom labels and structured metadata
 
 ## Trace Completion
 
@@ -55,10 +55,14 @@ The **Traces** page in your project shows a table of all traces, newest first. E
 
 Click on a trace to open the detail view, which shows:
 
-- **The full conversation** — All messages exchanged between user and agent
-- **The span tree** — A hierarchical view of every operation your agent performed
-- **Scores** — Any evaluation, annotation, or custom scores attached to this trace
-- **Metadata** — Custom fields, timing details, and resource usage
+- **The full conversation**: All messages exchanged between user and agent
+- **The span tree**: A hierarchical view of every operation your agent performed
+- **Scores**: Any evaluation, annotation, or custom scores attached to this trace
+- **Metadata**: Custom fields, timing details, and resource usage
+
+<Frame>
+  <img src="/images/traces/trace-detailed.png" alt="Trace detail view showing conversation, span tree, and metadata" />
+</Frame>
 
 ## Filtering Traces
 
@@ -69,9 +73,9 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
 <AccordionGroup>
   <Accordion title="Status">
     Filter traces by their completion status. Select one or more:
-    - **OK** — Trace completed without errors
-    - **ERROR** — At least one span in the trace errored
-    - **UNSET** — Status was not reported
+    - **OK**: Trace completed without errors
+    - **ERROR**: At least one span in the trace errored
+    - **UNSET**: Status was not reported
   </Accordion>
 
   <Accordion title="Name">
@@ -111,7 +115,7 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
   </Accordion>
 
   <Accordion title="TTFT (Time to First Token)">
-    Set a min/max range to filter by time to first token — useful for identifying slow-starting responses.
+    Set a min/max range to filter by time to first token. This is useful for identifying slow-starting responses.
   </Accordion>
 
   <Accordion title="Cost">
@@ -141,11 +145,11 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
 
 ### Combining Filters
 
-All active filters are combined with **AND** logic — traces must match every active filter to appear. For example:
+All active filters are combined with **AND** logic. Traces must match every active filter to appear. For example:
 
-- **Status** = ERROR **AND** **Cost** > 100 microcents — find expensive failures
-- **Models** = gpt-4o **AND** **Duration** > 5s — find slow GPT-4o traces
-- **Metadata** `environment` = `production` **AND** **Error Count** > 0 — find production errors
+- **Status** = ERROR **AND** **Cost** > 100 microcents: find expensive failures
+- **Models** = gpt-4o **AND** **Duration** > 5s: find slow GPT-4o traces
+- **Metadata** `environment` = `production` **AND** **Error Count** > 0: find production errors
 
 ## Traces and Sessions
 
@@ -153,6 +157,6 @@ When your application provides a `session_id` with its telemetry, Latitude group
 
 ## Next Steps
 
-- [Sessions](./sessions) — Session-level conversations and aggregation
-- [Scores](../scores/overview) — How scores attach to traces
-- [Annotations](../annotations/inline-annotations) — Annotating directly from trace views
+- [Sessions](./sessions): Session-level conversations and aggregation
+- [Scores](../scores/overview): How scores attach to traces
+- [Annotations](../annotations/inline-annotations): Annotating directly from trace views

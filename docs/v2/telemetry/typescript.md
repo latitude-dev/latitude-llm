@@ -1,6 +1,6 @@
 ---
 title: TypeScript SDK
-description: Full API reference for @latitude-data/telemetry — the TypeScript SDK for Latitude Telemetry.
+description: Full API reference for @latitude-data/telemetry, the TypeScript SDK for Latitude Telemetry.
 ---
 
 # TypeScript SDK
@@ -36,7 +36,7 @@ const response = await openai.chat.completions.create({
 await latitude.shutdown()
 ```
 
-`initLatitude` returns **immediately** — instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
+`initLatitude` returns **immediately**. Instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
 
 - **Fire-and-forget**: Start using your LLM clients right away. Early spans are captured once instrumentations finish registering.
 - **Optional `await latitude.ready`**: If you need instrumentations fully registered before making LLM calls, await the `ready` promise.
@@ -45,10 +45,10 @@ await latitude.shutdown()
 
 Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when you want to:
 
-- **Group traces by user or session** — Track all LLM calls from a specific user
-- **Add business context** — Tag traces with environment, feature flags, or request IDs
-- **Mark agent boundaries** — Wrap an agent run or conversation turn with a name and metadata
-- **Filter and analyze** — Use tags and metadata to filter traces in Latitude
+- **Group traces by user or session**: Track all LLM calls from a specific user
+- **Add business context**: Tag traces with environment, feature flags, or request IDs
+- **Mark agent boundaries**: Wrap an agent run or conversation turn with a name and metadata
+- **Filter and analyze**: Use tags and metadata to filter traces in Latitude
 
 ```ts
 import { initLatitude, capture } from "@latitude-data/telemetry"
@@ -78,7 +78,7 @@ await capture(
 await latitude.shutdown()
 ```
 
-`capture()` does **not** create spans — it only attaches context to spans created by auto-instrumentation. Use one `capture()` call at the request or agent boundary. Nested calls inherit from the parent context with local overrides.
+`capture()` does **not** create spans. It only attaches context to spans created by auto-instrumentation. Use one `capture()` call at the request or agent boundary. Nested calls inherit from the parent context with local overrides.
 
 **Nesting behavior:**
 
@@ -359,11 +359,11 @@ new LatitudeSpanProcessor(apiKey, projectSlug, {
 
 ### Spans not appearing in Latitude
 
-1. **Check API key and project slug** — Must be non-empty strings.
-2. **Verify instrumentations are registered** — Use `await latitude.ready` or `await registerLatitudeInstrumentations()`.
-3. **Flush before exit** — Call `await latitude.flush()` or `await provider.forceFlush()`.
-4. **Check smart filter** — Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans.
-5. **Ensure `capture()` wraps the code that creates spans** — `capture()` itself doesn't create spans; it only attaches context.
+1. **Check API key and project slug**: Must be non-empty strings.
+2. **Verify instrumentations are registered**: Use `await latitude.ready` or `await registerLatitudeInstrumentations()`.
+3. **Flush before exit**: Call `await latitude.flush()` or `await provider.forceFlush()`.
+4. **Check smart filter**: Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans.
+5. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
 
 ### No spans created inside `capture()`
 

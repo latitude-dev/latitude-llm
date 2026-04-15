@@ -1,6 +1,6 @@
 ---
 title: Python SDK
-description: Full API reference for latitude-telemetry — the Python SDK for Latitude Telemetry.
+description: Full API reference for latitude-telemetry, the Python SDK for Latitude Telemetry.
 ---
 
 # Python SDK
@@ -42,10 +42,10 @@ latitude.shutdown()
 
 Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when you want to:
 
-- **Group traces by user or session** — Track all LLM calls from a specific user
-- **Add business context** — Tag traces with environment, feature flags, or request IDs
-- **Mark agent boundaries** — Wrap an agent run or conversation turn with a name and metadata
-- **Filter and analyze** — Use tags and metadata to filter traces in Latitude
+- **Group traces by user or session**: Track all LLM calls from a specific user
+- **Add business context**: Tag traces with environment, feature flags, or request IDs
+- **Mark agent boundaries**: Wrap an agent run or conversation turn with a name and metadata
+- **Filter and analyze**: Use tags and metadata to filter traces in Latitude
 
 ```python
 from latitude_telemetry import init_latitude, capture
@@ -73,7 +73,7 @@ capture(
 latitude.shutdown()
 ```
 
-`capture()` does **not** create spans — it only attaches context to spans created by auto-instrumentation. Use one `capture()` call at the request or agent boundary. Nested calls inherit from the parent context with local overrides.
+`capture()` does **not** create spans. It only attaches context to spans created by auto-instrumentation. Use one `capture()` call at the request or agent boundary. Nested calls inherit from the parent context with local overrides.
 
 **Nesting behavior:**
 
@@ -103,7 +103,7 @@ register_latitude_instrumentations(
 )
 ```
 
-`LatitudeSpanProcessor` only exports spans to Latitude. You still need LLM instrumentations to create those spans — use `register_latitude_instrumentations()` or bring your own OTel-compatible LLM instrumentation.
+`LatitudeSpanProcessor` only exports spans to Latitude. You still need LLM instrumentations to create those spans. Use `register_latitude_instrumentations()` or bring your own OTel-compatible LLM instrumentation.
 
 ## Public API Reference
 
@@ -284,11 +284,11 @@ processor = LatitudeSpanProcessor(
 
 ### Spans not appearing in Latitude
 
-1. **Check API key and project slug** — Must be non-empty strings.
-2. **Verify instrumentations are registered** — Use `register_latitude_instrumentations()`.
-3. **Flush before exit** — Call `latitude.flush()` or `provider.force_flush()`.
-4. **Check smart filter** — Only LLM spans are exported by default. Use `disable_smart_filter=True` to export all spans.
-5. **Ensure `capture()` wraps the code that creates spans** — `capture()` itself doesn't create spans; it only attaches context.
+1. **Check API key and project slug**: Must be non-empty strings.
+2. **Verify instrumentations are registered**: Use `register_latitude_instrumentations()`.
+3. **Flush before exit**: Call `latitude.flush()` or `provider.force_flush()`.
+4. **Check smart filter**: Only LLM spans are exported by default. Use `disable_smart_filter=True` to export all spans.
+5. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
 
 ### No spans created inside `capture()`
 

@@ -14,7 +14,7 @@ This guide walks you through connecting an existing AI agent to Latitude. By the
 
 ## Step 1: Create a Project
 
-After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features — issues, evaluations, annotation queues, and simulations are all scoped to a project.
+After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features: issues, evaluations, annotation queues, and simulations are all scoped to a project.
 
 Give your project a descriptive name that matches the agent or feature you're monitoring.
 
@@ -41,9 +41,9 @@ Scores are the fundamental measurement unit. Every score is a normalized value b
 
 Scores come from three sources:
 
-1. **Evaluations** — automated scripts that run on your traces
-2. **Annotations** — human review verdicts from your team
-3. **Custom** — scores you submit from your own code via the API
+1. **Evaluations**: automated scripts that run on your traces
+2. **Annotations**: human review verdicts from your team
+3. **Custom**: scores you submit from your own code via the API
 
 Your project starts with default annotation queues that automatically flag common problems like jailbreaking, refusals, frustration, and tool call errors. Check the **Annotation Queues** page to see if any traces have been flagged for review.
 
@@ -54,7 +54,7 @@ Open the **Annotation Queues** page in your project. Each queue is a focused rev
 Click into a queue to enter the review screen:
 
 1. Read the conversation in the center panel
-2. Create an annotation — mark it as positive (thumbs up) or negative (thumbs down) with feedback
+2. Create an annotation: mark it as positive (thumbs up) or negative (thumbs down) with feedback
 3. Optionally link the annotation to an existing issue, or leave issue assignment automatic
 4. Mark the item as fully annotated and move to the next
 
@@ -62,9 +62,9 @@ Your annotations feed into issue discovery and evaluation alignment.
 
 ## What's Next
 
-- [Observability](../observability/overview) — Understand spans, traces, and sessions in depth
-- [Scores](../scores/overview) — Learn how the scoring system works
-- [Annotations](../annotations/overview) — Build human review workflows
-- [Evaluations](../evaluations/overview) — Set up automated monitoring
-- [Issues](../issues/overview) — Understand how failure patterns are discovered
-- [Simulations](../simulations/overview) — Test your agent before shipping
+- [Observability](../observability/overview): Understand spans, traces, and sessions in depth
+- [Scores](../scores/overview): Learn how the scoring system works
+- [Annotations](../annotations/overview): Build human review workflows
+- [Evaluations](../evaluations/overview): Set up automated monitoring
+- [Issues](../issues/overview): Understand how failure patterns are discovered
+- [Simulations](../simulations/overview): Test your agent before shipping

@@ -5,7 +5,7 @@ description: Use the shared filter system to narrow traces, configure evaluation
 
 # Filters
 
-Latitude uses a universal filter system across the platform. The same filters you use to search traces also power evaluation triggers and annotation queue configuration — learn it once, use it everywhere.
+Latitude uses a universal filter system across the platform. The same filters you use to search traces also power evaluation triggers and annotation queue configuration. Learn it once, use it everywhere.
 
 ## How Filters Work
 
@@ -55,8 +55,8 @@ Filters support 10 operators:
 
 Your application can send structured metadata with its telemetry. Filter on any metadata field using dot-notation:
 
-- `metadata.env` — top-level key
-- `metadata.runtime.region` — nested keys (up to 12 levels deep)
+- `metadata.env`: top-level key
+- `metadata.runtime.region`: nested keys (up to 12 levels deep)
 
 Metadata filters support all operators, so you can filter for exact matches, ranges, set membership, and substring searches on your custom fields.
 
@@ -64,10 +64,10 @@ Metadata filters support all operators, so you can filter for exact matches, ran
 
 All active filters combine with **AND** logic. Common combinations:
 
-- **Status** = ERROR **and** **Cost** > 100 — find expensive failures
-- **Models** = gpt-4o **and** **Duration** > 5s — find slow GPT-4o traces
-- **Metadata** `environment` = `production` **and** **Error Count** > 0 — find production errors
-- **Tags** in `["canary"]` **and** **Tokens Output** > 2000 — find verbose canary responses
+- **Status** = ERROR **and** **Cost** > 100: find expensive failures
+- **Models** = gpt-4o **and** **Duration** > 5s: find slow GPT-4o traces
+- **Metadata** `environment` = `production` **and** **Error Count** > 0: find production errors
+- **Tags** in `["canary"]` **and** **Tokens Output** > 2000: find verbose canary responses
 
 ## Where Filters Are Used
 
@@ -82,6 +82,6 @@ When you configure an evaluation trigger or live annotation queue, you're buildi
 
 ## Next Steps
 
-- [Traces](./traces) — Browse and filter your traces
-- [Evaluation Triggers](../evaluations/triggers) — Use filters to control evaluation scope
-- [Annotation Queues](../annotations/annotation-queues) — Use filters to build live review queues
+- [Traces](./traces): Browse and filter your traces
+- [Evaluation Triggers](../evaluations/triggers): Use filters to control evaluation scope
+- [Annotation Queues](../annotations/annotation-queues): Use filters to build live review queues

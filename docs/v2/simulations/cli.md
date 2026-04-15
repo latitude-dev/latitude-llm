@@ -4,7 +4,7 @@ description: Use the Latitude CLI to run simulations locally or in CI
 ---
 
 <Info>
-  **Coming Soon** — Simulations are under active development and not yet available. The design below reflects what's planned.
+  **Coming Soon.** Simulations are under active development and not yet available. The design below reflects what's planned.
 </Info>
 
 # Simulation CLI
@@ -65,8 +65,8 @@ Key details:
 
 Scenarios can come from:
 
-- **A Latitude dataset** — Referenced by CUID. The CLI downloads the dataset rows as scenarios.
-- **A custom function** — A loader function that returns scenarios programmatically. Stored as `"CUSTOM"` in simulation metadata.
+- **A Latitude dataset**: Referenced by CUID. The CLI downloads the dataset rows as scenarios.
+- **A custom function**: A loader function that returns scenarios programmatically. Stored as `"CUSTOM"` in simulation metadata.
 
 Query-backed datasets are planned for a future release.
 
@@ -80,8 +80,8 @@ Local runs are fast and don't require network access to Latitude unless you're d
 
 Add simulations to your CI/CD pipeline to gate deployments on quality. The CLI returns CI-friendly exit codes:
 
-- **Exit code 0** — All evaluations passed (or pass rate exceeds the configured threshold)
-- **Non-zero exit code** — At least one evaluation failed below the threshold
+- **Exit code 0**: All evaluations passed (or pass rate exceeds the configured threshold)
+- **Non-zero exit code**: At least one evaluation failed below the threshold
 
 ## Uploading Results
 
@@ -99,6 +99,6 @@ The CLI is JavaScript/TypeScript-native, but lightweight SDKs for other language
 
 ## Next Steps
 
-- [Simulation Reports](./reporting) — Understanding simulation results
-- [Simulations Overview](./overview) — Why simulations matter
-- [Evaluations](../evaluations/overview) — The evaluation scripts simulations use
+- [Simulation Reports](./reporting): Understanding simulation results
+- [Simulations Overview](./overview): Why simulations matter
+- [Evaluations](../evaluations/overview): The evaluation scripts simulations use

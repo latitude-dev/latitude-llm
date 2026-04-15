@@ -25,10 +25,10 @@ Inline annotations follow the same draft → published workflow as queue annotat
 
 Inline annotations are best for:
 
-- **Quick spot checks** — You're browsing traces and notice something worth flagging
-- **Issue investigation** — You're drilling into a specific issue and want to annotate relevant traces
-- **Demo and training** — Showing a new team member how annotation works
-- **Supplementary feedback** — Adding context to a trace that's already been reviewed in a queue
+- **Quick spot checks**: You're browsing traces and notice something worth flagging
+- **Issue investigation**: You're drilling into a specific issue and want to annotate relevant traces
+- **Demo and training**: Showing a new team member how annotation works
+- **Supplementary feedback**: Adding context to a trace that's already been reviewed in a queue
 
 For systematic, high-volume annotation work, use **annotation queues** instead. Queues provide focused workflows, progress tracking, and ensure coverage.
 
@@ -36,13 +36,13 @@ For systematic, high-volume annotation work, use **annotation queues** instead. 
 
 When creating an inline annotation, you can:
 
-- **Leave issue assignment automatic** — Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one) when the score is finalized
-- **Link to an existing issue** — Associate your annotation with a known failure pattern, bypassing automatic discovery for that score
+- **Leave issue assignment automatic**: Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one) when the score is finalized
+- **Link to an existing issue**: Associate your annotation with a known failure pattern, bypassing automatic discovery for that score
 
-Once finalized, failed annotations feed into the issue discovery pipeline automatically — you don't need to create issues manually.
+Once finalized, failed annotations feed into the issue discovery pipeline automatically. You don't need to create issues manually.
 
 ## Next Steps
 
-- [Annotation Queues](./annotation-queues) — Systematic review workflows
-- [Annotations Overview](./overview) — How the annotation system works
-- [Issues](../issues/overview) — How annotations connect to issue tracking
+- [Annotation Queues](./annotation-queues): Systematic review workflows
+- [Annotations Overview](./overview): How the annotation system works
+- [Issues](../issues/overview): How annotations connect to issue tracking

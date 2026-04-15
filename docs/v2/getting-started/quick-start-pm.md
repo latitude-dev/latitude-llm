@@ -1,11 +1,11 @@
 ---
 title: No-Code Quick Start
-description: Get started with Latitude through the web UI — no coding required
+description: Get started with Latitude through the web UI. No coding required
 ---
 
 # No-Code Quick Start
 
-This guide walks you through the Latitude web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand issues — all without writing code.
+This guide walks you through the Latitude web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand issues, all without writing code.
 
 ## Prerequisites
 
@@ -16,16 +16,16 @@ This guide walks you through the Latitude web interface. You'll learn how to nav
 
 When you open a project, you'll see the main navigation with these sections:
 
-- **Traces** — Every interaction your agent has had, shown as a timeline
-- **Sessions** — Multi-turn conversations grouped together
-- **Evaluations** — Automated monitoring scripts and their results
-- **Issues** — Failure patterns discovered from your agent's interactions
-- **Annotation Queues** — Review backlogs where your team provides human feedback
-- **Simulations** — Test runs of your agent against scenarios
+- **Traces**: Every interaction your agent has had, shown as a timeline
+- **Sessions**: Multi-turn conversations grouped together
+- **Evaluations**: Automated monitoring scripts and their results
+- **Issues**: Failure patterns discovered from your agent's interactions
+- **Annotation Queues**: Review backlogs where your team provides human feedback
+- **Simulations**: Test runs of your agent against scenarios
 
 ## Exploring Traces
 
-The **Traces** page shows every interaction your agent has processed. Each row represents one complete interaction — from user request to agent response.
+The **Traces** page shows every interaction your agent has processed. Each row represents one complete interaction, from user request to agent response.
 
 Click on a trace to see:
 
@@ -40,23 +40,23 @@ Use the filter sidebar to narrow traces by status, cost, duration, model, provid
 
 Annotation queues are where your team provides human judgment on agent interactions. Your project starts with default queues that automatically flag common problems:
 
-- **Jailbreaking** — Attempts to bypass safety constraints
-- **Refusal** — The agent refuses requests it should handle
-- **Frustration** — Clear user dissatisfaction
-- **Forgetting** — The agent loses conversation context
-- **Laziness** — The agent avoids doing the requested work
-- **Inappropriate Content** — Sexual or otherwise not-safe-for-work content
-- **Trashing** — The agent cycles between tools without making progress
-- **Tool Call Errors** — Failed tool invocations
-- **Resource Outliers** — Unusually high latency or cost
-- **Output Schema Validation** — Structured output didn't conform to the declared schema
-- **Empty Response** — The assistant returned an empty or degenerate response
+- **Jailbreaking**: Attempts to bypass safety constraints
+- **Refusal**: The agent refuses requests it should handle
+- **Frustration**: Clear user dissatisfaction
+- **Forgetting**: The agent loses conversation context
+- **Laziness**: The agent avoids doing the requested work
+- **Inappropriate Content**: Sexual or otherwise not-safe-for-work content
+- **Trashing**: The agent cycles between tools without making progress
+- **Tool Call Errors**: Failed tool invocations
+- **Resource Outliers**: Unusually high latency or cost
+- **Output Schema Validation**: Structured output didn't conform to the declared schema
+- **Empty Response**: The assistant returned an empty or degenerate response
 
 Open a queue and click into it to start reviewing. The review screen shows three sections:
 
-1. **Metadata** — Timestamp, duration, tokens, cost, and existing scores for the current trace
-2. **Conversation** — The full message exchange between user and agent
-3. **Annotations** — Queue instructions, existing annotations, and a button to create new ones
+1. **Metadata**: Timestamp, duration, tokens, cost, and existing scores for the current trace
+2. **Conversation**: The full message exchange between user and agent
+3. **Annotations**: Queue instructions, existing annotations, and a button to create new ones
 
 To annotate:
 
@@ -87,7 +87,7 @@ You can:
 
 The **Evaluations** page shows automated scripts that score your agent's interactions in real time.
 
-Evaluations are typically generated from issues — when you click "Generate Evaluation" on an issue, Latitude creates a monitoring script that watches for that failure pattern on live traffic.
+Evaluations are typically generated from issues. When you click "Generate Evaluation" on an issue, Latitude creates a monitoring script that watches for that failure pattern on live traffic.
 
 Each evaluation shows:
 
@@ -102,13 +102,13 @@ Scores are the fundamental unit of measurement in Latitude. Every score has:
 - A **value** between 0 and 1
 - A **pass/fail** verdict
 - **Feedback** text describing the verdict
-- A **source** — evaluation, annotation (human review), or custom
+- A **source**: evaluation, annotation (human review), or custom
 
 Scores appear throughout the product: on traces, in evaluation dashboards, in issue details, and in simulation reports.
 
 ## What's Next
 
-- [Scores](../scores/overview) — Deep dive into how scores work
-- [Annotations](../annotations/overview) — Human review workflows
-- [Issues](../issues/overview) — Learn about issue lifecycle and management
-- [Evaluations](../evaluations/overview) — Understand automated monitoring
+- [Scores](../scores/overview): Deep dive into how scores work
+- [Annotations](../annotations/overview): Human review workflows
+- [Issues](../issues/overview): Learn about issue lifecycle and management
+- [Evaluations](../evaluations/overview): Understand automated monitoring

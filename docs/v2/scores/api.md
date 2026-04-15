@@ -41,17 +41,17 @@ curl -X POST \
     "traceId": "abc123def456",
     "value": 0.2,
     "passed": false,
-    "feedback": "User reported the answer was incorrect — the recommended product was discontinued",
+    "feedback": "User reported the answer was incorrect. The recommended product was discontinued",
     "source_id": "user-feedback"
   }'
 ```
 
 ### Use Cases
 
-- **User satisfaction ratings** — Convert thumbs up/down or star ratings into scores
-- **Task completion metrics** — Track whether the agent's output led to a successful outcome
-- **Business KPIs** — Conversion rates, resolution rates, or other downstream metrics
-- **External validation** — Results from your own evaluation pipeline or third-party tools
+- **User satisfaction ratings**: Convert thumbs up/down or star ratings into scores
+- **Task completion metrics**: Track whether the agent's output led to a successful outcome
+- **Business KPIs**: Conversion rates, resolution rates, or other downstream metrics
+- **External validation**: Results from your own evaluation pipeline or third-party tools
 
 ## Annotations API
 
@@ -77,14 +77,14 @@ Annotations support the same fields as custom scores, plus optional anchor field
 
 Once submitted, custom scores and annotations flow through the same reliability pipeline as internally generated scores:
 
-1. **Issue discovery** — Failed, non-errored scores automatically enter the discovery pipeline, where Latitude clusters similar failures into issues
-2. **Analytics** — Immutable scores are saved to the analytics layer for time-series dashboards
-3. **Alignment** — Annotation scores are compared against evaluation scores for the same traces to compute alignment metrics
+1. **Issue discovery**: Failed, non-errored scores automatically enter the discovery pipeline, where Latitude clusters similar failures into issues
+2. **Analytics**: Immutable scores are saved to the analytics layer for time-series dashboards
+3. **Alignment**: Annotation scores are compared against evaluation scores for the same traces to compute alignment metrics
 
-Custom scores and annotations are first-class citizens — they appear alongside evaluation-generated scores in all dashboards, filters, and analytics views.
+Custom scores and annotations are first-class citizens. They appear alongside evaluation-generated scores in all dashboards, filters, and analytics views.
 
 ## Next Steps
 
-- [Scores Overview](./overview) — How the score model works
-- [Annotations](../annotations/overview) — How the annotation workflow works
-- [Issues](../issues/overview) — How failed scores become trackable issues
+- [Scores Overview](./overview): How the score model works
+- [Annotations](../annotations/overview): How the annotation workflow works
+- [Issues](../issues/overview): How failed scores become trackable issues

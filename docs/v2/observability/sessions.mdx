@@ -17,9 +17,9 @@ Sessions are formed when your application provides a `session_id` with its telem
 
 A session might look like:
 
-1. **Trace 1**: User asks "What's the weather?" — Agent responds with current weather
-2. **Trace 2**: User asks "What about tomorrow?" — Agent responds with the forecast
-3. **Trace 3**: User asks "Should I bring an umbrella?" — Agent gives a recommendation
+1. **Trace 1**: User asks "What's the weather?". The agent responds with current weather
+2. **Trace 2**: User asks "What about tomorrow?". The agent responds with the forecast
+3. **Trace 3**: User asks "Should I bring an umbrella?". The agent gives a recommendation
 
 Each turn is its own trace with its own spans, scores, and evaluations. The session ties them together.
 
@@ -29,16 +29,16 @@ Toggle between **Traces** and **Sessions** using the switcher in the top right o
 
 The sessions view shows:
 
-- **Expandable session rows** — Click a session to reveal all traces within it
-- **Start time** — When the session began
-- **Name** — The trace name (from `path` in your `capture()` call)
-- **Duration** — Total duration across all traces in the session
-- **Time to First Token** — Median TTFT across the session's traces
-- **Cost** — Aggregated cost across all traces
-- **Session ID** — The identifier your application provided
-- **User ID** — The end user, if provided via telemetry metadata
-- **Models** — Which LLM models were used across the session
-- **Span count** — Total spans across all traces
+- **Expandable session rows**: Click a session to reveal all traces within it
+- **Start time**: When the session began
+- **Name**: The trace name (from `path` in your `capture()` call)
+- **Duration**: Total duration across all traces in the session
+- **Time to First Token**: Median TTFT across the session's traces
+- **Cost**: Aggregated cost across all traces
+- **Session ID**: The identifier your application provided
+- **User ID**: The end user, if provided via telemetry metadata
+- **Models**: Which LLM models were used across the session
+- **Span count**: Total spans across all traces
 
 Each trace within a session is listed with its own metrics, so you can spot which specific turn had high latency or cost.
 
@@ -46,9 +46,9 @@ Each trace within a session is listed with its own metrics, so you can spot whic
 
 Sessions enable:
 
-- **Conversation-level evaluation** — Evaluations can target session-level interactions, not just individual turns. This catches problems like context loss, contradiction, and conversational drift.
-- **Session-level score aggregation** — Roll up scores across an entire conversation to see overall quality, not just per-turn results.
-- **Richer issue context** — When drilling into issues, seeing the full session context helps understand failure patterns that only emerge across multiple turns.
+- **Conversation-level evaluation**: Evaluations can target session-level interactions, not just individual turns. This catches problems like context loss, contradiction, and conversational drift.
+- **Session-level score aggregation**: Roll up scores across an entire conversation to see overall quality, not just per-turn results.
+- **Richer issue context**: When drilling into issues, seeing the full session context helps understand failure patterns that only emerge across multiple turns.
 
 ## Sending Session IDs
 
@@ -97,7 +97,7 @@ This means:
 
 ## Next Steps
 
-- [Traces](./traces) — The individual interactions that make up a session
-- [Scores](../scores/overview) — How scores attach to traces and sessions
-- [Evaluations](../evaluations/triggers) — Configuring evaluations to target sessions
-- [Annotation Queues](../annotations/annotation-queues) — Adding sessions to review backlogs
+- [Traces](./traces): The individual interactions that make up a session
+- [Scores](../scores/overview): How scores attach to traces and sessions
+- [Evaluations](../evaluations/triggers): Configuring evaluations to target sessions
+- [Annotation Queues](../annotations/annotation-queues): Adding sessions to review backlogs
