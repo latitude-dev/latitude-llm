@@ -100,4 +100,5 @@ These same filters power evaluation triggers and live annotation queues — when
 
 - [Traces](./traces) — Understand the trace model and lifecycle in detail
 - [Sessions](./sessions) — Learn about session-level aggregation
+- [Filters](./filters) — Learn how the shared filter system works
 - [Scores](../scores/overview) — See how scores attach to your telemetry

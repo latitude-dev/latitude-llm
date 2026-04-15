@@ -36,10 +36,10 @@ For systematic, high-volume annotation work, use **annotation queues** instead. 
 
 When creating an inline annotation, you can:
 
-- **Link to an existing issue** — Associate your annotation with a known failure pattern
-- **Create a new issue** — If you've discovered a new failure pattern, create an issue directly from the annotation
+- **Leave issue assignment automatic** — Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one) when the score is finalized
+- **Link to an existing issue** — Associate your annotation with a known failure pattern, bypassing automatic discovery for that score
 
-This makes inline annotations a discovery mechanism: as you browse traces, you can surface new issues organically.
+Once finalized, failed annotations feed into the issue discovery pipeline automatically — you don't need to create issues manually.
 
 ## Next Steps
 

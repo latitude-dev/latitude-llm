@@ -33,13 +33,16 @@ Every project starts with **default system queues** that automatically classify 
 - **Forgetting** — The agent loses conversation context
 - **Laziness** — The agent avoids doing the requested work
 - **NSFW** — Inappropriate content
+- **Trashing** — The agent cycles between tools without making progress
 - **Tool Call Errors** — Failed tool invocations
 - **Resource Outliers** — Unusually high latency or cost
+- **Output Schema Validation** — A structured-output response didn't conform to the declared schema
+- **Empty Response** — The assistant returned an empty or degenerate response
 
-System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first — only sampled-in traces are evaluated further. Then:
+System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first — only sampled-in traces are evaluated further. Then each queue runs its classifier:
 
-- **Tool Call Errors** and **Resource Outliers** use **deterministic rules** (no LLM needed)
-- The remaining queues use a lightweight LLM-based classifier with limited conversation context
+- **Tool Call Errors**, **Output Schema Validation**, **Empty Response**, and **Resource Outliers** use **deterministic rules** (no LLM needed)
+- **Jailbreaking**, **Refusal**, **Frustration**, **Forgetting**, **Laziness**, **NSFW**, and **Trashing** will use lightweight LLM-based classifiers — these are under active development and will roll out incrementally
 
 When a trace is flagged, a separate validation step using the full conversation context confirms the match and creates a draft annotation before the trace enters the queue.
 

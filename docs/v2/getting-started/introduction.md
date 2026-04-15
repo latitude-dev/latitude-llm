@@ -45,5 +45,6 @@ The result is a continuous improvement cycle where your agents get better with e
 
 ## Next Steps
 
+- **New to Latitude?** Read [Core Concepts](./concepts) to understand organizations, projects, and how everything fits together.
 - **Developers**: Follow the [Developer Quick Start](./quick-start-dev) to connect your first agent and see traces in Latitude.
 - **Team leads and PMs**: Follow the [No-Code Quick Start](./quick-start-pm) for a walkthrough of the Latitude web UI.

@@ -91,6 +91,16 @@ One of the most powerful workflows in Latitude:
 
 Issues may have several linked evaluations. Each generation starts a background job — the frontend polls for completion status.
 
+## Issue Visibility
+
+Not all issues appear in the default view immediately. Latitude uses a denoising strategy to keep the issues list actionable:
+
+- **Issues with at least one linked annotation** are always visible — human evidence is the strongest signal
+- **Manually created or manually linked issues** are always visible
+- **Low-evidence issues** (only evaluation or custom score matches, no annotations) may be hidden from the default list until enough evidence accumulates
+
+This prevents noisy, low-confidence detections from cluttering your issues page. As more scores match an issue or a human annotates a trace linked to it, the issue is promoted to full visibility automatically.
+
 ## Issue Analytics
 
 Each issue provides:

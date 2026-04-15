@@ -20,6 +20,8 @@ A simulation is a **local-first test run** of your agent that:
 3. Runs **evaluation scripts** against those traces
 4. Produces a **report** with pass/fail results, scores, and feedback
 
+Simulations are designed to be **local-first**: the Latitude CLI works as a standalone simulation runner, even without a hosted Latitude workspace. You can run simulations, execute evaluations, and get results entirely on your local machine or in CI. Uploading results to Latitude for historical tracking and team visibility is optional.
+
 Simulations reuse the same evaluation scripts that monitor production traffic. This means the quality bar in testing matches the quality bar in production.
 
 ## Why Simulations Matter

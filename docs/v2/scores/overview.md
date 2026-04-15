@@ -91,3 +91,4 @@ Scores feed forward into every part of Latitude:
 - [Evaluations](../evaluations/overview) — How automated scripts create scores
 - [Issues](../issues/overview) — How failed scores become trackable failure patterns
 - [Analytics](./analytics) — Visualizing score trends
+- [Scores API](./api) — Submit custom scores and annotations programmatically

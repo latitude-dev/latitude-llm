@@ -42,7 +42,17 @@ When Latitude discovers an issue from evaluation failures, human annotations con
 
 Annotations capture *why* an interaction was good or bad in the reviewer's own words. This qualitative feedback is valuable for understanding failure modes and informing evaluation improvements.
 
-Latitude enriches raw annotation feedback with surrounding conversation context before using it for issue discovery. The original human text is always preserved in metadata, while the enriched version becomes the canonical feedback used for clustering.
+#### Feedback Enrichment
+
+Raw annotation feedback is often short — things like "bad answer" or "wrong price." These brief notes are valuable but don't cluster well for issue discovery.
+
+To solve this, Latitude enriches annotation feedback before using it for issue clustering:
+
+1. **Your original text is always preserved** in the score's metadata — it's never lost or overwritten
+2. **The canonical feedback field** is enriched with surrounding conversation context (what the user asked, what the agent said, what went wrong)
+3. **Issue discovery uses the enriched version** for semantic similarity and text matching, so short human notes still cluster with related failures
+
+This means you can write quick, natural feedback during annotation without worrying about phrasing it perfectly for the system.
 
 ## Draft vs. Finalized
 
