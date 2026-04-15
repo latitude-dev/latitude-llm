@@ -15,7 +15,10 @@ interface MagicLinkEmailProps {
 export function MagicLinkEmail({ userName, magicLinkUrl }: MagicLinkEmailProps) {
   return (
     <ContainerLayout previewText={`Hi ${userName}, sign in to Latitude`}>
-      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Welcome back, ${userName}`}</EmailText>
+      <EmailText
+        variant="heading"
+        className={emailDesignTokens.spacing.headingGap}
+      >{`Welcome back, ${userName}`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         We received a sign-in request for your account. Tap the button below to continue to your Latitude dashboard.
       </EmailText>
@@ -25,7 +28,8 @@ export function MagicLinkEmail({ userName, magicLinkUrl }: MagicLinkEmailProps) 
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>
-        For security, this link is valid for 1 hour and works only once. If you didn&apos;t request this, you can safely ignore this email.
+        For security, this link is valid for 1 hour and works only once. If you didn&apos;t request this, you can safely
+        ignore this email.
       </EmailText>
     </ContainerLayout>
   )

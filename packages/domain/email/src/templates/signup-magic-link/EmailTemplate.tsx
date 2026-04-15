@@ -15,9 +15,13 @@ interface SignupMagicLinkEmailProps {
 export function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLinkEmailProps) {
   return (
     <ContainerLayout previewText={`Hi ${userName}, confirm your email to get started`}>
-      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hey ${userName}, let's get you set up`}</EmailText>
+      <EmailText
+        variant="heading"
+        className={emailDesignTokens.spacing.headingGap}
+      >{`Hey ${userName}, let's get you set up`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Thanks for signing up for Latitude. Confirm your email address by tapping the button below, and we&apos;ll have your workspace ready in seconds.
+        Thanks for signing up for Latitude. Confirm your email address by tapping the button below, and we&apos;ll have
+        your workspace ready in seconds.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
