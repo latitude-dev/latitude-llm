@@ -50,28 +50,28 @@ Submitted by your own code through the Latitude API. Use custom scores for domai
 - Business KPIs (conversion rates, resolution rates)
 - Downstream validation (was the agent's output actually correct?)
 
-## Score States
+## Score Lifecycle
 
 A score progresses through a defined lifecycle:
 
-- **Draft**: The score has `draftedAt` set. It is visible in draft-aware surfaces (like queue review and in-progress annotation editing) but excluded from analytics, issue discovery, and evaluation alignment.
-- **Passed final**: Not a draft, `passed = true`, not errored. Immutable and saved to analytics.
-- **Failed awaiting issue**: Not a draft, `passed = false`, not errored, no `issueId` yet. Lives only in Postgres until issue assignment completes.
-- **Failed final**: Not a draft, `passed = false`, not errored, `issueId` assigned. Immutable and saved to analytics.
-- **Errored**: Not a draft, `errored = true`. Represents a real execution failure. Excluded from issue discovery and evaluation alignment but still visible for observability.
+- **Draft**: The score is still being worked on. It appears in annotation review and editing views but is excluded from analytics, issue discovery, and evaluation alignment.
+- **Passed (final)**: The score passed and is now permanent. It appears in analytics dashboards.
+- **Failed (awaiting issue)**: The score failed. Latitude is in the process of matching it to an existing issue or creating a new one.
+- **Failed (final)**: The score failed and has been linked to an issue. It appears in analytics dashboards and the issue's detail page.
+- **Errored**: The score represents a real execution failure (e.g., the evaluation script crashed). Errored scores are visible for observability but excluded from issue discovery and evaluation alignment.
 
-Once a score is finalized (no longer a draft), it becomes immutable. It may be deleted later but should not be edited.
+Once a score is finalized (no longer a draft), it becomes permanent and cannot be edited.
 
 ## Draft Scores
 
 Scores from human annotations start as **drafts**. A draft score:
 
-- Is written to Postgres immediately so it persists across page refreshes
-- Is visible in draft-aware surfaces like annotation queue review and in-progress editing
+- Persists immediately so it survives page refreshes
+- Is visible in annotation queue review and in-progress editing
 - Does not appear in analytics, issue discovery, or alignment metrics
-- Can be edited and revised while `draftedAt` is still set
+- Can be edited and revised while still in draft state
 
-Human-created drafts are finalized automatically after a debounced timeout (default: 5 minutes after the last edit). System-created queue drafts wait for explicit human review before finalization.
+Human-created drafts are finalized automatically after a quiet period (default: 5 minutes after the last edit). System-created drafts (from automatic queue classification) wait for explicit human review before finalization.
 
 ## How Scores Flow Through the System
 
@@ -83,7 +83,7 @@ Scores feed forward into every part of Latitude:
 
 3. **Alignment**: Annotation scores are compared against evaluation scores for the same traces. This produces [alignment metrics](../evaluations/alignment) that tell you how well automated evaluations match human judgment.
 
-4. **Analytics**: Immutable scores are saved to ClickHouse for time-series dashboards showing quality trends across your project.
+4. **Analytics**: Finalized scores feed into time-series dashboards showing quality trends across your project.
 
 ## Next Steps
 

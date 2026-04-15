@@ -85,13 +85,7 @@ Add simulations to your CI/CD pipeline to gate deployments on quality. The CLI r
 
 ## Uploading Results
 
-When you provide a Latitude API key, simulation results can be uploaded to your project:
-
-- Score uploads use the same `POST /v1/organizations/:organizationId/projects/:projectId/scores` endpoint as other score sources
-- Custom evaluation results use the default custom-score contract
-- Latitude evaluation results include `_evaluation: true` with evaluation metadata and the evaluation CUID as `source_id`
-
-This gives you historical tracking, trace inspection in the Latitude UI, and score integration with your project's analytics.
+When you provide a Latitude API key, simulation results can be uploaded to your project. This gives you historical tracking, trace inspection in the Latitude UI, and score integration with your project's analytics.
 
 ## Additional Language SDKs
 

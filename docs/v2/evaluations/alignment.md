@@ -58,7 +58,7 @@ Each evaluation's detail page shows alignment metrics when annotation data exist
 
 When you generate an evaluation from an issue, alignment is core to the generation process:
 
-1. Latitude collects annotation-derived ground truth: at least one failed, non-draft, non-errored annotation linked to the issue (positive examples), plus available negative examples
+1. Latitude collects annotation-derived ground truth: at least one finalized, failed annotation linked to the issue (positive examples), plus available negative examples
 2. The optimizer generates candidate scripts and evaluates them against this ground truth
 3. The best script is selected based on ordered objectives: maximize MCC, then minimize cost, then minimize duration
 4. The confusion matrix is stored on the evaluation

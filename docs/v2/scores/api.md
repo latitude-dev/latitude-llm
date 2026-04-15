@@ -28,7 +28,7 @@ Each score requires:
 | `sessionId` | string | No | Associate with a session |
 | `metadata` | object | No | Arbitrary JSON metadata |
 
-Custom scores are created with `source = "custom"` automatically.
+Scores submitted through this endpoint are automatically categorized as custom scores.
 
 ### Example
 
@@ -61,7 +61,7 @@ Submit human annotations through the dedicated annotations endpoint:
 POST /v1/organizations/:organizationId/projects/:projectId/annotations
 ```
 
-This endpoint creates scores with `source = "annotation"` and `source_id = "API"`. Use it when building your own annotation or feedback UI outside of Latitude's web interface.
+Use this endpoint when building your own annotation or feedback UI outside of Latitude's web interface. Annotations submitted through this API appear alongside annotations created in the Latitude UI.
 
 Annotations support the same fields as custom scores, plus optional anchor fields for message-level or text-range annotations:
 
@@ -77,7 +77,7 @@ Annotations support the same fields as custom scores, plus optional anchor field
 
 Once submitted, custom scores and annotations flow through the same reliability pipeline as internally generated scores:
 
-1. **Issue discovery**: Failed, non-errored scores automatically enter the discovery pipeline, where Latitude clusters similar failures into issues
+1. **Issue discovery**: Failed scores automatically enter the discovery pipeline, where Latitude clusters similar failures into issues
 2. **Analytics**: Immutable scores are saved to the analytics layer for time-series dashboards
 3. **Alignment**: Annotation scores are compared against evaluation scores for the same traces to compute alignment metrics
 

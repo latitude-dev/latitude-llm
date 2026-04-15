@@ -27,9 +27,9 @@ Each issue has:
 
 Issue discovery uses **hybrid semantic search** to match new failures against existing issues or create new ones. Here's how it works:
 
-1. A score fails (non-draft, non-errored) and has no issue assignment yet
+1. A score fails and is finalized, with no issue assignment yet
 2. If the score comes from an issue-linked evaluation, it assigns directly to that issue. No search needed
-3. Otherwise, the score's canonical **feedback** text is embedded using a vector model
+3. Otherwise, the score's **feedback** text is embedded using a vector model
 4. Latitude runs **hybrid search** in Weaviate, combining vector similarity with BM25 text matching, against existing issue centroids and descriptions
 5. Results are **reranked** using a dedicated reranking model
 6. Candidates that don't pass minimum similarity and relevance thresholds are filtered out

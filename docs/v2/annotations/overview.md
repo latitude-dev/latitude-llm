@@ -20,7 +20,7 @@ An annotation is a human reviewer's verdict on a trace. Each annotation includes
 | **Issue link** | Optional link to an existing issue |
 | **Reviewer** | The team member who created the annotation |
 
-Annotations are stored as scores with `source = "annotation"`. When finalized, they feed into analytics, issue discovery, and evaluation alignment.
+When finalized, annotations feed into analytics, issue discovery, and evaluation alignment alongside all other scores.
 
 ## Why Annotations Matter
 
