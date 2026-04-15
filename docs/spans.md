@@ -33,7 +33,7 @@ Instead:
 - the `domain-events` dispatcher reacts to `SpanIngested` by publishing `live-traces:end` keyed by `(organizationId, projectId, traceId)`
 - if another span for that trace arrives before the delay elapses, the same logical `live-traces:end` task is replaced/rescheduled so the debounce window starts over
 - when the debounce window elapses, `live-traces:end` publishes `TraceEnded` directly through `createEventsPublisher(queuePublisher)`
-- the `domain-events` dispatcher then reacts to `TraceEnded` by publishing downstream tasks such as `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
+- the `domain-events` dispatcher then reacts to `TraceEnded` by publishing downstream tasks such as `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut`
 - the `domain-events` dispatcher never executes downstream reliability side effects inline; it only dispatches tasks
 
 This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and task fan-out pattern.

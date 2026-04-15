@@ -3,6 +3,7 @@ import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -99,7 +100,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to 4 targets including firstTrace check", async () => {
+  it("routes SpanIngested to live-traces:end and firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
@@ -110,19 +111,25 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "live-annotation-queues:curate",
-      "live-evaluations:enqueue",
-      "projects:checkFirstTrace",
-      "system-annotation-queues:fanOut",
-    ])
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["live-traces:end", "projects:checkFirstTrace"])
 
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
+    const liveTracesEnd = published.find((p) => p.queue === "live-traces")
+
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
+    expect(liveTracesEnd?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+    expect(liveTracesEnd?.options).toEqual({
+      dedupeKey: "live-traces:end:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
+    })
   })
 
-  it("rejects legacy TraceEnded events", async () => {
-    const { consumer } = setupDispatcher()
+  it("routes TraceEnded to evaluations and both annotation-queue consumers", async () => {
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
@@ -130,23 +137,42 @@ describe("domain-events dispatcher", () => {
       traceId: "trace-abc",
     })
 
-    const result = await Effect.runPromise(
-      consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope)).pipe(
-        Effect.match({
-          onFailure: (error) => ({
-            ok: false as const,
-            error: error as { _tag: string; name: string },
-          }),
-          onSuccess: () => ({ ok: true as const, error: null }),
-        }),
-      ),
-    )
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error._tag).toBe("UnhandledEventError")
-      expect(result.error.name).toBe("TraceEnded")
-    }
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "live-annotation-queues:curate",
+      "live-evaluations:enqueue",
+      "system-annotation-queues:fanOut",
+    ])
+
+    const liveEvaluations = published.find((p) => p.queue === "live-evaluations")
+    const liveAnnotationQueues = published.find((p) => p.queue === "live-annotation-queues")
+    const systemAnnotationQueues = published.find((p) => p.queue === "system-annotation-queues")
+
+    expect(liveEvaluations?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+    expect(liveAnnotationQueues?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+    expect(systemAnnotationQueues?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+    expect(liveEvaluations?.options).toEqual({
+      dedupeKey: "evaluations:live:enqueue:org-1:proj-1:trace-abc",
+    })
+    expect(liveAnnotationQueues?.options).toEqual({
+      dedupeKey: "annotation-queues:live:curate:org-1:proj-1:trace-abc",
+    })
+    expect(systemAnnotationQueues?.options).toEqual({
+      dedupeKey: "annotation-queues:system:fan-out:org-1:proj-1:trace-abc",
+    })
   })
 
   it("routes ProjectCreated to projects:provision", async () => {

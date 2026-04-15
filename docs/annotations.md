@@ -45,7 +45,7 @@ Rules:
 - human-created drafts publish on a debounced timeout after the last edit; the initial default is `5 minutes`
 - human-editable draft publication is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id, not by browser-local timers or persisted due-work scans
 - system-created queue drafts still use the queue CUID as `source_id`
-- they are created by a separate validation/annotation task that runs after `system-annotation-queues:flag` has flagged the trace for that system queue
+- they are created by the `systemQueueFlaggerWorkflow` started from `system-annotation-queues:fanOut` for that trace
 - system-created queue drafts do not use the automatic publication path; they wait for explicit human review
 - drafts do not participate in issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
@@ -65,7 +65,7 @@ Explicit link choices are human overrides:
 
 - while the annotation is still drafted, they store editable issue intent on the canonical score row
 - once published, they bypass similarity-based candidate selection for that annotation score
-- publication writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write, projection sync, and ClickHouse analytics sync
+- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write when needed, projection sync, and ClickHouse analytics sync
 - explicitly linked issues remain immediately visible only after publication
 
 ## Managed Queue Review
@@ -157,8 +157,8 @@ Important v2 carry-forward:
 5. while `draftedAt` is still set, keep the score out of issue discovery, issue-centroid mutation, Weaviate projection sync, evaluation alignment, and ClickHouse analytics
 6. if the annotator selected an existing issue while drafting, keep that `issue_id` only as editable draft intent
 7. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
-8. if the published annotation had a linked issue selected while drafted and is failed/non-errored, write `IssueDiscoveryRequested` carrying that selected `issueId`
-9. if the published annotation has no linked issue and is failed/non-errored, write `IssueDiscoveryRequested` without `issueId` so centralized issue handling can choose between known-issue routing and full similarity discovery
+8. if the published annotation had a linked issue selected while drafted and is failed/non-errored, the emitted `ScoreCreated` payload carries that selected `issueId` for centralized direct assignment
+9. if the published annotation has no linked issue and is failed/non-errored, the emitted `ScoreCreated` payload carries `issueId = null` so centralized issue handling can choose between known-issue routing and full similarity discovery
 10. if the published annotation is now immutable and ready for analytics save without issue mutation, save it to ClickHouse analytics
 
 ## Relationship To Issues

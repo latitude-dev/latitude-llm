@@ -30,6 +30,25 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
+  const buildTraceEndedDedupeKey = (prefix: string, payload: EventPayloads["TraceEnded"]) =>
+    `${prefix}:${payload.organizationId}:${payload.projectId}:${payload.traceId}`
+
+  const publishTraceEndedFanOut = (payload: EventPayloads["TraceEnded"]) =>
+    Effect.all(
+      [
+        pub.publish("live-evaluations", "enqueue", payload, {
+          dedupeKey: buildTraceEndedDedupeKey("evaluations:live:enqueue", payload),
+        }),
+        pub.publish("live-annotation-queues", "curate", payload, {
+          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:live:curate", payload),
+        }),
+        pub.publish("system-annotation-queues", "fanOut", payload, {
+          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:system:fan-out", payload),
+        }),
+      ],
+      { concurrency: "unbounded" },
+    ).pipe(Effect.asVoid)
+
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
       hash(event.payload.magicLinkUrl).pipe(
@@ -57,16 +76,8 @@ export const createDomainEventsWorker = ({
     SpanIngested: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload, {
-            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("live-annotation-queues", "curate", event.payload, {
-            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("system-annotation-queues", "fanOut", event.payload, {
-            dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
+          pub.publish("live-traces", "end", event.payload, {
+            dedupeKey: `live-traces:end:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish(
@@ -82,6 +93,8 @@ export const createDomainEventsWorker = ({
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
+
+    TraceEnded: (event) => publishTraceEndedFanOut(event.payload),
 
     ScoreCreated: (event) =>
       Effect.all([
