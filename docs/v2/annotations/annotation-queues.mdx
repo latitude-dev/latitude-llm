@@ -27,17 +27,51 @@ Each queue has a name, description, instructions for reviewers, and configuratio
 
 Every project starts with **default system queues** that automatically classify traces against common failure categories:
 
-- **Jailbreaking** — Attempts to bypass safety constraints
-- **Refusal** — The agent refuses requests it should handle
-- **Frustration** — Clear user dissatisfaction
-- **Forgetting** — The agent loses conversation context
-- **Laziness** — The agent avoids doing the requested work
-- **Inappropriate Content** — Sexual or otherwise not-safe-for-work content
-- **Trashing** — The agent cycles between tools without making progress
-- **Tool Call Errors** — Failed tool invocations
-- **Resource Outliers** — Unusually high latency or cost
-- **Output Schema Validation** — A structured-output response didn't conform to the declared schema
-- **Empty Response** — The assistant returned an empty or degenerate response
+<AccordionGroup>
+  <Accordion title="Jailbreaking">
+    Detects attempts to bypass system or safety constraints. This covers prompt injection, instruction hierarchy attacks, policy-evasion attempts, tool abuse intended to bypass guardrails, role or identity escape attempts, or assistant behavior that actually follows those bypass attempts. Does not flag harmless roleplay or ordinary unsafe requests that the assistant correctly refuses.
+  </Accordion>
+
+  <Accordion title="Refusal">
+    Detects when the assistant refuses a request it should handle. Flags traces where the assistant declines, deflects, or over-restricts even though the request is allowed and answerable within product policy and system capabilities. Does not flag correct refusals where the request is unsafe, unsupported, or missing required context.
+  </Accordion>
+
+  <Accordion title="Frustration">
+    Detects clear user frustration or dissatisfaction. Flags traces where the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Does not flag neutral clarifications or isolated terse replies without real evidence of frustration.
+  </Accordion>
+
+  <Accordion title="Forgetting">
+    Detects when the assistant forgets earlier conversation context or instructions. Flags traces where the assistant loses relevant session memory, repeats already-settled questions, contradicts previously established facts, or ignores earlier constraints from the same conversation. Does not flag ambiguity that was never resolved or context the user never provided.
+  </Accordion>
+
+  <Accordion title="Laziness">
+    Detects when the assistant avoids doing the requested work. Flags traces where the assistant gives a shallow partial answer, stops early without justification, refuses to inspect provided context, or pushes work back onto the user. Does not flag cases where the task is genuinely blocked by missing access, context, or policy constraints.
+  </Accordion>
+
+  <Accordion title="Inappropriate Content">
+    Detects sexual or otherwise not-safe-for-work content. Flags traces containing sexual content, explicit erotic material, or other clearly inappropriate content that should be reviewed. Does not flag benign anatomy or health discussion, mild romance, or safety-oriented policy discussion.
+  </Accordion>
+
+  <Accordion title="Trashing">
+    Detects when the agent cycles between tools without making progress. Flags traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Does not flag legitimate retries after transient errors or iterative refinement that is visibly converging.
+  </Accordion>
+
+  <Accordion title="Tool Call Errors">
+    Detects failed or errored tool invocations. Flags traces where the conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. Uses deterministic rules — no LLM needed.
+  </Accordion>
+
+  <Accordion title="Resource Outliers">
+    Detects unusually high latency, time to first token, token usage, or cost. Flags traces where resource consumption materially exceeds project norms based on percentile and median baselines. Uses deterministic rules — no LLM needed.
+  </Accordion>
+
+  <Accordion title="Output Schema Validation">
+    Detects structured-output responses that don't conform to the declared schema. Flags traces where a GenAI span was configured to produce structured output and the actual response either failed to parse as JSON or was visibly truncated before completion. Uses deterministic rules — no LLM needed.
+  </Accordion>
+
+  <Accordion title="Empty Response">
+    Detects empty or degenerate assistant responses. Flags traces where the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text. Uses deterministic rules — no LLM needed.
+  </Accordion>
+</AccordionGroup>
 
 System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first — only sampled-in traces are evaluated further. Then each queue runs its classifier:
 
@@ -50,23 +84,40 @@ System queue names, descriptions, and instructions are read-only, but you can ad
 
 ### Live Queues
 
-**Live queues** automatically add traces as they complete. You configure:
-
-- **Filters** — Which traces should enter the queue (using the shared filter system)
-- **Sample rate** — What percentage of matching traces to include (defaults to 10%)
-- **Reviewers** — Which team members should review this queue
-
-Filter matching runs first, then sampling. Live queues grow incrementally as new matching traces arrive.
+**Live queues** automatically add traces as they complete. Enable the **"Make this queue live"** toggle when creating a queue, then configure filters and sampling to control which traces enter the queue. Filter matching runs first, then sampling. Live queues grow incrementally as new matching traces arrive.
 
 ### Manual Queues
 
-**Manual queues** are populated by your team selecting traces from the trace dashboard or sessions dashboard and adding them to the queue. Use manual queues for:
+**Manual queues** are populated by your team selecting traces from the trace dashboard or sessions dashboard and adding them to the queue. Any queue created without the "Make this queue live" toggle is a manual queue. Use manual queues for:
 
 - Ad-hoc investigations ("Review all traces from this customer's session")
 - Issue deep-dives ("Review traces where this specific issue was detected")
 - Targeted annotation campaigns ("Build training data for this new evaluation")
 
 When adding a session to a manual queue, Latitude resolves it to the session's newest trace.
+
+## Creating a Queue
+
+Click the **Create** button on the Annotation Queues page to open the creation dialog:
+
+<Frame>
+  <img src="/images/annotations/create-queue.png" alt="Create Annotation Queue dialog showing configuration fields" />
+</Frame>
+
+Each queue is configured with:
+
+| Field | Description |
+| --- | --- |
+| **Name** | A descriptive name for the queue (e.g., "Customer support review", "Jailbreak investigation") |
+| **Description** | A short summary that appears in the queue list |
+| **Instructions** | Guidance for annotators reviewing traces in this queue — helps reviewers understand what to look for and how to assess interactions |
+| **Assignees** | Team members responsible for reviewing this queue |
+| **Make this queue live** | When enabled, the queue processes new traces automatically based on filters. When disabled, the queue is manual — you add traces to it explicitly. |
+
+When the "Make this queue live" toggle is enabled, additional configuration appears:
+
+- **Filters** — Define which traces should enter the queue using the [shared filter system](../observability/filters)
+- **Sample rate** — What percentage of matching traces to include (defaults to 10%)
 
 ## The Review Experience
 
