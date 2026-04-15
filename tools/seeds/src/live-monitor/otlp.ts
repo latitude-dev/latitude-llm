@@ -97,6 +97,8 @@ export type OtlpExportTraceServiceRequest = {
 export type BuiltTraceSpan = {
   readonly label: string
   readonly offsetMs: number
+  readonly durationMs: number
+  readonly emitAtMs: number
   readonly traceId: string
   readonly spanId: string
   readonly request: OtlpExportTraceServiceRequest
@@ -263,6 +265,8 @@ export function buildTraceRequests(input: {
     return {
       label: span.label,
       offsetMs: span.offsetMs,
+      durationMs: span.durationMs,
+      emitAtMs: span.offsetMs + span.durationMs,
       traceId: input.traceId,
       spanId,
       request,

@@ -8,7 +8,7 @@ The database seeds still live in the regular DB packages. This package is for pr
 
 Today this package contains one main tool:
 
-- `seed:live-monitor`: sends realistic OTLP traces to the ingest service using the default seeded organization, project, and API key
+- `seed:live-monitor`: sends OTLP traces to the ingest service using the default seeded organization, project, and API key
 
 This is useful when you want to test the full live-monitoring path end to end:
 
@@ -20,13 +20,16 @@ This is useful when you want to test the full live-monitoring path end to end:
 - live annotation queues curate traces
 - system annotation queues fan out to workflows
 
-The script is intentionally more than a simple fixture replayer:
+The live-monitor script is generator-backed rather than a simple fixture replayer:
 
-- it uses the seeded org/project credentials
-- it auto-provisions the full default system queue set by default
-- it picks `traceId`s that sample in or out as required by each fixture
-- it sends different traces concurrently
-- it preserves a realistic timeline within each trace
+- each fixture defines its own randomized trace generator
+- every generated trace keeps the fixture's sampling and behavioral contract
+- `traceId`s are still searched so sampling resolves in or out as required
+- multiple traces can be generated per fixture
+- traces are dispatched with bounded parallelism
+- spans within a trace are sent sequentially based on simulated trace timing
+- generation can be replayed exactly with `--seed`
+- runtime span enrichment follows the ambient seed conventions from `docs/seeds.md`, adding only the `live-seed` tag and `live_seed_fixture` metadata field on top
 
 ## Seeded Identity Used By The Script
 
@@ -47,9 +50,10 @@ Before running the script, make sure:
 1. Your local database and caches are up.
 2. You have applied the normal DB seeds.
 3. These services are running:
-  - `apps/ingest`
-  - `apps/workers`
-  - `apps/workflows`
+
+- `apps/ingest`
+- `apps/workers`
+- `apps/workflows`
 
 Example startup:
 
@@ -84,7 +88,7 @@ cd /Users/sans/src/latitude-v2/tools/seeds
 pnpm seed:live-monitor --list-fixtures
 ```
 
-Run all fixtures:
+Run one generated trace per fixture:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/seeds
@@ -96,6 +100,20 @@ Run a subset:
 ```bash
 cd /Users/sans/src/latitude-v2/tools/seeds
 pnpm seed:live-monitor --fixtures warranty-eval-in,combination-eval-and-live-queue-in,tool-call-error
+```
+
+Run multiple randomized traces for each selected fixture:
+
+```bash
+cd /Users/sans/src/latitude-v2/tools/seeds
+pnpm seed:live-monitor --fixtures warranty-eval-in,tool-call-error --count-per-fixture 25 --parallel-traces 6
+```
+
+Run the exact same generated corpus again:
+
+```bash
+cd /Users/sans/src/latitude-v2/tools/seeds
+pnpm seed:live-monitor --count-per-fixture 10 --parallel-traces 4 --seed live-monitor-demo-001
 ```
 
 Use a custom ingest URL:
@@ -124,13 +142,16 @@ pnpm seed:live-monitor --no-provision-system-queues
 - `--fixtures <a,b,c>`: comma-separated fixture keys to send
 - `--ingest-url <url>`: base URL for the ingest service
 - `--time-scale <n>`: multiplies fixture delays by the given factor
+- `--count-per-fixture <n>`: generates this many traces for each selected fixture
+- `--parallel-traces <n>`: maximum number of traces dispatched concurrently
+- `--seed <value>`: makes generation reproducible
 - `--no-provision-system-queues`: skips provisioning the default system queues before sending traces
 - `--list-fixtures`: prints the available fixture keys and exits
 - `--help`: prints help
 
 ## Fixture Catalog
 
-Each fixture represents one trace scenario. Some are meant to trigger live evaluations, some are meant to skip them, some are for live annotation queue curation, and some are for system queue fan-out.
+Each fixture represents a scenario family rather than one literal trace. Every run generates a new trace instance for that family while preserving the intended outcome.
 
 
 | Key                                  | Description                                                                                                                 | Intended outcome                                                                       |
@@ -148,7 +169,7 @@ Each fixture represents one trace scenario. Some are meant to trigger live evalu
 
 ## Recommended First Runs
 
-If you want a small smoke test first:
+If you want a small smoke run first:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/seeds
@@ -162,7 +183,19 @@ That gives you:
 - one trace that should skip live evaluations but curate a live queue
 - one trace that should exercise deterministic system-queue matching
 
-If you want the full matrix, run all fixtures.
+If you want a broader manual validation run:
+
+```bash
+cd /Users/sans/src/latitude-v2/tools/seeds
+pnpm seed:live-monitor --count-per-fixture 5 --parallel-traces 4
+```
+
+If you want the full matrix at scale with reproducible output:
+
+```bash
+cd /Users/sans/src/latitude-v2/tools/seeds
+pnpm seed:live-monitor --count-per-fixture 20 --parallel-traces 8 --seed live-monitor-scale-001
+```
 
 ## Example Run
 
@@ -170,23 +203,26 @@ Example:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/seeds
-pnpm seed:live-monitor --fixtures warranty-eval-in,frustration-in,tool-call-error
+pnpm seed:live-monitor --fixtures warranty-eval-in,frustration-in,tool-call-error --count-per-fixture 3 --parallel-traces 2 --seed example-run-01
 ```
 
 Typical flow:
 
 1. The script provisions the default system queues unless you disabled that behavior.
 2. It loads the seeded evaluations and queues from the database.
-3. It searches for `traceId`s whose deterministic sampling behavior matches each fixture's intended plan.
-4. It prints the selected trace IDs and whether each evaluation or queue is expected to sample in or out.
-5. It asynchronously sends OTLP spans to `POST /v1/traces`.
-6. It prints a `runId` that you can use to correlate logs and traces.
+3. It generates `N` randomized traces for each selected fixture.
+4. It searches for `traceId`s whose deterministic sampling behavior matches each fixture's intended plan.
+5. It prints the seed, run ID, and per-fixture sample expectations.
+6. It dispatches traces through a bounded pool of trace runners.
+7. Each trace runner sends spans one by one according to the simulated trace timeline.
 
 Typical script output will include:
 
 - the ingest endpoint
 - the project slug
-- the selected trace IDs
+- the seed and run ID
+- total trace count
+- per-fixture counts
 - live evaluation sample decisions
 - live queue sample decisions
 - system queue sample decisions
@@ -210,7 +246,7 @@ In practice:
 - `insertedItemCount > 0` in `Live annotation queue curate completed` means a live queue item was created
 - `startedWorkflows > 0` in `System queue fan-out completed` means system queue workflows were started
 
-The script prints a `runId` specifically so you can tie the generated traces to downstream logs.
+The script prints both a `runId` and a `seed` so you can correlate logs and rerun the same generated corpus if needed.
 
 ## Timing Notes
 
@@ -220,15 +256,19 @@ Important:
 
 - `--time-scale` only changes how quickly spans are sent relative to each other
 - it does not shorten the trace-end debounce itself
+- `--parallel-traces` changes how many traces can overlap in dispatch, but each trace still sends spans sequentially
 
-The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS` value and the longest fixture dispatch window.
+The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS` value and the actual dispatch duration of the run.
 
 ## Package Layout
 
 - `src/scripts/send-live-monitor.ts`: CLI entrypoint
-- `src/live-monitor/fixtures.ts`: fixture definitions and descriptions
-- `src/live-monitor/runtime.ts`: queue provisioning, seeded target loading, sample-aware `traceId` search, dispatch orchestration
+- `src/live-monitor/fixtures.ts`: generator-backed fixture registry
+- `src/live-monitor/fixtures/`: per-fixture generator modules
+- `src/live-monitor/runtime.ts`: queue provisioning, target loading, sample-aware trace ID search, run planning, and dispatch orchestration
 - `src/live-monitor/otlp.ts`: OTLP request builders and message helpers
+- `src/live-monitor/random.ts`: seeded RNG used for reproducible generation
+- `src/live-monitor/types.ts`: shared fixture and generated-trace types
 
 ## Future Additions
 

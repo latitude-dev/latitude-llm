@@ -8,6 +8,8 @@ import {
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { deterministicSampling } from "@domain/shared"
 import {
+  AGENT_PROFILES,
+  type AgentProfile,
   SEED_ACCESS_EVALUATION_ID,
   SEED_API_KEY_TOKEN,
   SEED_COMBINATION_EVALUATION_ID,
@@ -26,8 +28,10 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
-import { type LiveMonitorFixtureDefinition, liveMonitorFixtureKeys, liveMonitorFixtures } from "./fixtures.ts"
+import { liveMonitorFixtureKeys, liveMonitorFixtures } from "./fixtures.ts"
 import { type BuiltTraceSpan, buildTraceRequests } from "./otlp.ts"
+import { createSeededRng } from "./random.ts"
+import type { LiveMonitorFixtureDefinition, LiveMonitorGeneratedTrace } from "./types.ts"
 
 const HIGH_COST_LIVE_QUEUE_SLUG = "high-cost-traces"
 const FRUSTRATION_SYSTEM_QUEUE_SLUG = "frustration"
@@ -48,24 +52,30 @@ const EVALUATION_LABELS: Record<string, string> = {
   [SEED_ACCESS_EVALUATION_ID]: "access",
 }
 
-type SeedTargets = {
+export type SeedTargets = {
   readonly evaluationsById: Readonly<Record<string, Evaluation>>
   readonly highCostLiveQueue: AnnotationQueue
   readonly systemQueuesBySlug: Readonly<Record<string, AnnotationQueue>>
 }
 
-type ResolvedFixture = {
+export type LiveMonitorSamplePreview = {
+  readonly evaluations: Readonly<Record<string, boolean>>
+  readonly liveQueue?: boolean
+  readonly systemQueues?: Readonly<Record<string, boolean>>
+}
+
+export type ResolvedLiveMonitorTrace = {
   readonly fixture: LiveMonitorFixtureDefinition
+  readonly instanceIndex: number
+  readonly generatedTrace: LiveMonitorGeneratedTrace
   readonly traceId: string
-  readonly sessionId: string
-  readonly userId: string
-  readonly startDelayMs: number
-  readonly spans: readonly BuiltTraceSpan[]
-  readonly samples: {
-    readonly evaluations: Readonly<Record<string, boolean>>
-    readonly liveQueue?: boolean
-    readonly systemQueues?: Readonly<Record<string, boolean>>
-  }
+  readonly samples: LiveMonitorSamplePreview
+}
+
+export type LiveMonitorRunPlan = {
+  readonly seed: string
+  readonly runId: string
+  readonly traces: readonly ResolvedLiveMonitorTrace[]
 }
 
 export type SendLiveMonitorSeedDataOptions = {
@@ -73,6 +83,42 @@ export type SendLiveMonitorSeedDataOptions = {
   readonly ingestBaseUrl: string
   readonly timeScale: number
   readonly provisionSystemQueues: boolean
+  readonly countPerFixture: number
+  readonly parallelTraces: number
+  readonly seed?: string
+}
+
+export type BuildLiveMonitorRunPlanOptions = {
+  readonly fixtureKeys?: readonly string[]
+  readonly countPerFixture: number
+  readonly timeScale: number
+  readonly seed: string
+  readonly targets: SeedTargets
+}
+
+export type DispatchResolvedTracesOptions = {
+  readonly ingestBaseUrl: string
+  readonly parallelTraces: number
+  readonly runId: string
+  readonly postTraceSpan?: (input: {
+    readonly trace: ResolvedLiveMonitorTrace
+    readonly span: BuiltTraceSpan
+  }) => Promise<void>
+}
+
+export type DispatchResolvedTracesResult = {
+  readonly elapsedMs: number
+  readonly sentTraceCount: number
+  readonly sentSpanCount: number
+}
+
+type TraceDispatchContext = {
+  readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
+  readonly provider?: string
+  readonly model?: string
+  readonly scopeName?: string
+  readonly scopeVersion?: string
 }
 
 function hashHex(input: string, length: number): string {
@@ -116,6 +162,82 @@ function resolveSelectedFixtures(keys?: readonly string[]): readonly LiveMonitor
     }
     return fixture
   })
+}
+
+function runIdForSeed(seed: string): string {
+  return hashHex(`seed-live-monitor:${seed}`, 8)
+}
+
+function getAgentProfile(serviceName: string): AgentProfile {
+  const profile = AGENT_PROFILES.find((candidate) => candidate.serviceName === serviceName)
+  if (!profile) {
+    throw new Error(`Missing seeded agent profile for service "${serviceName}"`)
+  }
+  return profile
+}
+
+function buildSeedStyleMetadata(
+  profile: AgentProfile,
+  environment: string,
+  fixtureKey: string,
+  rng: ReturnType<typeof createSeededRng>,
+): Readonly<Record<string, string>> {
+  const metadata: Record<string, string> = {
+    environment,
+    sdk_version: rng.pick(["1.2.0", "1.3.1", "2.0.0-beta"]),
+    live_seed_fixture: fixtureKey,
+  }
+
+  if (rng.chance(0.6)) {
+    metadata.region = rng.pick(["us-desert-southwest", "us-mountain-west", "mars-colony-1", "eu-west-1"])
+  }
+  if (profile.tag === "support" && rng.chance(0.7)) {
+    metadata.product_category = rng.pick([
+      "explosives",
+      "propulsion",
+      "traps",
+      "disguises",
+      "construction",
+      "miscellaneous",
+    ])
+    metadata.customer_tier = rng.pick(["super-genius", "standard", "premium"])
+    metadata.channel = rng.pick(["web", "mobile", "api", "smoke-signal"])
+  }
+  if (profile.tag === "internal-kb" || profile.tag === "product-copywriting") {
+    metadata.customer_tier = "employee"
+  }
+
+  return metadata
+}
+
+function buildTraceDispatchContext(trace: ResolvedLiveMonitorTrace): TraceDispatchContext {
+  const profile = getAgentProfile(trace.generatedTrace.serviceName)
+  const rng = createSeededRng(
+    `dispatch-context:${trace.traceId}:${trace.fixture.key}:${trace.instanceIndex.toString()}`,
+  )
+  const environment = rng.pick(profile.environments)
+  const model = profile.models.length > 0 ? rng.pick(profile.models) : undefined
+
+  return {
+    tags: [profile.tag, environment, "live-seed"],
+    metadata: buildSeedStyleMetadata(profile, environment, trace.fixture.key, rng),
+    ...(trace.generatedTrace.provider
+      ? { provider: trace.generatedTrace.provider }
+      : model
+        ? { provider: model.provider }
+        : {}),
+    ...(trace.generatedTrace.model ? { model: trace.generatedTrace.model } : model ? { model: model.model } : {}),
+    ...(trace.generatedTrace.scopeName
+      ? { scopeName: trace.generatedTrace.scopeName }
+      : model?.scopeName
+        ? { scopeName: model.scopeName }
+        : {}),
+    ...(trace.generatedTrace.scopeVersion
+      ? { scopeVersion: trace.generatedTrace.scopeVersion }
+      : model
+        ? { scopeVersion: "1.0.0" }
+        : {}),
+  }
 }
 
 async function provisionSystemQueues(): Promise<void> {
@@ -225,7 +347,7 @@ async function computeSamplePreview(
   fixture: LiveMonitorFixtureDefinition,
   targets: SeedTargets,
   traceId: string,
-): Promise<ResolvedFixture["samples"]> {
+): Promise<LiveMonitorSamplePreview> {
   const evaluationEntries = await Promise.all(
     SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
       const evaluation = targets.evaluationsById[evaluationId]
@@ -263,7 +385,7 @@ async function computeSamplePreview(
 
 function samplePreviewMatchesRequirements(
   fixture: LiveMonitorFixtureDefinition,
-  preview: ResolvedFixture["samples"],
+  preview: LiveMonitorSamplePreview,
 ): boolean {
   const includeIds = fixture.sampling.includeEvaluationIds ?? []
   const excludeIds = fixture.sampling.excludeEvaluationIds ?? []
@@ -295,13 +417,17 @@ function samplePreviewMatchesRequirements(
   return true
 }
 
-async function findTraceIdForFixture(
+async function findTraceIdForFixtureInstance(
   fixture: LiveMonitorFixtureDefinition,
   targets: SeedTargets,
-  runId: string,
-): Promise<{ readonly traceId: string; readonly preview: ResolvedFixture["samples"] }> {
+  runSeed: string,
+  instanceIndex: number,
+): Promise<{ readonly traceId: string; readonly preview: LiveMonitorSamplePreview }> {
   for (let attempt = 0; attempt < MAX_TRACE_ID_SEARCH_ATTEMPTS; attempt += 1) {
-    const traceId = hashHex(`seed-live-monitor:${runId}:${fixture.key}:${attempt.toString()}`, 32)
+    const traceId = hashHex(
+      `seed-live-monitor:${runSeed}:${fixture.key}:${instanceIndex.toString()}:${attempt.toString()}`,
+      32,
+    )
     const preview = await computeSamplePreview(fixture, targets, traceId)
 
     if (samplePreviewMatchesRequirements(fixture, preview)) {
@@ -310,7 +436,7 @@ async function findTraceIdForFixture(
   }
 
   throw new Error(
-    `Unable to find a traceId for fixture "${fixture.key}" after ${MAX_TRACE_ID_SEARCH_ATTEMPTS.toString()} attempts`,
+    `Unable to find a traceId for fixture "${fixture.key}" instance ${instanceIndex.toString()} after ${MAX_TRACE_ID_SEARCH_ATTEMPTS.toString()} attempts`,
   )
 }
 
@@ -318,89 +444,130 @@ function scaleMs(value: number, timeScale: number, minimumMs = 0): number {
   return Math.max(minimumMs, Math.round(value * timeScale))
 }
 
-async function resolveFixtures(
-  fixtures: readonly LiveMonitorFixtureDefinition[],
-  targets: SeedTargets,
-  runId: string,
-  timeScale: number,
-): Promise<readonly ResolvedFixture[]> {
-  const scriptBaseTime = Date.now() + 1_500
-
-  return Promise.all(
-    fixtures.map(async (fixture) => {
-      const { traceId, preview } = await findTraceIdForFixture(fixture, targets, runId)
-      const sessionId = `seed-live-monitor:${runId}:${fixture.key}`
-      const userId = `seed-user:${fixture.key}`
-      const startDelayMs = scaleMs(fixture.startDelayMs, timeScale)
-      const baseTime = new Date(scriptBaseTime + startDelayMs)
-      const scaledSpans = fixture.spans.map((span) => ({
-        ...span,
-        offsetMs: scaleMs(span.offsetMs, timeScale),
-        durationMs: scaleMs(span.durationMs, timeScale, 250),
-      }))
-
-      return {
-        fixture,
-        traceId,
-        sessionId,
-        userId,
-        startDelayMs,
-        spans: buildTraceRequests({
-          traceId,
-          sessionId,
-          userId,
-          serviceName: fixture.serviceName,
-          spans: scaledSpans,
-          systemInstructions: fixture.systemInstructions,
-          tags: fixture.tags,
-          metadata: {
-            ...fixture.metadata,
-            runId,
-          },
-          baseTime,
-        }),
-        samples: preview,
-      } satisfies ResolvedFixture
-    }),
-  )
+function scaleGeneratedTrace(trace: LiveMonitorGeneratedTrace, timeScale: number): LiveMonitorGeneratedTrace {
+  return {
+    ...trace,
+    startDelayMs: scaleMs(trace.startDelayMs, timeScale),
+    spans: trace.spans.map((span) => ({
+      ...span,
+      offsetMs: scaleMs(span.offsetMs, timeScale),
+      durationMs: scaleMs(span.durationMs, timeScale, 250),
+    })),
+  }
 }
 
-function printFixturePlan(fixtures: readonly ResolvedFixture[], ingestBaseUrl: string, provisioned: boolean) {
+function getTraceDispatchWindowMs(trace: LiveMonitorGeneratedTrace): number {
+  const spanWindowMs = trace.spans.reduce(
+    (currentMax, span) => Math.max(currentMax, span.offsetMs + span.durationMs),
+    0,
+  )
+  return trace.startDelayMs + spanWindowMs
+}
+
+export async function buildLiveMonitorRunPlan(options: BuildLiveMonitorRunPlanOptions): Promise<LiveMonitorRunPlan> {
+  const fixtures = resolveSelectedFixtures(options.fixtureKeys)
+  const runId = runIdForSeed(options.seed)
+
+  const traces = await Promise.all(
+    fixtures.flatMap((fixture) =>
+      Array.from({ length: options.countPerFixture }, async (_, instanceIndex) => {
+        const rng = createSeededRng(`${options.seed}:${fixture.key}:${instanceIndex.toString()}`)
+        const generatedTrace = scaleGeneratedTrace(
+          fixture.generateTrace({
+            rng,
+            fixtureKey: fixture.key,
+            instanceIndex,
+            runSeed: options.seed,
+          }),
+          options.timeScale,
+        )
+        const { traceId, preview } = await findTraceIdForFixtureInstance(
+          fixture,
+          options.targets,
+          options.seed,
+          instanceIndex,
+        )
+
+        return {
+          fixture,
+          instanceIndex,
+          generatedTrace,
+          traceId,
+          samples: preview,
+        } satisfies ResolvedLiveMonitorTrace
+      }),
+    ),
+  )
+
+  return {
+    seed: options.seed,
+    runId,
+    traces,
+  }
+}
+
+function printFixturePlan(
+  plan: LiveMonitorRunPlan,
+  ingestBaseUrl: string,
+  provisioned: boolean,
+  parallelTraces: number,
+) {
   console.log("Live-monitor seed run plan:")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
   console.log(`  - project slug: ${SEED_PROJECT_SLUG}`)
   console.log(`  - system queue provisioning: ${provisioned ? "enabled" : "skipped"}`)
   console.log(`  - trace-end debounce: ${Math.ceil(TRACE_END_DEBOUNCE_MS / 1000).toString()}s`)
+  console.log(`  - runId: ${plan.runId}`)
+  console.log(`  - seed: ${plan.seed}`)
+  console.log(`  - total traces: ${plan.traces.length.toString()}`)
+  console.log(`  - parallel trace runners: ${parallelTraces.toString()}`)
 
-  for (const resolved of fixtures) {
-    console.log(`\n  - ${resolved.fixture.key}`)
-    console.log(`    traceId: ${resolved.traceId}`)
-    console.log(`    service: ${resolved.fixture.serviceName}`)
+  for (const fixture of liveMonitorFixtures) {
+    const matchingTraces = plan.traces.filter((trace) => trace.fixture.key === fixture.key)
+    if (matchingTraces.length === 0) {
+      continue
+    }
+
+    const example = matchingTraces[0]
+    const spanCounts = matchingTraces.map((trace) => trace.generatedTrace.spans.length)
+    const traceWindows = matchingTraces.map((trace) => getTraceDispatchWindowMs(trace.generatedTrace))
+
+    console.log(`\n  - ${fixture.key} (${matchingTraces.length.toString()} traces)`)
+    console.log(`    example traceId: ${example.traceId}`)
+    console.log(`    service: ${example.generatedTrace.serviceName}`)
+    console.log(`    span count range: ${Math.min(...spanCounts).toString()}-${Math.max(...spanCounts).toString()}`)
     console.log(
-      `    live evaluations: ${Object.entries(resolved.samples.evaluations)
+      `    dispatch window range: ${Math.min(...traceWindows).toString()}-${Math.max(...traceWindows).toString()}ms`,
+    )
+    console.log(
+      `    live evaluations: ${Object.entries(example.samples.evaluations)
         .map(([label, sampled]) => `${label}=${sampled ? "in" : "out"}`)
         .join(", ")}`,
     )
-    if (resolved.samples.liveQueue !== undefined) {
-      console.log(`    high-cost live queue sample: ${resolved.samples.liveQueue ? "in" : "out"}`)
+    if (example.samples.liveQueue !== undefined) {
+      console.log(`    high-cost live queue sample: ${example.samples.liveQueue ? "in" : "out"}`)
     }
-    if (resolved.samples.systemQueues !== undefined) {
+    if (example.samples.systemQueues !== undefined) {
       console.log(
-        `    system queue samples: ${Object.entries(resolved.samples.systemQueues)
+        `    system queue samples: ${Object.entries(example.samples.systemQueues)
           .map(([queueSlug, sampled]) => `${queueSlug}=${sampled ? "in" : "out"}`)
           .join(", ")}`,
       )
     }
-    if (resolved.fixture.deterministicSystemMatches.length > 0) {
-      console.log(`    deterministic system matches: ${resolved.fixture.deterministicSystemMatches.join(", ")}`)
+    if (fixture.deterministicSystemMatches.length > 0) {
+      console.log(`    deterministic system matches: ${fixture.deterministicSystemMatches.join(", ")}`)
     }
-    if (resolved.fixture.llmSystemIntents.length > 0) {
-      console.log(`    LLM system intents: ${resolved.fixture.llmSystemIntents.join(", ")}`)
+    if (fixture.llmSystemIntents.length > 0) {
+      console.log(`    LLM system intents: ${fixture.llmSystemIntents.join(", ")}`)
     }
   }
 }
 
-async function postSpan(ingestBaseUrl: string, traceId: string, request: BuiltTraceSpan["request"]): Promise<void> {
+async function postSpanToIngest(
+  ingestBaseUrl: string,
+  traceId: string,
+  request: BuiltTraceSpan["request"],
+): Promise<void> {
   const response = await fetch(`${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`, {
     method: "POST",
     headers: {
@@ -417,26 +584,80 @@ async function postSpan(ingestBaseUrl: string, traceId: string, request: BuiltTr
   }
 }
 
-async function dispatchFixtures(fixtures: readonly ResolvedFixture[], ingestBaseUrl: string): Promise<void> {
-  const runStartedAt = Date.now()
+async function runWithConcurrency<T>(
+  values: readonly T[],
+  concurrency: number,
+  worker: (value: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0
+  const workerCount = Math.max(1, Math.min(concurrency, values.length))
 
   await Promise.all(
-    fixtures.flatMap((resolved) =>
-      resolved.spans.map(async (span) => {
-        const dueAt = runStartedAt + resolved.startDelayMs + span.offsetMs
-        const sleepFor = Math.max(0, dueAt - Date.now())
-
-        if (sleepFor > 0) {
-          await sleep(sleepFor)
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < values.length) {
+        const currentIndex = nextIndex
+        nextIndex += 1
+        const value = values[currentIndex]
+        if (value !== undefined) {
+          await worker(value)
         }
-
-        await postSpan(ingestBaseUrl, resolved.traceId, span.request)
-        console.log(
-          `[${new Date().toISOString()}] sent ${resolved.fixture.key}/${span.label} trace=${resolved.traceId} span=${span.spanId}`,
-        )
-      }),
-    ),
+      }
+    }),
   )
+}
+
+export async function dispatchResolvedTraces(
+  traces: readonly ResolvedLiveMonitorTrace[],
+  options: DispatchResolvedTracesOptions,
+): Promise<DispatchResolvedTracesResult> {
+  const dispatchStartedAt = Date.now()
+  let sentSpanCount = 0
+
+  await runWithConcurrency(traces, options.parallelTraces, async (trace) => {
+    const traceStartedAt = Date.now()
+    const dispatchContext = buildTraceDispatchContext(trace)
+    const builtSpans = buildTraceRequests({
+      traceId: trace.traceId,
+      sessionId: trace.generatedTrace.sessionId,
+      userId: trace.generatedTrace.userId,
+      serviceName: trace.generatedTrace.serviceName,
+      spans: trace.generatedTrace.spans,
+      systemInstructions: trace.generatedTrace.systemInstructions,
+      tags: dispatchContext.tags,
+      metadata: dispatchContext.metadata,
+      baseTime: new Date(traceStartedAt + trace.generatedTrace.startDelayMs),
+      ...(dispatchContext.provider ? { provider: dispatchContext.provider } : {}),
+      ...(dispatchContext.model ? { model: dispatchContext.model } : {}),
+      ...(dispatchContext.scopeName ? { scopeName: dispatchContext.scopeName } : {}),
+      ...(dispatchContext.scopeVersion ? { scopeVersion: dispatchContext.scopeVersion } : {}),
+    })
+
+    for (const span of builtSpans) {
+      const dueAt = traceStartedAt + trace.generatedTrace.startDelayMs + span.emitAtMs
+      const sleepFor = Math.max(0, dueAt - Date.now())
+
+      if (sleepFor > 0) {
+        await sleep(sleepFor)
+      }
+
+      if (options.postTraceSpan) {
+        await options.postTraceSpan({ trace, span })
+      } else {
+        await postSpanToIngest(options.ingestBaseUrl, trace.traceId, span.request)
+      }
+
+      sentSpanCount += 1
+      console.log(
+        `[${new Date().toISOString()}] sent ${trace.fixture.key}[${trace.instanceIndex.toString()}]/${span.label} trace=${trace.traceId} span=${span.spanId}`,
+      )
+    }
+  })
+
+  return {
+    elapsedMs: Date.now() - dispatchStartedAt,
+    sentTraceCount: traces.length,
+    sentSpanCount,
+  }
 }
 
 export function printFixtureCatalog(): void {
@@ -447,28 +668,37 @@ export function printFixtureCatalog(): void {
 }
 
 export async function sendLiveMonitorSeedData(options: SendLiveMonitorSeedDataOptions): Promise<void> {
-  const selectedFixtures = resolveSelectedFixtures(options.fixtureKeys)
-  const runId = randomUUID().replaceAll("-", "").slice(0, 8)
+  const seed = options.seed ?? randomUUID().replaceAll("-", "")
 
   if (options.provisionSystemQueues) {
     await provisionSystemQueues()
   }
 
   const targets = await loadSeedTargets()
-  const resolvedFixtures = await resolveFixtures(selectedFixtures, targets, runId, options.timeScale)
-  printFixturePlan(resolvedFixtures, options.ingestBaseUrl, options.provisionSystemQueues)
+  const plan = await buildLiveMonitorRunPlan({
+    ...(options.fixtureKeys ? { fixtureKeys: options.fixtureKeys } : {}),
+    countPerFixture: options.countPerFixture,
+    timeScale: options.timeScale,
+    seed,
+    targets,
+  })
 
-  console.log(`\nSending ${resolvedFixtures.length.toString()} traces with runId=${runId}...`)
-  await dispatchFixtures(resolvedFixtures, options.ingestBaseUrl)
+  printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelTraces)
 
-  const maxDispatchMs = resolvedFixtures.reduce((fixtureMax, resolved) => {
-    const spanMax = resolved.spans.reduce((spanLimit, span) => Math.max(spanLimit, span.offsetMs), 0)
-    return Math.max(fixtureMax, resolved.startDelayMs + spanMax)
-  }, 0)
+  console.log(
+    `\nSending ${plan.traces.length.toString()} traces across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
+  )
+  const dispatchResult = await dispatchResolvedTraces(plan.traces, {
+    ingestBaseUrl: options.ingestBaseUrl,
+    parallelTraces: options.parallelTraces,
+    runId: plan.runId,
+  })
 
   console.log("\nAll spans were sent successfully.")
   console.log(
-    `Allow at least ${Math.ceil((TRACE_END_DEBOUNCE_MS + maxDispatchMs) / 1000).toString()}s from script start for every trace to become eligible for TraceEnded on this branch.`,
+    `Allow at least ${Math.ceil((TRACE_END_DEBOUNCE_MS + dispatchResult.elapsedMs) / 1000).toString()}s from script start for every trace to become eligible for TraceEnded on this branch.`,
   )
-  console.log(`Use runId=${runId} to correlate the ingested traces and downstream worker logs.`)
+  console.log(
+    `Use runId=${plan.runId} and seed=${plan.seed} to correlate generated traces with downstream worker logs.`,
+  )
 }
