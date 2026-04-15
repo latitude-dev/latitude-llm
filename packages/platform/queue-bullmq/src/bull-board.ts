@@ -11,6 +11,7 @@ export function createBullBoardQueues(config: BullMqConfig, topicNames: readonly
     host: config.host,
     port: config.port,
     ...(config.password ? { password: config.password } : {}),
+    ...(config.tls ? { tls: {} } : {}),
     maxRetriesPerRequest: null,
   })
 

@@ -51,21 +51,25 @@ export interface BullMqRedisConfig {
     readonly host: string
     readonly port: number
     readonly password?: string
+    readonly tls?: boolean
   }
   /** Optional sink for worker incidents (errors, failed jobs, stalls) for alerting and dashboards. */
   readonly onWorkerIncident?: (incident: BullMqWorkerIncident) => void
 }
 
+const buildRedisOptions = (redis: BullMqRedisConfig["redis"]) => ({
+  host: redis.host,
+  port: redis.port,
+  ...(redis.password ? { password: redis.password } : {}),
+  ...(redis.tls ? { tls: {} } : {}),
+  maxRetriesPerRequest: null,
+})
+
 export const createBullMqQueuePublisher = (
   config: BullMqRedisConfig,
 ): Effect.Effect<QueuePublisherShape, QueueClientError> =>
   Effect.gen(function* () {
-    const connection = new Redis({
-      host: config.redis.host,
-      port: config.redis.port,
-      ...(config.redis.password ? { password: config.redis.password } : {}),
-      maxRetriesPerRequest: null,
-    })
+    const connection = new Redis(buildRedisOptions(config.redis))
 
     const queues = new Map<string, Queue>()
 
@@ -121,12 +125,7 @@ type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, 
 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
   Effect.gen(function* () {
-    const redisConfig = {
-      host: config.redis.host,
-      port: config.redis.port,
-      ...(config.redis.password ? { password: config.redis.password } : {}),
-      maxRetriesPerRequest: null,
-    }
+    const redisConfig = buildRedisOptions(config.redis)
 
     const DEFAULT_CONCURRENCY = 10
     const services = yield* Effect.services<never>()

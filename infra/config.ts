@@ -140,8 +140,8 @@ export const stagingConfig: EnvironmentConfig = {
       },
       {
         name: "workers",
-        cpu: 256,
-        memory: 512,
+        cpu: 512,
+        memory: 1024,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
