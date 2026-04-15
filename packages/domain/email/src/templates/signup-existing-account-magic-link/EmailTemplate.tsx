@@ -17,21 +17,26 @@ export function SignupExistingAccountMagicLinkEmail({
   magicLinkUrl,
 }: SignupExistingAccountMagicLinkEmailProps) {
   return (
-    <ContainerLayout previewText="Sign in to your existing Latitude account">
-      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${userName},`}</EmailText>
+    <ContainerLayout previewText={`Hi ${userName}, you already have a Latitude account`}>
+      <EmailText
+        variant="heading"
+        className={emailDesignTokens.spacing.headingGap}
+      >{`Welcome back, ${userName}`}</EmailText>
       <EmailText variant="body" className="mb-2">
-        Looks like this email is already registered in Latitude.
+        It looks like you tried to create a new account, but this email address is already linked to an existing
+        Latitude workspace.
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Use this secure link to sign in to your existing account.
+        No worries — just tap the button below to sign in directly.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={magicLinkUrl} label="Sign In To Latitude" />
+        <EmailButton href={magicLinkUrl} label="Sign In to Your Account" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>
-        This link will expire in 1 hour and can only be used once.
+        For security, this link is valid for 1 hour and works only once. If you didn&apos;t request this, you can safely
+        ignore this email.
       </EmailText>
     </ContainerLayout>
   )
