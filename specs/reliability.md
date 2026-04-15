@@ -202,7 +202,7 @@ pub.publish("issues", "refresh", payload, {
 ### Naming and ownership rules
 
 - queue topics use lower-kebab-case names such as `live-evaluations`
-- domain events use PascalCase names such as `SpanIngested` and `TraceEnded`
+- domain events use PascalCase names such as `SpanIngested` and `ScoreCreated`
 - each queue topic maps to one subscribed worker module in `apps/workers/src/workers/<topic>.ts`
 - each topic may define several related lower-kebab-case task names such as `enqueue`, `execute`, `flag`, or `annotate`
 - the `domain-events` worker is a dispatcher only: it maps each domain event name to downstream topic tasks or workflow starts and never runs synchronous business logic inline
@@ -215,20 +215,18 @@ pub.publish("issues", "refresh", payload, {
 
 Initial reliability domain-event contracts:
 
-- `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to publish `live-traces:end`
-- `TraceEnded`: published directly into `domain-events` by `live-traces:end` through `createEventsPublisher(queuePublisher)` after its debounce window elapses; consumed by the `domain-events` dispatcher to publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut`
+- `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to debounce and publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut`
 - `ScoreCreated`: written transactionally after every canonical score write, including drafts; the payload carries the canonical `scoreId` plus an optional selected `issueId`, and the `domain-events` dispatcher consumes it by publishing the deduped `issues:discovery` task and the debounced `annotation-scores:publishHumanAnnotation` task
 - `ScoreAssignedToIssue`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be debounced; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
-- `SpanIngested` and `TraceEnded` stay on direct `createEventsPublisher(queuePublisher)` publication because they are high-volume append-only flows whose upstream writes are already durable before publication.
+- `SpanIngested` stays on direct `createEventsPublisher(queuePublisher)` publication because it comes from a high-volume append-only flow whose upstream write is already durable before publication.
 - `ScoreCreated` and `ScoreAssignedToIssue` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with downstream issue discovery, annotation publication, or debounced refresh requests.
 - ClickHouse analytics sync and Weaviate projection sync are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
 
 Initial reliability topic/task contracts:
 
-- `live-traces` / `end`: debounced end-of-trace detection keyed by `(organizationId, projectId, traceId)`; each new `SpanIngested` event for the same trace replaces/reschedules the pending task using BullMQ-backed dedupe/debounce, with the debounce window defined by a named constant whose initial default is `5 minutes`
 - `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
 - `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
@@ -246,12 +244,11 @@ Issue handling now has two queue-backed steps before/after the workflow boundary
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
-Trace-end fan-out:
+Span-ingested fan-out:
 
 - the span-ingestion process publishes `SpanIngested` directly through `createEventsPublisher(queuePublisher)` after spans are durable
-- the `domain-events` dispatcher reacts to `SpanIngested` by publishing `live-traces:end` with dedupe/debounce keyed by `(organizationId, projectId, traceId)`
-- when the debounce window elapses, `live-traces:end` publishes `TraceEnded` directly through `createEventsPublisher(queuePublisher)`
-- the `domain-events` dispatcher reacts to `TraceEnded` by publishing `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut`
+- the `domain-events` dispatcher reacts to `SpanIngested` by publishing `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut`, each debounced and deduped by `(organizationId, projectId, traceId)`
+- if another span for the same trace arrives before the debounce window elapses, the pending tasks are replaced/rescheduled so the window starts over
 - downstream tasks and workflows may publish or start further work such as `live-evaluations:execute` or `system-queue-flagger`, but the dispatcher itself never performs the work inline
 
 ## Trace Filters
@@ -677,7 +674,7 @@ MVP status:
 
 Live evaluation triggering is incremental:
 
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-evaluations` message with task `enqueue` for that trace
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes one `live-evaluations` message with task `enqueue` for that trace
 - `live-evaluations:enqueue` lists all active evaluations in that project, meaning rows with `archivedAt = null` and `deletedAt = null`
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
@@ -1062,7 +1059,7 @@ Queue population flows:
 - from the sessions dashboard table, users select sessions with row checkboxes and use a bulk action to add those sessions to an annotation queue
 - that session bulk action resolves each selected session to its newest trace and creates one `annotation_queue_items` row per `(queueId, latestTraceId)` pair with `completedAt = null`
 - system-created queues are also manual queues: they have no `settings.filter`, they are marked with `system = true`, and membership is inserted by the system instead of by user bulk selection or live filter materialization
-- when a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `system-annotation-queues` message with task `fanOut` for that trace
+- when a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes one `system-annotation-queues` message with task `fanOut` for that trace
 - `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:fanOut` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - for every sampled queue, `system-annotation-queues:fanOut` starts one `system-queue-flagger` workflow keyed by `(traceId, queueSlug)` so queue evaluation stays durable and idempotent per trace/queue pair
@@ -1071,7 +1068,7 @@ Queue population flows:
 - a trace may match none of the system-created queues, or it may match several of them
 - only if the workflow confirms the match does the system create the draft annotation and add the trace to that queue
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
-- live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted live queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
+- live queues are incremental: whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted live queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
 - `system-annotation-queues:fanOut`, `system-queue-flagger`, and `live-annotation-queues:curate` are all separate from `live-evaluations:enqueue`
 - when a live queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
 - when a system queue is provisioned for a project, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; users may later edit that sampling value per queue
@@ -1163,7 +1160,7 @@ Queue invariants:
 - manual queue insertion creates `annotation_queue_items` rows with `completedAt = null`
 - system-created queue insertion creates `annotation_queue_items` rows with `completedAt = null` only after the asynchronous validation/annotation task confirms the queue match and creates the draft annotation
 - live queue materialization also creates `annotation_queue_items` rows with `completedAt = null`
-- live queue materialization is incremental on `TraceEnded`, and it evaluates `filter` before `sampling`
+- live queue materialization is incremental on debounced `SpanIngested`, and it evaluates `filter` before `sampling`
 - progress is derived from total queue items versus queue items with `completedAt` set
 - marking an item as fully annotated is queue-item state, not annotation-row state
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic; there are no foreign keys
@@ -2705,15 +2702,15 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: can run in parallel with Phase 14 once Phase 12 lands.
 
-- [x] Implement `SpanIngested` publication from successful span ingestion via direct `createEventsPublisher(queuePublisher)` publication into `domain-events`, keep `projects:checkFirstTrace` on `SpanIngested`, publish the debounced `live-traces:end` task keyed by `(organizationId, projectId, traceId)`, publish the resulting `TraceEnded` domain event through that same direct `domain-events` rail, and trigger incremental live evaluation work over spans, traces, and sessions using the shared `FilterSet` for `trigger.filter` plus `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, shared trace-field-registry filter matching, the project-scoped scan of active evaluations on each `TraceEnded` event, the dedicated `live-evaluations` task `enqueue` dispatched from the `domain-events` rail, the follow-up `live-evaluations` task `execute` published for each matching `(evaluationId, traceId)` pair, and the sibling `TraceEnded` fan-out to `live-annotation-queues:curate` and `system-annotation-queues:fanOut` without adding a second downstream debounce window.
+- [x] Implement `SpanIngested` publication from successful span ingestion via direct `createEventsPublisher(queuePublisher)` publication into `domain-events`, keep `projects:checkFirstTrace` on `SpanIngested`, debounce and publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut` directly from the `SpanIngested` handler keyed by `(organizationId, projectId, traceId)`, and trigger incremental live evaluation work over spans, traces, and sessions using the shared `FilterSet` for `trigger.filter` plus `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, shared trace-field-registry filter matching, the project-scoped scan of active evaluations on each debounced `SpanIngested` fan-out, the dedicated `live-evaluations` task `enqueue` dispatched from the `domain-events` rail, and the follow-up `live-evaluations` task `execute` published for each matching `(evaluationId, traceId)` pair.
 - [x] Implement hosted `llm()` execution for live evaluations through `@platform/ai-vercel` and the Vercel AI SDK, using Latitude-managed provider/model/API-key configuration rather than user-configured provider/model settings.
 - [x] Implement `live-evaluations:execute` result writing, including value/passed/feedback/error plus persisted nanosecond `duration` and microcent `cost`, Postgres-first canonical persistence, correct `error -> errored` semantics, immediate ClickHouse save for immutable passed/errored results, and immediate save for failed non-errored issue-linked monitor results once `issue_id` is assigned at write time.
 - [x] Ensure archived/deleted evaluations never trigger and paused evaluations use `sampling = 0`.
 - [x] Implement direct `issue_id` assignment at write time for issue-linked monitor failures so those scores are immutable and can be written to ClickHouse analytics immediately.
 - [x] Add the execution hooks needed later by the full portable runtime so the same evaluation artifact can move from the MVP executor into later runtimes without storage changes.
-- [x] Add end-to-end monitor execution tests covering `live-traces:end` debounce reset behavior, `TraceEnded`-driven `live-evaluations:enqueue` behavior, downstream `live-evaluations:execute` behavior, turn selection, pause/archive/delete behavior, direct issue assignment, immutable-score analytics save timing, and persisted usage accounting.
+- [x] Add end-to-end monitor execution tests covering `SpanIngested` debounce reset behavior, debounced `live-evaluations:enqueue` behavior, downstream `live-evaluations:execute` behavior, turn selection, pause/archive/delete behavior, direct issue assignment, immutable-score analytics save timing, and persisted usage accounting.
 
-**Exit gate**: issue monitors run on live traffic; `SpanIngested -> live-traces:end -> TraceEnded -> live-evaluations:enqueue -> live-evaluations:execute` works end to end; evaluation-generated scores land in the canonical score model with the right issue linkage; and passed, errored, plus issue-linked failed immutable monitor results sync to ClickHouse immediately after commit.
+**Exit gate**: issue monitors run on live traffic; `SpanIngested -> (debounce) -> live-evaluations:enqueue -> live-evaluations:execute` works end to end; evaluation-generated scores land in the canonical score model with the right issue linkage; and passed, errored, plus issue-linked failed immutable monitor results sync to ClickHouse immediately after commit.
 
 ### (LAT-471) Phase 14 - Issues Lifecycle, Search, And Product Surface
 
@@ -2774,7 +2771,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [x] Implement annotation queue persistence and orchestration for manual and live queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for live queues, default sampling loaded from named constants when creating live queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
 - [x] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for live queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
-- [x] Connect manual trace/session selection, system-created queue population, and live filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item (deferred to dedicated sessions redesign phase), the dedicated `system-annotation-queues` task `fanOut` dispatched from `TraceEnded` that applies per-queue sampling first and starts one `systemQueueFlaggerWorkflow` per sampled system queue, with that workflow running deterministic checks or the low-cost flagger model and creating the draft annotation plus queue item when matched, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched live queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for live queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
+- [x] Connect manual trace/session selection, system-created queue population, and live filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item (deferred to dedicated sessions redesign phase), the dedicated `system-annotation-queues` task `fanOut` dispatched from debounced `SpanIngested` that applies per-queue sampling first and starts one `systemQueueFlaggerWorkflow` per sampled system queue, with that workflow running deterministic checks or the low-cost flagger model and creating the draft annotation plus queue item when matched, the dedicated `live-annotation-queues:curate` task dispatched on each debounced `SpanIngested` event that batch inserts matched live queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for live queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
 - [x] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
 - [x] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
 - [x] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace (deferred to sessions redesign), system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, one `systemQueueFlaggerWorkflow` started per sampled system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, live incremental materialization through `live-annotation-queues:curate` (post-MVP), default live queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates. (Unit tests exist; e2e tests deferred to post-MVP hardening.)

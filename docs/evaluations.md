@@ -99,8 +99,8 @@ Evaluation background work uses queue tasks in `@domain/queue`, `@platform/queue
 
 The main contracts are:
 
-- domain events: `SpanIngested`, `TraceEnded`
-- topic tasks: `live-traces:end`, `live-evaluations:enqueue`, `live-evaluations:execute`
+- domain events: `SpanIngested`
+- topic tasks: `live-evaluations:enqueue`, `live-evaluations:execute`
 - workflows: `evaluation-alignment`
 
 Rules:
@@ -263,7 +263,7 @@ Trigger semantics:
 
 Live evaluation triggering is incremental:
 
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `live-evaluations:enqueue` for that trace, and that task lists all active evaluations in the project, meaning rows with `archivedAt = null` and `deletedAt = null`
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `live-evaluations:enqueue` for that trace, and that task lists all active evaluations in the project, meaning rows with `archivedAt = null` and `deletedAt = null`
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation, writes the resulting score, keeps passed results unowned, immediately claims `scores.issue_id` for failed non-errored issue-linked monitor results, and persists execution failures as canonical errored evaluation scores

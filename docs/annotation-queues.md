@@ -47,7 +47,7 @@ When a trace ends, the system fans out across the project's provisioned system q
 
 **Fan-Out (`system-annotation-queues:fanOut`)**:
 
-1. Triggered by `TraceEnded` domain event
+1. Triggered by debounced `SpanIngested` fan-out
 2. Reads all active system queues for the project (cached or from DB)
 3. Applies deterministic sampling per queue and skips queues with `sampling <= 0`
 4. Starts `systemQueueFlaggerWorkflow` directly for each sampled queue
@@ -130,9 +130,9 @@ The evaluator returns both `reasons` (every rule that fires) and `matched` (whet
 Complete flow from trace ingestion to queue assignment:
 
 ```
-TraceEnded (domain event)
+SpanIngested (domain event, debounced)
     ↓
-domain-events worker
+domain-events dispatcher
     ↓
 system-annotation-queues:fanOut (list queues, apply sampling)
     ↓
@@ -255,7 +255,7 @@ Every project starts with these system-created manual queues:
 ### System-Created Manual Queues
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `system-annotation-queues:fanOut` for that trace
 - `system-annotation-queues:fanOut` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per sampled queue
 - queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
 - the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, `empty-response`, and `resource-outliers`
@@ -268,7 +268,7 @@ Every project starts with these system-created manual queues:
 
 - a queue becomes live when `settings.filter` is present
 - live queues are incremental: they grow as new matching traces arrive
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `live-annotation-queues:curate` for that trace
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `live-annotation-queues:curate` for that trace
 - `live-annotation-queues:curate` lists all non-deleted live queues in that project
 - queue selection order is `settings.filter` first, then `settings.sampling`
 - if both pass, `live-annotation-queues:curate` batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
@@ -369,7 +369,7 @@ Required Postgres indexes:
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
 - system-created queue insertion happens automatically via the `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation transactionally
-- live queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
+- live queue materialization is incremental on debounced `SpanIngested` and evaluates `filter` before `sampling`
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 
 ## Project Page
