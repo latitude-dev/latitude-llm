@@ -7,9 +7,6 @@ import { cn } from "../../utils/cn.ts"
 
 const outerElevation = "border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg"
 
-const insetFaceHighlight =
-  "shadow-[var(--button-face-inset-shadow)] group-hover:shadow-[var(--button-face-inset-shadow-hover)]"
-
 const buttonContainerVariants = cva(
   cn(
     "group relative inline-flex rounded-lg transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
@@ -43,20 +40,11 @@ const buttonVariantsConfig = cva(
   {
     variants: {
       variant: {
-        default: cn(
-          "border-0 bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default",
-          insetFaceHighlight,
-        ),
-        destructive: cn(
-          "border-0 bg-destructive text-destructive-foreground group-hover:bg-destructive/90",
-          insetFaceHighlight,
-        ),
+        default: "border-0 bg-transparent text-primary-foreground disabled:cursor-default",
+        destructive: "border-0 bg-transparent text-destructive-foreground",
         outline:
           "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none",
-        secondary: cn(
-          "border-0 bg-secondary text-secondary-foreground [&_svg]:text-muted-foreground group-hover:bg-secondary/90",
-          insetFaceHighlight,
-        ),
+        secondary: "border-0 bg-transparent text-secondary-foreground [&_svg]:text-muted-foreground",
         ghost:
           "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
@@ -80,10 +68,11 @@ const buttonVariantsConfig = cva(
       {
         variant: ["default", "destructive", "secondary"],
         class: [
+          "isolate",
           "before:pointer-events-none",
           "before:absolute",
           "before:-inset-1",
-          "before:z-0",
+          "before:-z-10",
           "before:scale-95",
           "before:rounded-xl",
           "before:opacity-0",
@@ -94,11 +83,30 @@ const buttonVariantsConfig = cva(
           "group-hover:before:scale-100",
           "group-hover:before:opacity-100",
           "group-active:before:-inset-0.5",
+          "after:pointer-events-none",
+          "after:absolute",
+          "after:inset-0",
+          "after:z-0",
+          "after:rounded-[inherit]",
+          "after:content-['']",
+          "after:transition-[background-color,box-shadow]",
+          "after:duration-200",
+          "after:shadow-[var(--button-face-inset-shadow)]",
+          "group-hover:after:shadow-[var(--button-face-inset-shadow-hover)]",
         ],
       },
-      { variant: "default", class: "before:bg-primary/20" },
-      { variant: "destructive", class: "before:bg-destructive/30" },
-      { variant: "secondary", class: "before:bg-foreground/10" },
+      {
+        variant: "default",
+        class: "before:bg-primary/20 after:bg-primary group-hover:after:bg-primary/90",
+      },
+      {
+        variant: "destructive",
+        class: "before:bg-destructive/30 after:bg-destructive group-hover:after:bg-destructive/90",
+      },
+      {
+        variant: "secondary",
+        class: "before:bg-foreground/10 after:bg-secondary group-hover:after:bg-secondary/90",
+      },
     ],
     defaultVariants: {
       variant: "default",
@@ -185,7 +193,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         aria-busy={isLoading ? "true" : undefined}
       >
-        <div className={cn(buttonVariantsConfig({ variant, size }), "z-[1]", className)}>
+        <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
           <div className="relative z-[1] flex max-w-full flex-row items-center gap-x-1.5">
             {isLoading && (
               <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
