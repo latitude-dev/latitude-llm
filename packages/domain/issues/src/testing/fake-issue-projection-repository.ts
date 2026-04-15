@@ -1,6 +1,6 @@
 import { RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
-import { ISSUE_DISCOVERY_MAX_CANDIDATES, ISSUE_DISCOVERY_SEARCH_RATIO } from "../constants.ts"
+import { ISSUE_DISCOVERY_SEARCH_CANDIDATES, ISSUE_DISCOVERY_SEARCH_RATIO } from "../constants.ts"
 import type {
   DeleteIssueProjectionInput,
   HybridSearchInput,
@@ -99,7 +99,7 @@ export const createFakeIssueProjectionRepository = ({
 
           candidates.sort((a, b) => b.score - a.score)
 
-          return candidates.slice(0, ISSUE_DISCOVERY_MAX_CANDIDATES).map((c) => ({
+          return candidates.slice(0, ISSUE_DISCOVERY_SEARCH_CANDIDATES).map((c) => ({
             uuid: c.uuid,
             title: c.title,
             description: c.description,

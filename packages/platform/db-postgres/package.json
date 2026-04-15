@@ -48,7 +48,8 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:",
-    "stripe": "^22.0.1"
+    "stripe": "^22.0.1",
+    "voyageai": "catalog:"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

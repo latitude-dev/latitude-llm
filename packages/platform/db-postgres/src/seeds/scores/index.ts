@@ -42,6 +42,8 @@ import {
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
   seedDateDaysAgo,
+  seedIssueOccurrenceSpanId,
+  seedIssueOccurrenceTraceId,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
@@ -61,6 +63,10 @@ function requiredAt<T>(items: readonly T[], index: number): T {
 
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
   return seedDateDaysAgo(daysAgo, hour, minute)
+}
+
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
+  return sourceId === "seed-issue-scout" ? "UI" : "API"
 }
 
 function annotationValue(passed: boolean, tier: string): number {
@@ -395,22 +401,34 @@ const simulationScoreRows = [
 
 const issueOccurrenceScoreRows = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
   const createdAt = createdAtFromDaysAgo(occurrence.daysAgo, occurrence.hour, occurrence.minute)
+  const seededSource =
+    occurrence.source === "custom"
+      ? {
+          source: "annotation" as const,
+          sourceId: annotationSeedSourceId(occurrence.sourceId),
+          metadata: { rawFeedback: occurrence.feedback },
+        }
+      : {
+          source: occurrence.source,
+          sourceId: occurrence.sourceId,
+          metadata: occurrence.metadata,
+        }
 
   return {
     id: ScoreId(seedScoreId(occurrence.idPrefix, i)),
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     sessionId: null,
-    traceId: null,
-    spanId: null,
-    source: occurrence.source,
-    sourceId: occurrence.sourceId,
+    traceId: seedIssueOccurrenceTraceId(i),
+    spanId: seedIssueOccurrenceSpanId(i),
+    source: seededSource.source,
+    sourceId: seededSource.sourceId,
     simulationId: null,
     issueId: occurrence.issueId,
     value: occurrence.value,
     passed: occurrence.passed,
     feedback: occurrence.feedback,
-    metadata: occurrence.metadata,
+    metadata: seededSource.metadata,
     error: occurrence.error,
     errored: occurrence.errored,
     duration: occurrence.duration,
@@ -431,6 +449,10 @@ const allScoreRows = [
   ...alignmentFixtureScoreRows,
   ...simulationScoreRows,
 ]
+
+export const issueLinkedScoreSeedRows = allScoreRows.filter(
+  (row): row is (typeof allScoreRows)[number] & { issueId: string } => row.issueId !== null && row.draftedAt === null,
+)
 
 const seedScores: Seeder = {
   name: "scores/acme-support-score-graph",

@@ -23,7 +23,7 @@ import { extractLeadingEmoji, formatCount } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { DatabaseIcon, FrownIcon, PlusIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, PlusIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
 import {
@@ -123,7 +123,7 @@ function ProjectsTable({
             <TableHead>Name</TableHead>
             <TableHead className="w-44">
               <div className="flex items-center gap-1.5">
-                <Icon icon={FrownIcon} size="sm" color="foregroundMuted" />
+                <Icon icon={ShieldAlertIcon} size="sm" color="foregroundMuted" />
                 <span>Issues</span>
               </div>
             </TableHead>

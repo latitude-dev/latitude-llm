@@ -35,9 +35,10 @@ export const embedIssueSearchQueryUseCase = (input: EmbedIssueSearchQueryInput) 
         },
       },
     })
+    const normalizedEmbedding = normalizeEmbedding(result.embedding)
 
     return {
       query: parsed.query,
-      normalizedEmbedding: normalizeEmbedding(result.embedding),
+      normalizedEmbedding,
     } satisfies EmbedIssueSearchQueryResult
   })

@@ -56,27 +56,24 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
 /** Alpha for Weaviate hybrid search: 75% vector search, 25% keyword search */
 export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
 
-/** Minimum hybrid similarity score to consider a candidate: 80% similarity */
+/** Minimum fused hybrid score to consider a candidate: 80% relevance after vector/BM25 fusion. */
 export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8
 
-/** Minimum BM25 keyword matches required (OR mode): At least 1 keyword match */
-export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1
-
-/** Maximum initial candidates returned from the hybrid search stage: Large pool */
-export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000
+/** Maximum candidates returned from the hybrid search stage. */
+export const ISSUE_DISCOVERY_SEARCH_CANDIDATES = 1000
 
 // ---------------------------------------------------------------------------
 // Discovery thresholds (rerank)
 // ---------------------------------------------------------------------------
 
-/** Maximum candidates sent to the reranker after hybrid search filtering. */
-export const RERANK_LIMIT = 100
+/** Maximum candidates sent into the reranking stage. */
+export const ISSUE_DISCOVERY_RERANK_CANDIDATES = 25
 
-/** Minimum rerank relevance score to accept a candidate as a match. */
-export const MIN_RERANK_RELEVANCE = 0.3
+/** Minimum rerank relevance score required to accept an existing issue match. */
+export const ISSUE_DISCOVERY_MIN_RELEVANCE = 0.3
 
-/** Rerank model identifier. */
-export const RERANK_MODEL = "rerank-2.5"
+/** Rerank model identifier for issue discovery candidate selection. */
+export const ISSUE_DISCOVERY_RERANK_MODEL = "rerank-2.5"
 
 // ---------------------------------------------------------------------------
 // Issue details generation
