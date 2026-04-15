@@ -64,6 +64,16 @@ export function createTryLatitudeDnsRecords(
     allowOverwrite: true,
   })
 
+  // MX records for trylatitude.com
+  records.mx = new aws.route53.Record(`${name}-trylatitude-mx`, {
+    zoneId: zone.zoneId,
+    name: "trylatitude.com",
+    type: "MX",
+    records: ["10 mxa.eu.mailgun.org", "10 mxb.eu.mailgun.org"],
+    ttl: 300,
+    allowOverwrite: true,
+  })
+
   // DMARC record for trylatitude.com
   records.dmarc = new aws.route53.Record(`${name}-trylatitude-dmarc`, {
     zoneId: zone.zoneId,
