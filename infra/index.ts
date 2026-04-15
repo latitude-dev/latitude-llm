@@ -85,6 +85,7 @@ const ecs = createEcs(
     web: alb.targetGroups.web.arn,
     api: alb.targetGroups.api.arn,
     ingest: alb.targetGroups.ingest.arn,
+    bullBoard: alb.targetGroups.bullBoard.arn,
   },
   {
     address: temporalCloudAddress,

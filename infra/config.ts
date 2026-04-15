@@ -11,6 +11,7 @@ export interface EnvironmentConfig {
     web: string
     api: string
     ingest: string
+    bullBoard: string
   }
 
   rds: {
@@ -79,6 +80,7 @@ export const stagingConfig: EnvironmentConfig = {
     web: "staging.latitude.so",
     api: "staging-api.latitude.so",
     ingest: "staging-ingest.latitude.so",
+    bullBoard: "staging-bull-board.latitude.so",
   },
 
   rds: {
@@ -178,6 +180,7 @@ export const productionConfig: EnvironmentConfig = {
     web: "console.latitude.so",
     api: "api.latitude.so",
     ingest: "ingest.latitude.so",
+    bullBoard: "bull-board.latitude.so",
   },
 
   rds: {

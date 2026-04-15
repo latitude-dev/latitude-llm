@@ -1,4 +1,8 @@
-import { createServer } from "node:http"
+import { createBullBoard } from "@bull-board/api"
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
+import { HonoAdapter } from "@bull-board/hono"
+import { serve } from "@hono/node-server"
+import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
@@ -17,6 +21,8 @@ import {
 import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
+import { Hono } from "hono"
+import { basicAuth } from "hono/basic-auth"
 import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
@@ -50,43 +56,52 @@ const bootstrap = async () => {
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
-  const healthServer = createServer((req, res) => {
-    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname
 
-    if (pathname === "/health/observability-test" && req.method === "GET") {
-      res.writeHead(200, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({ service: "workers", observabilityTest: "armed" }))
-      return
-    }
+  const app = new Hono()
 
-    if (pathname === "/health/observability-test/error" && req.method === "GET") {
-      const err = new LatitudeObservabilityTestError("workers")
-      logger.error(err)
-      const span = trace.getActiveSpan()
-      if (span) {
-        recordSpanExceptionForDatadog(span, err)
-      }
-      res.writeHead(500, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({ name: err.name, message: err.message }))
-      return
-    }
-
-    if (pathname === "/health" && req.method === "GET") {
-      const status = ready ? 200 : 503
-      res.writeHead(status, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
-    } else {
-      res.writeHead(404)
-      res.end()
-    }
+  app.get("/health/observability-test", (c) => {
+    return c.json({ service: "workers", observabilityTest: "armed" })
   })
 
-  healthServer.listen(healthPort, () => {
+  app.get("/health/observability-test/error", (c) => {
+    const err = new LatitudeObservabilityTestError("workers")
+    logger.error(err)
+    const span = trace.getActiveSpan()
+    if (span) {
+      recordSpanExceptionForDatadog(span, err)
+    }
+    return c.json({ name: err.name, message: err.message }, 500)
+  })
+
+  app.get("/health", (c) => {
+    const status = ready ? 200 : 503
+    return c.json({ status: ready ? "ok" : "starting" }, status)
+  })
+
+  const server = serve({ fetch: app.fetch, port: healthPort }, () => {
     logger.info(`workers health check listening on :${healthPort}/health`)
   })
 
   const initializeWorkers = async () => {
     const bullMqConfig = Effect.runSync(loadBullMqConfig())
+
+    // Set up bull-board dashboard with read-only Queue instances
+    const { TOPIC_NAMES } = await import("@domain/queue")
+    const { createBullBoardQueues } = await import("@platform/queue-bullmq")
+    const bullBoardQueues = createBullBoardQueues(bullMqConfig, TOPIC_NAMES)
+
+    const bullBoardUser = Effect.runSync(parseEnv("LAT_BULL_BOARD_USERNAME", "string"))
+    const bullBoardPass = Effect.runSync(parseEnv("LAT_BULL_BOARD_PASSWORD", "string"))
+    app.use("/bull-board/*", basicAuth({ username: bullBoardUser, password: bullBoardPass }))
+
+    const serverAdapter = new HonoAdapter(serveStatic)
+    serverAdapter.setBasePath("/bull-board")
+    createBullBoard({
+      queues: bullBoardQueues.map((q) => new BullMQAdapter(q, { readOnlyMode: true })),
+      serverAdapter,
+    })
+    app.route("/bull-board", serverAdapter.registerPlugin())
+
     const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
     const eventsPublisher = createEventsPublisher(queuePublisher)
 
@@ -161,7 +176,7 @@ const bootstrap = async () => {
   const handleShutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down workers...`)
     ready = false
-    healthServer.close()
+    server.close()
 
     try {
       const { consumers, queuePublisher } = await workersPromise

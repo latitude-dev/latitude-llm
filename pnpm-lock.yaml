@@ -9,6 +9,12 @@ catalogs:
     '@biomejs/biome':
       specifier: 2.4.6
       version: 2.4.6
+    '@bull-board/api':
+      specifier: 6.12.1
+      version: 6.12.1
+    '@bull-board/hono':
+      specifier: 6.12.1
+      version: 6.12.1
     '@clickhouse/client':
       specifier: 1.18.2
       version: 1.18.2
@@ -469,6 +475,12 @@ importers:
 
   apps/workers:
     dependencies:
+      '@bull-board/api':
+        specifier: 'catalog:'
+        version: 6.12.1(@bull-board/ui@6.12.1)
+      '@bull-board/hono':
+        specifier: 'catalog:'
+        version: 6.12.1(hono@4.12.12)
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
@@ -511,6 +523,9 @@ importers:
       '@domain/users':
         specifier: workspace:*
         version: link:../../packages/domain/users
+      '@hono/node-server':
+        specifier: 'catalog:'
+        version: 1.19.13(hono@4.12.12)
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -562,6 +577,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
+      hono:
+        specifier: 'catalog:'
+        version: 4.12.12
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1593,7 +1611,7 @@ importers:
     dependencies:
       '@base-ui/react':
         specifier: ^1.4.0
-        version: 1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@3.6.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@codemirror/commands':
         specifier: ^6.10.2
         version: 6.10.3
@@ -2484,6 +2502,19 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@bull-board/api@6.12.1':
+    resolution: {integrity: sha512-PejAqqtnasXHxGkSVCdh2VLNkwNPZ6/JN1BR31VCqX4l54JtWd9vSlcRU2jrwcNIK4aunvOx4VfKSII1pr4T/w==}
+    peerDependencies:
+      '@bull-board/ui': 6.12.1
+
+  '@bull-board/hono@6.12.1':
+    resolution: {integrity: sha512-Id4iNNgUs+qjqa0tVJ4jiwlW+zhyNxlcNKQBT/Cqfw6vshzixwaYfR+9IQU8jeyqB4s/O/icPutArHcfB19mUg==}
+    peerDependencies:
+      hono: ^4
+
+  '@bull-board/ui@6.12.1':
+    resolution: {integrity: sha512-vTGr3jS01b8JPOfnCqcEDxGUe8k5Zb4iGWiw38hlyiAC8c4qnKMc3FaFTSWeiT9va/s+nr5FqAu/kobqn/yNDg==}
 
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
@@ -6880,6 +6911,9 @@ packages:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
 
+  async@3.2.6:
+    resolution: {integrity: sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA==}
+
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
@@ -6894,6 +6928,9 @@ packages:
 
   bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}
+
+  balanced-match@1.0.2:
+    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
@@ -7083,6 +7120,9 @@ packages:
 
   bowser@2.14.1:
     resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
+
+  brace-expansion@2.1.0:
+    resolution: {integrity: sha512-TN1kCZAgdgweJhWWpgKYrQaMNHcDULHkWwQIspdtjV4Y5aurRdZpjAqn6yX3FPqTA9ngHCc4hJxMAMgGfve85w==}
 
   brace-expansion@5.0.5:
     resolution: {integrity: sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ==}
@@ -7416,9 +7456,6 @@ packages:
   date-fns@3.6.0:
     resolution: {integrity: sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww==}
 
-  date-fns@4.1.0:
-    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
-
   db0@0.3.4:
     resolution: {integrity: sha512-RiXXi4WaNzPTHEOu8UPQKMooIbqOEyqA1t7Z6MsdxSCeb8iUC9ko3LcmsLmeUt2SM5bctfArZKkRQggKZz7JNw==}
     peerDependencies:
@@ -7703,6 +7740,11 @@ packages:
   effect@4.0.0-beta.4:
     resolution: {integrity: sha512-oS7yB+gWK1JQDD15JlWh+rF9lfV04TDCN+ui2YOShMjyFPIWsuStaUYWGRmqjheP128NDr3mvMtU9+leEksqhw==}
 
+  ejs@3.1.10:
+    resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
+    engines: {node: '>=0.10.0'}
+    hasBin: true
+
   electron-to-chromium@1.5.334:
     resolution: {integrity: sha512-mgjZAz7Jyx1SRCwEpy9wefDS7GvNPazLthHg8eQMJ76wBdGQQDW33TCrUTvQ4wzpmOrv2zrFoD3oNufMdyMpog==}
 
@@ -7940,6 +7982,9 @@ packages:
 
   file-uri-to-path@1.0.0:
     resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
+
+  filelist@1.0.6:
+    resolution: {integrity: sha512-5giy2PkLYY1cP39p17Ech+2xlpTRL9HLspOfEgm0L6CwBXBTgsK5ou0JtzYuepxkaQ/tvhCFIJ5uXo0OrM2DxA==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -8416,6 +8461,11 @@ packages:
   jackspeak@4.2.3:
     resolution: {integrity: sha512-ykkVRwrYvFm1nb2AJfKKYPr0emF6IiXDYUaFx4Zn9ZuIH7MrzEZ3sD5RlqGXNRpHtvUHJyOnCEFxOlNDtGo7wg==}
     engines: {node: 20 || >=22}
+
+  jake@10.9.4:
+    resolution: {integrity: sha512-wpHYzhxiVQL+IV05BLE2Xn34zW1S223hvjtqk0+gsPrwd/8JNLXJgZZM/iPFsYc1xyphF+6M6EvdE5E9MBGkDA==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   jest-worker@27.5.1:
     resolution: {integrity: sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg==}
@@ -8985,6 +9035,10 @@ packages:
   minimatch@10.2.5:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
+
+  minimatch@5.1.9:
+    resolution: {integrity: sha512-7o1wEA2RyMP7Iu7GNba9vc0RWWGACJOCZBJX2GJWip0ikV+wcOsgVuY9uE8CPiyQhkGFSlhuSkZPavN7u1c2Fw==}
+    engines: {node: '>=10'}
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
@@ -9762,6 +9816,9 @@ packages:
   redis-errors@1.2.0:
     resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
     engines: {node: '>=4'}
+
+  redis-info@3.1.0:
+    resolution: {integrity: sha512-ER4L9Sh/vm63DkIE0bkSjxluQlioBiBgf5w1UuldaW/3vPcecdljVDisZhmnCMvsxHNiARTTDDHGg9cGwTfrKg==}
 
   redis-parser@3.0.0:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
@@ -12244,14 +12301,14 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@base-ui/react@1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@base-ui/react@1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@3.6.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@babel/runtime': 7.29.2
       '@base-ui/utils': 0.2.7(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@date-fns/tz': 1.4.1
       '@floating-ui/react-dom': 2.1.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@floating-ui/utils': 0.2.11
-      date-fns: 4.1.0
+      date-fns: 3.6.0
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       use-sync-external-store: 1.6.0(react@19.2.4)
@@ -12497,6 +12554,22 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
+
+  '@bull-board/api@6.12.1(@bull-board/ui@6.12.1)':
+    dependencies:
+      '@bull-board/ui': 6.12.1
+      redis-info: 3.1.0
+
+  '@bull-board/hono@6.12.1(hono@4.12.12)':
+    dependencies:
+      '@bull-board/api': 6.12.1(@bull-board/ui@6.12.1)
+      '@bull-board/ui': 6.12.1
+      ejs: 3.1.10
+      hono: 4.12.12
+
+  '@bull-board/ui@6.12.1':
+    dependencies:
+      '@bull-board/api': 6.12.1(@bull-board/ui@6.12.1)
 
   '@cfworker/json-schema@4.1.1': {}
 
@@ -17093,6 +17166,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  async@3.2.6: {}
+
   asynckit@0.4.0: {}
 
   atomically@2.1.1:
@@ -17112,6 +17187,8 @@ snapshots:
       - supports-color
 
   bail@2.0.2: {}
+
+  balanced-match@1.0.2: {}
 
   balanced-match@4.0.4: {}
 
@@ -17273,6 +17350,10 @@ snapshots:
   boolbase@1.0.0: {}
 
   bowser@2.14.1: {}
+
+  brace-expansion@2.1.0:
+    dependencies:
+      balanced-match: 1.0.2
 
   brace-expansion@5.0.5:
     dependencies:
@@ -17650,8 +17731,6 @@ snapshots:
 
   date-fns@3.6.0: {}
 
-  date-fns@4.1.0: {}
-
   db0@0.3.4(@electric-sql/pglite@0.3.15)(better-sqlite3@12.8.0)(drizzle-orm@1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(@types/pg@8.16.0)(better-sqlite3@12.8.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)):
     optionalDependencies:
       '@electric-sql/pglite': 0.3.15
@@ -17819,6 +17898,10 @@ snapshots:
       toml: 3.0.0
       uuid: 13.0.0
       yaml: 2.8.3
+
+  ejs@3.1.10:
+    dependencies:
+      jake: 10.9.4
 
   electron-to-chromium@1.5.334: {}
 
@@ -18102,6 +18185,10 @@ snapshots:
   fflate@0.4.8: {}
 
   file-uri-to-path@1.0.0: {}
+
+  filelist@1.0.6:
+    dependencies:
+      minimatch: 5.1.9
 
   fill-range@7.1.1:
     dependencies:
@@ -18629,6 +18716,12 @@ snapshots:
   jackspeak@4.2.3:
     dependencies:
       '@isaacs/cliui': 9.0.0
+
+  jake@10.9.4:
+    dependencies:
+      async: 3.2.6
+      filelist: 1.0.6
+      picocolors: 1.1.1
 
   jest-worker@27.5.1:
     dependencies:
@@ -19404,6 +19497,10 @@ snapshots:
   minimatch@10.2.5:
     dependencies:
       brace-expansion: 5.0.5
+
+  minimatch@5.1.9:
+    dependencies:
+      brace-expansion: 2.1.0
 
   minimist@1.2.8: {}
 
@@ -20363,6 +20460,10 @@ snapshots:
       tslib: 2.8.1
 
   redis-errors@1.2.0: {}
+
+  redis-info@3.1.0:
+    dependencies:
+      lodash: 4.18.1
 
   redis-parser@3.0.0:
     dependencies:
