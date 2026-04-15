@@ -364,6 +364,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Build telemetry package
+        run: pnpm --filter @latitude-data/telemetry build
+
       - name: Build all apps
         run: pnpm --filter "@app/*" build
         env:
@@ -739,6 +742,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build telemetry package
+        run: pnpm --filter @latitude-data/telemetry build
 
       - name: Build all apps
         run: pnpm --filter "@app/*" build

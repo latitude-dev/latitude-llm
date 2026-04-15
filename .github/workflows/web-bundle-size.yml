@@ -30,6 +30,9 @@ jobs:
       - name: Create .env.production from example
         run: cp .env.example .env.production
 
+      - name: Build telemetry package
+        run: pnpm --filter @latitude-data/telemetry build
+
       - name: Build web app
         run: pnpm --filter @app/web build
 
