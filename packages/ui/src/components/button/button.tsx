@@ -24,7 +24,7 @@ const buttonContainerVariants = cva(
         secondary: "bg-secondary hover:bg-secondary/80",
         ghost: "bg-transparent shadow-none hover:shadow-none",
         link: "bg-transparent shadow-none underline-offset-4 hover:underline hover:shadow-none",
-        "primary-soft": "bg-transparent shadow-none hover:shadow-none",
+        "default-soft": "bg-transparent shadow-none hover:shadow-none",
         "destructive-soft": "bg-transparent shadow-none hover:shadow-none",
         "secondary-soft": "bg-transparent shadow-none hover:shadow-none",
       },
@@ -60,7 +60,7 @@ const buttonVariantsConfig = cva(
         ghost:
           "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
-        "primary-soft":
+        "default-soft":
           "border-0 bg-primary-muted text-primary shadow-none group-hover:bg-primary-muted-hover group-hover:shadow-none group-active:bg-primary-muted group-hover:group-active:bg-primary-muted [&_svg]:text-primary/70",
         "destructive-soft":
           "border-0 bg-destructive-muted text-destructive-muted-foreground shadow-none group-hover:bg-destructive-muted-hover group-hover:shadow-none group-active:bg-destructive-muted group-hover:group-active:bg-destructive-muted [&_svg]:text-destructive-muted-foreground/85",

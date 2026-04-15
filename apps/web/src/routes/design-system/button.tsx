@@ -17,7 +17,7 @@ import { useState } from "react"
 
 const VARIANTS = [
   { value: "default", label: "Default" },
-  { value: "primary-soft", label: "Primary soft" },
+  { value: "default-soft", label: "Default soft" },
   { value: "secondary", label: "Secondary" },
   { value: "secondary-soft", label: "Secondary soft" },
   { value: "outline", label: "Outline" },
