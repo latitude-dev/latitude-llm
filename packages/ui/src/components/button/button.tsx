@@ -35,23 +35,6 @@ const buttonContainerVariants = cva(
   },
 )
 
-const glowBeforeBase = [
-  "before:pointer-events-none",
-  "before:absolute",
-  "before:-inset-1",
-  "before:z-0",
-  "before:scale-95",
-  "before:rounded-xl",
-  "before:opacity-0",
-  "before:transition-all",
-  "before:duration-200",
-  "before:ease-out",
-  "before:content-['']",
-  "group-hover:before:scale-100",
-  "group-hover:before:opacity-100",
-  "group-active:before:-inset-0.5",
-] as const
-
 const buttonVariantsConfig = cva(
   cn(
     "relative inline-flex w-full max-w-full cursor-pointer items-center justify-center rounded-lg font-sans font-medium transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background group-disabled:pointer-events-none group-disabled:opacity-50",
@@ -96,7 +79,22 @@ const buttonVariantsConfig = cva(
     compoundVariants: [
       {
         variant: ["default", "destructive", "secondary"],
-        class: [...glowBeforeBase],
+        class: [
+          "before:pointer-events-none",
+          "before:absolute",
+          "before:-inset-1",
+          "before:z-0",
+          "before:scale-95",
+          "before:rounded-xl",
+          "before:opacity-0",
+          "before:transition-all",
+          "before:duration-200",
+          "before:ease-out",
+          "before:content-['']",
+          "group-hover:before:scale-100",
+          "group-hover:before:opacity-100",
+          "group-active:before:-inset-0.5",
+        ],
       },
       { variant: "default", class: "before:bg-primary/20" },
       { variant: "destructive", class: "before:bg-destructive/30" },
