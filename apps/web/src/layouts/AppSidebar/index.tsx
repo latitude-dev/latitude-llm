@@ -1,4 +1,4 @@
-import { Button, cn, Icon, Text, Tooltip, useLocalStorage } from "@repo/ui"
+import { Button, cn, Icon, Text, Tooltip, useLocalStorage, useValueWithDefault } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { Link } from "@tanstack/react-router"
@@ -222,6 +222,7 @@ export function NavItem({
 function useShouldCollapseSidebar() {
   return useHasMatchStaticData((staticData) => staticData?.collapseSidebar === true)
 }
+
 export function AppSidebar({
   title,
   subtitle,
@@ -234,12 +235,21 @@ export function AppSidebar({
   footer?: (props: { collapsed: boolean }) => ReactNode
 }) {
   const autoCollapse = useShouldCollapseSidebar()
-  const { value: collapsedPreference, setValue: setCollapsedPreference } = useLocalStorage<boolean | null>({
+  const { value: storedCollapsed, setValue: setStoredCollapsed } = useLocalStorage<boolean | null>({
     key: "app-sidebar-collapsed",
     defaultValue: null,
   })
-  const collapsed = collapsedPreference ?? autoCollapse
-  const toggleCollapsed = () => setCollapsedPreference((value) => !(value ?? autoCollapse))
+
+  const defaultCollapseToken = autoCollapse ? "narrow" : storedCollapsed === true ? "narrow" : "wide"
+
+  const [collapseToken, setCollapseToken] = useValueWithDefault(defaultCollapseToken)
+  const collapsed = collapseToken === "narrow"
+
+  const toggleCollapsed = () => {
+    const nextCollapsed = !collapsed
+    setCollapseToken(nextCollapsed ? "narrow" : "wide")
+    setStoredCollapsed(nextCollapsed)
+  }
   useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
 
   return (

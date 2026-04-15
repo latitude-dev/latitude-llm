@@ -1,7 +1,14 @@
-import { type AnnotationScore, writeScoreUseCase } from "@domain/scores"
+import {
+  type AnnotationAnchor,
+  type AnnotationScore,
+  type Score,
+  ScoreRepository,
+  writeScoreUseCase,
+} from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import type { z } from "zod"
+import { anchorFromExistingAnnotationScore } from "./anchor-from-existing-annotation-score.ts"
 import { anchorFromPersistDraftFlatFields, persistDraftAnnotationInputSchema } from "./annotation-draft-write-schema.ts"
 import { buildAnnotationScoreMetadata } from "./build-annotation-score-metadata.ts"
 import { resolveWriteAnnotationTraceContext } from "./resolve-write-annotation-trace-context.ts"
@@ -13,7 +20,18 @@ export const writeAnnotation = (
   Effect.gen(function* () {
     const parsed = persistDraftAnnotationInputSchema.parse(input)
 
-    const anchor = parsed.anchor ?? anchorFromPersistDraftFlatFields(parsed)
+    let anchor: AnnotationAnchor | undefined
+    if (parsed.id !== undefined && parsed.id !== null) {
+      const scoreRepository = yield* ScoreRepository
+      const existing: Score | null = yield* scoreRepository
+        .findById(parsed.id)
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+      if (existing?.source === "annotation") {
+        anchor = anchorFromExistingAnnotationScore(existing)
+      }
+    } else {
+      anchor = parsed.anchor ?? anchorFromPersistDraftFlatFields(parsed)
+    }
 
     const { sessionId, spanId } = yield* resolveWriteAnnotationTraceContext({
       organizationId: OrganizationId(input.organizationId),

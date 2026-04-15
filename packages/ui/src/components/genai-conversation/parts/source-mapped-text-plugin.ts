@@ -82,21 +82,20 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
             if (!segmentText) continue
 
             const activeHighlight = overlaps.find((h) => h.startOffset < segEnd && h.endOffset > segStart) ?? null
+            const isAnnotation = activeHighlight && activeHighlight.type !== "selection"
+            const isClickable = isAnnotation && !!activeHighlight.id
             const className = cn({
-              "cursor-pointer inline": !!activeHighlight?.onClick,
+              "cursor-pointer hit-area-inline-y-2": isClickable,
               "bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-400/20 dark:border-yellow-400/50":
                 activeHighlight?.type === "selection",
-              "bg-red-100 dark:bg-red-400/30":
-                activeHighlight?.type !== "selection" && activeHighlight?.passed === false,
-              "bg-emerald-100 dark:bg-emerald-400/30":
-                activeHighlight?.type !== "selection" && activeHighlight?.passed === true,
-              "bg-blue-100 dark:bg-blue-400/30":
-                activeHighlight?.type !== "selection" && activeHighlight?.passed === undefined && !!activeHighlight,
+              "bg-red-100 dark:bg-red-400/30": isAnnotation && activeHighlight.passed === false,
+              "bg-emerald-100 dark:bg-emerald-400/30": isAnnotation && activeHighlight.passed === true,
+              "bg-blue-100 dark:bg-blue-400/30": isAnnotation && activeHighlight.passed === undefined,
             })
 
             nextChildren.push({
               type: "element",
-              tagName: activeHighlight?.onClick ? "button" : "span",
+              tagName: "span",
               properties: {
                 "data-source-start": String(segStart),
                 "data-source-end": String(segEnd),
@@ -108,33 +107,6 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
                         ...(activeHighlight.id ? { "data-annotation-id": activeHighlight.id } : {}),
                       }
                     : {}),
-                ...(activeHighlight?.onClick
-                  ? {
-                      type: "button",
-                      onClick: (e: MouseEvent) => {
-                        const target = e.currentTarget as HTMLElement
-                        const annotationId = target.getAttribute("data-annotation-id")
-                        let left = e.clientX
-                        let bottom = e.clientY
-                        if (annotationId) {
-                          const partRoot = target.closest("[data-part-index]") ?? document.body
-                          const segments = partRoot.querySelectorAll(`[data-annotation-id="${annotationId}"]`)
-                          if (segments.length > 0) {
-                            let minLeft = Number.POSITIVE_INFINITY
-                            let maxBottom = Number.NEGATIVE_INFINITY
-                            for (const seg of segments) {
-                              const r = seg.getBoundingClientRect()
-                              if (r.left < minLeft) minLeft = r.left
-                              if (r.bottom > maxBottom) maxBottom = r.bottom
-                            }
-                            left = minLeft
-                            bottom = maxBottom
-                          }
-                        }
-                        activeHighlight.onClick?.({ x: left, y: bottom })
-                      },
-                    }
-                  : {}),
                 ...(className ? { className } : {}),
               },
               children: [{ type: "text", value: segmentText }],

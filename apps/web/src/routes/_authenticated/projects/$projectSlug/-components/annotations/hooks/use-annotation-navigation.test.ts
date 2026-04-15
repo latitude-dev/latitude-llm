@@ -71,7 +71,7 @@ describe("useAnnotationNavigation", () => {
     document.body.innerHTML = ""
   })
 
-  it("opens and repositions the text-selection popover before smooth scroll ends", () => {
+  it("opens the text-selection popover only after scrollend on the scroll container", () => {
     const container = document.createElement("div")
     const partRoot = document.createElement("div")
     partRoot.setAttribute("data-part-index", "0")
@@ -110,21 +110,19 @@ describe("useAnnotationNavigation", () => {
       result.current.scrollToAnnotation(annotation)
     })
 
-    expect(openExistingAnnotationPopover).toHaveBeenCalledWith(annotation, { x: 40, y: 140 })
+    expect(textElement.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" })
+    expect(openExistingAnnotationPopover).not.toHaveBeenCalled()
+    expect(updateTextSelectionPopoverPosition).not.toHaveBeenCalled()
     expect(clickSpy).not.toHaveBeenCalled()
 
     currentRect = createRect(72, 220)
     act(() => {
-      container.dispatchEvent(new Event("scroll"))
-    })
-
-    expect(updateTextSelectionPopoverPosition).toHaveBeenLastCalledWith({ x: 72, y: 220 })
-
-    act(() => {
       container.dispatchEvent(new Event("scrollend"))
     })
 
+    expect(openExistingAnnotationPopover).toHaveBeenCalledTimes(1)
+    expect(openExistingAnnotationPopover).toHaveBeenCalledWith(annotation, { x: 72, y: 220 })
+    expect(updateTextSelectionPopoverPosition).not.toHaveBeenCalled()
     expect(clickSpy).not.toHaveBeenCalled()
-    expect(updateTextSelectionPopoverPosition).toHaveBeenLastCalledWith({ x: 72, y: 220 })
   })
 })

@@ -87,7 +87,11 @@ export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
 export { Conversation } from "./components/genai-conversation/conversation.tsx"
 export { Message } from "./components/genai-conversation/message.tsx"
 export { Part, ReasoningGroup, type ToolCallResult } from "./components/genai-conversation/part.tsx"
-export type { HighlightRange, TextSelectionAnchor } from "./components/genai-conversation/text-selection.tsx"
+export {
+  type HighlightRange,
+  SELECTION_HIGHLIGHT_CLASSES,
+  type TextSelectionAnchor,
+} from "./components/genai-conversation/text-selection.tsx"
 export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
