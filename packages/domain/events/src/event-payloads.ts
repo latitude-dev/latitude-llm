@@ -1,3 +1,11 @@
+/**
+ * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
+ * UserDeletionRequested) use imperative naming that borders on command-dispatch.
+ * They originate from Better Auth callbacks where no prior aggregate state
+ * transition exists to name the event after, and each has exactly one consumer.
+ * Acceptable as pragmatic exceptions at the auth boundary, but do not use this
+ * naming pattern for domain-owned aggregates.
+ */
 export interface EventPayloads {
   MagicLinkEmailRequested: {
     readonly email: string
