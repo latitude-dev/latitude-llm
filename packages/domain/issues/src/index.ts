@@ -131,10 +131,6 @@ export {
   listIssuesUseCase,
 } from "./use-cases/list-issues.ts"
 export {
-  type MaybeDiscoverIssueResult,
-  maybeDiscoverIssueUseCase,
-} from "./use-cases/maybe-discover-issue.ts"
-export {
   type RefreshIssueDetailsError,
   type RefreshIssueDetailsInput,
   type RefreshIssueDetailsResult,

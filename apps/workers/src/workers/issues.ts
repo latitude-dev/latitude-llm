@@ -1,4 +1,4 @@
-import { maybeDiscoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
+import { discoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -54,17 +54,13 @@ export const createIssuesWorker = async ({
 
   consumer.subscribe("issues", {
     discovery: (payload) =>
-      maybeDiscoverIssueUseCase(payload).pipe(
+      discoverIssueUseCase(payload).pipe(
         Effect.tap((outcome) =>
-          outcome.skipped
-            ? Effect.void
-            : Effect.sync(() => {
-                const detail =
-                  outcome.result.action === "workflow-started"
-                    ? `${outcome.result.action}:${outcome.result.workflow}`
-                    : outcome.result.action
-                logger.info(`Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${detail})`)
-              }),
+          Effect.sync(() => {
+            const detail =
+              outcome.action === "workflow-started" ? `${outcome.action}:${outcome.workflow}` : outcome.action
+            logger.info(`Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${detail})`)
+          }),
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Issue discovery failed for ${payload.projectId}/${payload.scoreId}`, error)),

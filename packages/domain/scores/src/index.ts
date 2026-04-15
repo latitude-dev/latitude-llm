@@ -34,7 +34,7 @@ export {
   scoreValueSchema,
 } from "./entities/score.ts"
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
-export { isImmutableScore, shouldDiscoverIssue } from "./helpers.ts"
+export { isImmutableScore } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
