@@ -158,6 +158,7 @@ describe("buildLiveSeedRunPlan", () => {
 describe("dispatchResolvedTraces", () => {
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it("sends spans sequentially within each trace when only one runner is allowed", async () => {
@@ -299,5 +300,52 @@ describe("dispatchResolvedTraces", () => {
     expect(metadataEntries.runId).toBeUndefined()
     expect(metadataEntries.fixture).toBeUndefined()
     expect(metadataEntries.expectation).toBeUndefined()
+  })
+
+  it("logs summary progress by default and span details only in verbose mode", async () => {
+    vi.useFakeTimers()
+    const baseTime = new Date("2026-04-14T00:00:00.000Z")
+    vi.setSystemTime(baseTime)
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+    const traces = [
+      createResolvedTrace({
+        traceId: "trace-log-a",
+        instanceIndex: 0,
+        startDelayMs: 0,
+        spans: [createSpan("a-1", 0, 100), createSpan("a-2", 150, 100)],
+      }),
+    ] as const
+
+    const summaryDispatchPromise = dispatchResolvedTraces(traces, {
+      ingestBaseUrl: "http://127.0.0.1:3002",
+      parallelTraces: 1,
+      runId: "dispatch-summary-logs",
+      postTraceSpan: async () => {},
+    })
+
+    await vi.runAllTimersAsync()
+    await summaryDispatchPromise
+
+    const summaryMessages = logSpy.mock.calls.map(([message]) => String(message))
+    expect(summaryMessages.some((message) => message.startsWith("[trace] completed"))).toBe(true)
+    expect(summaryMessages.some((message) => message.startsWith("[progress]"))).toBe(true)
+    expect(summaryMessages.some((message) => message.startsWith("[span]"))).toBe(false)
+
+    logSpy.mockClear()
+
+    const verboseDispatchPromise = dispatchResolvedTraces(traces, {
+      ingestBaseUrl: "http://127.0.0.1:3002",
+      parallelTraces: 1,
+      runId: "dispatch-verbose-logs",
+      verboseSpans: true,
+      postTraceSpan: async () => {},
+    })
+
+    await vi.runAllTimersAsync()
+    await verboseDispatchPromise
+
+    const verboseMessages = logSpy.mock.calls.map(([message]) => String(message))
+    expect(verboseMessages.some((message) => message.startsWith("[span]"))).toBe(true)
   })
 })

@@ -88,7 +88,7 @@ cd /Users/sans/src/latitude-v2/tools/live-seeds
 pnpm seed:live-seeds --list-fixtures
 ```
 
-Run one generated trace per fixture:
+Run the default batch of 5 generated traces per fixture:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
@@ -130,6 +130,13 @@ cd /Users/sans/src/latitude-v2/tools/live-seeds
 pnpm seed:live-seeds --time-scale 0.5
 ```
 
+Print one line per span in addition to summary progress:
+
+```bash
+cd /Users/sans/src/latitude-v2/tools/live-seeds
+pnpm seed:live-seeds --verbose-spans
+```
+
 Skip system queue provisioning:
 
 ```bash
@@ -145,6 +152,7 @@ pnpm seed:live-seeds --no-provision-system-queues
 - `--count-per-fixture <n>`: generates this many traces for each selected fixture
 - `--parallel-traces <n>`: maximum number of traces dispatched concurrently
 - `--seed <value>`: makes generation reproducible
+- `--verbose-spans`: prints one log line per sent span in addition to summary progress
 - `--no-provision-system-queues`: skips provisioning the default system queues before sending traces
 - `--list-fixtures`: prints the available fixture keys and exits
 - `--help`: prints help
@@ -173,7 +181,7 @@ If you want a small smoke run first:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue-in,off-service-live-queue-in,tool-call-error
+pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue-in,off-service-live-queue-in,tool-call-error --count-per-fixture 1
 ```
 
 That gives you:
@@ -222,10 +230,14 @@ Typical script output will include:
 - the project slug
 - the seed and run ID
 - total trace count
+- planned span count
 - per-fixture counts
+- per-trace completion lines
+- progress lines with sent spans/traces and throughput
 - live evaluation sample decisions
 - live queue sample decisions
 - system queue sample decisions
+- optional per-span lines when `--verbose-spans` is enabled
 - a final reminder telling you how long to wait for `TraceEnded`
 
 ## How To Verify The Run

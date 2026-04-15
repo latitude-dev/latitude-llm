@@ -85,6 +85,7 @@ export type SendLiveSeedDataOptions = {
   readonly provisionSystemQueues: boolean
   readonly countPerFixture: number
   readonly parallelTraces: number
+  readonly verboseSpans: boolean
   readonly seed?: string
 }
 
@@ -100,6 +101,7 @@ export type DispatchResolvedTracesOptions = {
   readonly ingestBaseUrl: string
   readonly parallelTraces: number
   readonly runId: string
+  readonly verboseSpans?: boolean
   readonly postTraceSpan?: (input: {
     readonly trace: ResolvedLiveSeedTrace
     readonly span: BuiltTraceSpan
@@ -110,6 +112,7 @@ export type DispatchResolvedTracesResult = {
   readonly elapsedMs: number
   readonly sentTraceCount: number
   readonly sentSpanCount: number
+  readonly plannedSpanCount: number
 }
 
 type TraceDispatchContext = {
@@ -138,6 +141,33 @@ function requireItem<T>(value: T | null | undefined, message: string): T {
 
 function normalizeBaseUrl(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1_000) {
+    return `${ms.toString()}ms`
+  }
+  if (ms < 60_000) {
+    const seconds = ms / 1_000
+    return `${seconds >= 10 ? seconds.toFixed(0) : seconds.toFixed(1)}s`
+  }
+
+  const minutes = Math.floor(ms / 60_000)
+  const seconds = ((ms % 60_000) / 1_000).toFixed(0).padStart(2, "0")
+  return `${minutes.toString()}m${seconds}s`
+}
+
+function formatRate(count: number, elapsedMs: number): string {
+  if (count <= 0 || elapsedMs <= 0) {
+    return "0/s"
+  }
+
+  const rate = count / (elapsedMs / 1_000)
+  return `${rate >= 10 ? rate.toFixed(0) : rate.toFixed(1)}/s`
+}
+
+function getPlannedSpanCount(traces: readonly ResolvedLiveSeedTrace[]): number {
+  return traces.reduce((sum, trace) => sum + trace.generatedTrace.spans.length, 0)
 }
 
 function labelForEvaluation(evaluationId: string): string {
@@ -251,7 +281,7 @@ async function provisionSystemQueues(): Promise<void> {
       }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, SEED_ORG_ID)),
     )
 
-    console.log("Provisioned system queues:")
+    console.log("[provision] System queues")
     for (const result of results) {
       console.log(`  - ${result.queueSlug}: ${result.action}`)
     }
@@ -504,7 +534,9 @@ export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions)
 }
 
 function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisioned: boolean, parallelTraces: number) {
-  console.log("Live-seed run plan:")
+  const plannedSpanCount = getPlannedSpanCount(plan.traces)
+
+  console.log("[plan] Live-seed run")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
   console.log(`  - project slug: ${SEED_PROJECT_SLUG}`)
   console.log(`  - system queue provisioning: ${provisioned ? "enabled" : "skipped"}`)
@@ -512,6 +544,7 @@ function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisio
   console.log(`  - runId: ${plan.runId}`)
   console.log(`  - seed: ${plan.seed}`)
   console.log(`  - total traces: ${plan.traces.length.toString()}`)
+  console.log(`  - planned spans: ${plannedSpanCount.toString()}`)
   console.log(`  - parallel trace runners: ${parallelTraces.toString()}`)
 
   for (const fixture of liveSeedFixtures) {
@@ -524,7 +557,7 @@ function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisio
     const spanCounts = matchingTraces.map((trace) => trace.generatedTrace.spans.length)
     const traceWindows = matchingTraces.map((trace) => getTraceDispatchWindowMs(trace.generatedTrace))
 
-    console.log(`\n  - ${fixture.key} (${matchingTraces.length.toString()} traces)`)
+    console.log(`\n  - fixture=${fixture.key} traces=${matchingTraces.length.toString()}`)
     console.log(`    example traceId: ${example.traceId}`)
     console.log(`    service: ${example.generatedTrace.serviceName}`)
     console.log(`    span count range: ${Math.min(...spanCounts).toString()}-${Math.max(...spanCounts).toString()}`)
@@ -603,9 +636,13 @@ export async function dispatchResolvedTraces(
   options: DispatchResolvedTracesOptions,
 ): Promise<DispatchResolvedTracesResult> {
   const dispatchStartedAt = Date.now()
+  const plannedSpanCount = getPlannedSpanCount(traces)
   let sentSpanCount = 0
+  let completedTraceCount = 0
+  let activeTraceCount = 0
 
   await runWithConcurrency(traces, options.parallelTraces, async (trace) => {
+    activeTraceCount += 1
     const traceStartedAt = Date.now()
     const dispatchContext = buildTraceDispatchContext(trace)
     const builtSpans = buildTraceRequests({
@@ -624,24 +661,46 @@ export async function dispatchResolvedTraces(
       ...(dispatchContext.scopeVersion ? { scopeVersion: dispatchContext.scopeVersion } : {}),
     })
 
-    for (const span of builtSpans) {
-      const dueAt = traceStartedAt + trace.generatedTrace.startDelayMs + span.emitAtMs
-      const sleepFor = Math.max(0, dueAt - Date.now())
+    try {
+      for (const span of builtSpans) {
+        const dueAt = traceStartedAt + trace.generatedTrace.startDelayMs + span.emitAtMs
+        const sleepFor = Math.max(0, dueAt - Date.now())
 
-      if (sleepFor > 0) {
-        await sleep(sleepFor)
+        if (sleepFor > 0) {
+          await sleep(sleepFor)
+        }
+
+        if (options.postTraceSpan) {
+          await options.postTraceSpan({ trace, span })
+        } else {
+          await postSpanToIngest(options.ingestBaseUrl, trace.traceId, span.request)
+        }
+
+        sentSpanCount += 1
+        if (options.verboseSpans) {
+          console.log(
+            `[span] fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} label=${span.label} trace=${trace.traceId} span=${span.spanId} sent=${sentSpanCount.toString()}/${plannedSpanCount.toString()}`,
+          )
+        }
       }
 
-      if (options.postTraceSpan) {
-        await options.postTraceSpan({ trace, span })
-      } else {
-        await postSpanToIngest(options.ingestBaseUrl, trace.traceId, span.request)
-      }
+      completedTraceCount += 1
+      activeTraceCount -= 1
+      const elapsedMs = Date.now() - traceStartedAt
+      const totalElapsedMs = Date.now() - dispatchStartedAt
 
-      sentSpanCount += 1
       console.log(
-        `[${new Date().toISOString()}] sent ${trace.fixture.key}[${trace.instanceIndex.toString()}]/${span.label} trace=${trace.traceId} span=${span.spanId}`,
+        `[trace] completed fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} spans=${builtSpans.length.toString()} elapsed=${formatDuration(elapsedMs)} trace=${trace.traceId}`,
       )
+      console.log(
+        `[progress] traces=${completedTraceCount.toString()}/${traces.length.toString()} spans=${sentSpanCount.toString()}/${plannedSpanCount.toString()} active=${activeTraceCount.toString()} elapsed=${formatDuration(totalElapsedMs)} rate=${formatRate(sentSpanCount, totalElapsedMs)}`,
+      )
+    } catch (error) {
+      activeTraceCount -= 1
+      console.error(
+        `[trace] failed fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} trace=${trace.traceId}`,
+      )
+      throw error
     }
   })
 
@@ -649,11 +708,12 @@ export async function dispatchResolvedTraces(
     elapsedMs: Date.now() - dispatchStartedAt,
     sentTraceCount: traces.length,
     sentSpanCount,
+    plannedSpanCount,
   }
 }
 
 export function printFixtureCatalog(): void {
-  console.log("Available live-seed fixtures:")
+  console.log("[fixtures] Available live-seed fixtures")
   for (const fixture of liveSeedFixtures) {
     console.log(`  - ${fixture.key}: ${fixture.description}`)
   }
@@ -677,20 +737,24 @@ export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promis
 
   printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelTraces)
 
+  const plannedSpanCount = getPlannedSpanCount(plan.traces)
   console.log(
-    `\nSending ${plan.traces.length.toString()} traces across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
+    `\n[send] Dispatching ${plan.traces.length.toString()} traces (${plannedSpanCount.toString()} spans planned) across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
   )
   const dispatchResult = await dispatchResolvedTraces(plan.traces, {
     ingestBaseUrl: options.ingestBaseUrl,
     parallelTraces: options.parallelTraces,
     runId: plan.runId,
+    verboseSpans: options.verboseSpans,
   })
 
-  console.log("\nAll spans were sent successfully.")
   console.log(
-    `Allow at least ${Math.ceil((TRACE_END_DEBOUNCE_MS + dispatchResult.elapsedMs) / 1000).toString()}s from script start for every trace to become eligible for TraceEnded on this branch.`,
+    `\n[done] Sent ${dispatchResult.sentTraceCount.toString()} traces and ${dispatchResult.sentSpanCount.toString()}/${dispatchResult.plannedSpanCount.toString()} spans in ${formatDuration(dispatchResult.elapsedMs)} (${formatRate(dispatchResult.sentSpanCount, dispatchResult.elapsedMs)}).`,
   )
   console.log(
-    `Use runId=${plan.runId} and seed=${plan.seed} to correlate generated traces with downstream worker logs.`,
+    `[done] Allow at least ${Math.ceil((TRACE_END_DEBOUNCE_MS + dispatchResult.elapsedMs) / 1000).toString()}s from script start for every trace to become eligible for TraceEnded on this branch.`,
+  )
+  console.log(
+    `[done] Use runId=${plan.runId} and seed=${plan.seed} to correlate generated traces with downstream worker logs.`,
   )
 }

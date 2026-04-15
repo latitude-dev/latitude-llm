@@ -12,9 +12,10 @@ Options:
   --fixtures <a,b,c>             Comma-separated fixture keys to send
   --ingest-url <url>             Base URL for the ingest service
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
-  --count-per-fixture <n>        Generate this many traces per selected fixture (default: 1)
+  --count-per-fixture <n>        Generate this many traces per selected fixture (default: 5)
   --parallel-traces <n>          Number of traces to dispatch concurrently (default: 4)
   --seed <value>                 Seed for reproducible trace generation
+  --verbose-spans                Print one log line per span in addition to summary progress
   --no-provision-system-queues   Skip provisioning the default system queues
   --list-fixtures                Print the available fixture keys and exit
   --help                         Show this help
@@ -59,9 +60,10 @@ const { values, positionals } = parseArgs({
     fixtures: { type: "string" },
     "ingest-url": { type: "string" },
     "time-scale": { type: "string", default: "1" },
-    "count-per-fixture": { type: "string", default: "1" },
+    "count-per-fixture": { type: "string", default: "5" },
     "parallel-traces": { type: "string", default: "4" },
     seed: { type: "string" },
+    "verbose-spans": { type: "boolean", default: false },
     "no-provision-system-queues": { type: "boolean", default: false },
     "list-fixtures": { type: "boolean", default: false },
     help: { type: "boolean", default: false },
@@ -92,9 +94,10 @@ const fixtureKeys =
 
 const ingestBaseUrl = values["ingest-url"] ?? resolveDefaultIngestUrl()
 const timeScale = parsePositiveNumber(values["time-scale"] ?? "1", "--time-scale")
-const countPerFixture = parsePositiveInteger(values["count-per-fixture"] ?? "1", "--count-per-fixture")
+const countPerFixture = parsePositiveInteger(values["count-per-fixture"] ?? "5", "--count-per-fixture")
 const parallelTraces = parsePositiveInteger(values["parallel-traces"] ?? "4", "--parallel-traces")
 const provisionSystemQueues = !values["no-provision-system-queues"]
+const verboseSpans = values["verbose-spans"] ?? false
 
 const options = {
   ...(fixtureKeys ? { fixtureKeys } : {}),
@@ -103,6 +106,7 @@ const options = {
   countPerFixture,
   parallelTraces,
   provisionSystemQueues,
+  verboseSpans,
   ...(values.seed ? { seed: values.seed } : {}),
 }
 
