@@ -15,5 +15,5 @@ export function createBullBoardQueues(config: BullMqConfig, topicNames: readonly
     maxRetriesPerRequest: null,
   })
 
-  return topicNames.map((name) => new Queue(name, { connection }))
+  return topicNames.map((name) => new Queue(name, { connection, prefix: '{bull}' }))
 }
