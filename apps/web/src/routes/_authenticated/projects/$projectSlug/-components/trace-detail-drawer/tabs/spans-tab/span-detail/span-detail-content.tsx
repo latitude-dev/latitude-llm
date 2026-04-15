@@ -43,8 +43,16 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
 
   if (span.statusCode !== "error" && !span.errorType && !exception) return null
 
+  const hasDetails = !!(span.errorType || span.statusMessage || exception?.message || exception?.stacktrace)
+
   return (
     <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+      {!hasDetails && (
+        <Text.H6 color="destructiveMutedForeground">
+          This span has been flagged as an error but no error details were provided.
+        </Text.H6>
+      )}
+
       {span.errorType && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Error Type</Text.H6>
