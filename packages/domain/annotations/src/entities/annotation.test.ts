@@ -53,6 +53,23 @@ describe("annotationAnchorSchema", () => {
     expect(result.success).toBe(true)
   })
 
+  it("accepts system message anchor at messageIndex 0", () => {
+    const result = annotationAnchorSchema.safeParse({
+      messageIndex: 0,
+      partIndex: 0,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects negative messageIndex", () => {
+    const result = annotationAnchorSchema.safeParse({
+      messageIndex: -1,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
   it("rejects substring anchors without a part index", () => {
     const result = annotationAnchorSchema.safeParse({
       messageIndex: 2,

@@ -136,6 +136,12 @@ export {
   refreshIssueDetailsUseCase,
 } from "./use-cases/refresh-issue-details.ts"
 export {
+  type RemoveScoreFromIssueError,
+  type RemoveScoreFromIssueInput,
+  type RemoveScoreFromIssueResult,
+  removeScoreFromIssueUseCase,
+} from "./use-cases/remove-score-from-issue.ts"
+export {
   type RerankIssueCandidatesInput,
   type RetrievalResult,
   rerankIssueCandidatesUseCase,

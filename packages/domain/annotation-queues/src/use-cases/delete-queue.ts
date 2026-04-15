@@ -12,6 +12,15 @@ export class DeleteQueueNotFoundError extends Data.TaggedError("DeleteQueueNotFo
   }
 }
 
+export class SystemQueueDeleteForbiddenError extends Data.TaggedError("SystemQueueDeleteForbiddenError")<{
+  readonly queueId: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return "System queues cannot be deleted"
+  }
+}
+
 export interface DeleteQueueInput {
   readonly projectId: ProjectId
   readonly queueId: string
@@ -21,7 +30,7 @@ export interface DeleteQueueResult {
   readonly queue: AnnotationQueue
 }
 
-export type DeleteQueueError = RepositoryError | DeleteQueueNotFoundError
+export type DeleteQueueError = RepositoryError | DeleteQueueNotFoundError | SystemQueueDeleteForbiddenError
 
 export const deleteQueueUseCase = (
   input: DeleteQueueInput,
@@ -36,6 +45,10 @@ export const deleteQueueUseCase = (
 
     if (!existing) {
       return yield* new DeleteQueueNotFoundError({ queueId: input.queueId })
+    }
+
+    if (existing.system) {
+      return yield* new SystemQueueDeleteForbiddenError({ queueId: input.queueId })
     }
 
     const now = new Date()

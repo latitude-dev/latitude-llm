@@ -38,6 +38,7 @@ const _registry = {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
+    readonly preEnrichedFeedback?: string
   }>(),
   systemQueueFlaggerWorkflow: input<{
     readonly organizationId: string

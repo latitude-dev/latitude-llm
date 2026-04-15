@@ -65,4 +65,25 @@ describe("publishAnnotationWorkflow", () => {
     expect(result).toEqual({ action: "already-published", scoreId: "score-1" })
     expect(mockActivities.writePublishedAnnotationScore).not.toHaveBeenCalled()
   })
+
+  it("skips enrichment activity when preEnrichedFeedback is provided", async () => {
+    const result = await publishAnnotationWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      preEnrichedFeedback: "System-generated feedback",
+    })
+
+    expect(result).toEqual({ action: "published", scoreId: "score-1" })
+    expect(callOrder).toEqual(["writePublishedAnnotationScore"])
+    expect(mockActivities.enrichAnnotationForPublication).not.toHaveBeenCalled()
+    expect(mockActivities.writePublishedAnnotationScore).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      enrichedFeedback: "System-generated feedback",
+      resolvedSessionId: null,
+      resolvedSpanId: null,
+    })
+  })
 })

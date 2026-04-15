@@ -124,6 +124,28 @@ export const createDomainEventsWorker = ({
         debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
       }),
 
+    AnnotationDeleted: (event) => {
+      const { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt } = event.payload
+
+      return Effect.all(
+        [
+          pub.publish(
+            "scores",
+            "delete-analytics",
+            { organizationId, scoreId },
+            { dedupeKey: `scores:delete-analytics:${scoreId}` },
+          ),
+          pub.publish(
+            "issues",
+            "removeScore",
+            { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt },
+            { dedupeKey: `issues:remove-score:${scoreId}` },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid)
+    },
+
     OrganizationCreated: (event) =>
       pub.publish(
         "api-keys",

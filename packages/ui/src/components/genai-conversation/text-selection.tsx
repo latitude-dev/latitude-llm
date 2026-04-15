@@ -182,8 +182,12 @@ function useTextSelectionHook(
 
   const clearSelection = useCallback(() => {
     setSelection(null)
-    window.getSelection()?.removeAllRanges()
-  }, [])
+    // Only clear browser selection if it's within our container
+    const ws = window.getSelection()
+    if (ws?.rangeCount && containerRef.current?.contains(ws.getRangeAt(0).commonAncestorContainer)) {
+      ws.removeAllRanges()
+    }
+  }, [containerRef])
 
   // Store callbacks in refs so the mount-only effect always calls the latest version
   const messagesRef = useRef(messages)
@@ -314,8 +318,6 @@ function useTextSelectionHook(
 
   return { selection, clearSelection }
 }
-
-// --- Provider ---
 
 export function TextSelectionProvider({
   messages,

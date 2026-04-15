@@ -85,6 +85,16 @@ const _registry = {
       readonly projectId: string
       readonly issueId: string
     }
+    removeScore: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+      readonly issueId: string | null
+      readonly draftedAt: string | null
+      readonly feedback: string
+      readonly source: string
+      readonly createdAt: string
+    }
   }>(),
 
   evaluations: payloads<{
@@ -105,6 +115,13 @@ const _registry = {
     markReviewStarted: {
       readonly organizationId: string
       readonly projectId: string
+      readonly scoreId: string
+    }
+  }>(),
+
+  scores: payloads<{
+    "delete-analytics": {
+      readonly organizationId: string
       readonly scoreId: string
     }
   }>(),

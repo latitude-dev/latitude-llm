@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, Children, forwardRef, isValidElement, type ReactNode } from "react"
+import { type ButtonHTMLAttributes, Children, isValidElement, type ReactNode, type Ref } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
@@ -118,6 +118,7 @@ const buttonVariantsConfig = cva(
 export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariantsConfig> {
+  ref?: Ref<HTMLButtonElement>
   asChild?: boolean
   isLoading?: boolean
 }
@@ -165,46 +166,55 @@ function stripLeadingIconChild(children: ReactNode): ReactNode {
   return childArray.filter((_, index) => index !== firstMeaningfulChildIndex)
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
-    const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  isLoading = false,
+  children,
+  disabled,
+  ref,
+  ...props
+}: ButtonProps) {
+  const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
 
-    if (asChild) {
-      return (
-        <Slot
-          ref={ref}
-          className={cn(
-            buttonContainerVariants({ variant }),
-            buttonVariantsConfig({ variant, size }),
-            className,
-            isLoading && "animate-pulse",
-          )}
-          {...props}
-        >
-          {visibleChildren}
-        </Slot>
-      )
-    }
+  if (asChild) {
+    // Used in combobox.ts <ComboboxInput>
     return (
-      <button
+      <Slot
         ref={ref}
+        className={cn(
+          buttonContainerVariants({ variant }),
+          buttonVariantsConfig({ variant, size }),
+          className,
+          isLoading && "animate-pulse",
+        )}
         {...props}
-        className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
-        disabled={disabled || isLoading}
-        aria-busy={isLoading ? "true" : undefined}
       >
-        <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
-          <div className="relative z-[1] flex max-w-full flex-row items-center gap-x-1.5">
-            {isLoading && (
-              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
-            {visibleChildren}
-          </div>
-        </div>
-      </button>
+        {visibleChildren}
+      </Slot>
     )
-  },
-)
-Button.displayName = "Button"
+  }
+
+  return (
+    <button
+      ref={ref}
+      {...props}
+      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+      disabled={disabled || isLoading}
+      aria-busy={isLoading ? "true" : undefined}
+    >
+      <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-1", className)}>
+        <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
+          {isLoading && (
+            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          )}
+          {visibleChildren}
+        </div>
+      </div>
+    </button>
+  )
+}
 
 export { Button, buttonVariantsConfig }

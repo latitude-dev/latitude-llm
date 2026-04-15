@@ -1,4 +1,5 @@
 import { cn, Skeleton, Text } from "@repo/ui"
+import { type KeyboardEvent, type MouseEvent, useCallback } from "react"
 import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import {
   useAnnotationsByTrace,
@@ -23,7 +24,11 @@ export function TraceAnnotationsList({
   readonly selectedAnnotationId?: string | undefined
   readonly onAnnotationClick?: ((annotation: AnnotationRecord) => void) | undefined
 }) {
-  const { data: annotationsData, isLoading: annotationsLoading } = useAnnotationsByTrace({
+  const {
+    data: annotationsData,
+    isLoading: annotationsLoading,
+    isError: annotationsError,
+  } = useAnnotationsByTrace({
     projectId,
     traceId,
     draftMode: "include",
@@ -40,6 +45,19 @@ export function TraceAnnotationsList({
   const annotations: readonly AnnotationRecord[] = annotationsData?.items ?? []
   const sortedAnnotations = [...annotations].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+
+  const onClickAnnotationCard = useCallback(
+    ({ isGlobal, annotation }: { isGlobal: boolean; annotation: AnnotationRecord }) =>
+      (event: MouseEvent | KeyboardEvent) => {
+        if (isGlobal) return
+        const target = event.target
+        if (target instanceof Element && target.closest("[data-no-navigate]")) return
+        if ("key" in event && event.key !== "Enter" && event.key !== " ") return
+
+        onAnnotationClick?.(annotation)
+      },
+    [onAnnotationClick],
   )
 
   function handleSave(data: { passed: boolean; comment: string; issueId: string | null }) {
@@ -90,7 +108,7 @@ export function TraceAnnotationsList({
       <div className="flex flex-col">
         <div className="flex items-center gap-1">
           <Text.H5M>Annotations</Text.H5M>
-          <Text.H5M color="foregroundMuted">{annotations.length}</Text.H5M>
+          <Text.H5M color="foregroundMuted">{annotationsError ? "–" : annotations.length}</Text.H5M>
         </div>
 
         <Text.H5 color="foregroundMuted">
@@ -107,6 +125,10 @@ export function TraceAnnotationsList({
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
+        ) : annotationsError ? (
+          <Text.H6 color="foregroundMuted" className="pt-4">
+            Could not load existing annotations.
+          </Text.H6>
         ) : sortedAnnotations.length > 0 ? (
           <div className="flex flex-col gap-2 pt-4">
             {sortedAnnotations.map((annotation) => {
@@ -122,19 +144,10 @@ export function TraceAnnotationsList({
                     isGlobal ? undefined : "cursor-pointer hover:bg-secondary",
                     isSelected && "bg-secondary ring-2 ring-primary/50 ring-offset-2",
                   )}
-                  onClick={isGlobal ? undefined : () => onAnnotationClick?.(annotation)}
+                  onClick={onClickAnnotationCard({ isGlobal, annotation })}
+                  onKeyDown={onClickAnnotationCard({ isGlobal, annotation })}
                   role={isGlobal ? undefined : "button"}
                   tabIndex={isGlobal ? undefined : 0}
-                  onKeyDown={
-                    isGlobal
-                      ? undefined
-                      : (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault()
-                            onAnnotationClick?.(annotation)
-                          }
-                        }
-                  }
                 >
                   <AnnotationCard
                     annotation={annotation}

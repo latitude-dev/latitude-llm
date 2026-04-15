@@ -59,6 +59,7 @@ export {
   type ScoreRepositoryShape,
   scoreDraftModeSchema,
 } from "./ports/score-repository.ts"
+export { deleteScoreAnalyticsUseCase } from "./use-cases/delete-score-analytics.ts"
 export {
   baseListScoresInputSchema,
   type ListProjectScoresInput,

@@ -39,6 +39,7 @@ import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
+import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
@@ -157,6 +158,7 @@ const bootstrap = async () => {
     createLiveAnnotationQueuesWorker(ctx)
     createSystemAnnotationQueuesWorker(ctx)
     createProjectsWorker(ctx)
+    createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())

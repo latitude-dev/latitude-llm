@@ -1,10 +1,11 @@
 import {
   OrganizationId,
   ProjectId,
+  SEED_ANNOTATION_DEMO_TRACE_ID,
   SEED_LIFECYCLE_TRACE_IDS,
   SEED_ORG_ID,
   SEED_PROJECT_ID,
-  type TraceId,
+  TraceId,
 } from "@domain/shared/seeding"
 import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -207,6 +208,44 @@ describe("TraceRepository", () => {
       expect(baseline.metrics.tokensTotal.sampleCount).toBe(1)
       expect(baseline.metrics.tokensTotal.p50).toBe(100)
       expect(baseline.metrics.tokensTotal.p90).toBe(100)
+    })
+  })
+
+  describe("findByTraceId", () => {
+    it("prepends system instructions as first message in allMessages", async () => {
+      const detail = await Effect.runPromise(
+        repo.findByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SEED_ANNOTATION_DEMO_TRACE_ID),
+        }),
+      )
+
+      expect(detail.systemInstructions.length).toBeGreaterThan(0)
+      expect(detail.allMessages.length).toBeGreaterThan(0)
+      expect(detail.allMessages[0]?.role).toBe("system")
+      expect(detail.allMessages[0]?.parts).toEqual(detail.systemInstructions)
+    })
+
+    it("allMessages starts with system message when systemInstructions present", async () => {
+      const detail = await Effect.runPromise(
+        repo.findByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+        }),
+      )
+
+      // If systemInstructions exist, first message should be system
+      if (detail.systemInstructions.length > 0) {
+        expect(detail.allMessages[0]?.role).toBe("system")
+        expect(detail.allMessages[0]?.parts).toEqual(detail.systemInstructions)
+      } else {
+        // If no system instructions, first message should not be system (or allMessages is empty)
+        if (detail.allMessages.length > 0) {
+          expect(detail.allMessages[0]?.role).not.toBe("system")
+        }
+      }
     })
   })
 

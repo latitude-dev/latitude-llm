@@ -1,5 +1,10 @@
-import { deleteAnnotationUseCase, listTraceAnnotationsUseCase } from "@domain/annotations"
+import {
+  approveSystemAnnotationUseCase,
+  deleteAnnotationUseCase,
+  listTraceAnnotationsUseCase,
+} from "@domain/annotations"
 import { writeDraftAnnotationUseCase } from "@domain/annotations/src/use-cases/write-draft-annotation.ts"
+import { WorkflowStarter } from "@domain/queue"
 import type { AnnotationScore, ScoreListPage } from "@domain/scores"
 import { annotationAnchorSchema, scoreDraftModeSchema } from "@domain/scores"
 import { ProjectId, ScoreId } from "@domain/shared"
@@ -15,7 +20,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getWorkflowStarter } from "../../server/clients.ts"
 
 const toRecord = (score: AnnotationScore) => ({
   id: score.id as string,
@@ -160,14 +165,12 @@ export const deleteAnnotation = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
 
-    const repositoriesLayer = Layer.mergeAll(ScoreRepositoryLive, ScoreAnalyticsRepositoryLive)
+    const postgresLayer = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive)
 
     await Effect.runPromise(
       deleteAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
-        withPostgres(repositoriesLayer, pgClient, organizationId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, organizationId),
+        withPostgres(postgresLayer, pgClient, organizationId),
       ),
     )
   })
@@ -197,4 +200,38 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
     )
 
     return toListResult(result)
+  })
+
+export const approveSystemAnnotation = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ scoreId: z.string() }))
+  .handler(async ({ data }): Promise<{ action: "approved" | "already-published" }> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const workflowStarter = await getWorkflowStarter()
+
+    const result = await Effect.runPromise(
+      approveSystemAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
+        Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
+        withPostgres(ScoreRepositoryLive, client, organizationId),
+      ),
+    )
+
+    return { action: result.action }
+  })
+
+export const rejectSystemAnnotation = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ scoreId: z.string() }))
+  .handler(async ({ data }): Promise<{ action: "rejected" }> => {
+    const { organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    const postgresLayer = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive)
+
+    await Effect.runPromise(
+      deleteAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
+        withPostgres(postgresLayer, pgClient, organizationId),
+      ),
+    )
+
+    return { action: "rejected" }
   })

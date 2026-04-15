@@ -232,14 +232,20 @@ const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
 }
 
 const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
+  const systemInstructions = parseSystem(row.system_instructions)
   const lastInput = parseMessages(row.last_input_messages)
   const output = parseMessages(row.output_messages)
+
+  // Prepend system instructions as a system message at index 0
+  const systemMessage: GenAIMessage | null =
+    systemInstructions.length > 0 ? { role: "system", parts: systemInstructions } : null
+
   return {
     ...toBaseFields(row),
-    systemInstructions: parseSystem(row.system_instructions),
+    systemInstructions,
     inputMessages: parseMessages(row.input_messages),
     outputMessages: output,
-    allMessages: [...lastInput, ...output],
+    allMessages: systemMessage ? [systemMessage, ...lastInput, ...output] : [...lastInput, ...output],
   }
 }
 

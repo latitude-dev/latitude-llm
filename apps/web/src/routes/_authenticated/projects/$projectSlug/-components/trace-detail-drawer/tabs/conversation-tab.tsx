@@ -1,6 +1,6 @@
 import { Conversation, ScrollNavigator, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type MutableRefObject, type RefObject, useCallback, useRef } from "react"
+import { type RefObject, useCallback, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
@@ -26,7 +26,7 @@ function ConversationContent({
   readonly projectId: string
   readonly isActive: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
-  readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
+  readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   readonly onPopoverClose?: (() => void) | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
@@ -104,7 +104,6 @@ function ConversationContent({
     <div className="relative flex-1 min-h-0 flex flex-col">
       <div ref={scrollRef} className="flex flex-col py-8 px-4 overflow-y-auto flex-1">
         <Conversation
-          systemInstructions={traceDetail.systemInstructions}
           messages={traceDetail.allMessages}
           enableNavigator
           scrollContainerRef={scrollRef}
@@ -112,8 +111,7 @@ function ConversationContent({
           navItemRefsRef={navItemRefs}
           onTextSelect={handleTextSelect}
           highlightRanges={highlightRanges}
-          messageAnnotationSlot={(messageIndex, role) => {
-            if (role === "tool") return null
+          messageAnnotationSlot={(messageIndex) => {
             const data = messageLevelAnnotations.get(messageIndex)
             return (
               <MessageAnnotationTrigger
@@ -185,7 +183,7 @@ export function ConversationTab({
   readonly isActive: boolean
   /** Optional ref to the scroll container. Used for external scroll control (e.g., annotation navigation). */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
-  readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
+  readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   /** Optional callback when annotation popover closes. Used to clear selection state. */
   readonly onPopoverClose?: (() => void) | undefined
 }) {

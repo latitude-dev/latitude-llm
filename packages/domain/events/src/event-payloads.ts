@@ -43,6 +43,16 @@ export interface EventPayloads {
     readonly projectId: string
     readonly issueId: string
   }
+  AnnotationDeleted: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+    readonly issueId: string | null
+    readonly draftedAt: string | null
+    readonly feedback: string
+    readonly source: string
+    readonly createdAt: string
+  }
   OrganizationCreated: {
     readonly organizationId: string
     readonly actorUserId: string

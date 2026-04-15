@@ -5,9 +5,11 @@
 // list, so a collection instance cache would add complexity with no reactive benefit.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  approveSystemAnnotation,
   createAnnotation,
   deleteAnnotation,
   listAnnotationsByTrace,
+  rejectSystemAnnotation,
   updateAnnotation,
 } from "./annotations.functions.ts"
 
@@ -82,6 +84,70 @@ export function useDeleteAnnotation() {
     mutationFn: (input: DeleteAnnotationInput) => deleteAnnotation({ data: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["annotations"] })
+    },
+  })
+}
+
+type AnnotationsPage = Awaited<ReturnType<typeof listAnnotationsByTrace>>
+
+export function useApproveSystemAnnotation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scoreId: string) => approveSystemAnnotation({ data: { scoreId } }),
+    onMutate: async (scoreId) => {
+      await queryClient.cancelQueries({ queryKey: ["annotations"] })
+
+      const previousData = queryClient.getQueriesData<AnnotationsPage>({ queryKey: ["annotations"] })
+
+      queryClient.setQueriesData<AnnotationsPage>({ queryKey: ["annotations"] }, (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          items: old.items.map((annotation) =>
+            annotation.id === scoreId ? { ...annotation, draftedAt: null } : annotation,
+          ),
+        }
+      })
+
+      return { previousData }
+    },
+    onError: (_err, _scoreId, context) => {
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      }
+    },
+  })
+}
+
+export function useRejectSystemAnnotation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scoreId: string) => rejectSystemAnnotation({ data: { scoreId } }),
+    onMutate: async (scoreId) => {
+      await queryClient.cancelQueries({ queryKey: ["annotations"] })
+
+      const previousData = queryClient.getQueriesData<AnnotationsPage>({ queryKey: ["annotations"] })
+
+      queryClient.setQueriesData<AnnotationsPage>({ queryKey: ["annotations"] }, (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          items: old.items.filter((annotation) => annotation.id !== scoreId),
+        }
+      })
+
+      return { previousData }
+    },
+    onError: (_err, _scoreId, context) => {
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      }
     },
   })
 }

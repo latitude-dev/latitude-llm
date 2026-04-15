@@ -1,5 +1,5 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, CheckboxInput, DropdownMenu, Input, Text } from "@repo/ui"
+import { Button, CheckboxInput, DropdownMenu, Icon, Input, Text } from "@repo/ui"
 import { PlusIcon } from "lucide-react"
 import { type RefObject, useCallback, useMemo, useState } from "react"
 import { MULTI_SELECT_FIELDS, NUMBER_RANGE_FIELDS, STATUS_OPTIONS, TEXT_FIELDS } from "./constants.ts"
@@ -260,20 +260,22 @@ export function FilterBuilder({
       })}
 
       {!disabled && availableFilters.length > 0 && (
-        <DropdownMenu
-          side="bottom"
-          align="start"
-          trigger={() => (
-            <Button type="button" variant="outline" size="sm" className="w-fit">
-              <PlusIcon className="h-4 w-4" />
-              Add filter
-            </Button>
-          )}
-          options={availableFilters.map((filter) => ({
-            label: filter.label,
-            onClick: () => addFilter(filter),
-          }))}
-        />
+        <div className="w-fit self-start">
+          <DropdownMenu
+            side="bottom"
+            align="start"
+            trigger={() => (
+              <Button type="button" variant="outline" size="sm">
+                <Icon icon={PlusIcon} size="sm" />
+                Add filter
+              </Button>
+            )}
+            options={availableFilters.map((filter) => ({
+              label: filter.label,
+              onClick: () => addFilter(filter),
+            }))}
+          />
+        </div>
       )}
 
       {activeFilters.length === 0 && <Text.H6 color="foregroundMuted">{emptyMessage}</Text.H6>}

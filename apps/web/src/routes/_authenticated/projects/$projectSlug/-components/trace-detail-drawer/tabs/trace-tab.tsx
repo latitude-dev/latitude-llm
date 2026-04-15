@@ -302,7 +302,7 @@ export function TraceTab({
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.systemInstructions.length ? (
             <div className="flex flex-col rounded-lg bg-secondary p-4">
-              <Conversation systemInstructions={traceDetail.systemInstructions} messages={[]} />
+              <Conversation messages={[{ role: "system", parts: traceDetail.systemInstructions }]} />
             </div>
           ) : (
             <Text.H6 color="foregroundMuted" italic>
