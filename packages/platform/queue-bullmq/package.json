@@ -16,6 +16,7 @@
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@opentelemetry/api": "catalog:",
+    "@platform/cache-redis": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
     "bullmq": "catalog:",

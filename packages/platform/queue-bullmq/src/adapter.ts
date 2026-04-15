@@ -10,6 +10,7 @@ import type {
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
+import { buildRedisConnectionOptions } from "@platform/cache-redis"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
@@ -58,10 +59,7 @@ export interface BullMqRedisConfig {
 }
 
 const buildRedisOptions = (redis: BullMqRedisConfig["redis"]) => ({
-  host: redis.host,
-  port: redis.port,
-  ...(redis.password ? { password: redis.password } : {}),
-  ...(redis.tls ? { tls: {} } : {}),
+  ...buildRedisConnectionOptions(redis),
   maxRetriesPerRequest: null,
 })
 

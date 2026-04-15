@@ -13,7 +13,7 @@ export const loadBullMqConfig = () =>
     const host = yield* parseEnv("LAT_BULLMQ_HOST", "string")
     const port = yield* parseEnv("LAT_BULLMQ_PORT", "number", 6380)
     const password = yield* parseEnvOptional("LAT_BULLMQ_PASSWORD", "string")
-    const tls = yield* parseEnvOptional("LAT_BULLMQ_TLS", "string")
+    const tls = yield* parseEnvOptional("LAT_REDIS_TLS", "string")
 
     return {
       host,

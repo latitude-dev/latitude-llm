@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { loadBullMqConfig } from "./config.ts"
 
-const ENV_KEYS = ["LAT_BULLMQ_HOST", "LAT_BULLMQ_PORT", "LAT_BULLMQ_PASSWORD", "LAT_BULLMQ_TLS"]
+const ENV_KEYS = ["LAT_BULLMQ_HOST", "LAT_BULLMQ_PORT", "LAT_BULLMQ_PASSWORD", "LAT_REDIS_TLS"]
 
 const BASE_ENV: Record<string, string> = {
   LAT_BULLMQ_HOST: "localhost",
@@ -64,14 +64,14 @@ describe("loadBullMqConfig", () => {
   })
 
   it("loads config with TLS enabled", async () => {
-    setEnv({ ...BASE_ENV, LAT_BULLMQ_TLS: "true" })
+    setEnv({ ...BASE_ENV, LAT_REDIS_TLS: "true" })
     const config = await Effect.runPromise(loadBullMqConfig())
 
     expect(config.tls).toBe(true)
   })
 
-  it("omits tls when LAT_BULLMQ_TLS is not 'true'", async () => {
-    setEnv({ ...BASE_ENV, LAT_BULLMQ_TLS: "false" })
+  it("omits tls when LAT_REDIS_TLS is not 'true'", async () => {
+    setEnv({ ...BASE_ENV, LAT_REDIS_TLS: "false" })
     const config = await Effect.runPromise(loadBullMqConfig())
 
     expect(config.tls).toBeUndefined()

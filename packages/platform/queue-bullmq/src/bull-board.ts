@@ -1,3 +1,4 @@
+import { buildRedisConnectionOptions } from "@platform/cache-redis"
 import { Queue } from "bullmq"
 import { Redis } from "ioredis"
 import type { BullMqConfig } from "./config.ts"
@@ -8,10 +9,7 @@ import type { BullMqConfig } from "./config.ts"
  */
 export function createBullBoardQueues(config: BullMqConfig, topicNames: readonly string[]): Queue[] {
   const connection = new Redis({
-    host: config.host,
-    port: config.port,
-    ...(config.password ? { password: config.password } : {}),
-    ...(config.tls ? { tls: {} } : {}),
+    ...buildRedisConnectionOptions(config),
     maxRetriesPerRequest: null,
   })
 

@@ -209,19 +209,18 @@ export function createEcs(
         securityGroups: [securityGroup.id],
         assignPublicIp: false,
       },
-      loadBalancers:
-        serviceConfig.port
-          ? Object.entries(albTargetGroupArns)
-              .filter(([key]) => {
-                if (serviceConfig.name === "workers") return key === "bullBoard"
-                return key === serviceConfig.name
-              })
-              .map(([_, arn]) => ({
-                targetGroupArn: arn,
-                containerName: serviceConfig.name,
-                containerPort: serviceConfig.port!,
-              }))
-          : undefined,
+      loadBalancers: serviceConfig.port
+        ? Object.entries(albTargetGroupArns)
+            .filter(([key]) => {
+              if (serviceConfig.name === "workers") return key === "bullBoard"
+              return key === serviceConfig.name
+            })
+            .map(([_, arn]) => ({
+              targetGroupArn: arn,
+              containerName: serviceConfig.name,
+              containerPort: serviceConfig.port!,
+            }))
+        : undefined,
       deploymentController: {
         type: "ECS",
       },
@@ -398,9 +397,12 @@ function createTaskDefinition(
           { name: "LAT_WORKERS_HEALTH_PORT", value: "8080" },
           { name: "LAT_REDIS_HOST", value: cacheRedis },
           { name: "LAT_REDIS_PORT", value: "6379" },
+          {
+            name: "LAT_REDIS_TLS",
+            value: config.redis.cache.type === "memorydb" || config.redis.bullmq.type === "memorydb" ? "true" : "false",
+          },
           { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
           { name: "LAT_BULLMQ_PORT", value: "6379" },
-          { name: "LAT_BULLMQ_TLS", value: config.redis.bullmq.type === "memorydb" ? "true" : "false" },
           { name: "LAT_STORAGE_DRIVER", value: "s3" },
           { name: "LAT_STORAGE_S3_BUCKET", value: s3BucketName },
           { name: "LAT_STORAGE_S3_REGION", value: config.region },

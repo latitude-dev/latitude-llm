@@ -1500,6 +1500,9 @@ importers:
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../cache-redis
       '@platform/env':
         specifier: workspace:*
         version: link:../env
