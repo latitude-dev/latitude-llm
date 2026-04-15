@@ -1,7 +1,8 @@
 import { createBullBoard } from "@bull-board/api"
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter.js"
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
 import { serve } from "@hono/node-server"
+import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
@@ -93,7 +94,8 @@ const bootstrap = async () => {
     const bullBoardPass = Effect.runSync(parseEnv("LAT_BULL_BOARD_PASSWORD", "string"))
     app.use("/bull-board/*", basicAuth({ username: bullBoardUser, password: bullBoardPass }))
 
-    const serverAdapter = new HonoAdapter("/bull-board")
+    const serverAdapter = new HonoAdapter(serveStatic)
+    serverAdapter.setBasePath("/bull-board")
     createBullBoard({
       queues: bullBoardQueues.map((q) => new BullMQAdapter(q, { readOnlyMode: true })),
       serverAdapter,
