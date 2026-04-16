@@ -70,7 +70,7 @@ function AnnotationApprovalButtons({ annotationId, onAction }: AnnotationApprova
       >
         <span className="flex items-center gap-1">
           <Icon icon={SparklesIcon} size="sm" className="shrink-0 stroke-[1.5]" />
-          Automatically created with AI
+          Automatically generated with AI
         </span>
       </Tooltip>
       <Button
