@@ -1,4 +1,4 @@
-import type { TraceCohortSummary, TraceMetrics } from "@domain/spans"
+import { getTraceMetricPercentileThreshold, type TraceCohortSummary, type TraceMetrics } from "@domain/spans"
 import {
   InfiniteTable,
   type InfiniteTableColumn,
@@ -38,10 +38,17 @@ function getPercentileLevel(
   value: number,
   baseline: Baselines[keyof Baselines] | undefined,
 ): "p99" | "p95" | "p90" | undefined {
-  if (!baseline || baseline.sampleCount === 0) return undefined
-  if (baseline.p99 !== null && value >= baseline.p99) return "p99"
-  if (baseline.p95 !== null && value >= baseline.p95) return "p95"
-  if (value >= baseline.p90) return "p90"
+  if (!baseline) return undefined
+
+  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
+  if (p99 !== null && value >= p99) return "p99"
+
+  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
+  if (p95 !== null && value >= p95) return "p95"
+
+  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
+  if (p90 !== null && value >= p90) return "p90"
+
   return undefined
 }
 

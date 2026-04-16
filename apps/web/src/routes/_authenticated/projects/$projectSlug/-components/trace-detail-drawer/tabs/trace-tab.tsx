@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceCohortSummary } from "@domain/spans"
+import { getTraceMetricPercentileThreshold, type TraceCohortSummary } from "@domain/spans"
 import {
   Badge,
   type BadgeProps,
@@ -31,16 +31,18 @@ function getPercentileBadges(value: number, baselines: Baselines | undefined, me
   if (!baselines) return []
 
   const baseline = baselines[metricKey]
-  if (baseline.sampleCount === 0) return []
 
   const badges: string[] = []
+  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
+  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
+  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
 
   // Show highest matching percentile badge only (p99 > p95 > p90)
-  if (baseline.p99 !== null && value >= baseline.p99) {
+  if (p99 !== null && value >= p99) {
     badges.push("p99")
-  } else if (baseline.p95 !== null && value >= baseline.p95) {
+  } else if (p95 !== null && value >= p95) {
     badges.push("p95")
-  } else if (value >= baseline.p90) {
+  } else if (p90 !== null && value >= p90) {
     badges.push("p90")
   }
 
@@ -63,14 +65,13 @@ function PercentileBadge({ level, onClick }: { readonly level: string; readonly 
 }
 
 function getThresholdForBadge(badge: string, baselines: Baselines, metricKey: keyof Baselines): number | null {
-  const baseline = baselines[metricKey]
   switch (badge) {
     case "p99":
-      return baseline.p99
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p99")
     case "p95":
-      return baseline.p95
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p95")
     case "p90":
-      return baseline.p90
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p90")
     default:
       return null
   }
