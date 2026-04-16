@@ -55,10 +55,10 @@ const ROLE_OPTIONS: ReadonlyArray<{
 
 const ROLE_MOCKUPS: Record<OnboardingRole, string> = {
   engineer: "/onboarding/role-engineer.png",
-  "data-ai-ml": "/onboarding/role-data.png",
-  "product-manager": "/onboarding/role-product.png",
-  founder: "/onboarding/role-product.png",
-  other: "/onboarding/role-product.png",
+  "data-ai-ml": "/onboarding/issues.png",
+  "product-manager": "/onboarding/home.png",
+  founder: "/onboarding/home.png",
+  other: "/onboarding/traces.png",
 }
 
 /** Right-panel headline for each role (step 1). */
@@ -74,18 +74,18 @@ const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly descript
   [
     {
       title: "Live traces coming in",
-      description: "As soon as we detect your first trace, we will open the project traces tab automatically.",
-      image: "/onboarding/discover.png",
+      description: "As soon as we detect your first trace, you will start getting comprehensive insights",
+      image: "/onboarding/traces.png",
     },
     {
       title: "Debug responses with context",
-      description: "Inspect model calls, timing, costs and user/session metadata in one place.",
-      image: "/onboarding/observe.png",
+      description: "Inspect model calls, timing, costs and session metadata in one place",
+      image: "/onboarding/home.png",
     },
     {
-      title: "Track product-level behavior",
-      description: "Use role-specific views to monitor quality and catch regressions quickly.",
-      image: "/onboarding/annotate.png",
+      title: "Detect issues automatically",
+      description: "Once the telemetry is set up, Latitude will start monitoring your product for common issues",
+      image: "/onboarding/issues.png",
     },
   ]
 
@@ -417,9 +417,14 @@ export function OnboardingFlow({
                 </>
               )}
 
-              <Button variant="outline" onClick={() => setStep("role")}>
-                Back
-              </Button>
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={() => setStep("role")}>
+                  Back
+                </Button>
+                <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
+                  Skip for now
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -429,11 +434,11 @@ export function OnboardingFlow({
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24">
           {step === "role" ? (
             <div className="mx-auto flex h-fit w-full max-w-[591px] flex-col items-center justify-center gap-4">
-              <div className="w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
+              <div className="w-full overflow-hidden rounded-xl border-[6px] border-[#0b0f19] bg-[#0b0f19] shadow-xl">
                 <img
                   src={ROLE_MOCKUPS[role]}
                   alt={`${role} preview`}
-                  className="h-full w-full object-cover object-left-top"
+                  className="block h-auto w-full max-w-full"
                 />
               </div>
               <Text.H5 color="foregroundMuted" align="center">
@@ -466,11 +471,11 @@ export function OnboardingFlow({
                   </Button>
                 </div>
               </div>
-              <div className="mt-10 w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
+              <div className="mt-10 w-full overflow-hidden rounded-xl border-[6px] border-[#0b0f19] bg-[#0b0f19] shadow-xl">
                 <img
                   src={activeGalleryItem.image}
                   alt={activeGalleryItem.title}
-                  className="h-full w-full object-cover object-left-top"
+                  className="block h-auto w-full max-w-full"
                 />
               </div>
             </div>

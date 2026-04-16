@@ -8,6 +8,7 @@ import { resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { EnsureOrganizationOnboarding } from "./_authenticated/-components/ensure-organization-onboarding.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
@@ -208,6 +209,7 @@ function AuthenticatedLayout() {
         organizationName={org?.name}
       />
       {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
+      <EnsureOrganizationOnboarding organizationId={organizationId} />
       {isProjectOnboarding ? null : <NavHeader />}
       <main
         className={
