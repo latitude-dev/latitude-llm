@@ -3,13 +3,7 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  DatabaseIcon,
-  FilterIcon,
-  LayersIcon,
-  MessagesSquareIcon,
-  TextIcon,
-} from "lucide-react"
+import { DatabaseIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
