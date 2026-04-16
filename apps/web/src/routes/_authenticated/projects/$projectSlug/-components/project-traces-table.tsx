@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import { type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -78,6 +79,8 @@ interface ProjectTracesTableProps {
   readonly onTraceClick?: (trace: TraceRecord) => void
   readonly getTraceRowAriaLabel?: (trace: TraceRecord) => string
   readonly rowInteractionRole?: "button" | "link"
+  /** When provided, renders the name column as a real link for accessibility (e.g., open in new tab). */
+  readonly getTraceHref?: (trace: TraceRecord) => string
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
   readonly baselines?: Baselines | undefined
@@ -100,6 +103,7 @@ export function ProjectTracesTable({
   onTraceClick,
   getTraceRowAriaLabel,
   rowInteractionRole,
+  getTraceHref,
   traceMetrics,
   metricsLoading,
   baselines,
@@ -125,7 +129,21 @@ export function ProjectTracesTable({
         key: "name",
         header: "Name",
         width: 180,
-        render: (trace) => trace.rootSpanName || trace.traceId.slice(0, 8),
+        render: (trace) => {
+          const displayName = trace.rootSpanName || trace.traceId.slice(0, 8)
+          if (getTraceHref) {
+            return (
+              <Link
+                to={getTraceHref(trace)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                className="hover:underline"
+              >
+                {displayName}
+              </Link>
+            )
+          }
+          return displayName
+        },
       },
       {
         key: "tags",
@@ -289,7 +307,7 @@ export function ProjectTracesTable({
           : {}),
       },
     ]
-  }, [showMetricSubheaders, traceMetrics, metricsLoading, baselines])
+  }, [showMetricSubheaders, traceMetrics, metricsLoading, baselines, getTraceHref])
 
   const columns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
