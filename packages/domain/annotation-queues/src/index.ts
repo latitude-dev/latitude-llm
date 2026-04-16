@@ -76,6 +76,12 @@ export {
 } from "./ports/annotation-queue-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
+  buildLiveTraceEndQueueSelectionKey,
+  buildLiveTraceEndSystemQueueSelectionKey,
+  buildTraceEndLiveQueueSelectionInputs,
+  buildTraceEndSystemQueueSelectionInputs,
+} from "./use-cases/build-trace-end-queue-selection.ts"
+export {
   type CompleteQueueItemError,
   type CompleteQueueItemInput,
   completeQueueItemUseCase,
@@ -116,6 +122,11 @@ export {
   type MaterializeLiveQueueItemsResult,
   materializeLiveQueueItemsUseCase,
 } from "./use-cases/materialize-live-queue-items.ts"
+export {
+  orchestrateTraceEndLiveQueueMaterializationUseCase,
+  orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
+  type StartSystemQueueFlaggerForTraceOnce,
+} from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
 export {
   type PersistSystemQueueAnnotationError,
   type PersistSystemQueueAnnotationInput,

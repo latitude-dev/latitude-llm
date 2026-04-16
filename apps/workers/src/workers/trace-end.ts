@@ -1,20 +1,24 @@
 import {
   AnnotationQueueRepository,
+  buildTraceEndLiveQueueSelectionInputs,
+  buildTraceEndSystemQueueSelectionInputs,
   getProjectSystemQueuesUseCase,
-  LIVE_QUEUE_DEFAULT_SAMPLING,
-  materializeLiveQueueItemsUseCase,
-  type SystemQueueCacheEntry,
+  orchestrateTraceEndLiveQueueMaterializationUseCase,
+  orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
 } from "@domain/annotation-queues"
 import {
-  buildLiveEvaluationExecutePublication,
-  type Evaluation,
-  getLiveEvaluationEligibility,
+  buildTraceEndEvaluationSelectionInputs,
   listAllActiveEvaluations,
+  orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
-import { ScoreRepository } from "@domain/scores"
-import { type FilterSet, OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import { selectTraceEndItemsUseCase, type TraceEndSelectionSpec, TraceRepository } from "@domain/spans"
+import { OrganizationId } from "@domain/shared"
+import {
+  loadTraceForTraceEndUseCase,
+  selectTraceEndItemsUseCase,
+  summarizeTraceEndItemDecisions,
+  type TraceEndItemDecisionCounts,
+} from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -62,31 +66,19 @@ interface RunTraceEndDeps {
   readonly redisClient: RedisClient
 }
 
-type DecisionCounts = {
-  selectedCount: number
-  sampledOutCount: number
-  filterMissCount: number
-}
-
-type MutableDecisionCounts = {
-  selectedCount: number
-  sampledOutCount: number
-  filterMissCount: number
-}
-
-type EvaluationSummary = DecisionCounts & {
+type EvaluationSummary = TraceEndItemDecisionCounts & {
   readonly activeEvaluationsScanned: number
   readonly skippedIneligibleCount: number
   readonly skippedTurnCount: number
   readonly publishedExecuteCount: number
 }
 
-type LiveQueueSummary = DecisionCounts & {
+type LiveQueueSummary = TraceEndItemDecisionCounts & {
   readonly liveQueuesScanned: number
   readonly insertedItemCount: number
 }
 
-type SystemQueueSummary = DecisionCounts & {
+type SystemQueueSummary = TraceEndItemDecisionCounts & {
   readonly systemQueuesScanned: number
   readonly startedWorkflowCount: number
 }
@@ -117,57 +109,6 @@ const buildRunLogContext = (payload: TraceEndPayload) => ({
   projectId: payload.projectId,
   traceId: payload.traceId,
 })
-
-const summarizeSelections = (
-  itemKeys: readonly string[],
-  decisions: Readonly<Record<string, { reason: string }>>,
-): DecisionCounts => {
-  const summary: MutableDecisionCounts = {
-    selectedCount: 0,
-    sampledOutCount: 0,
-    filterMissCount: 0,
-  }
-
-  for (const itemKey of itemKeys) {
-    const reason = decisions[itemKey]?.reason
-
-    if (reason === "selected") {
-      summary.selectedCount += 1
-    } else if (reason === "filter-miss") {
-      summary.filterMissCount += 1
-    } else {
-      summary.sampledOutCount += 1
-    }
-  }
-
-  return summary
-}
-
-const buildLiveEvaluationSelectionKey = (evaluationId: string) => `live-evaluation:${evaluationId}`
-const buildLiveQueueSelectionKey = (queueId: string) => `live-queue:${queueId}`
-const buildSystemQueueSelectionKey = (queueSlug: string) => `system-queue:${queueSlug}`
-
-const publishLiveEvaluationExecute = ({
-  publisher,
-  input,
-}: {
-  readonly publisher: QueuePublisherShape
-  readonly input: ReturnType<typeof buildLiveEvaluationExecutePublication>
-}) =>
-  publisher.publish(
-    "live-evaluations",
-    "execute",
-    {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      evaluationId: input.evaluationId,
-      traceId: input.traceId,
-    },
-    {
-      ...(input.dedupeKey !== undefined ? { dedupeKey: input.dedupeKey } : {}),
-      ...(input.debounceMs !== undefined ? { debounceMs: input.debounceMs } : {}),
-    },
-  )
 
 const startWorkflowOnce = ({
   redisClient,
@@ -215,31 +156,21 @@ const startWorkflowOnce = ({
   })
 }
 
-export const runTraceEndUseCase =
+export const runTraceEndJob =
   ({ publisher, workflowStarter, postgresClient, clickhouseClient, redisClient }: RunTraceEndDeps) =>
-  (payload: TraceEndPayload) => {
-    const evaluationByKey = new Map<string, Evaluation>()
-    const liveQueueIdByKey = new Map<string, string>()
-    const systemQueueByKey = new Map<string, SystemQueueCacheEntry>()
+  (payload: TraceEndPayload) =>
+    Effect.gen(function* () {
+      const loaded = yield* loadTraceForTraceEndUseCase(payload)
 
-    return Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const scoreRepository = yield* ScoreRepository
-      const traceDetail = yield* traceRepository
-        .findByTraceId({
-          organizationId: OrganizationId(payload.organizationId),
-          projectId: ProjectId(payload.projectId),
-          traceId: TraceId(payload.traceId),
-        })
-        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-      if (traceDetail === null) {
+      if (loaded.kind === "skipped") {
         return {
           action: "skipped",
           reason: "trace-not-found",
           traceId: payload.traceId,
         } satisfies TraceEndRunResult
       }
+
+      const traceDetail = loaded.traceDetail
 
       const [activeEvaluations, liveQueues, systemQueues] = yield* Effect.all(
         [
@@ -260,47 +191,14 @@ export const runTraceEndUseCase =
         { concurrency: "unbounded" },
       )
 
-      const evaluationEligibility = activeEvaluations.map((evaluation) => ({
-        evaluation,
-        eligibility: getLiveEvaluationEligibility(evaluation),
-      }))
-      const skippedIneligibleCount = evaluationEligibility.reduce(
-        (count, item) => (item.eligibility.eligible ? count : count + 1),
-        0,
-      )
-      const eligibleEvaluations = evaluationEligibility.flatMap((item) =>
-        item.eligibility.eligible ? [item.evaluation] : [],
-      )
+      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations)
+      const liveBuilt = buildTraceEndLiveQueueSelectionInputs(liveQueues)
+      const sysBuilt = buildTraceEndSystemQueueSelectionInputs(systemQueues)
 
-      const items = Object.create(null) as Record<string, TraceEndSelectionSpec>
-
-      for (const evaluation of eligibleEvaluations) {
-        const key = buildLiveEvaluationSelectionKey(evaluation.id)
-        evaluationByKey.set(key, evaluation)
-        items[key] = {
-          sampling: evaluation.trigger.sampling,
-          ...(evaluation.trigger.filter ? { filter: evaluation.trigger.filter as FilterSet } : {}),
-          sampleKey: evaluation.id,
-        }
-      }
-
-      for (const queue of liveQueues) {
-        const key = buildLiveQueueSelectionKey(queue.id)
-        liveQueueIdByKey.set(key, queue.id)
-        items[key] = {
-          sampling: queue.settings.sampling ?? LIVE_QUEUE_DEFAULT_SAMPLING,
-          ...(queue.settings.filter ? { filter: queue.settings.filter } : {}),
-          sampleKey: queue.id,
-        }
-      }
-
-      for (const queue of systemQueues) {
-        const key = buildSystemQueueSelectionKey(queue.queueSlug)
-        systemQueueByKey.set(key, queue)
-        items[key] = {
-          sampling: queue.sampling,
-          sampleKey: queue.queueSlug,
-        }
+      const items = {
+        ...evalBuilt.items,
+        ...liveBuilt.items,
+        ...sysBuilt.items,
       }
 
       const decisions = yield* selectTraceEndItemsUseCase({
@@ -310,84 +208,69 @@ export const runTraceEndUseCase =
         items,
       })
 
-      const evaluationDecisionCounts = summarizeSelections([...evaluationByKey.keys()], decisions)
-      const liveQueueDecisionCounts = summarizeSelections([...liveQueueIdByKey.keys()], decisions)
-      const systemQueueDecisionCounts = summarizeSelections([...systemQueueByKey.keys()], decisions)
+      const evaluationDecisionCounts = summarizeTraceEndItemDecisions([...evalBuilt.evaluationByKey.keys()], decisions)
+      const liveQueueDecisionCounts = summarizeTraceEndItemDecisions([...liveBuilt.liveQueueIdByKey.keys()], decisions)
+      const systemQueueDecisionCounts = summarizeTraceEndItemDecisions([...sysBuilt.systemQueueByKey.keys()], decisions)
 
-      const selectedEvaluations = [...evaluationByKey.entries()]
+      const selectedEvaluations = [...evalBuilt.evaluationByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, evaluation]) => evaluation)
-      const selectedLiveQueueIds = [...liveQueueIdByKey.entries()]
+      const selectedLiveQueueIds = [...liveBuilt.liveQueueIdByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, queueId]) => queueId)
-      const selectedSystemQueues = [...systemQueueByKey.entries()]
+      const selectedSystemQueues = [...sysBuilt.systemQueueByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, queue]) => queue)
 
-      let skippedTurnCount = 0
-      let publishedExecuteCount = 0
-
-      for (const evaluation of selectedEvaluations) {
-        if (evaluation.trigger.turn !== "first") {
-          yield* publishLiveEvaluationExecute({
-            publisher,
-            input: buildLiveEvaluationExecutePublication({
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              traceId: payload.traceId,
-              sessionId: traceDetail.sessionId ?? null,
-              evaluation,
-            }),
-          })
-          publishedExecuteCount += 1
-          continue
-        }
-
-        const alreadyExists = yield* scoreRepository.existsByEvaluationIdAndScope({
-          projectId: traceDetail.projectId,
-          evaluationId: evaluation.id,
-          traceId: traceDetail.traceId,
-          sessionId: traceDetail.sessionId ?? null,
-        })
-
-        if (alreadyExists) {
-          skippedTurnCount += 1
-          continue
-        }
-
-        yield* publishLiveEvaluationExecute({
-          publisher,
-          input: buildLiveEvaluationExecutePublication({
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: payload.traceId,
-            sessionId: traceDetail.sessionId ?? null,
-            evaluation,
-          }),
-        })
-        publishedExecuteCount += 1
-      }
-
-      const { insertedItemCount } = yield* materializeLiveQueueItemsUseCase({
-        projectId: traceDetail.projectId,
-        traceId: traceDetail.traceId,
-        traceCreatedAt: traceDetail.startTime,
-        queueIds: selectedLiveQueueIds,
+      const { skippedTurnCount, publishedExecuteCount } = yield* orchestrateTraceEndLiveEvaluationExecutesUseCase({
+        publishExecute: (pubInput) =>
+          publisher.publish(
+            "live-evaluations",
+            "execute",
+            {
+              organizationId: pubInput.organizationId,
+              projectId: pubInput.projectId,
+              evaluationId: pubInput.evaluationId,
+              traceId: pubInput.traceId,
+            },
+            {
+              ...(pubInput.dedupeKey !== undefined ? { dedupeKey: pubInput.dedupeKey } : {}),
+              ...(pubInput.debounceMs !== undefined ? { debounceMs: pubInput.debounceMs } : {}),
+            },
+          ),
+      })({
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        traceId: payload.traceId,
+        traceProjectId: traceDetail.projectId,
+        traceRowId: traceDetail.traceId,
+        sessionId: traceDetail.sessionId ?? null,
+        selectedEvaluations,
       })
 
-      const startedWorkflowCount = yield* Effect.forEach(
-        selectedSystemQueues,
-        (queue) =>
+      const { insertedItemCount } = yield* orchestrateTraceEndLiveQueueMaterializationUseCase({
+        traceProjectId: traceDetail.projectId,
+        traceRowId: traceDetail.traceId,
+        traceCreatedAt: traceDetail.startTime,
+        selectedLiveQueueIds,
+      })
+
+      const { startedWorkflowCount } = yield* orchestrateTraceEndSystemQueueWorkflowStartsUseCase({
+        startOnce: (args) =>
           startWorkflowOnce({
             redisClient,
             workflowStarter,
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            traceId: payload.traceId,
-            queueSlug: queue.queueSlug,
+            organizationId: args.organizationId,
+            projectId: args.projectId,
+            traceId: args.traceId,
+            queueSlug: args.queueSlug,
           }),
-        { concurrency: 1 },
-      ).pipe(Effect.map((started) => started.filter(Boolean).length))
+      })({
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        traceId: payload.traceId,
+        selectedSystemQueues,
+      })
 
       return {
         action: "completed",
@@ -397,7 +280,7 @@ export const runTraceEndUseCase =
           evaluations: {
             ...evaluationDecisionCounts,
             activeEvaluationsScanned: activeEvaluations.length,
-            skippedIneligibleCount,
+            skippedIneligibleCount: evalBuilt.skippedIneligibleCount,
             skippedTurnCount,
             publishedExecuteCount,
           },
@@ -427,12 +310,11 @@ export const runTraceEndUseCase =
       withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
       Effect.provide(RedisCacheStoreLive(redisClient)),
     )
-  }
 
 export const createRunHandler =
   ({ log, ...deps }: RunTraceEndDeps & { readonly log: TraceEndLogger }) =>
   (payload: TraceEndPayload) =>
-    runTraceEndUseCase(deps)(payload).pipe(
+    runTraceEndJob(deps)(payload).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           if (result.action === "skipped") {

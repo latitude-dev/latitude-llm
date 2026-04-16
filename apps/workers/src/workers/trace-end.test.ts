@@ -20,7 +20,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
-import { createRunHandler, createTraceEndWorker, runTraceEndUseCase } from "./trace-end.ts"
+import { createRunHandler, createTraceEndWorker, runTraceEndJob } from "./trace-end.ts"
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -299,14 +299,14 @@ describe("createTraceEndWorker", () => {
   })
 })
 
-describe("runTraceEndUseCase", () => {
+describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
     const { workflowStarter, startedWorkflows } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
-      runTraceEndUseCase({
+      runTraceEndJob({
         publisher,
         workflowStarter,
         postgresClient: pg.appPostgresClient,
@@ -329,7 +329,7 @@ describe("runTraceEndUseCase", () => {
   })
 })
 
-describe("runTraceEndUseCase", () => {
+describe("runTraceEndJob", () => {
   it("selects and applies live evaluations, live queues, and system queues", async () => {
     await insertTraceRows([makeTraceRow()])
     await pg.db.insert(issues).values([makeIssueRow()])
@@ -384,7 +384,7 @@ describe("runTraceEndUseCase", () => {
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
-      runTraceEndUseCase({
+      runTraceEndJob({
         publisher,
         workflowStarter,
         postgresClient: pg.appPostgresClient,

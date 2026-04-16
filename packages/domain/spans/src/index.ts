@@ -101,6 +101,12 @@ export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-su
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
+export type {
+  LoadTraceForTraceEndFound,
+  LoadTraceForTraceEndResult,
+  LoadTraceForTraceEndSkipped,
+} from "./use-cases/load-trace-for-trace-end.ts"
+export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
@@ -113,3 +119,5 @@ export type {
   TraceEndSelectionSpec,
 } from "./use-cases/select-trace-end-items.ts"
 export { selectTraceEndItemsUseCase } from "./use-cases/select-trace-end-items.ts"
+export type { TraceEndItemDecisionCounts } from "./use-cases/summarize-trace-end-item-decisions.ts"
+export { summarizeTraceEndItemDecisions } from "./use-cases/summarize-trace-end-item-decisions.ts"

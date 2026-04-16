@@ -158,6 +158,10 @@ export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-bas
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
+  buildLiveTraceEndEvaluationSelectionKey,
+  buildTraceEndEvaluationSelectionInputs,
+} from "./use-cases/live/build-trace-end-evaluation-selection.ts"
+export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
   type LiveEvaluationConversationInput,
@@ -172,6 +176,7 @@ export {
   liveEvaluationResultPayloadSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
 export { listAllActiveEvaluations } from "./use-cases/live/list-all-active-evaluations.ts"
+export { orchestrateTraceEndLiveEvaluationExecutesUseCase } from "./use-cases/live/orchestrate-trace-end-live-evaluation-executes.ts"
 export {
   type RunLiveEvaluationCompletedExecution,
   type RunLiveEvaluationError,
