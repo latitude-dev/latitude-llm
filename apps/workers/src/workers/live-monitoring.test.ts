@@ -11,7 +11,7 @@ import type { RedisClient } from "@platform/cache-redis"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
@@ -236,6 +236,10 @@ const createQueueHarness = () => {
 }
 
 describe("live monitoring integration", () => {
+  beforeEach(async () => {
+    await pg.db.delete(evaluations)
+  })
+
   it("debounces SpanIngested into trace-end:run before publishing execute work", async () => {
     await ch.client.insert({
       table: "spans",
