@@ -124,8 +124,8 @@ describe("runSystemQueueFlaggerUseCase", () => {
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: 256,
       telemetry: {
-        spanName: "system-queue-flagger",
-        tags: ["annotation-queue", "system-flagger"],
+        spanName: "queue.system.classify",
+        tags: ["queue", "system", "classify"],
         metadata: {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,

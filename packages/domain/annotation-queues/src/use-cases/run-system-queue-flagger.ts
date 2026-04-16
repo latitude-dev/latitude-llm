@@ -1,4 +1,13 @@
-import { AI, type AICredentialError, type AIError, formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+  formatGenAIConversation,
+  formatGenAIMessage,
+} from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import {
   evaluateTraceResourceOutliersUseCase,
@@ -267,14 +276,12 @@ const runLlmFlagger = (
       prompt: buildFlaggerPrompt(trace),
       schema: systemQueueFlaggerOutputSchema,
       telemetry: {
-        spanName: "system-queue-flagger",
-        tags: ["annotation-queue", "system-flagger"],
-        metadata: {
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          queueSlug: input.queueSlug,
-        },
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemClassify,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
+        metadata: buildProjectScopedAiMetadata(
+          { organizationId: input.organizationId, projectId: input.projectId },
+          { traceId: input.traceId, queueSlug: input.queueSlug },
+        ),
       },
     })
 

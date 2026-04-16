@@ -79,6 +79,14 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const issueId = IssueId("i".repeat(24))
 
+const alignmentActivityScope = {
+  organizationId: String(organizationId),
+  projectId: String(projectId),
+  issueId: String(issueId),
+  evaluationId: "e".repeat(24) as string | null,
+  jobId: "job-alignment-test",
+}
+
 const insertIssue = async () => {
   await pg.db.insert(issuesTable).values({
     id: issueId,
@@ -319,6 +327,8 @@ describe("evaluation-alignment activities", () => {
     )
 
     const result = await generateEvaluationDetails({
+      ...alignmentActivityScope,
+      evaluationHash: "eh-details-1",
       issueName: "Fabricated refund guarantees in support answers",
       issueDescription: "The agent invents refund or cancellation guarantees not confirmed in the conversation.",
       script,
@@ -351,6 +361,8 @@ describe("evaluation-alignment activities", () => {
     )
 
     const result = await generateEvaluationDetails({
+      ...alignmentActivityScope,
+      evaluationHash: "eh-details-2",
       issueName: "Test issue",
       issueDescription: "Test description",
       script: wrapPromptAsEvaluationScript("Test prompt"),
@@ -374,6 +386,7 @@ describe("evaluation-alignment activities", () => {
     })
 
     const result = await evaluateBaselineEvaluationDraft({
+      ...alignmentActivityScope,
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
@@ -482,6 +495,7 @@ describe("evaluation-alignment activities", () => {
 
   it("returns a no-op incremental refresh when no new examples are available", async () => {
     const result = await evaluateIncrementalEvaluationDraft({
+      ...alignmentActivityScope,
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
@@ -535,6 +549,7 @@ describe("evaluation-alignment activities", () => {
     })
 
     const result = await evaluateIncrementalEvaluationDraft({
+      ...alignmentActivityScope,
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
@@ -601,6 +616,7 @@ describe("evaluation-alignment activities", () => {
     )
 
     const result = await evaluateIncrementalEvaluationDraft({
+      ...alignmentActivityScope,
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
@@ -785,6 +801,11 @@ describe("evaluation-alignment activities", () => {
     )
 
     const result = await optimizeEvaluationDraft({
+      organizationId: String(organizationId),
+      projectId: String(projectId),
+      issueId: String(issueId),
+      evaluationId: null,
+      jobId: "job-opt-test",
       draft: {
         script: baselineScript,
         evaluationHash: "hash-baseline",

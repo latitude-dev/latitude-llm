@@ -5,6 +5,10 @@ import type {
   HydratedEvaluationAlignmentExample,
 } from "../../alignment/types.ts"
 import { addConfusionMatrixObservation, deriveEvaluationAlignmentMetrics, emptyConfusionMatrix } from "../../helpers.ts"
+import {
+  buildEvaluationAlignmentJudgeTelemetryCapture,
+  type EvaluationAlignmentJudgeTelemetryScope,
+} from "../../runtime/ai-telemetry.ts"
 import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS;
@@ -15,6 +19,7 @@ export const evaluateDraftAgainstExamplesUseCase = (input: {
   readonly script: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+  readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
 }) =>
   Effect.gen(function* () {
     const examples = [...input.positiveExamples, ...input.negativeExamples]
@@ -29,6 +34,11 @@ export const evaluateDraftAgainstExamplesUseCase = (input: {
           name: input.issueName,
           description: input.issueDescription,
         },
+        telemetry: buildEvaluationAlignmentJudgeTelemetryCapture({
+          scope: input.judgeTelemetry,
+          traceId: String(example.traceId),
+          exampleLabel: example.label,
+        }),
       })
 
       const expectedPositive = example.label === "positive"

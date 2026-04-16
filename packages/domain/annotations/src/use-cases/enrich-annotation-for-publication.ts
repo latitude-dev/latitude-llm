@@ -1,4 +1,12 @@
-import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+  formatGenAIMessage,
+} from "@domain/ai"
 import type { AnnotationScoreMetadata } from "@domain/scores"
 import {
   type BadRequestError,
@@ -164,14 +172,18 @@ export const enrichAnnotationForPublicationUseCase = (input: EnrichAnnotationFor
     const result = yield* ai.generate({
       ...ANNOTATION_ENRICHMENT_MODEL,
       telemetry: {
-        spanName: "annotation-publication-enrichment",
-        tags: ["annotation", "publish-enrichment"],
-        metadata: {
-          scoreId: input.scoreId,
-          organizationId: annotationScore.organizationId,
-          projectId: annotationScore.projectId,
-          ...(annotationScore.traceId !== null ? { traceId: annotationScore.traceId } : {}),
-        },
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.annotationEnrichPublication,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.annotationEnrichPublication],
+        metadata: buildProjectScopedAiMetadata(
+          {
+            organizationId: annotationScore.organizationId,
+            projectId: annotationScore.projectId,
+          },
+          {
+            scoreId: input.scoreId,
+            ...(annotationScore.traceId !== null ? { traceId: annotationScore.traceId } : {}),
+          },
+        ),
         ...(resolvedSessionId !== null ? { sessionId: resolvedSessionId } : {}),
       },
       system: ENRICHMENT_SYSTEM_PROMPT,

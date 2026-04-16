@@ -329,6 +329,12 @@ describe("evaluationAlignmentWorkflow", () => {
     ])
 
     expect(mockActivities.generateEvaluationDetails).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      issueId: "issue-1",
+      evaluationId: null,
+      jobId: "job-1",
+      evaluationHash: "hash-1",
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       script: wrapPromptAsEvaluationScript("Placeholder evaluation prompt."),

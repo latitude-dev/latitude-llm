@@ -1,4 +1,4 @@
-import type { AI, GenerateTelemetryCapture } from "@domain/ai"
+import type { AI } from "@domain/ai"
 import type { OutboxEventWriter } from "@domain/events"
 import {
   type EvaluationScore,
@@ -22,6 +22,7 @@ import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
 import {
   executeLiveEvaluationUseCase,
   type LiveEvaluationExecutionResult,
@@ -112,17 +113,6 @@ const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvalua
   tokens: 0,
   cost: 0,
 })
-const buildLiveEvaluationExecutionTelemetry = (input: RunLiveEvaluationInput): GenerateTelemetryCapture => ({
-  spanName: "evaluation.live.execute",
-  tags: ["evaluations", "live"],
-  metadata: {
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    evaluationId: input.evaluationId,
-    traceId: input.traceId,
-  },
-})
-
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
@@ -218,7 +208,13 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       script: evaluation.script,
       issue: issueContext,
       conversation: traceDetail.allMessages,
-      telemetry: buildLiveEvaluationExecutionTelemetry(input),
+      telemetry: buildEvaluationJudgeLiveTelemetryCapture({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        evaluationId: evaluation.id,
+        issueId: String(evaluation.issueId),
+        traceId: input.traceId,
+      }),
     }).pipe(
       Effect.map(
         (result) =>

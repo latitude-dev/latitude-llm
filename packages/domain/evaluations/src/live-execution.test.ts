@@ -132,11 +132,13 @@ describe("executeLiveEvaluationUseCase", () => {
   it("executes the MVP script bridge through the shared AI service", async () => {
     const telemetry = liveEvaluationExecutionInputSchema.pick({ telemetry: true }).parse({
       telemetry: {
-        spanName: "evaluation.live.execute",
-        tags: ["evaluations", "live"],
+        spanName: "evaluation.judge.live",
+        tags: ["evaluation", "judge", "live"],
         metadata: {
-          evaluationId,
+          organizationId: "o".repeat(24),
           projectId: "p".repeat(24),
+          evaluationId,
+          issueId: "i".repeat(24),
           traceId: "t".repeat(32),
         },
       },

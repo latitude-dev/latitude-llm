@@ -100,8 +100,8 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
     expect(generateCall.telemetry).toMatchObject({
-      spanName: "system-queue-annotator",
-      tags: ["annotation-queue", "system-annotator"],
+      spanName: "queue.system.draft",
+      tags: ["queue", "system", "draft"],
       metadata: {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,

@@ -86,6 +86,7 @@ describe("generateIssueDetailsUseCase", () => {
 
     const result = await Effect.runPromise(
       generateIssueDetailsUseCase({
+        organizationId,
         projectId,
         occurrences: [
           {
@@ -131,6 +132,7 @@ describe("generateIssueDetailsUseCase", () => {
 
     const result = await Effect.runPromise(
       generateIssueDetailsUseCase({
+        organizationId,
         projectId,
         issueId: existingIssue.id,
       }).pipe(
@@ -174,6 +176,7 @@ describe("generateIssueDetailsUseCase", () => {
 
     const result = await Effect.runPromise(
       generateIssueDetailsUseCase({
+        organizationId,
         projectId,
         issueId: existingIssue.id,
       }).pipe(

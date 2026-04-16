@@ -829,12 +829,13 @@ describe("runLiveEvaluationUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
     expect(calls.generate[0]?.telemetry).toMatchObject({
-      spanName: "evaluation.live.execute",
-      tags: ["evaluations", "live"],
+      spanName: "evaluation.judge.live",
+      tags: ["evaluation", "judge", "live"],
       metadata: {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
         evaluationId: INPUT.evaluationId,
+        issueId: "i".repeat(24),
         traceId: INPUT.traceId,
       },
     })

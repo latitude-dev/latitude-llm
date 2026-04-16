@@ -1,6 +1,10 @@
 import type { OptimizationCandidate, OptimizationTrajectory } from "@domain/optimizations"
 import { Effect } from "effect"
 import type { HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"
+import {
+  buildEvaluationOptimizationJudgeTelemetryCapture,
+  type EvaluationOptimizationJudgeTelemetryScope,
+} from "../../runtime/ai-telemetry.ts"
 import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS
@@ -10,6 +14,7 @@ export const evaluateOptimizationCandidate = (input: {
   readonly example: HydratedEvaluationAlignmentExample
   readonly issueName: string
   readonly issueDescription: string
+  readonly judgeTelemetry: EvaluationOptimizationJudgeTelemetryScope
 }) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
@@ -22,6 +27,11 @@ export const evaluateOptimizationCandidate = (input: {
         name: input.issueName,
         description: input.issueDescription,
       },
+      telemetry: buildEvaluationOptimizationJudgeTelemetryCapture({
+        scope: input.judgeTelemetry,
+        candidateHash: input.candidate.hash,
+        exampleTraceId: String(input.example.traceId),
+      }),
     })
 
     const expectedPositive = input.example.label === "positive"
