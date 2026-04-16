@@ -8,7 +8,7 @@ export function issueOccurrenceBarColorForCategory(category: string, theme: Char
   if (theme.isDark) {
     switch (category) {
       case "New":
-        return "rgb(96 165 250)"
+        return theme.primary
       case "Escalating":
         return "rgb(251 191 36)"
       case "Regressed":
@@ -21,7 +21,7 @@ export function issueOccurrenceBarColorForCategory(category: string, theme: Char
   }
   switch (category) {
     case "New":
-      return "rgb(37 99 235)"
+      return theme.primary
     case "Escalating":
       return "rgb(217 119 6)"
     case "Regressed":
