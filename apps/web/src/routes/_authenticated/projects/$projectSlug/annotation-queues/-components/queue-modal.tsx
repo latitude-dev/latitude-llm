@@ -1,11 +1,14 @@
-import { LIVE_QUEUE_DEFAULT_SAMPLING } from "@domain/annotation-queues"
+import {
+  LIVE_QUEUE_DEFAULT_SAMPLING,
+  SYSTEM_QUEUE_DEFAULT_SAMPLING,
+  SYSTEM_QUEUE_DEFINITIONS,
+} from "@domain/annotation-queues"
 import type { FilterSet } from "@domain/shared"
-import { Alert, Button, CloseTrigger, Modal, useToast } from "@repo/ui"
+import { Alert, Button, CloseTrigger, Modal, SwitchInput, useToast } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { useRef } from "react"
+import { useMemo, useRef } from "react"
 import { QueueForm } from "../../../../../../components/annotation-queues/queue-form.tsx"
 import { queueFormValuesToSettings } from "../../../../../../components/annotation-queues/queue-form-schema.ts"
-import { UserMultiSelect } from "../../../../../../components/user-multi-select.tsx"
 import type { AnnotationQueueRecord } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import {
   createAnnotationQueue,
@@ -27,6 +30,12 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
   const isEdit = queue !== undefined
   const isSystem = queue?.system ?? false
 
+  const systemSamplingRestoreDefault = useMemo(() => {
+    if (!queue?.system) return LIVE_QUEUE_DEFAULT_SAMPLING
+    const match = SYSTEM_QUEUE_DEFINITIONS.find((d) => d.slug === queue.slug)
+    return match?.sampling ?? SYSTEM_QUEUE_DEFAULT_SAMPLING
+  }, [queue])
+
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -38,24 +47,41 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
       assignees: [...(queue?.assignees ?? [])] as string[],
       isLive: queue?.settings.filter !== undefined,
       filters: (queue?.settings.filter ?? {}) as FilterSet,
-      sampling: queue?.settings.sampling ?? LIVE_QUEUE_DEFAULT_SAMPLING,
+      sampling:
+        queue?.system === true
+          ? (queue.settings.sampling ?? 0)
+          : (queue?.settings.sampling ?? LIVE_QUEUE_DEFAULT_SAMPLING),
     },
     onSubmit: createFormSubmitHandler(
       async (value) => {
         const settings = isSystem ? { sampling: value.sampling } : queueFormValuesToSettings(value)
 
         if (isEdit) {
-          await updateAnnotationQueue({
-            data: {
-              projectId,
-              queueId: queue.id,
-              name: value.name.trim(),
-              description: value.description,
-              instructions: value.instructions,
-              assignees: value.assignees,
-              ...(Object.keys(settings).length > 0 ? { settings } : {}),
-            },
-          })
+          if (isSystem && queue) {
+            await updateAnnotationQueue({
+              data: {
+                projectId,
+                queueId: queue.id,
+                name: queue.name,
+                description: queue.description,
+                instructions: queue.instructions,
+                assignees: [...queue.assignees],
+                settings: { sampling: value.sampling },
+              },
+            })
+          } else {
+            await updateAnnotationQueue({
+              data: {
+                projectId,
+                queueId: queue.id,
+                name: value.name.trim(),
+                description: value.description,
+                instructions: value.instructions,
+                assignees: value.assignees,
+                ...(Object.keys(settings).length > 0 ? { settings } : {}),
+              },
+            })
+          }
         } else {
           await createAnnotationQueue({
             data: {
@@ -100,7 +126,13 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit Annotation Queue" : "Create Annotation Queue"}
-      description={isEdit ? "Update queue settings and assignees." : "Set up a new queue to organize trace reviews."}
+      description={
+        isSystem
+          ? "Turn automated sampling on or off for this system queue."
+          : isEdit
+            ? "Update queue settings and assignees."
+            : "Set up a new queue to organize trace reviews."
+      }
       size="medium"
       dismissible
       footer={
@@ -123,19 +155,26 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
           <div className="flex flex-col gap-6">
             <Alert
               variant="default"
-              title="System Queue"
-              description="This queue is managed by Latitude and cannot be deleted or have its core settings edited. You can update assignees."
+              title="System queue"
+              description="Latitude manages this queue. You can pause automated sampling so traces are no longer evaluated for it."
             />
-            <form.Field name="assignees">
-              {(field) => (
-                <UserMultiSelect
-                  label="Assignees"
-                  value={field.state.value}
-                  onChange={field.handleChange}
-                  placeholder="Select team members..."
-                  portalContainer={portalContainerRef}
-                />
-              )}
+            <form.Field name="sampling">
+              {(field) => {
+                const enabled = field.state.value > 0
+                const restoreRate =
+                  queue && (queue.settings.sampling ?? 0) > 0
+                    ? (queue.settings.sampling ?? 0)
+                    : systemSamplingRestoreDefault
+                return (
+                  <SwitchInput
+                    id="system-queue-sampling-enabled"
+                    label="Automated sampling"
+                    description="When disabled, this queue does not receive new automatically flagged traces. Turn it back on to resume sampling at the default rate for this queue type."
+                    checked={enabled}
+                    onCheckedChange={(checked) => field.handleChange(checked ? restoreRate : 0)}
+                  />
+                )
+              }}
             </form.Field>
           </div>
         ) : (

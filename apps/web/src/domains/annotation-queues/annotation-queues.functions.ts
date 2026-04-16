@@ -34,6 +34,7 @@ const toAnnotationQueueRecord = (q: {
   organizationId: string
   projectId: string
   system: boolean
+  slug: string
   name: string
   description: string
   instructions: string
@@ -49,6 +50,7 @@ const toAnnotationQueueRecord = (q: {
   organizationId: q.organizationId,
   projectId: q.projectId,
   system: q.system,
+  slug: q.slug,
   name: q.name,
   description: q.description,
   instructions: q.instructions,

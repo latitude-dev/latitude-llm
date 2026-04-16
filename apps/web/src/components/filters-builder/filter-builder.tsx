@@ -126,11 +126,11 @@ export function FilterBuilder({
   const addFilter = useCallback(
     (filter: { type: FilterType; field: string }) => {
       if (filter.type === "status") {
-        setField("status", [])
+        setField("status", [{ op: "in", value: [] }])
       } else if (filter.type === "text") {
         setField(filter.field, [{ op: "contains", value: "" }])
       } else if (filter.type === "multiSelect") {
-        setField(filter.field, [])
+        setField(filter.field, [{ op: "in", value: [] }])
       } else if (filter.type === "numberRange") {
         onChange({ ...value, [filter.field]: [] })
       } else if (filter.type === "metadata") {

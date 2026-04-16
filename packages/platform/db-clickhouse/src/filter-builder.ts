@@ -46,6 +46,8 @@ const SCALAR_OPS: Record<ScalarOp, string> = {
  * - `metadata.*` fields are handled via dot-notation convention.
  * - Array fields use `hasAny()` for `in`/`notIn` operators.
  * - `contains`/`notContains` use ClickHouse `ILIKE` with auto-wrapped `%` wildcards.
+ * - Callers should normalize filters at persistence time (e.g. annotation queue settings); empty `in`/`notIn`
+ *   lists still compile to parameterized SQL (typically matching no rows for `in`, all rows for `notIn`).
  *
  * NOTE: `column` and `chType` values from the registry are interpolated into SQL.
  * They must come from hard-coded registries, never from user input.

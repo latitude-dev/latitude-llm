@@ -30,6 +30,26 @@ describe("normalizeQueueSettings", () => {
     expect(result).toEqual({})
     expect(result).not.toHaveProperty("filter")
   })
+
+  it("strips in/notIn conditions with an empty value list", () => {
+    const result = normalizeQueueSettings({
+      filter: { status: [{ op: "in", value: [] }] },
+    })
+    expect(result).toEqual({})
+    expect(result).not.toHaveProperty("filter")
+  })
+
+  it("keeps other conditions when removing only empty in list placeholders", () => {
+    const result = normalizeQueueSettings({
+      filter: {
+        status: [
+          { op: "in", value: [] },
+          { op: "eq", value: "error" },
+        ],
+      },
+    })
+    expect(result).toEqual({ filter: { status: [{ op: "eq", value: "error" }] } })
+  })
 })
 
 describe("isLiveQueue / isManualQueue", () => {

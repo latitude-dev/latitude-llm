@@ -30,8 +30,10 @@ export function useMetadataFilter(value: FilterSet, onChange: (filters: FilterSe
         if (!key.startsWith("metadata.")) next[key] = val
       }
       for (const entry of newEntries) {
-        if (entry.key.trim()) {
-          next[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
+        const trimmedKey = entry.key.trim()
+        const trimmedValue = entry.value.trim()
+        if (trimmedKey && trimmedValue) {
+          next[`metadata.${trimmedKey}`] = [{ op: "eq", value: trimmedValue }]
         }
       }
       onChange(next)
