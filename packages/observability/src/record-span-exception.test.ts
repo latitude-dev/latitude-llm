@@ -17,7 +17,15 @@ describe("recordSpanExceptionForDatadog", () => {
       "at assertAuthenticatedSession (file:///app/apps/web/.output/server/_ssr/session.functions.mjs:11:29)",
     ].join("\n")
 
-    recordSpanExceptionForDatadog(span, error)
+    const recordedError = recordSpanExceptionForDatadog(span, error)
+
+    expect(recordedError).toBe(error)
+    expect(error.stack).toBe(
+      [
+        "UnauthorizedError: Unauthorized",
+        "at assertAuthenticatedSession (/app/apps/web/.output/server/_ssr/session.functions.js:11:29)",
+      ].join("\n"),
+    )
 
     expect(recordException).toHaveBeenCalledWith({
       name: "Error",
@@ -48,7 +56,10 @@ describe("recordSpanExceptionForDatadog", () => {
 
     error.stack = ["Error: Boom", "at handler (file:///app/apps/workflows/dist/server.mjs:10:4)"].join("\n")
 
-    recordSpanExceptionForDatadog(span, error)
+    const recordedError = recordSpanExceptionForDatadog(span, error)
+
+    expect(recordedError).toBe(error)
+    expect(error.stack).toBe(["Error: Boom", "at handler (/app/apps/workflows/dist/server.mjs:10:4)"].join("\n"))
 
     expect(recordException).toHaveBeenCalledWith({
       name: "Error",

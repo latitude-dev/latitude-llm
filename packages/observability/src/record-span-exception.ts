@@ -15,6 +15,7 @@ const normalizeStack = (stack: string): string =>
 export function recordSpanExceptionForDatadog(span: Span, error: unknown): Error {
   const err = toError(error)
   const stack = normalizeStack(err.stack ?? "")
+  err.stack = stack
 
   span.recordException({ name: err.name, message: err.message, stack })
   span.setAttributes({
