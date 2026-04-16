@@ -15,8 +15,8 @@ function ProjectHomePage() {
   return (
     <Layout>
       <Layout.Content>
-        <Layout.List className="pt-6 pb-8">
-          <div className="mb-6 flex min-w-0 flex-row flex-wrap items-center justify-between gap-3">
+        <Layout.List className="flex flex-col gap-6 pt-6 pb-8">
+          <div className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
               <Text.H4>Overview</Text.H4>
               <Text.H6 color="foregroundMuted">Your project overview over the past 7 days</Text.H6>

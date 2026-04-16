@@ -27,7 +27,7 @@ export function ProjectHomeSectionBlankSlate({
           {description}
         </Text.H6>
       ) : null}
-      {action ? <div className="mt-1 flex flex-row flex-wrap items-center justify-center gap-2">{action}</div> : null}
+      {action ? <div className="flex flex-row flex-wrap items-center justify-center gap-2 pt-1">{action}</div> : null}
     </div>
   )
 }
