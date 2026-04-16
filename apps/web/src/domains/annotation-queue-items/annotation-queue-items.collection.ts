@@ -15,8 +15,7 @@ import {
   listAnnotationQueueItemsByQueue,
   uncompleteQueueItem,
 } from "./annotation-queue-items.functions.ts"
-
-const BATCH_SIZE = 50
+import { ANNOTATION_QUEUE_ITEMS_PAGE_LIMIT } from "./annotation-queue-items-pagination.ts"
 
 export const ANNOTATION_QUEUE_ITEMS_DEFAULT_SORTING: InfiniteTableSorting = {
   column: "status",
@@ -59,7 +58,7 @@ export function useAnnotationQueueItemsInfiniteScroll({
         data: {
           projectId,
           queueId,
-          limit: BATCH_SIZE,
+          limit: ANNOTATION_QUEUE_ITEMS_PAGE_LIMIT,
           cursor: pageParam,
           sortBy,
           sortDirection,

@@ -1,9 +1,8 @@
-import { annotationQueueItemStatus } from "@domain/annotation-queues"
 import { Avatar, InfiniteTable, type InfiniteTableColumn, type InfiniteTableSorting, Text, Tooltip } from "@repo/ui"
 import { mapByEntityId, relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { useMemo, useState } from "react"
 import z from "zod"
 import {
   ANNOTATION_QUEUE_ITEMS_DEFAULT_SORTING,
@@ -11,12 +10,14 @@ import {
 } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.collection.ts"
 import type { AnnotationQueueItemRecord } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.functions.ts"
 import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
+import { getAnnotationQueueByProject } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { QueueBadge } from "../-components/queue-badge.tsx"
 import { QueueItemStatusBadge } from "../-components/queue-item-status-badge.tsx"
+import { resolveFirstNonCompletedQueueItemId } from "./resolve-focus-queue-item.ts"
 
 const annotationQueueListSearchSchema = z
   .object({
@@ -28,12 +29,46 @@ const annotationQueueListSearchSchema = z
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/annotation-queues/$queueId/")({
   validateSearch: annotationQueueListSearchSchema,
+  loader: async ({ preload, location, params, parentMatchPromise }) => {
+    // Skip on prefetch/hover-preload; still run on `cause: "stay"` so `?focus=true` works when only search changes.
+    if (preload) return
+
+    const { focus } = annotationQueueListSearchSchema.parse(location.search)
+    if (!focus) return
+
+    const parent = await parentMatchPromise
+    const project = parent.loaderData?.project
+    if (!project) return
+
+    const { projectSlug, queueId } = params
+    const projectId = project.id
+
+    const queue = await getAnnotationQueueByProject({ data: { projectId, queueId } })
+    const queueName = queue?.name
+
+    const itemId = await resolveFirstNonCompletedQueueItemId(projectId, queueId)
+
+    if (itemId) {
+      throw redirect({
+        to: "/projects/$projectSlug/annotation-queues/$queueId/items/$itemId",
+        params: { projectSlug, queueId, itemId },
+        state: { queueName } as { queueName?: string },
+        replace: true,
+      })
+    }
+
+    throw redirect({
+      to: "/projects/$projectSlug/annotation-queues/$queueId",
+      params: { projectSlug, queueId },
+      search: {},
+      replace: true,
+    })
+  },
   component: AnnotationQueueItemsPage,
 })
 
 function AnnotationQueueItemsPage() {
   const { projectSlug, queueId } = Route.useParams()
-  const search = Route.useSearch()
   const navigate = useNavigate()
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
@@ -58,59 +93,6 @@ function AnnotationQueueItemsPage() {
     queueId,
     sorting,
   })
-
-  const focusIntentResolvedRef = useRef(false)
-
-  // TODO(frontend-use-effect-policy): resolve `focus` search param by navigating once items are loaded,
-  // paging the infinite list until a non-completed item exists or the queue is exhausted; not mount-only.
-  useEffect(() => {
-    if (!search.focus) {
-      focusIntentResolvedRef.current = false
-      return
-    }
-    if (focusIntentResolvedRef.current) return
-    if (!projectId) return
-    if (itemsLoading && items.length === 0) return
-
-    const firstReviewItem = items.find((row) => annotationQueueItemStatus(row) !== "completed")
-
-    if (firstReviewItem) {
-      focusIntentResolvedRef.current = true
-      void navigate({
-        to: "/projects/$projectSlug/annotation-queues/$queueId/items/$itemId",
-        params: { projectSlug, queueId, itemId: firstReviewItem.id },
-        state: { queueName: queue?.name } as { queueName?: string },
-        replace: true,
-      })
-      return
-    }
-
-    if (infiniteScroll.hasMore) {
-      if (infiniteScroll.isLoadingMore) return
-      infiniteScroll.onLoadMore()
-      return
-    }
-
-    focusIntentResolvedRef.current = true
-    void navigate({
-      to: "/projects/$projectSlug/annotation-queues/$queueId",
-      params: { projectSlug, queueId },
-      search: {},
-      replace: true,
-    })
-  }, [
-    search.focus,
-    projectId,
-    projectSlug,
-    queueId,
-    queue?.name,
-    items,
-    itemsLoading,
-    navigate,
-    infiniteScroll.hasMore,
-    infiniteScroll.isLoadingMore,
-    infiniteScroll.onLoadMore,
-  ])
 
   const memberByUserId = useMemberByUserIdMap()
   const completerByItemId = useMemo(

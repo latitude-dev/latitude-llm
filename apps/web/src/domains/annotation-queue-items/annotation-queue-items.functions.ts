@@ -25,6 +25,7 @@ import { z } from "zod"
 import { queueInputSchema } from "../../components/annotation-queues/queue-form-schema.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
+import { ANNOTATION_QUEUE_ITEMS_PAGE_LIMIT } from "./annotation-queue-items-pagination.ts"
 
 const itemListCursorSchema = z.object({
   sortValue: z.string(),
@@ -103,7 +104,7 @@ export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
 
         const c = data.cursor
         const listOptions: AnnotationQueueItemListOptions = {
-          limit: data.limit ?? 50,
+          limit: data.limit ?? ANNOTATION_QUEUE_ITEMS_PAGE_LIMIT,
           ...(sortBy !== undefined ? { sortBy } : {}),
           ...(sortDirection !== undefined ? { sortDirection } : {}),
           ...(c
