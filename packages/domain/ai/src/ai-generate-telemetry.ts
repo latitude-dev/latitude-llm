@@ -3,15 +3,15 @@
  * Use with `GenerateInput.telemetry` / `GenerateTelemetryCapture`.
  */
 export const AI_GENERATE_TELEMETRY_TAGS = {
-  issueDetails: ["issue", "details"],
-  annotationEnrichPublication: ["annotation", "enrich", "publication"],
-  queueSystemClassify: ["queue", "system", "classify"],
-  queueSystemDraft: ["queue", "system", "draft"],
-  evaluationJudgeLive: ["evaluation", "judge", "live"],
-  evaluationJudgeAlignment: ["evaluation", "judge", "alignment"],
-  evaluationJudgeOptimization: ["evaluation", "judge", "optimization"],
-  evaluationSummaryOptimization: ["evaluation", "summary", "optimization"],
-  evaluationProposeOptimization: ["evaluation", "propose", "optimization"],
+  issueDetails: ["issue:details", "details"],
+  annotationEnrichPublication: ["annotation:enrichment"],
+  queueSystemClassify: ["system-queue:classify"],
+  queueSystemDraft: ["system-queue:draft"],
+  evaluationJudgeLive: ["eval:execute", "live"],
+  evaluationJudgeAlignment: ["eval:execute", "alignment"],
+  evaluationJudgeOptimization: ["eval:execute", "optimization"],
+  evaluationSummaryOptimization: ["gepa:summary"],
+  evaluationProposeOptimization: ["gepa:propose"],
 } as const satisfies Record<string, readonly string[]>
 
 export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
