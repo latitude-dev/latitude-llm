@@ -23,6 +23,11 @@ const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean
 export default defineConfig({
   // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
   plugins: [tanstackStart(), nitro({ sourcemap: true }), tailwindcss(), react()],
+  ssr: {
+    // Temporal's Node client works in workers as a normal runtime dependency.
+    // Keep it out of the Nitro SSR bundle so web server functions use the same path.
+    external: ["@temporalio/client"],
+  },
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default
