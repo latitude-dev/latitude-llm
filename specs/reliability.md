@@ -2757,9 +2757,9 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: after this phase lands, Phase 17 can proceed.
 
-- [ ] Implement organization/project reliability settings on the owner entities only for `keepMonitoring`, with `apps/web` management flows plus matching public/machine-facing APIs.
-- [ ] Implement `keepMonitoring` in organization/project settings, use it as the default state for the manual issue-resolution confirmation toggle, and enforce its effect on resolved issue-linked evaluation lifecycle behavior.
-- [ ] Place the MVP settings entry points in the home dashboard and project dashboard exactly as specified.
+- [x] Implement organization/project reliability settings on the owner entities only for `keepMonitoring`, with `apps/web` management flows plus matching public/machine-facing APIs.
+- [x] Implement `keepMonitoring` in organization/project settings, use it as the default state for the manual issue-resolution confirmation toggle, and enforce its effect on resolved issue-linked evaluation lifecycle behavior.
+- [x] Place the MVP settings entry points in the home dashboard and project dashboard exactly as specified.
 
 **Exit gate**: MVP reliability settings live on the right owner entities; `keepMonitoring` can be managed through both UI and API.
 
