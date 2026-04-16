@@ -134,18 +134,16 @@ The seed also includes a deterministic Acme support workflow core built from fix
 
 The issue graph is intentionally broader than one happy-path lifecycle. The default seed should cover at least twenty-five issues in one coherent tenant-scoped project graph:
 
-
-| Issue family                            | Narrative role                                           | Lifecycle coverage                                                                                                                                                                                     |
-| --------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Warranty coverage fabrication           | Mature support issue                                     | Active, escalating, evaluation-linked, dataset-backed, simulation-backed                                                                                                                               |
-| Dangerous product combinations          | Mature issue with regression                             | Resolved issue that regressed through fresh linked occurrences and still has an active monitor                                                                                                         |
-| Unsupported logistics guarantees        | Generate-ready support issue                             | New, escalating, annotation-backed only, no linked evaluation yet                                                                                                                                      |
-| Instant returns eligibility             | Resolved issue with continued monitoring                 | Historical evaluation-linked issue whose monitor remains active after resolution to catch regressions                                                                                                  |
-| Courtesy credits and fee waivers        | Ignored noisy issue                                      | Custom-score-backed issue with recent ignored state and no linked evaluation                                                                                                                           |
-| Account recovery verification bypass    | Active issue outside the original support-policy cluster | Evaluation-linked security issue with fresh recent activity                                                                                                                                            |
-| Installation certification fabrication  | Older lingering issue                                    | Custom-score-backed issue with older occurrences across the rolling seed window                                                                                                                        |
-| Additional long-tail reliability issues | Diverse backlog coverage                                 | Custom-score-backed issues spanning support, logistics, compliance, billing, procurement, and API operations; some remain intentionally denoised below the visibility threshold while others exceed it |
-
+| Issue family | Narrative role | Lifecycle coverage |
+| --- | --- | --- |
+| Warranty coverage fabrication | Mature support issue | Active, escalating, evaluation-linked, dataset-backed, simulation-backed |
+| Dangerous product combinations | Mature issue with regression | Resolved issue that regressed through fresh linked occurrences and still has an active monitor |
+| Unsupported logistics guarantees | Generate-ready support issue | New, escalating, annotation-backed only, no linked evaluation yet |
+| Instant returns eligibility | Resolved issue with continued monitoring | Historical evaluation-linked issue whose monitor remains active after resolution to catch regressions |
+| Courtesy credits and fee waivers | Ignored noisy issue | Custom-score-backed issue with recent ignored state and no linked evaluation |
+| Account recovery verification bypass | Active issue outside the original support-policy cluster | Evaluation-linked security issue with fresh recent activity |
+| Installation certification fabrication | Older lingering issue | Custom-score-backed issue with older occurrences across the rolling seed window |
+| Additional long-tail reliability issues | Diverse backlog coverage | Custom-score-backed issues spanning support, logistics, compliance, billing, procurement, and API operations; some remain intentionally denoised below the visibility threshold while others exceed it |
 
 Important rules:
 
@@ -238,7 +236,7 @@ Use deterministic seeds when the goal is stable workflow navigation:
 When a new seeded concept crosses module or store boundaries:
 
 1. add or update stable IDs in `packages/domain/shared/src/seeds.ts`
-2. place reusable narrative content in `packages/domain/shared/src/seed-content/`*
+2. place reusable narrative content in `packages/domain/shared/src/seed-content/*`
 3. wire Postgres, ClickHouse, and Weaviate seeders to those shared definitions
 
 Do not scatter hardcoded IDs or story text independently across seeders.
