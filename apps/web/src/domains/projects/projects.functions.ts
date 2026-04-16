@@ -105,7 +105,7 @@ export const updateProject = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       id: z.string(),
-      name: z.string().optional(),
+      name: z.string().min(1, { message: "Name is required" }).optional(),
       settings: projectSettingsSchema.optional(),
     }),
   )

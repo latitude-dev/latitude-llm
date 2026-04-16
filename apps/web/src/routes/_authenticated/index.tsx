@@ -35,7 +35,7 @@ import {
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
-import { createFormSubmitHandler } from "../../lib/form-server-action.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../lib/form-server-action.ts"
 import { useAuthenticatedOrganizationId } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -279,10 +279,12 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
             {(field) => (
               <Input
                 required
+                name={field.name}
                 type="text"
                 label="Name"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 placeholder="New project name"
               />
             )}
@@ -355,6 +357,7 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
                 label="Name"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 placeholder="My awesome project"
               />
             )}

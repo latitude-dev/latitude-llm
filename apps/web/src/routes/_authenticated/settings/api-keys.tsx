@@ -30,7 +30,7 @@ import {
 } from "../../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../../domains/api-keys/api-keys.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler } from "../../../lib/form-server-action.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/api-keys")({
   component: ApiKeysSettingsPage,
@@ -82,6 +82,7 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
                     label="Name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="My API Key"
                     description="A descriptive name for this API key"
                   />
@@ -145,6 +146,7 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
                     label="Name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="API key name"
                   />
                 )}

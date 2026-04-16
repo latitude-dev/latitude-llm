@@ -10,7 +10,7 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler } from "../../../lib/form-server-action.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
@@ -100,6 +100,7 @@ function CreateOrganizationModal({ open, setOpen }: { open: boolean; setOpen: (o
                     label="Organization Name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="My Organization"
                   />
                 )}
