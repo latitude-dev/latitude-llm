@@ -7,9 +7,8 @@ import {
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
-  type GeneratedTurnDefinition,
+  buildConversationCase,
+  type GeneratedConversationTurnDefinition,
   SUPPORT_SERVICE_NAME,
   SUPPORT_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -64,17 +63,19 @@ export const supportEvalsOutFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: [],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const opening = rng.pick(OPENING_EXCHANGES)
     const followUp = rng.pick(FOLLOW_UP_EXCHANGES)
-    const turns: GeneratedTurnDefinition[] = [
+    const turns: GeneratedConversationTurnDefinition[] = [
       {
+        key: "opening",
         inputAdditions: [userTextMessage(opening.user)],
         outputMessages: [assistantTextMessage(opening.assistant)],
         durationRangeMs: [850, 1_400] as const,
         usageProfile: "tiny" as const,
       },
       {
+        key: "follow-up",
         inputAdditions: [userTextMessage(followUp.user)],
         outputMessages: [assistantTextMessage(followUp.assistant)],
         durationRangeMs: [800, 1_350] as const,
@@ -84,6 +85,7 @@ export const supportEvalsOutFixture: LiveSeedFixtureDefinition = {
 
     if (rng.chance(0.35)) {
       turns.push({
+        key: "closing",
         inputAdditions: [userTextMessage("Great, that answers it. Please close the request once the email goes out.")],
         outputMessages: [assistantTextMessage("Will do. I'll close the request after the summary email is sent.")],
         durationRangeMs: [650, 1_100] as const,
@@ -91,13 +93,14 @@ export const supportEvalsOutFixture: LiveSeedFixtureDefinition = {
       })
     }
 
-    return createGeneratedTrace({
+    return buildConversationCase({
       rng,
       fixtureKey,
       family: "support",
       serviceName: SUPPORT_SERVICE_NAME,
       systemInstructions: SUPPORT_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, turns),
+      turns,
+      targetTurnIndex: 0,
       startDelayRangeMs: [200, 1_400],
       traits: {
         highCost: false,

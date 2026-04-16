@@ -5,14 +5,14 @@ import {
   ORDER_ROUTER_SYSTEM_PROMPT,
   QA_CLASSIFIER_SYSTEM_PROMPT,
 } from "@domain/shared/seeding"
-import type { SeedMessage, SeedSpanDefinition, SeedSystemPart } from "../otlp.ts"
+import type { SeedChatSpanDefinition, SeedMessage, SeedSpanDefinition, SeedSystemPart } from "../otlp.ts"
 import type { SeededRng } from "../random.ts"
-import type { LiveSeedGeneratedTrace } from "../types.ts"
+import type { LiveSeedGeneratedCase, LiveSeedGeneratedCaseTrace } from "../types.ts"
 
 type UsageProfile = "tiny" | "low" | "medium" | "high" | "veryHigh"
 
-export type GeneratedTurnDefinition = {
-  readonly label?: string
+export type GeneratedConversationTurnDefinition = {
+  readonly key?: string
   readonly inputAdditions: readonly SeedMessage[]
   readonly outputMessages: readonly SeedMessage[]
   readonly durationRangeMs?: readonly [number, number]
@@ -25,7 +25,7 @@ export type GeneratedTurnDefinition = {
 type TraceFamily = "support" | "control"
 
 const DEFAULT_DURATION_RANGE: readonly [number, number] = [850, 2_300]
-const DEFAULT_GAP_RANGE: readonly [number, number] = [700, 2_400]
+const DEFAULT_CONVERSATION_GAP_RANGE: readonly [number, number] = [4_000, 18_000]
 
 const USAGE_PROFILES: Record<
   UsageProfile,
@@ -132,7 +132,7 @@ function buildUsage(input: {
   readonly outputMessages: readonly SeedMessage[]
   readonly usageProfile: UsageProfile
   readonly forceReasoning?: boolean
-}): SeedSpanDefinition["usage"] {
+}): SeedChatSpanDefinition["usage"] {
   const profile = USAGE_PROFILES[input.usageProfile]
   const inputTokens = Math.max(
     20,
@@ -158,44 +158,41 @@ function buildUsage(input: {
   }
 }
 
-export function buildTraceFromTurns(
+export function createChatSpan(
   rng: SeededRng,
-  turns: readonly GeneratedTurnDefinition[],
-  initialHistory: readonly SeedMessage[] = [],
-): readonly SeedSpanDefinition[] {
-  const history = [...initialHistory]
-  let offsetMs = 0
+  input: {
+    readonly label: string
+    readonly inputMessages: readonly SeedMessage[]
+    readonly outputMessages: readonly SeedMessage[]
+    readonly usageProfile: UsageProfile
+    readonly durationRangeMs?: readonly [number, number]
+    readonly finishReasons?: readonly string[]
+    readonly forceReasoning?: boolean
+  },
+): SeedChatSpanDefinition {
+  const durationRange = input.durationRangeMs ?? DEFAULT_DURATION_RANGE
+  const durationMs = rng.int(durationRange[0], durationRange[1])
 
-  return turns.map((turn, index) => {
-    const inputMessages = [...history, ...turn.inputAdditions]
-    const outputMessages = [...turn.outputMessages]
-    const durationRange = turn.durationRangeMs ?? DEFAULT_DURATION_RANGE
-    const durationMs = rng.int(durationRange[0], durationRange[1])
-    const span = {
-      label: turn.label ?? `turn-${index + 1}`,
-      offsetMs,
+  return {
+    type: "chat",
+    label: input.label,
+    offsetMs: 0,
+    durationMs,
+    inputMessages: [...input.inputMessages],
+    outputMessages: [...input.outputMessages],
+    usage: buildUsage({
+      rng,
       durationMs,
-      inputMessages,
-      outputMessages,
-      usage: buildUsage({
-        rng,
-        durationMs,
-        inputMessages,
-        outputMessages,
-        usageProfile: turn.usageProfile,
-        ...(turn.forceReasoning === undefined ? {} : { forceReasoning: turn.forceReasoning }),
-      }),
-      ...(turn.finishReasons ? { finishReasons: turn.finishReasons } : {}),
-    } satisfies SeedSpanDefinition
-
-    history.push(...turn.inputAdditions, ...turn.outputMessages)
-    const gapRange = turn.gapAfterRangeMs ?? DEFAULT_GAP_RANGE
-    offsetMs += durationMs + rng.int(gapRange[0], gapRange[1])
-    return span
-  })
+      inputMessages: input.inputMessages,
+      outputMessages: input.outputMessages,
+      usageProfile: input.usageProfile,
+      ...(input.forceReasoning === undefined ? {} : { forceReasoning: input.forceReasoning }),
+    }),
+    ...(input.finishReasons ? { finishReasons: input.finishReasons } : {}),
+  }
 }
 
-function createTraceIdentity(
+function createCaseIdentity(
   rng: SeededRng,
   fixtureKey: string,
   family: TraceFamily,
@@ -213,39 +210,144 @@ function createTraceIdentity(
 export const WARRANTY_SAFE_EXAMPLES = ISSUE_1_NEGATIVE_TRACES
 export const COMBINATION_RISK_EXAMPLES = ISSUE_2_POSITIVE_TRACES
 
-export function createGeneratedTrace(input: {
+type GeneratedCaseTraceInput = {
+  readonly key: string
+  readonly role: LiveSeedGeneratedCaseTrace["role"]
+  readonly startDelayMs: number
+  readonly serviceName: string
+  readonly systemInstructions: readonly SeedSystemPart[]
+  readonly spans: readonly SeedSpanDefinition[]
+  readonly modelInfo?: {
+    readonly provider: string
+    readonly model: string
+  }
+  readonly scopeName?: string
+  readonly scopeVersion?: string
+  readonly traits?: LiveSeedGeneratedCaseTrace["traits"]
+}
+
+function createGeneratedCase(input: {
+  readonly rng: SeededRng
+  readonly fixtureKey: string
+  readonly family: TraceFamily
+  readonly traces: readonly GeneratedCaseTraceInput[]
+}): LiveSeedGeneratedCase {
+  const identity = createCaseIdentity(input.rng, input.fixtureKey, input.family)
+
+  return {
+    sessionId: identity.sessionId,
+    userId: identity.userId,
+    traces: input.traces.map((trace) => ({
+      key: trace.key,
+      role: trace.role,
+      startDelayMs: trace.startDelayMs,
+      serviceName: trace.serviceName,
+      systemInstructions: trace.systemInstructions,
+      spans: trace.spans,
+      ...(trace.modelInfo === undefined
+        ? {}
+        : {
+            provider: trace.modelInfo.provider,
+            model: trace.modelInfo.model,
+          }),
+      scopeName: trace.scopeName ?? FIXTURE_SCOPE_NAME,
+      scopeVersion: trace.scopeVersion ?? "2.0.0",
+      ...(trace.traits === undefined ? {} : { traits: trace.traits }),
+    })),
+  }
+}
+
+export function buildConversationCase(input: {
   readonly rng: SeededRng
   readonly fixtureKey: string
   readonly family: TraceFamily
   readonly serviceName: string
-  readonly spans: readonly SeedSpanDefinition[]
   readonly systemInstructions: readonly SeedSystemPart[]
+  readonly turns: readonly GeneratedConversationTurnDefinition[]
+  readonly targetTurnIndex: number
   readonly startDelayRangeMs?: readonly [number, number]
   readonly modelInfo?: {
     readonly provider: string
     readonly model: string
   }
-  readonly traits?: {
-    readonly highCost?: boolean
-    readonly supportService?: boolean
+  readonly traits?: LiveSeedGeneratedCaseTrace["traits"]
+  readonly initialHistory?: readonly SeedMessage[]
+}): LiveSeedGeneratedCase {
+  const history = [...(input.initialHistory ?? [])]
+  let traceStartDelayMs = input.rng.int(...(input.startDelayRangeMs ?? [0, 1_500]))
+
+  return createGeneratedCase({
+    rng: input.rng,
+    fixtureKey: input.fixtureKey,
+    family: input.family,
+    traces: input.turns.map((turn, index) => {
+      const inputMessages = [...history, ...turn.inputAdditions]
+      const outputMessages = [...turn.outputMessages]
+      const traceKey = turn.key ?? `turn-${index + 1}`
+      const span = createChatSpan(input.rng, {
+        label: `${traceKey}-chat`,
+        inputMessages,
+        outputMessages,
+        usageProfile: turn.usageProfile,
+        ...(turn.durationRangeMs ? { durationRangeMs: turn.durationRangeMs } : {}),
+        ...(turn.finishReasons ? { finishReasons: turn.finishReasons } : {}),
+        ...(turn.forceReasoning === undefined ? {} : { forceReasoning: turn.forceReasoning }),
+      })
+
+      history.push(...turn.inputAdditions, ...turn.outputMessages)
+
+      const currentTraceStartDelayMs = traceStartDelayMs
+      const gapRange = turn.gapAfterRangeMs ?? DEFAULT_CONVERSATION_GAP_RANGE
+      traceStartDelayMs += span.durationMs + input.rng.int(gapRange[0], gapRange[1])
+
+      return {
+        key: traceKey,
+        role: index === input.targetTurnIndex ? "target" : "context",
+        startDelayMs: currentTraceStartDelayMs,
+        serviceName: input.serviceName,
+        systemInstructions: input.systemInstructions,
+        spans: [span],
+        ...(input.modelInfo === undefined ? {} : { modelInfo: input.modelInfo }),
+        ...(input.traits === undefined ? {} : { traits: input.traits }),
+      } satisfies GeneratedCaseTraceInput
+    }),
+  })
+}
+
+export function createSingleTraceCase(input: {
+  readonly rng: SeededRng
+  readonly fixtureKey: string
+  readonly family: TraceFamily
+  readonly traceKey?: string
+  readonly serviceName: string
+  readonly systemInstructions: readonly SeedSystemPart[]
+  readonly spans: readonly SeedSpanDefinition[]
+  readonly startDelayRangeMs?: readonly [number, number]
+  readonly modelInfo?: {
+    readonly provider: string
+    readonly model: string
   }
-}): LiveSeedGeneratedTrace {
-  const identity = createTraceIdentity(input.rng, input.fixtureKey, input.family)
-  const modelInfo = input.modelInfo
+  readonly traits?: LiveSeedGeneratedCaseTrace["traits"]
+}): LiveSeedGeneratedCase {
   const startDelayRange = input.startDelayRangeMs ?? [0, 1_500]
 
-  return {
-    startDelayMs: input.rng.int(startDelayRange[0], startDelayRange[1]),
-    sessionId: identity.sessionId,
-    userId: identity.userId,
-    serviceName: input.serviceName,
-    systemInstructions: input.systemInstructions,
-    spans: input.spans,
-    ...(modelInfo === undefined ? {} : { provider: modelInfo.provider, model: modelInfo.model }),
-    scopeName: FIXTURE_SCOPE_NAME,
-    scopeVersion: "2.0.0",
-    ...(input.traits === undefined ? {} : { traits: input.traits }),
-  }
+  return createGeneratedCase({
+    rng: input.rng,
+    fixtureKey: input.fixtureKey,
+    family: input.family,
+    traces: [
+      {
+        key: input.traceKey ?? "target",
+        role: "target",
+        startDelayMs: input.rng.int(startDelayRange[0], startDelayRange[1]),
+        serviceName: input.serviceName,
+        systemInstructions: input.systemInstructions,
+        spans: input.spans,
+        ...(input.modelInfo === undefined ? {} : { modelInfo: input.modelInfo }),
+        ...(input.traits === undefined ? {} : { traits: input.traits }),
+      },
+    ],
+  })
 }
 
 export const INTERNAL_KB_SYSTEM_INSTRUCTIONS: readonly SeedSystemPart[] = [

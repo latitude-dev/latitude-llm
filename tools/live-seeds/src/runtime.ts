@@ -29,9 +29,14 @@ import {
 } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
 import { liveSeedFixtureKeys, liveSeedFixtures } from "./fixtures.ts"
-import { type BuiltTraceSpan, buildTraceRequests } from "./otlp.ts"
+import { type BuiltTraceSpan, buildTraceRequests, type SeedSpanDefinition } from "./otlp.ts"
 import { createSeededRng } from "./random.ts"
-import type { LiveSeedFixtureDefinition, LiveSeedGeneratedTrace } from "./types.ts"
+import type {
+  LiveSeedFixtureDefinition,
+  LiveSeedGeneratedCase,
+  LiveSeedGeneratedCaseTrace,
+  SamplingPlan,
+} from "./types.ts"
 
 const HIGH_COST_LIVE_QUEUE_SLUG = "high-cost-traces"
 const FRUSTRATION_SYSTEM_QUEUE_SLUG = "frustration"
@@ -59,23 +64,34 @@ export type SeedTargets = {
 }
 
 export type LiveSeedSamplePreview = {
-  readonly evaluations: Readonly<Record<string, boolean>>
-  readonly liveQueue?: boolean
-  readonly systemQueues?: Readonly<Record<string, boolean>>
+  readonly evaluationsById: Readonly<Record<string, boolean>>
+  readonly liveQueue: boolean
+  readonly systemQueuesBySlug: Readonly<Record<string, boolean>>
 }
 
 export type ResolvedLiveSeedTrace = {
   readonly fixture: LiveSeedFixtureDefinition
-  readonly instanceIndex: number
-  readonly generatedTrace: LiveSeedGeneratedTrace
+  readonly caseIndex: number
+  readonly traceIndex: number
+  readonly sessionId: string
+  readonly userId: string
+  readonly generatedTrace: LiveSeedGeneratedCaseTrace
   readonly traceId: string
   readonly samples: LiveSeedSamplePreview
+}
+
+export type ResolvedLiveSeedCase = {
+  readonly fixture: LiveSeedFixtureDefinition
+  readonly caseIndex: number
+  readonly sessionId: string
+  readonly userId: string
+  readonly traces: readonly ResolvedLiveSeedTrace[]
 }
 
 export type LiveSeedRunPlan = {
   readonly seed: string
   readonly runId: string
-  readonly traces: readonly ResolvedLiveSeedTrace[]
+  readonly cases: readonly ResolvedLiveSeedCase[]
 }
 
 export type SendLiveSeedDataOptions = {
@@ -84,7 +100,7 @@ export type SendLiveSeedDataOptions = {
   readonly timeScale: number
   readonly provisionSystemQueues: boolean
   readonly countPerFixture: number
-  readonly parallelTraces: number
+  readonly parallelCases: number
   readonly verboseSpans: boolean
   readonly seed?: string
 }
@@ -97,21 +113,24 @@ export type BuildLiveSeedRunPlanOptions = {
   readonly targets: SeedTargets
 }
 
-export type DispatchResolvedTracesOptions = {
+export type DispatchResolvedCasesOptions = {
   readonly ingestBaseUrl: string
-  readonly parallelTraces: number
+  readonly parallelCases: number
   readonly runId: string
   readonly verboseSpans?: boolean
   readonly postTraceSpan?: (input: {
+    readonly seedCase: ResolvedLiveSeedCase
     readonly trace: ResolvedLiveSeedTrace
     readonly span: BuiltTraceSpan
   }) => Promise<void>
 }
 
-export type DispatchResolvedTracesResult = {
+export type DispatchResolvedCasesResult = {
   readonly elapsedMs: number
+  readonly sentCaseCount: number
   readonly sentTraceCount: number
   readonly sentSpanCount: number
+  readonly plannedTraceCount: number
   readonly plannedSpanCount: number
 }
 
@@ -122,6 +141,13 @@ type TraceDispatchContext = {
   readonly model?: string
   readonly scopeName?: string
   readonly scopeVersion?: string
+}
+
+type ScheduledTraceSpan = {
+  readonly seedCase: ResolvedLiveSeedCase
+  readonly trace: ResolvedLiveSeedTrace
+  readonly span: BuiltTraceSpan
+  readonly dueAt: number
 }
 
 function hashHex(input: string, length: number): string {
@@ -166,8 +192,20 @@ function formatRate(count: number, elapsedMs: number): string {
   return `${rate >= 10 ? rate.toFixed(0) : rate.toFixed(1)}/s`
 }
 
-function getPlannedSpanCount(traces: readonly ResolvedLiveSeedTrace[]): number {
-  return traces.reduce((sum, trace) => sum + trace.generatedTrace.spans.length, 0)
+function getTraceSpanCount(trace: ResolvedLiveSeedTrace): number {
+  return trace.generatedTrace.spans.length
+}
+
+function getCaseSpanCount(seedCase: ResolvedLiveSeedCase): number {
+  return seedCase.traces.reduce((sum, trace) => sum + getTraceSpanCount(trace), 0)
+}
+
+function getPlannedTraceCount(cases: readonly ResolvedLiveSeedCase[]): number {
+  return cases.reduce((sum, seedCase) => sum + seedCase.traces.length, 0)
+}
+
+function getPlannedSpanCount(cases: readonly ResolvedLiveSeedCase[]): number {
+  return cases.reduce((sum, seedCase) => sum + getCaseSpanCount(seedCase), 0)
 }
 
 function labelForEvaluation(evaluationId: string): string {
@@ -243,7 +281,7 @@ function buildSeedStyleMetadata(
 function buildTraceDispatchContext(trace: ResolvedLiveSeedTrace): TraceDispatchContext {
   const profile = getAgentProfile(trace.generatedTrace.serviceName)
   const rng = createSeededRng(
-    `dispatch-context:${trace.traceId}:${trace.fixture.key}:${trace.instanceIndex.toString()}`,
+    `dispatch-context:${trace.traceId}:${trace.fixture.key}:${trace.caseIndex.toString()}:${trace.traceIndex.toString()}`,
   )
   const environment = rng.pick(profile.environments)
   const model = profile.models.length > 0 ? rng.pick(profile.models) : undefined
@@ -373,97 +411,132 @@ async function sampleSystemQueue(target: AnnotationQueue, traceId: string): Prom
   })
 }
 
-async function computeSamplePreview(
-  fixture: LiveSeedFixtureDefinition,
-  targets: SeedTargets,
-  traceId: string,
-): Promise<LiveSeedSamplePreview> {
-  const evaluationEntries = await Promise.all(
-    SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
-      const evaluation = targets.evaluationsById[evaluationId]
-      const sampled = await sampleLiveEvaluation(evaluation, traceId)
-      return [EVALUATION_LABELS[evaluationId], sampled] as const
-    }),
+async function computeSamplePreview(targets: SeedTargets, traceId: string): Promise<LiveSeedSamplePreview> {
+  const evaluationsById = Object.fromEntries(
+    await Promise.all(
+      SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
+        const evaluation = targets.evaluationsById[evaluationId]
+        return [evaluationId, await sampleLiveEvaluation(evaluation, traceId)] as const
+      }),
+    ),
   )
 
-  const liveQueue =
-    fixture.sampling.liveQueueSample === undefined
-      ? undefined
-      : await sampleLiveQueue(targets.highCostLiveQueue, traceId)
-
-  const systemQueues =
-    fixture.sampling.systemQueueSamples === undefined
-      ? undefined
-      : Object.fromEntries(
-          await Promise.all(
-            Object.entries(fixture.sampling.systemQueueSamples).map(async ([queueSlug]) => {
-              const queue = requireItem(
-                targets.systemQueuesBySlug[queueSlug],
-                `Missing provisioned system queue "${queueSlug}" in seeded project`,
-              )
-              return [queueSlug, await sampleSystemQueue(queue, traceId)] as const
-            }),
-          ),
-        )
+  const liveQueue = await sampleLiveQueue(targets.highCostLiveQueue, traceId)
+  const systemQueuesBySlug = Object.fromEntries(
+    await Promise.all(
+      Object.entries(targets.systemQueuesBySlug).map(async ([queueSlug, queue]) => {
+        return [queueSlug, await sampleSystemQueue(queue, traceId)] as const
+      }),
+    ),
+  )
 
   return {
-    evaluations: Object.fromEntries(evaluationEntries),
-    ...(liveQueue === undefined ? {} : { liveQueue }),
-    ...(systemQueues === undefined ? {} : { systemQueues }),
+    evaluationsById,
+    liveQueue,
+    systemQueuesBySlug,
   }
 }
 
-function samplePreviewMatchesRequirements(fixture: LiveSeedFixtureDefinition, preview: LiveSeedSamplePreview): boolean {
-  const includeIds = fixture.sampling.includeEvaluationIds ?? []
-  const excludeIds = fixture.sampling.excludeEvaluationIds ?? []
+function buildContextSamplingPlan(fixture: LiveSeedFixtureDefinition, targets: SeedTargets): SamplingPlan {
+  const contextSystemQueueSamples = Object.fromEntries(
+    Object.keys(fixture.sampling.systemQueueSamples ?? {})
+      .filter((queueSlug) => {
+        const queue = targets.systemQueuesBySlug[queueSlug]
+        return (queue?.settings.sampling ?? 0) < 100
+      })
+      .map((queueSlug) => [queueSlug, false]),
+  )
 
-  for (const evaluationId of includeIds) {
-    if (!preview.evaluations[labelForEvaluation(evaluationId)]) {
+  return {
+    excludeEvaluationIds: SEEDED_EVALUATION_ORDER,
+    liveQueueSample: false,
+    ...(Object.keys(contextSystemQueueSamples).length > 0 ? { systemQueueSamples: contextSystemQueueSamples } : {}),
+  }
+}
+
+function samplePreviewMatchesPlan(plan: SamplingPlan, preview: LiveSeedSamplePreview): boolean {
+  for (const evaluationId of plan.includeEvaluationIds ?? []) {
+    if (!preview.evaluationsById[evaluationId]) {
       return false
     }
   }
 
-  for (const evaluationId of excludeIds) {
-    if (preview.evaluations[labelForEvaluation(evaluationId)]) {
+  for (const evaluationId of plan.excludeEvaluationIds ?? []) {
+    if (preview.evaluationsById[evaluationId]) {
       return false
     }
   }
 
-  if (fixture.sampling.liveQueueSample !== undefined && preview.liveQueue !== fixture.sampling.liveQueueSample) {
+  if (plan.liveQueueSample !== undefined && preview.liveQueue !== plan.liveQueueSample) {
     return false
   }
 
-  if (fixture.sampling.systemQueueSamples !== undefined) {
-    for (const [queueSlug, expectedSample] of Object.entries(fixture.sampling.systemQueueSamples)) {
-      if (preview.systemQueues?.[queueSlug] !== expectedSample) {
-        return false
-      }
+  for (const [queueSlug, expectedSample] of Object.entries(plan.systemQueueSamples ?? {})) {
+    if (preview.systemQueuesBySlug[queueSlug] !== expectedSample) {
+      return false
     }
   }
 
   return true
 }
 
-async function findTraceIdForFixtureInstance(
+function validateGeneratedCase(
   fixture: LiveSeedFixtureDefinition,
-  targets: SeedTargets,
-  runSeed: string,
-  instanceIndex: number,
-): Promise<{ readonly traceId: string; readonly preview: LiveSeedSamplePreview }> {
+  generatedCase: LiveSeedGeneratedCase,
+  caseIndex: number,
+): void {
+  if (generatedCase.traces.length === 0) {
+    throw new Error(`Fixture "${fixture.key}" case ${caseIndex.toString()} generated no traces`)
+  }
+
+  const targetTraceCount = generatedCase.traces.filter((trace) => trace.role === "target").length
+  if (targetTraceCount !== 1) {
+    throw new Error(
+      `Fixture "${fixture.key}" case ${caseIndex.toString()} must generate exactly one target trace, received ${targetTraceCount.toString()}`,
+    )
+  }
+
+  const traceKeys = new Set<string>()
+  for (const trace of generatedCase.traces) {
+    if (trace.spans.length === 0) {
+      throw new Error(`Fixture "${fixture.key}" case ${caseIndex.toString()} trace "${trace.key}" generated no spans`)
+    }
+    if (traceKeys.has(trace.key)) {
+      throw new Error(
+        `Fixture "${fixture.key}" case ${caseIndex.toString()} generated duplicate trace key "${trace.key}"`,
+      )
+    }
+    traceKeys.add(trace.key)
+  }
+}
+
+async function findTraceIdForCaseTrace(input: {
+  readonly fixture: LiveSeedFixtureDefinition
+  readonly generatedTrace: LiveSeedGeneratedCaseTrace
+  readonly targets: SeedTargets
+  readonly runSeed: string
+  readonly caseIndex: number
+  readonly traceIndex: number
+}): Promise<{ readonly traceId: string; readonly preview: LiveSeedSamplePreview }> {
+  const samplingPlan =
+    input.generatedTrace.role === "target"
+      ? input.fixture.sampling
+      : buildContextSamplingPlan(input.fixture, input.targets)
+
   for (let attempt = 0; attempt < MAX_TRACE_ID_SEARCH_ATTEMPTS; attempt += 1) {
     const traceId = hashHex(
-      `seed-live-seeds:${runSeed}:${fixture.key}:${instanceIndex.toString()}:${attempt.toString()}`,
+      `seed-live-seeds:${input.runSeed}:${input.fixture.key}:${input.caseIndex.toString()}:${input.traceIndex.toString()}:${input.generatedTrace.key}:${attempt.toString()}`,
       32,
     )
-    const preview = await computeSamplePreview(fixture, targets, traceId)
+    const preview = await computeSamplePreview(input.targets, traceId)
 
-    if (samplePreviewMatchesRequirements(fixture, preview)) {
+    if (samplePreviewMatchesPlan(samplingPlan, preview)) {
       return { traceId, preview }
     }
   }
 
   throw new Error(
-    `Unable to find a traceId for fixture "${fixture.key}" instance ${instanceIndex.toString()} after ${MAX_TRACE_ID_SEARCH_ATTEMPTS.toString()} attempts`,
+    `Unable to find a traceId for fixture "${input.fixture.key}" case ${input.caseIndex.toString()} trace "${input.generatedTrace.key}" after ${MAX_TRACE_ID_SEARCH_ATTEMPTS.toString()} attempts`,
   )
 }
 
@@ -471,19 +544,30 @@ function scaleMs(value: number, timeScale: number, minimumMs = 0): number {
   return Math.max(minimumMs, Math.round(value * timeScale))
 }
 
-function scaleGeneratedTrace(trace: LiveSeedGeneratedTrace, timeScale: number): LiveSeedGeneratedTrace {
+function scaleGeneratedSpan(span: SeedSpanDefinition, timeScale: number): SeedSpanDefinition {
   return {
-    ...trace,
-    startDelayMs: scaleMs(trace.startDelayMs, timeScale),
-    spans: trace.spans.map((span) => ({
-      ...span,
-      offsetMs: scaleMs(span.offsetMs, timeScale),
-      durationMs: scaleMs(span.durationMs, timeScale, 250),
-    })),
+    ...span,
+    offsetMs: scaleMs(span.offsetMs, timeScale),
+    durationMs: scaleMs(span.durationMs, timeScale, 250),
   }
 }
 
-function getTraceDispatchWindowMs(trace: LiveSeedGeneratedTrace): number {
+function scaleGeneratedCaseTrace(trace: LiveSeedGeneratedCaseTrace, timeScale: number): LiveSeedGeneratedCaseTrace {
+  return {
+    ...trace,
+    startDelayMs: scaleMs(trace.startDelayMs, timeScale),
+    spans: trace.spans.map((span) => scaleGeneratedSpan(span, timeScale)),
+  }
+}
+
+function scaleGeneratedCase(generatedCase: LiveSeedGeneratedCase, timeScale: number): LiveSeedGeneratedCase {
+  return {
+    ...generatedCase,
+    traces: generatedCase.traces.map((trace) => scaleGeneratedCaseTrace(trace, timeScale)),
+  }
+}
+
+function getTraceDispatchWindowMs(trace: LiveSeedGeneratedCaseTrace): number {
   const spanWindowMs = trace.spans.reduce(
     (currentMax, span) => Math.max(currentMax, span.offsetMs + span.durationMs),
     0,
@@ -491,37 +575,64 @@ function getTraceDispatchWindowMs(trace: LiveSeedGeneratedTrace): number {
   return trace.startDelayMs + spanWindowMs
 }
 
+function getCaseDispatchWindowMs(seedCase: ResolvedLiveSeedCase): number {
+  return seedCase.traces.reduce(
+    (currentMax, trace) => Math.max(currentMax, getTraceDispatchWindowMs(trace.generatedTrace)),
+    0,
+  )
+}
+
 export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions): Promise<LiveSeedRunPlan> {
   const fixtures = resolveSelectedFixtures(options.fixtureKeys)
   const runId = runIdForSeed(options.seed)
 
-  const traces = await Promise.all(
+  const cases = await Promise.all(
     fixtures.flatMap((fixture) =>
-      Array.from({ length: options.countPerFixture }, async (_, instanceIndex) => {
-        const rng = createSeededRng(`${options.seed}:${fixture.key}:${instanceIndex.toString()}`)
-        const generatedTrace = scaleGeneratedTrace(
-          fixture.generateTrace({
+      Array.from({ length: options.countPerFixture }, async (_, caseIndex) => {
+        const rng = createSeededRng(`${options.seed}:${fixture.key}:${caseIndex.toString()}`)
+        const generatedCase = scaleGeneratedCase(
+          fixture.generateCase({
             rng,
             fixtureKey: fixture.key,
-            instanceIndex,
+            instanceIndex: caseIndex,
             runSeed: options.seed,
           }),
           options.timeScale,
         )
-        const { traceId, preview } = await findTraceIdForFixtureInstance(
-          fixture,
-          options.targets,
-          options.seed,
-          instanceIndex,
+
+        validateGeneratedCase(fixture, generatedCase, caseIndex)
+
+        const traces = await Promise.all(
+          generatedCase.traces.map(async (generatedTrace, traceIndex) => {
+            const { traceId, preview } = await findTraceIdForCaseTrace({
+              fixture,
+              generatedTrace,
+              targets: options.targets,
+              runSeed: options.seed,
+              caseIndex,
+              traceIndex,
+            })
+
+            return {
+              fixture,
+              caseIndex,
+              traceIndex,
+              sessionId: generatedCase.sessionId,
+              userId: generatedCase.userId,
+              generatedTrace,
+              traceId,
+              samples: preview,
+            } satisfies ResolvedLiveSeedTrace
+          }),
         )
 
         return {
           fixture,
-          instanceIndex,
-          generatedTrace,
-          traceId,
-          samples: preview,
-        } satisfies ResolvedLiveSeedTrace
+          caseIndex,
+          sessionId: generatedCase.sessionId,
+          userId: generatedCase.userId,
+          traces,
+        } satisfies ResolvedLiveSeedCase
       }),
     ),
   )
@@ -529,12 +640,33 @@ export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions)
   return {
     seed: options.seed,
     runId,
-    traces,
+    cases,
   }
 }
 
-function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisioned: boolean, parallelTraces: number) {
-  const plannedSpanCount = getPlannedSpanCount(plan.traces)
+function formatEvaluationSamples(preview: LiveSeedSamplePreview): string {
+  return SEEDED_EVALUATION_ORDER.map((evaluationId) => {
+    return `${labelForEvaluation(evaluationId)}=${preview.evaluationsById[evaluationId] ? "in" : "out"}`
+  }).join(", ")
+}
+
+function formatSystemQueueSamples(
+  preview: LiveSeedSamplePreview,
+  fixture: LiveSeedFixtureDefinition,
+): string | undefined {
+  const relevantQueueSlugs = Object.keys(fixture.sampling.systemQueueSamples ?? {})
+  if (relevantQueueSlugs.length === 0) {
+    return undefined
+  }
+
+  return relevantQueueSlugs
+    .map((queueSlug) => `${queueSlug}=${preview.systemQueuesBySlug[queueSlug] ? "in" : "out"}`)
+    .join(", ")
+}
+
+function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisioned: boolean, parallelCases: number) {
+  const plannedTraceCount = getPlannedTraceCount(plan.cases)
+  const plannedSpanCount = getPlannedSpanCount(plan.cases)
 
   console.log("[plan] Live-seed run")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
@@ -543,41 +675,43 @@ function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisio
   console.log(`  - trace-end debounce: ${Math.ceil(TRACE_END_DEBOUNCE_MS / 1000).toString()}s`)
   console.log(`  - runId: ${plan.runId}`)
   console.log(`  - seed: ${plan.seed}`)
-  console.log(`  - total traces: ${plan.traces.length.toString()}`)
+  console.log(`  - total cases: ${plan.cases.length.toString()}`)
+  console.log(`  - total traces: ${plannedTraceCount.toString()}`)
   console.log(`  - planned spans: ${plannedSpanCount.toString()}`)
-  console.log(`  - parallel trace runners: ${parallelTraces.toString()}`)
+  console.log(`  - parallel case runners: ${parallelCases.toString()}`)
 
   for (const fixture of liveSeedFixtures) {
-    const matchingTraces = plan.traces.filter((trace) => trace.fixture.key === fixture.key)
-    if (matchingTraces.length === 0) {
+    const matchingCases = plan.cases.filter((seedCase) => seedCase.fixture.key === fixture.key)
+    if (matchingCases.length === 0) {
       continue
     }
 
-    const example = matchingTraces[0]
-    const spanCounts = matchingTraces.map((trace) => trace.generatedTrace.spans.length)
-    const traceWindows = matchingTraces.map((trace) => getTraceDispatchWindowMs(trace.generatedTrace))
+    const exampleCase = matchingCases[0]
+    const targetTrace = requireItem(
+      exampleCase.traces.find((trace) => trace.generatedTrace.role === "target"),
+      `Fixture "${fixture.key}" example case is missing a target trace`,
+    )
+    const tracesPerCase = matchingCases.map((seedCase) => seedCase.traces.length)
+    const spansPerCase = matchingCases.map((seedCase) => getCaseSpanCount(seedCase))
+    const dispatchWindows = matchingCases.map((seedCase) => getCaseDispatchWindowMs(seedCase))
 
-    console.log(`\n  - fixture=${fixture.key} traces=${matchingTraces.length.toString()}`)
-    console.log(`    example traceId: ${example.traceId}`)
-    console.log(`    service: ${example.generatedTrace.serviceName}`)
-    console.log(`    span count range: ${Math.min(...spanCounts).toString()}-${Math.max(...spanCounts).toString()}`)
+    console.log(`\n  - fixture=${fixture.key} cases=${matchingCases.length.toString()}`)
     console.log(
-      `    dispatch window range: ${Math.min(...traceWindows).toString()}-${Math.max(...traceWindows).toString()}ms`,
+      `    traces per case: ${Math.min(...tracesPerCase).toString()}-${Math.max(...tracesPerCase).toString()}`,
     )
+    console.log(`    spans per case: ${Math.min(...spansPerCase).toString()}-${Math.max(...spansPerCase).toString()}`)
     console.log(
-      `    live evaluations: ${Object.entries(example.samples.evaluations)
-        .map(([label, sampled]) => `${label}=${sampled ? "in" : "out"}`)
-        .join(", ")}`,
+      `    dispatch window range: ${Math.min(...dispatchWindows).toString()}-${Math.max(...dispatchWindows).toString()}ms`,
     )
-    if (example.samples.liveQueue !== undefined) {
-      console.log(`    high-cost live queue sample: ${example.samples.liveQueue ? "in" : "out"}`)
+    console.log(`    example target traceId: ${targetTrace.traceId}`)
+    console.log(`    target service: ${targetTrace.generatedTrace.serviceName}`)
+    console.log(`    live evaluations: ${formatEvaluationSamples(targetTrace.samples)}`)
+    if (fixture.sampling.liveQueueSample !== undefined) {
+      console.log(`    high-cost live queue sample: ${targetTrace.samples.liveQueue ? "in" : "out"}`)
     }
-    if (example.samples.systemQueues !== undefined) {
-      console.log(
-        `    system queue samples: ${Object.entries(example.samples.systemQueues)
-          .map(([queueSlug, sampled]) => `${queueSlug}=${sampled ? "in" : "out"}`)
-          .join(", ")}`,
-      )
+    const systemQueueSamples = formatSystemQueueSamples(targetTrace.samples, fixture)
+    if (systemQueueSamples) {
+      console.log(`    system queue samples: ${systemQueueSamples}`)
     }
     if (fixture.deterministicSystemMatches.length > 0) {
       console.log(`    deterministic system matches: ${fixture.deterministicSystemMatches.join(", ")}`)
@@ -631,83 +765,119 @@ async function runWithConcurrency<T>(
   )
 }
 
-export async function dispatchResolvedTraces(
-  traces: readonly ResolvedLiveSeedTrace[],
-  options: DispatchResolvedTracesOptions,
-): Promise<DispatchResolvedTracesResult> {
-  const dispatchStartedAt = Date.now()
-  const plannedSpanCount = getPlannedSpanCount(traces)
-  let sentSpanCount = 0
-  let completedTraceCount = 0
-  let activeTraceCount = 0
-
-  await runWithConcurrency(traces, options.parallelTraces, async (trace) => {
-    activeTraceCount += 1
-    const traceStartedAt = Date.now()
+function buildScheduledSpansForCase(
+  seedCase: ResolvedLiveSeedCase,
+  caseStartedAt: number,
+): readonly ScheduledTraceSpan[] {
+  const scheduledSpans = seedCase.traces.flatMap((trace) => {
     const dispatchContext = buildTraceDispatchContext(trace)
     const builtSpans = buildTraceRequests({
       traceId: trace.traceId,
-      sessionId: trace.generatedTrace.sessionId,
-      userId: trace.generatedTrace.userId,
+      sessionId: seedCase.sessionId,
+      userId: seedCase.userId,
       serviceName: trace.generatedTrace.serviceName,
       spans: trace.generatedTrace.spans,
       systemInstructions: trace.generatedTrace.systemInstructions,
       tags: dispatchContext.tags,
       metadata: dispatchContext.metadata,
-      baseTime: new Date(traceStartedAt + trace.generatedTrace.startDelayMs),
+      baseTime: new Date(caseStartedAt + trace.generatedTrace.startDelayMs),
       ...(dispatchContext.provider ? { provider: dispatchContext.provider } : {}),
       ...(dispatchContext.model ? { model: dispatchContext.model } : {}),
       ...(dispatchContext.scopeName ? { scopeName: dispatchContext.scopeName } : {}),
       ...(dispatchContext.scopeVersion ? { scopeVersion: dispatchContext.scopeVersion } : {}),
     })
 
+    return builtSpans.map((span) => ({
+      seedCase,
+      trace,
+      span,
+      dueAt: caseStartedAt + trace.generatedTrace.startDelayMs + span.emitAtMs,
+    }))
+  })
+
+  return [...scheduledSpans].sort((left, right) => left.dueAt - right.dueAt)
+}
+
+export async function dispatchResolvedCases(
+  cases: readonly ResolvedLiveSeedCase[],
+  options: DispatchResolvedCasesOptions,
+): Promise<DispatchResolvedCasesResult> {
+  const dispatchStartedAt = Date.now()
+  const plannedTraceCount = getPlannedTraceCount(cases)
+  const plannedSpanCount = getPlannedSpanCount(cases)
+  let sentSpanCount = 0
+  let completedTraceCount = 0
+  let completedCaseCount = 0
+  let activeCaseCount = 0
+
+  await runWithConcurrency(cases, options.parallelCases, async (seedCase) => {
+    activeCaseCount += 1
+    const caseStartedAt = Date.now()
+    const scheduledSpans = buildScheduledSpansForCase(seedCase, caseStartedAt)
+    const remainingSpansByTrace = new Map(
+      seedCase.traces.map((trace) => [trace.traceId, getTraceSpanCount(trace)] as const),
+    )
+
     try {
-      for (const span of builtSpans) {
-        const dueAt = traceStartedAt + trace.generatedTrace.startDelayMs + span.emitAtMs
-        const sleepFor = Math.max(0, dueAt - Date.now())
+      for (const scheduled of scheduledSpans) {
+        const sleepFor = Math.max(0, scheduled.dueAt - Date.now())
 
         if (sleepFor > 0) {
           await sleep(sleepFor)
         }
 
         if (options.postTraceSpan) {
-          await options.postTraceSpan({ trace, span })
+          await options.postTraceSpan({
+            seedCase: scheduled.seedCase,
+            trace: scheduled.trace,
+            span: scheduled.span,
+          })
         } else {
-          await postSpanToIngest(options.ingestBaseUrl, trace.traceId, span.request)
+          await postSpanToIngest(options.ingestBaseUrl, scheduled.trace.traceId, scheduled.span.request)
         }
 
         sentSpanCount += 1
         if (options.verboseSpans) {
           console.log(
-            `[span] fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} label=${span.label} trace=${trace.traceId} span=${span.spanId} sent=${sentSpanCount.toString()}/${plannedSpanCount.toString()}`,
+            `[span] fixture=${scheduled.trace.fixture.key} case=${scheduled.trace.caseIndex.toString()} trace=${scheduled.trace.traceId} traceKey=${scheduled.trace.generatedTrace.key} role=${scheduled.trace.generatedTrace.role} label=${scheduled.span.label} sent=${sentSpanCount.toString()}/${plannedSpanCount.toString()}`,
+          )
+        }
+
+        const remainingSpans = (remainingSpansByTrace.get(scheduled.trace.traceId) ?? 1) - 1
+        remainingSpansByTrace.set(scheduled.trace.traceId, remainingSpans)
+        if (remainingSpans === 0) {
+          completedTraceCount += 1
+          const traceElapsedMs = Date.now() - (caseStartedAt + scheduled.trace.generatedTrace.startDelayMs)
+          console.log(
+            `[trace] completed fixture=${scheduled.trace.fixture.key} case=${scheduled.trace.caseIndex.toString()} traceIndex=${scheduled.trace.traceIndex.toString()} traceKey=${scheduled.trace.generatedTrace.key} role=${scheduled.trace.generatedTrace.role} spans=${getTraceSpanCount(scheduled.trace).toString()} elapsed=${formatDuration(traceElapsedMs)} trace=${scheduled.trace.traceId}`,
           )
         }
       }
 
-      completedTraceCount += 1
-      activeTraceCount -= 1
-      const elapsedMs = Date.now() - traceStartedAt
+      completedCaseCount += 1
+      activeCaseCount -= 1
+      const caseElapsedMs = Date.now() - caseStartedAt
       const totalElapsedMs = Date.now() - dispatchStartedAt
 
       console.log(
-        `[trace] completed fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} spans=${builtSpans.length.toString()} elapsed=${formatDuration(elapsedMs)} trace=${trace.traceId}`,
+        `[case] completed fixture=${seedCase.fixture.key} case=${seedCase.caseIndex.toString()} traces=${seedCase.traces.length.toString()} spans=${getCaseSpanCount(seedCase).toString()} elapsed=${formatDuration(caseElapsedMs)} session=${seedCase.sessionId}`,
       )
       console.log(
-        `[progress] traces=${completedTraceCount.toString()}/${traces.length.toString()} spans=${sentSpanCount.toString()}/${plannedSpanCount.toString()} active=${activeTraceCount.toString()} elapsed=${formatDuration(totalElapsedMs)} rate=${formatRate(sentSpanCount, totalElapsedMs)}`,
+        `[progress] cases=${completedCaseCount.toString()}/${cases.length.toString()} traces=${completedTraceCount.toString()}/${plannedTraceCount.toString()} spans=${sentSpanCount.toString()}/${plannedSpanCount.toString()} active=${activeCaseCount.toString()} elapsed=${formatDuration(totalElapsedMs)} rate=${formatRate(sentSpanCount, totalElapsedMs)}`,
       )
     } catch (error) {
-      activeTraceCount -= 1
-      console.error(
-        `[trace] failed fixture=${trace.fixture.key} index=${trace.instanceIndex.toString()} trace=${trace.traceId}`,
-      )
+      activeCaseCount -= 1
+      console.error(`[case] failed fixture=${seedCase.fixture.key} case=${seedCase.caseIndex.toString()}`)
       throw error
     }
   })
 
   return {
     elapsedMs: Date.now() - dispatchStartedAt,
-    sentTraceCount: traces.length,
+    sentCaseCount: cases.length,
+    sentTraceCount: plannedTraceCount,
     sentSpanCount,
+    plannedTraceCount,
     plannedSpanCount,
   }
 }
@@ -735,21 +905,22 @@ export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promis
     targets,
   })
 
-  printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelTraces)
+  printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelCases)
 
-  const plannedSpanCount = getPlannedSpanCount(plan.traces)
+  const plannedTraceCount = getPlannedTraceCount(plan.cases)
+  const plannedSpanCount = getPlannedSpanCount(plan.cases)
   console.log(
-    `\n[send] Dispatching ${plan.traces.length.toString()} traces (${plannedSpanCount.toString()} spans planned) across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
+    `\n[send] Dispatching ${plan.cases.length.toString()} cases (${plannedTraceCount.toString()} traces, ${plannedSpanCount.toString()} spans planned) across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
   )
-  const dispatchResult = await dispatchResolvedTraces(plan.traces, {
+  const dispatchResult = await dispatchResolvedCases(plan.cases, {
     ingestBaseUrl: options.ingestBaseUrl,
-    parallelTraces: options.parallelTraces,
+    parallelCases: options.parallelCases,
     runId: plan.runId,
     verboseSpans: options.verboseSpans,
   })
 
   console.log(
-    `\n[done] Sent ${dispatchResult.sentTraceCount.toString()} traces and ${dispatchResult.sentSpanCount.toString()}/${dispatchResult.plannedSpanCount.toString()} spans in ${formatDuration(dispatchResult.elapsedMs)} (${formatRate(dispatchResult.sentSpanCount, dispatchResult.elapsedMs)}).`,
+    `\n[done] Sent ${dispatchResult.sentCaseCount.toString()} cases, ${dispatchResult.sentTraceCount.toString()} traces, and ${dispatchResult.sentSpanCount.toString()}/${dispatchResult.plannedSpanCount.toString()} spans in ${formatDuration(dispatchResult.elapsedMs)} (${formatRate(dispatchResult.sentSpanCount, dispatchResult.elapsedMs)}).`,
   )
   console.log(
     `[done] Allow at least ${Math.ceil((TRACE_END_DEBOUNCE_MS + dispatchResult.elapsedMs) / 1000).toString()}s from script start for every trace to become eligible for TraceEnded on this branch.`,

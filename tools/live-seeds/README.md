@@ -22,12 +22,15 @@ This is useful when you want to test the full live ingestion path end to end:
 
 The live-seeds script is generator-backed rather than a simple fixture replayer:
 
-- each fixture defines its own randomized trace generator
-- every generated trace keeps the fixture's sampling and behavioral contract
+- each fixture defines its own randomized case generator
+- every generated case keeps the fixture's sampling and behavioral contract
 - `traceId`s are still searched so sampling resolves in or out as required
-- multiple traces can be generated per fixture
-- traces are dispatched with bounded parallelism
-- spans within a trace are sent sequentially based on simulated trace timing
+- multiple cases can be generated per fixture
+- conversational cases can emit multiple traces that share the same `sessionId`
+- single-interaction workflow cases can emit one trace with a wrapper span and sibling chat/tool spans
+- cases are dispatched with bounded parallelism
+- traces within a case are scheduled against one shared simulated case timeline
+- spans within a trace are sent sequentially based on simulated finish timing
 - generation can be replayed exactly with `--seed`
 - runtime span enrichment follows the ambient seed conventions from `docs/seeds.md`, adding only the `live-seed` tag and `live_seed_fixture` metadata field on top
 
@@ -88,7 +91,7 @@ cd /Users/sans/src/latitude-v2/tools/live-seeds
 pnpm seed:live-seeds --list-fixtures
 ```
 
-Run the default batch of 5 generated traces per fixture:
+Run the default batch of 5 generated cases per fixture:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
@@ -102,18 +105,18 @@ cd /Users/sans/src/latitude-v2/tools/live-seeds
 pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue-in,tool-call-error
 ```
 
-Run multiple randomized traces for each selected fixture:
+Run multiple randomized cases for each selected fixture:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --fixtures warranty-eval-in,tool-call-error --count-per-fixture 25 --parallel-traces 6
+pnpm seed:live-seeds --fixtures warranty-eval-in,tool-call-error --count-per-fixture 25 --parallel-cases 6
 ```
 
 Run the exact same generated corpus again:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --count-per-fixture 10 --parallel-traces 4 --seed live-seeds-demo-001
+pnpm seed:live-seeds --count-per-fixture 10 --parallel-cases 4 --seed live-seeds-demo-001
 ```
 
 Use a custom ingest URL:
@@ -149,8 +152,9 @@ pnpm seed:live-seeds --no-provision-system-queues
 - `--fixtures <a,b,c>`: comma-separated fixture keys to send
 - `--ingest-url <url>`: base URL for the ingest service
 - `--time-scale <n>`: multiplies fixture delays by the given factor
-- `--count-per-fixture <n>`: generates this many traces for each selected fixture
-- `--parallel-traces <n>`: maximum number of traces dispatched concurrently
+- `--count-per-fixture <n>`: generates this many cases for each selected fixture
+- `--parallel-cases <n>`: maximum number of cases dispatched concurrently
+- `--parallel-traces <n>`: alias for `--parallel-cases`
 - `--seed <value>`: makes generation reproducible
 - `--verbose-spans`: prints one log line per sent span in addition to summary progress
 - `--no-provision-system-queues`: skips provisioning the default system queues before sending traces
@@ -159,7 +163,7 @@ pnpm seed:live-seeds --no-provision-system-queues
 
 ## Fixture Catalog
 
-Each fixture represents a scenario family rather than one literal trace. Every run generates a new trace instance for that family while preserving the intended outcome.
+Each fixture represents a scenario family rather than one literal trace. Every run generates a new case for that family while preserving the intended outcome. Some cases emit one trace, while conversational fixtures emit multiple traces that share a session.
 
 
 | Key                                  | Description                                                                                                                 | Intended outcome                                                                       |
@@ -186,23 +190,23 @@ pnpm seed:live-seeds --fixtures warranty-eval-in,combination-eval-and-live-queue
 
 That gives you:
 
-- one trace that should run a live evaluation only
-- one trace that should run a live evaluation and curate a live queue
-- one trace that should skip live evaluations but curate a live queue
-- one trace that should exercise deterministic system-queue matching
+- one case whose target trace should run a live evaluation only
+- one case whose target trace should run a live evaluation and curate a live queue
+- one case whose target trace should skip live evaluations but curate a live queue
+- one case that should exercise deterministic system-queue matching
 
 If you want a broader manual validation run:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --count-per-fixture 5 --parallel-traces 4
+pnpm seed:live-seeds --count-per-fixture 5 --parallel-cases 4
 ```
 
 If you want the full matrix at scale with reproducible output:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --count-per-fixture 20 --parallel-traces 8 --seed live-seeds-scale-001
+pnpm seed:live-seeds --count-per-fixture 20 --parallel-cases 8 --seed live-seeds-scale-001
 ```
 
 ## Example Run
@@ -211,29 +215,31 @@ Example:
 
 ```bash
 cd /Users/sans/src/latitude-v2/tools/live-seeds
-pnpm seed:live-seeds --fixtures warranty-eval-in,frustration-in,tool-call-error --count-per-fixture 3 --parallel-traces 2 --seed example-run-01
+pnpm seed:live-seeds --fixtures warranty-eval-in,frustration-in,tool-call-error --count-per-fixture 3 --parallel-cases 2 --seed example-run-01
 ```
 
 Typical flow:
 
 1. The script provisions the default system queues unless you disabled that behavior.
 2. It loads the seeded evaluations and queues from the database.
-3. It generates `N` randomized traces for each selected fixture.
-4. It searches for `traceId`s whose deterministic sampling behavior matches each fixture's intended plan.
+3. It generates `N` randomized cases for each selected fixture.
+4. It searches for `traceId`s whose deterministic sampling behavior matches each generated trace's intended role.
 5. It prints the seed, run ID, and per-fixture sample expectations.
-6. It dispatches traces through a bounded pool of trace runners.
-7. Each trace runner sends spans one by one according to the simulated trace timeline.
+6. It dispatches cases through a bounded pool of case runners.
+7. Each case runner schedules traces and spans according to the simulated case timeline.
 
 Typical script output will include:
 
 - the ingest endpoint
 - the project slug
 - the seed and run ID
+- total case count
 - total trace count
 - planned span count
 - per-fixture counts
+- per-case completion lines
 - per-trace completion lines
-- progress lines with sent spans/traces and throughput
+- progress lines with sent cases/traces/spans and throughput
 - live evaluation sample decisions
 - live queue sample decisions
 - system queue sample decisions
@@ -262,13 +268,15 @@ The script prints both a `runId` and a `seed` so you can correlate logs and reru
 
 ## Timing Notes
 
-This script preserves timing within each trace, but trace completion still depends on the trace-end debounce configured in the repo.
+This script preserves timing within each case and trace, but trace completion still depends on the trace-end debounce configured in the repo.
 
 Important:
 
 - `--time-scale` only changes how quickly spans are sent relative to each other
 - it does not shorten the trace-end debounce itself
-- `--parallel-traces` changes how many traces can overlap in dispatch, but each trace still sends spans sequentially
+- `--parallel-cases` changes how many cases can overlap in dispatch
+- `--parallel-traces` is an alias for `--parallel-cases`
+- traces in the same case still follow their simulated session offsets, and each trace still sends spans sequentially
 
 The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS` value and the actual dispatch duration of the run.
 
@@ -277,10 +285,10 @@ The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS`
 - `src/scripts/send-live-seeds.ts`: CLI entrypoint
 - `src/fixtures.ts`: generator-backed fixture registry
 - `src/fixtures/`: per-fixture generator modules
-- `src/runtime.ts`: queue provisioning, target loading, sample-aware trace ID search, run planning, and dispatch orchestration
+- `src/runtime.ts`: queue provisioning, target loading, sample-aware trace ID search, case planning, and dispatch orchestration
 - `src/otlp.ts`: OTLP request builders and message helpers
 - `src/random.ts`: seeded RNG used for reproducible generation
-- `src/types.ts`: shared fixture and generated-trace types
+- `src/types.ts`: shared fixture and generated-case types
 
 ## Scope
 

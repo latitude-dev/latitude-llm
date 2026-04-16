@@ -8,10 +8,10 @@ export type SamplingPlan = {
   readonly systemQueueSamples?: Readonly<Record<string, boolean>>
 }
 
-export type LiveSeedGeneratedTrace = {
+export type LiveSeedGeneratedCaseTrace = {
+  readonly key: string
+  readonly role: "target" | "context"
   readonly startDelayMs: number
-  readonly sessionId: string
-  readonly userId: string
   readonly serviceName: string
   readonly systemInstructions: readonly SeedSystemPart[]
   readonly spans: readonly SeedSpanDefinition[]
@@ -23,6 +23,12 @@ export type LiveSeedGeneratedTrace = {
     readonly highCost?: boolean
     readonly supportService?: boolean
   }
+}
+
+export type LiveSeedGeneratedCase = {
+  readonly sessionId: string
+  readonly userId: string
+  readonly traces: readonly LiveSeedGeneratedCaseTrace[]
 }
 
 export type FixtureGenerationContext = {
@@ -38,5 +44,5 @@ export type LiveSeedFixtureDefinition = {
   readonly sampling: SamplingPlan
   readonly deterministicSystemMatches: readonly string[]
   readonly llmSystemIntents: readonly string[]
-  readonly generateTrace: (context: FixtureGenerationContext) => LiveSeedGeneratedTrace
+  readonly generateCase: (context: FixtureGenerationContext) => LiveSeedGeneratedCase
 }

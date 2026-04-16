@@ -1,8 +1,8 @@
 import { assistantTextMessage, assistantToolCallMessage, toolResponseMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
+  createChatSpan,
+  createSingleTraceCase,
   ORDER_ROUTER_SERVICE_NAME,
   ORDER_ROUTER_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -42,44 +42,76 @@ export const toolCallErrorFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: ["tool-call-errors"],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const scenario = rng.pick(TOOL_SCENARIOS)
     const callId = `call_${rng.hex(12)}`
+    const userPrompt = userTextMessage(scenario.prompt)
+    const assistantToolCall = assistantToolCallMessage([
+      {
+        id: callId,
+        name: scenario.toolName,
+        arguments: scenario.arguments,
+      },
+    ])
+    const toolErrorResult = {
+      status: "error",
+      error: scenario.error,
+    }
+    const toolResult = toolResponseMessage(callId, toolErrorResult)
+    const planningSpan = {
+      ...createChatSpan(rng, {
+        label: "plan-tool-call",
+        inputMessages: [userPrompt],
+        outputMessages: [assistantToolCall],
+        durationRangeMs: [850, 1_350] as const,
+        usageProfile: "tiny" as const,
+        finishReasons: ["tool_calls"],
+      }),
+      parentLabel: "invoke-agent",
+    } as const
+    const toolSpan = {
+      type: "tool",
+      label: "tool-error",
+      parentLabel: "invoke-agent",
+      offsetMs: planningSpan.durationMs,
+      durationMs: rng.int(180, 650),
+      toolName: scenario.toolName,
+      toolCallId: callId,
+      toolInput: scenario.arguments,
+      toolOutput: toolErrorResult,
+    } as const
+    const recoverySpan = {
+      ...createChatSpan(rng, {
+        label: "tool-recovery",
+        inputMessages: [userPrompt, assistantToolCall, toolResult],
+        outputMessages: [assistantTextMessage(scenario.recovery)],
+        durationRangeMs: [800, 1_300] as const,
+        usageProfile: "low" as const,
+      }),
+      parentLabel: "invoke-agent",
+      offsetMs: planningSpan.durationMs + toolSpan.durationMs,
+    } as const
+    const wrapperDurationMs = recoverySpan.offsetMs + recoverySpan.durationMs + rng.int(40, 120)
 
-    return createGeneratedTrace({
+    return createSingleTraceCase({
       rng,
       fixtureKey,
       family: "control",
       serviceName: ORDER_ROUTER_SERVICE_NAME,
       systemInstructions: ORDER_ROUTER_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, [
+      spans: [
         {
-          inputAdditions: [userTextMessage(scenario.prompt)],
-          outputMessages: [
-            assistantToolCallMessage([
-              {
-                id: callId,
-                name: scenario.toolName,
-                arguments: scenario.arguments,
-              },
-            ]),
-          ],
-          durationRangeMs: [850, 1_350] as const,
-          usageProfile: "tiny" as const,
-          finishReasons: ["tool_calls"],
+          type: "wrapper",
+          label: "invoke-agent",
+          offsetMs: 0,
+          durationMs: wrapperDurationMs,
+          name: `invoke_agent ${ORDER_ROUTER_SERVICE_NAME}`,
+          operation: "invoke_agent",
         },
-        {
-          inputAdditions: [
-            toolResponseMessage(callId, {
-              status: "error",
-              error: scenario.error,
-            }),
-          ],
-          outputMessages: [assistantTextMessage(scenario.recovery)],
-          durationRangeMs: [800, 1_300] as const,
-          usageProfile: "low" as const,
-        },
-      ]),
+        planningSpan,
+        toolSpan,
+        recoverySpan,
+      ],
       startDelayRangeMs: [2_000, 3_600],
       traits: {
         highCost: false,

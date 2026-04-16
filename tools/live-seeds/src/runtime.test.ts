@@ -14,12 +14,7 @@ import {
   type SeedSpanDefinition,
   userTextMessage,
 } from "./otlp.ts"
-import {
-  buildLiveSeedRunPlan,
-  dispatchResolvedTraces,
-  type ResolvedLiveSeedTrace,
-  type SeedTargets,
-} from "./runtime.ts"
+import { buildLiveSeedRunPlan, dispatchResolvedCases, type ResolvedLiveSeedCase, type SeedTargets } from "./runtime.ts"
 
 function createSeedTargets(): SeedTargets {
   return {
@@ -71,11 +66,13 @@ function createSeedTargets(): SeedTargets {
   }
 }
 
-function createSpan(label: string, offsetMs: number, durationMs: number): SeedSpanDefinition {
+function createChatSpan(label: string, offsetMs: number, durationMs: number, parentLabel?: string): SeedSpanDefinition {
   return {
+    type: "chat",
     label,
     offsetMs,
     durationMs,
+    ...(parentLabel === undefined ? {} : { parentLabel }),
     inputMessages: [userTextMessage(`input-${label}`)],
     outputMessages: [assistantTextMessage(`output-${label}`)],
     usage: {
@@ -86,37 +83,65 @@ function createSpan(label: string, offsetMs: number, durationMs: number): SeedSp
   }
 }
 
-function createResolvedTrace(input: {
-  readonly traceId: string
-  readonly instanceIndex: number
-  readonly startDelayMs: number
-  readonly spans: readonly SeedSpanDefinition[]
-}): ResolvedLiveSeedTrace {
+function createEmptyPreview() {
+  return {
+    evaluationsById: {
+      [SEED_EVALUATION_ID]: false,
+      [SEED_COMBINATION_EVALUATION_ID]: false,
+      [SEED_RETURNS_EVALUATION_ID]: false,
+      [SEED_ACCESS_EVALUATION_ID]: false,
+    },
+    liveQueue: false,
+    systemQueuesBySlug: {
+      frustration: false,
+      "tool-call-errors": false,
+      "empty-response": false,
+      "output-schema-validation": false,
+    },
+  } as const
+}
+
+function createResolvedCase(input: {
+  readonly caseIndex: number
+  readonly traces: readonly {
+    readonly traceId: string
+    readonly key: string
+    readonly role?: "target" | "context"
+    readonly startDelayMs: number
+    readonly spans: readonly SeedSpanDefinition[]
+    readonly serviceName?: string
+  }[]
+}): ResolvedLiveSeedCase {
+  const sessionId = `session-${input.caseIndex.toString()}`
+  const userId = `user-${input.caseIndex.toString()}`
+
   return {
     fixture: warrantyEvalInFixture,
-    instanceIndex: input.instanceIndex,
-    traceId: input.traceId,
-    generatedTrace: {
-      startDelayMs: input.startDelayMs,
-      sessionId: `session-${input.traceId}`,
-      userId: `user-${input.traceId}`,
-      serviceName: "acme-support-agent",
-      systemInstructions: [{ type: "text", content: "Test system prompt" }],
-      spans: input.spans,
-    },
-    samples: {
-      evaluations: {
-        warranty: false,
-        combination: false,
-        returns: false,
-        access: false,
+    caseIndex: input.caseIndex,
+    sessionId,
+    userId,
+    traces: input.traces.map((trace, traceIndex) => ({
+      fixture: warrantyEvalInFixture,
+      caseIndex: input.caseIndex,
+      traceIndex,
+      sessionId,
+      userId,
+      traceId: trace.traceId,
+      generatedTrace: {
+        key: trace.key,
+        role: trace.role ?? (traceIndex === 0 ? "target" : "context"),
+        startDelayMs: trace.startDelayMs,
+        serviceName: trace.serviceName ?? "acme-support-agent",
+        systemInstructions: [{ type: "text", content: "Test system prompt" }],
+        spans: trace.spans,
       },
-    },
+      samples: createEmptyPreview(),
+    })),
   }
 }
 
 describe("buildLiveSeedRunPlan", () => {
-  it("expands fixtures by count and stays reproducible for a fixed seed", async () => {
+  it("expands fixtures into reproducible cases and only enforces sampling on the target trace", async () => {
     const targets = createSeedTargets()
     const planA = await buildLiveSeedRunPlan({
       fixtureKeys: ["warranty-eval-in", "tool-call-error"],
@@ -134,58 +159,99 @@ describe("buildLiveSeedRunPlan", () => {
     })
 
     const summarize = (plan: Awaited<ReturnType<typeof buildLiveSeedRunPlan>>) =>
-      plan.traces.map((trace) => ({
-        fixtureKey: trace.fixture.key,
-        instanceIndex: trace.instanceIndex,
-        traceId: trace.traceId,
-        generatedTrace: trace.generatedTrace,
-        samples: trace.samples,
+      plan.cases.map((seedCase) => ({
+        fixtureKey: seedCase.fixture.key,
+        caseIndex: seedCase.caseIndex,
+        sessionId: seedCase.sessionId,
+        traces: seedCase.traces.map((trace) => ({
+          traceIndex: trace.traceIndex,
+          traceId: trace.traceId,
+          generatedTrace: trace.generatedTrace,
+          samples: trace.samples,
+        })),
       }))
 
     expect(planA.runId).toBe(planB.runId)
-    expect(planA.traces).toHaveLength(4)
-    expect(new Set(planA.traces.map((trace) => trace.traceId)).size).toBe(4)
+    expect(planA.cases).toHaveLength(4)
     expect(summarize(planA)).toEqual(summarize(planB))
 
-    const warrantyTraces = planA.traces.filter((trace) => trace.fixture.key === "warranty-eval-in")
-    expect(warrantyTraces).toHaveLength(2)
-    expect(JSON.stringify(warrantyTraces[0]?.generatedTrace.spans)).not.toBe(
-      JSON.stringify(warrantyTraces[1]?.generatedTrace.spans),
-    )
+    const warrantyCase = planA.cases.find((seedCase) => seedCase.fixture.key === "warranty-eval-in")
+    expect(warrantyCase).toBeDefined()
+
+    if (!warrantyCase) {
+      return
+    }
+
+    expect(warrantyCase.traces.length).toBeGreaterThan(1)
+    expect(warrantyCase.traces.filter((trace) => trace.generatedTrace.role === "target")).toHaveLength(1)
+    expect(new Set(warrantyCase.traces.map((trace) => trace.sessionId)).size).toBe(1)
+
+    const targetTrace = warrantyCase.traces.find((trace) => trace.generatedTrace.role === "target")
+    const contextTraces = warrantyCase.traces.filter((trace) => trace.generatedTrace.role === "context")
+
+    expect(targetTrace?.samples.evaluationsById[SEED_EVALUATION_ID]).toBe(true)
+    expect(targetTrace?.samples.evaluationsById[SEED_COMBINATION_EVALUATION_ID]).toBe(false)
+    expect(targetTrace?.samples.evaluationsById[SEED_RETURNS_EVALUATION_ID]).toBe(false)
+    expect(targetTrace?.samples.evaluationsById[SEED_ACCESS_EVALUATION_ID]).toBe(false)
+    expect(contextTraces.length).toBeGreaterThan(0)
+
+    for (const contextTrace of contextTraces) {
+      expect(Object.values(contextTrace.samples.evaluationsById).every((sampled) => !sampled)).toBe(true)
+      expect(contextTrace.samples.liveQueue).toBe(false)
+      expect(contextTrace.samples.systemQueuesBySlug.frustration).toBe(false)
+    }
   })
 })
 
-describe("dispatchResolvedTraces", () => {
+describe("dispatchResolvedCases", () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
-  it("sends spans sequentially within each trace when only one runner is allowed", async () => {
+  it("preserves per-case, per-trace, and per-span timing while allowing parallel cases", async () => {
     vi.useFakeTimers()
     const baseTime = new Date("2026-04-14T00:00:00.000Z")
     vi.setSystemTime(baseTime)
 
     const calls: Array<{ readonly atMs: number; readonly traceId: string; readonly label: string }> = []
-    const traces = [
-      createResolvedTrace({
-        traceId: "trace-a",
-        instanceIndex: 0,
-        startDelayMs: 0,
-        spans: [createSpan("a-1", 0, 100), createSpan("a-2", 150, 100)],
+    const cases = [
+      createResolvedCase({
+        caseIndex: 0,
+        traces: [
+          {
+            traceId: "trace-a1",
+            key: "opening",
+            role: "target",
+            startDelayMs: 0,
+            spans: [createChatSpan("a-1", 0, 100), createChatSpan("a-2", 150, 100)],
+          },
+          {
+            traceId: "trace-a2",
+            key: "follow-up",
+            role: "context",
+            startDelayMs: 400,
+            spans: [createChatSpan("a-3", 0, 50)],
+          },
+        ],
       }),
-      createResolvedTrace({
-        traceId: "trace-b",
-        instanceIndex: 1,
-        startDelayMs: 0,
-        spans: [createSpan("b-1", 0, 50)],
+      createResolvedCase({
+        caseIndex: 1,
+        traces: [
+          {
+            traceId: "trace-b1",
+            key: "target",
+            startDelayMs: 0,
+            spans: [createChatSpan("b-1", 0, 50)],
+          },
+        ],
       }),
     ] as const
 
-    const dispatchPromise = dispatchResolvedTraces(traces, {
+    const dispatchPromise = dispatchResolvedCases(cases, {
       ingestBaseUrl: "http://127.0.0.1:3002",
-      parallelTraces: 1,
-      runId: "dispatch-sequential",
+      parallelCases: 2,
+      runId: "dispatch-parallel-cases",
       postTraceSpan: async ({ trace, span }) => {
         calls.push({
           atMs: Date.now() - baseTime.getTime(),
@@ -199,58 +265,14 @@ describe("dispatchResolvedTraces", () => {
     const result = await dispatchPromise
 
     expect(calls).toEqual([
-      { atMs: 100, traceId: "trace-a", label: "a-1" },
-      { atMs: 250, traceId: "trace-a", label: "a-2" },
-      { atMs: 300, traceId: "trace-b", label: "b-1" },
+      { atMs: 50, traceId: "trace-b1", label: "b-1" },
+      { atMs: 100, traceId: "trace-a1", label: "a-1" },
+      { atMs: 250, traceId: "trace-a1", label: "a-2" },
+      { atMs: 450, traceId: "trace-a2", label: "a-3" },
     ])
-    expect(result.sentTraceCount).toBe(2)
-    expect(result.sentSpanCount).toBe(3)
-  })
-
-  it("allows traces to overlap when multiple trace runners are available", async () => {
-    vi.useFakeTimers()
-    const baseTime = new Date("2026-04-14T00:00:00.000Z")
-    vi.setSystemTime(baseTime)
-
-    const calls: Array<{ readonly atMs: number; readonly traceId: string; readonly label: string }> = []
-    const traces = [
-      createResolvedTrace({
-        traceId: "trace-a",
-        instanceIndex: 0,
-        startDelayMs: 0,
-        spans: [createSpan("a-1", 0, 100), createSpan("a-2", 150, 100)],
-      }),
-      createResolvedTrace({
-        traceId: "trace-b",
-        instanceIndex: 1,
-        startDelayMs: 0,
-        spans: [createSpan("b-1", 0, 50)],
-      }),
-    ] as const
-
-    const dispatchPromise = dispatchResolvedTraces(traces, {
-      ingestBaseUrl: "http://127.0.0.1:3002",
-      parallelTraces: 2,
-      runId: "dispatch-parallel",
-      postTraceSpan: async ({ trace, span }) => {
-        calls.push({
-          atMs: Date.now() - baseTime.getTime(),
-          traceId: trace.traceId,
-          label: span.label,
-        })
-      },
-    })
-
-    await vi.runAllTimersAsync()
-    const result = await dispatchPromise
-
-    expect(calls).toEqual([
-      { atMs: 50, traceId: "trace-b", label: "b-1" },
-      { atMs: 100, traceId: "trace-a", label: "a-1" },
-      { atMs: 250, traceId: "trace-a", label: "a-2" },
-    ])
-    expect(result.sentTraceCount).toBe(2)
-    expect(result.sentSpanCount).toBe(3)
+    expect(result.sentCaseCount).toBe(2)
+    expect(result.sentTraceCount).toBe(3)
+    expect(result.sentSpanCount).toBe(4)
   })
 
   it("enriches span tags and metadata using seed-style context only", async () => {
@@ -259,18 +281,23 @@ describe("dispatchResolvedTraces", () => {
     vi.setSystemTime(baseTime)
 
     const capturedRequests: unknown[] = []
-    const traces = [
-      createResolvedTrace({
-        traceId: "trace-seed-context",
-        instanceIndex: 0,
-        startDelayMs: 0,
-        spans: [createSpan("seed-context", 0, 100)],
+    const cases = [
+      createResolvedCase({
+        caseIndex: 0,
+        traces: [
+          {
+            traceId: "trace-seed-context",
+            key: "target",
+            startDelayMs: 0,
+            spans: [createChatSpan("seed-context", 0, 100)],
+          },
+        ],
       }),
     ] as const
 
-    const dispatchPromise = dispatchResolvedTraces(traces, {
+    const dispatchPromise = dispatchResolvedCases(cases, {
       ingestBaseUrl: "http://127.0.0.1:3002",
-      parallelTraces: 1,
+      parallelCases: 1,
       runId: "dispatch-seed-context",
       postTraceSpan: async ({ span }) => {
         capturedRequests.push(span.request)
@@ -281,7 +308,6 @@ describe("dispatchResolvedTraces", () => {
     await dispatchPromise
 
     const request = capturedRequests[0] as OtlpExportTraceServiceRequest
-
     const attributes = request.resourceSpans[0]?.scopeSpans[0]?.spans[0]?.attributes ?? []
     const tagsAttr = attributes.find((attribute) => attribute.key === "langfuse.trace.tags")
     const tagValues = tagsAttr?.value.arrayValue?.values?.map((value) => value.stringValue).filter(Boolean)
@@ -302,24 +328,106 @@ describe("dispatchResolvedTraces", () => {
     expect(metadataEntries.expectation).toBeUndefined()
   })
 
-  it("logs summary progress by default and span details only in verbose mode", async () => {
+  it("emits valid wrapper and sibling parentage for multi-span workflow traces", async () => {
+    vi.useFakeTimers()
+    const baseTime = new Date("2026-04-14T00:00:00.000Z")
+    vi.setSystemTime(baseTime)
+
+    const capturedSpans: Array<{
+      readonly label: string
+      readonly spanId: string
+      readonly parentSpanId?: string
+    }> = []
+    const cases = [
+      createResolvedCase({
+        caseIndex: 0,
+        traces: [
+          {
+            traceId: "trace-workflow",
+            key: "target",
+            startDelayMs: 0,
+            spans: [
+              {
+                type: "wrapper",
+                label: "invoke-agent",
+                offsetMs: 0,
+                durationMs: 400,
+                name: "invoke_agent acme-support-agent",
+                operation: "invoke_agent",
+              },
+              createChatSpan("plan-chat", 0, 100, "invoke-agent"),
+              {
+                type: "tool",
+                label: "tool-step",
+                parentLabel: "invoke-agent",
+                offsetMs: 100,
+                durationMs: 150,
+                toolName: "lookup_policy",
+                toolCallId: "call_123",
+                toolInput: { query: "policy" },
+                toolOutput: { status: "error" },
+              },
+              createChatSpan("final-chat", 250, 100, "invoke-agent"),
+            ],
+          },
+        ],
+      }),
+    ] as const
+
+    const dispatchPromise = dispatchResolvedCases(cases, {
+      ingestBaseUrl: "http://127.0.0.1:3002",
+      parallelCases: 1,
+      runId: "dispatch-topology",
+      postTraceSpan: async ({ span }) => {
+        const otlpSpan = span.request.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+        if (otlpSpan) {
+          capturedSpans.push({
+            label: span.label,
+            spanId: otlpSpan.spanId,
+            ...(otlpSpan.parentSpanId === undefined ? {} : { parentSpanId: otlpSpan.parentSpanId }),
+          })
+        }
+      },
+    })
+
+    await vi.runAllTimersAsync()
+    await dispatchPromise
+
+    const wrapper = capturedSpans.find((span) => span.label === "invoke-agent")
+    const planChat = capturedSpans.find((span) => span.label === "plan-chat")
+    const toolStep = capturedSpans.find((span) => span.label === "tool-step")
+    const finalChat = capturedSpans.find((span) => span.label === "final-chat")
+
+    expect(wrapper).toBeDefined()
+    expect(planChat?.parentSpanId).toBe(wrapper?.spanId)
+    expect(toolStep?.parentSpanId).toBe(wrapper?.spanId)
+    expect(finalChat?.parentSpanId).toBe(wrapper?.spanId)
+    expect(finalChat?.parentSpanId).not.toBe(planChat?.spanId)
+  })
+
+  it("logs case and trace progress by default and span details only in verbose mode", async () => {
     vi.useFakeTimers()
     const baseTime = new Date("2026-04-14T00:00:00.000Z")
     vi.setSystemTime(baseTime)
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
-    const traces = [
-      createResolvedTrace({
-        traceId: "trace-log-a",
-        instanceIndex: 0,
-        startDelayMs: 0,
-        spans: [createSpan("a-1", 0, 100), createSpan("a-2", 150, 100)],
+    const cases = [
+      createResolvedCase({
+        caseIndex: 0,
+        traces: [
+          {
+            traceId: "trace-log-a",
+            key: "target",
+            startDelayMs: 0,
+            spans: [createChatSpan("a-1", 0, 100), createChatSpan("a-2", 150, 100)],
+          },
+        ],
       }),
     ] as const
 
-    const summaryDispatchPromise = dispatchResolvedTraces(traces, {
+    const summaryDispatchPromise = dispatchResolvedCases(cases, {
       ingestBaseUrl: "http://127.0.0.1:3002",
-      parallelTraces: 1,
+      parallelCases: 1,
       runId: "dispatch-summary-logs",
       postTraceSpan: async () => {},
     })
@@ -329,14 +437,15 @@ describe("dispatchResolvedTraces", () => {
 
     const summaryMessages = logSpy.mock.calls.map(([message]) => String(message))
     expect(summaryMessages.some((message) => message.startsWith("[trace] completed"))).toBe(true)
+    expect(summaryMessages.some((message) => message.startsWith("[case] completed"))).toBe(true)
     expect(summaryMessages.some((message) => message.startsWith("[progress]"))).toBe(true)
     expect(summaryMessages.some((message) => message.startsWith("[span]"))).toBe(false)
 
     logSpy.mockClear()
 
-    const verboseDispatchPromise = dispatchResolvedTraces(traces, {
+    const verboseDispatchPromise = dispatchResolvedCases(cases, {
       ingestBaseUrl: "http://127.0.0.1:3002",
-      parallelTraces: 1,
+      parallelCases: 1,
       runId: "dispatch-verbose-logs",
       verboseSpans: true,
       postTraceSpan: async () => {},

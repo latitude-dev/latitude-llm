@@ -7,10 +7,9 @@ import {
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
+  buildConversationCase,
   COMBINATION_RISK_EXAMPLES,
-  createGeneratedTrace,
-  type GeneratedTurnDefinition,
+  type GeneratedConversationTurnDefinition,
   SUPPORT_SERVICE_NAME,
   SUPPORT_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -51,10 +50,11 @@ export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: [],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const example = rng.pick(COMBINATION_RISK_EXAMPLES)
-    const turns: GeneratedTurnDefinition[] = [
+    const turns: GeneratedConversationTurnDefinition[] = [
       {
+        key: "opening",
         inputAdditions: [userTextMessage(example.userMessage)],
         outputMessages: [assistantTextMessage(example.agentResponse)],
         durationRangeMs: [1_600, 2_700] as const,
@@ -62,6 +62,7 @@ export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
         forceReasoning: true,
       },
       {
+        key: "follow-up",
         inputAdditions: [userTextMessage(rng.pick(FOLLOW_UP_PROMPTS))],
         outputMessages: [assistantTextMessage(rng.pick(FOLLOW_UP_RESPONSES))],
         durationRangeMs: [1_700, 2_900] as const,
@@ -72,6 +73,7 @@ export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
 
     if (rng.chance(0.5)) {
       turns.push({
+        key: "closing",
         inputAdditions: [userTextMessage(rng.pick(CLOSING_PROMPTS))],
         outputMessages: [assistantTextMessage(rng.pick(CLOSING_RESPONSES))],
         durationRangeMs: [1_300, 2_200] as const,
@@ -80,13 +82,14 @@ export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
       })
     }
 
-    return createGeneratedTrace({
+    return buildConversationCase({
       rng,
       fixtureKey,
       family: "support",
       serviceName: SUPPORT_SERVICE_NAME,
       systemInstructions: SUPPORT_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, turns),
+      turns,
+      targetTurnIndex: 0,
       startDelayRangeMs: [800, 2_100],
       traits: {
         highCost: true,

@@ -7,9 +7,8 @@ import {
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
-  type GeneratedTurnDefinition,
+  buildConversationCase,
+  type GeneratedConversationTurnDefinition,
   SUPPORT_SERVICE_NAME,
   SUPPORT_SYSTEM_INSTRUCTIONS,
   WARRANTY_SAFE_EXAMPLES,
@@ -50,16 +49,18 @@ export const warrantyEvalInFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: [],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const example = rng.pick(WARRANTY_SAFE_EXAMPLES)
-    const turns: GeneratedTurnDefinition[] = [
+    const turns: GeneratedConversationTurnDefinition[] = [
       {
+        key: "opening",
         inputAdditions: [userTextMessage(example.userMessage)],
         outputMessages: [assistantTextMessage(example.agentResponse)],
         durationRangeMs: [900, 1_900] as const,
         usageProfile: "low" as const,
       },
       {
+        key: "follow-up",
         inputAdditions: [userTextMessage(rng.pick(FOLLOW_UP_PROMPTS))],
         outputMessages: [assistantTextMessage(rng.pick(FOLLOW_UP_RESPONSES))],
         durationRangeMs: [850, 1_750] as const,
@@ -69,6 +70,7 @@ export const warrantyEvalInFixture: LiveSeedFixtureDefinition = {
 
     if (rng.chance(0.45)) {
       turns.push({
+        key: "closing",
         inputAdditions: [userTextMessage(rng.pick(CLOSING_PROMPTS))],
         outputMessages: [assistantTextMessage(rng.pick(CLOSING_RESPONSES))],
         durationRangeMs: [800, 1_500] as const,
@@ -76,13 +78,14 @@ export const warrantyEvalInFixture: LiveSeedFixtureDefinition = {
       })
     }
 
-    return createGeneratedTrace({
+    return buildConversationCase({
       rng,
       fixtureKey,
       family: "support",
       serviceName: SUPPORT_SERVICE_NAME,
       systemInstructions: SUPPORT_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, turns),
+      turns,
+      targetTurnIndex: 0,
       startDelayRangeMs: [0, 1_000],
       traits: {
         highCost: false,

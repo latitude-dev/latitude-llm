@@ -1,8 +1,8 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
+  createChatSpan,
+  createSingleTraceCase,
   QA_TRIAGE_SERVICE_NAME,
   QA_TRIAGE_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -26,21 +26,22 @@ export const emptyResponseFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: ["empty-response"],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) =>
-    createGeneratedTrace({
+  generateCase: ({ fixtureKey, rng }) =>
+    createSingleTraceCase({
       rng,
       fixtureKey,
       family: "control",
       serviceName: QA_TRIAGE_SERVICE_NAME,
       systemInstructions: QA_TRIAGE_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, [
-        {
-          inputAdditions: [userTextMessage(rng.pick(EMPTY_RESPONSE_PROMPTS))],
+      spans: [
+        createChatSpan(rng, {
+          label: "empty-response-chat",
+          inputMessages: [userTextMessage(rng.pick(EMPTY_RESPONSE_PROMPTS))],
           outputMessages: [assistantTextMessage(rng.pick(EMPTY_RESPONSES))],
           durationRangeMs: [650, 1_050] as const,
           usageProfile: "tiny" as const,
-        },
-      ]),
+        }),
+      ],
       startDelayRangeMs: [2_300, 3_900],
       traits: {
         highCost: false,

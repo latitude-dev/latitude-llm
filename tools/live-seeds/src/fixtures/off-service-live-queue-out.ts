@@ -1,8 +1,8 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
+  buildConversationCase,
+  type GeneratedConversationTurnDefinition,
   INTERNAL_KB_SERVICE_NAME,
   INTERNAL_KB_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -55,32 +55,36 @@ export const offServiceLiveQueueOutFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: [],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const opening = rng.pick(OPENING_EXCHANGES)
     const followUp = rng.pick(FOLLOW_UP_EXCHANGES)
+    const turns: GeneratedConversationTurnDefinition[] = [
+      {
+        key: "opening",
+        inputAdditions: [userTextMessage(opening.user)],
+        outputMessages: [assistantTextMessage(opening.assistant)],
+        durationRangeMs: [1_300, 2_300] as const,
+        usageProfile: "high" as const,
+        forceReasoning: true,
+      },
+      {
+        key: "follow-up",
+        inputAdditions: [userTextMessage(followUp.user)],
+        outputMessages: [assistantTextMessage(followUp.assistant)],
+        durationRangeMs: [1_500, 2_500] as const,
+        usageProfile: "high" as const,
+        forceReasoning: true,
+      },
+    ]
 
-    return createGeneratedTrace({
+    return buildConversationCase({
       rng,
       fixtureKey,
       family: "control",
       serviceName: INTERNAL_KB_SERVICE_NAME,
       systemInstructions: INTERNAL_KB_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, [
-        {
-          inputAdditions: [userTextMessage(opening.user)],
-          outputMessages: [assistantTextMessage(opening.assistant)],
-          durationRangeMs: [1_300, 2_300] as const,
-          usageProfile: "high" as const,
-          forceReasoning: true,
-        },
-        {
-          inputAdditions: [userTextMessage(followUp.user)],
-          outputMessages: [assistantTextMessage(followUp.assistant)],
-          durationRangeMs: [1_500, 2_500] as const,
-          usageProfile: "high" as const,
-          forceReasoning: true,
-        },
-      ]),
+      turns,
+      targetTurnIndex: 0,
       startDelayRangeMs: [1_400, 3_000],
       traits: {
         highCost: true,

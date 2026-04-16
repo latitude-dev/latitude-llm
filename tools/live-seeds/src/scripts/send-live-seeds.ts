@@ -12,8 +12,9 @@ Options:
   --fixtures <a,b,c>             Comma-separated fixture keys to send
   --ingest-url <url>             Base URL for the ingest service
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
-  --count-per-fixture <n>        Generate this many traces per selected fixture (default: 5)
-  --parallel-traces <n>          Number of traces to dispatch concurrently (default: 4)
+  --count-per-fixture <n>        Generate this many cases per selected fixture (default: 5)
+  --parallel-cases <n>           Number of cases to dispatch concurrently (default: 4)
+  --parallel-traces <n>          Alias for --parallel-cases
   --seed <value>                 Seed for reproducible trace generation
   --verbose-spans                Print one log line per span in addition to summary progress
   --no-provision-system-queues   Skip provisioning the default system queues
@@ -61,6 +62,7 @@ const { values, positionals } = parseArgs({
     "ingest-url": { type: "string" },
     "time-scale": { type: "string", default: "1" },
     "count-per-fixture": { type: "string", default: "5" },
+    "parallel-cases": { type: "string" },
     "parallel-traces": { type: "string", default: "4" },
     seed: { type: "string" },
     "verbose-spans": { type: "boolean", default: false },
@@ -95,7 +97,10 @@ const fixtureKeys =
 const ingestBaseUrl = values["ingest-url"] ?? resolveDefaultIngestUrl()
 const timeScale = parsePositiveNumber(values["time-scale"] ?? "1", "--time-scale")
 const countPerFixture = parsePositiveInteger(values["count-per-fixture"] ?? "5", "--count-per-fixture")
-const parallelTraces = parsePositiveInteger(values["parallel-traces"] ?? "4", "--parallel-traces")
+const parallelCases = parsePositiveInteger(
+  values["parallel-cases"] ?? values["parallel-traces"] ?? "4",
+  values["parallel-cases"] ? "--parallel-cases" : "--parallel-traces",
+)
 const provisionSystemQueues = !values["no-provision-system-queues"]
 const verboseSpans = values["verbose-spans"] ?? false
 
@@ -104,14 +109,14 @@ const options = {
   ingestBaseUrl,
   timeScale,
   countPerFixture,
-  parallelTraces,
+  parallelCases,
   provisionSystemQueues,
   verboseSpans,
   ...(values.seed ? { seed: values.seed } : {}),
 }
 
 void sendLiveSeedData(options).catch((error: unknown) => {
-  console.error("Failed to send live-seed traces:")
+  console.error("Failed to send live-seed cases:")
   console.error(error)
   process.exitCode = 1
 })

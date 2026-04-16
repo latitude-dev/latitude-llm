@@ -1,9 +1,8 @@
 import { assistantTextMessage, userTextMessage } from "../otlp.ts"
 import type { LiveSeedFixtureDefinition } from "../types.ts"
 import {
-  buildTraceFromTurns,
-  createGeneratedTrace,
-  type GeneratedTurnDefinition,
+  buildConversationCase,
+  type GeneratedConversationTurnDefinition,
   INTERNAL_KB_SERVICE_NAME,
   INTERNAL_KB_SYSTEM_INSTRUCTIONS,
 } from "./common.ts"
@@ -69,11 +68,12 @@ export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
   },
   deterministicSystemMatches: [],
   llmSystemIntents: [],
-  generateTrace: ({ fixtureKey, rng }) => {
+  generateCase: ({ fixtureKey, rng }) => {
     const opening = rng.pick(OPENING_EXCHANGES)
     const followUp = rng.pick(FOLLOW_UP_EXCHANGES)
-    const turns: GeneratedTurnDefinition[] = [
+    const turns: GeneratedConversationTurnDefinition[] = [
       {
+        key: "opening",
         inputAdditions: [userTextMessage(opening.user)],
         outputMessages: [assistantTextMessage(opening.assistant)],
         durationRangeMs: [1_400, 2_600] as const,
@@ -81,6 +81,7 @@ export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
         forceReasoning: true,
       },
       {
+        key: "follow-up",
         inputAdditions: [userTextMessage(followUp.user)],
         outputMessages: [assistantTextMessage(followUp.assistant)],
         durationRangeMs: [1_500, 2_700] as const,
@@ -92,6 +93,7 @@ export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
     if (rng.chance(0.55)) {
       const closing = rng.pick(OPTIONAL_CLOSING)
       turns.push({
+        key: "closing",
         inputAdditions: [userTextMessage(closing.user)],
         outputMessages: [assistantTextMessage(closing.assistant)],
         durationRangeMs: [1_200, 2_000] as const,
@@ -100,13 +102,14 @@ export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
       })
     }
 
-    return createGeneratedTrace({
+    return buildConversationCase({
       rng,
       fixtureKey,
       family: "control",
       serviceName: INTERNAL_KB_SERVICE_NAME,
       systemInstructions: INTERNAL_KB_SYSTEM_INSTRUCTIONS,
-      spans: buildTraceFromTurns(rng, turns),
+      turns,
+      targetTurnIndex: 0,
       startDelayRangeMs: [1_000, 2_600],
       traits: {
         highCost: true,
