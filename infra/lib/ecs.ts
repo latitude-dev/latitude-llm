@@ -464,6 +464,8 @@ function createTaskDefinition(
         const workflowsMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
 
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
+          // The web app starts workflows from server functions (e.g. issue monitoring).
+          web: temporalEnvVars,
           workflows: [
             { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
             { name: "NODE_OPTIONS", value: `--max-old-space-size=${workflowsMaxOldSpaceMb}` },
@@ -490,7 +492,7 @@ function createTaskDefinition(
         ]
 
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          web: oauthSecrets,
+          web: [...oauthSecrets, temporalSecret],
           workflows: [temporalSecret],
           workers: [temporalSecret, ...bullBoardSecrets],
         }
