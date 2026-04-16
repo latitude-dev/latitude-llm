@@ -123,6 +123,7 @@ function ProjectPage() {
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
+  const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_TRACE_SORTING.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
@@ -205,12 +206,21 @@ function ProjectPage() {
     setRawFilters("")
   }
 
+  const closeTraceDrawer = useCallback(() => {
+    setActiveTraceId("")
+    setSelectedSpanId("")
+  }, [setActiveTraceId, setSelectedSpanId])
+
   const onActiveTraceChange = (traceId: string | undefined) => {
-    setActiveTraceId(traceId ?? "")
+    if (!traceId) {
+      closeTraceDrawer()
+      return
+    }
+    setActiveTraceId(traceId)
   }
 
   const onActiveSessionChange = (_sessionId: string | undefined) => {
-    setActiveTraceId("")
+    closeTraceDrawer()
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
@@ -241,7 +251,7 @@ function ProjectPage() {
     { hotkey: "2", callback: () => setActiveTab("sessions"), options: { enabled: !activeTraceId } },
     {
       hotkey: "Escape",
-      callback: () => setActiveTraceId(""),
+      callback: closeTraceDrawer,
       options: { enabled: !!activeTraceId, ignoreInputs: true },
     },
   ])
@@ -391,7 +401,7 @@ function ProjectPage() {
             baselines={cohortSummary?.baselines}
             filters={filters}
             onFiltersChange={onFiltersChange}
-            onClose={() => setActiveTraceId("")}
+            onClose={closeTraceDrawer}
             onNextTrace={onNextTrace}
             onPrevTrace={onPrevTrace}
             canNavigateNext={canNavigateNext}
