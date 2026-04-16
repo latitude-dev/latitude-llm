@@ -307,7 +307,6 @@ export function TraceDetailDrawer({
             baselines={baselines}
             filters={filters}
             onFiltersChange={onFiltersChange}
-            defaultSectionsOpen={false}
           />
         )}
       </div>

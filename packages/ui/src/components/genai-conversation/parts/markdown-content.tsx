@@ -1,12 +1,22 @@
-import { use, useMemo } from "react"
+import { use, useMemo, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
+import { Button } from "../../button/button.tsx"
+import { Text } from "../../text/text.tsx"
 import { TextSelectionContext } from "../text-selection.tsx"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
 const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
+export const LARGE_MARKDOWN_CONTENT_THRESHOLD = 20_000
+export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
+
+function getLargeContentPreview(content: string) {
+  if (content.length <= LARGE_MARKDOWN_PREVIEW_LENGTH) return content
+
+  return `${content.slice(0, LARGE_MARKDOWN_PREVIEW_LENGTH)}\n\n[truncated ${content.length - LARGE_MARKDOWN_PREVIEW_LENGTH} characters]`
+}
 
 export function MarkdownContent({
   content,
@@ -25,6 +35,29 @@ export function MarkdownContent({
         : [],
     [selectionCtx, messageIndex, partIndex],
   )
+  const [showFullText, setShowFullText] = useState(false)
+
+  if (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD) {
+    const preview = showFullText ? content : getLargeContentPreview(content)
+
+    return (
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
+        <Text.H6 color="foregroundMuted">
+          This content is too large to render as Markdown safely, so we&apos;re showing it as plain text instead.
+        </Text.H6>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" type="button" onClick={() => setShowFullText((prev) => !prev)}>
+            {showFullText ? "Show preview" : "Show full text"}
+          </Button>
+        </div>
+
+        <pre className="overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs">
+          {preview}
+        </pre>
+      </div>
+    )
+  }
 
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
