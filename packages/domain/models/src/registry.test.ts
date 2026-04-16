@@ -169,6 +169,13 @@ describe("getCostSpec", () => {
     expect(result.cost).toHaveProperty("output")
   })
 
+  it("normalizes Vercel provider suffixes for cost lookup", () => {
+    const result = getCostSpec("openai.responses", "gpt-4o")
+    expect(result.costImplemented).toBe(true)
+    expect(result.cost).toHaveProperty("input")
+    expect(result.cost).toHaveProperty("output")
+  })
+
   it("returns not-implemented for unknown model", () => {
     const result = getCostSpec("openai", "nonexistent-model-xyz")
     expect(result.costImplemented).toBe(false)

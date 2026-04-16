@@ -926,7 +926,7 @@ function buildDuplicatedOuterUsageTrace(): OtlpExportTraceServiceRequest {
 }
 
 describe("Vercel AI SDK duplicate usage normalization", () => {
-  it("zeros outer wrapper usage and cost when the matching inner do* span also carries billing data", () => {
+  it("preserves raw outer wrapper usage before ingestion-time sanitization", () => {
     const spans = transformOtlpToSpans(buildDuplicatedOuterUsageTrace(), CONTEXT)
     const outer = spans.find((span) => span.spanId === "cccccccccccccccc")
     const inner = spans.find((span) => span.spanId === "dddddddddddddddd")
@@ -934,10 +934,10 @@ describe("Vercel AI SDK duplicate usage normalization", () => {
     expect(outer).toBeDefined()
     expect(inner).toBeDefined()
 
-    expect(outer?.tokensInput).toBe(0)
-    expect(outer?.tokensOutput).toBe(0)
-    expect(outer?.costTotalMicrocents).toBe(0)
-    expect(outer?.costIsEstimated).toBe(false)
+    expect(outer?.tokensInput).toBe(321)
+    expect(outer?.tokensOutput).toBe(45)
+    expect(outer?.costTotalMicrocents).toBeGreaterThan(0)
+    expect(outer?.costIsEstimated).toBe(true)
 
     expect(inner?.tokensInput).toBe(321)
     expect(inner?.tokensOutput).toBe(45)

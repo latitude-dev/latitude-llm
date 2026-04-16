@@ -26,8 +26,13 @@ const PROVIDER_ALIASES: Record<string, string> = {
   anthropic_vertex: "anthropic-vertex",
 }
 
+// Vercel AI SDK appends transport-style suffixes like `.responses` and `.chat`
+// to provider ids. Strip them so pricing lookup resolves to the base provider.
+const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
+
 function resolveProviderName(provider: string): string {
-  return PROVIDER_ALIASES[provider] ?? provider
+  const stripped = provider.replace(VERCEL_PROVIDER_SUFFIX, "")
+  return PROVIDER_ALIASES[stripped] ?? stripped
 }
 
 /**

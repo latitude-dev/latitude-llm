@@ -15,6 +15,51 @@ import { transformOtlpToSpans } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
 
+const VERCEL_WRAPPER_OPERATION_IDS = new Set([
+  "ai.generateText",
+  "ai.streamText",
+  "ai.generateObject",
+  "ai.streamObject",
+])
+
+function isVercelWrapperSpan(span: SpanDetail): boolean {
+  const operationId = span.attrString["ai.operationId"]
+  if (operationId && VERCEL_WRAPPER_OPERATION_IDS.has(operationId)) {
+    return true
+  }
+
+  return VERCEL_WRAPPER_OPERATION_IDS.has(span.name)
+}
+
+function sanitizeVercelWrapperSpan(span: SpanDetail): SpanDetail {
+  const next: SpanDetail = {
+    ...span,
+    tokensInput: 0,
+    tokensOutput: 0,
+    tokensCacheRead: 0,
+    tokensCacheCreate: 0,
+    tokensReasoning: 0,
+  }
+
+  if (!span.costIsEstimated) return next
+
+  return {
+    ...next,
+    costInputMicrocents: 0,
+    costOutputMicrocents: 0,
+    costTotalMicrocents: 0,
+    costIsEstimated: false,
+  }
+}
+
+function sanitizePersistedSpans(spans: readonly SpanDetail[]): readonly SpanDetail[] {
+  if (!spans.some((span) => span.name.startsWith("ai.") || span.attrString["ai.operationId"] !== undefined)) {
+    return spans
+  }
+
+  return spans.map((span) => (isVercelWrapperSpan(span) ? sanitizeVercelWrapperSpan(span) : span))
+}
+
 export interface ProcessIngestedSpansInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -68,12 +113,14 @@ function decodeAndTransform(
       return []
     }
 
-    return transformOtlpToSpans(request, {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      apiKeyId: input.apiKeyId,
-      ingestedAt: input.ingestedAt,
-    })
+    return sanitizePersistedSpans(
+      transformOtlpToSpans(request, {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        apiKeyId: input.apiKeyId,
+        ingestedAt: input.ingestedAt,
+      }),
+    )
   })
 }
 
