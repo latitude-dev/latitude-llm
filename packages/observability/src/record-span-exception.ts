@@ -5,10 +5,12 @@ const toError = (value: unknown): Error => (value instanceof Error ? value : new
 /**
  * Strip `file://` protocol from stack traces so Datadog can match frames
  * against uploaded sourcemaps (which use bare `/app/...` path prefixes).
- * Node.js ESM (used by Nitro/Vinxi in apps/web) includes `file://` in
- * stack frames, but the other apps emit plain paths — this is a no-op for them.
+ * Datadog only uses `.js.map` files to unminify stack traces, so apps/web also
+ * rewrites its Nitro/Vinxi server bundle frames from `.mjs` to `.js` to match
+ * the upload-time aliases created during the build.
  */
-const normalizeStack = (stack: string): string => stack.replaceAll("file://", "")
+const normalizeStack = (stack: string): string =>
+  stack.replaceAll("file://", "").replaceAll(/(\/app\/apps\/web\/\.output\/server\/[^\s):]+)\.mjs(?=[:)])/g, "$1.js")
 
 export function recordSpanExceptionForDatadog(span: Span, error: unknown): Error {
   const err = toError(error)

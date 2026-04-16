@@ -14,11 +14,15 @@ function walk(directory) {
       continue
     }
 
-    if (extname(entry.name) !== ".map" || !entry.name.endsWith(".mjs.map")) {
+    if (entry.name.endsWith(".mjs")) {
+      createJsModuleAlias(entryPath)
       continue
     }
 
-    repairMap(entryPath)
+    if (extname(entry.name) === ".map" && entry.name.endsWith(".mjs.map")) {
+      repairMap(entryPath)
+      createJsMapAlias(entryPath)
+    }
   }
 }
 
@@ -66,6 +70,23 @@ function rewriteSourcePath(source, assetMapDir, targetMapDir) {
 
   const absoluteSourcePath = resolve(assetMapDir, source)
   return relative(targetMapDir, absoluteSourcePath)
+}
+
+function createJsModuleAlias(targetModulePath) {
+  const aliasPath = targetModulePath.slice(0, -4) + ".js"
+  const moduleContents = readFileSync(targetModulePath, "utf8")
+  const aliasedContents = moduleContents.replace(/\.mjs\.map$/m, ".js.map")
+  writeFileSync(aliasPath, aliasedContents)
+}
+
+function createJsMapAlias(targetMapPath) {
+  const aliasPath = targetMapPath.slice(0, -8) + ".js.map"
+  const targetMap = JSON.parse(readFileSync(targetMapPath, "utf8"))
+  const aliasedMap = {
+    ...targetMap,
+    file: typeof targetMap.file === "string" ? targetMap.file.replace(/\.mjs$/, ".js") : targetMap.file,
+  }
+  writeFileSync(aliasPath, `${JSON.stringify(aliasedMap)}\n`)
 }
 
 function statExists(path) {
