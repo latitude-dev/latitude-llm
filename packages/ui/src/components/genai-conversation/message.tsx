@@ -112,21 +112,33 @@ function AssistantMessage({
   )
 }
 
-function SystemMessage({ message }: { readonly message: GenAIMessage }) {
+function SystemMessage({
+  message,
+  messageIndex,
+}: {
+  readonly message: GenAIMessage
+  readonly messageIndex?: number | undefined
+}) {
   return (
     <div className="flex flex-col gap-1">
       <div className="border-l-2 border-accent bg-muted/50 rounded-r-lg px-4 py-3">
-        <PartsRenderer parts={message.parts} />
+        <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
       </div>
     </div>
   )
 }
 
-function ToolMessage({ message }: { readonly message: GenAIMessage }) {
+function ToolMessage({
+  message,
+  messageIndex,
+}: {
+  readonly message: GenAIMessage
+  readonly messageIndex?: number | undefined
+}) {
   return (
     <div className="flex flex-col gap-1">
       <div className="border border-dashed border-border rounded-lg px-4 py-3">
-        <PartsRenderer parts={message.parts} />
+        <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
       </div>
     </div>
   )
@@ -171,9 +183,9 @@ export function Message({
         />
       )
     case "system":
-      return <SystemMessage message={message} />
+      return <SystemMessage message={message} messageIndex={messageIndex} />
     case "tool":
-      return <ToolMessage message={message} />
+      return <ToolMessage message={message} messageIndex={messageIndex} />
     default:
       return <UnknownRoleMessage message={message} />
   }

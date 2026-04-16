@@ -37,7 +37,7 @@ export const writePublishedAnnotationScore = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
-  readonly enrichedFeedback: string
+  readonly enrichedFeedback: string | undefined
   readonly resolvedSessionId: string | null
   readonly resolvedSpanId: string | null
 }) =>
@@ -60,7 +60,7 @@ export const writePublishedAnnotationScore = async (input: {
       }
 
       const toWrite = mergeEnrichmentIntoAnnotationScoreForPublication(score as AnnotationScore, {
-        enrichedFeedback: input.enrichedFeedback,
+        enrichedFeedback: input.enrichedFeedback ?? score.feedback,
         resolvedSessionId: input.resolvedSessionId,
         resolvedSpanId: input.resolvedSpanId,
       })

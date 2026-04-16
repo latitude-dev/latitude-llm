@@ -1,8 +1,7 @@
 import { LIVE_QUEUE_DEFAULT_SAMPLING } from "@domain/annotation-queues"
 import type { FilterSet } from "@domain/shared"
-import { Button, CloseTrigger, Modal, Slider, Text, useToast } from "@repo/ui"
+import { Alert, Button, CloseTrigger, Modal, useToast } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
-import type { ReactNode } from "react"
 import { useRef } from "react"
 import { QueueForm } from "../../../../../../components/annotation-queues/queue-form.tsx"
 import { queueFormValuesToSettings } from "../../../../../../components/annotation-queues/queue-form-schema.ts"
@@ -15,33 +14,6 @@ import {
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { useAppForm } from "../../../../../../lib/form-hook-factory.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
-
-function SamplingSlider({
-  value,
-  onChange,
-  description,
-}: {
-  value: number
-  onChange: (value: number) => void
-  description: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <Text.H5>Sampling</Text.H5>
-        <Text.H5 color="foregroundMuted">{value}%</Text.H5>
-      </div>
-      <Slider
-        value={[value]}
-        onValueChange={([v]) => onChange(v ?? LIVE_QUEUE_DEFAULT_SAMPLING)}
-        min={0}
-        max={100}
-        step={1}
-      />
-      <Text.H6 color="foregroundMuted">{description}</Text.H6>
-    </div>
-  )
-}
 
 interface QueueModalProps {
   readonly open: boolean
@@ -149,6 +121,11 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
 
         {isSystem ? (
           <div className="flex flex-col gap-6">
+            <Alert
+              variant="default"
+              title="System Queue"
+              description="This queue is managed by Latitude and cannot be deleted or have its core settings edited. You can update assignees."
+            />
             <form.Field name="assignees">
               {(field) => (
                 <UserMultiSelect
@@ -157,16 +134,6 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
                   onChange={field.handleChange}
                   placeholder="Select team members..."
                   portalContainer={portalContainerRef}
-                />
-              )}
-            </form.Field>
-
-            <form.Field name="sampling">
-              {(field) => (
-                <SamplingSlider
-                  value={field.state.value}
-                  onChange={field.handleChange}
-                  description="Percentage of flagged traces to include in this system queue."
                 />
               )}
             </form.Field>

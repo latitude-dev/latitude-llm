@@ -1,14 +1,97 @@
-import { Avatar, Badge, Button, DropdownMenu, Icon, type MenuOption, Text, Tooltip } from "@repo/ui"
+import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotations"
+import {
+  Avatar,
+  Badge,
+  Button,
+  DropdownMenu,
+  Icon,
+  LatitudeLogo,
+  type MenuOption,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Text,
+  Tooltip,
+} from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useNavigate, useParams } from "@tanstack/react-router"
-import { EllipsisIcon, GlobeIcon, HashIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
-import { useMemo, useState } from "react"
-import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
+import {
+  EllipsisIcon,
+  GlobeIcon,
+  HashIcon,
+  InfoIcon,
+  PencilIcon,
+  SparklesIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+} from "lucide-react"
+import { type MouseEvent, useMemo, useState } from "react"
+import {
+  useApproveSystemAnnotation,
+  useDeleteAnnotation,
+  useRejectSystemAnnotation,
+} from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { AnnotationInput } from "./annotation-input.tsx"
+
+interface AnnotationApprovalButtonsProps {
+  readonly annotationId: string
+  readonly onAction?: (() => void) | undefined
+}
+
+function AnnotationApprovalButtons({ annotationId, onAction }: AnnotationApprovalButtonsProps) {
+  const approveMutation = useApproveSystemAnnotation()
+  const rejectMutation = useRejectSystemAnnotation()
+  const isDisabled = approveMutation.isPending || rejectMutation.isPending
+
+  function handleApprove(event: MouseEvent) {
+    event.stopPropagation()
+    event.preventDefault()
+    approveMutation.mutate(annotationId, onAction ? { onSuccess: onAction } : undefined)
+  }
+
+  function handleReject(event: MouseEvent) {
+    event.stopPropagation()
+    event.preventDefault()
+    rejectMutation.mutate(annotationId, onAction ? { onSuccess: onAction } : undefined)
+  }
+
+  return (
+    <div className="flex items-center gap-2" data-no-navigate data-annotation-approval-buttons={annotationId}>
+      <Tooltip
+        asChild
+        trigger={
+          <span className="inline-flex items-center text-muted-foreground">
+            <Icon icon={InfoIcon} size="xs" color="foregroundMuted" />
+          </span>
+        }
+      >
+        This annotation was created by our AI agent and requires review. Approve to keep it or reject to delete it.
+      </Tooltip>
+      <Button
+        variant="destructive-soft"
+        size="sm"
+        onClick={handleReject}
+        disabled={isDisabled}
+        isLoading={rejectMutation.isPending}
+      >
+        Reject
+      </Button>
+      <Button
+        variant="default-soft"
+        size="sm"
+        onClick={handleApprove}
+        disabled={isDisabled}
+        isLoading={approveMutation.isPending}
+      >
+        Approve
+      </Button>
+    </div>
+  )
+}
 
 interface AnnotationCardProps {
   readonly annotation: AnnotationRecord
@@ -40,11 +123,16 @@ export function AnnotationCard({
   })
 
   const linkedIssueName = linkedIssue?.name ?? null
+  const provenance = getAnnotationProvenance(annotation)
+  const isEditable = canUpdateAnnotation(annotation)
+  const isDraft = annotation.draftedAt !== null
+  const isAgentDraft = provenance === "agent" && isDraft
 
   const menuOptions: MenuOption[] = useMemo(
     () => [
       {
         label: "Edit",
+        disabled: !isEditable,
         onClick: () => setIsEditing(true),
       },
       {
@@ -54,7 +142,7 @@ export function AnnotationCard({
           deleteMutation.mutate({ scoreId: annotation.id, projectId }, onDelete ? { onSuccess: onDelete } : undefined),
       },
     ],
-    [annotation.id, projectId, deleteMutation, onDelete],
+    [annotation.id, projectId, deleteMutation, onDelete, isEditable],
   )
 
   function handleSave(data: { passed: boolean; comment: string; issueId: string | null }) {
@@ -80,18 +168,27 @@ export function AnnotationCard({
 
   if (isEditing) {
     return (
-      <AnnotationInput
-        projectId={projectId}
-        isLoading={isUpdateLoading}
-        initialPassed={annotation.passed}
-        initialComment={annotation.feedback ?? ""}
-        initialIssueId={annotation.issueId}
-        onSave={handleSave}
-        cancellable
-        onCancel={() => setIsEditing(false)}
-      />
+      <div data-no-navigate>
+        <AnnotationInput
+          projectId={projectId}
+          isLoading={isUpdateLoading}
+          initialPassed={annotation.passed}
+          initialComment={annotation.feedback ?? ""}
+          initialIssueId={annotation.issueId}
+          onSave={handleSave}
+          cancellable
+          autoFocus
+          onCancel={() => setIsEditing(false)}
+        />
+      </div>
     )
   }
+
+  const isPublished = !isDraft
+  const rawFeedback = (annotation.metadata as { rawFeedback?: string })?.rawFeedback?.trim()
+  const humanFeedback = annotation.feedback?.trim()
+  const showRawFeedback =
+    rawFeedback && (provenance === "agent" || ((provenance === "human" || provenance === "api") && isPublished))
 
   return (
     <div
@@ -100,13 +197,46 @@ export function AnnotationCard({
       className="flex flex-col gap-1 m-1 p-1 rounded-lg outline-none"
     >
       <div className="flex items-center gap-2">
-        {annotator && (
+        {provenance === "human" && annotator && (
           <>
             <Avatar name={annotator.name} imageSrc={annotator.imageSrc} size="xs" />
             <Text.H6 weight="bold">{annotator.name}</Text.H6>
           </>
         )}
+        {provenance === "agent" && (
+          <Tooltip
+            asChild
+            trigger={
+              <div className="flex items-center gap-1.5">
+                <LatitudeLogo className="h-4 w-4" />
+                <Text.H6 weight="bold">Latitude</Text.H6>
+                <Badge variant="secondary" size="small">
+                  Agent
+                </Badge>
+              </div>
+            }
+          >
+            Created automatically by a Latitude system queue
+          </Tooltip>
+        )}
+        {provenance === "api" && (
+          <Tooltip
+            asChild
+            trigger={
+              <Badge variant="outline" size="small">
+                API
+              </Badge>
+            }
+          >
+            Created via the public API
+          </Tooltip>
+        )}
         <Text.H6 color="foregroundMuted">{relativeTime(new Date(annotation.createdAt))}</Text.H6>
+        {isDraft && (
+          <Tooltip asChild trigger={<Icon icon={PencilIcon} size="xs" color="foregroundMuted" />}>
+            Draft annotation. It will be published automatically, or you can edit it while in draft.
+          </Tooltip>
+        )}
 
         <div className="ml-auto flex items-center gap-x-1">
           {isGlobal && (
@@ -121,6 +251,25 @@ export function AnnotationCard({
               Applies to the entire conversation
             </Tooltip>
           )}
+          {showRawFeedback && (
+            <div data-no-navigate>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Icon icon={SparklesIcon} size="xs" color="foregroundMuted" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="end" className="max-w-md">
+                  <div className="flex flex-col gap-0.5">
+                    <Text.H6 color="foregroundMuted" className="mb-1">
+                      Original feedback
+                    </Text.H6>
+                    <Text.H6 className="whitespace-pre-wrap">{rawFeedback}</Text.H6>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
           <div className="flex h-8 w-8 items-center justify-center">
             <Icon
               icon={annotation.passed ? ThumbsUpIcon : ThumbsDownIcon}
@@ -129,40 +278,54 @@ export function AnnotationCard({
             />
           </div>
 
-          <DropdownMenu
-            options={menuOptions}
-            align="end"
-            trigger={() => (
-              <Button variant="ghost" size="icon">
-                <Icon icon={EllipsisIcon} size="xs" color="foregroundMuted" />
-              </Button>
-            )}
-          />
+          <div data-no-navigate>
+            <DropdownMenu
+              options={menuOptions}
+              align="end"
+              trigger={() => (
+                <Button variant="ghost" size="icon">
+                  <Icon icon={EllipsisIcon} size="xs" color="foregroundMuted" />
+                </Button>
+              )}
+            />
+          </div>
         </div>
       </div>
 
-      {annotation.feedback?.trim() && <Text.H5 className="whitespace-pre-wrap">{annotation.feedback.trim()}</Text.H5>}
+      {humanFeedback && <Text.H5 className="whitespace-pre-wrap">{humanFeedback}</Text.H5>}
 
-      {linkedIssueName && (
-        <div className="flex mt-1">
-          <Badge
-            variant="outline"
-            size="small"
-            ellipsis
-            role="button"
-            tabIndex={0}
-            aria-label={`Open issue ${linkedIssueName}`}
-            className="cursor-pointer hover:bg-muted"
-            iconProps={{ icon: HashIcon, color: "foregroundMuted", placement: "start" }}
-            onClick={openLinkedIssue}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                openLinkedIssue(event)
-              }
-            }}
-          >
-            {linkedIssueName}
-          </Badge>
+      {(linkedIssueName || isAgentDraft) && (
+        <div className="flex items-center gap-2 pt-1">
+          {linkedIssueName && (
+            <Badge
+              data-no-navigate
+              variant="outline"
+              size="small"
+              ellipsis
+              role="button"
+              tabIndex={0}
+              aria-label={`Open issue ${linkedIssueName}`}
+              className="cursor-pointer hover:bg-muted"
+              iconProps={{
+                icon: HashIcon,
+                color: "foregroundMuted",
+                placement: "start",
+              }}
+              onClick={openLinkedIssue}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  openLinkedIssue(event)
+                }
+              }}
+            >
+              {linkedIssueName}
+            </Badge>
+          )}
+          {isAgentDraft && (
+            <div className="ml-auto">
+              <AnnotationApprovalButtons annotationId={annotation.id} onAction={onDelete} />
+            </div>
+          )}
         </div>
       )}
     </div>

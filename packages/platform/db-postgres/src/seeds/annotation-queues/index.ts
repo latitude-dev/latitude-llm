@@ -1,10 +1,12 @@
 import { SYSTEM_QUEUE_DEFAULT_SAMPLING, SYSTEM_QUEUE_DEFINITIONS } from "@domain/annotation-queues"
 import {
   SEED_ADMIN_USER_ID,
+  SEED_ANNOTATION_DEMO_TRACE_ID,
   SEED_ANNOTATION_QUEUE_COMBINATION_ID,
   SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID,
   SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID,
   SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_KITCHEN_SINK_ID,
   SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID,
   SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID,
   SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID,
@@ -13,6 +15,7 @@ import {
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID,
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID,
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
   SEED_ANNOTATION_QUEUE_LIVE_ID,
   SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
   SEED_ANNOTATION_QUEUE_SYSTEM_ID,
@@ -161,6 +164,26 @@ const queueRows = [
     createdAt: queueDate(4, 10),
     updatedAt: queueDate(4, 10),
   },
+  {
+    id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    system: false,
+    name: "Kitchen Sink All Annotations",
+    slug: "kitchen-sink-all-annotations",
+    description:
+      "Demo queue showcasing all annotation features: human/agent/API provenances, draft/published states, global/message/range anchors.",
+    instructions:
+      "This queue contains a trace with 30+ messages and 12 annotations demonstrating every combination of provenance (human, agent, API), " +
+      "state (draft, published), and anchor type (global, message-level, text range selection). Use this queue to test the annotation UI.",
+    settings: {},
+    assignees: [SEED_OWNER_USER_ID, SEED_ADMIN_USER_ID],
+    totalItems: 1,
+    completedItems: 0,
+    deletedAt: null,
+    createdAt: queueDate(1, 8),
+    updatedAt: queueDate(1, 8),
+  },
 ] satisfies AnnotationQueueRow[]
 
 const queueItemRows = [
@@ -306,6 +329,19 @@ const queueItemRows = [
     reviewStartedAt: null,
     createdAt: queueDate(4, 10, 15),
     updatedAt: queueDate(4, 10, 15),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_ITEM_KITCHEN_SINK_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    queueId: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
+    traceId: SEED_ANNOTATION_DEMO_TRACE_ID,
+    traceCreatedAt: queueDate(2, 8),
+    completedAt: null,
+    completedBy: null,
+    reviewStartedAt: queueDate(1, 9),
+    createdAt: queueDate(1, 8, 30),
+    updatedAt: queueDate(1, 9),
   },
 ] satisfies AnnotationQueueItemRow[]
 

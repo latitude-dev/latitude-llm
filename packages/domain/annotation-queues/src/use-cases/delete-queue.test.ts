@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 import { createFakeAnnotationQueueRepository } from "../testing/fake-annotation-queue-repository.ts"
-import { type DeleteQueueInput, DeleteQueueNotFoundError, deleteQueueUseCase } from "./delete-queue.ts"
+import {
+  type DeleteQueueInput,
+  DeleteQueueNotFoundError,
+  deleteQueueUseCase,
+  SystemQueueDeleteForbiddenError,
+} from "./delete-queue.ts"
 
 const PROJECT_ID = ProjectId("p".repeat(24))
 const ORG_ID = OrganizationId("o".repeat(24))
@@ -89,22 +94,19 @@ describe("deleteQueueUseCase", () => {
     expect(result.queue.name).toBe("Test Queue")
   })
 
-  it("can delete system queues", async () => {
+  it("rejects deleting system queues", async () => {
     const existing = createExistingQueue({ system: true })
-    const { layer, getLastSavedQueue } = createTestLayer(existing)
+    const { layer } = createTestLayer(existing)
 
     const input: DeleteQueueInput = {
       projectId: PROJECT_ID,
       queueId: QUEUE_ID,
     }
 
-    const result = await Effect.runPromise(deleteQueueUseCase(input).pipe(Effect.provide(layer)))
+    const result = await Effect.runPromise(deleteQueueUseCase(input).pipe(Effect.flip, Effect.provide(layer)))
 
-    expect(result.queue.deletedAt).not.toBeNull()
-    expect(result.queue.system).toBe(true)
-
-    const saved = getLastSavedQueue()
-    expect(saved?.deletedAt).not.toBeNull()
+    expect(result).toBeInstanceOf(SystemQueueDeleteForbiddenError)
+    expect((result as SystemQueueDeleteForbiddenError).queueId).toBe(QUEUE_ID)
   })
 
   it("preserves existing queue data", async () => {

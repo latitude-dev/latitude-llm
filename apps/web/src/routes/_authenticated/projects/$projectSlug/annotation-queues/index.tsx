@@ -145,6 +145,7 @@ function AnnotationQueuesPage() {
           {
             label: "Delete",
             type: "destructive",
+            disabled: q.system,
             onClick: () => openDeleteModal(q),
           },
         ],

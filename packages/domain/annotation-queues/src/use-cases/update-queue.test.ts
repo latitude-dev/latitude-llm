@@ -181,7 +181,7 @@ describe("updateQueueUseCase", () => {
       expect(result.queue.assignees).toEqual(["user-new"])
     })
 
-    it("allows updating sampling for system queue", async () => {
+    it("ignores sampling change for system queue", async () => {
       const existing = createExistingQueue({ system: true, settings: { sampling: 10 } })
       const { layer } = createTestLayer(existing)
 
@@ -195,7 +195,7 @@ describe("updateQueueUseCase", () => {
 
       const result = await Effect.runPromise(updateQueueUseCase(input).pipe(Effect.provide(layer)))
 
-      expect(result.queue.settings.sampling).toBe(50)
+      expect(result.queue.settings.sampling).toBe(10)
     })
 
     it("ignores name change for system queue", async () => {

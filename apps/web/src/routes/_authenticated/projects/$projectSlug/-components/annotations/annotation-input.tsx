@@ -14,6 +14,7 @@ interface AnnotationInputProps {
   readonly initialComment?: string
   readonly initialIssueId?: string | null
   readonly cancellable?: boolean
+  readonly autoFocus?: boolean
   readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
   readonly onCancel?: (() => void) | undefined
 }
@@ -102,6 +103,7 @@ export function AnnotationInput({
   initialComment = "",
   initialIssueId = null,
   cancellable = false,
+  autoFocus = false,
   onSave,
   onCancel,
 }: AnnotationInputProps) {
@@ -141,8 +143,15 @@ export function AnnotationInput({
           minRows={2}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && onCancel) {
+              e.preventDefault()
+              onCancel()
+            }
+          }}
           placeholder="Leave feedback on how the AI did"
           disabled={isLoading}
+          autoFocus={autoFocus}
         />
       </div>
 

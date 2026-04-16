@@ -1,23 +1,11 @@
 import { cn, Text } from "@repo/ui"
 import { type ReactNode, type Ref, type RefObject, useMemo, useRef } from "react"
-import type { GenAIMessage, GenAIPart, GenAISystem } from "rosetta-ai"
+import type { GenAIMessage } from "rosetta-ai"
 import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
-import { Part, type ToolCallResult } from "./part.tsx"
+import type { ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
 import { type HighlightRange, type TextSelectionAnchor, TextSelectionProvider } from "./text-selection.tsx"
-
-function SystemInstructionsBlock({ parts }: { readonly parts: readonly GenAIPart[] }) {
-  return (
-    <div className="rounded-r-lg border-l-2 border-primary bg-muted/50 px-4 py-3">
-      <div className="flex flex-col gap-2">
-        {parts.map((part, i) => (
-          <Part key={i} part={part} />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 interface ToolResponsePart {
   readonly type: "tool_call_response"
@@ -79,7 +67,6 @@ function normalizeMessage(message: GenAIMessage): GenAIMessage {
 }
 
 export function Conversation({
-  systemInstructions,
   messages,
   enableNavigator = false,
   scrollContainerRef,
@@ -93,7 +80,6 @@ export function Conversation({
   highlightRanges,
   messageAnnotationSlot,
 }: {
-  readonly systemInstructions?: GenAISystem
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
@@ -126,7 +112,6 @@ export function Conversation({
   const containerRef = useRef<HTMLDivElement>(null)
   const enableTextSelection = !!onTextSelect || (highlightRanges != null && highlightRanges.length > 0)
 
-  const hasSystem = !!(systemInstructions && systemInstructions.length > 0)
   const { resultMap, visibleMessages } = useMemo(() => {
     const { resultMap, absorbedIndexes } = buildToolResultsMap(messages)
 
@@ -144,10 +129,9 @@ export function Conversation({
     return { resultMap, visibleMessages }
   }, [messages])
 
-  const totalNavItems = (hasSystem ? 1 : 0) + visibleMessages.length
-  navItemRefs.current.length = totalNavItems
+  navItemRefs.current.length = visibleMessages.length
 
-  if (!hasSystem && visibleMessages.length === 0) {
+  if (visibleMessages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center py-6">
         <Text.H5 color="foregroundMuted">No conversation data</Text.H5>
@@ -157,19 +141,7 @@ export function Conversation({
 
   const content = (
     <div ref={containerRef} className={cn("flex min-w-0 flex-col gap-6", { "select-none": !enableTextSelection })}>
-      {hasSystem && (
-        <div
-          ref={(el) => {
-            navItemRefs.current[0] = el
-          }}
-          className="pl-4"
-        >
-          <SystemInstructionsBlock parts={systemInstructions} />
-        </div>
-      )}
-
       {visibleMessages.map(({ message, index }, i) => {
-        const navIdx = i + (hasSystem ? 1 : 0)
         const onNavigate = messageActions?.get(index)
         const isAssistant = message.role === "assistant"
         const isUser = message.role === "user"
@@ -179,7 +151,7 @@ export function Conversation({
           <div
             key={index}
             ref={(el) => {
-              navItemRefs.current[navIdx] = el
+              navItemRefs.current[i] = el
             }}
             data-message-index={index}
             className={cn("group relative min-w-0 rounded-lg pl-4 pr-4", {
