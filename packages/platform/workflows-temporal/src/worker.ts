@@ -1,6 +1,55 @@
-import { createLogger } from "@repo/observability"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
+import { createLogger, recordSpanExceptionForDatadog } from "@repo/observability"
+import { Context as ActivityContext } from "@temporalio/activity"
+import type {
+  ActivityExecuteInput,
+  ActivityInboundCallsInterceptor,
+  ActivityInterceptorsFactory,
+  Next,
+} from "@temporalio/worker"
 import { NativeConnection, Worker } from "@temporalio/worker"
 import type { TemporalConfig } from "./config.ts"
+
+const tracer = trace.getTracer("temporal-worker")
+
+const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityContext) => ({
+  inbound: {
+    async execute(
+      input: ActivityExecuteInput,
+      next: Next<ActivityInboundCallsInterceptor, "execute">,
+    ): Promise<unknown> {
+      const info = ActivityContext.current().info
+      const spanName = `temporal.activity.${info.activityType}`
+
+      return tracer.startActiveSpan(
+        spanName,
+        {
+          attributes: {
+            "temporal.activity.type": info.activityType,
+            "temporal.workflow.type": info.workflowType,
+            "temporal.workflow.namespace": info.workflowNamespace,
+            "temporal.task_queue": info.taskQueue,
+            "temporal.activity.id": info.activityId,
+            "temporal.attempt": info.attempt,
+          },
+        },
+        async (span) => {
+          try {
+            const result = await next(input)
+            span.setStatus({ code: SpanStatusCode.OK })
+            return result
+          } catch (error) {
+            const err = recordSpanExceptionForDatadog(span, error)
+            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message })
+            throw err
+          } finally {
+            span.end()
+          }
+        },
+      )
+    },
+  },
+})
 
 const logger = createLogger("workflows-temporal-worker")
 
@@ -33,6 +82,9 @@ export async function runTemporalWorker(input: RunTemporalWorkerInput) {
     taskQueue: config.taskQueue,
     workflowsPath,
     activities,
+    interceptors: {
+      activity: [datadogActivityInterceptor],
+    },
   })
 
   const runPromise = worker.run()

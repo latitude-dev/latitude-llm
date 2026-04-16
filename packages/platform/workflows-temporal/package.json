@@ -18,8 +18,10 @@
   },
   "dependencies": {
     "@domain/queue": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@temporalio/activity": "catalog:",
     "@temporalio/client": "catalog:",
     "@temporalio/worker": "catalog:",
     "effect": "catalog:"
