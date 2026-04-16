@@ -1,4 +1,4 @@
-import { type AI, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { type AI, AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
@@ -830,7 +830,7 @@ describe("runLiveEvaluationUseCase", () => {
     expectImmutableAnalyticsSyncOrder(operations)
     expect(calls.generate[0]?.telemetry).toMatchObject({
       spanName: "evaluation.judge.live",
-      tags: ["evaluation", "judge", "live"],
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
       metadata: {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,

@@ -1,4 +1,4 @@
-import { AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -133,7 +133,7 @@ describe("executeLiveEvaluationUseCase", () => {
     const telemetry = liveEvaluationExecutionInputSchema.pick({ telemetry: true }).parse({
       telemetry: {
         spanName: "evaluation.judge.live",
-        tags: ["evaluation", "judge", "live"],
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
         metadata: {
           organizationId: "o".repeat(24),
           projectId: "p".repeat(24),
