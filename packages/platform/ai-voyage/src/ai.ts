@@ -16,6 +16,20 @@ import type { VoyageAIClient } from "voyageai"
 
 const require = createRequire(import.meta.url)
 
+const requireVoyageAi = () => {
+  try {
+    return require("voyageai") as {
+      VoyageAIClient: new (config: { apiKey: string }) => VoyageAIClient
+    }
+  } catch {
+    const packageRequire = createRequire(require.resolve("@platform/ai-voyage/package.json"))
+
+    return packageRequire("voyageai") as {
+      VoyageAIClient: new (config: { apiKey: string }) => VoyageAIClient
+    }
+  }
+}
+
 const createVoyageClient = (): Effect.Effect<VoyageAIClient, AIError> =>
   parseEnv("LAT_VOYAGE_API_KEY", "string").pipe(
     Effect.mapError(
@@ -29,9 +43,7 @@ const createVoyageClient = (): Effect.Effect<VoyageAIClient, AIError> =>
         try: () => {
           // Note: this is needed because the VoyageAI SDK has a bug with ESM imports
           // https://github.com/voyage-ai/typescript-sdk/issues/26
-          const { VoyageAIClient } = require("voyageai") as {
-            VoyageAIClient: new (config: { apiKey: string }) => VoyageAIClient
-          }
+          const { VoyageAIClient } = requireVoyageAi()
           return new VoyageAIClient({ apiKey })
         },
         catch: (cause) =>
