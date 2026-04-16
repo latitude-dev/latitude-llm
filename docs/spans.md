@@ -38,6 +38,12 @@ Instead:
 
 This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and a single debounced trace-end runtime rather than several parallel selection tasks.
 
+### Trace-end code map
+
+- **Worker composition root**: `apps/workers/src/workers/trace-end.ts` exports `runTraceEndJob` (and `createTraceEndWorker` / `createRunHandler`). That module owns transport and infrastructure wiring only; it is not named as a domain use case.
+- `**@domain/spans`**: `loadTraceForTraceEndUseCase`, `selectTraceEndItemsUseCase`, and `summarizeTraceEndItemDecisions` in `packages/domain/spans/src/use-cases/` implement trace load, sample-first + batched filter selection, and per-candidate decision counts for logging.
+- `**@domain/evaluations**` and `**@domain/annotation-queues**`: see `docs/evaluations.md` and `docs/annotation-queues.md` for the live-evaluation and queue halves of the same debounced pass.
+
 ## Why Sessions Matter
 
 Sessions are needed so that:

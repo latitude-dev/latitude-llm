@@ -155,7 +155,7 @@ Rules:
 - the new reliability domain events publish directly through `createEventsPublisher(queuePublisher)` into `domain-events` only after their upstream writes are durable
 - BullMQ is transport, not lifecycle storage; durable progress, dedupe semantics, ownership, and visible progress stay in Postgres/domain state even when BullMQ provides the dedupe/debounce primitive
 - topic publication may request logical dedupe/debounce keyed by entity identity so BullMQ can reuse delayed jobs or job ids without leaking transport detail to callers
-- the `SpanIngested` debounced trace-end runtime is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed `trace-end:run` task
+- the `SpanIngested` debounced trace-end runtime is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed `trace-end:run` task; the worker composition root is `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`, with domain rules split across `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` (see `docs/spans.md`)
 - user-triggered async work that needs frontend progress feedback should also write a transient Redis key such as `evaluation-alignment:<jobId>`, with the UI polling an endpoint that reads Redis rather than BullMQ directly
 - queues stay single-step; long-running or multi-step orchestration belongs in workflows whose activities own retries, timers, and progress
 - reliability work extends the existing `apps/workflows` Temporal service and the existing `domain-events` dispatcher rail rather than introducing a second workflow runner or ad-hoc event-execution path

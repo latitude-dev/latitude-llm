@@ -272,6 +272,7 @@ Live evaluation triggering is incremental:
 - the hosted AI call inside `live-evaluations:execute` runs inside a stable telemetry capture span named `evaluation.live.execute` with queued identity metadata including `organizationId`, `projectId`, `evaluationId`, and `traceId`
 - `trace-end:run` batches live-evaluation and live-queue filter checks together instead of using separate queue tasks
 - trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `docs/filters.md`
+- in code, the evaluation side of that shared pass lives in `@domain/evaluations`: `buildTraceEndEvaluationSelectionInputs` builds selection specs and eligible rows, and `orchestrateTraceEndLiveEvaluationExecutesUseCase` applies turn rules, checks canonical score state via `ScoreRepository`, and enqueues `live-evaluations:execute` through an injected publish callback (the worker binds the real BullMQ publisher)
 
 ## Lifecycle
 

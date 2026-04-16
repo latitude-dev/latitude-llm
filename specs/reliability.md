@@ -230,7 +230,7 @@ Initial reliability topic/task contracts:
 - `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
 - `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
-- `trace-end` / `run`: loads one ended trace, selects live evaluations, live queues, and system queues through a shared sample-first selection pass, then applies the resulting downstream work
+- `trace-end` / `run`: implemented as `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`; loads one ended trace, runs the shared sample-first selection pass across live evaluations, live queues, and system queues via `@domain/spans` / `@domain/evaluations` / `@domain/annotation-queues` orchestrators, then applies downstream work (execute publishes, live-queue membership writes, system-queue workflow starts)
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 
 Initial reliability workflows:

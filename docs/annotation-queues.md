@@ -155,13 +155,16 @@ The workflow now fully automates the path from trace to reviewable draft annotat
 - **Domain**: `packages/domain/annotation-queues/src/use-cases/`
   - `provision-system-queues.ts` - Idempotent queue creation
   - `get-project-system-queues.ts` - Cached queue listing
+  - `materialize-live-queue-items.ts` - Batch insert pending live-queue rows after the shared trace-end selection pass
+  - `build-trace-end-queue-selection.ts` - Build `TraceEndSelectionSpec` maps and stable keys for live and system queues in that pass
+  - `orchestrate-trace-end-annotation-queue-effects.ts` - Run live-queue materialization and sequential system-queue workflow starts (the worker supplies the idempotent Temporal start hook)
   - `run-system-queue-flagger.ts` - Slug-to-matcher queue evaluation
   - `draft-system-queue-annotation.ts` - LLM feedback generation
   - `persist-system-queue-annotation.ts` - Transactional queue item + draft creation
 
 - **Workers**: `apps/workers/src/workers/`
   - `project-provisioning.ts` - BullMQ-based provisioning
-  - `trace-end.ts` - Shared trace-end selection runtime plus per-queue workflow start
+  - `trace-end.ts` - `trace-end` topic worker: `runTraceEndJob` wires Postgres/ClickHouse/Redis, the queue publisher, and Temporal/Redis dedupe, and composes `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` orchestrators for one debounced `run`
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
