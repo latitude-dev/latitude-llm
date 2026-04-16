@@ -1,6 +1,6 @@
 import { BarChart, HistogramSkeleton, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
@@ -47,6 +47,21 @@ export function IssuesAnalyticsPanel({
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
+  const histogramBarChartData = useMemo(
+    () =>
+      analytics.histogram.map((bucket) => ({
+        category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", "\u00A0"),
+        tooltipCategory: formatDayBucketTooltipLabel(bucket.bucket),
+        value: bucket.count,
+      })),
+    [analytics.histogram],
+  )
+
+  const formatHistogramTooltip = useCallback(
+    (category: string, value: number) => `${category}<br/><b>${formatCount(value)}</b> occurrences`,
+    [],
+  )
+
   const handleSelect = useCallback(
     (range: { startIndex: number; endIndex: number } | null) => {
       if (!onRangeSelect) return
@@ -93,16 +108,12 @@ export function IssuesAnalyticsPanel({
       ) : (
         <div className="px-4 py-3">
           <BarChart
-            data={analytics.histogram.map((bucket) => ({
-              category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", "\u00A0"),
-              tooltipCategory: formatDayBucketTooltipLabel(bucket.bucket),
-              value: bucket.count,
-            }))}
+            data={histogramBarChartData}
             height={160}
             showYAxis={false}
             xAxisLabelFontSize={10}
             ariaLabel="Issue occurrences by day"
-            formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> occurrences`}
+            formatTooltip={formatHistogramTooltip}
             onSelect={onRangeSelect ? handleSelect : undefined}
           />
         </div>

@@ -40,13 +40,13 @@ import {
   type TraceColumnId,
 } from "../../-components/project-traces-table.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
-import { formatSeenAgeParts } from "./issue-formatters.ts"
+import { formatIssueAgeAgoLabel, formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
-    <div className="flex shrink-0 flex-col gap-0.5">
+    <div className="flex min-w-0 max-w-full flex-col gap-0.5">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {value}
     </div>
@@ -63,18 +63,39 @@ function SeenAtSummaryValue({
   const { lastSeenLabel, firstSeenLabel } = formatSeenAgeParts(lastSeenAtIso, firstSeenAtIso)
 
   return (
-    <Text.H5 color="foreground" className="flex min-w-0 items-center gap-1 whitespace-nowrap">
-      <Tooltip asChild trigger={<span className="truncate">{lastSeenLabel}</span>}>
+    <Text.H5 color="foreground" className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
+      <Tooltip asChild trigger={<span className="break-words">{lastSeenLabel}</span>}>
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="foregroundMuted">Last seen at</Text.H6>
           <Text.H6B>{new Date(lastSeenAtIso).toLocaleString()}</Text.H6B>
         </div>
       </Tooltip>
-      <span className="text-muted-foreground">/</span>
-      <Tooltip asChild trigger={<span className="truncate">{firstSeenLabel}</span>}>
+      <span className="shrink-0 text-muted-foreground">/</span>
+      <Tooltip asChild trigger={<span className="break-words">{firstSeenLabel}</span>}>
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="foregroundMuted">First seen at</Text.H6>
           <Text.H6B>{new Date(firstSeenAtIso).toLocaleString()}</Text.H6B>
+        </div>
+      </Tooltip>
+    </Text.H5>
+  )
+}
+
+function IssueLifecycleTimestampSummaryValue({
+  tooltipHeading,
+  iso,
+}: {
+  readonly tooltipHeading: string
+  readonly iso: string
+}) {
+  const label = formatIssueAgeAgoLabel(iso)
+
+  return (
+    <Text.H5 color="foreground" className="flex min-w-0 flex-wrap items-center gap-1">
+      <Tooltip asChild trigger={<span className="break-words">{label}</span>}>
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted">{tooltipHeading}</Text.H6>
+          <Text.H6B>{new Date(iso).toLocaleString()}</Text.H6B>
         </div>
       </Tooltip>
     </Text.H5>
@@ -90,7 +111,8 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
     case "ignore":
       return {
         title: "Ignore issue",
-        description: "Mark this issue as ignored. We won't alert you about new ocurrences of this issue anymore",
+        description:
+          "Mark this issue as ignored. We won't monitor or alert you about new occurrences of this issue anymore",
         confirmLabel: "Ignore",
         confirmIcon: PauseIcon,
         confirmVariant: "destructive" as const,
@@ -160,13 +182,14 @@ export function IssueDetailDrawer({
       search: {
         tab: "traces",
         traceId,
+        traceDetailTab: "annotations",
       },
     })
   }
 
   const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
     const shortName = input.rootSpanName || input.traceId.slice(0, 8)
-    return `Open trace ${shortName} in traces dashboard`
+    return `Open trace ${shortName} with annotations tab in traces dashboard`
   }
 
   const runLifecycleCommand = async (command: "resolve" | "unresolve" | "ignore" | "unignore", override?: boolean) => {
@@ -310,11 +333,11 @@ export function IssueDetailDrawer({
       >
         <div className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-row items-start gap-8">
+            <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
               {isLoading ? (
                 <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
               ) : issue && issue.states.length > 0 ? (
-                <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap={false} />} />
+                <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
               ) : null}
               <SummaryField
                 label="Seen at"
@@ -328,6 +351,18 @@ export function IssueDetailDrawer({
                   )
                 }
               />
+              {!isLoading && issue?.resolvedAt ? (
+                <SummaryField
+                  label="Resolved at"
+                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                />
+              ) : null}
+              {!isLoading && issue?.ignoredAt ? (
+                <SummaryField
+                  label="Ignored at"
+                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                />
+              ) : null}
               <SummaryField
                 label="Occurrences"
                 value={
@@ -387,21 +422,21 @@ export function IssueDetailDrawer({
             icon={<Icon icon={TextAlignStartIcon} size="sm" />}
             label="Traces"
             defaultOpen
-            contentClassName="pl-0 max-h-none overflow-visible"
+            contentClassName="pl-0 max-h-none overflow-hidden flex flex-col"
           >
-            <div className="flex min-h-72 flex-col">
-              <ProjectTracesTable
-                data={traces}
-                isLoading={tracesLoading}
-                visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
-                defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-                onTraceClick={(trace) => handleTraceClick(trace.traceId)}
-                getTraceRowAriaLabel={getTraceRowAriaLabel}
-                rowInteractionRole="link"
-                infiniteScroll={infiniteScroll}
-                blankSlate="This issue has not been seen on any traces yet."
-              />
-            </div>
+            <ProjectTracesTable
+              data={traces}
+              isLoading={tracesLoading}
+              visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
+              defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
+              onTraceClick={(trace) => handleTraceClick(trace.traceId)}
+              getTraceRowAriaLabel={getTraceRowAriaLabel}
+              rowInteractionRole="link"
+              infiniteScroll={infiniteScroll}
+              blankSlate="This issue has not been seen on any traces yet."
+              scrollAreaLayout="intrinsic"
+              scrollContainerClassName="max-h-[min(28rem,50vh)]"
+            />
           </DetailSection>
         </div>
       </DetailDrawer>
@@ -410,7 +445,7 @@ export function IssueDetailDrawer({
         <Modal.Content dismissible>
           <Modal.Header
             title="Resolve issue"
-            description="Mark this issue as resolved. If this issue starts occurring again we will promote it as regressed"
+            description="Mark this issue as resolved. If this issue starts occurring again we will alert you and promote it as regressed"
           />
           {hasActiveLinkedEvaluations ? (
             <Modal.Body>

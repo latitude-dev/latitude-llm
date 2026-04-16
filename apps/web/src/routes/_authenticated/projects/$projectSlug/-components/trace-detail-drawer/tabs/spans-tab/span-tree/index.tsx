@@ -4,7 +4,13 @@ import { ChevronsDownUpIcon, ChevronsUpDownIcon, MaximizeIcon, MinimizeIcon } fr
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { MIN_TREE_WIDTH, MIN_WATERFALL_WIDTH, MINIMIZED_MAX_HEIGHT, ROW_HEIGHT } from "./helpers.ts"
+import {
+  MIN_TREE_WIDTH,
+  MIN_WATERFALL_WIDTH,
+  MINIMIZED_MAX_HEIGHT,
+  ROW_HEIGHT,
+  WATERFALL_H_INSET_PX,
+} from "./helpers.ts"
 import { TreeRow } from "./tree-row.tsx"
 import { buildSpanTree, flattenTree, formatDuration, getTraceTimeRange } from "./tree-utils.ts"
 import { useResizablePanel } from "./use-resizable-panel.ts"
@@ -155,7 +161,10 @@ export function SpanTree({
           )}
         </div>
         <div className="shrink-0 w-px self-stretch bg-border" />
-        <div className="flex-1 flex flex-row items-center justify-between px-2">
+        <div
+          className="flex-1 flex flex-row items-center justify-between min-w-0"
+          style={{ paddingLeft: WATERFALL_H_INSET_PX, paddingRight: WATERFALL_H_INSET_PX }}
+        >
           <Text.H6 color="foregroundMuted">0ms</Text.H6>
           <Text.H6 color="foregroundMuted">{formatDuration(timeRange.totalDuration)}</Text.H6>
         </div>

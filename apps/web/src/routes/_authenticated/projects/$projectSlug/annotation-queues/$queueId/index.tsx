@@ -12,7 +12,10 @@ import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
+import {
+  ListingLayout as Layout,
+  listingLayoutIntrinsicScroll,
+} from "../../../../../../layouts/ListingLayout/index.tsx"
 import { QueueBadge } from "../-components/queue-badge.tsx"
 import { QueueItemStatusBadge } from "../-components/queue-item-status-badge.tsx"
 
@@ -131,6 +134,7 @@ function AnnotationQueueItemsPage() {
       <Layout.Body>
         <Layout.List>
           <InfiniteTable
+            {...listingLayoutIntrinsicScroll.infiniteTable}
             data={items}
             isLoading={itemsLoading}
             columns={columns}

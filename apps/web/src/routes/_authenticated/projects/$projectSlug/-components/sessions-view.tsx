@@ -18,7 +18,7 @@ import { type RefObject, useCallback, useMemo, useState } from "react"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import { listTracesByProject, type TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -446,6 +446,7 @@ export function SessionsView({
       )}
       <Layout.List>
         <InfiniteTable
+          {...listingLayoutIntrinsicScroll.infiniteTable}
           data={tableData}
           isLoading={isLoading}
           columns={columns}

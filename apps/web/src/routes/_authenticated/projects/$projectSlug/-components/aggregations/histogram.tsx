@@ -60,6 +60,11 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
     [denseBuckets, bucketSeconds, onRangeSelect],
   )
 
+  const formatTooltip = useCallback(
+    (category: string, value: number) => `${category}<br/><b>${formatCount(value)}</b> traces`,
+    [],
+  )
+
   if (isLoading) {
     return (
       <div className="px-4 py-3">
@@ -91,7 +96,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
         height={160}
         showYAxis={false}
         ariaLabel="Trace count by time bucket"
-        formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> traces`}
+        formatTooltip={formatTooltip}
         onSelect={onRangeSelect ? handleSelect : undefined}
       />
     </div>

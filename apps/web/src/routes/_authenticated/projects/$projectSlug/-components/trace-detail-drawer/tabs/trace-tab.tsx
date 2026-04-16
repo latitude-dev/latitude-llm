@@ -170,7 +170,6 @@ export function TraceTab({
 
   const durationValue = traceRecord ? (
     <span className="flex items-center gap-1">
-      {traceRecord.durationNs > 0 ? formatDuration(traceRecord.durationNs) : "-"}
       {durationBadge ? (
         <PercentileStatus
           level={durationBadge}
@@ -186,12 +185,12 @@ export function TraceTab({
           }
         />
       ) : null}
+      {traceRecord.durationNs > 0 ? formatDuration(traceRecord.durationNs) : "-"}
     </span>
   ) : undefined
 
   const ttftValue = traceRecord ? (
     <span className="flex items-center gap-1">
-      {traceRecord.timeToFirstTokenNs > 0 ? formatDuration(traceRecord.timeToFirstTokenNs) : "-"}
       {ttftBadge ? (
         <PercentileStatus
           level={ttftBadge}
@@ -207,6 +206,7 @@ export function TraceTab({
           }
         />
       ) : null}
+      {traceRecord.timeToFirstTokenNs > 0 ? formatDuration(traceRecord.timeToFirstTokenNs) : "-"}
     </span>
   ) : undefined
 

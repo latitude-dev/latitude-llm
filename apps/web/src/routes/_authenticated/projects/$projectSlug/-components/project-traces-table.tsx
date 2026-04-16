@@ -81,6 +81,8 @@ interface ProjectTracesTableProps {
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
   readonly baselines?: Baselines | undefined
+  readonly scrollAreaLayout?: "fill" | "intrinsic"
+  readonly scrollContainerClassName?: string
 }
 
 export function ProjectTracesTable({
@@ -101,6 +103,8 @@ export function ProjectTracesTable({
   traceMetrics,
   metricsLoading,
   baselines,
+  scrollAreaLayout,
+  scrollContainerClassName,
 }: ProjectTracesTableProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
 
@@ -313,6 +317,8 @@ export function ProjectTracesTable({
     <InfiniteTable
       data={data}
       {...(isLoading !== undefined ? { isLoading } : {})}
+      {...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {})}
+      {...(scrollContainerClassName !== undefined ? { className: scrollContainerClassName } : {})}
       columns={columns}
       getRowKey={(trace) => trace.traceId}
       {...(onTraceClick

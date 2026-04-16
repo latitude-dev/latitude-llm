@@ -135,4 +135,13 @@ ListingLayout.Body = Body
 ListingLayout.Sidebar = Sidebar
 ListingLayout.List = List
 
+/**
+ * Use with `InfiniteTable` / `ProjectTracesTable` inside `ListingLayout.List` so the scroll area
+ * height follows the table (horizontal scrollbar sits under the last row when the list is short).
+ */
+export const listingLayoutIntrinsicScroll = {
+  infiniteTable: { scrollAreaLayout: "intrinsic" as const, className: "max-h-full" },
+  projectTracesTable: { scrollAreaLayout: "intrinsic" as const, scrollContainerClassName: "max-h-full" },
+}
+
 export { ListingLayout }

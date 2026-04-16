@@ -1,7 +1,7 @@
 import { cn, Text } from "@repo/ui"
 import { useCallback, useMemo, useState } from "react"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { statusBarColor } from "./helpers.ts"
+import { statusBarColor, WATERFALL_H_INSET_PX } from "./helpers.ts"
 import type { TraceTimeRange } from "./tree-utils.ts"
 import { formatDuration } from "./tree-utils.ts"
 
@@ -44,8 +44,16 @@ export function useWaterfallCursor({
       const rect = containerRef.current.getBoundingClientRect()
       const x = e.clientX - rect.left
       const waterfallStart = treeWidth + 1
-      if (x >= waterfallStart) {
-        setCursorX(x - waterfallStart)
+      const relX = x - waterfallStart
+      const waterfallWidth = containerRef.current.offsetWidth - treeWidth - 1
+      const g = WATERFALL_H_INSET_PX
+      const trackWidth = waterfallWidth - 2 * g
+      if (relX < 0 || waterfallWidth <= 0 || trackWidth <= 0) {
+        setCursorX(null)
+        return
+      }
+      if (relX >= g && relX <= waterfallWidth - g) {
+        setCursorX(relX)
       } else {
         setCursorX(null)
       }
@@ -58,8 +66,10 @@ export function useWaterfallCursor({
   const cursorTimeLabel = useMemo(() => {
     if (cursorX === null || !containerRef.current || timeRange.totalDuration === 0) return null
     const waterfallWidth = containerRef.current.offsetWidth - treeWidth - 1
-    if (waterfallWidth <= 0) return null
-    const fraction = cursorX / waterfallWidth
+    const g = WATERFALL_H_INSET_PX
+    const trackWidth = waterfallWidth - 2 * g
+    if (waterfallWidth <= 0 || trackWidth <= 0) return null
+    const fraction = (cursorX - g) / trackWidth
     return formatDuration(fraction * timeRange.totalDuration)
   }, [cursorX, containerRef, treeWidth, timeRange])
 

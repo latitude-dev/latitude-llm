@@ -1,7 +1,7 @@
 import { cn, Text } from "@repo/ui"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import { memo } from "react"
-import { INDENT_PX, ROW_HEIGHT, statusTextColor } from "./helpers.ts"
+import { INDENT_PX, ROW_HEIGHT, statusTextColor, WATERFALL_H_INSET_PX } from "./helpers.ts"
 import { SpanIcon } from "./span-icon.tsx"
 import type { FlattenedNode, TraceTimeRange } from "./tree-utils.ts"
 import { formatDuration } from "./tree-utils.ts"
@@ -110,7 +110,9 @@ export const TreeRow = memo(function TreeRow({
       </div>
 
       <div className="flex-1 relative h-full min-w-0">
-        <WaterfallBar span={node.span} timeRange={timeRange} />
+        <div className="absolute inset-y-0 min-w-0" style={{ left: WATERFALL_H_INSET_PX, right: WATERFALL_H_INSET_PX }}>
+          <WaterfallBar span={node.span} timeRange={timeRange} />
+        </div>
       </div>
     </div>
   )

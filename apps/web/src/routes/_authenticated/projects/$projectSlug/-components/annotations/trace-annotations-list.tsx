@@ -17,12 +17,15 @@ export function TraceAnnotationsList({
   queueId,
   selectedAnnotationId,
   onAnnotationClick,
+  hideAnnotationIntro = false,
 }: {
   readonly projectId: string
   readonly traceId: string
   readonly queueId?: string | undefined
   readonly selectedAnnotationId?: string | undefined
   readonly onAnnotationClick?: ((annotation: AnnotationRecord) => void) | undefined
+  /** When true, omit the Annotations title, count, and helper line (e.g. trace detail tab already shows the label). */
+  readonly hideAnnotationIntro?: boolean | undefined
 }) {
   const {
     data: annotationsData,
@@ -105,16 +108,22 @@ export function TraceAnnotationsList({
           <hr className="border border-border border-dashed" />
         </>
       )}
-      <div className="flex flex-col">
-        <div className="flex items-center gap-1">
-          <Text.H5M>Annotations</Text.H5M>
-          <Text.H5M color="foregroundMuted">{annotationsError ? "–" : annotations.length}</Text.H5M>
-        </div>
+      {!hideAnnotationIntro && (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1">
+            <Text.H5M>Annotations</Text.H5M>
+            {annotationsError ? (
+              <Text.H5M color="foregroundMuted">–</Text.H5M>
+            ) : annotationsLoading ? null : annotations.length > 0 ? (
+              <Text.H5M color="foregroundMuted">{annotations.length}</Text.H5M>
+            ) : null}
+          </div>
 
-        <Text.H5 color="foregroundMuted">
-          Select text, a message or annotate the entire conversation in this section
-        </Text.H5>
-      </div>
+          <Text.H5 color="foregroundMuted">
+            Select text, a message or annotate the entire conversation in this section
+          </Text.H5>
+        </div>
+      )}
 
       {/* Input and list */}
       <div className="flex flex-col gap-4">

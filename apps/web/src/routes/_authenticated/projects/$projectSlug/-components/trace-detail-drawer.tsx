@@ -11,7 +11,6 @@ import {
   Tabs,
   Text,
   Tooltip,
-  useMountEffect,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
@@ -22,8 +21,9 @@ import {
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
@@ -59,6 +59,34 @@ const TABS: TabOption<TabId>[] = [
   },
 ]
 
+function isTraceDetailTab(v: string): v is TabId {
+  return v === "trace" || v === "conversation" || v === "spans" || v === "annotations"
+}
+
+const annotationTabCountPillClass =
+  "inline-flex min-h-5 min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-muted px-1.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"
+
+function getAnnotationTabSuffix({
+  annotationsByTraceError,
+  annotationsByTraceLoading,
+  annotationCount,
+}: {
+  readonly annotationsByTraceError: boolean
+  readonly annotationsByTraceLoading: boolean
+  readonly annotationCount: number
+}): ReactNode {
+  if (annotationsByTraceError) {
+    return <span className={annotationTabCountPillClass}>–</span>
+  }
+  if (annotationsByTraceLoading) {
+    return null
+  }
+  if (annotationCount === 0) {
+    return null
+  }
+  return <span className={cn(annotationTabCountPillClass, "tabular-nums")}>{annotationCount}</span>
+}
+
 export function TraceDetailDrawer({
   traceId,
   trace,
@@ -71,7 +99,6 @@ export function TraceDetailDrawer({
   onPrevTrace,
   canNavigateNext,
   canNavigatePrev,
-  onTabChange,
 }: {
   readonly traceId: string
   readonly trace?: TraceRecord | undefined
@@ -84,16 +111,40 @@ export function TraceDetailDrawer({
   readonly onPrevTrace?: () => void
   readonly canNavigateNext: boolean
   readonly canNavigatePrev: boolean
-  readonly onTabChange?: (tab: TabId) => void
 }) {
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
   })
+  const {
+    data: annotationsByTraceData,
+    isLoading: annotationsByTraceLoading,
+    isError: annotationsByTraceError,
+  } = useAnnotationsByTrace({
+    projectId,
+    traceId,
+    draftMode: "include",
+  })
+  const annotationCount = annotationsByTraceData?.items?.length ?? 0
+  const annotationTabSuffix = useMemo(
+    () =>
+      getAnnotationTabSuffix({
+        annotationsByTraceError,
+        annotationsByTraceLoading,
+        annotationCount,
+      }),
+    [annotationsByTraceError, annotationsByTraceLoading, annotationCount],
+  )
+  const tabsWithAnnotationCount = useMemo<TabOption<TabId>[]>(
+    () => TABS.map((tab) => (tab.id === "annotations" ? { ...tab, suffix: annotationTabSuffix } : tab)),
+    [annotationTabSuffix],
+  )
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
-  const [activeTab, setActiveTab] = useState<TabId>("trace")
-  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [activeTab, setActiveTab] = useParamState("traceDetailTab", "trace", {
+    validate: isTraceDetailTab,
+  })
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
@@ -105,14 +156,13 @@ export function TraceDetailDrawer({
     textSelectionPopoverControlsRef,
   })
 
-  useMountEffect(() => {
-    onTabChange?.("trace")
-  })
+  useEffect(() => {
+    setVisitedTabs((prev) => new Set([...prev, activeTab]))
+  }, [activeTab])
 
   function handleSetActiveTab(tab: TabId) {
     setActiveTab(tab)
     setVisitedTabs((prev) => new Set([...prev, tab]))
-    onTabChange?.(tab)
   }
 
   function handleAnnotationClick(annotation: AnnotationRecord) {
@@ -242,7 +292,7 @@ export function TraceDetailDrawer({
             <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
           </div>
 
-          <Tabs options={TABS} active={activeTab} onSelect={handleSetActiveTab} />
+          <Tabs options={tabsWithAnnotationCount} active={activeTab} onSelect={handleSetActiveTab} />
         </>
       }
     >
@@ -285,7 +335,12 @@ export function TraceDetailDrawer({
       </div>
       <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "annotations" })}>
         {visitedTabs.has("annotations") && (
-          <TraceAnnotationsList projectId={projectId} traceId={traceId} onAnnotationClick={handleAnnotationClick} />
+          <TraceAnnotationsList
+            projectId={projectId}
+            traceId={traceId}
+            hideAnnotationIntro
+            onAnnotationClick={handleAnnotationClick}
+          />
         )}
       </div>
     </DetailDrawer>

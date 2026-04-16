@@ -36,6 +36,7 @@ export function InfiniteTable<T>({
   defaultSorting,
   onSortChange,
   blankSlate,
+  scrollAreaLayout = "fill",
   className,
   expandedRowKeys,
   getExpandedRows,
@@ -139,14 +140,18 @@ export function InfiniteTable<T>({
       )
     ) : null
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className={cn("flex flex-col min-h-0", scrollAreaLayout === "fill" ? "flex-1" : "w-full max-w-full")}>
       {blankSlateContent ? (
         blankSlateContent
       ) : (
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className={cn("flex-1 min-h-0 overflow-auto custom-scrollbar", className)}
+          className={cn(
+            scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
+            "overflow-auto custom-scrollbar",
+            className,
+          )}
         >
           <table
             ref={tableRef}

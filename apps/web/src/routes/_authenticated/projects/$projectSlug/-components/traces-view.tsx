@@ -5,7 +5,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { type RefObject, useCallback, useMemo } from "react"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { DEFAULT_TRACE_TABLE_SORTING, ProjectTracesTable, type TraceColumnId } from "./project-traces-table.tsx"
@@ -128,6 +128,7 @@ export function TracesView({
       )}
       <Layout.List>
         <ProjectTracesTable
+          {...listingLayoutIntrinsicScroll.projectTracesTable}
           data={traces}
           isLoading={isLoading}
           visibleColumnIds={visibleColumnIds}
