@@ -104,3 +104,12 @@ export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
+export type {
+  SelectTraceEndItemsError,
+  TraceEndSelectionDecision,
+  TraceEndSelectionInput,
+  TraceEndSelectionReason,
+  TraceEndSelectionResult,
+  TraceEndSelectionSpec,
+} from "./use-cases/select-trace-end-items.ts"
+export { selectTraceEndItemsUseCase } from "./use-cases/select-trace-end-items.ts"

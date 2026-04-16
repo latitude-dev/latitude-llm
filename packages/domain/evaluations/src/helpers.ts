@@ -12,6 +12,7 @@ import type {
 } from "./entities/evaluation.ts"
 import { evaluationAlignmentJobStatusSchema, isPausedEvaluation } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
+import type { PublishLiveEvaluationExecuteInput } from "./ports/live-evaluation-queue-publisher.ts"
 
 export type EvaluationAlignmentMetrics = {
   readonly accuracy: number
@@ -250,6 +251,77 @@ export const buildLiveEvaluationExecuteScopeDedupeKey = (input: {
 
 export const toLiveEvaluationDebounceMs = (debounceSeconds: number): number | undefined =>
   debounceSeconds > 0 ? debounceSeconds * 1000 : undefined
+
+export const buildLiveEvaluationExecutePublication = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly sessionId?: string | null
+  readonly evaluation: Evaluation
+}): PublishLiveEvaluationExecuteInput => {
+  const debounceMs = toLiveEvaluationDebounceMs(input.evaluation.trigger.debounce)
+  const traceDedupeKey = buildLiveEvaluationExecuteTraceDedupeKey({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+  })
+  const scopeDedupeKey = buildLiveEvaluationExecuteScopeDedupeKey({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+    ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+  })
+
+  if (input.evaluation.trigger.turn === "every" && debounceMs === undefined) {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: traceDedupeKey,
+    }
+  }
+
+  if (input.evaluation.trigger.turn === "last") {
+    if (debounceMs === undefined) {
+      throw new Error("`turn = last` requires `debounce > 0` before enqueue publication")
+    }
+
+    // TODO(live-evals-last-trace): `turn = last` should identify the last trace in a
+    // session, which needs a session-level signal separate from the current trace-end
+    // debounce that only identifies the last span of one trace.
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: scopeDedupeKey,
+      debounceMs,
+    }
+  }
+
+  if (input.evaluation.trigger.turn === "every" && debounceMs !== undefined) {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: scopeDedupeKey,
+      debounceMs,
+    }
+  }
+
+  return {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+    dedupeKey: traceDedupeKey,
+    ...(debounceMs !== undefined ? { debounceMs } : {}),
+  }
+}
 
 export const emptyConfusionMatrix = (): ConfusionMatrix => ({
   truePositives: 0,

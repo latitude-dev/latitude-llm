@@ -34,13 +34,12 @@ import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
-import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
-import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
+import { createTraceEndWorker } from "./workers/trace-end.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -153,8 +152,7 @@ const bootstrap = async () => {
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createAnnotationQueuesWorker(ctx)
-    createLiveAnnotationQueuesWorker(ctx)
-    createSystemAnnotationQueuesWorker(ctx)
+    createTraceEndWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)

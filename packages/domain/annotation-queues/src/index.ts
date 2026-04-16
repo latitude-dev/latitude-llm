@@ -87,13 +87,6 @@ export {
   createQueueUseCase,
 } from "./use-cases/create-queue.ts"
 export {
-  type CurateLiveAnnotationQueuesError,
-  type CurateLiveAnnotationQueuesInput,
-  type CurateLiveAnnotationQueuesResult,
-  type CurateLiveAnnotationQueuesSummary,
-  curateLiveAnnotationQueuesUseCase,
-} from "./use-cases/curate-live-annotation-queues.ts"
-export {
   type DeleteQueueError,
   type DeleteQueueInput,
   DeleteQueueNotFoundError,
@@ -117,6 +110,12 @@ export {
   type MarkReviewStartedInput,
   markReviewStartedUseCase,
 } from "./use-cases/mark-review-started.ts"
+export {
+  type MaterializeLiveQueueItemsError,
+  type MaterializeLiveQueueItemsInput,
+  type MaterializeLiveQueueItemsResult,
+  materializeLiveQueueItemsUseCase,
+} from "./use-cases/materialize-live-queue-items.ts"
 export {
   type PersistSystemQueueAnnotationError,
   type PersistSystemQueueAnnotationInput,

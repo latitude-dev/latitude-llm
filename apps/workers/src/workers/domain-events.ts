@@ -77,16 +77,8 @@ export const createDomainEventsWorker = ({
     SpanIngested: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload, {
-            dedupeKey: buildSpanIngestedDedupeKey("evaluations:live:enqueue", event.payload),
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("live-annotation-queues", "curate", event.payload, {
-            dedupeKey: buildSpanIngestedDedupeKey("annotation-queues:live:curate", event.payload),
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("system-annotation-queues", "fanOut", event.payload, {
-            dedupeKey: buildSpanIngestedDedupeKey("annotation-queues:system:fan-out", event.payload),
+          pub.publish("trace-end", "run", event.payload, {
+            dedupeKey: buildSpanIngestedDedupeKey("trace-end:run", event.payload),
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish(

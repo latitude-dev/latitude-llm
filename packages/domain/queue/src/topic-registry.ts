@@ -119,11 +119,6 @@ const _registry = {
   }>(),
 
   "live-evaluations": payloads<{
-    enqueue: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
     execute: {
       readonly organizationId: string
       readonly projectId: string
@@ -132,16 +127,8 @@ const _registry = {
     }
   }>(),
 
-  "live-annotation-queues": payloads<{
-    curate: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
-  }>(),
-
-  "system-annotation-queues": payloads<{
-    fanOut: {
+  "trace-end": payloads<{
+    run: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string

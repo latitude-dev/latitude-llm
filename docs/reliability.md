@@ -155,7 +155,7 @@ Rules:
 - the new reliability domain events publish directly through `createEventsPublisher(queuePublisher)` into `domain-events` only after their upstream writes are durable
 - BullMQ is transport, not lifecycle storage; durable progress, dedupe semantics, ownership, and visible progress stay in Postgres/domain state even when BullMQ provides the dedupe/debounce primitive
 - topic publication may request logical dedupe/debounce keyed by entity identity so BullMQ can reuse delayed jobs or job ids without leaking transport detail to callers
-- the `SpanIngested` debounced fan-out is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed tasks
+- the `SpanIngested` debounced trace-end runtime is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed `trace-end:run` task
 - user-triggered async work that needs frontend progress feedback should also write a transient Redis key such as `evaluation-alignment:<jobId>`, with the UI polling an endpoint that reads Redis rather than BullMQ directly
 - queues stay single-step; long-running or multi-step orchestration belongs in workflows whose activities own retries, timers, and progress
 - reliability work extends the existing `apps/workflows` Temporal service and the existing `domain-events` dispatcher rail rather than introducing a second workflow runner or ad-hoc event-execution path
@@ -165,7 +165,7 @@ Rules:
 Initial reliability async contracts:
 
 - domain events: `SpanIngested`, `ScoreCreated`, `ScoreAssignedToIssue`
-- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:fanOut`
+- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`
 - workflows: `issue-discovery`, `evaluation-alignment`, `annotation-publication`, `system-queue-flagger`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
@@ -207,8 +207,8 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - each project starts with default system-created manual queues such as `Jailbreaking`, `Refusal`, `Frustration`, `Forgetting`, `Laziness`, `NSFW`, `Tool Call Errors`, and `Resource Outliers`
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table; session selection resolves to the newest trace and still creates `annotation_queue_items` with `trace_id` only and `completedAt = null`
 - system-created manual queues are marked with `system = true`, provision `settings.sampling` from a named default constant, and let users tune that sampling later without changing the canonical queue definitions
-- system-created manual queues are populated asynchronously from debounced `SpanIngested`: the `domain-events` dispatcher publishes `system-annotation-queues:fanOut`, which lists system queues for the project, applies per-queue sampling, and starts one `system-queue-flagger` workflow per sampled queue; that workflow performs deterministic routing or a limited-context flagger pass and, when it confirms a match, writes the queue item and pending-review draft annotation with full context
-- queues are conceptually live when they store the shared `FilterSet` used by evaluation triggers inside queue settings, and a dedicated `live-annotation-queues:curate` task incrementally materializes new matching traces from debounced `SpanIngested` with shared trace-filter matching before sampling and batched inserts
+- system-created manual queues are populated asynchronously from debounced `SpanIngested`: the `domain-events` dispatcher publishes `trace-end:run`, that runtime samples system queues first, and it starts one `system-queue-flagger` workflow per selected queue; the workflow performs deterministic routing or a limited-context flagger pass and, when it confirms a match, writes the queue item and pending-review draft annotation with full context
+- queues are conceptually live when they store the shared `FilterSet` used by evaluation triggers inside queue settings, and `trace-end:run` incrementally materializes new matching traces by batching live-queue filters together with live-evaluation filters after sample-first pruning
 - newly created live annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
 - queue review is the focused in-product annotation workflow for fast human feedback
 
@@ -241,7 +241,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
 - issue-generated evaluation creation returns a `jobId` immediately and completes in the background; the frontend polls a Redis-backed status endpoint for that alignment job
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
-- live evaluation triggering is incremental on debounced `SpanIngested`; the `domain-events` dispatcher publishes `live-evaluations:enqueue`, that task checks active evaluations project-wide, applies the shared `FilterSet` first, sampling second, then turn/debounce, and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer
+- live evaluation triggering is incremental on debounced `SpanIngested`; the `domain-events` dispatcher publishes `trace-end:run`, that runtime checks active evaluations project-wide, applies deterministic sampling first, batches the remaining shared `FilterSet` checks together with live queues, then applies evaluation turn/debounce rules and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
 - sparse first-pass monitors may be weakly aligned at first, but annotation-driven realignment should improve them as more evidence accumulates
 - evaluations are script-native, GEPA-backed artifacts that run through a portable runtime shared with simulations
