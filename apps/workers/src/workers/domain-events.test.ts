@@ -100,7 +100,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to debounced evaluations, annotation queues, and immediate firstTrace check", async () => {
+  it("routes SpanIngested to the debounced trace-end runtime and immediate firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
@@ -111,33 +111,18 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "live-annotation-queues:curate",
-      "live-evaluations:enqueue",
-      "projects:checkFirstTrace",
-      "system-annotation-queues:fanOut",
-    ])
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["projects:checkFirstTrace", "trace-end:run"])
 
-    const liveEvaluations = published.find((p) => p.queue === "live-evaluations")
-    const liveAnnotationQueues = published.find((p) => p.queue === "live-annotation-queues")
-    const systemAnnotationQueues = published.find((p) => p.queue === "system-annotation-queues")
+    const traceEnd = published.find((p) => p.queue === "trace-end")
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
 
-    expect(liveEvaluations?.payload).toEqual({
+    expect(traceEnd?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
     })
-    expect(liveEvaluations?.options).toEqual({
-      dedupeKey: "evaluations:live:enqueue:org-1:proj-1:trace-abc",
-      debounceMs: TRACE_END_DEBOUNCE_MS,
-    })
-    expect(liveAnnotationQueues?.options).toEqual({
-      dedupeKey: "annotation-queues:live:curate:org-1:proj-1:trace-abc",
-      debounceMs: TRACE_END_DEBOUNCE_MS,
-    })
-    expect(systemAnnotationQueues?.options).toEqual({
-      dedupeKey: "annotation-queues:system:fan-out:org-1:proj-1:trace-abc",
+    expect(traceEnd?.options).toEqual({
+      dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")

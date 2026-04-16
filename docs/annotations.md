@@ -45,7 +45,7 @@ Rules:
 - human-created drafts publish on a debounced timeout after the last edit; the initial default is `5 minutes`
 - human-editable draft publication is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id, not by browser-local timers or persisted due-work scans
 - system-created queue drafts still use the queue CUID as `source_id`
-- they are created by the `systemQueueFlaggerWorkflow` started from `system-annotation-queues:fanOut` for that trace
+- they are created by the `systemQueueFlaggerWorkflow` started from the debounced `trace-end:run` runtime for that trace
 - system-created queue drafts do not use the automatic publication path; they wait for explicit human review
 - drafts do not participate in issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
