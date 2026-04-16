@@ -213,10 +213,6 @@ function ProjectPage() {
     setActiveTraceId(traceId)
   }
 
-  const onActiveSessionChange = (_sessionId: string | undefined) => {
-    closeTraceDrawer()
-  }
-
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
   // Compute next/prev trace callbacks from the loaded list
@@ -369,7 +365,7 @@ function ProjectPage() {
       {activeTab === "traces" ? (
         <TracesView {...sharedViewProps} visibleColumnIds={visibleTraceColumnIds} />
       ) : (
-        <SessionsView {...sharedViewProps} onActiveSessionChange={onActiveSessionChange} />
+        <SessionsView {...sharedViewProps} />
       )}
 
       {activeTraceId ? (

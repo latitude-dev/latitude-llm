@@ -68,7 +68,10 @@ function AnnotationApprovalButtons({ annotationId, onAction }: AnnotationApprova
           </span>
         }
       >
-        This annotation was automatically created with AI and requires review
+        <span className="flex items-center gap-1">
+          <Icon icon={SparklesIcon} size="sm" className="shrink-0 stroke-[1.5]" />
+          Automatically created with AI
+        </span>
       </Tooltip>
       <Button
         variant="destructive-soft"
@@ -242,11 +245,12 @@ export function AnnotationCard({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent side="bottom" align="end" className="max-w-md">
-                  <div className="flex flex-col gap-0.5">
-                    <Text.H6 color="foregroundMuted" className="mb-1">
-                      This feedback has been enriched with AI
-                    </Text.H6>
-                    <Text.H6 className="whitespace-pre-wrap">{rawFeedback}</Text.H6>
+                  <div className="flex flex-col gap-1">
+                    <Text.H5 className="whitespace-pre-wrap">{rawFeedback}</Text.H5>
+                    <span className="flex items-center gap-1">
+                      <Icon icon={SparklesIcon} size="xs" color="foregroundMuted" className="shrink-0" />
+                      <Text.H6 color="foregroundMuted">This feedback has been enriched with AI</Text.H6>
+                    </span>
                   </div>
                 </PopoverContent>
               </Popover>

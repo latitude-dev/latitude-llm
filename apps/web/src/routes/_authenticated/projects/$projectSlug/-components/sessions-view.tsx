@@ -176,7 +176,6 @@ interface SessionsViewProps {
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
-  readonly onActiveSessionChange?: (sessionId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
 }
 
@@ -193,7 +192,6 @@ export function SessionsView({
   onFiltersChange,
   onFiltersClose,
   onActiveTraceChange,
-  onActiveSessionChange,
   traceIdsRef,
 }: SessionsViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
@@ -302,21 +300,7 @@ export function SessionsView({
         width: 160,
         render: (row) => {
           if (row.kind === "session") {
-            if (onActiveSessionChange) {
-              return (
-                <button
-                  type="button"
-                  className="max-w-full cursor-pointer truncate text-left font-inherit text-primary hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onActiveSessionChange(row.session.sessionId)
-                  }}
-                >
-                  {row.session.sessionId}
-                </button>
-              )
-            }
-            return row.session.sessionId
+            return <span className="block max-w-full truncate">{row.session.sessionId}</span>
           }
           return row.trace.sessionId
         },
@@ -375,7 +359,7 @@ export function SessionsView({
         ),
       },
     ]
-  }, [sessionMetrics, sessionMetricsLoading, onActiveSessionChange])
+  }, [sessionMetrics, sessionMetricsLoading])
 
   const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions, sorting)
 

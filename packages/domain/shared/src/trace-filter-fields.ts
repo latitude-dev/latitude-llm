@@ -11,6 +11,7 @@ export interface TraceFilterField {
 export const TRACE_FILTER_FIELDS = [
   { field: "status", type: "status", label: "Status" },
   { field: "name", type: "text", label: "Name", placeholder: "Enter name..." },
+  { field: "traceId", type: "text", label: "Trace ID", placeholder: "Filter by trace..." },
   { field: "sessionId", type: "text", label: "Session ID", placeholder: "Filter by session..." },
   { field: "simulationId", type: "text", label: "Simulation ID", placeholder: "Filter by simulation..." },
   { field: "userId", type: "text", label: "User ID", placeholder: "Filter by user..." },
