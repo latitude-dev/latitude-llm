@@ -7,6 +7,7 @@ type InternalField = "startTime"
 export const TRACE_FIELD_REGISTRY: ChFieldRegistry<TraceFilterFieldName | InternalField> = {
   status: { column: "overall_status", chType: "UInt8", mapValue: mapStatusValue },
   name: { column: "root_span_name", chType: "String" },
+  traceId: { column: "trace_id", chType: "String" },
   sessionId: { column: "session_id", chType: "String" },
   simulationId: { column: "simulation_id", chType: "String" },
   userId: { column: "user_id", chType: "String" },
