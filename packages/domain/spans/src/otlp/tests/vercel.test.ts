@@ -948,3 +948,55 @@ describe("Vercel AI SDK duplicate usage normalization", () => {
     expect(outer?.attrString["ai.operationId"]).toBe("ai.streamText")
   })
 })
+
+describe("Vercel AI SDK top-level prompt fallback", () => {
+  it("treats ai.prompt.prompt as a user input message when ai.prompt.messages is absent", () => {
+    const spans = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", SERVICE_NAME)] },
+            scopeSpans: [
+              {
+                scope: { name: SCOPE_NAME, version: SCOPE_VERSION },
+                spans: [
+                  {
+                    traceId: TRACE_ID,
+                    spanId: "eeeeeeeeeeeeeeee",
+                    name: "ai.generateText",
+                    kind: 1,
+                    startTimeUnixNano: "1710590430000000000",
+                    endTimeUnixNano: "1710590431000000000",
+                    attributes: [
+                      str("ai.operationId", "ai.generateText"),
+                      str(
+                        "ai.prompt",
+                        JSON.stringify({
+                          system: "You are a triage flagger.",
+                          prompt: "SYSTEM PROMPT EXCERPT:\nYou are an expert writer.",
+                        }),
+                      ),
+                      str("ai.response.text", '{"matched":false}'),
+                    ],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      CONTEXT,
+    )
+
+    const span = spans[0]
+
+    expect(span).toBeDefined()
+    expect(span?.systemInstructions).toEqual([{ type: "text", content: "You are a triage flagger." }])
+    expect(span?.inputMessages).toHaveLength(1)
+    expect(span?.inputMessages[0]?.role).toBe("user")
+    expect(span?.inputMessages[0]?.parts).toEqual([
+      { type: "text", content: "SYSTEM PROMPT EXCERPT:\nYou are an expert writer." },
+    ])
+  })
+})
