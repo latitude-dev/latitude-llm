@@ -42,7 +42,11 @@ export function SpanTree({
 
   const collapsibleIds = useMemo(() => {
     const ids = new Set<string>()
+    const visited = new Set<string>()
     function collect(node: { span: { spanId: string }; children: readonly unknown[] }) {
+      // Cycle detection: skip if already visited
+      if (visited.has(node.span.spanId)) return
+      visited.add(node.span.spanId)
       if (node.children.length > 0) ids.add(node.span.spanId)
       for (const child of node.children) collect(child as typeof node)
     }
