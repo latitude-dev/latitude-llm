@@ -61,17 +61,17 @@ Before running the script, make sure:
 Example startup:
 
 ```bash
-cd /Users/sans/src/latitude-v2/apps/ingest
+cd apps/ingest
 pnpm dev
 ```
 
 ```bash
-cd /Users/sans/src/latitude-v2/apps/workers
+cd apps/workers
 pnpm dev
 ```
 
 ```bash
-cd /Users/sans/src/latitude-v2/apps/workflows
+cd apps/workflows
 pnpm dev
 ```
 
@@ -80,21 +80,21 @@ pnpm dev
 Run from the package directory:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/live-seeds
+cd tools/live-seeds
 pnpm seed:live-seeds --help
 ```
 
 List all fixtures:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/live-seeds
+cd tools/live-seeds
 pnpm seed:live-seeds --list-fixtures
 ```
 
 Run the default batch of 5 generated cases per fixture:
 
 ```bash
-cd /Users/sans/src/latitude-v2/tools/live-seeds
+cd tools/live-seeds
 pnpm seed:live-seeds
 ```
 
