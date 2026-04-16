@@ -4,6 +4,14 @@ export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly cause: unknown
   readonly operation: string
 }> {
+  constructor(args: { readonly cause: unknown; readonly operation: string }) {
+    super(args)
+
+    if (args.cause instanceof Error && args.cause.stack) {
+      this.stack = args.cause.stack
+    }
+  }
+
   readonly httpStatus = 500
   readonly httpMessage = "Internal server error"
 }

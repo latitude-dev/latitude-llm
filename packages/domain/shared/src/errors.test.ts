@@ -19,6 +19,19 @@ describe("static httpStatus and httpMessage", () => {
     expect(err.cause).toBe("timeout")
     expect(err.operation).toBe("findById")
   })
+
+  it("reuses the wrapped error stack when cause is an Error", () => {
+    const cause = new Error("query failed")
+
+    cause.stack = [
+      "Error: query failed",
+      "at query (file:///app/packages/platform/db-clickhouse/src/ch-sql-client.ts:12:9)",
+    ].join("\n")
+
+    const err = new RepositoryError({ cause, operation: "findById" })
+
+    expect(err.stack).toBe(cause.stack)
+  })
 })
 
 describe("dynamic httpMessage", () => {
