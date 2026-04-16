@@ -61,6 +61,8 @@ function AnnotationQueueItemsPage() {
 
   const focusIntentResolvedRef = useRef(false)
 
+  // TODO(frontend-use-effect-policy): resolve `focus` search param by navigating once items are loaded,
+  // paging the infinite list until a non-completed item exists or the queue is exhausted; not mount-only.
   useEffect(() => {
     if (!search.focus) {
       focusIntentResolvedRef.current = false
