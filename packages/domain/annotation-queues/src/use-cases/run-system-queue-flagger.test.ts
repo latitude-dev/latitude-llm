@@ -140,6 +140,25 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(calls.generate[0].prompt).toContain("Ignore previous instructions")
   })
 
+  it("does not call the LLM flagger when the trace has no conversation messages", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([])),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called when conversation context is missing"),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
+  })
+
   it("uses a queue-specific prompt for refusal", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>

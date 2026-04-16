@@ -303,6 +303,11 @@ export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) 
     }
 
     const trace = yield* loadTraceDetail(input)
+
+    if (trace.allMessages.length === 0) {
+      return { matched: false }
+    }
+
     const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
 
     return {
