@@ -38,6 +38,7 @@ import {
 } from "../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
@@ -48,15 +49,20 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   const { toast } = useToast()
   const form = useForm({
     defaultValues: { email: "" },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         await inviteMemberMutation(value.email)
-        setOpen(false)
-        toast({ description: "Invitation sent" })
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          setOpen(false)
+          toast({ description: "Invitation sent" })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (
