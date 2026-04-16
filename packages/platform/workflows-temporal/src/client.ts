@@ -6,9 +6,47 @@ import type { TemporalConfig } from "./config.ts"
 
 const logger = createLogger("workflows-temporal-client")
 
+const OPAQUE_TEMPORAL_ERROR_MESSAGE = "undefined undefined: undefined"
+
+const toNonEmptyString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : undefined
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
 const formatUnknownError = (error: unknown): string => {
   if (error instanceof Error) {
-    return error.message
+    const message = toNonEmptyString(error.message)
+    const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
+
+    if (message !== undefined && message !== OPAQUE_TEMPORAL_ERROR_MESSAGE) {
+      return causeMessage ? `${message} (cause: ${causeMessage})` : message
+    }
+
+    if (causeMessage) {
+      return causeMessage
+    }
+
+    return toNonEmptyString(error.name) ?? OPAQUE_TEMPORAL_ERROR_MESSAGE
+  }
+
+  if (isRecord(error)) {
+    const message = toNonEmptyString(error.message)
+    const code = toNonEmptyString(error.code)
+    const details = toNonEmptyString(error.details)
+    const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
+    const pieces = [message, code, details, causeMessage ? `cause: ${causeMessage}` : undefined].filter(
+      (value): value is string => value !== undefined && value !== OPAQUE_TEMPORAL_ERROR_MESSAGE,
+    )
+
+    if (pieces.length > 0) {
+      return pieces.join(" | ")
+    }
   }
 
   return String(error)
@@ -36,7 +74,7 @@ export const createTemporalClientEffect = (config: TemporalConfig): Effect.Effec
           }),
         catch: (error) =>
           new TemporalConnectionError({
-            message: formatUnknownError(error),
+            message: `Failed to connect to Temporal at ${config.address} (namespace ${config.namespace}): ${formatUnknownError(error)}`,
           }),
       }),
     ),
