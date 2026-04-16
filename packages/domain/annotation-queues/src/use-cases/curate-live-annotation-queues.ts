@@ -93,7 +93,7 @@ export const curateLiveAnnotationQueuesUseCase = (input: CurateLiveAnnotationQue
     }
 
     // TODO: Share filter evaluation with live evaluations to reduce duplication.
-    // Both live queues and live evaluations evaluate FilterSets against the same trace on TraceEnded.
+    // Both live queues and live evaluations evaluate FilterSets against the same trace after SpanIngested debounce.
     // A unified abstraction would batch both into a single listMatchingFilterIdsByTraceId call,
     // improving performance and reducing ClickHouse queries.
     const filterSets = liveQueues.flatMap((queue) => {

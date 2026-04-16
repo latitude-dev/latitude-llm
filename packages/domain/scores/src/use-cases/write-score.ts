@@ -100,9 +100,6 @@ const scoreDiscoveryPayloadIssueId = (score: Score, existingScore: Score | null)
   return null
 }
 
-const scoreEventName = (score: Score): "ScoreDraftSaved" | "ScorePublished" =>
-  score.draftedAt === null ? "ScorePublished" : "ScoreDraftSaved"
-
 const buildScore = ({
   input,
   organizationId,
@@ -181,7 +178,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         yield* scoreRepository.save(score)
 
         yield* outboxEventWriter.write({
-          eventName: scoreEventName(score),
+          eventName: "ScoreCreated",
           aggregateType: "score",
           aggregateId: score.id,
           organizationId: score.organizationId,
@@ -190,6 +187,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
             projectId: score.projectId,
             scoreId: score.id,
             issueId: scoreDiscoveryPayloadIssueId(score, existingScore),
+            status: score.draftedAt === null ? "published" : "draft",
           },
         })
 

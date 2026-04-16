@@ -30,28 +30,15 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
-  const buildTraceEndedDedupeKey = (prefix: string, payload: EventPayloads["TraceEnded"]) =>
+  const buildSpanIngestedDedupeKey = (prefix: string, payload: EventPayloads["SpanIngested"]) =>
     `${prefix}:${payload.organizationId}:${payload.projectId}:${payload.traceId}`
 
-  const publishTraceEndedFanOut = (payload: EventPayloads["TraceEnded"]) =>
+  const publishScoreCreatedFanOut = (payload: EventPayloads["ScoreCreated"]) =>
     Effect.all(
       [
-        pub.publish("live-evaluations", "enqueue", payload, {
-          dedupeKey: buildTraceEndedDedupeKey("evaluations:live:enqueue", payload),
+        pub.publish("issues", "discovery", payload, {
+          dedupeKey: `issues:discovery:${payload.scoreId}:${payload.status}`,
         }),
-        pub.publish("live-annotation-queues", "curate", payload, {
-          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:live:curate", payload),
-        }),
-        pub.publish("system-annotation-queues", "fanOut", payload, {
-          dedupeKey: buildTraceEndedDedupeKey("annotation-queues:system:fan-out", payload),
-        }),
-      ],
-      { concurrency: "unbounded" },
-    ).pipe(Effect.asVoid)
-
-  const publishScoreDraftSavedFanOut = (payload: EventPayloads["ScoreDraftSaved"]) =>
-    Effect.all(
-      [
         pub.publish("annotation-scores", "publishHumanAnnotation", payload, {
           dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
@@ -62,11 +49,6 @@ export const createDomainEventsWorker = ({
       ],
       { concurrency: "unbounded" },
     ).pipe(Effect.asVoid)
-
-  const publishScorePublishedFanOut = (payload: EventPayloads["ScorePublished"]) =>
-    pub.publish("issues", "discovery", payload, {
-      dedupeKey: `issues:discovery:${payload.scoreId}`,
-    })
 
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
@@ -95,8 +77,16 @@ export const createDomainEventsWorker = ({
     SpanIngested: (event) =>
       Effect.all(
         [
-          pub.publish("live-traces", "end", event.payload, {
-            dedupeKey: `live-traces:end:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+          pub.publish("live-evaluations", "enqueue", event.payload, {
+            dedupeKey: buildSpanIngestedDedupeKey("evaluations:live:enqueue", event.payload),
+            debounceMs: TRACE_END_DEBOUNCE_MS,
+          }),
+          pub.publish("live-annotation-queues", "curate", event.payload, {
+            dedupeKey: buildSpanIngestedDedupeKey("annotation-queues:live:curate", event.payload),
+            debounceMs: TRACE_END_DEBOUNCE_MS,
+          }),
+          pub.publish("system-annotation-queues", "fanOut", event.payload, {
+            dedupeKey: buildSpanIngestedDedupeKey("annotation-queues:system:fan-out", event.payload),
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish(
@@ -113,10 +103,7 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    TraceEnded: (event) => publishTraceEndedFanOut(event.payload),
-
-    ScoreDraftSaved: (event) => publishScoreDraftSavedFanOut(event.payload),
-    ScorePublished: (event) => publishScorePublishedFanOut(event.payload),
+    ScoreCreated: (event) => publishScoreCreatedFanOut(event.payload),
 
     ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {

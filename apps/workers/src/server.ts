@@ -36,7 +36,6 @@ import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
-import { createLiveTracesWorker } from "./workers/live-traces.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
@@ -149,7 +148,6 @@ const bootstrap = async () => {
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
     createDatasetExportWorker(ctx)
-    createLiveTracesWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)

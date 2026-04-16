@@ -65,14 +65,6 @@ const _registry = {
     }
   }>(),
 
-  "live-traces": payloads<{
-    end: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
-  }>(),
-
   issues: payloads<{
     discovery: {
       readonly organizationId: string
