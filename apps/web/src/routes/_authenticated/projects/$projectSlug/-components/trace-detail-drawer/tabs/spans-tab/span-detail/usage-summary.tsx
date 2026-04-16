@@ -138,10 +138,10 @@ function UsageRow({
       </Tooltip>
 
       <div className="flex items-center gap-2 self-center">
+        {badges}
         <Text.H5 color="foreground" noWrap>
           {formattedTotal}
         </Text.H5>
-        {badges}
       </div>
     </div>
   )

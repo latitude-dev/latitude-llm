@@ -1,4 +1,4 @@
-import { Check, Clipboard } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
@@ -9,13 +9,14 @@ import { Tooltip } from "../tooltip/tooltip.tsx"
 
 type CopyableTextSize = "sm" | "default"
 
-const SIZE_CONFIG: Record<CopyableTextSize, { buttonClass: string; iconSize: IconSize }> = {
+/** Badge `muted`-like pill; size maps to padding + icon scale. */
+const SIZE_CONFIG: Record<CopyableTextSize, { paddingClass: string; iconSize: IconSize }> = {
   sm: {
-    buttonClass: "gap-1 px-1.5 py-0.5 -mx-1.5",
+    paddingClass: "gap-1 px-1.5 py-0.5",
     iconSize: "xs",
   },
   default: {
-    buttonClass: "gap-2 px-2.5 py-1.5 -mx-2.5",
+    paddingClass: "gap-2 px-2.5 py-1.5",
     iconSize: "sm",
   },
 }
@@ -66,15 +67,17 @@ export function CopyableText({
       type="button"
       onClick={handleCopy}
       className={cn(
-        "flex items-center min-w-0 rounded-md cursor-pointer hover:bg-muted transition-colors",
-        config.buttonClass,
+        "inline-flex w-fit max-w-full shrink-0 items-center self-start rounded-md cursor-pointer transition-colors",
+        "border border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80",
+        config.paddingClass,
+        ellipsis && "min-w-0",
       )}
     >
       <Label color="foregroundMuted" ellipsis={ellipsis}>
         {displayValue ?? value}
       </Label>
       <Icon
-        icon={copied ? Check : Clipboard}
+        icon={copied ? Check : Copy}
         size={config.iconSize}
         color={copied ? "success" : "foregroundMuted"}
         className="shrink-0"

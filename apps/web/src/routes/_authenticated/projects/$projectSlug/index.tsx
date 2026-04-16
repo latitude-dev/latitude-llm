@@ -125,8 +125,10 @@ function ProjectPage() {
     serializeTraceColumnIds(DEFAULT_TRACE_COLUMNS),
   )
 
-  // Tracks which drawer tab is active so J/K knows when to defer to span navigation
-  const [activeDrawerTab, setActiveDrawerTab] = useState<string>("trace")
+  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
+    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
+      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
+  })
 
   // Ref to the ordered list of trace IDs from the currently loaded table page
   const traceIdsRef = useRef<string[]>([])
@@ -200,7 +202,8 @@ function ProjectPage() {
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-  }, [setActiveTraceId, setSelectedSpanId])
+    setTraceDetailTab("trace")
+  }, [setActiveTraceId, setSelectedSpanId, setTraceDetailTab])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -252,7 +255,7 @@ function ProjectPage() {
     filters,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
-    activeDrawerTab,
+    activeDrawerTab: traceDetailTab,
     baselines: cohortSummary?.baselines,
     sorting,
     onSortingChange,
@@ -383,7 +386,6 @@ function ProjectPage() {
             onPrevTrace={onPrevTrace}
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
-            onTabChange={setActiveDrawerTab}
           />
         </Layout.Aside>
       ) : null}

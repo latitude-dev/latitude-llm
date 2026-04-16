@@ -16,7 +16,7 @@ import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
@@ -127,6 +127,7 @@ function DatasetsPage() {
         </Layout.Actions>
         <Layout.List>
           <InfiniteTable
+            {...listingLayoutIntrinsicScroll.infiniteTable}
             data={datasets}
             isLoading={isLoading}
             columns={columns}

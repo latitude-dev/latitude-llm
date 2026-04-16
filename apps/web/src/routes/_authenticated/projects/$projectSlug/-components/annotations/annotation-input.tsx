@@ -133,7 +133,7 @@ export function AnnotationInput({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-2xl border bg-background transition-colors",
+        "flex flex-col rounded-2xl border border-2 bg-background transition-colors",
         "border-input focus-within:border-ring",
       )}
     >

@@ -22,7 +22,7 @@ import type { AnnotationQueueRecord } from "../../../../../domains/annotation-qu
 import { useMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
 import { pickUsersFromMembersMap } from "../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { AqListBreadcrumb } from "./-components/aq-list-breadcrumb.tsx"
 import { DeleteQueueModal } from "./-components/delete-queue-modal.tsx"
 import { QueueBadge } from "./-components/queue-badge.tsx"
@@ -187,6 +187,7 @@ function AnnotationQueuesPage() {
       <Layout.Body>
         <Layout.List>
           <InfiniteTable
+            {...listingLayoutIntrinsicScroll.infiniteTable}
             data={queues}
             isLoading={isLoading}
             columns={columns}

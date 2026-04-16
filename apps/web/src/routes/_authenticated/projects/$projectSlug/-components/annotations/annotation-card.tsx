@@ -18,9 +18,8 @@ import { useNavigate, useParams } from "@tanstack/react-router"
 import {
   EllipsisIcon,
   GlobeIcon,
-  HashIcon,
   InfoIcon,
-  PencilIcon,
+  ShieldAlertIcon,
   SparklesIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
@@ -69,7 +68,7 @@ function AnnotationApprovalButtons({ annotationId, onAction }: AnnotationApprova
           </span>
         }
       >
-        This annotation was created by our AI agent and requires review. Approve to keep it or reject to delete it.
+        This annotation was automatically created with AI and requires review
       </Tooltip>
       <Button
         variant="destructive-soft"
@@ -123,6 +122,7 @@ export function AnnotationCard({
   })
 
   const linkedIssueName = linkedIssue?.name ?? null
+  const linkedIssueDescription = linkedIssue?.description?.trim()
   const provenance = getAnnotationProvenance(annotation)
   const isEditable = canUpdateAnnotation(annotation)
   const isDraft = annotation.draftedAt !== null
@@ -188,7 +188,9 @@ export function AnnotationCard({
   const rawFeedback = (annotation.metadata as { rawFeedback?: string })?.rawFeedback?.trim()
   const humanFeedback = annotation.feedback?.trim()
   const showRawFeedback =
-    rawFeedback && (provenance === "agent" || ((provenance === "human" || provenance === "api") && isPublished))
+    rawFeedback &&
+    (provenance === "agent" || ((provenance === "human" || provenance === "api") && isPublished)) &&
+    rawFeedback !== humanFeedback
 
   return (
     <div
@@ -204,40 +206,20 @@ export function AnnotationCard({
           </>
         )}
         {provenance === "agent" && (
-          <Tooltip
-            asChild
-            trigger={
-              <div className="flex items-center gap-1.5">
-                <LatitudeLogo className="h-4 w-4" />
-                <Text.H6 weight="bold">Latitude</Text.H6>
-                <Badge variant="secondary" size="small">
-                  Agent
-                </Badge>
-              </div>
-            }
-          >
-            Created automatically by a Latitude system queue
-          </Tooltip>
+          <div className="flex items-center gap-1.5">
+            <LatitudeLogo className="h-4 w-4" />
+            <Text.H6 weight="bold">Latitude</Text.H6>
+            <Badge variant="secondary" size="small">
+              Agent
+            </Badge>
+          </div>
         )}
         {provenance === "api" && (
-          <Tooltip
-            asChild
-            trigger={
-              <Badge variant="outline" size="small">
-                API
-              </Badge>
-            }
-          >
-            Created via the public API
-          </Tooltip>
+          <Badge variant="outline" size="small">
+            API
+          </Badge>
         )}
         <Text.H6 color="foregroundMuted">{relativeTime(new Date(annotation.createdAt))}</Text.H6>
-        {isDraft && (
-          <Tooltip asChild trigger={<Icon icon={PencilIcon} size="xs" color="foregroundMuted" />}>
-            Draft annotation. It will be published automatically, or you can edit it while in draft.
-          </Tooltip>
-        )}
-
         <div className="ml-auto flex items-center gap-x-1">
           {isGlobal && (
             <Tooltip
@@ -262,7 +244,7 @@ export function AnnotationCard({
                 <PopoverContent side="bottom" align="end" className="max-w-md">
                   <div className="flex flex-col gap-0.5">
                     <Text.H6 color="foregroundMuted" className="mb-1">
-                      Original feedback
+                      This feedback has been enriched with AI
                     </Text.H6>
                     <Text.H6 className="whitespace-pre-wrap">{rawFeedback}</Text.H6>
                   </div>
@@ -296,31 +278,42 @@ export function AnnotationCard({
 
       {(linkedIssueName || isAgentDraft) && (
         <div className="flex items-center gap-2 pt-1">
-          {linkedIssueName && (
-            <Badge
-              data-no-navigate
-              variant="outline"
-              size="small"
-              ellipsis
-              role="button"
-              tabIndex={0}
-              aria-label={`Open issue ${linkedIssueName}`}
-              className="cursor-pointer hover:bg-muted"
-              iconProps={{
-                icon: HashIcon,
-                color: "foregroundMuted",
-                placement: "start",
-              }}
-              onClick={openLinkedIssue}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  openLinkedIssue(event)
-                }
-              }}
-            >
-              {linkedIssueName}
-            </Badge>
-          )}
+          {linkedIssueName &&
+            (() => {
+              const issueLinkBadge = (
+                <Badge
+                  data-no-navigate
+                  variant="outline"
+                  size="small"
+                  ellipsis
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open issue ${linkedIssueName}`}
+                  className="cursor-pointer hover:bg-muted"
+                  iconProps={{
+                    icon: ShieldAlertIcon,
+                    color: "foregroundMuted",
+                    placement: "start",
+                    className: "stroke-[2.5]",
+                  }}
+                  onClick={openLinkedIssue}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      openLinkedIssue(event)
+                    }
+                  }}
+                >
+                  {linkedIssueName}
+                </Badge>
+              )
+              return linkedIssueDescription ? (
+                <Tooltip asChild trigger={issueLinkBadge}>
+                  <span className="block max-w-xs whitespace-pre-wrap text-left">{linkedIssueDescription}</span>
+                </Tooltip>
+              ) : (
+                issueLinkBadge
+              )
+            })()}
           {isAgentDraft && (
             <div className="ml-auto">
               <AnnotationApprovalButtons annotationId={annotation.id} onAction={onDelete} />

@@ -2,7 +2,7 @@
 import type { ECharts, EChartsCoreOption } from "echarts/core"
 import EChartsReact from "echarts-for-react/lib/core"
 import type { ComponentType, CSSProperties, HTMLAttributes } from "react"
-import { useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
@@ -103,6 +103,17 @@ function BarChart({
 
   // Stable event handlers that read the latest onSelect from a ref.
   // This prevents echarts-for-react from rebinding events on every render.
+  const reapplyBrushCursor = useCallback(() => {
+    chartRef.current?.dispatchAction({
+      type: "takeGlobalCursor",
+      key: "brush",
+      brushOption: {
+        brushType: "lineX",
+        brushMode: "single",
+      },
+    })
+  }, [])
+
   const onEvents = useMemo(() => {
     if (!hasBrush) return undefined
     return {
@@ -121,24 +132,23 @@ function BarChart({
         }
         onSelectRef.current?.(null)
       },
+      /**
+       * `notMerge` replaces the full option; brush interaction mode is reset and must be
+       * re-established. `onChartReady` only runs once, so we reapply after each render cycle.
+       */
+      finished: () => {
+        reapplyBrushCursor()
+      },
     }
-  }, [hasBrush])
+  }, [hasBrush, reapplyBrushCursor])
 
   const onChartReady = useMemo(() => {
     if (!hasBrush) return undefined
     return (instance: ECharts) => {
       chartRef.current = instance
-      // Activate brush cursor on every chart init/re-init
-      instance.dispatchAction({
-        type: "takeGlobalCursor",
-        key: "brush",
-        brushOption: {
-          brushType: "lineX",
-          brushMode: "single",
-        },
-      })
+      reapplyBrushCursor()
     }
-  }, [hasBrush])
+  }, [hasBrush, reapplyBrushCursor])
 
   if (!mounted) {
     return (
