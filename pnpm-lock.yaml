@@ -24,6 +24,9 @@ catalogs:
     '@paralleldrive/cuid2':
       specifier: 3.3.0
       version: 3.3.0
+    '@temporalio/activity':
+      specifier: 1.16.0
+      version: 1.16.0
     '@temporalio/client':
       specifier: 1.16.0
       version: 1.16.0
@@ -1589,12 +1592,18 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../domain/queue
+      '@opentelemetry/api':
+        specifier: 1.9.1
+        version: 1.9.1
       '@platform/env':
         specifier: workspace:*
         version: link:../env
       '@repo/observability':
         specifier: workspace:*
         version: link:../../observability
+      '@temporalio/activity':
+        specifier: 'catalog:'
+        version: 1.16.0
       '@temporalio/client':
         specifier: 'catalog:'
         version: 1.16.0
