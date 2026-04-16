@@ -1,16 +1,13 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Icon, type InfiniteTableSorting, Input, type SortDirection, Tabs, Tooltip } from "@repo/ui"
+import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
 import {
-  AppWindowIcon,
-  ChevronDown,
   DatabaseIcon,
   FilterIcon,
   LayersIcon,
   MessagesSquareIcon,
-  SearchIcon,
   TextIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
@@ -269,11 +266,6 @@ function ProjectPage() {
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
-            <Button variant="outline" size="sm" disabled>
-              <AppWindowIcon className="h-4 w-4" />
-              All logs
-              <ChevronDown className="h-4 w-4" />
-            </Button>
             <TimeFilterDropdown
               {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
               {...(timeTo ? { startTimeTo: timeTo } : {})}
@@ -346,15 +338,6 @@ function ProjectPage() {
                 setActiveTab(id)
               }}
             />
-            <div className="relative">
-              <Input
-                placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
-                size="sm"
-                className="peer w-60 pl-8"
-                disabled
-              />
-              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground peer-disabled:opacity-50" />
-            </div>
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>
