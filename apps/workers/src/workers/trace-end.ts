@@ -63,9 +63,9 @@ interface RunTraceEndDeps {
 }
 
 type DecisionCounts = {
-  readonly selectedCount: number
-  readonly sampledOutCount: number
-  readonly filterMissCount: number
+  selectedCount: number
+  sampledOutCount: number
+  filterMissCount: number
 }
 
 type MutableDecisionCounts = {
