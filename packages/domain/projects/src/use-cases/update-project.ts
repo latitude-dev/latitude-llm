@@ -28,6 +28,7 @@ export type UpdateProjectError =
 
 export const updateProjectUseCase = (input: UpdateProjectInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("project.id", input.id)
     const sqlClient = yield* SqlClient
     const { organizationId } = sqlClient
 
@@ -88,4 +89,4 @@ export const updateProjectUseCase = (input: UpdateProjectInput) =>
         return updatedProject
       }),
     )
-  })
+  }).pipe(Effect.withSpan("projects.updateProject"))

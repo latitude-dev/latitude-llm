@@ -23,6 +23,7 @@ No business logic in handlers, controllers, or jobs.
 - **Clients**: Initialize integrations in `apps/*/clients.ts` and import from boundaries — avoid scattering raw clients.
 - **Routes**: Use `apps/*/routes/` with a `registerRoutes()` (or equivalent) pattern so the HTTP surface stays modular.
 - **Logging**: Use `createLogger()` from `@repo/observability` with a stable service name per app.
+- **Tracing**: Every `Effect.runPromise` call site must include `withTracing` from `@repo/observability` in the pipe chain to connect Effect spans to the OTel pipeline. See [effect-and-errors](../effect-and-errors/SKILL.md) for the full tracing rules.
 - **Configuration values**: Read env through `parseEnv` / `parseEnvOptional` — see [env-configuration](../env-configuration/SKILL.md).
 
 ## Web vs public API (`apps/web` and `apps/api`)

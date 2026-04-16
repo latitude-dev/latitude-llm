@@ -3,7 +3,7 @@ import { deleteScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId, ScoreId } from "@domain/shared"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient } from "../clients.ts"
 
@@ -21,6 +21,7 @@ export const createScoresWorker = ({ consumer, clickhouseClient }: ScoresWorkerD
     "delete-analytics": (payload) =>
       deleteScoreAnalyticsUseCase({ scoreId: ScoreId(payload.scoreId) }).pipe(
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        withTracing,
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "deleted") {

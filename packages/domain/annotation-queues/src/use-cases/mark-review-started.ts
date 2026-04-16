@@ -19,6 +19,9 @@ export interface MarkReviewStartedInput {
  */
 export const markReviewStartedUseCase = (input: MarkReviewStartedInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("score.id", input.score.id)
+    yield* Effect.annotateCurrentSpan("score.projectId", input.score.projectId)
+
     const { score } = input
 
     if (score.source !== "annotation") return 0
@@ -66,4 +69,4 @@ export const markReviewStartedUseCase = (input: MarkReviewStartedInput) =>
     )
 
     return pendingItems.length
-  })
+  }).pipe(Effect.withSpan("annotationQueues.markReviewStarted"))

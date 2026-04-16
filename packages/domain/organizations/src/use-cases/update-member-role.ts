@@ -18,6 +18,10 @@ export interface UpdateMemberRoleInput {
 
 export const updateMemberRoleUseCase = (input: UpdateMemberRoleInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("targetUserId", input.targetUserId)
+    yield* Effect.annotateCurrentSpan("newRole", input.newRole)
+
     const repository = yield* MembershipRepository
 
     // Check if requesting user is an admin
@@ -54,4 +58,4 @@ export const updateMemberRoleUseCase = (input: UpdateMemberRoleInput) =>
     yield* repository.save(updatedMembership)
 
     return { success: true }
-  })
+  }).pipe(Effect.withSpan("organizations.updateMemberRole"))

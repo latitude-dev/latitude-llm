@@ -26,7 +26,7 @@ import {
   ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -173,6 +173,7 @@ export const createLiveEvaluationsWorker = ({
           OrganizationId(payload.organizationId),
         ),
         withClickHouse(TraceRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        withTracing,
         Effect.provide(Layer.succeed(LiveEvaluationQueuePublisher, liveEvaluationQueuePublisher)),
         Effect.tap((result) =>
           Effect.sync(() => {
@@ -222,6 +223,7 @@ export const createLiveEvaluationsWorker = ({
           OrganizationId(payload.organizationId),
         ),
         withDefaultAi,
+        withTracing,
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "skipped") {

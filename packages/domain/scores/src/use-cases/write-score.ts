@@ -145,6 +145,8 @@ const buildScore = ({
 export const writeScoreUseCase = (input: WriteScoreInput) =>
   Effect.gen(function* () {
     const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
+    yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
+    yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
     const sqlClient = yield* SqlClient
 
     const score = yield* sqlClient.transaction(
@@ -203,4 +205,4 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
     }
 
     return score
-  })
+  }).pipe(Effect.withSpan("scores.writeScore"))

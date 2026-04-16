@@ -19,6 +19,7 @@ import {
   SqlClientLive,
 } from "@platform/db-postgres"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -157,7 +158,7 @@ export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
           hasMore: listPage.hasMore,
           nextCursor: listPage.nextCursor,
         }
-      }).pipe(Effect.provide(itemsLayer)),
+      }).pipe(Effect.provide(itemsLayer), withTracing),
     )
 
     return page
@@ -211,7 +212,7 @@ export const addTracesToQueueFunction = createServerFn({ method: "POST" })
       ? { projectId, queueId: AnnotationQueueId(data.queueId), selection }
       : { projectId, newQueue: data.newQueue as NewQueueInput, selection }
 
-    const result = await Effect.runPromise(requestBulkQueueItems(input).pipe(Effect.provide(layer)))
+    const result = await Effect.runPromise(requestBulkQueueItems(input).pipe(Effect.provide(layer), withTracing))
     return { queueId: result.queueId as string }
   })
 
@@ -262,7 +263,7 @@ export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
           ...toItemRecord(item),
           traceDisplayName,
         }
-      }).pipe(Effect.provide(layer)),
+      }).pipe(Effect.provide(layer), withTracing),
     )
   })
 
@@ -312,7 +313,7 @@ export const getQueueItemNavigation = createServerFn({ method: "GET" })
           currentIndex: position.currentIndex,
           totalItems: position.totalItems,
         }
-      }).pipe(Effect.provide(layer)),
+      }).pipe(Effect.provide(layer), withTracing),
     )
   })
 
@@ -354,7 +355,7 @@ export const completeQueueItem = createServerFn({ method: "POST" })
         })
 
         return { nextItemId }
-      }).pipe(Effect.provide(layer)),
+      }).pipe(Effect.provide(layer), withTracing),
     )
   })
 
@@ -381,6 +382,6 @@ export const uncompleteQueueItem = createServerFn({ method: "POST" })
         projectId,
         queueId: data.queueId,
         itemId: data.itemId,
-      }).pipe(Effect.provide(layer)),
+      }).pipe(Effect.provide(layer), withTracing),
     )
   })

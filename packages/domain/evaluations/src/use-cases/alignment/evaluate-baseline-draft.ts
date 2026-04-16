@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import type { HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"
 import { evaluateDraftAgainstExamplesUseCase } from "./evaluate-draft-against-examples.ts"
 
@@ -14,4 +15,4 @@ export const evaluateBaselineDraftUseCase = (input: {
     script: input.script,
     positiveExamples: input.positiveExamples,
     negativeExamples: input.negativeExamples,
-  })
+  }).pipe(Effect.withSpan("evaluations.evaluateBaselineDraft"))

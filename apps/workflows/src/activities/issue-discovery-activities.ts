@@ -25,7 +25,7 @@ import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
 
@@ -36,6 +36,7 @@ export const checkEligibility = async (input: CheckEligibilityInput) => {
     await Effect.runPromise(
       checkEligibilityUseCase(input).pipe(
         withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+        withTracing,
       ),
     )
 
@@ -63,6 +64,7 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     embedScoreFeedbackUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withAi(AIEmbedLive, getRedisClient()),
+      withTracing,
     ),
   )
 
@@ -70,16 +72,18 @@ export const hybridSearchIssues = async (input: HybridSearchIssuesInput) =>
   Effect.runPromise(
     hybridSearchIssuesUseCase(input).pipe(
       withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )
 
 export const rerankIssueCandidates = async (input: RerankIssueCandidatesInput) =>
-  Effect.runPromise(rerankIssueCandidatesUseCase(input).pipe(withAi(AIRerankLive, getRedisClient())))
+  Effect.runPromise(rerankIssueCandidatesUseCase(input).pipe(withAi(AIRerankLive, getRedisClient()), withTracing))
 
 export const resolveMatchedIssue = async (input: ResolveMatchedIssueInput) =>
   Effect.runPromise(
     resolveMatchedIssueUseCase(input).pipe(
       withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )
 
@@ -92,6 +96,7 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
         OrganizationId(input.organizationId),
       ),
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
     ),
   )
 
@@ -103,6 +108,7 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      withTracing,
     ),
   )
 
@@ -111,6 +117,7 @@ export const syncScoreAnalytics = async (input: SyncScoreAnalyticsInput) =>
     syncScoreAnalyticsUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )
 
@@ -119,5 +126,6 @@ export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
     syncIssueProjectionsUseCase(input).pipe(
       withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )

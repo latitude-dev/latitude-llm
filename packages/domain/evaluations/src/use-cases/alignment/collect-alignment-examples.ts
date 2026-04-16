@@ -19,6 +19,10 @@ export const collectAlignmentExamplesUseCase = (input: {
   readonly requirePositiveExamples?: boolean
 }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+
     const issueRepository = yield* EvaluationIssueRepository
     const exampleRepository = yield* EvaluationAlignmentExamplesRepository
     const traceRepository = yield* TraceRepository
@@ -96,4 +100,4 @@ export const collectAlignmentExamplesUseCase = (input: {
       positiveExamples: positiveExamples.map(hydrateExample),
       negativeExamples: negativeExamples.map(hydrateExample),
     } satisfies CollectedEvaluationAlignmentExamples
-  })
+  }).pipe(Effect.withSpan("evaluations.collectAlignmentExamples"))

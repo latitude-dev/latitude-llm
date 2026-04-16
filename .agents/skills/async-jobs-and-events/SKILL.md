@@ -61,6 +61,7 @@ ScoreCreated: (event) =>
 - Put **IDs** or opaque storage keys in job payloads — not full mutable entities.
 - **Re-fetch** authoritative state inside the worker before acting.
 - Make **stale or deleted** entities an explicit outcome (skip, dead-letter, or record failure) instead of assuming rows still exist.
+- Worker handler effects must include `withTracing` from `@repo/observability` in their pipe chain so that Effect spans flow into the OTel pipeline. See [effect-and-errors](../effect-and-errors/SKILL.md) for tracing rules.
 - For **transactional domain events**, write through the **`OutboxEventWriter`** service (or a plain `OutboxEventWriterShape` from `createOutboxWriter` in `@platform/db-postgres`) instead of inserting outbox rows directly.
 - For **high-volume or otherwise non-transactional producers** whose upstream write is already durable, publish directly through **`createEventsPublisher(queuePublisher)`** into `domain-events` instead of persisting an outbox row only to forward it.
 - Domain-event consumers should act as **dispatchers**: publish downstream topic tasks or start workflows, but do not run synchronous business logic inline inside the event handler.

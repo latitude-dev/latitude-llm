@@ -11,6 +11,7 @@ export interface SyncScoreAnalyticsInput {
 
 export const syncScoreAnalyticsUseCase = (input: SyncScoreAnalyticsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("score.scoreId", input.scoreId)
     const scoreRepository = yield* ScoreRepository
     const analyticsRepository = yield* ScoreAnalyticsRepository
 
@@ -27,4 +28,4 @@ export const syncScoreAnalyticsUseCase = (input: SyncScoreAnalyticsInput) =>
     }
 
     yield* analyticsRepository.insert(score)
-  })
+  }).pipe(Effect.withSpan("scores.syncScoreAnalytics"))

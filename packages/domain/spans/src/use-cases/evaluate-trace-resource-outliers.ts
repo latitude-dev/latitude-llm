@@ -15,6 +15,9 @@ export type EvaluateTraceResourceOutliersError = NotFoundError | RepositoryError
 
 export const evaluateTraceResourceOutliersUseCase = (input: EvaluateTraceResourceOutliersInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+
     const traceRepository = yield* TraceRepository
     const trace = yield* traceRepository.findByTraceId({
       organizationId: input.organizationId,
@@ -30,4 +33,4 @@ export const evaluateTraceResourceOutliersUseCase = (input: EvaluateTraceResourc
     })
 
     return evaluateTraceResourceOutliers(trace, buildTraceMetricBaselines(baselineData))
-  })
+  }).pipe(Effect.withSpan("spans.evaluateTraceResourceOutliers"))

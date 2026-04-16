@@ -2,7 +2,7 @@ import { provisionSystemQueuesUseCase } from "@domain/annotation-queues"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -17,6 +17,7 @@ export const provisionSystemQueues = async (input: { readonly organizationId: st
       projectId: ProjectId(input.projectId),
     }).pipe(
       withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
     ),
   )

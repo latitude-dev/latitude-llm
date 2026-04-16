@@ -16,6 +16,10 @@ export type CompleteQueueItemError = RepositoryError | QueueItemNotFoundError | 
 
 export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("queue.itemId", input.itemId)
+
     const sqlClient = yield* SqlClient
     const itemRepo = yield* AnnotationQueueItemRepository
     const queueRepo = yield* AnnotationQueueRepository
@@ -68,4 +72,4 @@ export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
         return updated
       }),
     )
-  })
+  }).pipe(Effect.withSpan("annotationQueues.completeQueueItem"))

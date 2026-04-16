@@ -138,6 +138,9 @@ export const processIngestedSpansUseCase =
     SpanRepository | StorageDisk
   > =>
     Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+
       const payload = yield* resolvePayload(input)
       const spans = yield* decodeAndTransform(payload, input)
 
@@ -159,4 +162,4 @@ export const processIngestedSpansUseCase =
         ),
         { concurrency: "unbounded" },
       )
-    })
+    }).pipe(Effect.withSpan("spans.processIngestedSpans"))

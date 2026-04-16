@@ -36,6 +36,9 @@ export const deleteQueueUseCase = (
   input: DeleteQueueInput,
 ): Effect.Effect<DeleteQueueResult, DeleteQueueError, AnnotationQueueRepository> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+
     const repo = yield* AnnotationQueueRepository
 
     const existing = yield* repo.findByIdInProject({
@@ -62,4 +65,4 @@ export const deleteQueueUseCase = (
     const saved = yield* repo.save(deleted)
 
     return { queue: saved }
-  })
+  }).pipe(Effect.withSpan("annotationQueues.deleteQueue"))

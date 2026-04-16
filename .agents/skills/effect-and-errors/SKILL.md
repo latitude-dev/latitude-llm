@@ -33,6 +33,54 @@ details when the documentation isn't enough.
 - Use `Effect.repeat` with `Schedule` for polling/recurring tasks
 - Use `Fiber` for lifecycle management of long-running effects
 
+## Tracing and observability
+
+Effect programs are instrumented with Effect's native OpenTelemetry support via `@effect/opentelemetry`. This bridges Effect spans into the existing OTel pipeline (Datadog, etc.) so business logic is visible alongside HTTP request spans.
+
+### Use case instrumentation (required for all new use cases)
+
+Every use case function that returns an Effect **must** be wrapped with `Effect.withSpan` and annotated with key business IDs:
+
+```typescript
+export const writeScoreUseCase = (input: WriteScoreInput) =>
+  Effect.gen(function* () {
+    const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
+    yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
+    yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
+    // ... business logic
+  }).pipe(Effect.withSpan("scores.writeScore"))
+```
+
+**Rules:**
+
+1. **Span naming:** `{domain}.{functionName}` in camelCase — e.g. `scores.writeScore`, `issues.discoverIssue`, `evaluations.runLiveEvaluation`.
+2. **Attribute annotation:** Call `yield* Effect.annotateCurrentSpan("key", value)` early in the function (after input parsing, before business logic) for key IDs (`projectId`, `scoreId`, `issueId`, etc.) and discriminating attributes (`source`, `status`). Only annotate when the value is present (guard nullables).
+3. **No type signature changes:** `Effect.withSpan` is transparent — it does not alter the Effect's success, error, or requirements channels.
+4. **No extra imports:** `Effect` is already imported in every use case file. `withSpan` and `annotateCurrentSpan` are methods on `Effect`.
+
+### Edge call sites (required for all new Effect.runPromise sites)
+
+Every `Effect.runPromise` call site **must** include `withTracing` in the pipe chain to provide the OTel tracer layer:
+
+```typescript
+import { withTracing } from "@repo/observability"
+
+const result = await Effect.runPromise(
+  myEffect.pipe(
+    withPostgres(Layer.mergeAll(RepoLive, ...), client, organizationId),
+    withClickHouse(AnalyticsRepoLive, chClient, organizationId),
+    withTracing,
+  ),
+)
+```
+
+**Rules:**
+
+1. `withTracing` is a pipe combinator exported from `@repo/observability`. It provides `EffectOtelTracerLive` — the bridge between Effect's Tracer and the global OTel TracerProvider.
+2. Place `withTracing` alongside (not inside) infrastructure providers like `withPostgres` / `withClickHouse`. Tracing is decoupled from DB layers.
+3. Without `withTracing`, `Effect.withSpan` calls are no-ops (Effect's default tracer discards spans). In tests this is fine — tests don't initialize OTel.
+4. Active OTel spans from HTTP middleware (Hono `@hono/otel`) are automatically picked up as parents, so Effect spans nest correctly under request traces.
+
 ## Error handling
 
 - Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries

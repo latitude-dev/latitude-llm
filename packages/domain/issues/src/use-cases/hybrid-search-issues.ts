@@ -14,6 +14,7 @@ export interface HybridSearchIssuesResult {
 
 export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const issueProjectionRepository = yield* IssueProjectionRepository
 
     const candidates = yield* issueProjectionRepository.hybridSearch({
@@ -25,4 +26,4 @@ export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
     return {
       candidates,
     } satisfies HybridSearchIssuesResult
-  })
+  }).pipe(Effect.withSpan("issues.hybridSearchIssues"))

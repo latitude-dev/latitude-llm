@@ -24,6 +24,7 @@ export interface RetrievalResult {
 
 export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("candidateCount", input.candidates.length)
     const limitedCandidates = [...input.candidates]
       .sort((left, right) => right.score - left.score)
       .slice(0, ISSUE_DISCOVERY_RERANK_CANDIDATES)
@@ -72,4 +73,4 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
       matchedIssueUuid: matchedIssue.uuid,
       similarityScore: best.relevanceScore,
     } satisfies RetrievalResult
-  })
+  }).pipe(Effect.withSpan("issues.rerankIssueCandidates"))

@@ -28,4 +28,4 @@ export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =
     return yield* new SlugGenerationError({
       message: `Could not generate a unique slug after ${MAX_SLUG_ATTEMPTS} attempts`,
     })
-  })
+  }).pipe(Effect.withSpan("organizations.generateUniqueOrganizationSlug"))

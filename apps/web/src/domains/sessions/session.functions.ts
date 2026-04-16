@@ -1,4 +1,5 @@
 import { generateId, UnauthorizedError } from "@domain/shared"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
@@ -58,18 +59,20 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
 
   // Write a domain event for background deletion
   await Effect.runPromise(
-    outboxWriter.write({
-      id: generateId(),
-      eventName: "UserDeletionRequested",
-      aggregateType: "user",
-      aggregateId: userId,
-      organizationId: "system",
-      payload: {
-        organizationId: session.session.activeOrganizationId ?? "system",
-        userId,
-      },
-      occurredAt: new Date(),
-    }),
+    outboxWriter
+      .write({
+        id: generateId(),
+        eventName: "UserDeletionRequested",
+        aggregateType: "user",
+        aggregateId: userId,
+        organizationId: "system",
+        payload: {
+          organizationId: session.session.activeOrganizationId ?? "system",
+          userId,
+        },
+        occurredAt: new Date(),
+      })
+      .pipe(withTracing),
   )
 
   // Revoke the session so the user is logged out

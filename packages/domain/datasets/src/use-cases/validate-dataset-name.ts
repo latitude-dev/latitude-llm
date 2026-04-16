@@ -14,6 +14,8 @@ export function validateDatasetNameInProject(args: {
   readonly excludeDatasetId?: DatasetId
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+
     const repo = yield* DatasetRepository
     const trimmed = args.name.trim()
     if (!trimmed) {
@@ -28,5 +30,5 @@ export function validateDatasetNameInProject(args: {
       return yield* new DuplicateDatasetNameError({ projectId: args.projectId, name: trimmed })
     }
     return trimmed
-  })
+  }).pipe(Effect.withSpan("datasets.validateDatasetName"))
 }

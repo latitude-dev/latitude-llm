@@ -16,6 +16,8 @@ export function insertRows(args: {
   readonly source?: string
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     const resolvedRows = yield* Effect.forEach(args.rows, (row) =>
       buildValidRowId(row.id).pipe(Effect.map((id) => ({ ...row, id }))),
     )
@@ -45,5 +47,5 @@ export function insertRows(args: {
       )
 
     return { versionId: version.id, version: version.version, rowIds }
-  })
+  }).pipe(Effect.withSpan("datasets.insertRows"))
 }

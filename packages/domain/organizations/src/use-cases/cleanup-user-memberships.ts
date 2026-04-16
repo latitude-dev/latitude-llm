@@ -12,6 +12,8 @@ export const cleanupUserMembershipsUseCase = (
   input: CleanupUserMembershipsInput,
 ): Effect.Effect<void, RepositoryError, MembershipRepository | OrganizationRepository> =>
   E.gen(function* () {
+    yield* E.annotateCurrentSpan("userId", input.userId)
+
     const membershipRepo = yield* MembershipRepository
     const orgRepo = yield* OrganizationRepository
 
@@ -27,4 +29,4 @@ export const cleanupUserMembershipsUseCase = (
         yield* membershipRepo.delete(membership.id)
       }
     }
-  })
+  }).pipe(E.withSpan("organizations.cleanupUserMemberships"))

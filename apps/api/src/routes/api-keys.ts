@@ -9,6 +9,7 @@ import { ApiKeyId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import {
   errorResponse,
@@ -142,6 +143,7 @@ export const createApiKeysRoutes = () => {
           c.var.postgresClient,
           c.var.organization.id,
         ),
+        withTracing,
       ),
     )
     return c.json(toResponse(apiKey), 201)
@@ -152,7 +154,7 @@ export const createApiKeysRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.list()
-      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id)),
+      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
     return c.json({ apiKeys: apiKeys.map(toListItemResponse) }, 200)
   })
@@ -164,6 +166,7 @@ export const createApiKeysRoutes = () => {
       revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
         Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
         withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
+        withTracing,
       ),
     )
     return c.body(null, 204)

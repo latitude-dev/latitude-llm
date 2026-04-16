@@ -2,7 +2,7 @@ import { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 const logger = createLogger("touch-buffer")
@@ -113,7 +113,7 @@ class TouchBuffer {
         Effect.gen(function* () {
           const repo = yield* ApiKeyRepository
           return yield* repo.touchBatch(keyIds)
-        }).pipe(withPostgres(ApiKeyRepositoryLive, this.client)),
+        }).pipe(withPostgres(ApiKeyRepositoryLive, this.client), withTracing),
       )
 
       this.log({

@@ -12,6 +12,7 @@ import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -184,6 +185,7 @@ export const createScoresRoutes = () => {
           organizationId,
         ),
         withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
+        withTracing,
       ),
     )
 

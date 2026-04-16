@@ -7,7 +7,7 @@ import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhous
 import { DatasetRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
@@ -110,6 +110,7 @@ export const createDatasetExportWorker = ({
         ),
         withPostgres(DatasetRepositoryLive, pgClient, organizationId),
         withClickHouse(DatasetRowRepositoryLive, chClient, organizationId),
+        withTracing,
       )
     },
   })

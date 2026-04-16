@@ -2,6 +2,7 @@ import { OrganizationId, ProjectId } from "@domain/shared"
 import { ingestSpansUseCase } from "@domain/spans"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { StorageDiskLive } from "@platform/storage-object"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import type { Hono } from "hono"
 import { getQueuePublisher, getRedisClient, getStorageDisk } from "../clients.ts"
@@ -54,7 +55,7 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
         apiKeyId: c.get("apiKeyId"),
         payload: new Uint8Array(body),
         contentType,
-      }).pipe(Effect.provide(Layer.merge(StorageDiskLive(disk), QueuePublisherLive(publisher)))),
+      }).pipe(Effect.provide(Layer.merge(StorageDiskLive(disk), QueuePublisherLive(publisher))), withTracing),
     )
 
     return c.json({}, 202)

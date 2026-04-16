@@ -23,7 +23,7 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, type WeaviateClient, withWeaviate } from "@platform/db-weaviate"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
 
@@ -74,6 +74,7 @@ export const createIssuesWorker = async ({
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
+        withTracing,
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
         Effect.asVoid,
       ),
@@ -86,6 +87,7 @@ export const createIssuesWorker = async ({
         ),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIGenerateLive, rdClient),
+        withTracing,
         Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         Effect.tap(() =>
           Effect.sync(() =>
@@ -110,6 +112,7 @@ export const createIssuesWorker = async ({
         withPostgres(IssueRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
+        withTracing,
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "removed") {

@@ -125,6 +125,11 @@ const buildLiveEvaluationExecutionTelemetry = (input: RunLiveEvaluationInput): G
 
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
+    yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("evaluation.traceId", input.traceId)
+
     const evaluationRepository = yield* EvaluationRepository
     const scoreRepository = yield* ScoreRepository
     const projectId = ProjectId(input.projectId)
@@ -304,7 +309,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         score,
       },
     } satisfies RunLiveEvaluationResult
-  }) as Effect.Effect<
+  }).pipe(Effect.withSpan("evaluations.runLiveEvaluation")) as Effect.Effect<
     RunLiveEvaluationResult,
     RunLiveEvaluationError,
     | AI

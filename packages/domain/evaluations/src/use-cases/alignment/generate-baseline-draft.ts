@@ -20,4 +20,4 @@ export const generateBaselineDraftUseCase = (input: {
       evaluationHash: yield* Effect.tryPromise(() => hashOptimizationCandidateText(script)),
       trigger: defaultEvaluationTrigger(),
     } satisfies GeneratedEvaluationDraft
-  })
+  }).pipe(Effect.withSpan("evaluations.generateBaselineDraft"))

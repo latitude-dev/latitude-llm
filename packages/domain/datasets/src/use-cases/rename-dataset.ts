@@ -5,6 +5,8 @@ import { validateDatasetNameInProject } from "./validate-dataset-name.ts"
 
 export function renameDataset(args: { readonly datasetId: DatasetId; readonly name: string }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     const repo = yield* DatasetRepository
     const dataset = yield* repo.findById(args.datasetId)
     const trimmed = args.name.trim()
@@ -17,5 +19,5 @@ export function renameDataset(args: { readonly datasetId: DatasetId; readonly na
     })
 
     return yield* repo.updateName({ id: args.datasetId, name })
-  })
+  }).pipe(Effect.withSpan("datasets.renameDataset"))
 }

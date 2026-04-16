@@ -5,7 +5,7 @@ import { processIngestedSpansUseCase } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { StorageDiskLive } from "@platform/storage-object"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient, getStorageDisk } from "../clients.ts"
 
@@ -53,6 +53,7 @@ export const createSpanIngestionWorker = ({
           ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
           withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
+          withTracing,
           Effect.provide(StorageDiskLive(disk)),
         )
       },

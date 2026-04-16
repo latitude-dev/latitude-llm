@@ -5,6 +5,7 @@ import {
 } from "@domain/organizations"
 import { OrganizationId, UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
@@ -20,7 +21,7 @@ export const listOrganizations = createServerFn({ method: "GET" }).handler(async
     Effect.gen(function* () {
       const repo = yield* OrganizationRepository
       return yield* repo.listByUserId(UserId(userId))
-    }).pipe(withPostgres(repoLayer, client)),
+    }).pipe(withPostgres(repoLayer, client), withTracing),
   )
 })
 
@@ -32,6 +33,7 @@ export const createOrganization = createServerFn({ method: "POST" })
     const slug = await Effect.runPromise(
       generateUniqueOrganizationSlugUseCase({ name: data.name }).pipe(
         withPostgres(OrganizationRepositoryLive, adminClient),
+        withTracing,
       ),
     )
 
@@ -82,6 +84,7 @@ export const updateOrganization = createServerFn({ method: "POST" })
     return await Effect.runPromise(
       updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
+        withTracing,
       ),
     )
   })

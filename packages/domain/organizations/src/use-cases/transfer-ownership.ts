@@ -17,6 +17,9 @@ export interface TransferOwnershipInput {
 
 export const transferOwnershipUseCase = (input: TransferOwnershipInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("newOwnerUserId", input.newOwnerUserId)
+
     const repository = yield* MembershipRepository
 
     // Check if current owner is actually the owner
@@ -62,4 +65,4 @@ export const transferOwnershipUseCase = (input: TransferOwnershipInput) =>
     yield* repository.save(updatedNewOwnerMembership)
 
     return { success: true }
-  })
+  }).pipe(Effect.withSpan("organizations.transferOwnership"))

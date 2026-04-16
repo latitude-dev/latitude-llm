@@ -3,7 +3,7 @@ import type { QueueConsumer, WorkflowStarterShape } from "@domain/queue"
 import { deterministicSampling, OrganizationId, ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
 import { createIterationProgress } from "../services/iteration-progress.ts"
@@ -122,7 +122,7 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
           startedWorkflows,
         }),
       )
-    })
+    }).pipe(withTracing)
   }
 }
 

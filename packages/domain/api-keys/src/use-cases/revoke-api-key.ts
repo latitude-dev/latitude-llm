@@ -20,6 +20,7 @@ export class ApiKeyCacheInvalidator extends ServiceMap.Service<
 
 export const revokeApiKeyUseCase = (input: RevokeApiKeyInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
     const sqlClient = yield* SqlClient
     const cacheInvalidator = yield* ApiKeyCacheInvalidator
 
@@ -38,4 +39,4 @@ export const revokeApiKeyUseCase = (input: RevokeApiKeyInput) =>
         return revokedApiKey
       }),
     )
-  })
+  }).pipe(Effect.withSpan("apiKeys.revokeApiKey"))

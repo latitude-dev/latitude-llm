@@ -46,6 +46,9 @@ export type PersistSystemQueueAnnotationError = BadRequestError | RepositoryErro
  */
 export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnnotationInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+    yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+
     const parsedInput = yield* parseOrBadRequest(
       systemQueueAnnotateInputSchema,
       input,
@@ -146,4 +149,4 @@ export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnn
       draftAnnotationId: result.draftAnnotationId,
       wasCreated: result.wasCreated,
     }) as SystemQueueAnnotateOutput
-  })
+  }).pipe(Effect.withSpan("annotationQueues.persistSystemQueueAnnotation"))

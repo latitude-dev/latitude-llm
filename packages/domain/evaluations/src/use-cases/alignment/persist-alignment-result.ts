@@ -18,6 +18,12 @@ export const persistAlignmentResultUseCase = (input: {
   readonly description: string
 }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+    if (input.evaluationId) {
+      yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
+    }
+
     const evaluationRepository = yield* EvaluationRepository
     const projectId = ProjectId(input.projectId)
     const issueId = IssueId(input.issueId)
@@ -69,4 +75,4 @@ export const persistAlignmentResultUseCase = (input: {
     yield* evaluationRepository.save(evaluation)
 
     return { evaluationId: evaluation.id } satisfies PersistEvaluationAlignmentResult
-  })
+  }).pipe(Effect.withSpan("evaluations.persistAlignmentResult"))

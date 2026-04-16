@@ -311,6 +311,7 @@ export const listIssuesUseCase = (
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
+    yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const issueRepository = yield* IssueRepository
     const evaluationRepository = yield* EvaluationRepository
@@ -520,4 +521,4 @@ export const listIssuesUseCase = (
       offset: parsed.offset,
       occurrencesSum,
     } satisfies ListIssuesResult
-  })
+  }).pipe(Effect.withSpan("issues.listIssues"))

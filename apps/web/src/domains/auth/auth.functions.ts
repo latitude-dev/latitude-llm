@@ -1,5 +1,6 @@
 import { InvitationRepository } from "@domain/organizations"
 import { InvitationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
@@ -54,6 +55,6 @@ export const getInvitationPreview = createServerFn({ method: "GET" })
         return yield* repo
           .findPublicPendingPreviewById(data.invitationId)
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      }).pipe(withPostgres(InvitationRepositoryLive, client)),
+      }).pipe(withPostgres(InvitationRepositoryLive, client), withTracing),
     )
   })

@@ -55,6 +55,10 @@ const shouldSampleLiveQueue = async (input: {
 
 export const curateLiveAnnotationQueuesUseCase = (input: CurateLiveAnnotationQueuesInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+
     const traceRepository = yield* TraceRepository
     const queueRepository = yield* AnnotationQueueRepository
     const queueItemRepository = yield* AnnotationQueueItemRepository
@@ -164,7 +168,7 @@ export const curateLiveAnnotationQueuesUseCase = (input: CurateLiveAnnotationQue
         insertedItemCount,
       },
     } satisfies CurateLiveAnnotationQueuesResult
-  }) as Effect.Effect<
+  }).pipe(Effect.withSpan("annotationQueues.curateLiveAnnotationQueues")) as Effect.Effect<
     CurateLiveAnnotationQueuesResult,
     CurateLiveAnnotationQueuesError,
     SqlClient | TraceRepository | AnnotationQueueRepository | AnnotationQueueItemRepository

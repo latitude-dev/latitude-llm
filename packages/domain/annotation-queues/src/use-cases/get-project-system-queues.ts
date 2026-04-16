@@ -48,6 +48,9 @@ export interface EvictProjectSystemQueuesInput {
 
 export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+
     const cache = yield* CacheStore
     const cacheKey = buildProjectSystemQueuesCacheKey(input.organizationId, input.projectId)
 
@@ -69,7 +72,7 @@ export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput
       .pipe(Effect.catchTag("CacheError", () => Effect.void))
 
     return entries
-  })
+  }).pipe(Effect.withSpan("annotationQueues.getProjectSystemQueues"))
 
 export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesInput) =>
   Effect.serviceOption(CacheStore).pipe(
@@ -82,4 +85,5 @@ export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesI
         },
       }),
     ),
+    Effect.withSpan("annotationQueues.evictProjectSystemQueues"),
   )

@@ -14,6 +14,10 @@ export type UncompleteQueueItemError = RepositoryError | QueueItemNotFoundError 
 
 export const uncompleteQueueItemUseCase = (input: UncompleteQueueItemInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("queue.itemId", input.itemId)
+
     const sqlClient = yield* SqlClient
     const itemRepo = yield* AnnotationQueueItemRepository
     const queueRepo = yield* AnnotationQueueRepository
@@ -51,4 +55,4 @@ export const uncompleteQueueItemUseCase = (input: UncompleteQueueItemInput) =>
         return updated
       }),
     )
-  })
+  }).pipe(Effect.withSpan("annotationQueues.uncompleteQueueItem"))

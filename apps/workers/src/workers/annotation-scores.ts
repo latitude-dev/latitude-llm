@@ -6,7 +6,7 @@ import { ScoreRepository } from "@domain/scores"
 import { OrganizationId, type ScoreId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
 import { AnnotationQueueItemRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
 
@@ -25,6 +25,7 @@ export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgr
     publishHumanAnnotation: (payload) =>
       publishHumanAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
         withPostgres(ScoreRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+        withTracing,
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
         Effect.tap((result) =>
           Effect.sync(() => {
@@ -59,6 +60,7 @@ export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgr
           pgClient,
           OrganizationId(payload.organizationId),
         ),
+        withTracing,
         Effect.catchTag("NotFoundError", () =>
           Effect.sync(() => logger.warn(`Score ${payload.scoreId} not found, skipping markReviewStarted`)),
         ),

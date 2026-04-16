@@ -34,6 +34,7 @@ import {
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -164,7 +165,7 @@ export const listDatasetsByProject = createServerFn({ method: "GET" })
           ...(data.sortBy ? { sortBy: data.sortBy } : {}),
           ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
         },
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     const datasets = page.datasets.map(toDatasetRecord)
@@ -188,6 +189,7 @@ export const getDatasetQuery = createServerFn({ method: "GET" })
       }).pipe(
         Effect.catchTag("DatasetNotFoundError", () => Effect.succeed(null)),
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
       ),
     )
   })
@@ -245,6 +247,7 @@ export const listRowsQuery = createServerFn({ method: "GET" })
         }).pipe(
           withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
           withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+          withTracing,
         ),
       )
 
@@ -278,6 +281,7 @@ export const getRowQuery = createServerFn({ method: "GET" })
         Effect.catchTag("RowNotFoundError", () => Effect.succeed(null)),
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
   })
@@ -299,7 +303,7 @@ export const updateDataset = createServerFn({ method: "POST" })
         datasetId: DatasetId(data.datasetId),
         name: data.name,
         description: data.description ?? null,
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     return toDatasetRecord(dataset)
@@ -314,7 +318,7 @@ export const deleteDatasetFunction = createServerFn({ method: "POST" })
     await Effect.runPromise(
       deleteDataset({
         datasetId: DatasetId(data.datasetId),
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
   })
 
@@ -342,13 +346,14 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
         return yield* repo.findById(datasetId)
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     const total = await Effect.runPromise(
       countRows({ datasetId }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -377,6 +382,7 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
       listRows({ datasetId, limit: total, offset: 0 }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -420,6 +426,7 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
       }).pipe(
         withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -459,7 +466,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
           id: DatasetId(datasetId),
           fileKey,
         })
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
     const { rows } = parseDatasetCsv(content)
@@ -477,6 +484,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -511,6 +519,7 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
         }).pipe(
           withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
           withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+          withTracing,
         ),
       )
 
@@ -551,6 +560,7 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -583,6 +593,7 @@ export const deleteDatasetRows = createServerFn({ method: "POST" })
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
       ),
     )
 
@@ -616,6 +627,7 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
         withClickHouse(TraceRepositoryLive, chClient, orgId),
+        withTracing,
       ),
     )
 
@@ -666,6 +678,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
+          withTracing,
         ),
       )
 

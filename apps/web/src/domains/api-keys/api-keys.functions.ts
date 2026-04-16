@@ -1,6 +1,7 @@
 import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import { ApiKeyId, isValidId } from "@domain/shared"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -35,7 +36,7 @@ export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): P
     Effect.gen(function* () {
       const repo = yield* ApiKeyRepository
       return yield* repo.list()
-    }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
+    }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId), withTracing),
   )
 
   return apiKeys.map(toRecord)
@@ -62,7 +63,10 @@ export const createApiKey = createServerFn({ method: "POST" })
         ...(data.id ? { id: ApiKeyId(data.id) } : {}),
         name: data.name,
         actorUserId: userId,
-      }).pipe(withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive), client, organizationId)),
+      }).pipe(
+        withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive), client, organizationId),
+        withTracing,
+      ),
     )
 
     return toRecord(apiKey)
@@ -77,6 +81,7 @@ export const updateApiKey = createServerFn({ method: "POST" })
     const apiKey = await Effect.runPromise(
       updateApiKeyUseCase({ id: ApiKeyId(data.id), name: data.name }).pipe(
         withPostgres(ApiKeyRepositoryLive, client, organizationId),
+        withTracing,
       ),
     )
 
@@ -93,6 +98,6 @@ export const deleteApiKey = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         yield* repo.delete(ApiKeyId(data.id))
-      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId), withTracing),
     )
   })

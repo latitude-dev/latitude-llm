@@ -107,6 +107,8 @@ const buildNewIssueFromScore = ({
 
 export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const initialScoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
     if (initialScoreResult.action === "already-assigned") {
       return {
@@ -178,4 +180,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         } satisfies CreateIssueFromScoreResult
       }),
     )
-  }) as Effect.Effect<CreateIssueFromScoreResult, CreateIssueFromScoreError>
+  }).pipe(Effect.withSpan("issues.createIssueFromScore")) as Effect.Effect<
+    CreateIssueFromScoreResult,
+    CreateIssueFromScoreError
+  >

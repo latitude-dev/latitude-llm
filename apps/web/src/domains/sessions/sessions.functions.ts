@@ -2,6 +2,7 @@ import { filterSetSchema, OrganizationId, ProjectId } from "@domain/shared"
 import type { Session, SessionDistinctColumn, SessionMetrics } from "@domain/spans"
 import { SessionRepository } from "@domain/spans"
 import { SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -79,7 +80,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
             ...(data.filters ? { filters: data.filters } : {}),
           },
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
 
     if (!page.nextCursor) {
@@ -106,7 +107,7 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -135,6 +136,6 @@ export const getSessionDistinctValues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.search ? { search: data.search } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

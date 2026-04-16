@@ -24,6 +24,7 @@ import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { EvaluationRepositoryLive, IssueRepositoryLive, SettingsReaderLive, withPostgres } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -291,6 +292,7 @@ export const listIssues = createServerFn({ method: "GET" })
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
         provideIssueProjection,
         withAi(AIEmbedLive, redisClient),
+        withTracing,
       ),
     )
 
@@ -316,7 +318,7 @@ export const getIssue = createServerFn({ method: "GET" })
         const issue = issues[0]
 
         return issue ? toIssueSummaryRecord(issue) : null
-      }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId)),
+      }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withTracing),
     )
   })
 
@@ -404,6 +406,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
           orgId,
         ),
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withTracing,
       ),
     )
   })
@@ -464,7 +467,10 @@ export const listIssueTraces = createServerFn({ method: "GET" })
           limit: tracePage.limit,
           offset: tracePage.offset,
         })
-      }).pipe(withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId)),
+      }).pipe(
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+        withTracing,
+      ),
     )
   })
 
@@ -487,6 +493,7 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
           pgClient,
           orgId,
         ),
+        withTracing,
       ),
     )
 

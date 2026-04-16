@@ -37,6 +37,7 @@ const startPublishAnnotationWorkflow = (
 
 export const approveSystemAnnotationUseCase = (input: ApproveSystemAnnotationInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
     const workflowStarter = yield* WorkflowStarter
     const scoreRepository = yield* ScoreRepository
     const score = yield* scoreRepository
@@ -77,4 +78,4 @@ export const approveSystemAnnotationUseCase = (input: ApproveSystemAnnotationInp
     })
 
     return { action: "approved", scoreId: score.id } satisfies ApproveSystemAnnotationResult
-  })
+  }).pipe(Effect.withSpan("annotations.approveSystemAnnotation"))

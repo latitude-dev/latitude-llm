@@ -8,10 +8,12 @@ export interface DeleteUserInput {
 
 export const deleteUserUseCase = (input: DeleteUserInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("userId", input.userId)
+
     // Clean up memberships and sole-member organizations
     yield* cleanupUserMembershipsUseCase({ userId: input.userId })
 
     // Delete the user record (cascades to sessions, accounts)
     const userRepo = yield* UserRepository
     yield* userRepo.delete(input.userId)
-  })
+  }).pipe(Effect.withSpan("users.deleteUser"))
