@@ -2,7 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets } from "@domain/spans"
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useCallback, useMemo } from "react"
+import { type ReactNode, useCallback, useMemo } from "react"
 
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 
@@ -16,9 +16,11 @@ interface HistogramProps {
   readonly filters: FilterSet
   /** Called when user selects a time range via brush on the histogram. */
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
+  /** Replaces the default “no data” line when there are no buckets. */
+  readonly emptyContent?: ReactNode
 }
 
-export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps) {
+export function Histogram({ projectId, filters, onRangeSelect, emptyContent }: HistogramProps) {
   const {
     data: sparseBuckets,
     isLoading,
@@ -78,8 +80,12 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
 
   if (denseBuckets.length === 0) {
     return (
-      <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-        <Text.H6 color="foregroundMuted">No traces in this time window</Text.H6>
+      <div className="w-full px-4 py-3">
+        {emptyContent ?? (
+          <div className="flex min-h-[80px] w-full items-center justify-center">
+            <Text.H6 color="foregroundMuted">No traces in this time window</Text.H6>
+          </div>
+        )}
       </div>
     )
   }

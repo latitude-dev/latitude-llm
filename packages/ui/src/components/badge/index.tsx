@@ -7,36 +7,33 @@ import { DotIndicator, type DotIndicatorProps } from "../dot-indicator/dot-indic
 import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default: "border-primary-foreground/10 bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-secondary-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        yellow: "border-transparent bg-yellow text-foreground hover:bg-yellow/80",
-        purple: "border-purple-foreground/10 bg-purple text-purple-foreground hover:bg-purple/80",
-        accent: "border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80",
-        success: "border-transparent bg-green-500 text-success-foreground hover:bg-green-500/80",
-        successMuted:
-          "border-success-muted-foreground/10 bg-success-muted text-success-muted-foreground hover:bg-success-muted/80",
-        destructive:
-          "border-destructive-foreground/10 bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        default: "border-none bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "border-none bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        yellow: "border-none bg-yellow text-foreground hover:bg-yellow/80",
+        purple: "border-none bg-purple text-purple-foreground hover:bg-purple/80",
+        accent: "border-none bg-accent text-accent-foreground hover:bg-accent/80",
+        success: "border-none bg-green-500 text-success-foreground hover:bg-green-500/80",
+        successMuted: "border-none bg-success-muted text-success-muted-foreground hover:bg-success-muted/80",
+        destructive: "border-none bg-destructive text-destructive-foreground hover:bg-destructive/80",
         destructiveMuted:
-          "border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80",
-        warningMuted:
-          "border-warning-muted-foreground/10 bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80",
-        muted: "border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80",
-        outline: "text-foreground",
-        outlineMuted: "border-muted-foreground/30 text-muted-foreground",
-        outlineAccent: "border-accent-foreground/30 text-accent-foreground",
-        outlinePurple: "border-purple-foreground/30 text-purple-foreground",
-        outlineSuccessMuted: "border-success-muted-foreground/30 text-success-muted-foreground",
-        outlineDestructiveMuted: "border-destructive-muted-foreground/30 text-destructive-muted-foreground",
-        outlineWarningMuted: "border-warning-muted-foreground/30 text-warning-muted-foreground",
-        noBorderMuted: "bg-muted border-none text-muted-foreground hover:bg-muted/80",
+          "border-none bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80",
+        warningMuted: "border-none bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80",
+        muted: "border-none bg-muted text-muted-foreground hover:bg-muted/80",
+        outline: "border border-border text-foreground",
+        outlineMuted: "border border-muted-foreground/30 text-muted-foreground",
+        outlineAccent: "border border-accent-foreground/30 text-accent-foreground",
+        outlinePurple: "border border-purple-foreground/30 text-purple-foreground",
+        outlineSuccessMuted: "border border-success-muted-foreground/30 text-success-muted-foreground",
+        outlineDestructiveMuted: "border border-destructive-muted-foreground/30 text-destructive-muted-foreground",
+        outlineWarningMuted: "border border-warning-muted-foreground/30 text-warning-muted-foreground",
+        noBorderMuted: "border-none bg-muted text-muted-foreground hover:bg-muted/80",
         noBorderDestructiveMuted:
-          "bg-destructive-muted border-none text-destructive-muted-foreground hover:bg-destructive-muted/80",
-        white: "bg-white text-primary hover:bg-white/80",
+          "border-none bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80",
+        white: "border-none bg-white text-primary hover:bg-white/80",
       },
       shape: {
         default: "max-h-5",

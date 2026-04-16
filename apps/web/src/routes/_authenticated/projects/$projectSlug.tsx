@@ -104,7 +104,7 @@ function ProjectLayout() {
   return (
     <div className="flex h-full">
       <ProjectSidebar project={project} projectSlug={projectSlug} />
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto pb-6">
         <Outlet />
       </main>
     </div>

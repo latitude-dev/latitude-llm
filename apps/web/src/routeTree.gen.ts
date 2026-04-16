@@ -16,8 +16,10 @@ import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
 import { Route as DesignSystemIndexRouteImport } from './routes/design-system/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
+import { Route as DesignSystemStatusRouteImport } from './routes/design-system/status'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
+import { Route as DesignSystemBadgeRouteImport } from './routes/design-system/badge'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -76,6 +78,11 @@ const DownloadsExportRoute = DownloadsExportRouteImport.update({
   path: '/downloads/export',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DesignSystemStatusRoute = DesignSystemStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => DesignSystemRouteRoute,
+} as any)
 const DesignSystemColorsRoute = DesignSystemColorsRouteImport.update({
   id: '/colors',
   path: '/colors',
@@ -84,6 +91,11 @@ const DesignSystemColorsRoute = DesignSystemColorsRouteImport.update({
 const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
   id: '/button',
   path: '/button',
+  getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const DesignSystemBadgeRoute = DesignSystemBadgeRouteImport.update({
+  id: '/badge',
+  path: '/badge',
   getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const AuthInviteRoute = AuthInviteRouteImport.update({
@@ -234,8 +246,10 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/badge': typeof DesignSystemBadgeRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
+  '/design-system/status': typeof DesignSystemStatusRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
@@ -264,8 +278,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/badge': typeof DesignSystemBadgeRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
+  '/design-system/status': typeof DesignSystemStatusRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/': typeof AuthenticatedIndexRoute
   '/design-system': typeof DesignSystemIndexRoute
@@ -297,8 +313,10 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/badge': typeof DesignSystemBadgeRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
+  '/design-system/status': typeof DesignSystemStatusRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/design-system/': typeof DesignSystemIndexRoute
@@ -333,8 +351,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/badge'
     | '/design-system/button'
     | '/design-system/colors'
+    | '/design-system/status'
     | '/downloads/export'
     | '/design-system/'
     | '/welcome/'
@@ -363,8 +383,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/badge'
     | '/design-system/button'
     | '/design-system/colors'
+    | '/design-system/status'
     | '/downloads/export'
     | '/'
     | '/design-system'
@@ -395,8 +417,10 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/badge'
     | '/design-system/button'
     | '/design-system/colors'
+    | '/design-system/status'
     | '/downloads/export'
     | '/_authenticated/'
     | '/design-system/'
@@ -487,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadsExportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/design-system/status': {
+      id: '/design-system/status'
+      path: '/status'
+      fullPath: '/design-system/status'
+      preLoaderRoute: typeof DesignSystemStatusRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
+    }
     '/design-system/colors': {
       id: '/design-system/colors'
       path: '/colors'
@@ -499,6 +530,13 @@ declare module '@tanstack/react-router' {
       path: '/button'
       fullPath: '/design-system/button'
       preLoaderRoute: typeof DesignSystemButtonRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/design-system/badge': {
+      id: '/design-system/badge'
+      path: '/badge'
+      fullPath: '/design-system/badge'
+      preLoaderRoute: typeof DesignSystemBadgeRouteImport
       parentRoute: typeof DesignSystemRouteRoute
     }
     '/auth/invite': {
@@ -666,14 +704,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface DesignSystemRouteRouteChildren {
+  DesignSystemBadgeRoute: typeof DesignSystemBadgeRoute
   DesignSystemButtonRoute: typeof DesignSystemButtonRoute
   DesignSystemColorsRoute: typeof DesignSystemColorsRoute
+  DesignSystemStatusRoute: typeof DesignSystemStatusRoute
   DesignSystemIndexRoute: typeof DesignSystemIndexRoute
 }
 
 const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
+  DesignSystemBadgeRoute: DesignSystemBadgeRoute,
   DesignSystemButtonRoute: DesignSystemButtonRoute,
   DesignSystemColorsRoute: DesignSystemColorsRoute,
+  DesignSystemStatusRoute: DesignSystemStatusRoute,
   DesignSystemIndexRoute: DesignSystemIndexRoute,
 }
 

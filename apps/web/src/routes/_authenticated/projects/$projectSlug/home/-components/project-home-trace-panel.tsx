@@ -1,18 +1,22 @@
 import type { FilterSet } from "@domain/shared"
-import { Badge, type BadgeProps, Skeleton, Text } from "@repo/ui"
-import { formatCount, formatDuration, formatPrice } from "@repo/utils"
+import { Badge, type BadgeProps, Button, Skeleton, Text } from "@repo/ui"
+import { formatCount, formatDuration } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
+import { Activity } from "lucide-react"
 import { useMemo } from "react"
+import { useIssues } from "../../../../../../domains/issues/issues.collection.ts"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
 import { countTracesByProject, getTraceMetricsByProject } from "../../../../../../domains/traces/traces.functions.ts"
 import { Histogram } from "../../-components/aggregations/histogram.tsx"
+import { ProjectHomeSectionBlankSlate } from "./project-home-section-blank-slate.tsx"
 
 type TrendTone = "neutral" | "positive" | "negative"
 
 function trendBadgeVariant(tone: TrendTone): BadgeProps["variant"] {
-  if (tone === "positive") return "outlineSuccessMuted"
-  if (tone === "negative") return "outlineDestructiveMuted"
-  return "outlineMuted"
+  if (tone === "positive") return "successMuted"
+  if (tone === "negative") return "destructiveMuted"
+  return "muted"
 }
 
 function countRatioTrendShortFull(
@@ -73,26 +77,28 @@ function TraceMetricWithTrend({
   readonly skeletonWidthClassName?: string
 }) {
   return (
-    <div className="flex min-w-[176px] max-w-[200px] shrink-0 basis-[176px] flex-col gap-1.5">
+    <div className="flex min-w-[176px] max-w-[220px] shrink-0 basis-[176px] flex-col gap-1.5">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
-      {isLoading ? (
-        <Skeleton className={`h-5 ${skeletonWidthClassName}`} />
-      ) : (
-        <Text.H5 color="foreground" className="tabular-nums">
-          {value}
-        </Text.H5>
-      )}
-      {isLoading ? (
-        <Skeleton className="h-5 w-14 rounded-md" />
-      ) : trendAwaitingCompare || !trend ? (
-        <Badge variant="outlineMuted" size="small" title={trend?.full}>
-          {trendAwaitingCompare ? "…" : "—"}
-        </Badge>
-      ) : (
-        <Badge variant={trendBadgeVariant(trendTone)} size="small" title={trend.full} className="w-fit">
-          {trend.short}
-        </Badge>
-      )}
+      <div className="flex min-w-0 flex-row items-center gap-2">
+        {isLoading ? (
+          <Skeleton className={`h-5 ${skeletonWidthClassName}`} />
+        ) : (
+          <Text.H5 color="foreground" className="tabular-nums">
+            {value}
+          </Text.H5>
+        )}
+        {isLoading ? (
+          <Skeleton className="h-5 w-14 rounded-md" />
+        ) : trendAwaitingCompare || !trend ? (
+          <Badge variant="muted" size="small" title={trend?.full}>
+            {trendAwaitingCompare ? "…" : "—"}
+          </Badge>
+        ) : (
+          <Badge variant={trendBadgeVariant(trendTone)} size="small" title={trend.full} className="w-fit">
+            {trend.short}
+          </Badge>
+        )}
+      </div>
     </div>
   )
 }
@@ -105,12 +111,31 @@ function mergeFilters(a: FilterSet, b: FilterSet): FilterSet {
   return { ...a, ...b }
 }
 
+function timeRangeFromFilters(filters: FilterSet):
+  | {
+      readonly fromIso?: string
+      readonly toIso?: string
+    }
+  | undefined {
+  const startTime = filters.startTime
+  if (!startTime?.length) return undefined
+  const gte = startTime.find((condition) => condition.op === "gte")
+  const lte = startTime.find((condition) => condition.op === "lte")
+  if (!gte?.value && !lte?.value) return undefined
+  return {
+    ...(gte?.value ? { fromIso: String(gte.value) } : {}),
+    ...(lte?.value ? { toIso: String(lte.value) } : {}),
+  }
+}
+
 export function ProjectHomeTracePanel({
   projectId,
+  projectSlug,
   currentRange,
   compareFilters,
 }: {
   readonly projectId: string
+  readonly projectSlug: string
   readonly currentRange: FilterSet
   readonly compareFilters: FilterSet
 }) {
@@ -121,6 +146,24 @@ export function ProjectHomeTracePanel({
     projectId,
     filters: currentRange,
   })
+  const currentIssuesTimeRange = useMemo(() => timeRangeFromFilters(currentRange), [currentRange])
+  const compareIssuesTimeRange = useMemo(() => timeRangeFromFilters(compareFilters), [compareFilters])
+
+  const { totalCount: activeIssueCount, isLoading: activeIssueLoading } = useIssues({
+    projectId,
+    lifecycleGroup: "active",
+    sorting: { column: "occurrences", direction: "desc" },
+    limit: 1,
+    ...(currentIssuesTimeRange ? { timeRange: currentIssuesTimeRange } : {}),
+  })
+  const { totalCount: prevActiveIssueCount, isLoading: prevActiveIssueLoading } = useIssues({
+    projectId,
+    lifecycleGroup: "active",
+    sorting: { column: "occurrences", direction: "desc" },
+    limit: 1,
+    ...(compareIssuesTimeRange ? { timeRange: compareIssuesTimeRange } : {}),
+  })
+
   const { totalCount: traceCount, isLoading: countLoading } = useTracesCount({
     projectId,
     filters: currentRange,
@@ -152,16 +195,11 @@ export function ProjectHomeTracePanel({
   const loading = metricsLoading || countLoading
   const dash = "—"
   const traceCountStr = formatCount(traceCount)
-  const totalCostStr = traceMetrics ? formatPrice(traceMetrics.costTotalMicrocents.sum / 100_000_000) : dash
   const medianDurationStr = traceMetrics ? formatDuration(traceMetrics.durationNs.median) : dash
-  const totalTokensStr = traceMetrics ? formatCount(traceMetrics.tokensTotal.sum) : dash
-  const totalSpansStr = traceMetrics ? formatCount(traceMetrics.spanCount.sum) : dash
   const errorRate = traceCount > 0 ? (errorTraceCount / traceCount) * 100 : 0
   const prevErrorRate = prevTraceCount > 0 ? (prevErrorTraceCount / prevTraceCount) * 100 : 0
 
-  const showTtftAggregations = traceMetrics && traceMetrics.timeToFirstTokenNs.max > 0
-
-  const trendAwaitingCompare = prevTraceFetching || prevMetricsFetching || prevErrorFetching
+  const trendAwaitingCompare = prevTraceFetching || prevMetricsFetching || prevErrorFetching || prevActiveIssueLoading
 
   const tracesTrend = countRatioTrendShortFull(traceCount, prevTraceCount)
   const tracesTone: TrendTone =
@@ -169,19 +207,6 @@ export function ProjectHomeTracePanel({
       ? traceCount < prevTraceCount
         ? "positive"
         : traceCount > prevTraceCount
-          ? "negative"
-          : "neutral"
-      : "neutral"
-
-  const costTrend =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? countRatioTrendShortFull(traceMetrics.costTotalMicrocents.sum, prevTraceMetrics.costTotalMicrocents.sum)
-      : null
-  const costTone: TrendTone =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? traceMetrics.costTotalMicrocents.sum < prevTraceMetrics.costTotalMicrocents.sum
-        ? "positive"
-        : traceMetrics.costTotalMicrocents.sum > prevTraceMetrics.costTotalMicrocents.sum
           ? "negative"
           : "neutral"
       : "neutral"
@@ -199,119 +224,86 @@ export function ProjectHomeTracePanel({
           : "neutral"
       : "neutral"
 
-  const tokensTrend =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? countRatioTrendShortFull(traceMetrics.tokensTotal.sum, prevTraceMetrics.tokensTotal.sum)
-      : null
-  const tokensTone: TrendTone =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? traceMetrics.tokensTotal.sum < prevTraceMetrics.tokensTotal.sum
-        ? "positive"
-        : traceMetrics.tokensTotal.sum > prevTraceMetrics.tokensTotal.sum
-          ? "negative"
-          : "neutral"
-      : "neutral"
-
-  const spansTrend =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? countRatioTrendShortFull(traceMetrics.spanCount.sum, prevTraceMetrics.spanCount.sum)
-      : null
-  const spansTone: TrendTone =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching
-      ? traceMetrics.spanCount.sum < prevTraceMetrics.spanCount.sum
-        ? "positive"
-        : traceMetrics.spanCount.sum > prevTraceMetrics.spanCount.sum
-          ? "negative"
-          : "neutral"
-      : "neutral"
-
   const errorTrend = errorRateDeltaShortFull(errorRate, prevErrorRate)
   const errorTone: TrendTone =
     errorRate > prevErrorRate ? "negative" : errorRate < prevErrorRate ? "positive" : "neutral"
-
-  const ttftTrend =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching && showTtftAggregations
-      ? latencyDeltaShortFull(traceMetrics.timeToFirstTokenNs.median, prevTraceMetrics.timeToFirstTokenNs.median)
-      : null
-  const ttftTone: TrendTone =
-    traceMetrics && prevTraceMetrics && !prevMetricsFetching && showTtftAggregations
-      ? traceMetrics.timeToFirstTokenNs.median < prevTraceMetrics.timeToFirstTokenNs.median
+  const activeIssuesTrend = countRatioTrendShortFull(activeIssueCount, prevActiveIssueCount)
+  const activeIssuesTone: TrendTone =
+    prevActiveIssueCount > 0
+      ? activeIssueCount < prevActiveIssueCount
         ? "positive"
-        : traceMetrics.timeToFirstTokenNs.median > prevTraceMetrics.timeToFirstTokenNs.median
+        : activeIssueCount > prevActiveIssueCount
           ? "negative"
           : "neutral"
       : "neutral"
 
   return (
     <div className="flex flex-col rounded-lg bg-secondary p-2">
-      <div className="flex flex-row flex-wrap gap-3 p-4">
-        <TraceMetricWithTrend
-          label="Traces"
-          value={traceCountStr}
-          trend={tracesTrend}
-          trendTone={tracesTone}
-          isLoading={countLoading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-16"
-        />
-        <TraceMetricWithTrend
-          label="Error rate"
-          value={formatRatioPercent(errorTraceCount, traceCount)}
-          trend={errorTrend}
-          trendTone={errorTone}
-          isLoading={errorCountLoading || countLoading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-14"
-        />
-        <TraceMetricWithTrend
-          label="Total cost"
-          value={totalCostStr}
-          trend={costTrend}
-          trendTone={costTone}
-          isLoading={loading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-20"
-        />
-        <TraceMetricWithTrend
-          label="Median duration"
-          value={medianDurationStr}
-          trend={durationTrend}
-          trendTone={durationTone}
-          isLoading={loading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-20"
-        />
-        <TraceMetricWithTrend
-          label="Total tokens"
-          value={totalTokensStr}
-          trend={tokensTrend}
-          trendTone={tokensTone}
-          isLoading={loading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-20"
-        />
-        {showTtftAggregations ? (
+      <div className="flex flex-row gap-4 p-4">
+        <div className="flex min-w-0 flex-1 flex-row flex-wrap gap-3">
           <TraceMetricWithTrend
-            label="Median time to first token"
-            value={formatDuration(traceMetrics.timeToFirstTokenNs.median)}
-            trend={ttftTrend}
-            trendTone={ttftTone}
+            label="Traces"
+            value={traceCountStr}
+            trend={tracesTrend}
+            trendTone={tracesTone}
+            isLoading={countLoading}
+            trendAwaitingCompare={trendAwaitingCompare}
+            skeletonWidthClassName="w-16"
+          />
+          <TraceMetricWithTrend
+            label="Error rate"
+            value={formatRatioPercent(errorTraceCount, traceCount)}
+            trend={errorTrend}
+            trendTone={errorTone}
+            isLoading={errorCountLoading || countLoading}
+            trendAwaitingCompare={trendAwaitingCompare}
+            skeletonWidthClassName="w-14"
+          />
+          <TraceMetricWithTrend
+            label="Median latency"
+            value={medianDurationStr}
+            trend={durationTrend}
+            trendTone={durationTone}
             isLoading={loading}
             trendAwaitingCompare={trendAwaitingCompare}
-            skeletonWidthClassName="w-24"
+            skeletonWidthClassName="w-20"
           />
-        ) : null}
-        <TraceMetricWithTrend
-          label="Total spans"
-          value={totalSpansStr}
-          trend={spansTrend}
-          trendTone={spansTone}
-          isLoading={loading}
-          trendAwaitingCompare={trendAwaitingCompare}
-          skeletonWidthClassName="w-16"
-        />
+          <TraceMetricWithTrend
+            label="Active issues"
+            value={formatCount(activeIssueCount)}
+            trend={activeIssuesTrend}
+            trendTone={activeIssuesTone}
+            isLoading={activeIssueLoading}
+            trendAwaitingCompare={trendAwaitingCompare}
+            skeletonWidthClassName="w-16"
+          />
+        </div>
+        <div className="shrink-0 self-start">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/projects/$projectSlug/" params={{ projectSlug }}>
+              View traces
+            </Link>
+          </Button>
+        </div>
       </div>
-      <Histogram projectId={projectId} filters={currentRange} />
+      <Histogram
+        projectId={projectId}
+        filters={currentRange}
+        emptyContent={
+          <ProjectHomeSectionBlankSlate
+            icon={Activity}
+            title="No traces in the last 7 days"
+            description="Once your app sends traces, volume and timing will show up here."
+            action={
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/projects/$projectSlug/" params={{ projectSlug }}>
+                  View traces
+                </Link>
+              </Button>
+            }
+          />
+        }
+      />
     </div>
   )
 }

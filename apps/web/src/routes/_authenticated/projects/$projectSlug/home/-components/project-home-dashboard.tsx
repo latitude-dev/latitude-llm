@@ -1,18 +1,20 @@
 import { isManualQueue, isSystemQueue } from "@domain/annotation-queues"
-import { Button, Icon, Skeleton, Text } from "@repo/ui"
+import { BarChart, Button, Icon, Skeleton, Text, useChartCssTheme } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Activity, ArrowUpRight, ChartColumn, ClipboardList } from "lucide-react"
+import { ArrowUpRight, BarChart3, CircleCheck, Layers } from "lucide-react"
 import { useMemo } from "react"
 import { listAnnotationQueuesByProject } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { useIssues } from "../../../../../../domains/issues/issues.collection.ts"
 import type { IssueRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatPercent } from "../../issues/-components/issue-formatters.ts"
 import { IssueLifecycleStatuses } from "../../issues/-components/issue-lifecycle-statuses.tsx"
-import { IssuesAnalyticsPanel } from "../../issues/-components/issues-analytics-panel.tsx"
+import { issueOccurrenceBarColorForCategory } from "../../issues/-components/issue-status-bar-chart-colors.ts"
 import { HomeSectionTitle } from "./home-section-title.tsx"
 import { buildHomeSevenDayWindow } from "./home-seven-day-window.ts"
+import { ProjectHomeIssueTrendMiniChart } from "./project-home-issue-trend-mini-chart.tsx"
+import { ProjectHomeSectionBlankSlate } from "./project-home-section-blank-slate.tsx"
 import { ProjectHomeTracePanel } from "./project-home-trace-panel.tsx"
 
 const NEEDS_ATTENTION_STATES = new Set(["new", "escalating", "regressed"])
@@ -48,6 +50,22 @@ export function ProjectHomeDashboard({
 
   const needsAttentionRows = useMemo(() => issueRows.filter(issueNeedsAttention).slice(0, 5), [issueRows])
 
+  const chartTheme = useChartCssTheme()
+  const issuesByStatusData = useMemo(() => {
+    const rows = [
+      { category: "New", value: analytics.counts.newIssues },
+      { category: "Escalating", value: analytics.counts.escalatingIssues },
+      { category: "Regressed", value: analytics.counts.regressedIssues },
+      { category: "Resolved", value: analytics.counts.resolvedIssues },
+    ]
+    return rows
+      .filter((item) => item.value > 0)
+      .map((item) => ({
+        ...item,
+        barColor: issueOccurrenceBarColorForCategory(item.category, chartTheme),
+      }))
+  }, [analytics.counts, chartTheme])
+
   const { data: queuesResponse, isLoading: queuesLoading } = useQuery({
     queryKey: ["project-home-queues", projectId],
     queryFn: () =>
@@ -66,39 +84,61 @@ export function ProjectHomeDashboard({
   const topQueues = useMemo(() => manualQueues.slice(0, 6), [manualQueues])
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pb-6">
       <div className="flex flex-col gap-2.5">
-        <HomeSectionTitle icon={<Activity />} label="Traces" />
-        <ProjectHomeTracePanel projectId={projectId} currentRange={currentRange} compareFilters={compareFilters} />
+        <HomeSectionTitle label="Traces" />
+        <ProjectHomeTracePanel
+          projectId={projectId}
+          projectSlug={projectSlug}
+          currentRange={currentRange}
+          compareFilters={compareFilters}
+        />
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <HomeSectionTitle icon={<ChartColumn />} label="Issues" />
+        <HomeSectionTitle label="Issues" />
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-3">
-            <div className="flex min-w-0 flex-row items-center justify-between gap-2">
-              <Text.H5M color="foreground" className="min-w-0 truncate">
-                Issue occurrences
-              </Text.H5M>
-              <Button variant="outline" size="sm" className="shrink-0 gap-1" asChild>
+            <div className="flex min-w-0 flex-row items-start justify-between gap-2">
+              <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+                By status
+              </Text.H6>
+              <Button variant="outline" size="sm" className="shrink-0" asChild>
                 <Link to="/projects/$projectSlug/issues" params={{ projectSlug }}>
                   View issues
-                  <Icon icon={ArrowUpRight} size="sm" />
                 </Link>
               </Button>
             </div>
-            <IssuesAnalyticsPanel
-              analytics={analytics}
-              isLoading={issuesLoading}
-              showMetricsRow={false}
-              withPanelChrome={false}
-            />
+            {issuesLoading ? (
+              <Skeleton className="h-[176px] w-full" />
+            ) : issuesByStatusData.length === 0 ? (
+              <ProjectHomeSectionBlankSlate
+                icon={BarChart3}
+                title="No issues in the last 7 days"
+                description="Lifecycle counts will appear here when issues are detected in this window."
+                action={
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/projects/$projectSlug/issues" params={{ projectSlug }}>
+                      View issues
+                    </Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <BarChart
+                data={issuesByStatusData}
+                height={160}
+                showYAxis={false}
+                ariaLabel="Issues by status"
+                formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> issues`}
+              />
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-3">
-            <Text.H5M color="foreground" className="min-w-0 truncate">
+            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
               Needs attention
-            </Text.H5M>
+            </Text.H6>
             {issuesLoading && needsAttentionRows.length === 0 ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-10 w-full" />
@@ -106,7 +146,18 @@ export function ProjectHomeDashboard({
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : needsAttentionRows.length === 0 ? (
-              <Text.H6 color="foregroundMuted">Nothing needs attention in the last 7 days.</Text.H6>
+              <ProjectHomeSectionBlankSlate
+                icon={CircleCheck}
+                title="Nothing needs attention"
+                description="No new, escalating, or regressing issues in the last 7 days."
+                action={
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/projects/$projectSlug/issues" params={{ projectSlug }}>
+                      View issues
+                    </Link>
+                  </Button>
+                }
+              />
             ) : (
               <div className="flex flex-col">
                 {needsAttentionRows.map((issue) => (
@@ -125,6 +176,7 @@ export function ProjectHomeDashboard({
                     >
                       {issue.name}
                     </Link>
+                    <ProjectHomeIssueTrendMiniChart issue={issue} />
                     <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap tabular-nums">
                       {formatCount(issue.occurrences)} occ · {formatPercent(issue.affectedTracesPercent)} traces
                     </Text.H6>
@@ -137,15 +189,33 @@ export function ProjectHomeDashboard({
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <HomeSectionTitle icon={<ClipboardList />} label="Annotation queues" />
+        <HomeSectionTitle label="Annotation queues" />
         <div className="flex flex-col gap-3 rounded-lg bg-secondary p-3">
-          <Text.H5M color="foreground" className="min-w-0 truncate">
-            Pending review
-          </Text.H5M>
+          <div className="flex min-w-0 flex-row items-start justify-between gap-2">
+            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+              Pending review
+            </Text.H6>
+            <Button variant="outline" size="sm" className="shrink-0" asChild>
+              <Link to="/projects/$projectSlug/annotation-queues/" params={{ projectSlug }}>
+                View queues
+              </Link>
+            </Button>
+          </div>
           {queuesLoading ? (
             <Skeleton className="h-32 w-full" />
           ) : topQueues.length === 0 ? (
-            <Text.H6 color="foregroundMuted">No manual queues yet</Text.H6>
+            <ProjectHomeSectionBlankSlate
+              icon={Layers}
+              title="No manual queues yet"
+              description="Create a manual review queue to track annotation work for this project."
+              action={
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/projects/$projectSlug/annotation-queues/" params={{ projectSlug }}>
+                    View queues
+                  </Link>
+                </Button>
+              }
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {topQueues.map((q) => {
@@ -154,10 +224,10 @@ export function ProjectHomeDashboard({
                 const total = q.totalItems
                 const doneRatioPct = total > 0 ? Math.round((completed / total) * 100) : 0
                 return (
-                  <div key={q.id} className="flex min-w-0 flex-row flex-nowrap items-center gap-2 sm:gap-3">
-                    <Text.H6 color="foreground" className="min-w-0 flex-1 truncate font-medium">
+                  <div key={q.id} className="flex min-w-0 flex-row flex-nowrap items-center gap-2 py-2 sm:gap-3">
+                    <Text.H5 color="foreground" className="min-w-0 flex-1 truncate font-medium">
                       {q.name}
-                    </Text.H6>
+                    </Text.H5>
                     <Text.H6 color="foregroundMuted" className="shrink-0 tabular-nums">
                       {formatCount(completed)}
                     </Text.H6>
@@ -174,6 +244,7 @@ export function ProjectHomeDashboard({
                       <Link
                         to="/projects/$projectSlug/annotation-queues/$queueId"
                         params={{ projectSlug, queueId: q.id }}
+                        search={{ focus: true }}
                       >
                         Focus
                         <Icon icon={ArrowUpRight} size="sm" />

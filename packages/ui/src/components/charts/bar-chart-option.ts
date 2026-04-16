@@ -19,6 +19,10 @@ export function buildBarChartOption(
   showYAxis = true,
   enableBrush = false,
   xAxisLabelFontSize = 11,
+  /** Per-bar fill; index aligns with `values`. Omitted entries use `colors.primary`. */
+  itemColors?: readonly (string | undefined)[],
+  /** When false, hides category labels, ticks, and axis line (sparkline-style). */
+  showXAxisLabels = true,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
@@ -27,13 +31,16 @@ export function buildBarChartOption(
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
   const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
   const splitLineOpacity = colors.isDark ? 0.3 : 0.6
+  const gridBottom = showXAxisLabels ? gridVerticalInsetPx : 4
+  const gridTop = showXAxisLabels ? gridVerticalInsetPx : 4
+
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
-      left: showYAxis ? 48 : 8,
-      right: 16,
-      top: gridVerticalInsetPx,
-      bottom: gridVerticalInsetPx,
+      left: showYAxis ? 48 : 4,
+      right: showXAxisLabels ? 16 : 4,
+      top: gridTop,
+      bottom: gridBottom,
       containLabel: false,
     },
     tooltip: {
@@ -62,20 +69,24 @@ export function buildBarChartOption(
     xAxis: {
       type: "category",
       data: [...categories],
-      axisLine: { lineStyle: { color: colors.border } },
-      axisLabel: {
-        color: colors.mutedForeground,
-        fontSize: xAxisLabelFontSize,
-        rotate: 0,
-        interval: categoryLabelInterval,
-        hideOverlap: true,
-      },
-      axisTick: { alignWithLabel: true, lineStyle: { color: colors.border } },
+      axisLine: showXAxisLabels ? { lineStyle: { color: colors.border } } : { show: false },
+      axisLabel: showXAxisLabels
+        ? {
+            color: colors.mutedForeground,
+            fontSize: xAxisLabelFontSize,
+            rotate: 0,
+            interval: categoryLabelInterval,
+            hideOverlap: true,
+          }
+        : { show: false },
+      axisTick: showXAxisLabels ? { alignWithLabel: true, lineStyle: { color: colors.border } } : { show: false },
     },
     yAxis: {
       type: "value",
       minInterval: 1,
-      splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
+      splitLine: showXAxisLabels
+        ? { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } }
+        : { show: false },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),
       axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
@@ -83,7 +94,17 @@ export function buildBarChartOption(
     series: [
       {
         type: "bar",
-        data: [...values],
+        data: values.map((v, i) => {
+          const c = itemColors?.[i]
+          if (!c) return v
+          return {
+            value: v,
+            itemStyle: { color: c, borderRadius: [4, 4, 0, 0] },
+            emphasis: {
+              itemStyle: { color: c, borderRadius: [4, 4, 0, 0] },
+            },
+          }
+        }),
         ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
         barCategoryGap: "18%",
         cursor: "default",

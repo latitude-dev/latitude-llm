@@ -19,7 +19,7 @@ function ProjectHomePage() {
           <div className="mb-6 flex min-w-0 flex-row flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
               <Text.H4>Overview</Text.H4>
-              <Text.H6 color="foregroundMuted">Last 7 days</Text.H6>
+              <Text.H6 color="foregroundMuted">Your project overview over the past 7 days</Text.H6>
             </div>
           </div>
           <ProjectHomeDashboard projectId={project.id} projectSlug={projectSlug} />

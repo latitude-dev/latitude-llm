@@ -32,8 +32,38 @@ import {
   useMountEffect,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
+import { Check, Loader2, Moon, Palette, Sparkles, Star, Sun } from "lucide-react"
 import { useState } from "react"
+
+const DESIGN_SYSTEM_BADGE_VARIANTS = [
+  "default",
+  "secondary",
+  "yellow",
+  "purple",
+  "accent",
+  "success",
+  "successMuted",
+  "destructive",
+  "destructiveMuted",
+  "warningMuted",
+  "muted",
+  "outline",
+  "outlineMuted",
+  "outlineAccent",
+  "outlinePurple",
+  "outlineSuccessMuted",
+  "outlineDestructiveMuted",
+  "outlineWarningMuted",
+  "noBorderMuted",
+  "noBorderDestructiveMuted",
+  "white",
+] as const
+
+const DESIGN_SYSTEM_BADGE_SIZES = ["small", "normal", "large"] as const
+
+const DESIGN_SYSTEM_BADGE_SHAPES = ["default", "rounded"] as const
+
+const DESIGN_SYSTEM_STATUS_VARIANTS = ["neutral", "info", "success", "warning", "destructive"] as const
 
 export const Route = createFileRoute("/design-system/")({
   component: DesignSystemPage,
@@ -132,11 +162,107 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
               ]}
             />
           </div>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Badge"
+        description="Label chips: color variants, sizes, shapes, disabled, dot, icons, and truncation."
+      >
+        <div className="flex flex-col gap-6">
+          <Link
+            to="/design-system/badge"
+            className="inline-flex w-fit items-center gap-1 text-sm text-accent-foreground underline-offset-4 hover:underline"
+          >
+            Full badge reference (light/dark playground) →
+          </Link>
+
           <div className="flex flex-col gap-2">
-            <Text.H6 weight="semibold">Badge uppercase</Text.H6>
+            <Text.H6 weight="semibold">Variants</Text.H6>
+            <div className="flex flex-col gap-2">
+              {DESIGN_SYSTEM_BADGE_VARIANTS.map((variant) => (
+                <div
+                  key={variant}
+                  className="grid grid-cols-1 items-center gap-2 border-b border-border/40 pb-2 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,12rem)_1fr]"
+                >
+                  <div className="min-w-0 truncate">
+                    <Text.Mono size="h6" color="foregroundMuted" display="block">
+                      {variant}
+                    </Text.Mono>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={variant} noWrap>
+                      Label
+                    </Badge>
+                    <Badge variant={variant} uppercase noWrap>
+                      status
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Sizes</Text.H6>
+            <div className="flex flex-wrap items-end gap-4">
+              {DESIGN_SYSTEM_BADGE_SIZES.map((size) => (
+                <div key={size} className="flex flex-col gap-2">
+                  <Text.Mono size="h6" color="foregroundMuted">
+                    {size}
+                  </Text.Mono>
+                  <Badge size={size} noWrap>
+                    {size === "large" ? "Large" : "Text"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Shapes</Text.H6>
+            <div className="flex flex-wrap items-center gap-4">
+              {DESIGN_SYSTEM_BADGE_SHAPES.map((shape) => (
+                <div key={shape} className="flex flex-col gap-2">
+                  <Text.Mono size="h6" color="foregroundMuted">
+                    {shape}
+                  </Text.Mono>
+                  <Badge shape={shape} variant="secondary" noWrap>
+                    Shape
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Disabled, dot, icons</Text.H6>
             <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="outline" size="small" uppercase noWrap>
-                live
+              <Badge disabled>Muted off</Badge>
+              <Badge variant="success" disabled>
+                Success off
+              </Badge>
+              <Badge variant="outline" indicatorProps={{ variant: "default" }} noWrap>
+                Dot
+              </Badge>
+              <Badge variant="outline" indicatorProps={{ variant: "success", size: "md" }} noWrap>
+                Live
+              </Badge>
+              <Badge variant="secondary" iconProps={{ icon: Check, placement: "start" }} noWrap>
+                Start
+              </Badge>
+              <Badge variant="secondary" iconProps={{ icon: Sparkles, placement: "end" }} noWrap>
+                End
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Ellipsis</Text.H6>
+            <div className="max-w-48">
+              <Badge variant="muted" ellipsis className="w-full max-w-full">
+                This label is intentionally long and should truncate with an ellipsis
               </Badge>
             </div>
           </div>
@@ -264,23 +390,64 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
       <ShowcaseSection
         theme={theme}
         title="Status"
-        description="Compact pill statuses with semantic variants and a leading dot."
+        description="Compact pill statuses: semantic variants, optional dot, custom indicators, truncation."
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Status label="Neutral" variant="neutral" />
-            <Status label="Info" variant="info" />
-            <Status label="Success" variant="success" />
-            <Status label="Warning" variant="warning" />
-            <Status label="Destructive" variant="destructive" />
+        <div className="flex flex-col gap-6">
+          <Link
+            to="/design-system/status"
+            className="inline-flex w-fit items-center gap-1 text-sm text-accent-foreground underline-offset-4 hover:underline"
+          >
+            Full status reference (light/dark playground) →
+          </Link>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Variants (default dot)</Text.H6>
+            <div className="flex flex-col gap-2">
+              {DESIGN_SYSTEM_STATUS_VARIANTS.map((variant) => (
+                <div
+                  key={variant}
+                  className="grid grid-cols-1 items-center gap-2 border-b border-border/40 pb-2 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,10rem)_1fr]"
+                >
+                  <Text.Mono size="h6" color="foregroundMuted">
+                    {variant}
+                  </Text.Mono>
+                  <Status variant={variant} label={variant.charAt(0).toUpperCase() + variant.slice(1)} />
+                </div>
+              ))}
+            </div>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">No dot</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              {DESIGN_SYSTEM_STATUS_VARIANTS.map((variant) => (
+                <Status key={variant} variant={variant} indicator={false} label="Text only" />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Custom indicator</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <Status
+                variant="info"
+                label="Loading"
+                indicator={<Icon icon={Loader2} size="xs" className="animate-spin" aria-hidden />}
+              />
+              <Status variant="success" label="Star" indicator={<Icon icon={Star} size="xs" aria-hidden />} />
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Text.H6 weight="semibold">Truncation</Text.H6>
-            <div className="max-w-64">
-              <Status
-                label="This is a longer status label that truncates cleanly in constrained layouts"
-                variant="info"
-              />
+            <div className="max-w-sm flex flex-col gap-2">
+              {DESIGN_SYSTEM_STATUS_VARIANTS.map((variant) => (
+                <Status
+                  key={variant}
+                  variant={variant}
+                  label="This status line is long and should ellipsize instead of wrapping the layout"
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -622,6 +789,18 @@ function DesignSystemPage() {
                 className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Colors
+              </Link>
+              <Link
+                to="/design-system/badge"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Badge
+              </Link>
+              <Link
+                to="/design-system/status"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Status
               </Link>
             </div>
 

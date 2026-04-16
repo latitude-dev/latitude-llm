@@ -15,6 +15,8 @@ export type BarChartDataPoint = {
   readonly category: string
   readonly tooltipCategory?: string
   readonly value: number
+  /** When set, this bar uses this fill instead of the theme primary (e.g. status-colored bars). */
+  readonly barColor?: string
 }
 
 export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSelect"> & {
@@ -33,6 +35,8 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
   readonly showYAxis?: boolean
   /** Optional x-axis label font size override in pixels. */
   readonly xAxisLabelFontSize?: number
+  /** When false, hides x-axis labels and ticks (mini / sparkline charts). */
+  readonly showXAxisLabels?: boolean
   /**
    * Called when user selects a range via brush (e.g., drag on the histogram).
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
@@ -65,6 +69,7 @@ function BarChart({
   formatTooltip,
   showYAxis = true,
   xAxisLabelFontSize,
+  showXAxisLabels = true,
   onSelect,
   className,
   ...rest
@@ -85,6 +90,7 @@ function BarChart({
   const categories = useMemo(() => data.map((d) => d.category), [data])
   const tooltipCategories = useMemo(() => data.map((d) => d.tooltipCategory ?? d.category), [data])
   const values = useMemo(() => data.map((d) => d.value), [data])
+  const itemColors = useMemo(() => data.map((d) => d.barColor), [data])
 
   const option = useMemo(
     () =>
@@ -97,8 +103,21 @@ function BarChart({
         showYAxis,
         hasBrush,
         xAxisLabelFontSize,
+        itemColors.some((c) => c !== undefined) ? itemColors : undefined,
+        showXAxisLabels,
       ),
-    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize],
+    [
+      categories,
+      values,
+      tooltipCategories,
+      colors,
+      formatTooltip,
+      showYAxis,
+      hasBrush,
+      xAxisLabelFontSize,
+      itemColors,
+      showXAxisLabels,
+    ],
   )
 
   // Stable event handlers that read the latest onSelect from a ref.

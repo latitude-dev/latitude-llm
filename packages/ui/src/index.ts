@@ -33,6 +33,7 @@ export { HistogramSkeleton, type HistogramSkeletonProps } from "./components/cha
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { LazyPieChart as PieChart } from "./components/charts/lazy-pie-chart.tsx"
 export type { PieChartDataPoint, PieChartProps } from "./components/charts/pie-chart.tsx"
+export { useChartCssTheme } from "./components/charts/use-chart-css-theme.ts"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { CheckboxInput, type CheckboxInputProps } from "./components/checkbox/checkbox-input.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"
