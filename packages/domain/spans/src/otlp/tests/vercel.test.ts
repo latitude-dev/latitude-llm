@@ -872,3 +872,79 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
     })
   })
 })
+
+function buildDuplicatedOuterUsageTrace(): OtlpExportTraceServiceRequest {
+  return {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", SERVICE_NAME)] },
+        scopeSpans: [
+          {
+            scope: { name: SCOPE_NAME, version: SCOPE_VERSION },
+            spans: [
+              {
+                traceId: TRACE_ID,
+                spanId: "cccccccccccccccc",
+                name: "ai.streamText",
+                kind: 1,
+                startTimeUnixNano: "1710590420000000000",
+                endTimeUnixNano: "1710590421000000000",
+                attributes: [
+                  str("ai.operationId", "ai.streamText"),
+                  str("ai.model.provider", "openai.chat"),
+                  str("ai.model.id", MODEL),
+                  str("ai.response.model", RESPONSE_MODEL),
+                  int("ai.usage.inputTokens", 321),
+                  int("ai.usage.outputTokens", 45),
+                ],
+                status: { code: 1 },
+              },
+              {
+                traceId: TRACE_ID,
+                spanId: "dddddddddddddddd",
+                parentSpanId: "cccccccccccccccc",
+                name: "ai.streamText.doStream",
+                kind: 1,
+                startTimeUnixNano: "1710590420100000000",
+                endTimeUnixNano: "1710590420900000000",
+                attributes: [
+                  str("ai.operationId", "ai.streamText.doStream"),
+                  str("ai.model.provider", "openai.chat"),
+                  str("ai.model.id", MODEL),
+                  str("ai.response.model", RESPONSE_MODEL),
+                  int("ai.usage.inputTokens", 321),
+                  int("ai.usage.outputTokens", 45),
+                ],
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+describe("Vercel AI SDK duplicate usage normalization", () => {
+  it("zeros outer wrapper usage and cost when the matching inner do* span also carries billing data", () => {
+    const spans = transformOtlpToSpans(buildDuplicatedOuterUsageTrace(), CONTEXT)
+    const outer = spans.find((span) => span.spanId === "cccccccccccccccc")
+    const inner = spans.find((span) => span.spanId === "dddddddddddddddd")
+
+    expect(outer).toBeDefined()
+    expect(inner).toBeDefined()
+
+    expect(outer?.tokensInput).toBe(0)
+    expect(outer?.tokensOutput).toBe(0)
+    expect(outer?.costTotalMicrocents).toBe(0)
+    expect(outer?.costIsEstimated).toBe(false)
+
+    expect(inner?.tokensInput).toBe(321)
+    expect(inner?.tokensOutput).toBe(45)
+    expect(inner?.costTotalMicrocents).toBeGreaterThan(0)
+
+    expect(outer?.attrInt["ai.usage.inputTokens"]).toBe(321)
+    expect(outer?.attrInt["ai.usage.outputTokens"]).toBe(45)
+    expect(outer?.attrString["ai.operationId"]).toBe("ai.streamText")
+  })
+})
