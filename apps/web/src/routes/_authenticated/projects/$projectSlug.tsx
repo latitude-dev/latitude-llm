@@ -5,13 +5,9 @@ import { useLayoutEffect } from "react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { writeLastProjectSlug } from "../../../lib/last-project-storage.ts"
-import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
-  staticData: {
-    breadcrumb: ProjectBreadcrumbSegment,
-  },
   staleTime: Infinity,
   remountDeps: ({ params }) => params,
   component: ProjectLayout,

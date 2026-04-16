@@ -315,7 +315,7 @@ function MembersTable({
                   </DropdownMenuRoot>
                 </TableCell>
                 <TableCell>
-                  <Status variant={inv.variant}>{inv.label}</Status>
+                  <Status variant={inv.variant} label={inv.label} />
                 </TableCell>
                 {isAdmin ? (
                   <TableCell align="right" className="w-14 max-w-none min-w-14 shrink-0">
