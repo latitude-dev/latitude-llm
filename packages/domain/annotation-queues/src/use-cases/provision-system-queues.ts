@@ -1,6 +1,6 @@
 import { generateId, type ProjectId, type RepositoryError, SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
-import { SYSTEM_QUEUE_DEFAULT_SAMPLING, SYSTEM_QUEUE_DEFINITIONS, type SystemQueueDefinition } from "../constants.ts"
+import { SYSTEM_QUEUE_DEFINITIONS, type SystemQueueDefinition } from "../constants.ts"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 
@@ -28,7 +28,7 @@ const createSystemQueue = (
     slug,
     description: definition.description,
     instructions: definition.instructions,
-    settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
+    settings: { sampling: definition.sampling },
     assignees: [],
     totalItems: 0,
     completedItems: 0,
