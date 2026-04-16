@@ -103,6 +103,10 @@ You must:
 
 export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    if (input.issueId) {
+      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    }
     const ai = yield* AI
 
     let previousName: string | null = null
@@ -184,4 +188,7 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
       name: truncateIssueName(result.object.name),
       description: collapseWhitespace(result.object.description),
     } satisfies GeneratedIssueDetails
-  }) as Effect.Effect<GeneratedIssueDetails, GenerateIssueDetailsError>
+  }).pipe(Effect.withSpan("issues.generateIssueDetails")) as Effect.Effect<
+    GeneratedIssueDetails,
+    GenerateIssueDetailsError
+  >

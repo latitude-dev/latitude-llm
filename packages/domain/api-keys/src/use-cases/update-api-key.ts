@@ -13,6 +13,7 @@ export type UpdateApiKeyError = RepositoryError | ApiKeyNotFoundError
 
 export const updateApiKeyUseCase = (input: UpdateApiKeyInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
     const repo = yield* ApiKeyRepository
     const apiKey = yield* repo
       .findById(input.id)
@@ -22,4 +23,4 @@ export const updateApiKeyUseCase = (input: UpdateApiKeyInput) =>
     yield* repo.save(updated)
 
     return updated
-  })
+  }).pipe(Effect.withSpan("apiKeys.updateApiKey"))

@@ -48,6 +48,9 @@ const createSystemQueue = (
  */
 export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+
     const sqlClient = yield* SqlClient
     const { organizationId, projectId } = input
 
@@ -82,4 +85,4 @@ export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) 
         return results
       }),
     )
-  })
+  }).pipe(Effect.withSpan("annotationQueues.provisionSystemQueues"))

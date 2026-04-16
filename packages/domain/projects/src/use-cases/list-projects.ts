@@ -12,8 +12,9 @@ export const listAllProjectsUseCase = (
   input: ListAllProjectsInput,
 ): Effect.Effect<readonly Project[], RepositoryError, ProjectRepository> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("project.organizationId", input.organizationId)
     const repo = yield* ProjectRepository
     if (input.includeDeleted) return yield* repo.listIncludingDeleted()
 
     return yield* repo.list()
-  })
+  }).pipe(Effect.withSpan("projects.listAllProjects"))

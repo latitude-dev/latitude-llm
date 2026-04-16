@@ -1,5 +1,6 @@
 import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@domain/scores"
 import type { BadRequestError, RepositoryError } from "@domain/shared"
+import { Effect } from "effect"
 import type { z } from "zod"
 import { persistDraftAnnotationInputSchema } from "../helpers/annotation-draft-write-schema.ts"
 import { writeAnnotation } from "../helpers/write-annotation.ts"
@@ -15,4 +16,4 @@ export type PersistDraftAnnotationError =
 
 /** Thin primitive: persist or update a **draft** annotation score (`draftedAt` set). */
 export const writeDraftAnnotationUseCase = (input: WriteDraftAnnotationInput & { organizationId: string }) =>
-  writeAnnotation(input, new Date())
+  writeAnnotation(input, new Date()).pipe(Effect.withSpan("annotations.writeDraftAnnotation"))

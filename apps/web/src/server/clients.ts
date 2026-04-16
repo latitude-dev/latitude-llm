@@ -8,6 +8,7 @@ import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
 import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
+import { withTracing } from "@repo/observability"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 
@@ -143,46 +144,52 @@ export const getBetterAuth = () => {
       extraPlugins: [tanstackStartCookies()],
       onUserCreated: async (user) => {
         await Effect.runPromise(
-          outboxWriter.write({
-            eventName: "UserSignedUp",
-            aggregateType: "user",
-            aggregateId: user.id,
-            organizationId: "system",
-            payload: { userId: user.id, email: user.email },
-          }),
+          outboxWriter
+            .write({
+              eventName: "UserSignedUp",
+              aggregateType: "user",
+              aggregateId: user.id,
+              organizationId: "system",
+              payload: { userId: user.id, email: user.email },
+            })
+            .pipe(withTracing),
         )
       },
       onMemberCreated: async (member) => {
         await Effect.runPromise(
-          outboxWriter.write({
-            eventName: "MemberJoined",
-            aggregateType: "member",
-            aggregateId: member.userId,
-            organizationId: member.organizationId,
-            payload: {
+          outboxWriter
+            .write({
+              eventName: "MemberJoined",
+              aggregateType: "member",
+              aggregateId: member.userId,
               organizationId: member.organizationId,
-              userId: member.userId,
-              role: member.role,
-            },
-          }),
+              payload: {
+                organizationId: member.organizationId,
+                userId: member.userId,
+                role: member.role,
+              },
+            })
+            .pipe(withTracing),
         )
       },
       sendMagicLink: async ({ email, url }) => {
         const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })
 
         await Effect.runPromise(
-          outboxWriter.write({
-            eventName: "MagicLinkEmailRequested",
-            aggregateType: "email_request",
-            aggregateId: generateId(),
-            organizationId: "system",
-            payload: {
-              email,
-              magicLinkUrl: url,
+          outboxWriter
+            .write({
+              eventName: "MagicLinkEmailRequested",
+              aggregateType: "email_request",
+              aggregateId: generateId(),
               organizationId: "system",
-              emailFlow,
-            },
-          }),
+              payload: {
+                email,
+                magicLinkUrl: url,
+                organizationId: "system",
+                emailFlow,
+              },
+            })
+            .pipe(withTracing),
         )
       },
       sendInvitationEmail: async (data) => {
@@ -191,34 +198,38 @@ export const getBetterAuth = () => {
             ? data.inviter.user.name.trim()
             : "A teammate"
         await Effect.runPromise(
-          outboxWriter.write({
-            eventName: "InvitationEmailRequested",
-            aggregateType: "invitation",
-            aggregateId: data.id,
-            organizationId: "system",
-            payload: {
-              email: data.email,
-              invitationUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
+          outboxWriter
+            .write({
+              eventName: "InvitationEmailRequested",
+              aggregateType: "invitation",
+              aggregateId: data.id,
               organizationId: "system",
-              organizationName: data.organization.name,
-              inviterName,
-            },
-            occurredAt: new Date(),
-          }),
+              payload: {
+                email: data.email,
+                invitationUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
+                organizationId: "system",
+                organizationName: data.organization.name,
+                inviterName,
+              },
+              occurredAt: new Date(),
+            })
+            .pipe(withTracing),
         )
         await Effect.runPromise(
-          outboxWriter.write({
-            eventName: "MemberInvited",
-            aggregateType: "invitation",
-            aggregateId: data.id,
-            organizationId: "system",
-            payload: {
+          outboxWriter
+            .write({
+              eventName: "MemberInvited",
+              aggregateType: "invitation",
+              aggregateId: data.id,
               organizationId: "system",
-              actorUserId: data.inviter.user.id,
-              email: data.email,
-              role: data.role,
-            },
-          }),
+              payload: {
+                organizationId: "system",
+                actorUserId: data.inviter.user.id,
+                email: data.email,
+                role: data.role,
+              },
+            })
+            .pipe(withTracing),
         )
       },
     })

@@ -100,6 +100,9 @@ export function addTracesToDataset(args: {
   readonly selection: TraceSelection
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+
     const chSqlClient = yield* ChSqlClient
     const rowRepo = yield* DatasetRowRepository
 
@@ -134,7 +137,7 @@ export function addTracesToDataset(args: {
       rows,
       source: "traces",
     })
-  })
+  }).pipe(Effect.withSpan("datasets.addTracesToDataset"))
 }
 
 export function createDatasetFromTraces(args: {
@@ -143,6 +146,8 @@ export function createDatasetFromTraces(args: {
   readonly selection: TraceSelection
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+
     const chSqlClient = yield* ChSqlClient
     const datasetRepo = yield* DatasetRepository
 
@@ -184,5 +189,5 @@ export function createDatasetFromTraces(args: {
     })
 
     return yield* populateDataset.pipe(Effect.tapError(() => datasetRepo.softDelete(dataset.id)))
-  })
+  }).pipe(Effect.withSpan("datasets.createDatasetFromTraces"))
 }

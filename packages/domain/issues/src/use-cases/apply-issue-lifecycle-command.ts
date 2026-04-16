@@ -154,6 +154,8 @@ export const applyIssueLifecycleCommandUseCase = (
 > =>
   Effect.gen(function* () {
     const parsed = applyIssueLifecycleCommandInputSchema.parse(input)
+    yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
+    yield* Effect.annotateCurrentSpan("command", parsed.command)
     const sqlClient = yield* SqlClient
     const keepMonitoring =
       parsed.command === "resolve"
@@ -207,4 +209,4 @@ export const applyIssueLifecycleCommandUseCase = (
         } satisfies ApplyIssueLifecycleCommandResult
       }),
     )
-  })
+  }).pipe(Effect.withSpan("issues.applyIssueLifecycleCommand"))

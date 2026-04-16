@@ -15,6 +15,9 @@ export type BuildTraceCohortListingSpecError = TraceCohortUnavailableError | Rep
 
 export const buildTraceCohortListingSpecUseCase = (input: BuildTraceCohortListingSpecInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("cohort", input.cohort)
+
     const traceRepository = yield* TraceRepository
     const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
       organizationId: input.organizationId,
@@ -31,4 +34,4 @@ export const buildTraceCohortListingSpecUseCase = (input: BuildTraceCohortListin
     }
 
     return spec
-  })
+  }).pipe(Effect.withSpan("spans.buildTraceCohortListingSpec"))

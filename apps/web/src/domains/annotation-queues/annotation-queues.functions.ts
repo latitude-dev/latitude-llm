@@ -8,6 +8,7 @@ import {
 } from "@domain/annotation-queues"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -89,7 +90,7 @@ export const listAnnotationQueuesByProject = createServerFn({ method: "GET" })
             ...(data.sortDirection !== undefined ? { sortDirection: data.sortDirection } : {}),
           },
         })
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId), withTracing),
     )
 
     const queues = page.items.map((q) => toAnnotationQueueRecord(q))
@@ -121,7 +122,7 @@ export const getAnnotationQueueByProject = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* AnnotationQueueRepository
         return yield* repo.findByIdInProject({ projectId, queueId: data.queueId })
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId), withTracing),
     )
 
     if (!queue) {
@@ -151,7 +152,7 @@ export const createAnnotationQueue = createServerFn({ method: "POST" })
         instructions: data.instructions,
         assignees: data.assignees ?? [],
         ...(data.settings !== undefined ? { settings: data.settings } : {}),
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId), withTracing),
     )
 
     return toAnnotationQueueRecord(result.queue)
@@ -178,7 +179,7 @@ export const updateAnnotationQueue = createServerFn({ method: "POST" })
         instructions: data.instructions,
         assignees: data.assignees ?? [],
         ...(data.settings !== undefined ? { settings: data.settings } : {}),
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId), withTracing),
     )
 
     return toAnnotationQueueRecord(result.queue)
@@ -200,6 +201,6 @@ export const deleteAnnotationQueue = createServerFn({ method: "POST" })
       deleteQueueUseCase({
         projectId: ProjectId(data.projectId),
         queueId: data.queueId,
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId), withTracing),
     )
   })

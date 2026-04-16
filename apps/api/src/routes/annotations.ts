@@ -11,6 +11,7 @@ import {
 } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -106,6 +107,7 @@ export const createAnnotationsRoutes = () => {
           organizationId,
         ),
         Effect.provide(QueuePublisherLive(c.var.queuePublisher)),
+        withTracing,
       ),
     )
 

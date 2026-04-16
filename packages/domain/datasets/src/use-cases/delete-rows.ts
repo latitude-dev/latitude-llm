@@ -12,6 +12,8 @@ export type DeleteRowsSelection =
 // See update-row.ts for details on the last-write-wins behavior.
 export function deleteRows(args: { readonly datasetId: DatasetId; readonly selection: DeleteRowsSelection }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     if (args.selection.mode === "selected" && args.selection.rowIds.length === 0) {
       return { versionId: null, version: 0 }
     }
@@ -54,5 +56,5 @@ export function deleteRows(args: { readonly datasetId: DatasetId; readonly selec
       .pipe(Effect.tapError(() => datasetRepo.decrementVersion({ id: args.datasetId, versionId: version.id })))
 
     return { versionId: version.id, version: version.version, deletedCount }
-  })
+  }).pipe(Effect.withSpan("datasets.deleteRows"))
 }

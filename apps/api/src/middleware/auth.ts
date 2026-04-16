@@ -1,6 +1,7 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import { validateApiKey } from "@platform/api-key-auth"
 import type { PostgresClient } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getAdminPostgresClient } from "../clients.ts"
@@ -79,7 +80,7 @@ interface AuthMiddlewareOptions {
 
 export const createAuthMiddleware = (options: AuthMiddlewareOptions): MiddlewareHandler => {
   return async (c: Context, next: Next) => {
-    const authContext = await Effect.runPromise(authenticate(c, options))
+    const authContext = await Effect.runPromise(authenticate(c, options).pipe(withTracing))
     c.set("auth", authContext)
     await next()
   }

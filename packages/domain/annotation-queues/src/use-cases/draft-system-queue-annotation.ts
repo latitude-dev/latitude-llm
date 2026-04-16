@@ -44,6 +44,11 @@ export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError 
  */
 export const draftSystemQueueAnnotationUseCase = (input: DraftSystemQueueAnnotationInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+    yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+
     const parsedInput = yield* parseOrBadRequest(
       systemQueueAnnotateInputSchema,
       input,
@@ -80,4 +85,4 @@ export const draftSystemQueueAnnotationUseCase = (input: DraftSystemQueueAnnotat
       feedback: annotatorResult.feedback,
       traceCreatedAt: annotatorResult.traceCreatedAt,
     } as DraftSystemQueueAnnotationOutput
-  })
+  }).pipe(Effect.withSpan("annotationQueues.draftSystemQueueAnnotation"))

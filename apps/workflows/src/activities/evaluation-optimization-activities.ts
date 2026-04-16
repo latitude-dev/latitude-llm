@@ -27,6 +27,7 @@ import {
   GepaOptimizerLive,
   gepaProposalOutputSchema,
 } from "@platform/op-gepa"
+import { withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getRedisClient } from "../clients.ts"
 
@@ -92,6 +93,7 @@ const proposeOptimizationCandidate = (input: {
       } satisfies OptimizationCandidate
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.mapError(
         (cause) =>
           new EvaluationOptimizationActivityError({
@@ -151,6 +153,7 @@ export const optimizeEvaluationDraft = (input: {
               issueDescription: input.issueDescription,
             }).pipe(
               withAi(AIGenerateLive, getRedisClient()),
+              withTracing,
               Effect.mapError(
                 (cause) =>
                   new EvaluationOptimizationActivityError({

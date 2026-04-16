@@ -11,6 +11,7 @@ export interface SyncIssueProjectionsInput {
 
 export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     const issueProjectionRepository = yield* IssueProjectionRepository
     const issueRepository = yield* IssueRepository
 
@@ -37,4 +38,4 @@ export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
       description: issue.description,
       vector,
     })
-  })
+  }).pipe(Effect.withSpan("issues.syncProjections"))

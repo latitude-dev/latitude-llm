@@ -8,6 +8,7 @@ import {
 import { ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import {
   errorResponse,
@@ -142,6 +143,7 @@ export const createProjectsRoutes = () => {
           c.var.postgresClient,
           c.var.organization.id,
         ),
+        withTracing,
       ),
     )
     return c.json(toResponse(project), 201)
@@ -152,7 +154,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.list()
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
+      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
     return c.json({ projects: projects.map(toResponse) }, 200)
@@ -166,7 +168,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findById(id)
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
+      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
     return c.json(toResponse(project), 200)
@@ -181,7 +183,7 @@ export const createProjectsRoutes = () => {
       updateProjectUseCase({
         id,
         ...(body.name !== undefined ? { name: body.name } : {}),
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
+      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
     return c.json(toResponse(updatedProject), 200)
@@ -195,7 +197,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(id)
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
+      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
     return c.body(null, 204)
   })

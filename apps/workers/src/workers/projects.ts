@@ -3,7 +3,7 @@ import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
 import { provisionSystemQueues } from "../services/provisioning.ts"
@@ -41,7 +41,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           queuesProvisioned: results.length,
           results: results.map((r) => r.queueSlug),
         })
-      }),
+      }).pipe(withTracing),
 
     checkFirstTrace: (payload) =>
       Effect.gen(function* () {
@@ -89,6 +89,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           pgClient,
           OrganizationId(payload.organizationId),
         ),
+        withTracing,
         Effect.ignore,
       ),
   })

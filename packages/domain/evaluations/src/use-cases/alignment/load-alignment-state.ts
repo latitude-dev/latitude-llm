@@ -12,6 +12,10 @@ export const loadAlignmentStateUseCase = (input: {
   readonly evaluationId: string
 }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
+    yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+
     const evaluationRepository = yield* EvaluationRepository
     const issueRepository = yield* EvaluationIssueRepository
     const evaluation = yield* evaluationRepository
@@ -53,4 +57,4 @@ export const loadAlignmentStateUseCase = (input: {
       },
       confusionMatrix: evaluation.alignment.confusionMatrix,
     } satisfies LoadedEvaluationAlignmentState
-  })
+  }).pipe(Effect.withSpan("evaluations.loadAlignmentState"))

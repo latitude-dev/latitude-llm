@@ -3,7 +3,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { AnnotationQueueId, type FilterSet, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
@@ -58,6 +58,7 @@ export const createAnnotationQueuesWorker = ({ consumer }: AnnotationQueuesDeps)
           organizationId,
         ),
         withClickHouse(TraceRepositoryLive, chClient, organizationId),
+        withTracing,
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info("Bulk import completed", {

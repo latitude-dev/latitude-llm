@@ -113,6 +113,7 @@ export type EnrichAnnotationForPublicationError = RepositoryError | BadRequestEr
 
 export const enrichAnnotationForPublicationUseCase = (input: EnrichAnnotationForPublicationInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
     const ai = yield* AI
 
     const loaded = yield* loadAnnotationScoreForPublicationMutation(input.scoreId)
@@ -186,4 +187,4 @@ export const enrichAnnotationForPublicationUseCase = (input: EnrichAnnotationFor
       resolvedSessionId: resolvedSessionId === null ? null : String(resolvedSessionId),
       resolvedSpanId: resolvedSpanId === null ? null : String(resolvedSpanId),
     }
-  })
+  }).pipe(Effect.withSpan("annotations.enrichAnnotationForPublication"))

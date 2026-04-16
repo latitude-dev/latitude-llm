@@ -22,7 +22,7 @@ import {
   ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -39,6 +39,7 @@ export const runFlagger = async (input: {
     runSystemQueueFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.tap(() =>
         Effect.sync(() =>
           logger.info("Ran system queue flagger", {
@@ -78,6 +79,7 @@ export const draftAnnotate = async (input: {
         OrganizationId(input.organizationId),
       ),
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
           systemQueueLogger.error("System queue draft annotate activity failed", {
@@ -118,6 +120,7 @@ export const persistAnnotation = async (input: {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
+      withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
           systemQueueLogger.error("System queue persist annotation activity failed", {

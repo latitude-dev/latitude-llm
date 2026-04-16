@@ -15,6 +15,9 @@ export function updateRow(args: {
   readonly metadata: RowFieldValue
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+    yield* Effect.annotateCurrentSpan("rowId", args.rowId)
+
     const datasetRepo = yield* DatasetRepository
     const rowRepo = yield* DatasetRowRepository
 
@@ -48,5 +51,5 @@ export function updateRow(args: {
       )
 
     return { versionId: version.id, version: version.version }
-  })
+  }).pipe(Effect.withSpan("datasets.updateRow"))
 }

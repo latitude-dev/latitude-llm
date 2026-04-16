@@ -19,12 +19,16 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@effect/opentelemetry": "catalog:",
     "@latitude-data/telemetry": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
+    "@opentelemetry/resources": "catalog:",
     "@opentelemetry/sdk-node": "^0.213.0",
     "@opentelemetry/sdk-trace-base": "^2.6.0",
+    "@opentelemetry/sdk-trace-node": "catalog:",
+    "@opentelemetry/semantic-conventions": "catalog:",
     "@platform/env": "workspace:*",
     "effect": "catalog:"
   }

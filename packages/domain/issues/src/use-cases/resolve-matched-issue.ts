@@ -14,6 +14,10 @@ export interface ResolvedIssueMatch {
 
 export const resolveMatchedIssueUseCase = (input: ResolveMatchedIssueInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    if (input.matchedIssueUuid !== null) {
+      yield* Effect.annotateCurrentSpan("matchedIssueUuid", input.matchedIssueUuid)
+    }
     if (input.matchedIssueUuid === null) {
       return {
         issueId: null,
@@ -31,4 +35,4 @@ export const resolveMatchedIssueUseCase = (input: ResolveMatchedIssueInput) =>
     return {
       issueId: issue?.id ?? null,
     } satisfies ResolvedIssueMatch
-  }) as Effect.Effect<ResolvedIssueMatch, RepositoryError>
+  }).pipe(Effect.withSpan("issues.resolveMatchedIssue")) as Effect.Effect<ResolvedIssueMatch, RepositoryError>

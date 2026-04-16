@@ -1,4 +1,4 @@
-import type { Effect } from "effect"
+import { Effect } from "effect"
 import type { EmailContent } from "../entities/email.ts"
 import type { EmailSendError } from "../errors.ts"
 import type { EmailSender } from "../ports/email-sender.ts"
@@ -12,12 +12,14 @@ import type { EmailSender } from "../ports/email-sender.ts"
 
 export const sendEmail = ({ emailSender }: { readonly emailSender: EmailSender }) => {
   return (email: EmailContent): Effect.Effect<void, EmailSendError> => {
-    return emailSender.send({
-      to: email.to,
-      subject: email.subject,
-      html: email.html,
-      ...(email.text && { text: email.text }),
-    })
+    return emailSender
+      .send({
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+        ...(email.text && { text: email.text }),
+      })
+      .pipe(Effect.withSpan("email.sendEmail"))
   }
 }
 

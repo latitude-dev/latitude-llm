@@ -13,6 +13,7 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -30,6 +31,7 @@ export const enrichAnnotationForPublication = async (input: {
         OrganizationId(input.organizationId),
       ),
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
     ),
   )
 
@@ -73,5 +75,6 @@ export const writePublishedAnnotationScore = async (input: {
         OrganizationId(input.organizationId),
       ),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )

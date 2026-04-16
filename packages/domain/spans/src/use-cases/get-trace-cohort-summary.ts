@@ -13,6 +13,8 @@ export interface GetTraceCohortSummaryInput {
 
 export const getTraceCohortSummaryUseCase = (input: GetTraceCohortSummaryInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+
     const traceRepository = yield* TraceRepository
     const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
       organizationId: input.organizationId,
@@ -27,4 +29,4 @@ export const getTraceCohortSummaryUseCase = (input: GetTraceCohortSummaryInput) 
       traceCount: baselineData.traceCount,
       baselines,
     } satisfies TraceCohortSummary
-  })
+  }).pipe(Effect.withSpan("spans.getTraceCohortSummary"))

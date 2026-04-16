@@ -40,6 +40,7 @@ import {
   GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
   gepaDetailsOutputSchema,
 } from "@platform/op-gepa"
+import { withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -125,6 +126,7 @@ export const loadEvaluationAlignmentState = (input: {
   Effect.runPromise(
     loadAlignmentStateUseCase(input).pipe(
       withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )
 
@@ -139,6 +141,7 @@ export const collectEvaluationAlignmentExamples = (input: {
     collectAlignmentExamplesUseCase(input).pipe(
       withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )
 
@@ -174,6 +177,7 @@ export const evaluateBaselineEvaluationDraft = (input: {
       script: input.draft.script,
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.mapError(
         (cause) =>
           new EvaluationAlignmentActivityError({
@@ -195,6 +199,7 @@ export const evaluateIncrementalEvaluationDraft = (input: {
   Effect.runPromise(
     evaluateIncrementalDraftUseCase(input).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.mapError(
         (cause) =>
           new EvaluationAlignmentActivityError({
@@ -230,6 +235,7 @@ export const generateEvaluationDetails = (input: {
       }
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
       Effect.mapError(
         (cause) =>
           new EvaluationAlignmentActivityError({
@@ -246,5 +252,6 @@ export const persistEvaluationAlignmentResult = (
   Effect.runPromise(
     persistAlignmentResultUseCase(input).pipe(
       withPostgres(EvaluationRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
     ),
   )

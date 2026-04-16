@@ -17,6 +17,9 @@ export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApi
 export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
   Effect.gen(function* () {
     const { organizationId } = yield* SqlClient
+    if (input.id) {
+      yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
+    }
 
     if (!input.name || input.name.trim().length === 0) {
       return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name cannot be empty" })
@@ -54,4 +57,4 @@ export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
     })
 
     return apiKey
-  })
+  }).pipe(Effect.withSpan("apiKeys.generateApiKey"))

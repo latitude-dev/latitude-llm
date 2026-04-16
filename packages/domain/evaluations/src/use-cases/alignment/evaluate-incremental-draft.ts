@@ -69,4 +69,4 @@ export const evaluateIncrementalDraftUseCase = (input: {
       matthewsCorrelationCoefficientDrop: decision.matthewsCorrelationCoefficientDrop,
       confusionMatrix: incremental.confusionMatrix,
     } satisfies IncrementalEvaluationRefreshResult
-  })
+  }).pipe(Effect.withSpan("evaluations.evaluateIncrementalDraft"))

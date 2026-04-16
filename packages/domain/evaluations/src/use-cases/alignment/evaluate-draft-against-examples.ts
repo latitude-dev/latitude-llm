@@ -52,4 +52,4 @@ export const evaluateDraftAgainstExamplesUseCase = (input: {
       metrics: deriveEvaluationAlignmentMetrics(confusionMatrix),
       exampleResults,
     } satisfies BaselineEvaluationResult
-  })
+  }).pipe(Effect.withSpan("evaluations.evaluateDraftAgainstExamples"))

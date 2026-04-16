@@ -18,6 +18,9 @@ export const ingestSpansUseCase = (
   input: IngestSpansInput,
 ): Effect.Effect<void, StorageError | QueuePublishError, StorageDisk | QueuePublisher> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+
     const publisher = yield* QueuePublisher
 
     let fileKey: string | null = null
@@ -45,4 +48,4 @@ export const ingestSpansUseCase = (
       apiKeyId: input.apiKeyId,
       ingestedAt: new Date().toISOString(),
     })
-  })
+  }).pipe(Effect.withSpan("spans.ingestSpans"))

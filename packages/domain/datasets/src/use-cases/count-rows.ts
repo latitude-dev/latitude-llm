@@ -9,6 +9,8 @@ export function countRows(args: {
   readonly search?: string
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     const rowRepo = yield* DatasetRowRepository
 
     let version: number | undefined
@@ -25,5 +27,5 @@ export function countRows(args: {
       ...(version !== undefined ? { version } : {}),
       ...(args.search ? { search: args.search } : {}),
     })
-  })
+  }).pipe(Effect.withSpan("datasets.countRows"))
 }

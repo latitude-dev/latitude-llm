@@ -33,6 +33,8 @@ export const listTraceAnnotationsUseCase = (input: ListTraceAnnotationsInput) =>
       input,
       "Invalid list trace annotations input",
     )
+    yield* Effect.annotateCurrentSpan("annotation.projectId", parsed.projectId)
+    yield* Effect.annotateCurrentSpan("annotation.traceId", parsed.traceId)
 
     const scoreRepository = yield* ScoreRepository
 
@@ -46,4 +48,4 @@ export const listTraceAnnotationsUseCase = (input: ListTraceAnnotationsInput) =>
         draftMode: parsed.draftMode,
       },
     })
-  })
+  }).pipe(Effect.withSpan("annotations.listTraceAnnotations"))

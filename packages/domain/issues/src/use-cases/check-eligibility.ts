@@ -22,6 +22,8 @@ export interface CheckEligibilityInput {
 
 export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const scoreRepository = yield* ScoreRepository
 
     const score = yield* scoreRepository
@@ -61,4 +63,4 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
     }
 
     return score
-  }) as Effect.Effect<Score, CheckEligibilityError | RepositoryError>
+  }).pipe(Effect.withSpan("issues.checkEligibility")) as Effect.Effect<Score, CheckEligibilityError | RepositoryError>

@@ -13,6 +13,8 @@ export function createDataset(args: {
   readonly actorUserId?: string
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+
     const repo = yield* DatasetRepository
     const name = yield* validateDatasetNameInProject({
       projectId: args.projectId,
@@ -36,5 +38,5 @@ export function createDataset(args: {
     })
 
     return dataset
-  })
+  }).pipe(Effect.withSpan("datasets.createDataset"))
 }

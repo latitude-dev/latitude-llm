@@ -16,7 +16,7 @@ import {
   type PostgresClient,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
@@ -67,6 +67,7 @@ export const createCurateHandler =
         OrganizationId(payload.organizationId),
       ),
       withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
+      withTracing,
       Effect.tap((result) =>
         Effect.sync(() => {
           if (result.action === "skipped") {

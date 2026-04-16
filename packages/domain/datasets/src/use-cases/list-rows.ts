@@ -13,6 +13,8 @@ export function listRows(args: {
   readonly cursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     const rowRepo = yield* DatasetRowRepository
 
     let version: number | undefined
@@ -33,5 +35,5 @@ export function listRows(args: {
       ...(args.offset !== undefined ? { offset: args.offset } : {}),
       ...(args.cursor ? { cursor: args.cursor } : {}),
     })
-  })
+  }).pipe(Effect.withSpan("datasets.listRows"))
 }

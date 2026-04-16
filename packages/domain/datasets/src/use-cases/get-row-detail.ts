@@ -9,6 +9,9 @@ export function getRowDetail(args: {
   readonly versionId?: DatasetVersionId
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+    yield* Effect.annotateCurrentSpan("rowId", args.rowId)
+
     const rowRepo = yield* DatasetRowRepository
 
     let version: number | undefined
@@ -25,5 +28,5 @@ export function getRowDetail(args: {
       rowId: args.rowId,
       ...(version !== undefined ? { version } : {}),
     })
-  })
+  }).pipe(Effect.withSpan("datasets.getRowDetail"))
 }

@@ -16,6 +16,7 @@ import {
 } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -109,6 +110,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
           chClient,
           organizationId,
         ),
+        withTracing,
       ),
     )
 
@@ -154,6 +156,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
           chClient,
           organizationId,
         ),
+        withTracing,
       ),
     )
 
@@ -171,6 +174,7 @@ export const deleteAnnotation = createServerFn({ method: "POST" })
     await Effect.runPromise(
       deleteAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
         withPostgres(postgresLayer, pgClient, organizationId),
+        withTracing,
       ),
     )
   })
@@ -196,7 +200,7 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include", // draft-aware by default for trace-scoped reads
-      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
     )
 
     return toListResult(result)
@@ -213,6 +217,7 @@ export const approveSystemAnnotation = createServerFn({ method: "POST" })
       approveSystemAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
         withPostgres(ScoreRepositoryLive, client, organizationId),
+        withTracing,
       ),
     )
 
@@ -230,6 +235,7 @@ export const rejectSystemAnnotation = createServerFn({ method: "POST" })
     await Effect.runPromise(
       deleteAnnotationUseCase({ scoreId: ScoreId(data.scoreId) }).pipe(
         withPostgres(postgresLayer, pgClient, organizationId),
+        withTracing,
       ),
     )
 

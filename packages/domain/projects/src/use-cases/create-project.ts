@@ -23,6 +23,9 @@ export type CreateProjectError = RepositoryError | ValidationError | ConflictErr
 
 export const createProjectUseCase = (input: CreateProjectInput) =>
   Effect.gen(function* () {
+    if (input.id) {
+      yield* Effect.annotateCurrentSpan("project.id", input.id)
+    }
     const trimmedName = input.name.trim()
     const sqlClient = yield* SqlClient
     const { organizationId } = sqlClient
@@ -109,4 +112,4 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
         return project
       }),
     )
-  })
+  }).pipe(Effect.withSpan("projects.createProject"))

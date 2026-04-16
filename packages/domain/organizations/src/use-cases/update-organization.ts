@@ -26,4 +26,4 @@ export const updateOrganizationUseCase = (input: UpdateOrganizationInput) =>
     yield* repo.save(updated)
 
     return updated
-  })
+  }).pipe(Effect.withSpan("organizations.updateOrganization"))

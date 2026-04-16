@@ -26,6 +26,10 @@ export type RemoveScoreFromIssueError = RepositoryError
 
 export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    if (input.issueId !== null) {
+      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    }
     if (input.draftedAt !== null) {
       return { action: "skipped", reason: "draft" } satisfies RemoveScoreFromIssueResult
     }
@@ -102,4 +106,7 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
     }
 
     return result
-  }) as Effect.Effect<RemoveScoreFromIssueResult, RemoveScoreFromIssueError>
+  }).pipe(Effect.withSpan("issues.removeScoreFromIssue")) as Effect.Effect<
+    RemoveScoreFromIssueResult,
+    RemoveScoreFromIssueError
+  >

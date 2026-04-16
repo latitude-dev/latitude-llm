@@ -20,6 +20,8 @@ export interface EmbeddedScoreFeedback {
 
 export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const scoreRepository = yield* ScoreRepository
     const ai = yield* AI
 
@@ -51,4 +53,4 @@ export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
       feedback: score.feedback,
       normalizedEmbedding: normalizeEmbedding(embedding.embedding),
     } satisfies EmbeddedScoreFeedback
-  })
+  }).pipe(Effect.withSpan("issues.embedScoreFeedback"))

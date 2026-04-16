@@ -20,6 +20,7 @@ export interface EmbedIssueSearchQueryResult {
 export const embedIssueSearchQueryUseCase = (input: EmbedIssueSearchQueryInput) =>
   Effect.gen(function* () {
     const parsed = embedIssueSearchQueryInputSchema.parse(input)
+    yield* Effect.annotateCurrentSpan("projectId", parsed.projectId)
     const ai = yield* AI
 
     const result = yield* ai.embed({
@@ -41,4 +42,4 @@ export const embedIssueSearchQueryUseCase = (input: EmbedIssueSearchQueryInput) 
       query: parsed.query,
       normalizedEmbedding,
     } satisfies EmbedIssueSearchQueryResult
-  })
+  }).pipe(Effect.withSpan("issues.embedIssueSearchQuery"))

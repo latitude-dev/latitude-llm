@@ -148,6 +148,10 @@ const buildExecutePublication = (input: {
 
 export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
+    yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("evaluation.traceId", input.traceId)
+
     const scoreRepository = yield* ScoreRepository
     const liveEvaluationQueuePublisher = yield* LiveEvaluationQueuePublisher
     const traceRepository = yield* TraceRepository
@@ -277,7 +281,7 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
         publishedExecuteCount,
       },
     } satisfies EnqueueLiveEvaluationsResult
-  }) as Effect.Effect<
+  }).pipe(Effect.withSpan("evaluations.enqueueLiveEvaluations")) as Effect.Effect<
     EnqueueLiveEvaluationsResult,
     EnqueueLiveEvaluationsError,
     TraceRepository | EvaluationRepository | LiveEvaluationQueuePublisher | ScoreRepository

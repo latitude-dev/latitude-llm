@@ -12,6 +12,9 @@ export const evaluateOptimizationCandidate = (input: {
   readonly issueDescription: string
 }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
+    yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
+
     const execution = yield* executeEvaluationScriptWithAI({
       script: input.candidate.text,
       conversation: input.example.conversation,
@@ -38,4 +41,4 @@ export const evaluateOptimizationCandidate = (input: {
         totalTokens: execution.totalTokens,
       } satisfies OptimizationTrajectory,
     }
-  })
+  }).pipe(Effect.withSpan("evaluations.evaluateOptimizationCandidate"))

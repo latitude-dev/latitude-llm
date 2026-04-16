@@ -16,6 +16,8 @@ export function updateDatasetDetails(args: {
   readonly description: string | null | undefined
 }) {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
     const repo = yield* DatasetRepository
     const dataset = yield* repo.findById(args.datasetId)
     const trimmedName = args.name.trim()
@@ -39,5 +41,5 @@ export function updateDatasetDetails(args: {
       name,
       description: normalizedDesc,
     })
-  })
+  }).pipe(Effect.withSpan("datasets.updateDatasetDetails"))
 }

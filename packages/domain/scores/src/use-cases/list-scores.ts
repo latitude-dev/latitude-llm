@@ -37,6 +37,7 @@ export type ListScoresError = RepositoryError | BadRequestError
 export const listProjectScoresUseCase = (input: ListProjectScoresInput) =>
   Effect.gen(function* () {
     const parsedInput = yield* parseOrBadRequest(listProjectScoresInputSchema, input, "Invalid project score query")
+    yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
     const repository = yield* ScoreRepository
 
     return yield* repository.listByProjectId({
@@ -47,11 +48,14 @@ export const listProjectScoresUseCase = (input: ListProjectScoresInput) =>
         draftMode: parsedInput.draftMode,
       },
     })
-  })
+  }).pipe(Effect.withSpan("scores.listProjectScores"))
 
 export const listSourceScoresUseCase = (input: ListSourceScoresInput) =>
   Effect.gen(function* () {
     const parsedInput = yield* parseOrBadRequest(listSourceScoresInputSchema, input, "Invalid source query")
+    yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
+    yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
+    yield* Effect.annotateCurrentSpan("score.sourceId", parsedInput.sourceId)
     const repository = yield* ScoreRepository
 
     return yield* repository.listBySourceId({
@@ -64,4 +68,4 @@ export const listSourceScoresUseCase = (input: ListSourceScoresInput) =>
         draftMode: parsedInput.draftMode,
       },
     })
-  })
+  }).pipe(Effect.withSpan("scores.listSourceScores"))
