@@ -8,6 +8,8 @@ import { Effect } from "effect"
 import type { ZodType, z } from "zod"
 import { GEPA_DEFAULT_SEED, GEPA_PYTHON_ENTRY_MODULE } from "./constants.ts"
 import {
+  createInternalErrorResponse,
+  createJsonRpcResponseError,
   createRequest,
   createResponse,
   isRequest,
@@ -26,6 +28,7 @@ type HandlerRegistration<P extends ZodType, R extends ZodType> = {
 }
 
 type PendingRequest<R extends ZodType> = {
+  readonly method: string
   readonly responseSchema: R
   readonly resolve: (value: z.infer<R>) => void
   readonly reject: (error: Error) => void
@@ -153,6 +156,7 @@ export class GepaClient {
 
     return new Promise<z.output<R>>((resolve, reject) => {
       this.pendingRequests.set(id, {
+        method,
         responseSchema,
         resolve,
         reject,
@@ -265,7 +269,13 @@ export class GepaClient {
     this.pendingRequests.delete(response.id)
 
     if (response.error) {
-      pending.reject(new Error(`RPC error ${response.error.code}: ${response.error.message}`))
+      pending.reject(
+        createJsonRpcResponseError({
+          error: response.error,
+          method: pending.method,
+          requestId: response.id,
+        }),
+      )
       return
     }
 
@@ -316,14 +326,7 @@ export class GepaClient {
       }
     } catch (error) {
       if (request.id !== null) {
-        this.write(
-          serializeMessage(
-            createResponse(request.id, undefined, {
-              code: JsonRpcErrorCode.internalError,
-              message: error instanceof Error ? error.message : String(error),
-            }),
-          ),
-        )
+        this.write(serializeMessage(createInternalErrorResponse(request.id, error)))
       }
     }
   }

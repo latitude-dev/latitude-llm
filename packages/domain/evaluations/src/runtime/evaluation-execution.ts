@@ -17,8 +17,8 @@ export type EvaluationScriptSchema<T> = z.ZodType<T>
 export const evaluationRuntimeZod = z
 
 export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
-  provider: "openai",
-  model: "gpt-5.4",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-sonnet-4-6",
   reasoning: "low",
 } as const
 
