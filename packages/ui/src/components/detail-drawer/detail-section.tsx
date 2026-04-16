@@ -5,6 +5,17 @@ import { useHover } from "../../hooks/use-hover.ts"
 import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
 
+/** Muted section label for sidebars (typography aligned with `DetailSection` titles, no rule). */
+export function DetailDrawerSectionHeading({ label }: { readonly label: string }) {
+  return (
+    <div className="flex h-8 w-full min-w-0 items-center px-1.5 py-0.5">
+      <Text.H6 color="foregroundMuted" weight="medium">
+        {label}
+      </Text.H6>
+    </div>
+  )
+}
+
 function Header({
   icon,
   label,
@@ -26,9 +37,13 @@ function Header({
       onClick={onClick}
     >
       {icon}
-      <Text.H6 color={hover ? "primary" : "foregroundMuted"}>{label}</Text.H6>
+      <Text.H6 color={hover ? "primary" : "foregroundMuted"} weight="medium">
+        {label}
+      </Text.H6>
 
-      <hr className={cn("flex-1 border-t-2 border-dashed border-border mx-2", { "border-accent": hover })} />
+      <hr
+        className={cn("mx-2 min-h-0 min-w-0 flex-1 border-t-2 border-dashed border-border", { "border-accent": hover })}
+      />
 
       {open ? <ChevronDown className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
     </button>

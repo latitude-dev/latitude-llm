@@ -11,10 +11,15 @@ import {
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
+import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: OrganizationSettingsPage,
+  component: OrganizationSettingsRoutePage,
 })
+
+function OrganizationSettingsRoutePage() {
+  return <OrganizationSettingsPanel />
+}
 
 function OrganizationNameSection() {
   const organizationId = useAuthenticatedOrganizationId()
@@ -129,10 +134,10 @@ function CreateOrganizationSection() {
   )
 }
 
-function OrganizationSettingsPage() {
+export function OrganizationSettingsPanel() {
   return (
-    <Container className="flex flex-col gap-8 pt-14">
-      <Text.H4 weight="bold">Organization</Text.H4>
+    <Container className="flex flex-col gap-8 p-6">
+      <SettingsPageHeader title="Organization" description="Manage your organization details." />
       <div className="flex max-w-lg flex-col gap-6">
         <OrganizationNameSection />
       </div>

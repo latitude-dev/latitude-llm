@@ -13,6 +13,12 @@ const statusVariants = cva(
         success: "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
         warning: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
         destructive: "bg-rose-500/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400",
+        /** Invitation pending — same surface as neutral */
+        pending: "bg-muted text-muted-foreground",
+        /** Invitation accepted / active — same surface as success */
+        accepted: "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
+        /** Invitation expired — same surface as destructive */
+        expired: "bg-rose-500/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400",
       },
     },
     defaultVariants: {
@@ -29,6 +35,9 @@ const statusDotVariants = cva("size-1.5 shrink-0 rounded-full", {
       success: "bg-green-600 dark:bg-green-400",
       warning: "bg-amber-600 dark:bg-amber-400",
       destructive: "bg-rose-600 dark:bg-rose-400",
+      pending: "bg-muted-foreground",
+      accepted: "bg-green-600 dark:bg-green-400",
+      expired: "bg-rose-600 dark:bg-rose-400",
     },
   },
   defaultVariants: {

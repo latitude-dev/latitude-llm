@@ -1,26 +1,12 @@
-import { DatasetRepository } from "@domain/datasets"
-import { IssueProjectionRepository, listIssuesUseCase } from "@domain/issues"
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { isValidId, OrganizationId, ProjectId } from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
-import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import {
-  DatasetRepositoryLive,
-  EvaluationRepositoryLive,
-  IssueRepositoryLive,
-  OutboxEventWriterLive,
-  ProjectRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { isValidId, ProjectId } from "@domain/shared"
+import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
-
-const logger = createLogger("project-stats")
+import { getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 
 const toRecord = (project: Project) => ({
   id: project.id,
@@ -146,75 +132,4 @@ export const deleteProject = createServerFn({ method: "POST" })
         },
       }),
     )
-  })
-
-export interface ProjectStats {
-  readonly activeIssueCount: number
-  readonly datasetCount: number
-  readonly traceCount: number
-}
-
-export const getProjectStats = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<ProjectStats> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const projectId = ProjectId(data.projectId)
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
-
-    const datasetEffect = Effect.gen(function* () {
-      const repo = yield* DatasetRepository
-      const result = yield* repo.listByProject({
-        projectId,
-        options: { limit: 1000 },
-      })
-      return result.datasets.length
-    }).pipe(
-      withPostgres(DatasetRepositoryLive, pgClient, orgId),
-      Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countDatasets" }))),
-      Effect.orElseSucceed(() => 0),
-    )
-
-    const traceEffect = Effect.gen(function* () {
-      const repo = yield* TraceRepository
-      return yield* repo.countByProjectId({
-        organizationId: orgId,
-        projectId,
-      })
-    }).pipe(
-      withClickHouse(TraceRepositoryLive, chClient, orgId),
-      Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countTraces" }))),
-      Effect.orElseSucceed(() => 0),
-    )
-
-    const issueEffect = Effect.gen(function* () {
-      const issues = yield* listIssuesUseCase({
-        organizationId,
-        projectId: data.projectId,
-        lifecycleGroup: "active",
-        limit: 1,
-        offset: 0,
-      })
-
-      return issues.totalCount
-    }).pipe(
-      withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-      withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
-      Effect.provide(
-        Layer.succeed(IssueProjectionRepository, {
-          upsert: () => Effect.void,
-          delete: () => Effect.void,
-          hybridSearch: () => Effect.succeed([]),
-        }),
-      ),
-      Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countActiveIssues" }))),
-      Effect.orElseSucceed(() => 0),
-    )
-
-    const [activeIssueCount, datasetCount, traceCount] = await Effect.runPromise(
-      Effect.all([issueEffect, datasetEffect, traceEffect]),
-    )
-
-    return { activeIssueCount, datasetCount, traceCount }
   })

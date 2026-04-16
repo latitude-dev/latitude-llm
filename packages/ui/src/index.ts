@@ -61,7 +61,7 @@ export {
   type DateRangePickerPreset,
 } from "./components/date-range-picker/date-range-picker.tsx"
 export { DetailDrawer } from "./components/detail-drawer/detail-drawer.tsx"
-export { DetailSection } from "./components/detail-drawer/detail-section.tsx"
+export { DetailDrawerSectionHeading, DetailSection } from "./components/detail-drawer/detail-section.tsx"
 export { DetailSummary, type DetailSummaryItem } from "./components/detail-drawer/detail-summary.tsx"
 export { DotIndicator, type DotIndicatorProps } from "./components/dot-indicator/dot-indicator.tsx"
 export { DropdownMenu, type MenuOption, type TriggerButtonProps } from "./components/dropdown-menu/dropdown-menu.tsx"
@@ -145,7 +145,15 @@ export { Slider, type SliderProps } from "./components/slider/index.tsx"
 export { Status, type StatusProps, statusVariants } from "./components/status/status.tsx"
 export { Switch, type SwitchProps } from "./components/switch/switch.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
-export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/table/table.tsx"
+export {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  type TableVariant,
+} from "./components/table/table.tsx"
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"

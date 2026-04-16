@@ -1,14 +1,13 @@
 import { CopyableText } from "@repo/ui"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { DatabaseIcon, LayersIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { useLayoutEffect } from "react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
-import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
+import { writeLastProjectSlug } from "../../../lib/last-project-storage.ts"
+import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
-  staticData: {
-    breadcrumb: ProjectBreadcrumbSegment,
-  },
   staleTime: Infinity,
   remountDeps: ({ params }) => params,
   component: ProjectLayout,
@@ -93,10 +92,16 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
 function ProjectLayout() {
   const { projectSlug } = Route.useParams()
   const project = Route.useLoaderData({ select: (data) => data.project })
+  const organizationId = useAuthenticatedOrganizationId()
+
+  useLayoutEffect(() => {
+    writeLastProjectSlug(organizationId, projectSlug)
+  }, [organizationId, projectSlug])
+
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0">
       <ProjectSidebar project={project} projectSlug={projectSlug} />
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <Outlet />
       </main>
     </div>
