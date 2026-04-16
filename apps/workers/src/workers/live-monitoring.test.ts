@@ -189,10 +189,13 @@ const createFakeRedisClient = (): RedisClient => {
   } as unknown as RedisClient
 }
 
+const delayedMessageKey = (queue: QueueName, dedupeKey: string) => `${queue}::${dedupeKey}`
+
 const createQueueHarness = () => {
   const consumer = new TestQueueConsumer()
   const published: PublishedMessage[] = []
-  const delayed = new Map<QueueName, PublishedMessage[]>()
+  /** Mimics BullMQ debounce+dedupe: same (queue, dedupeKey) replaces the pending delayed job. */
+  const delayed = new Map<string, PublishedMessage>()
 
   const publisher: QueuePublisherShape = {
     publish: (queue, task, payload, options) =>
@@ -200,21 +203,23 @@ const createQueueHarness = () => {
         const message = options === undefined ? { queue, task, payload } : { queue, task, payload, options }
         published.push(message)
 
-        if (options?.debounceMs !== undefined) {
-          const existing = delayed.get(queue) ?? []
-          existing.push(message)
-          delayed.set(queue, existing)
+        if (options?.debounceMs !== undefined && options.dedupeKey !== undefined) {
+          delayed.set(delayedMessageKey(queue, options.dedupeKey), message)
         }
       }),
     close: () => Effect.void,
   }
 
   const flushDelayed = async (queue: QueueName) => {
-    const messages = delayed.get(queue) ?? []
-    delayed.set(queue, [])
+    const prefix = `${queue}::`
+    const keysToFlush = [...delayed.keys()].filter((key) => key.startsWith(prefix))
 
-    for (const message of messages) {
-      await consumer.dispatchTask(queue, message.task, message.payload)
+    for (const key of keysToFlush) {
+      const message = delayed.get(key)
+      delayed.delete(key)
+      if (message) {
+        await consumer.dispatchTask(queue, message.task, message.payload)
+      }
     }
   }
 
@@ -222,7 +227,10 @@ const createQueueHarness = () => {
     consumer,
     publisher,
     published,
-    getDelayed: (queue: QueueName) => delayed.get(queue) ?? [],
+    getDelayed: (queue: QueueName) => {
+      const prefix = `${queue}::`
+      return [...delayed.entries()].filter(([key]) => key.startsWith(prefix)).map(([, message]) => message)
+    },
     flushDelayed,
   }
 }
@@ -307,5 +315,62 @@ describe("live monitoring integration", () => {
         }),
       },
     })
+  })
+
+  it("replaces debounced trace-end:run when SpanIngested is dispatched twice for the same trace", async () => {
+    await ch.client.insert({
+      table: "spans",
+      values: [makeTraceRow()],
+      format: "JSONEachRow",
+    })
+    await pg.db.insert(evaluations).values([makeEvaluationRow()])
+
+    const harness = createQueueHarness()
+
+    createDomainEventsWorker({
+      consumer: harness.consumer,
+      publisher: harness.publisher,
+    })
+    createTraceEndWorker({
+      consumer: harness.consumer,
+      publisher: harness.publisher,
+      workflowStarter: createFakeWorkflowStarter(),
+      postgresClient: pg.appPostgresClient,
+      clickhouseClient: ch.client,
+      redisClient: createFakeRedisClient(),
+    })
+
+    const envelope = makeEnvelope({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+    })
+    const dispatchPayload = envelopeToDispatchPayload(envelope)
+
+    await harness.consumer.dispatchTask("domain-events", "dispatch", dispatchPayload)
+    await harness.consumer.dispatchTask("domain-events", "dispatch", dispatchPayload)
+
+    const delayedTraceEnd = harness.getDelayed("trace-end")
+    expect(delayedTraceEnd).toHaveLength(1)
+    expect(delayedTraceEnd[0]).toEqual({
+      queue: "trace-end",
+      task: "run",
+      payload: {
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+      },
+      options: {
+        dedupeKey: `trace-end:run:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
+        debounceMs: TRACE_END_DEBOUNCE_MS,
+      },
+    })
+
+    await harness.flushDelayed("trace-end")
+
+    const liveEvalExecutePublishes = harness.published.filter(
+      (message) => message.queue === "live-evaluations" && message.task === "execute",
+    )
+    expect(liveEvalExecutePublishes).toHaveLength(1)
   })
 })
