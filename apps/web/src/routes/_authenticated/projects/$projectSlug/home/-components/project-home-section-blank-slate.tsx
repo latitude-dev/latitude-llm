@@ -18,7 +18,7 @@ export function ProjectHomeSectionBlankSlate({
 }) {
   return (
     <div className="flex w-full min-h-[120px] flex-col items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-muted/25 to-transparent px-4 py-10 text-center">
-      <Icon className="h-8 w-8 shrink-0 text-muted-foreground" aria-hidden />
+      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
       <Text.H5 align="center" display="block" color="foregroundMuted" className="max-w-md">
         {title}
       </Text.H5>

@@ -23,6 +23,31 @@ function issueNeedsAttention(issue: IssueRecord): boolean {
   return issue.states.some((s) => NEEDS_ATTENTION_STATES.has(s))
 }
 
+function AnnotationQueueHomeMetric({
+  label,
+  value,
+  isLoading,
+  skeletonWidthClassName = "w-16",
+}: {
+  readonly label: string
+  readonly value: string
+  readonly isLoading?: boolean
+  readonly skeletonWidthClassName?: string
+}) {
+  return (
+    <div className="flex min-w-[120px] max-w-[200px] shrink-0 basis-[148px] flex-col gap-1.5">
+      <Text.H6 color="foregroundMuted">{label}</Text.H6>
+      {isLoading ? (
+        <Skeleton className={`h-5 ${skeletonWidthClassName}`} />
+      ) : (
+        <Text.H5 color="foreground" className="tabular-nums">
+          {value}
+        </Text.H5>
+      )}
+    </div>
+  )
+}
+
 export function ProjectHomeDashboard({
   projectId,
   projectSlug,
@@ -82,6 +107,24 @@ export function ProjectHomeDashboard({
   }, [queuesResponse?.queues])
 
   const topQueues = useMemo(() => manualQueues.slice(0, 6), [manualQueues])
+
+  const manualQueueRollup = useMemo(() => {
+    let pending = 0
+    let completed = 0
+    let total = 0
+    for (const q of manualQueues) {
+      pending += Math.max(0, q.totalItems - q.completedItems)
+      completed += q.completedItems
+      total += q.totalItems
+    }
+    return {
+      pending,
+      completed,
+      total,
+      queueCount: manualQueues.length,
+      doneRatio: total > 0 ? completed / total : 0,
+    }
+  }, [manualQueues])
 
   return (
     <div className="flex flex-col gap-5 pb-6">
@@ -190,12 +233,35 @@ export function ProjectHomeDashboard({
 
       <div className="flex flex-col gap-2.5">
         <HomeSectionTitle label="Annotation queues" />
-        <div className="flex flex-col gap-3 rounded-lg bg-secondary p-3">
-          <div className="flex min-w-0 flex-row items-start justify-between gap-2">
-            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
-              Pending review
-            </Text.H6>
-            <Button variant="outline" size="sm" className="shrink-0" asChild>
+        <div className="flex flex-col gap-3 rounded-lg bg-secondary p-2">
+          <div className="flex min-w-0 flex-row flex-wrap items-start justify-between gap-3 p-4">
+            <div className="flex min-w-0 flex-1 flex-row flex-wrap gap-3">
+              <AnnotationQueueHomeMetric
+                label="Pending"
+                value={formatCount(manualQueueRollup.pending)}
+                isLoading={queuesLoading}
+                skeletonWidthClassName="w-14"
+              />
+              <AnnotationQueueHomeMetric
+                label="Completed"
+                value={formatCount(manualQueueRollup.completed)}
+                isLoading={queuesLoading}
+                skeletonWidthClassName="w-14"
+              />
+              <AnnotationQueueHomeMetric
+                label="Progress"
+                value={formatPercent(manualQueueRollup.doneRatio)}
+                isLoading={queuesLoading}
+                skeletonWidthClassName="w-12"
+              />
+              <AnnotationQueueHomeMetric
+                label="Queues"
+                value={formatCount(manualQueueRollup.queueCount)}
+                isLoading={queuesLoading}
+                skeletonWidthClassName="w-10"
+              />
+            </div>
+            <Button variant="outline" size="sm" className="shrink-0 self-start" asChild>
               <Link to="/projects/$projectSlug/annotation-queues/" params={{ projectSlug }}>
                 View queues
               </Link>
