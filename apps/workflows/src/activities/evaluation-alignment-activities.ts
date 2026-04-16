@@ -3,6 +3,7 @@ import {
   ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS,
   type BaselineEvaluationResult,
   buildEvaluationAlignmentJobStatus,
+  buildEvaluationGepaSummaryTelemetryCapture,
   type CollectedEvaluationAlignmentExamples,
   collectAlignmentExamplesUseCase,
   EVALUATION_JOB_STATUS_TTL_SECONDS,
@@ -165,6 +166,11 @@ export const generateBaselineEvaluationDraft = (input: {
   )
 
 export const evaluateBaselineEvaluationDraft = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
   readonly issueName: string
   readonly issueDescription: string
   readonly draft: GeneratedEvaluationDraft
@@ -173,8 +179,18 @@ export const evaluateBaselineEvaluationDraft = (input: {
 }): Promise<BaselineEvaluationResult> =>
   Effect.runPromise(
     evaluateBaselineDraftUseCase({
-      ...input,
+      issueName: input.issueName,
+      issueDescription: input.issueDescription,
       script: input.draft.script,
+      positiveExamples: input.positiveExamples,
+      negativeExamples: input.negativeExamples,
+      judgeTelemetry: {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        issueId: input.issueId,
+        evaluationId: input.evaluationId,
+        jobId: input.jobId,
+      },
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
@@ -189,6 +205,11 @@ export const evaluateBaselineEvaluationDraft = (input: {
   )
 
 export const evaluateIncrementalEvaluationDraft = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId?: string | null
   readonly issueName: string
   readonly issueDescription: string
   readonly draft: GeneratedEvaluationDraft
@@ -197,7 +218,21 @@ export const evaluateIncrementalEvaluationDraft = (input: {
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
 }): Promise<IncrementalEvaluationRefreshResult> =>
   Effect.runPromise(
-    evaluateIncrementalDraftUseCase(input).pipe(
+    evaluateIncrementalDraftUseCase({
+      issueName: input.issueName,
+      issueDescription: input.issueDescription,
+      draft: input.draft,
+      previousConfusionMatrix: input.previousConfusionMatrix,
+      positiveExamples: input.positiveExamples,
+      negativeExamples: input.negativeExamples,
+      judgeTelemetry: {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        issueId: input.issueId,
+        evaluationId: input.evaluationId,
+        ...(input.jobId !== undefined ? { jobId: input.jobId } : {}),
+      },
+    }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.mapError(
@@ -211,6 +246,12 @@ export const evaluateIncrementalEvaluationDraft = (input: {
   )
 
 export const generateEvaluationDetails = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
+  readonly evaluationHash: string
   readonly issueName: string
   readonly issueDescription: string
   readonly script: string
@@ -220,6 +261,14 @@ export const generateEvaluationDetails = (input: {
       const ai = yield* AI
       const result = yield* ai.generate({
         ...GEPA_DETAILS_GENERATOR_MODEL,
+        telemetry: buildEvaluationGepaSummaryTelemetryCapture({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId,
+          jobId: input.jobId,
+          evaluationHash: input.evaluationHash,
+        }),
         system: GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
         prompt: buildGepaDetailsPrompt({
           issueName: input.issueName,

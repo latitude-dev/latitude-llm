@@ -115,6 +115,11 @@ const runFullAlignment = async (
     })
 
     const optimizedDraft = await optimizeEvaluationDraft({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId ?? null,
+      jobId: input.jobId,
       draft: baselineDraft,
       issueName: collected.issueName,
       issueDescription: collected.issueDescription,
@@ -123,6 +128,11 @@ const runFullAlignment = async (
     })
 
     const baselineEvaluation = await evaluateBaselineEvaluationDraft({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId ?? null,
+      jobId: input.jobId,
       issueName: collected.issueName,
       issueDescription: collected.issueDescription,
       draft: optimizedDraft,
@@ -136,6 +146,12 @@ const runFullAlignment = async (
           description: existingState.description,
         }
       : await generateEvaluationDetails({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId ?? null,
+          jobId: input.jobId,
+          evaluationHash: optimizedDraft.evaluationHash,
           issueName: collected.issueName,
           issueDescription: collected.issueDescription,
           script: optimizedDraft.script,
@@ -193,6 +209,7 @@ const runIncrementalMetricRefresh = async (input: {
   readonly projectId: string
   readonly issueId: string
   readonly evaluationId: string
+  readonly jobId: string
 }): Promise<{
   readonly strategy: "no-op" | "metric-only" | "full-reoptimization"
   readonly evaluationId: string
@@ -212,6 +229,11 @@ const runIncrementalMetricRefresh = async (input: {
     requirePositiveExamples: false,
   })
   const refresh = await evaluateIncrementalEvaluationDraft({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: state.evaluationId,
+    jobId: input.jobId,
     issueName: state.issueName,
     issueDescription: state.issueDescription,
     draft: state.draft,
@@ -337,6 +359,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
           projectId: input.projectId,
           issueId: input.issueId,
           evaluationId: input.evaluationId,
+          jobId: input.jobId,
         })
 
         if (result.strategy === "full-reoptimization") {

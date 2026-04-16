@@ -3,6 +3,7 @@ import {
   ALIGNMENT_DEFAULT_SEED,
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
+  buildEvaluationGepaProposeTelemetryCapture,
   evaluateOptimizationCandidate,
   type GeneratedEvaluationDraft,
   type HydratedEvaluationAlignmentExample,
@@ -43,6 +44,12 @@ class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationAl
 }
 
 const proposeOptimizationCandidate = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
+  readonly draftEvaluationHash: string
   readonly candidate: OptimizationCandidate
   readonly issueName: string
   readonly issueDescription: string
@@ -60,6 +67,15 @@ const proposeOptimizationCandidate = (input: {
       const ai = yield* AI
       const result = yield* ai.generate({
         ...GEPA_PROPOSER_MODEL,
+        telemetry: buildEvaluationGepaProposeTelemetryCapture({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId,
+          jobId: input.jobId,
+          evaluationHash: input.draftEvaluationHash,
+          candidateHash: input.candidate.hash,
+        }),
         system: GEPA_PROPOSER_SYSTEM_PROMPT,
         prompt: buildGepaProposalPrompt({
           issueName: input.issueName,
@@ -105,6 +121,11 @@ const proposeOptimizationCandidate = (input: {
   )
 
 export const optimizeEvaluationDraft = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
   readonly draft: GeneratedEvaluationDraft
   readonly issueName: string
   readonly issueDescription: string
@@ -151,6 +172,13 @@ export const optimizeEvaluationDraft = (input: {
               example: hydratedExample,
               issueName: input.issueName,
               issueDescription: input.issueDescription,
+              judgeTelemetry: {
+                organizationId: input.organizationId,
+                projectId: input.projectId,
+                issueId: input.issueId,
+                evaluationId: input.evaluationId,
+                jobId: input.jobId,
+              },
             }).pipe(
               withAi(AIGenerateLive, getRedisClient()),
               withTracing,
@@ -166,6 +194,12 @@ export const optimizeEvaluationDraft = (input: {
         },
         propose: ({ candidate, context }: OptimizeProposalInput) =>
           proposeOptimizationCandidate({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            issueId: input.issueId,
+            evaluationId: input.evaluationId,
+            jobId: input.jobId,
+            draftEvaluationHash: input.draft.evaluationHash,
             candidate,
             issueName: input.issueName,
             issueDescription: input.issueDescription,

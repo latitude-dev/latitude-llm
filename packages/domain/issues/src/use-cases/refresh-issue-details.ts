@@ -65,6 +65,7 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
     yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const generatedDetailsResult = yield* generateIssueDetailsUseCase({
+      organizationId: input.organizationId,
       projectId: input.projectId,
       issueId: input.issueId,
     }).pipe(

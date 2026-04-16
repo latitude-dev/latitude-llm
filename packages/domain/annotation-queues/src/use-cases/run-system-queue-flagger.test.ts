@@ -1,4 +1,4 @@
-import { AIError } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
@@ -124,8 +124,8 @@ describe("runSystemQueueFlaggerUseCase", () => {
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: 256,
       telemetry: {
-        spanName: "system-queue-flagger",
-        tags: ["annotation-queue", "system-flagger"],
+        spanName: "queue.system.classify",
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
         metadata: {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,

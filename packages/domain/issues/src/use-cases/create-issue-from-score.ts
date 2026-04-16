@@ -118,6 +118,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
     }
 
     const issueDetails = yield* generateIssueDetailsUseCase({
+      organizationId: input.organizationId,
       projectId: input.projectId,
       occurrences: [
         {

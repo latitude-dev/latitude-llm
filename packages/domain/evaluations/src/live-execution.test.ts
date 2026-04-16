@@ -1,4 +1,4 @@
-import { AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -132,11 +132,13 @@ describe("executeLiveEvaluationUseCase", () => {
   it("executes the MVP script bridge through the shared AI service", async () => {
     const telemetry = liveEvaluationExecutionInputSchema.pick({ telemetry: true }).parse({
       telemetry: {
-        spanName: "evaluation.live.execute",
-        tags: ["evaluations", "live"],
+        spanName: "evaluation.judge.live",
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
         metadata: {
-          evaluationId,
+          organizationId: "o".repeat(24),
           projectId: "p".repeat(24),
+          evaluationId,
+          issueId: "i".repeat(24),
           traceId: "t".repeat(32),
         },
       },

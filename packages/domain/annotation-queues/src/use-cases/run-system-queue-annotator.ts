@@ -1,4 +1,12 @@
-import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+  formatGenAIMessage,
+} from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import type { TraceResourceOutlierReason } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
@@ -141,14 +149,12 @@ export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInp
       prompt,
       schema: systemQueueAnnotatorOutputSchema,
       telemetry: {
-        spanName: "system-queue-annotator",
-        tags: ["annotation-queue", "system-annotator"],
-        metadata: {
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          queueSlug: input.queueSlug,
-        },
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+        metadata: buildProjectScopedAiMetadata(
+          { organizationId: input.organizationId, projectId: input.projectId },
+          { traceId: input.traceId, queueSlug: input.queueSlug },
+        ),
       },
     })
 

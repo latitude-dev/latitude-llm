@@ -3,6 +3,12 @@ import { type Effect, ServiceMap } from "effect"
 import type { z } from "zod"
 import type { AICredentialError, AIError } from "./errors.ts"
 
+export {
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  buildProjectScopedAiMetadata,
+  type ProjectScopedAiIds,
+} from "./ai-generate-telemetry.ts"
 export { AICredentialError, AIError } from "./errors.ts"
 export {
   formatGenAIConversation,
