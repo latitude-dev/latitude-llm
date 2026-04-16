@@ -71,6 +71,8 @@ export default defineConfig({
       },
     },
     rollupOptions: {
+      // Nitro's final server build resolves externals through Rollup options.
+      external: ["@temporalio/client"],
       plugins: bundleAnalyze
         ? [
             visualizer({
