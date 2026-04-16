@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { HighlightRange } from "../text-selection.tsx"
 import { type HastNode, sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
@@ -125,7 +125,7 @@ describe("className generation", () => {
     expect(props(highlighted).className).toContain("bg-blue-100")
   })
 
-  it("adds cursor-pointer when highlight has onClick", () => {
+  it("adds cursor-pointer and hit-area when annotation has an id", () => {
     const h: HighlightRange = {
       messageIndex: 0,
       partIndex: 0,
@@ -133,15 +133,16 @@ describe("className generation", () => {
       endOffset: 5,
       type: "annotation",
       passed: true,
-      onClick: vi.fn(),
+      id: "ann-1",
     }
     const tree = rootWith(textNode("hello world", 0, 11))
     run(tree, [h])
     const highlighted = children(tree).find((n) => props(n)["data-annotated-text"])
     expect(props(highlighted).className).toContain("cursor-pointer")
+    expect(props(highlighted).className).toContain("hit-area-inline-y-2")
   })
 
-  it("does not add cursor-pointer when highlight has no onClick", () => {
+  it("does not add cursor-pointer when annotation has no id", () => {
     const h: HighlightRange = {
       messageIndex: 0,
       partIndex: 0,
@@ -173,31 +174,31 @@ describe("className generation", () => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Tag name (button vs span)
+// Tag name (always span)
 // ──────────────────────────────────────────────────────────────────────────────
 
 describe("tagName", () => {
-  it("renders a button when highlight has onClick", () => {
+  it("always renders a span for annotation highlights", () => {
     const h: HighlightRange = {
       messageIndex: 0,
       partIndex: 0,
       startOffset: 0,
       endOffset: 5,
       type: "annotation",
-      onClick: vi.fn(),
+      id: "ann-1",
     }
     const tree = rootWith(textNode("hello world", 0, 11))
     run(tree, [h])
     const annotated = children(tree).find((n) => props(n)["data-annotated-text"])
-    expect(annotated?.tagName).toBe("button")
+    expect(annotated?.tagName).toBe("span")
   })
 
-  it("renders a span when highlight has no onClick", () => {
-    const h: HighlightRange = { messageIndex: 0, partIndex: 0, startOffset: 0, endOffset: 5, type: "annotation" }
+  it("renders a span for selection highlights", () => {
+    const h: HighlightRange = { messageIndex: 0, partIndex: 0, startOffset: 0, endOffset: 5, type: "selection" }
     const tree = rootWith(textNode("hello world", 0, 11))
     run(tree, [h])
-    const annotated = children(tree).find((n) => props(n)["data-annotated-text"])
-    expect(annotated?.tagName).toBe("span")
+    const sel = children(tree).find((n) => props(n)["data-selected-text"])
+    expect(sel?.tagName).toBe("span")
   })
 })
 

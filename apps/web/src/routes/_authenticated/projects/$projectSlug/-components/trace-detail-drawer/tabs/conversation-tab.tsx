@@ -33,6 +33,7 @@ function ConversationContent({
   const scrollRef = scrollContainerRef ?? internalScrollRef
   const navigatorRef = useRef<ScrollNavigatorHandle>(null)
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const clearSelectionRef = useRef<(() => void) | null>(null)
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
@@ -61,6 +62,7 @@ function ConversationContent({
 
   const {
     highlightRanges,
+    onAnnotationClick,
     handleTextSelect,
     openExistingAnnotationPopover,
     textSelectionPopoverPosition,
@@ -102,7 +104,7 @@ function ConversationContent({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={scrollRef} className="flex flex-col py-8 px-4 overflow-y-auto flex-1">
+      <div ref={scrollRef} className="flex flex-col py-8 px-4 custom-scrollbar overflow-y-auto flex-1">
         <Conversation
           messages={traceDetail.allMessages}
           enableNavigator
@@ -110,7 +112,10 @@ function ConversationContent({
           navigatorRef={navigatorRef}
           navItemRefsRef={navItemRefs}
           onTextSelect={handleTextSelect}
+          onSelectionDismiss={closeAnnotationPopover}
+          clearSelectionRef={clearSelectionRef}
           highlightRanges={highlightRanges}
+          onAnnotationClick={onAnnotationClick}
           messageAnnotationSlot={(messageIndex) => {
             const data = messageLevelAnnotations.get(messageIndex)
             return (
@@ -131,6 +136,7 @@ function ConversationContent({
         />
         <AnnotationPopover
           position={textSelectionPopoverPosition}
+          scrollContainerRef={scrollRef}
           projectId={projectId}
           annotations={textSelectionAnnotations}
           showCreateForm={textSelectionAnnotations.length === 0}
@@ -140,6 +146,7 @@ function ConversationContent({
           onUpdate={updateTextSelectionAnnotation}
           onClose={() => {
             closeAnnotationPopover()
+            clearSelectionRef.current?.()
             onPopoverClose?.()
           }}
         />

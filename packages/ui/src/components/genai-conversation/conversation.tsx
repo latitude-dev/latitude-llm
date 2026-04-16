@@ -1,11 +1,17 @@
 import { cn, Text } from "@repo/ui"
-import { type ReactNode, type Ref, type RefObject, useMemo, useRef } from "react"
+import { type ReactNode, type Ref, type RefObject, useCallback, useMemo, useRef } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
 import type { ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
-import { type HighlightRange, type TextSelectionAnchor, TextSelectionProvider } from "./text-selection.tsx"
+import { SelectionActionPopover } from "./selection-action-popover.tsx"
+import {
+  type HighlightRange,
+  SELECTION_HIGHLIGHT_CLASSES,
+  type TextSelectionAnchor,
+  TextSelectionProvider,
+} from "./text-selection.tsx"
 
 interface ToolResponsePart {
   readonly type: "tool_call_response"
@@ -77,7 +83,10 @@ export function Conversation({
   messageActions,
   toolCallActions,
   onTextSelect,
+  onSelectionDismiss,
+  clearSelectionRef,
   highlightRanges,
+  onAnnotationClick,
   messageAnnotationSlot,
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
@@ -101,8 +110,14 @@ export function Conversation({
   readonly toolCallActions?: ToolCallActions
   /** Called when the user selects text within a message part. Emits the canonical anchor and popover position. */
   readonly onTextSelect?: ((anchor: TextSelectionAnchor, position: { x: number; y: number }) => void) | undefined
+  /** Called when the selection highlight is cleared (e.g. ESC, click outside). Use to close external popovers. */
+  readonly onSelectionDismiss?: (() => void) | undefined
+  /** Ref that receives a function to imperatively clear the selection highlight from outside. */
+  readonly clearSelectionRef?: RefObject<(() => void) | null> | undefined
   /** Highlight ranges to paint on text parts (e.g. from persisted annotations). */
   readonly highlightRanges?: ReadonlyArray<HighlightRange> | undefined
+  /** Called when a persisted annotation highlight is clicked. Receives the annotation id and click position. */
+  readonly onAnnotationClick?: ((annotationId: string, position: { x: number; y: number }) => void) | undefined
   /** Renders a slot below each message. Receives the original messageIndex and role. */
   readonly messageAnnotationSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
@@ -111,6 +126,35 @@ export function Conversation({
   const navItemRefs = navItemRefsRef ?? internalNavItemRefs
   const containerRef = useRef<HTMLDivElement>(null)
   const enableTextSelection = !!onTextSelect || (highlightRanges != null && highlightRanges.length > 0)
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!onAnnotationClick) return
+      const target = (e.target as HTMLElement).closest<HTMLElement>("[data-annotation-id]")
+      if (!target) return
+
+      const annotationId = target.getAttribute("data-annotation-id")
+      if (!annotationId) return
+
+      const partRoot = target.closest("[data-part-index]") ?? document.body
+      const segments = partRoot.querySelectorAll(`[data-annotation-id="${annotationId}"]`)
+      let left = e.clientX
+      let bottom = e.clientY
+      if (segments.length > 0) {
+        let minLeft = Number.POSITIVE_INFINITY
+        let maxBottom = Number.NEGATIVE_INFINITY
+        for (const seg of segments) {
+          const r = seg.getBoundingClientRect()
+          if (r.left < minLeft) minLeft = r.left
+          if (r.bottom > maxBottom) maxBottom = r.bottom
+        }
+        left = minLeft
+        bottom = maxBottom
+      }
+      onAnnotationClick(annotationId, { x: left, y: bottom })
+    },
+    [onAnnotationClick],
+  )
 
   const { resultMap, visibleMessages } = useMemo(() => {
     const { resultMap, absorbedIndexes } = buildToolResultsMap(messages)
@@ -140,7 +184,16 @@ export function Conversation({
   }
 
   const content = (
-    <div ref={containerRef} className={cn("flex min-w-0 flex-col gap-6", { "select-none": !enableTextSelection })}>
+    // biome-ignore lint/a11y/useKeyWithClickEvents: delegated click for annotation spans (keyboard handled by Escape listener)
+    // biome-ignore lint/a11y/noStaticElementInteractions: delegated event handler — actual interactive targets are annotated spans
+    <div
+      ref={containerRef}
+      onClick={handleContainerClick}
+      className={cn("flex min-w-0 flex-col gap-6", {
+        "select-none": !enableTextSelection,
+        [SELECTION_HIGHLIGHT_CLASSES]: enableTextSelection,
+      })}
+    >
       {visibleMessages.map(({ message, index }, i) => {
         const onNavigate = messageActions?.get(index)
         const isAssistant = message.role === "assistant"
@@ -205,9 +258,12 @@ export function Conversation({
         messages={messages}
         containerRef={containerRef}
         onSelect={onTextSelect}
+        onDismiss={onSelectionDismiss}
+        clearSelectionRef={clearSelectionRef}
         highlightRanges={highlightRanges}
       >
         {content}
+        <SelectionActionPopover />
       </TextSelectionProvider>
     )
   }
