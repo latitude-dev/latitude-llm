@@ -27,14 +27,23 @@ export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgr
         withPostgres(ScoreRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         withTracing,
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
+        Effect.catchTag("NotFoundError", () =>
+          Effect.sync(() =>
+            logger.warn(
+              `Score ${payload.scoreId} not found, skipping publishHumanAnnotation (score may have been deleted before debounced job ran)`,
+            ),
+          ),
+        ),
         Effect.tap((result) =>
-          Effect.sync(() => {
-            if (result.action === "workflow-started") {
-              logger.info(`Started annotation publication workflow for ${payload.projectId}/${payload.scoreId}`)
-            } else {
-              logger.info(`Annotation score ${payload.projectId}/${payload.scoreId} already published (idempotent)`)
-            }
-          }),
+          result === undefined
+            ? Effect.void
+            : Effect.sync(() => {
+                if (result.action === "workflow-started") {
+                  logger.info(`Started annotation publication workflow for ${payload.projectId}/${payload.scoreId}`)
+                } else {
+                  logger.info(`Annotation score ${payload.projectId}/${payload.scoreId} already published (idempotent)`)
+                }
+              }),
         ),
         Effect.tapError((error) =>
           Effect.sync(() =>

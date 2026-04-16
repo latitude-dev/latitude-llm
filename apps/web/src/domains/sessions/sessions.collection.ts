@@ -95,5 +95,6 @@ export function useSessionDistinctValues({
     queryKey: ["session-distinct", projectId, column, search],
     queryFn: () => getSessionDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
     staleTime: 60_000,
+    enabled: projectId.length > 0,
   })
 }

@@ -1,6 +1,6 @@
 import { Button, Icon, Input } from "@repo/ui"
 import { PlusIcon, Trash2Icon } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { MetadataEntry } from "./use-metadata-filter.ts"
 
 interface MetadataFilterProps {
@@ -10,18 +10,23 @@ interface MetadataFilterProps {
 }
 
 export function MetadataFilter({ entries: committedEntries, onChange, disabled }: MetadataFilterProps) {
-  const [localEntries, setLocalEntries] = useState<MetadataEntry[]>([...committedEntries])
+  const [localEntries, setLocalEntries] = useState<MetadataEntry[]>(() => [...committedEntries])
 
-  // TODO(frontend-use-effect-policy): keep draft metadata rows in sync with externally-controlled filter updates.
+  const persistedSnapshot = useMemo(
+    () => JSON.stringify(committedEntries.map((e) => [e.key, e.value])),
+    [committedEntries],
+  )
+
+  // Sync from parent when persisted metadata rows change (e.g. preset load, remove filter). Partial rows with an
+  // empty key are not in committedEntries, so the snapshot stays stable while typing only value or key first.
   useEffect(() => {
     setLocalEntries([...committedEntries])
-  }, [committedEntries])
+  }, [persistedSnapshot, committedEntries])
 
   const propagate = useCallback(
     (entries: MetadataEntry[]) => {
       setLocalEntries(entries)
-      const valid = entries.filter((e) => e.key !== "" && e.value !== "")
-      onChange(valid)
+      onChange(entries)
     },
     [onChange],
   )

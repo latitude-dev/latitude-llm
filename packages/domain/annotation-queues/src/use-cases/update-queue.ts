@@ -54,9 +54,15 @@ export const updateQueueUseCase = (
     let updated: AnnotationQueue
 
     if (existing.system) {
+      const mergedSettings: AnnotationQueueSettings = {
+        ...existing.settings,
+        ...(input.settings?.sampling !== undefined ? { sampling: input.settings.sampling } : {}),
+      }
+      const normalizedSettings = normalizeQueueSettings(mergedSettings)
+
       updated = {
         ...existing,
-        assignees: input.assignees ? [...input.assignees] : [...existing.assignees],
+        settings: normalizedSettings,
         updatedAt: now,
       }
     } else {

@@ -186,6 +186,7 @@ export function useTraceDistinctValues({
     queryKey: ["trace-distinct", projectId, column, search],
     queryFn: () => getTraceDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
     staleTime: 60_000,
+    enabled: projectId.length > 0,
   })
 }
 
