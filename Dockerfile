@@ -123,7 +123,9 @@ RUN cat <<'EOF' > /usr/local/bin/install-prod-deps && chmod +x /usr/local/bin/in
 #!/bin/bash
 set -euo pipefail
 
-pnpm install --frozen-lockfile --ignore-scripts --production
+# CI=true auto-confirms pnpm's modules-purge prompt in non-TTY Docker builds,
+# which is needed when `.npmrc` public-hoist-pattern changes the expected layout.
+CI=true pnpm install --frozen-lockfile --ignore-scripts --production
 EOF
 
 # ---------------------------------------------------------------------------
@@ -290,7 +292,7 @@ COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-migrations /app/.npmrc ./.npmrc
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --ignore-scripts
+  CI=true pnpm install --frozen-lockfile --ignore-scripts
 
 USER latitude
 
