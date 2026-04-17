@@ -1,5 +1,66 @@
 import { Data } from "effect"
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+const toNonEmptyString = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+
+const toCauseMessage = (cause: unknown): string | null => {
+  if (cause instanceof Error) {
+    return toNonEmptyString(cause.message)
+  }
+
+  if (typeof cause === "string") {
+    return toNonEmptyString(cause)
+  }
+
+  if (isRecord(cause)) {
+    return toNonEmptyString(cause.message) ?? toNonEmptyString(cause.detail)
+  }
+
+  return null
+}
+
+const collectCauseMessages = (cause: unknown): string[] => {
+  const messages: string[] = []
+  const seen = new Set<unknown>()
+  let current: unknown = cause
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+
+    const message = toCauseMessage(current)
+    if (message && !messages.includes(message)) {
+      messages.push(message)
+    }
+
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return messages
+}
+
+const findCauseStack = (cause: unknown): string | undefined => {
+  const seen = new Set<unknown>()
+  let current: unknown = cause
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+
+    if (current instanceof Error && current.stack) {
+      return current.stack
+    }
+
+    if (isRecord(current) && typeof current.stack === "string" && current.stack.length > 0) {
+      return current.stack
+    }
+
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return undefined
+}
+
 export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly cause: unknown
   readonly operation: string
@@ -7,8 +68,15 @@ export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   constructor(args: { readonly cause: unknown; readonly operation: string }) {
     super(args)
 
-    if (args.cause instanceof Error && args.cause.stack) {
-      this.stack = args.cause.stack
+    const causeMessages = collectCauseMessages(args.cause)
+    this.message =
+      causeMessages.length > 0
+        ? `Repository ${args.operation} failed: ${causeMessages.join(" Caused by: ")}`
+        : `Repository ${args.operation} failed`
+
+    const causeStack = findCauseStack(args.cause)
+    if (causeStack) {
+      this.stack = causeStack
     }
   }
 
