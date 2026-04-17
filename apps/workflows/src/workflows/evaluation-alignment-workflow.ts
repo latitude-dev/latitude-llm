@@ -5,6 +5,7 @@ import {
 import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/queue/workflow-registry"
 import { condition, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 type EvaluationAlignmentWorkflowInput = {
   readonly organizationId: string
@@ -38,7 +39,13 @@ const {
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
   writeEvaluationAlignmentJobStatus,
-} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "5 minutes",
+  retry: {
+    ...defaultActivityRetryPolicy,
+    nonRetryableErrorTypes: ["EvaluationManualRealignmentRateLimitedError"],
+  },
+})
 
 const toFailurePayload = (error: unknown) => {
   const maybeTag = (error as { _tag?: string } | null)?._tag
@@ -382,8 +389,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
     const currentRevision = scheduleRevision
 
     if (nextDueAtMs === null) {
-      await condition(() => scheduleRevision !== currentRevision || pendingManualJobId !== null)
-      continue
+      return
     }
 
     await condition(

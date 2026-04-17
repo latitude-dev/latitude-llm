@@ -1,9 +1,13 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 const { embedScoreFeedback, assignScoreToIssue, syncIssueProjections, syncScoreAnalytics } = proxyActivities<
   typeof activities
->({ startToCloseTimeout: "5 minutes" })
+>({
+  startToCloseTimeout: "5 minutes",
+  retry: defaultActivityRetryPolicy,
+})
 
 export const assignScoreToKnownIssueWorkflow = async (input: {
   readonly organizationId: string
