@@ -382,8 +382,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
     const currentRevision = scheduleRevision
 
     if (nextDueAtMs === null) {
-      await condition(() => scheduleRevision !== currentRevision || pendingManualJobId !== null)
-      continue
+      return
     }
 
     await condition(
