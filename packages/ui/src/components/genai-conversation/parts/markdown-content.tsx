@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm"
 import { Button } from "../../button/button.tsx"
 import { Text } from "../../text/text.tsx"
 import { TextSelectionContext } from "../text-selection.tsx"
+import { JsonContent } from "./json-content.tsx"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
 const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
@@ -16,6 +17,20 @@ function getLargeContentPreview(content: string) {
   if (content.length <= LARGE_MARKDOWN_PREVIEW_LENGTH) return content
 
   return `${content.slice(0, LARGE_MARKDOWN_PREVIEW_LENGTH)}\n\n[truncated ${content.length - LARGE_MARKDOWN_PREVIEW_LENGTH} characters]`
+}
+
+export function isJsonBlock(content: string): boolean {
+  const t = content.trim()
+  if (t.length < 2) return false
+  const first = t[0]
+  const last = t[t.length - 1]
+  if (!((first === "{" && last === "}") || (first === "[" && last === "]"))) return false
+  try {
+    JSON.parse(t)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function MarkdownContent({
@@ -36,6 +51,11 @@ export function MarkdownContent({
     [selectionCtx, messageIndex, partIndex],
   )
   const [showFullText, setShowFullText] = useState(false)
+  const isJson = useMemo(() => isJsonBlock(content), [content])
+
+  if (isJson) {
+    return <JsonContent content={content} messageIndex={messageIndex} partIndex={partIndex} />
+  }
 
   if (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD) {
     const preview = showFullText ? content : getLargeContentPreview(content)

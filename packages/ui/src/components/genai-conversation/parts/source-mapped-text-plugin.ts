@@ -1,5 +1,5 @@
-import { cn } from "../../../utils/cn.ts"
 import type { HighlightRange } from "../text-selection.tsx"
+import { highlightAttributes, segmentForHighlights } from "./highlight-segments.ts"
 
 export type HastNode = {
   type: string
@@ -47,69 +47,23 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
             continue
           }
 
-          const overlaps = sortedHighlights.filter(
-            (h) => h.endOffset > start && h.startOffset < end && h.endOffset > h.startOffset,
-          )
-
-          if (overlaps.length === 0) {
-            nextChildren.push({
-              type: "element",
-              tagName: "span",
-              properties: {
-                "data-source-start": String(start),
-                "data-source-end": String(end),
-              },
-              children: [{ type: "text", value }],
-            })
+          const segments = segmentForHighlights(value, start, end, sortedHighlights)
+          if (segments.length === 0) {
+            nextChildren.push(child)
             continue
           }
 
-          const cuts = new Set<number>([start, end])
-          for (const h of overlaps) {
-            cuts.add(Math.max(start, h.startOffset))
-            cuts.add(Math.min(end, h.endOffset))
-          }
-          const boundaries = [...cuts].sort((a, b) => a - b)
-
-          for (let i = 0; i < boundaries.length - 1; i++) {
-            const segStart = boundaries[i] ?? start
-            const segEnd = boundaries[i + 1] ?? end
-            if (segEnd <= segStart) continue
-
-            const sliceStart = segStart - start
-            const sliceEnd = segEnd - start
-            const segmentText = value.slice(sliceStart, sliceEnd)
-            if (!segmentText) continue
-
-            const activeHighlight = overlaps.find((h) => h.startOffset < segEnd && h.endOffset > segStart) ?? null
-            const isAnnotation = activeHighlight && activeHighlight.type !== "selection"
-            const isClickable = isAnnotation && !!activeHighlight.id
-            const className = cn({
-              "cursor-pointer hit-area-inline-y-2": isClickable,
-              "bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-400/20 dark:border-yellow-400/50":
-                activeHighlight?.type === "selection",
-              "bg-red-100 dark:bg-red-400/30": isAnnotation && activeHighlight.passed === false,
-              "bg-emerald-100 dark:bg-emerald-400/30": isAnnotation && activeHighlight.passed === true,
-              "bg-blue-100 dark:bg-blue-400/30": isAnnotation && activeHighlight.passed === undefined,
-            })
-
+          for (const segment of segments) {
+            const attrs = highlightAttributes(segment.activeHighlight)
             nextChildren.push({
               type: "element",
               tagName: "span",
               properties: {
-                "data-source-start": String(segStart),
-                "data-source-end": String(segEnd),
-                ...(activeHighlight?.type === "selection"
-                  ? { "data-selected-text": true }
-                  : activeHighlight
-                    ? {
-                        "data-annotated-text": true,
-                        ...(activeHighlight.id ? { "data-annotation-id": activeHighlight.id } : {}),
-                      }
-                    : {}),
-                ...(className ? { className } : {}),
+                "data-source-start": String(segment.sourceStart),
+                "data-source-end": String(segment.sourceEnd),
+                ...attrs,
               },
-              children: [{ type: "text", value: segmentText }],
+              children: [{ type: "text", value: segment.text }],
             })
           }
         }
