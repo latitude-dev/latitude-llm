@@ -17,55 +17,57 @@ export interface MarkReviewStartedInput {
  *
  * Skips if the score is not an annotation or has no traceId.
  */
-export const markReviewStartedUseCase = Effect.fn("annotationQueues.markReviewStarted")(function* (input: MarkReviewStartedInput) {
-    yield* Effect.annotateCurrentSpan("score.id", input.score.id)
-    yield* Effect.annotateCurrentSpan("score.projectId", input.score.projectId)
+export const markReviewStartedUseCase = Effect.fn("annotationQueues.markReviewStarted")(function* (
+  input: MarkReviewStartedInput,
+) {
+  yield* Effect.annotateCurrentSpan("score.id", input.score.id)
+  yield* Effect.annotateCurrentSpan("score.projectId", input.score.projectId)
 
-    const { score } = input
+  const { score } = input
 
-    if (score.source !== "annotation") return 0
-    if (!score.traceId) return 0
+  if (score.source !== "annotation") return 0
+  if (!score.traceId) return 0
 
-    const projectId = ProjectId(score.projectId)
-    const traceId = score.traceId
+  const projectId = ProjectId(score.projectId)
+  const traceId = score.traceId
 
-    const existingAnnotations = yield* listTraceAnnotationsUseCase({
-      projectId: projectId as unknown as string,
-      traceId,
-      limit: 2,
-      draftMode: "include",
-    })
+  const existingAnnotations = yield* listTraceAnnotationsUseCase({
+    projectId: projectId as unknown as string,
+    traceId,
+    limit: 2,
+    draftMode: "include",
+  })
 
-    if (existingAnnotations.items.length > 1) {
-      return 0
-    }
+  if (existingAnnotations.items.length > 1) {
+    return 0
+  }
 
-    const itemRepo = yield* AnnotationQueueItemRepository
+  const itemRepo = yield* AnnotationQueueItemRepository
 
-    const items = yield* itemRepo.listByTraceId({
-      projectId,
-      traceId,
-    })
+  const items = yield* itemRepo.listByTraceId({
+    projectId,
+    traceId,
+  })
 
-    const pendingItems = items.filter((item) => item.completedAt === null && item.reviewStartedAt === null)
+  const pendingItems = items.filter((item) => item.completedAt === null && item.reviewStartedAt === null)
 
-    if (pendingItems.length === 0) {
-      return 0
-    }
+  if (pendingItems.length === 0) {
+    return 0
+  }
 
-    const now = new Date()
+  const now = new Date()
 
-    yield* Effect.forEach(
-      pendingItems,
-      (item) =>
-        itemRepo.update({
-          projectId,
-          queueId: item.queueId,
-          itemId: item.id,
-          reviewStartedAt: now,
-        }),
-      { concurrency: "unbounded" },
-    )
+  yield* Effect.forEach(
+    pendingItems,
+    (item) =>
+      itemRepo.update({
+        projectId,
+        queueId: item.queueId,
+        itemId: item.id,
+        reviewStartedAt: now,
+      }),
+    { concurrency: "unbounded" },
+  )
 
   return pendingItems.length
 })

@@ -35,48 +35,48 @@ const startPublishAnnotationWorkflow = (
     },
   )
 
-export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSystemAnnotation")(
-  function* (input: ApproveSystemAnnotationInput) {
-    yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
-    const workflowStarter = yield* WorkflowStarter
-    const scoreRepository = yield* ScoreRepository
-    const score = yield* scoreRepository
-      .findById(input.scoreId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new BadRequestError({ message: `Annotation ${input.scoreId} not found` })),
-        ),
-      )
+export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSystemAnnotation")(function* (
+  input: ApproveSystemAnnotationInput,
+) {
+  yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
+  const workflowStarter = yield* WorkflowStarter
+  const scoreRepository = yield* ScoreRepository
+  const score = yield* scoreRepository
+    .findById(input.scoreId)
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new BadRequestError({ message: `Annotation ${input.scoreId} not found` })),
+      ),
+    )
 
-    if (score.draftedAt === null) {
-      return { action: "already-published" } satisfies ApproveSystemAnnotationResult
-    }
+  if (score.draftedAt === null) {
+    return { action: "already-published" } satisfies ApproveSystemAnnotationResult
+  }
 
-    if (score.source !== "annotation") {
-      return yield* new BadRequestError({
-        message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
-      })
-    }
-
-    if (score.annotatorId !== null) {
-      return yield* new BadRequestError({
-        message: "Only system-created annotations can be approved via this flow",
-      })
-    }
-
-    if (!isValidId(score.sourceId)) {
-      return yield* new BadRequestError({
-        message: `Annotation ${input.scoreId} was not created by a system queue (sourceId: ${score.sourceId})`,
-      })
-    }
-
-    yield* startPublishAnnotationWorkflow(workflowStarter, {
-      organizationId: score.organizationId,
-      projectId: score.projectId,
-      scoreId: score.id,
-      preEnrichedFeedback: score.feedback,
+  if (score.source !== "annotation") {
+    return yield* new BadRequestError({
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
     })
+  }
 
-    return { action: "approved", scoreId: score.id } satisfies ApproveSystemAnnotationResult
-  },
-)
+  if (score.annotatorId !== null) {
+    return yield* new BadRequestError({
+      message: "Only system-created annotations can be approved via this flow",
+    })
+  }
+
+  if (!isValidId(score.sourceId)) {
+    return yield* new BadRequestError({
+      message: `Annotation ${input.scoreId} was not created by a system queue (sourceId: ${score.sourceId})`,
+    })
+  }
+
+  yield* startPublishAnnotationWorkflow(workflowStarter, {
+    organizationId: score.organizationId,
+    projectId: score.projectId,
+    scoreId: score.id,
+    preEnrichedFeedback: score.feedback,
+  })
+
+  return { action: "approved", scoreId: score.id } satisfies ApproveSystemAnnotationResult
+})

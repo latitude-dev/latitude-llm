@@ -128,77 +128,75 @@ const asSkipped = (reason: DiscoverIssueSkipReason) =>
   } as const)
 
 export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* (input: DiscoverIssueInput) {
-    yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    if (input.issueId !== null) {
-      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
-    }
-    const workflowStarter = yield* WorkflowStarter
+  yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  if (input.issueId !== null) {
+    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+  }
+  const workflowStarter = yield* WorkflowStarter
 
-    const eligibilityResult = yield* checkEligibilityUseCase(input).pipe(
-      Effect.map((score) => ({ action: "ready", score }) as const),
-      Effect.catchTag("ScoreAlreadyOwnedByIssueError", () => loadAssignedScoreOrSkip(input.scoreId)),
-      Effect.catchTag("ScoreNotFoundForDiscoveryError", () => asSkipped("ScoreNotFoundForDiscoveryError")),
-      Effect.catchTag("ScoreDiscoveryOrganizationMismatchError", () =>
-        asSkipped("ScoreDiscoveryOrganizationMismatchError"),
-      ),
-      Effect.catchTag("ScoreDiscoveryProjectMismatchError", () => asSkipped("ScoreDiscoveryProjectMismatchError")),
-      Effect.catchTag("DraftScoreNotEligibleForDiscoveryError", () =>
-        asSkipped("DraftScoreNotEligibleForDiscoveryError"),
-      ),
-      Effect.catchTag("ErroredScoreNotEligibleForDiscoveryError", () =>
-        asSkipped("ErroredScoreNotEligibleForDiscoveryError"),
-      ),
-      Effect.catchTag("MissingScoreFeedbackForDiscoveryError", () =>
-        asSkipped("MissingScoreFeedbackForDiscoveryError"),
-      ),
-      Effect.catchTag("PassedScoreNotEligibleForDiscoveryError", () =>
-        asSkipped("PassedScoreNotEligibleForDiscoveryError"),
-      ),
-    )
+  const eligibilityResult = yield* checkEligibilityUseCase(input).pipe(
+    Effect.map((score) => ({ action: "ready", score }) as const),
+    Effect.catchTag("ScoreAlreadyOwnedByIssueError", () => loadAssignedScoreOrSkip(input.scoreId)),
+    Effect.catchTag("ScoreNotFoundForDiscoveryError", () => asSkipped("ScoreNotFoundForDiscoveryError")),
+    Effect.catchTag("ScoreDiscoveryOrganizationMismatchError", () =>
+      asSkipped("ScoreDiscoveryOrganizationMismatchError"),
+    ),
+    Effect.catchTag("ScoreDiscoveryProjectMismatchError", () => asSkipped("ScoreDiscoveryProjectMismatchError")),
+    Effect.catchTag("DraftScoreNotEligibleForDiscoveryError", () =>
+      asSkipped("DraftScoreNotEligibleForDiscoveryError"),
+    ),
+    Effect.catchTag("ErroredScoreNotEligibleForDiscoveryError", () =>
+      asSkipped("ErroredScoreNotEligibleForDiscoveryError"),
+    ),
+    Effect.catchTag("MissingScoreFeedbackForDiscoveryError", () => asSkipped("MissingScoreFeedbackForDiscoveryError")),
+    Effect.catchTag("PassedScoreNotEligibleForDiscoveryError", () =>
+      asSkipped("PassedScoreNotEligibleForDiscoveryError"),
+    ),
+  )
 
-    if (eligibilityResult.action === "skipped") {
-      return eligibilityResult satisfies DiscoverIssueResult
-    }
+  if (eligibilityResult.action === "skipped") {
+    return eligibilityResult satisfies DiscoverIssueResult
+  }
 
-    if (eligibilityResult.action === "already-assigned") {
-      yield* syncIssueProjectionsUseCase({
-        organizationId: input.organizationId,
-        issueId: eligibilityResult.issueId,
-      })
-      yield* syncScoreAnalyticsUseCase({
-        organizationId: input.organizationId,
-        scoreId: input.scoreId,
-      })
+  if (eligibilityResult.action === "already-assigned") {
+    yield* syncIssueProjectionsUseCase({
+      organizationId: input.organizationId,
+      issueId: eligibilityResult.issueId,
+    })
+    yield* syncScoreAnalyticsUseCase({
+      organizationId: input.organizationId,
+      scoreId: input.scoreId,
+    })
 
-      return {
-        action: "already-assigned",
-        issueId: eligibilityResult.issueId,
-      } satisfies DiscoverIssueResult
-    }
+    return {
+      action: "already-assigned",
+      issueId: eligibilityResult.issueId,
+    } satisfies DiscoverIssueResult
+  }
 
-    const score = eligibilityResult.score
-    const selectedIssueId =
-      input.issueId === null
-        ? yield* resolveLinkedIssueId(score)
-        : yield* resolveKnownIssueId({
-            issueId: input.issueId,
-            projectId: score.projectId,
-          })
+  const score = eligibilityResult.score
+  const selectedIssueId =
+    input.issueId === null
+      ? yield* resolveLinkedIssueId(score)
+      : yield* resolveKnownIssueId({
+          issueId: input.issueId,
+          projectId: score.projectId,
+        })
 
-    if (selectedIssueId === null) {
-      yield* startDiscoveryWorkflow(workflowStarter, input)
-      return {
-        action: "workflow-started",
-        workflow: "issueDiscoveryWorkflow",
-        scoreId: score.id,
-      } satisfies DiscoverIssueResult
-    }
-
-    yield* startAssignScoreToKnownIssueWorkflow(workflowStarter, input, selectedIssueId)
+  if (selectedIssueId === null) {
+    yield* startDiscoveryWorkflow(workflowStarter, input)
     return {
       action: "workflow-started",
-      workflow: "assignScoreToKnownIssueWorkflow",
+      workflow: "issueDiscoveryWorkflow",
       scoreId: score.id,
     } satisfies DiscoverIssueResult
-  })
+  }
+
+  yield* startAssignScoreToKnownIssueWorkflow(workflowStarter, input, selectedIssueId)
+  return {
+    action: "workflow-started",
+    workflow: "assignScoreToKnownIssueWorkflow",
+    scoreId: score.id,
+  } satisfies DiscoverIssueResult
+})

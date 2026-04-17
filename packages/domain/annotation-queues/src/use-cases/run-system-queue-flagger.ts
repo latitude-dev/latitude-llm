@@ -292,31 +292,33 @@ export function getSystemQueueMatcherBySlug(queueSlug: string): SystemQueueMatch
   return isDeterministicQueueSlug(queueSlug) ? deterministicQueueMatchers[queueSlug] : undefined
 }
 
-export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (input: RunSystemQueueFlaggerInput) {
-    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-    yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
+  input: RunSystemQueueFlaggerInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
-    const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
+  const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
 
-    if (deterministicMatcher) {
-      return yield* deterministicMatcher(input)
-    }
+  if (deterministicMatcher) {
+    return yield* deterministicMatcher(input)
+  }
 
-    if (!isLlmQueueSlug(input.queueSlug)) {
-      return { matched: false }
-    }
+  if (!isLlmQueueSlug(input.queueSlug)) {
+    return { matched: false }
+  }
 
-    const trace = yield* loadTraceDetail(input)
+  const trace = yield* loadTraceDetail(input)
 
-    if (trace.allMessages.length === 0) {
-      return { matched: false }
-    }
+  if (trace.allMessages.length === 0) {
+    return { matched: false }
+  }
 
-    const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
+  const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
 
-    return {
+  return {
     matched: decisions.matched,
   } satisfies RunSystemQueueFlaggerResult
 })

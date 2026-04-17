@@ -8,24 +8,22 @@ export interface RemoveMemberInput {
   readonly requestingUserId: string
 }
 
-export const removeMemberUseCase = Effect.fn("organizations.removeMember")(
-  function* (input: RemoveMemberInput) {
-    yield* Effect.annotateCurrentSpan("membershipId", input.membershipId)
+export const removeMemberUseCase = Effect.fn("organizations.removeMember")(function* (input: RemoveMemberInput) {
+  yield* Effect.annotateCurrentSpan("membershipId", input.membershipId)
 
-    const repository = yield* MembershipRepository
+  const repository = yield* MembershipRepository
 
-    const membership = yield* repository
-      .findById(input.membershipId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new MembershipNotFoundError({ membershipId: input.membershipId })),
-        ),
-      )
+  const membership = yield* repository
+    .findById(input.membershipId)
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new MembershipNotFoundError({ membershipId: input.membershipId })),
+      ),
+    )
 
-    if (membership.userId === input.requestingUserId) {
-      return yield* new CannotRemoveSelfError({ userId: input.requestingUserId })
-    }
+  if (membership.userId === input.requestingUserId) {
+    return yield* new CannotRemoveSelfError({ userId: input.requestingUserId })
+  }
 
-    yield* repository.delete(input.membershipId)
-  },
-)
+  yield* repository.delete(input.membershipId)
+})

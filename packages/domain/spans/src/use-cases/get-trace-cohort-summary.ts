@@ -11,7 +11,9 @@ export interface GetTraceCohortSummaryInput {
   readonly effectiveRangeEndIso: string
 }
 
-export const getTraceCohortSummaryUseCase = Effect.fn("spans.getTraceCohortSummary")(function* (input: GetTraceCohortSummaryInput) {
+export const getTraceCohortSummaryUseCase = Effect.fn("spans.getTraceCohortSummary")(function* (
+  input: GetTraceCohortSummaryInput,
+) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
   const traceRepository = yield* TraceRepository

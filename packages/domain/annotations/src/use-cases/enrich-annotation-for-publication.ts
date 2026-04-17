@@ -119,85 +119,85 @@ export type EnrichAnnotationForPublicationResult =
 
 export type EnrichAnnotationForPublicationError = RepositoryError | BadRequestError | AIError | AICredentialError
 
-export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enrichAnnotationForPublication")(
-  function* (input: EnrichAnnotationForPublicationInput) {
-    yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
-    const ai = yield* AI
+export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enrichAnnotationForPublication")(function* (
+  input: EnrichAnnotationForPublicationInput,
+) {
+  yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
+  const ai = yield* AI
 
-    const loaded = yield* loadAnnotationScoreForPublicationMutation(input.scoreId)
+  const loaded = yield* loadAnnotationScoreForPublicationMutation(input.scoreId)
 
-    if (loaded.kind === "already-published") {
-      return { status: "already-published" as const }
-    }
+  if (loaded.kind === "already-published") {
+    return { status: "already-published" as const }
+  }
 
-    const annotationScore = loaded.score
-    const metadata = annotationScore.metadata as AnnotationScoreMetadata
+  const annotationScore = loaded.score
+  const metadata = annotationScore.metadata as AnnotationScoreMetadata
 
-    let fullConversationText: string | undefined
-    let highlightedExcerpt: string | undefined
-    let resolvedSessionId = annotationScore.sessionId
-    let resolvedSpanId = annotationScore.spanId
+  let fullConversationText: string | undefined
+  let highlightedExcerpt: string | undefined
+  let resolvedSessionId = annotationScore.sessionId
+  let resolvedSpanId = annotationScore.spanId
 
-    if (annotationScore.traceId !== null) {
-      const traceRepository = yield* TraceRepository
-      const detail = yield* traceRepository
-        .findByTraceId({
+  if (annotationScore.traceId !== null) {
+    const traceRepository = yield* TraceRepository
+    const detail = yield* traceRepository
+      .findByTraceId({
+        organizationId: OrganizationId(annotationScore.organizationId),
+        projectId: ProjectId(annotationScore.projectId),
+        traceId: TraceId(annotationScore.traceId),
+      })
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (detail) {
+      if (resolvedSessionId === null) {
+        resolvedSessionId = detail.sessionId
+      }
+      if (resolvedSpanId === null) {
+        const spanRepository = yield* SpanRepository
+        const spans = yield* spanRepository.listByTraceId({
           organizationId: OrganizationId(annotationScore.organizationId),
-          projectId: ProjectId(annotationScore.projectId),
           traceId: TraceId(annotationScore.traceId),
         })
-        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      if (detail) {
-        if (resolvedSessionId === null) {
-          resolvedSessionId = detail.sessionId
-        }
-        if (resolvedSpanId === null) {
-          const spanRepository = yield* SpanRepository
-          const spans = yield* spanRepository.listByTraceId({
-            organizationId: OrganizationId(annotationScore.organizationId),
-            traceId: TraceId(annotationScore.traceId),
-          })
-          resolvedSpanId = resolveLastLlmCompletionSpanId(spans) ?? null
-        }
+        resolvedSpanId = resolveLastLlmCompletionSpanId(spans) ?? null
+      }
 
-        if (detail.allMessages.length > 0) {
-          fullConversationText = formatGenAIMessagesForEnrichmentPrompt(detail.allMessages)
-          if (metadata.messageIndex !== undefined) {
-            highlightedExcerpt = resolveAnnotationAnchorText(detail.allMessages, metadata)
-          }
+      if (detail.allMessages.length > 0) {
+        fullConversationText = formatGenAIMessagesForEnrichmentPrompt(detail.allMessages)
+        if (metadata.messageIndex !== undefined) {
+          highlightedExcerpt = resolveAnnotationAnchorText(detail.allMessages, metadata)
         }
       }
     }
+  }
 
-    const result = yield* ai.generate({
-      ...ANNOTATION_ENRICHMENT_MODEL,
-      telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.annotationEnrichPublication,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.annotationEnrichPublication],
-        metadata: buildProjectScopedAiMetadata(
-          {
-            organizationId: annotationScore.organizationId,
-            projectId: annotationScore.projectId,
-          },
-          {
-            scoreId: input.scoreId,
-            ...(annotationScore.traceId !== null ? { traceId: annotationScore.traceId } : {}),
-          },
-        ),
-        ...(resolvedSessionId !== null ? { sessionId: resolvedSessionId } : {}),
-      },
-      system: ENRICHMENT_SYSTEM_PROMPT,
-      prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),
-      schema: annotationPublicationEnrichmentSchema,
-    })
+  const result = yield* ai.generate({
+    ...ANNOTATION_ENRICHMENT_MODEL,
+    telemetry: {
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.annotationEnrichPublication,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.annotationEnrichPublication],
+      metadata: buildProjectScopedAiMetadata(
+        {
+          organizationId: annotationScore.organizationId,
+          projectId: annotationScore.projectId,
+        },
+        {
+          scoreId: input.scoreId,
+          ...(annotationScore.traceId !== null ? { traceId: annotationScore.traceId } : {}),
+        },
+      ),
+      ...(resolvedSessionId !== null ? { sessionId: resolvedSessionId } : {}),
+    },
+    system: ENRICHMENT_SYSTEM_PROMPT,
+    prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),
+    schema: annotationPublicationEnrichmentSchema,
+  })
 
-    const enrichedFeedback = result.object.enrichedFeedback.trim() || metadata.rawFeedback
+  const enrichedFeedback = result.object.enrichedFeedback.trim() || metadata.rawFeedback
 
-    return {
-      status: "enriched" as const,
-      enrichedFeedback,
-      resolvedSessionId: resolvedSessionId === null ? null : String(resolvedSessionId),
-      resolvedSpanId: resolvedSpanId === null ? null : String(resolvedSpanId),
-    }
-  },
-)
+  return {
+    status: "enriched" as const,
+    enrichedFeedback,
+    resolvedSessionId: resolvedSessionId === null ? null : String(resolvedSessionId),
+    resolvedSpanId: resolvedSpanId === null ? null : String(resolvedSpanId),
+  }
+})

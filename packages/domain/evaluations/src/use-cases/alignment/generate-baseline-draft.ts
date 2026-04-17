@@ -11,12 +11,12 @@ export const generateBaselineDraftUseCase = Effect.fn("evaluations.generateBasel
   readonly issueName: string
   readonly issueDescription: string
 }) {
-    const promptText = generateBaselinePromptText(input.issueName, input.issueDescription)
-    const script = wrapPromptAsEvaluationScript(promptText)
+  const promptText = generateBaselinePromptText(input.issueName, input.issueDescription)
+  const script = wrapPromptAsEvaluationScript(promptText)
 
-    return {
-      script,
-      evaluationHash: yield* Effect.tryPromise(() => hashOptimizationCandidateText(script)),
-      trigger: defaultEvaluationTrigger(),
-    } satisfies GeneratedEvaluationDraft
-  })
+  return {
+    script,
+    evaluationHash: yield* Effect.tryPromise(() => hashOptimizationCandidateText(script)),
+    trigger: defaultEvaluationTrigger(),
+  } satisfies GeneratedEvaluationDraft
+})

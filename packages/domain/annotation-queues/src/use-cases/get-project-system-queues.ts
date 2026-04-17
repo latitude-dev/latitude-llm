@@ -46,31 +46,33 @@ export interface EvictProjectSystemQueuesInput {
   readonly projectId: ProjectId
 }
 
-export const getProjectSystemQueuesUseCase = Effect.fn("annotationQueues.getProjectSystemQueues")(function* (input: GetProjectSystemQueuesInput) {
-    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+export const getProjectSystemQueuesUseCase = Effect.fn("annotationQueues.getProjectSystemQueues")(function* (
+  input: GetProjectSystemQueuesInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
 
-    const cache = yield* CacheStore
-    const cacheKey = buildProjectSystemQueuesCacheKey(input.organizationId, input.projectId)
+  const cache = yield* CacheStore
+  const cacheKey = buildProjectSystemQueuesCacheKey(input.organizationId, input.projectId)
 
-    const cachedResult = yield* cache.get(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
+  const cachedResult = yield* cache.get(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
 
-    if (cachedResult !== null) {
-      const parsed = parseCacheEntries(cachedResult)
-      if (parsed !== null) {
-        return parsed
-      }
+  if (cachedResult !== null) {
+    const parsed = parseCacheEntries(cachedResult)
+    if (parsed !== null) {
+      return parsed
     }
+  }
 
-    const repo = yield* AnnotationQueueRepository
-    const queues = yield* repo.listSystemQueuesByProject({ projectId: input.projectId })
-    const entries = queues.map(toCacheEntry)
+  const repo = yield* AnnotationQueueRepository
+  const queues = yield* repo.listSystemQueuesByProject({ projectId: input.projectId })
+  const entries = queues.map(toCacheEntry)
 
-    yield* cache
-      .set(cacheKey, encodeCacheEntries(entries), { ttlSeconds: CACHE_TTL_SECONDS })
-      .pipe(Effect.catchTag("CacheError", () => Effect.void))
+  yield* cache
+    .set(cacheKey, encodeCacheEntries(entries), { ttlSeconds: CACHE_TTL_SECONDS })
+    .pipe(Effect.catchTag("CacheError", () => Effect.void))
 
-    return entries
+  return entries
 })
 
 export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesInput) =>

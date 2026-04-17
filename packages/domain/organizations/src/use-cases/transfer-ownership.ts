@@ -15,9 +15,9 @@ export interface TransferOwnershipInput {
   readonly newOwnerUserId: UserId
 }
 
-export const transferOwnershipUseCase = Effect.fn(
-  "organizations.transferOwnership",
-)(function* (input: TransferOwnershipInput) {
+export const transferOwnershipUseCase = Effect.fn("organizations.transferOwnership")(function* (
+  input: TransferOwnershipInput,
+) {
   yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
   yield* Effect.annotateCurrentSpan("newOwnerUserId", input.newOwnerUserId)
 

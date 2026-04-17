@@ -9,9 +9,9 @@ export interface UpdateOrganizationInput {
   readonly settings?: OrganizationSettings | undefined
 }
 
-export const updateOrganizationUseCase = Effect.fn(
-  "organizations.updateOrganization",
-)(function* (input: UpdateOrganizationInput) {
+export const updateOrganizationUseCase = Effect.fn("organizations.updateOrganization")(function* (
+  input: UpdateOrganizationInput,
+) {
   const sqlClient = yield* SqlClient
   const repo = yield* OrganizationRepository
 

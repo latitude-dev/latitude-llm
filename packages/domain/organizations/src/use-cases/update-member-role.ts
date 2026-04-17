@@ -16,9 +16,9 @@ export interface UpdateMemberRoleInput {
   readonly newRole: MembershipRole
 }
 
-export const updateMemberRoleUseCase = Effect.fn(
-  "organizations.updateMemberRole",
-)(function* (input: UpdateMemberRoleInput) {
+export const updateMemberRoleUseCase = Effect.fn("organizations.updateMemberRole")(function* (
+  input: UpdateMemberRoleInput,
+) {
   yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
   yield* Effect.annotateCurrentSpan("targetUserId", input.targetUserId)
   yield* Effect.annotateCurrentSpan("newRole", input.newRole)

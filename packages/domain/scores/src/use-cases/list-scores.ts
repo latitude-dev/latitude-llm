@@ -34,7 +34,9 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
 
 export type ListScoresError = RepositoryError | BadRequestError
 
-export const listProjectScoresUseCase = Effect.fn("scores.listProjectScores")(function* (input: ListProjectScoresInput) {
+export const listProjectScoresUseCase = Effect.fn("scores.listProjectScores")(function* (
+  input: ListProjectScoresInput,
+) {
   const parsedInput = yield* parseOrBadRequest(listProjectScoresInputSchema, input, "Invalid project score query")
   yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
   const repository = yield* ScoreRepository

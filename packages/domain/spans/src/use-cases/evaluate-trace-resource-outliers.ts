@@ -13,7 +13,9 @@ export interface EvaluateTraceResourceOutliersInput {
 
 export type EvaluateTraceResourceOutliersError = NotFoundError | RepositoryError
 
-export const evaluateTraceResourceOutliersUseCase = Effect.fn("spans.evaluateTraceResourceOutliers")(function* (input: EvaluateTraceResourceOutliersInput) {
+export const evaluateTraceResourceOutliersUseCase = Effect.fn("spans.evaluateTraceResourceOutliers")(function* (
+  input: EvaluateTraceResourceOutliersInput,
+) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("traceId", input.traceId)
 

@@ -13,7 +13,9 @@ export interface BuildTraceCohortListingSpecInput {
 
 export type BuildTraceCohortListingSpecError = TraceCohortUnavailableError | RepositoryError
 
-export const buildTraceCohortListingSpecUseCase = Effect.fn("spans.buildTraceCohortListingSpec")(function* (input: BuildTraceCohortListingSpecInput) {
+export const buildTraceCohortListingSpecUseCase = Effect.fn("spans.buildTraceCohortListingSpec")(function* (
+  input: BuildTraceCohortListingSpecInput,
+) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("cohort", input.cohort)
 

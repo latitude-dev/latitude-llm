@@ -97,7 +97,9 @@ const buildFilterBatch = (entries: readonly [string, TraceEndSelectionSpec][]) =
     })) satisfies readonly FilterBatchEntry[]
   })
 
-export const selectTraceEndItemsUseCase = Effect.fn("spans.selectTraceEndItems")(function* (input: TraceEndSelectionInput) {
+export const selectTraceEndItemsUseCase = Effect.fn("spans.selectTraceEndItems")(function* (
+  input: TraceEndSelectionInput,
+) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("traceId", input.traceId)
   yield* Effect.annotateCurrentSpan("selection.itemCount", Object.keys(input.items).length)
@@ -151,9 +153,7 @@ export const selectTraceEndItemsUseCase = Effect.fn("spans.selectTraceEndItems")
   const matchingFingerprintSet = new Set(matchingFingerprints)
 
   for (const entry of filterBatch) {
-    const decision = matchingFingerprintSet.has(entry.fingerprint)
-      ? selectedDecision()
-      : skippedDecision("filter-miss")
+    const decision = matchingFingerprintSet.has(entry.fingerprint) ? selectedDecision() : skippedDecision("filter-miss")
 
     for (const itemKey of entry.itemKeys) {
       decisions[itemKey] = decision

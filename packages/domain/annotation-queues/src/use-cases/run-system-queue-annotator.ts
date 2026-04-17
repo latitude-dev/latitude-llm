@@ -120,44 +120,46 @@ const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
     })
   })
 
-export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (input: RunSystemQueueAnnotatorInput) {
-    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-    yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
+  input: RunSystemQueueAnnotatorInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
-    const ai = yield* AI
+  const ai = yield* AI
 
-    const trace = yield* loadTraceDetail(input)
+  const trace = yield* loadTraceDetail(input)
 
-    const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
+  const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
 
-    const conversationText =
-      trace.allMessages.length > 0
-        ? formatConversationForAnnotator(trace.allMessages)
-        : "<no conversation messages available>"
+  const conversationText =
+    trace.allMessages.length > 0
+      ? formatConversationForAnnotator(trace.allMessages)
+      : "<no conversation messages available>"
 
-    const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
+  const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
 
-    const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
+  const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
-    const result = yield* ai.generate({
-      ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
-      maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
-      system: systemPrompt,
-      prompt,
-      schema: systemQueueAnnotatorOutputSchema,
-      telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
-        metadata: buildProjectScopedAiMetadata(
-          { organizationId: input.organizationId, projectId: input.projectId },
-          { traceId: input.traceId, queueSlug: input.queueSlug },
-        ),
-      },
-    })
+  const result = yield* ai.generate({
+    ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
+    maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
+    system: systemPrompt,
+    prompt,
+    schema: systemQueueAnnotatorOutputSchema,
+    telemetry: {
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      metadata: buildProjectScopedAiMetadata(
+        { organizationId: input.organizationId, projectId: input.projectId },
+        { traceId: input.traceId, queueSlug: input.queueSlug },
+      ),
+    },
+  })
 
-    return {
+  return {
     feedback: result.object.feedback,
     traceCreatedAt: trace.startTime.toISOString(),
   }

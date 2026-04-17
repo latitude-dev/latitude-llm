@@ -9,7 +9,9 @@ export interface SyncScoreAnalyticsInput {
   readonly scoreId: string
 }
 
-export const syncScoreAnalyticsUseCase = Effect.fn("scores.syncScoreAnalytics")(function* (input: SyncScoreAnalyticsInput) {
+export const syncScoreAnalyticsUseCase = Effect.fn("scores.syncScoreAnalytics")(function* (
+  input: SyncScoreAnalyticsInput,
+) {
   yield* Effect.annotateCurrentSpan("score.scoreId", input.scoreId)
   const scoreRepository = yield* ScoreRepository
   const analyticsRepository = yield* ScoreAnalyticsRepository
