@@ -99,6 +99,10 @@ const buildFilterBatch = (entries: readonly [string, TraceEndSelectionSpec][]) =
 
 export const selectTraceEndItemsUseCase = (input: TraceEndSelectionInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+    yield* Effect.annotateCurrentSpan("selection.itemCount", Object.keys(input.items).length)
+
     const decisions: Record<string, TraceEndSelectionDecision> = {}
     const sampledIn: Array<[string, TraceEndSelectionSpec]> = []
 
@@ -158,4 +162,4 @@ export const selectTraceEndItemsUseCase = (input: TraceEndSelectionInput) =>
     }
 
     return decisions satisfies TraceEndSelectionResult
-  }) as Effect.Effect<TraceEndSelectionResult, SelectTraceEndItemsError, TraceRepository>
+  }).pipe(Effect.withSpan("spans.selectTraceEndItems"))

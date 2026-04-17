@@ -19,6 +19,10 @@ export type MaterializeLiveQueueItemsError = RepositoryError
 
 export const materializeLiveQueueItemsUseCase = (input: MaterializeLiveQueueItemsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+    yield* Effect.annotateCurrentSpan("annotationQueues.queueCount", input.queueIds.length)
+
     if (input.queueIds.length === 0) {
       return {
         insertedItemCount: 0,
@@ -50,4 +54,4 @@ export const materializeLiveQueueItemsUseCase = (input: MaterializeLiveQueueItem
     return {
       insertedItemCount,
     } satisfies MaterializeLiveQueueItemsResult
-  })
+  }).pipe(Effect.withSpan("annotationQueues.materializeLiveQueueItems"))

@@ -29,7 +29,7 @@ import {
   ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -309,6 +309,7 @@ export const runTraceEndJob =
       ),
       withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
       Effect.provide(RedisCacheStoreLive(redisClient)),
+      withTracing,
     )
 
 export const createRunHandler =

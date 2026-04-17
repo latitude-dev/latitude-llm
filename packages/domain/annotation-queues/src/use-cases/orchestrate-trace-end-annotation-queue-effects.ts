@@ -25,20 +25,25 @@ export const orchestrateTraceEndSystemQueueWorkflowStartsUseCase =
     readonly traceId: string
     readonly selectedSystemQueues: readonly SystemQueueCacheEntry[]
   }) =>
-    Effect.forEach(
-      input.selectedSystemQueues,
-      (queue) =>
-        startOnce({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          queueSlug: queue.queueSlug,
-        }),
-      { concurrency: 1 },
-    ).pipe(
-      Effect.map((started) => started.filter(Boolean).length),
-      Effect.map((startedWorkflowCount) => ({ startedWorkflowCount })),
-    )
+    Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+      yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+      yield* Effect.annotateCurrentSpan("annotationQueues.systemQueueCount", input.selectedSystemQueues.length)
+
+      const started = yield* Effect.forEach(
+        input.selectedSystemQueues,
+        (queue) =>
+          startOnce({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traceId: input.traceId,
+            queueSlug: queue.queueSlug,
+          }),
+        { concurrency: 1 },
+      )
+
+      return { startedWorkflowCount: started.filter(Boolean).length }
+    }).pipe(Effect.withSpan("annotationQueues.startTraceEndSystemQueueWorkflows"))
 
 export type StartSystemQueueFlaggerForTraceOnce = (args: {
   readonly organizationId: string

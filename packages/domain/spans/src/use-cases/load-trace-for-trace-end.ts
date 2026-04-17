@@ -23,6 +23,9 @@ export const loadTraceForTraceEndUseCase = (input: {
   readonly traceId: string
 }): Effect.Effect<LoadTraceForTraceEndResult, RepositoryError, TraceRepository> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+
     const traceRepository = yield* TraceRepository
     const detail = yield* traceRepository
       .findByTraceId({
@@ -41,4 +44,4 @@ export const loadTraceForTraceEndUseCase = (input: {
     }
 
     return { kind: "found", traceDetail: detail } satisfies LoadTraceForTraceEndFound
-  })
+  }).pipe(Effect.withSpan("spans.loadTraceForTraceEnd"))
