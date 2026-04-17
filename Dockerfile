@@ -139,6 +139,15 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
   install-prod-deps
 
 RUN prune-workspace
+
+# Nitro's SSR output imports @temporalio/client as an external runtime package,
+# but pnpm only installs it under the workspace package that declares it.
+# Expose it on the web app resolution path so Node can load the SSR chunk.
+RUN mkdir -p ./apps/web/node_modules/@temporalio && \
+  ln -sf \
+  /app/packages/platform/workflows-temporal/node_modules/@temporalio/client \
+  ./apps/web/node_modules/@temporalio/client
+
 USER latitude
 EXPOSE 8080
 
