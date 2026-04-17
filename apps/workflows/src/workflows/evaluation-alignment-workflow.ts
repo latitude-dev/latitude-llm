@@ -266,7 +266,9 @@ const runIncrementalMetricRefresh = async (input: {
 
 export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWorkflowInput) => {
   if (!input.refreshLoop) {
-    return runFullAlignment(input)
+    const result = await runFullAlignment(input)
+
+    return result
   }
 
   if (!input.evaluationId) {
