@@ -32,7 +32,7 @@ catalog:
   bullmq: 5.28.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
-  drizzle-orm: 1.0.0-beta.21-af6b4cb
+  drizzle-orm: 1.0.0-beta.21-b0c345d
   fast-json-stable-stringify: 2.1.0
   '@effect/opentelemetry': 4.0.0-beta.4
   effect: 4.0.0-beta.4
@@ -42,7 +42,7 @@ catalog:
   react: 19.2.4
   react-dom: 19.2.4
   rosetta-ai: 2.0.0
-  protobufjs: 7.5.4
+  protobufjs: 7.5.5
   tsx: 4.21.0
   turbo: 2.5.8
   typescript: 5.9.3
