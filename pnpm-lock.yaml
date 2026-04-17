@@ -418,6 +418,9 @@ importers:
       '@tanstack/react-start':
         specifier: 1.167.16
         version: 1.167.16(crossws@0.4.5(srvx@0.11.15))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(webpack@5.106.2(esbuild@0.27.7))
+      '@temporalio/client':
+        specifier: 'catalog:'
+        version: 1.16.0
       better-auth:
         specifier: 'catalog:'
         version: 1.5.6(81b6a556f219e9ebb364b9d22b62cec9)

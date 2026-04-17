@@ -23,7 +23,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 
 # Populate pnpm store from lockfile only for better cache reuse
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -36,9 +36,12 @@ FROM deps AS source
 
 COPY . .
 
-# Skip postinstall scripts (chdb and other dev-only native deps)
+# Skip postinstall scripts (chdb and other dev-only native deps).
+# CI=true tells pnpm to auto-confirm operations like purging node_modules
+# after `.npmrc` public-hoist-pattern changes, which is required in non-TTY
+# Docker builds.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --ignore-scripts --offline
+  CI=true pnpm install --frozen-lockfile --ignore-scripts --offline
 
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
@@ -133,6 +136,7 @@ COPY --from=build-api /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build-api /app/package.json ./package.json
 COPY --from=build-api /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-api /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-api /app/.npmrc ./.npmrc
 COPY --from=build-api /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -155,6 +159,7 @@ COPY --from=build-ingest /app/apps/ingest/package.json ./apps/ingest/package.jso
 COPY --from=build-ingest /app/package.json ./package.json
 COPY --from=build-ingest /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-ingest /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-ingest /app/.npmrc ./.npmrc
 COPY --from=build-ingest /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -176,6 +181,7 @@ COPY --from=build-workers /app/apps/workers/package.json ./apps/workers/package.
 COPY --from=build-workers /app/package.json ./package.json
 COPY --from=build-workers /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-workers /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workers /app/.npmrc ./.npmrc
 COPY --from=build-workers /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -205,6 +211,7 @@ COPY --from=build-workflows /app/apps/workflows/src/activities ./apps/workflows/
 COPY --from=build-workflows /app/package.json ./package.json
 COPY --from=build-workflows /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-workflows /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workflows /app/.npmrc ./.npmrc
 COPY --from=build-workflows /app/packages ./packages
 
 # Install GEPA Python dependencies into a venv via uv
@@ -239,6 +246,7 @@ COPY --from=build-web /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build-web /app/package.json ./package.json
 COPY --from=build-web /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-web /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-web /app/.npmrc ./.npmrc
 COPY --from=build-web /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -279,6 +287,7 @@ COPY --from=build-migrations /app/apps/workflows ./apps/workflows
 COPY --from=build-migrations /app/package.json ./package.json
 COPY --from=build-migrations /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-migrations /app/.npmrc ./.npmrc
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
   pnpm install --frozen-lockfile --ignore-scripts

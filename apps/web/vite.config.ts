@@ -20,9 +20,35 @@ if (existsSync(envFilePath)) {
 const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean", false))
 
+// @temporalio/client ships protobufjs runtime codegen and @grpc/grpc-js. The two
+// packages hold references to each other's module instances, so partial bundling
+// (protobufjs bundled, grpc-js external) breaks gRPC status deserialization and
+// produces "undefined undefined: undefined" errors at connect time.
+// Externalize the entire Temporal dep tree so Node loads one coherent copy at
+// runtime. See `.npmrc` public-hoist-pattern for the matching pnpm hoisting.
+const temporalExternal: (string | RegExp)[] = [
+  /^@temporalio\//,
+  /^@grpc\//,
+  /^protobufjs(\/.*)?$/,
+  /^@protobufjs\//,
+  "long",
+]
+
 export default defineConfig({
   // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
-  plugins: [tanstackStart(), nitro({ sourcemap: true }), tailwindcss(), react()],
+  plugins: [
+    tanstackStart(),
+    nitro({
+      sourcemap: true,
+      rollupConfig: { external: temporalExternal },
+      rolldownConfig: { external: temporalExternal },
+    }),
+    tailwindcss(),
+    react(),
+  ],
+  ssr: {
+    external: ["@temporalio/client", "@temporalio/proto", "@grpc/grpc-js", "protobufjs", "long"],
+  },
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default
