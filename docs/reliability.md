@@ -114,6 +114,8 @@ The first phase that needs each external provider capability introduces it as a 
 - `@platform/ai-voyage` for embeddings and reranking
 - `@platform/db-weaviate` for issue projection storage/search
 
+The canonical cross-domain `AI.generate` feature catalog (purpose, telemetry tags, and call sites) lives in `docs/ai-generation-features.md`.
+
 Optimizer abstractions live in domain packages, while concrete optimizer implementations live in platform packages:
 
 - `@domain/optimizations` for the optimizer interface/abstraction
