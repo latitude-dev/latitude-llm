@@ -13,24 +13,25 @@ export interface EvaluateTraceResourceOutliersInput {
 
 export type EvaluateTraceResourceOutliersError = NotFoundError | RepositoryError
 
-export const evaluateTraceResourceOutliersUseCase = (input: EvaluateTraceResourceOutliersInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+export const evaluateTraceResourceOutliersUseCase = Effect.fn("spans.evaluateTraceResourceOutliers")(function* (
+  input: EvaluateTraceResourceOutliersInput,
+) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("traceId", input.traceId)
 
-    const traceRepository = yield* TraceRepository
-    const trace = yield* traceRepository.findByTraceId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-    })
-    const effectiveFilters = resolveTraceCohortFilters(input.filters, trace.startTime.getTime()).effectiveFilters
-    const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      filters: effectiveFilters,
-      excludeTraceId: input.traceId,
-    })
+  const traceRepository = yield* TraceRepository
+  const trace = yield* traceRepository.findByTraceId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    traceId: input.traceId,
+  })
+  const effectiveFilters = resolveTraceCohortFilters(input.filters, trace.startTime.getTime()).effectiveFilters
+  const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    filters: effectiveFilters,
+    excludeTraceId: input.traceId,
+  })
 
-    return evaluateTraceResourceOutliers(trace, buildTraceMetricBaselines(baselineData))
-  }).pipe(Effect.withSpan("spans.evaluateTraceResourceOutliers"))
+  return evaluateTraceResourceOutliers(trace, buildTraceMetricBaselines(baselineData))
+})

@@ -9,46 +9,45 @@ import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-executio
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS
 // and this function's structure will remain the same — it just calls executeEvaluationScript.
-export const evaluateOptimizationCandidate = (input: {
+export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOptimizationCandidate")(function* (input: {
   readonly candidate: OptimizationCandidate
   readonly example: HydratedEvaluationAlignmentExample
   readonly issueName: string
   readonly issueDescription: string
   readonly judgeTelemetry: EvaluationOptimizationJudgeTelemetryScope
-}) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
-    yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
+}) {
+  yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
+  yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
 
-    const execution = yield* executeEvaluationScriptWithAI({
-      script: input.candidate.text,
-      conversation: input.example.conversation,
-      issue: {
-        name: input.issueName,
-        description: input.issueDescription,
-      },
-      telemetry: buildEvaluationOptimizationJudgeTelemetryCapture({
-        scope: input.judgeTelemetry,
-        candidateHash: input.candidate.hash,
-        exampleTraceId: String(input.example.traceId),
-      }),
-    })
+  const execution = yield* executeEvaluationScriptWithAI({
+    script: input.candidate.text,
+    conversation: input.example.conversation,
+    issue: {
+      name: input.issueName,
+      description: input.issueDescription,
+    },
+    telemetry: buildEvaluationOptimizationJudgeTelemetryCapture({
+      scope: input.judgeTelemetry,
+      candidateHash: input.candidate.hash,
+      exampleTraceId: String(input.example.traceId),
+    }),
+  })
 
-    const expectedPositive = input.example.label === "positive"
-    const predictedPositive = execution.result.passed === false
-    const score = expectedPositive === predictedPositive ? 1 : 0
+  const expectedPositive = input.example.label === "positive"
+  const predictedPositive = execution.result.passed === false
+  const score = expectedPositive === predictedPositive ? 1 : 0
 
-    return {
-      trajectory: {
-        id: input.example.traceId,
-        conversationText: input.example.conversationText,
-        feedback: execution.result.feedback,
-        ...(input.example.annotationFeedback ? { annotationContext: input.example.annotationFeedback } : {}),
-        expectedPositive,
-        predictedPositive,
-        passed: execution.result.passed,
-        score,
-        totalTokens: execution.totalTokens,
-      } satisfies OptimizationTrajectory,
-    }
-  }).pipe(Effect.withSpan("evaluations.evaluateOptimizationCandidate"))
+  return {
+    trajectory: {
+      id: input.example.traceId,
+      conversationText: input.example.conversationText,
+      feedback: execution.result.feedback,
+      ...(input.example.annotationFeedback ? { annotationContext: input.example.annotationFeedback } : {}),
+      expectedPositive,
+      predictedPositive,
+      passed: execution.result.passed,
+      score,
+      totalTokens: execution.totalTokens,
+    } satisfies OptimizationTrajectory,
+  }
+})

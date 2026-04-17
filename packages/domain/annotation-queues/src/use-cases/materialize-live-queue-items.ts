@@ -17,41 +17,42 @@ export interface MaterializeLiveQueueItemsResult {
 
 export type MaterializeLiveQueueItemsError = RepositoryError
 
-export const materializeLiveQueueItemsUseCase = (input: MaterializeLiveQueueItemsInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
-    yield* Effect.annotateCurrentSpan("annotationQueues.queueCount", input.queueIds.length)
+export const materializeLiveQueueItemsUseCase = Effect.fn("annotationQueues.materializeLiveQueueItems")(function* (
+  input: MaterializeLiveQueueItemsInput,
+) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("annotationQueues.queueCount", input.queueIds.length)
 
-    if (input.queueIds.length === 0) {
-      return {
-        insertedItemCount: 0,
-      } satisfies MaterializeLiveQueueItemsResult
-    }
-
-    const sqlClient = yield* SqlClient
-    const queueRepository = yield* AnnotationQueueRepository
-    const queueItemRepository = yield* AnnotationQueueItemRepository
-
-    const insertedItemCount = yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const { insertedQueueIds } = yield* queueItemRepository.insertManyAcrossQueues({
-          projectId: ProjectId(input.projectId),
-          traceId: TraceId(input.traceId),
-          traceCreatedAt: input.traceCreatedAt,
-          queueIds: input.queueIds,
-        })
-
-        yield* queueRepository.incrementTotalItemsMany({
-          projectId: ProjectId(input.projectId),
-          queueIds: insertedQueueIds,
-        })
-
-        return insertedQueueIds.length
-      }),
-    )
-
+  if (input.queueIds.length === 0) {
     return {
-      insertedItemCount,
+      insertedItemCount: 0,
     } satisfies MaterializeLiveQueueItemsResult
-  }).pipe(Effect.withSpan("annotationQueues.materializeLiveQueueItems"))
+  }
+
+  const sqlClient = yield* SqlClient
+  const queueRepository = yield* AnnotationQueueRepository
+  const queueItemRepository = yield* AnnotationQueueItemRepository
+
+  const insertedItemCount = yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const { insertedQueueIds } = yield* queueItemRepository.insertManyAcrossQueues({
+        projectId: ProjectId(input.projectId),
+        traceId: TraceId(input.traceId),
+        traceCreatedAt: input.traceCreatedAt,
+        queueIds: input.queueIds,
+      })
+
+      yield* queueRepository.incrementTotalItemsMany({
+        projectId: ProjectId(input.projectId),
+        queueIds: insertedQueueIds,
+      })
+
+      return insertedQueueIds.length
+    }),
+  )
+
+  return {
+    insertedItemCount,
+  } satisfies MaterializeLiveQueueItemsResult
+})

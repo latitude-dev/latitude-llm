@@ -5,8 +5,8 @@ import { OrganizationRepository } from "../ports/organization-repository.ts"
 
 const MAX_SLUG_ATTEMPTS = 20
 
-export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =>
-  Effect.gen(function* () {
+export const generateUniqueOrganizationSlugUseCase = Effect.fn("organizations.generateUniqueOrganizationSlug")(
+  function* (input: { name: string }) {
     const repository = yield* OrganizationRepository
 
     let slugBase = toSlug(input.name)
@@ -28,4 +28,5 @@ export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =
     return yield* new SlugGenerationError({
       message: `Could not generate a unique slug after ${MAX_SLUG_ATTEMPTS} attempts`,
     })
-  }).pipe(Effect.withSpan("organizations.generateUniqueOrganizationSlug"))
+  },
+)

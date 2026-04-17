@@ -9,33 +9,34 @@ export interface SyncIssueProjectionsInput {
   readonly issueId: string
 }
 
-export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
-    const issueProjectionRepository = yield* IssueProjectionRepository
-    const issueRepository = yield* IssueRepository
+export const syncIssueProjectionsUseCase = Effect.fn("issues.syncProjections")(function* (
+  input: SyncIssueProjectionsInput,
+) {
+  yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+  const issueProjectionRepository = yield* IssueProjectionRepository
+  const issueRepository = yield* IssueRepository
 
-    const issue = yield* issueRepository
-      .findById(IssueId(input.issueId))
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    if (!issue) {
-      return
-    }
+  const issue = yield* issueRepository
+    .findById(IssueId(input.issueId))
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (!issue) {
+    return
+  }
 
-    const vector = normalizeIssueCentroid(issue.centroid)
-    if (vector.length === 0) {
-      yield* issueProjectionRepository.delete({
-        projectId: issue.projectId,
-        uuid: issue.uuid,
-      })
-      return
-    }
-
-    yield* issueProjectionRepository.upsert({
+  const vector = normalizeIssueCentroid(issue.centroid)
+  if (vector.length === 0) {
+    yield* issueProjectionRepository.delete({
       projectId: issue.projectId,
       uuid: issue.uuid,
-      title: issue.name,
-      description: issue.description,
-      vector,
     })
-  }).pipe(Effect.withSpan("issues.syncProjections"))
+    return
+  }
+
+  yield* issueProjectionRepository.upsert({
+    projectId: issue.projectId,
+    uuid: issue.uuid,
+    title: issue.name,
+    description: issue.description,
+    vector,
+  })
+})

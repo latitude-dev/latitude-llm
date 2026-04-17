@@ -10,36 +10,34 @@ function normalizeDescription(description: string | null | undefined): string | 
   return t === "" ? null : t
 }
 
-export function updateDatasetDetails(args: {
+export const updateDatasetDetails = Effect.fn("datasets.updateDatasetDetails")(function* (args: {
   readonly datasetId: DatasetId
   readonly name: string
   readonly description: string | null | undefined
 }) {
-  return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
 
-    const repo = yield* DatasetRepository
-    const dataset = yield* repo.findById(args.datasetId)
-    const trimmedName = args.name.trim()
-    if (trimmedName === "") {
-      return yield* new ValidationError({ field: "name", message: "Name cannot be empty" })
-    }
-    const normalizedDesc = normalizeDescription(args.description)
+  const repo = yield* DatasetRepository
+  const dataset = yield* repo.findById(args.datasetId)
+  const trimmedName = args.name.trim()
+  if (trimmedName === "") {
+    return yield* new ValidationError({ field: "name", message: "Name cannot be empty" })
+  }
+  const normalizedDesc = normalizeDescription(args.description)
 
-    if (dataset.name === trimmedName && dataset.description === normalizedDesc) {
-      return dataset
-    }
+  if (dataset.name === trimmedName && dataset.description === normalizedDesc) {
+    return dataset
+  }
 
-    const name = yield* validateDatasetNameInProject({
-      projectId: dataset.projectId,
-      name: args.name,
-      excludeDatasetId: args.datasetId,
-    })
+  const name = yield* validateDatasetNameInProject({
+    projectId: dataset.projectId,
+    name: args.name,
+    excludeDatasetId: args.datasetId,
+  })
 
-    return yield* repo.updateDetails({
-      id: args.datasetId,
-      name,
-      description: normalizedDesc,
-    })
-  }).pipe(Effect.withSpan("datasets.updateDatasetDetails"))
-}
+  return yield* repo.updateDetails({
+    id: args.datasetId,
+    name,
+    description: normalizedDesc,
+  })
+})

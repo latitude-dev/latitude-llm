@@ -46,43 +46,44 @@ const createSystemQueue = (
  * - All system queues use the same slug generation from their canonical name
  * - Safe for concurrent calls: insertIfNotExists handles race conditions gracefully
  */
-export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+export const provisionSystemQueuesUseCase = Effect.fn("annotationQueues.provisionSystemQueues")(function* (
+  input: ProvisionSystemQueuesInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
 
-    const sqlClient = yield* SqlClient
-    const { organizationId, projectId } = input
+  const sqlClient = yield* SqlClient
+  const { organizationId, projectId } = input
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const queueRepository = yield* AnnotationQueueRepository
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const queueRepository = yield* AnnotationQueueRepository
 
-        const results: Array<{ queueSlug: string; action: "created" | "skipped" | "exists" }> = []
+      const results: Array<{ queueSlug: string; action: "created" | "skipped" | "exists" }> = []
 
-        for (const definition of SYSTEM_QUEUE_DEFINITIONS) {
-          const slug = toSlug(definition.name)
+      for (const definition of SYSTEM_QUEUE_DEFINITIONS) {
+        const slug = toSlug(definition.name)
 
-          const existing = yield* queueRepository.findSystemQueueBySlugInProject({
-            projectId,
-            queueSlug: slug,
-          })
+        const existing = yield* queueRepository.findSystemQueueBySlugInProject({
+          projectId,
+          queueSlug: slug,
+        })
 
-          if (existing) {
-            if (existing.deletedAt !== null) {
-              results.push({ queueSlug: slug, action: "skipped" })
-            } else {
-              results.push({ queueSlug: slug, action: "exists" })
-            }
-            continue
+        if (existing) {
+          if (existing.deletedAt !== null) {
+            results.push({ queueSlug: slug, action: "skipped" })
+          } else {
+            results.push({ queueSlug: slug, action: "exists" })
           }
-
-          const queue = createSystemQueue(projectId, organizationId, definition)
-          const wasInserted = yield* queueRepository.insertIfNotExists(queue)
-          results.push({ queueSlug: slug, action: wasInserted ? "created" : "exists" })
+          continue
         }
 
-        return results
-      }),
-    )
-  }).pipe(Effect.withSpan("annotationQueues.provisionSystemQueues"))
+        const queue = createSystemQueue(projectId, organizationId, definition)
+        const wasInserted = yield* queueRepository.insertIfNotExists(queue)
+        results.push({ queueSlug: slug, action: wasInserted ? "created" : "exists" })
+      }
+
+      return results
+    }),
+  )
+})

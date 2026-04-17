@@ -18,25 +18,24 @@ export class ApiKeyCacheInvalidator extends ServiceMap.Service<
   }
 >()("@domain/api-keys/ApiKeyCacheInvalidator") {}
 
-export const revokeApiKeyUseCase = (input: RevokeApiKeyInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
-    const sqlClient = yield* SqlClient
-    const cacheInvalidator = yield* ApiKeyCacheInvalidator
+export const revokeApiKeyUseCase = Effect.fn("apiKeys.revokeApiKey")(function* (input: RevokeApiKeyInput) {
+  yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
+  const sqlClient = yield* SqlClient
+  const cacheInvalidator = yield* ApiKeyCacheInvalidator
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const repo = yield* ApiKeyRepository
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repo = yield* ApiKeyRepository
 
-        const apiKey = yield* repo.findById(input.id)
-        if (apiKey.deletedAt !== null) return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
+      const apiKey = yield* repo.findById(input.id)
+      if (apiKey.deletedAt !== null) return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
 
-        const revokedApiKey = revoke(apiKey)
-        yield* repo.save(revokedApiKey)
+      const revokedApiKey = revoke(apiKey)
+      yield* repo.save(revokedApiKey)
 
-        yield* cacheInvalidator.delete(revokedApiKey.tokenHash)
+      yield* cacheInvalidator.delete(revokedApiKey.tokenHash)
 
-        return revokedApiKey
-      }),
-    )
-  }).pipe(Effect.withSpan("apiKeys.revokeApiKey"))
+      return revokedApiKey
+    }),
+  )
+})

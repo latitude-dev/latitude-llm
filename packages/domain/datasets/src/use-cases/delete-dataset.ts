@@ -2,12 +2,10 @@ import type { DatasetId } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 
-export function deleteDataset(args: { readonly datasetId: DatasetId }) {
-  return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+export const deleteDataset = Effect.fn("datasets.deleteDataset")(function* (args: { readonly datasetId: DatasetId }) {
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
 
-    const repo = yield* DatasetRepository
-    yield* repo.findById(args.datasetId)
-    yield* repo.softDelete(args.datasetId)
-  }).pipe(Effect.withSpan("datasets.deleteDataset"))
-}
+  const repo = yield* DatasetRepository
+  yield* repo.findById(args.datasetId)
+  yield* repo.softDelete(args.datasetId)
+})

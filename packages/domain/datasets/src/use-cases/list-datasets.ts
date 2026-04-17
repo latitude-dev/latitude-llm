@@ -3,13 +3,14 @@ import { Effect } from "effect"
 import type { DatasetListOptions } from "../ports/dataset-repository.ts"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 
-export function listDatasets(args: { readonly projectId: ProjectId; readonly options?: DatasetListOptions }) {
-  return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+export const listDatasets = Effect.fn("datasets.listDatasets")(function* (args: {
+  readonly projectId: ProjectId
+  readonly options?: DatasetListOptions
+}) {
+  yield* Effect.annotateCurrentSpan("projectId", args.projectId)
 
-    const repo = yield* DatasetRepository
-    return yield* repo.listByProject(
-      args.options !== undefined ? { projectId: args.projectId, options: args.options } : { projectId: args.projectId },
-    )
-  }).pipe(Effect.withSpan("datasets.listDatasets"))
-}
+  const repo = yield* DatasetRepository
+  return yield* repo.listByProject(
+    args.options !== undefined ? { projectId: args.projectId, options: args.options } : { projectId: args.projectId },
+  )
+})

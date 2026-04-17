@@ -13,15 +13,15 @@ import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-executio
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS;
 // this function delegates to it and its structure won't change.
-export const evaluateDraftAgainstExamplesUseCase = (input: {
-  readonly issueName: string
-  readonly issueDescription: string
-  readonly script: string
-  readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
-  readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
-  readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
-}) =>
-  Effect.gen(function* () {
+export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evaluateDraftAgainstExamples")(
+  function* (input: {
+    readonly issueName: string
+    readonly issueDescription: string
+    readonly script: string
+    readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
+    readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+    readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
+  }) {
     const examples = [...input.positiveExamples, ...input.negativeExamples]
     let confusionMatrix = emptyConfusionMatrix()
     const exampleResults: BaselineEvaluationExampleResult[] = []
@@ -62,4 +62,5 @@ export const evaluateDraftAgainstExamplesUseCase = (input: {
       metrics: deriveEvaluationAlignmentMetrics(confusionMatrix),
       exampleResults,
     } satisfies BaselineEvaluationResult
-  }).pipe(Effect.withSpan("evaluations.evaluateDraftAgainstExamples"))
+  },
+)

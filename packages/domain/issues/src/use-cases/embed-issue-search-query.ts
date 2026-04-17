@@ -17,29 +17,30 @@ export interface EmbedIssueSearchQueryResult {
   readonly normalizedEmbedding: number[]
 }
 
-export const embedIssueSearchQueryUseCase = (input: EmbedIssueSearchQueryInput) =>
-  Effect.gen(function* () {
-    const parsed = embedIssueSearchQueryInputSchema.parse(input)
-    yield* Effect.annotateCurrentSpan("projectId", parsed.projectId)
-    const ai = yield* AI
+export const embedIssueSearchQueryUseCase = Effect.fn("issues.embedIssueSearchQuery")(function* (
+  input: EmbedIssueSearchQueryInput,
+) {
+  const parsed = embedIssueSearchQueryInputSchema.parse(input)
+  yield* Effect.annotateCurrentSpan("projectId", parsed.projectId)
+  const ai = yield* AI
 
-    const result = yield* ai.embed({
-      text: parsed.query,
-      model: CENTROID_EMBEDDING_MODEL,
-      dimensions: CENTROID_EMBEDDING_DIMENSIONS,
-      telemetry: {
-        spanName: "embed-issue-search-query",
-        tags: ["issues", "embedding", "search"],
-        metadata: {
-          organizationId: parsed.organizationId,
-          projectId: parsed.projectId,
-        },
+  const result = yield* ai.embed({
+    text: parsed.query,
+    model: CENTROID_EMBEDDING_MODEL,
+    dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+    telemetry: {
+      spanName: "embed-issue-search-query",
+      tags: ["issues", "embedding", "search"],
+      metadata: {
+        organizationId: parsed.organizationId,
+        projectId: parsed.projectId,
       },
-    })
-    const normalizedEmbedding = normalizeEmbedding(result.embedding)
+    },
+  })
+  const normalizedEmbedding = normalizeEmbedding(result.embedding)
 
-    return {
-      query: parsed.query,
-      normalizedEmbedding,
-    } satisfies EmbedIssueSearchQueryResult
-  }).pipe(Effect.withSpan("issues.embedIssueSearchQuery"))
+  return {
+    query: parsed.query,
+    normalizedEmbedding,
+  } satisfies EmbedIssueSearchQueryResult
+})
