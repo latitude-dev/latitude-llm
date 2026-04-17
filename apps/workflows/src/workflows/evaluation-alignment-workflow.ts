@@ -5,6 +5,7 @@ import {
 import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/queue/workflow-registry"
 import { condition, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 type EvaluationAlignmentWorkflowInput = {
   readonly organizationId: string
@@ -41,10 +42,7 @@ const {
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
   retry: {
-    initialInterval: "1 second",
-    backoffCoefficient: 2,
-    maximumInterval: "1 minute",
-    maximumAttempts: 5,
+    ...defaultActivityRetryPolicy,
     nonRetryableErrorTypes: ["EvaluationManualRealignmentRateLimitedError"],
   },
 })

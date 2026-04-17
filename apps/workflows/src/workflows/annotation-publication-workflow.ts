@@ -1,8 +1,13 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 const { enrichAnnotationForPublication, writePublishedAnnotationScore } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
+  retry: {
+    ...defaultActivityRetryPolicy,
+    nonRetryableErrorTypes: ["BadRequestError"],
+  },
 })
 
 export const publishAnnotationWorkflow = async (input: {
