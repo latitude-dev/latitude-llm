@@ -4,6 +4,7 @@ import { CheckboxInput, Input, Slider, Text, Textarea } from "@repo/ui"
 import type { ReactNode, RefObject } from "react"
 import { Activity } from "react"
 import { withForm } from "../../lib/form-hook-factory.ts"
+import { fieldErrorsAsStrings } from "../../lib/form-server-action.ts"
 import { FilterBuilder } from "../filters-builder/filter-builder.tsx"
 import { UserMultiSelect } from "../user-multi-select.tsx"
 import type { QueueFormValues } from "./queue-form-schema.ts"
@@ -72,7 +73,7 @@ export const QueueForm = withForm({
               onBlur={field.handleBlur}
               disabled={disabled}
               required
-              errors={field.state.meta.errors.length > 0 ? field.state.meta.errors.map(String) : undefined}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
             />
           )}
         </form.Field>
@@ -86,7 +87,7 @@ export const QueueForm = withForm({
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               disabled={disabled}
-              errors={field.state.meta.errors.length > 0 ? field.state.meta.errors.map(String) : undefined}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
             />
           )}
         </form.Field>
@@ -102,7 +103,7 @@ export const QueueForm = withForm({
               onChange={(e) => field.handleChange(e.target.value)}
               disabled={disabled}
               minRows={3}
-              errors={field.state.meta.errors.length > 0 ? field.state.meta.errors.map(String) : undefined}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
             />
           )}
         </form.Field>

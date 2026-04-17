@@ -1,5 +1,15 @@
 import { extractFieldErrors } from "./errors.ts"
 
+/**
+ * Maps TanStack Form `field.state.meta.errors` to `@repo/ui` `Input` / `Textarea` `errors`:
+ * `string[]` when non-empty, otherwise `undefined` (no error UI).
+ */
+export function fieldErrorsAsStrings(errors: readonly unknown[]): string[] | undefined {
+  if (errors.length === 0) return undefined
+
+  return errors.map(String)
+}
+
 interface ServerSubmitOptions<TResult> {
   onSuccess?: (result: TResult) => void | Promise<void>
   onError?: (error: unknown) => void

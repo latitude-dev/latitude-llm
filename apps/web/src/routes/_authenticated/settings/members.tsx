@@ -38,7 +38,7 @@ import {
 } from "../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler } from "../../../lib/form-server-action.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
@@ -85,6 +85,7 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
                     label="Email"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="jon@latitude.so"
                   />
                 )}

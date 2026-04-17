@@ -1,11 +1,11 @@
 ---
 name: web-frontend
-description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
+description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, forms (useForm + createFormSubmitHandler + fieldErrorsAsStrings for Zod field errors), Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
 ---
 
 # Web app frontend (`apps/web`)
 
-**When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
+**When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms (**`useForm`** with **`createFormSubmitHandler`** + **`fieldErrorsAsStrings`** when Zod validation errors should appear on fields), Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
 
 ## Legacy UI reference
 
@@ -183,6 +183,23 @@ export function useAuthenticatedUser() {
 - Use `useState` for local UI state (modals, form visibility); no global stores
 - Invalidate query cache after mutations: `getQueryClient().invalidateQueries({ queryKey: [...] })`
 - Forms use TanStack React Form (`useForm` + `form.Field`)
+
+## TanStack Form + Zod field errors (`createFormSubmitHandler` + `fieldErrorsAsStrings`)
+
+**When:** `useForm` submits work that can fail with **Zod validation** (for example server functions using `inputValidator`), and you want **inline errors on `@repo/ui` fields** (not only a toast).
+
+**Module:** `apps/web/src/lib/form-server-action.ts`
+
+| Helper | Use |
+| --- | --- |
+| **`createFormSubmitHandler`** | Pass as `useForm({ onSubmit: createFormSubmitHandler(async (value) => { ... }, { onSuccess, onError }) })`. On validation failure it maps serialized Zod issues onto TanStack Form field meta via `extractFieldErrors` in `apps/web/src/lib/errors.ts`. Non-field errors go to `onError`. On success it resets the form and runs `onSuccess`. |
+| **`fieldErrorsAsStrings`** | On every `Input`, `Textarea`, or other control with an `errors` prop inside `form.Field`, set `errors={fieldErrorsAsStrings(field.state.meta.errors)}` so those meta errors display. |
+
+**Always use both** when you want Zod-driven field errors: the submit handler wires errors into form state; the helper wires form state into `@repo/ui`.
+
+**Do not** duplicate the inline pattern `field.state.meta.errors.length > 0 ? field.state.meta.errors.map(String) : undefined` — use `fieldErrorsAsStrings` instead.
+
+**Reference:** `apps/web/src/routes/_authenticated/index.tsx` — `RenameProjectModal`: `createFormSubmitHandler` in `useForm` (~line 225), `fieldErrorsAsStrings` on the name field `Input` (~line 287).
 
 ## Layout and spacing
 
