@@ -48,11 +48,6 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
           }
 
           const segments = segmentForHighlights(value, start, end, sortedHighlights)
-          if (segments.length === 0) {
-            nextChildren.push(child)
-            continue
-          }
-
           for (const segment of segments) {
             const attrs = highlightAttributes(segment.activeHighlight)
             nextChildren.push({

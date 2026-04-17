@@ -51,11 +51,9 @@ export function MarkdownContent({
     [selectionCtx, messageIndex, partIndex],
   )
   const [showFullText, setShowFullText] = useState(false)
-  const isJson = useMemo(() => isJsonBlock(content), [content])
-
-  if (isJson) {
-    return <JsonContent content={content} messageIndex={messageIndex} partIndex={partIndex} />
-  }
+  // Gate the JSON.parse on size so oversized content doesn't pay the parse cost
+  // only to be discarded by the large-content fallback below.
+  const isJson = useMemo(() => content.length <= LARGE_MARKDOWN_CONTENT_THRESHOLD && isJsonBlock(content), [content])
 
   if (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD) {
     const preview = showFullText ? content : getLargeContentPreview(content)
@@ -77,6 +75,10 @@ export function MarkdownContent({
         </pre>
       </div>
     )
+  }
+
+  if (isJson) {
+    return <JsonContent content={content} messageIndex={messageIndex} partIndex={partIndex} />
   }
 
   return (
