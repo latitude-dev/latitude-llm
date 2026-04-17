@@ -22,7 +22,19 @@ const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean
 
 export default defineConfig({
   // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
-  plugins: [tanstackStart(), nitro({ sourcemap: true }), tailwindcss(), react()],
+  plugins: [
+    tanstackStart(),
+    nitro({
+      sourcemap: true,
+      // Nitro runs a separate final server bundle step from Vite SSR.
+      // Externalize the Temporal client there as well so Rolldown doesn't try
+      // to resolve it from generated SSR assets.
+      rollupConfig: { external: ["@temporalio/client"] },
+      rolldownConfig: { external: ["@temporalio/client"] },
+    }),
+    tailwindcss(),
+    react(),
+  ],
   ssr: {
     // Temporal's Node client works in workers as a normal runtime dependency.
     // Keep it out of the Nitro SSR bundle so web server functions use the same path.
@@ -71,8 +83,6 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      // Nitro's final server build resolves externals through Rollup options.
-      external: ["@temporalio/client"],
       plugins: bundleAnalyze
         ? [
             visualizer({
