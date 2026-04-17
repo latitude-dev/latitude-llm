@@ -11,22 +11,21 @@ export interface GetTraceCohortSummaryInput {
   readonly effectiveRangeEndIso: string
 }
 
-export const getTraceCohortSummaryUseCase = (input: GetTraceCohortSummaryInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+export const getTraceCohortSummaryUseCase = Effect.fn("spans.getTraceCohortSummary")(function* (input: GetTraceCohortSummaryInput) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
-    const traceRepository = yield* TraceRepository
-    const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      ...(input.filters ? { filters: input.filters } : {}),
-    })
-    const baselines = buildTraceMetricBaselines(baselineData)
+  const traceRepository = yield* TraceRepository
+  const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    ...(input.filters ? { filters: input.filters } : {}),
+  })
+  const baselines = buildTraceMetricBaselines(baselineData)
 
-    return {
-      effectiveRangeStartIso: input.effectiveRangeStartIso,
-      effectiveRangeEndIso: input.effectiveRangeEndIso,
-      traceCount: baselineData.traceCount,
-      baselines,
-    } satisfies TraceCohortSummary
-  }).pipe(Effect.withSpan("spans.getTraceCohortSummary"))
+  return {
+    effectiveRangeStartIso: input.effectiveRangeStartIso,
+    effectiveRangeEndIso: input.effectiveRangeEndIso,
+    traceCount: baselineData.traceCount,
+    baselines,
+  } satisfies TraceCohortSummary
+})

@@ -5,7 +5,7 @@ import { type ConfusionMatrix, type EvaluationTrigger, evaluationSchema } from "
 import { isDeletedEvaluation } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
-export const persistAlignmentResultUseCase = (input: {
+export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlignmentResult")(function* (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly issueId: string
@@ -16,8 +16,7 @@ export const persistAlignmentResultUseCase = (input: {
   readonly trigger: EvaluationTrigger
   readonly name: string
   readonly description: string
-}) =>
-  Effect.gen(function* () {
+}) {
     yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
     if (input.evaluationId) {
@@ -75,4 +74,4 @@ export const persistAlignmentResultUseCase = (input: {
     yield* evaluationRepository.save(evaluation)
 
     return { evaluationId: evaluation.id } satisfies PersistEvaluationAlignmentResult
-  }).pipe(Effect.withSpan("evaluations.persistAlignmentResult"))
+  })

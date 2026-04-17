@@ -127,8 +127,7 @@ const asSkipped = (reason: DiscoverIssueSkipReason) =>
     reason,
   } as const)
 
-export const discoverIssueUseCase = (input: DiscoverIssueInput) =>
-  Effect.gen(function* () {
+export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* (input: DiscoverIssueInput) {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     if (input.issueId !== null) {
@@ -202,4 +201,4 @@ export const discoverIssueUseCase = (input: DiscoverIssueInput) =>
       workflow: "assignScoreToKnownIssueWorkflow",
       scoreId: score.id,
     } satisfies DiscoverIssueResult
-  }).pipe(Effect.withSpan("issues.discoverIssue"))
+  })

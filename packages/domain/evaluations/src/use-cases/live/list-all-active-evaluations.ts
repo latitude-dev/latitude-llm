@@ -6,8 +6,10 @@ import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 const ACTIVE_EVALUATION_SCAN_PAGE_SIZE = 100
 
-export const listAllActiveEvaluations = ({ projectId }: { readonly projectId: ProjectId }) =>
-  Effect.gen(function* () {
+export const listAllActiveEvaluations = Effect.fn("evaluations.listAllActiveEvaluations")(function* (_: {
+  readonly projectId: ProjectId
+}) {
+    const projectId = _.projectId
     yield* Effect.annotateCurrentSpan("projectId", projectId)
 
     const evaluationRepository = yield* EvaluationRepository
@@ -32,4 +34,4 @@ export const listAllActiveEvaluations = ({ projectId }: { readonly projectId: Pr
 
       offset += page.limit
     }
-  }).pipe(Effect.withSpan("evaluations.listAllActiveEvaluations"))
+  })

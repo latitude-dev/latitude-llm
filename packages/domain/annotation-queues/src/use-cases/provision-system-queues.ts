@@ -46,8 +46,7 @@ const createSystemQueue = (
  * - All system queues use the same slug generation from their canonical name
  * - Safe for concurrent calls: insertIfNotExists handles race conditions gracefully
  */
-export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) =>
-  Effect.gen(function* () {
+export const provisionSystemQueuesUseCase = Effect.fn("annotationQueues.provisionSystemQueues")(function* (input: ProvisionSystemQueuesInput) {
     yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
 
@@ -83,6 +82,6 @@ export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) 
         }
 
         return results
-      }),
-    )
-  }).pipe(Effect.withSpan("annotationQueues.provisionSystemQueues"))
+    }),
+  )
+})

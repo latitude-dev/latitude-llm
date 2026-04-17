@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { validateDatasetNameInProject } from "./validate-dataset-name.ts"
 
-export function createDataset(args: {
+export const createDataset = Effect.fn("datasets.createDataset")(function* (args: {
   readonly id?: DatasetId
   readonly projectId: ProjectId
   readonly name: string
@@ -12,31 +12,29 @@ export function createDataset(args: {
   readonly fileKey?: string
   readonly actorUserId?: string
 }) {
-  return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+  yield* Effect.annotateCurrentSpan("projectId", args.projectId)
 
-    const repo = yield* DatasetRepository
-    const name = yield* validateDatasetNameInProject({
-      projectId: args.projectId,
-      name: args.name,
-    })
-    const dataset = yield* repo.create({ ...args, name })
+  const repo = yield* DatasetRepository
+  const name = yield* validateDatasetNameInProject({
+    projectId: args.projectId,
+    name: args.name,
+  })
+  const dataset = yield* repo.create({ ...args, name })
 
-    const outboxEventWriter = yield* OutboxEventWriter
-    yield* outboxEventWriter.write({
-      eventName: "DatasetCreated",
-      aggregateType: "dataset",
-      aggregateId: dataset.id,
+  const outboxEventWriter = yield* OutboxEventWriter
+  yield* outboxEventWriter.write({
+    eventName: "DatasetCreated",
+    aggregateType: "dataset",
+    aggregateId: dataset.id,
+    organizationId: dataset.organizationId,
+    payload: {
       organizationId: dataset.organizationId,
-      payload: {
-        organizationId: dataset.organizationId,
-        actorUserId: args.actorUserId ?? "",
-        projectId: dataset.projectId,
-        datasetId: dataset.id,
-        name: dataset.name,
-      },
-    })
+      actorUserId: args.actorUserId ?? "",
+      projectId: dataset.projectId,
+      datasetId: dataset.id,
+      name: dataset.name,
+    },
+  })
 
-    return dataset
-  }).pipe(Effect.withSpan("datasets.createDataset"))
-}
+  return dataset
+})

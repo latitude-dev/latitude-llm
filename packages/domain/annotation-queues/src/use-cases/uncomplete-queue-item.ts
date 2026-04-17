@@ -12,8 +12,7 @@ export interface UncompleteQueueItemInput {
 
 export type UncompleteQueueItemError = RepositoryError | QueueItemNotFoundError | QueueItemNotCompletedError
 
-export const uncompleteQueueItemUseCase = (input: UncompleteQueueItemInput) =>
-  Effect.gen(function* () {
+export const uncompleteQueueItemUseCase = Effect.fn("annotationQueues.uncompleteQueueItem")(function* (input: UncompleteQueueItemInput) {
     yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("queue.itemId", input.itemId)
@@ -55,4 +54,4 @@ export const uncompleteQueueItemUseCase = (input: UncompleteQueueItemInput) =>
         return updated
       }),
     )
-  }).pipe(Effect.withSpan("annotationQueues.uncompleteQueueItem"))
+  })

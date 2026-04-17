@@ -9,8 +9,8 @@ export interface DeleteAnnotationInput {
 
 export type DeleteAnnotationError = RepositoryError | BadRequestError
 
-export const deleteAnnotationUseCase = (input: DeleteAnnotationInput) =>
-  Effect.gen(function* () {
+export const deleteAnnotationUseCase = Effect.fn("annotations.deleteAnnotation")(
+  function* (input: DeleteAnnotationInput) {
     yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
     const sqlClient = yield* SqlClient
     const scoreRepository = yield* ScoreRepository
@@ -52,4 +52,5 @@ export const deleteAnnotationUseCase = (input: DeleteAnnotationInput) =>
         yield* scoreRepository.delete(input.scoreId)
       }),
     )
-  }).pipe(Effect.withSpan("annotations.deleteAnnotation"))
+  },
+)

@@ -42,8 +42,7 @@ export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError 
  * This use case is idempotent - retrying with the same (queueId, traceId) will
  * regenerate the same feedback (or similar, since LLM output may vary slightly).
  */
-export const draftSystemQueueAnnotationUseCase = (input: DraftSystemQueueAnnotationInput) =>
-  Effect.gen(function* () {
+export const draftSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.draftSystemQueueAnnotation")(function* (input: DraftSystemQueueAnnotationInput) {
     yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
@@ -84,5 +83,5 @@ export const draftSystemQueueAnnotationUseCase = (input: DraftSystemQueueAnnotat
       traceId: parsedInput.traceId,
       feedback: annotatorResult.feedback,
       traceCreatedAt: annotatorResult.traceCreatedAt,
-    } as DraftSystemQueueAnnotationOutput
-  }).pipe(Effect.withSpan("annotationQueues.draftSystemQueueAnnotation"))
+  } as DraftSystemQueueAnnotationOutput
+})

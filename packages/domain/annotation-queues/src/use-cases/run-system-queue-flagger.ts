@@ -292,8 +292,7 @@ export function getSystemQueueMatcherBySlug(queueSlug: string): SystemQueueMatch
   return isDeterministicQueueSlug(queueSlug) ? deterministicQueueMatchers[queueSlug] : undefined
 }
 
-export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) =>
-  Effect.gen(function* () {
+export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (input: RunSystemQueueFlaggerInput) {
     yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
@@ -318,6 +317,6 @@ export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) 
     const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
 
     return {
-      matched: decisions.matched,
-    } satisfies RunSystemQueueFlaggerResult
-  }).pipe(Effect.withSpan("annotationQueues.runSystemQueueFlagger"))
+    matched: decisions.matched,
+  } satisfies RunSystemQueueFlaggerResult
+})

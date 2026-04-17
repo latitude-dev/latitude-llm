@@ -14,7 +14,7 @@ import {
 import type { EvaluationAlignmentJudgeTelemetryScope } from "../../runtime/ai-telemetry.ts"
 import { evaluateDraftAgainstExamplesUseCase } from "./evaluate-draft-against-examples.ts"
 
-export const evaluateIncrementalDraftUseCase = (input: {
+export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIncrementalDraft")(function* (input: {
   readonly issueName: string
   readonly issueDescription: string
   readonly draft: GeneratedEvaluationDraft
@@ -22,8 +22,7 @@ export const evaluateIncrementalDraftUseCase = (input: {
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
-}) =>
-  Effect.gen(function* () {
+}) {
     const newExampleCount = input.positiveExamples.length + input.negativeExamples.length
     const previousMetrics = deriveEvaluationAlignmentMetrics(input.previousConfusionMatrix)
 
@@ -72,4 +71,4 @@ export const evaluateIncrementalDraftUseCase = (input: {
       matthewsCorrelationCoefficientDrop: decision.matthewsCorrelationCoefficientDrop,
       confusionMatrix: incremental.confusionMatrix,
     } satisfies IncrementalEvaluationRefreshResult
-  }).pipe(Effect.withSpan("evaluations.evaluateIncrementalDraft"))
+  })

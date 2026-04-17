@@ -3,30 +3,28 @@ import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 
-export function getRowDetail(args: {
+export const getRowDetail = Effect.fn("datasets.getRowDetail")(function* (args: {
   readonly datasetId: DatasetId
   readonly rowId: DatasetRowId
   readonly versionId?: DatasetVersionId
 }) {
-  return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
-    yield* Effect.annotateCurrentSpan("rowId", args.rowId)
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+  yield* Effect.annotateCurrentSpan("rowId", args.rowId)
 
-    const rowRepo = yield* DatasetRowRepository
+  const rowRepo = yield* DatasetRowRepository
 
-    let version: number | undefined
-    if (args.versionId) {
-      const datasetRepo = yield* DatasetRepository
-      version = yield* datasetRepo.resolveVersion({
-        datasetId: args.datasetId,
-        versionId: args.versionId,
-      })
-    }
-
-    return yield* rowRepo.findById({
+  let version: number | undefined
+  if (args.versionId) {
+    const datasetRepo = yield* DatasetRepository
+    version = yield* datasetRepo.resolveVersion({
       datasetId: args.datasetId,
-      rowId: args.rowId,
-      ...(version !== undefined ? { version } : {}),
+      versionId: args.versionId,
     })
-  }).pipe(Effect.withSpan("datasets.getRowDetail"))
-}
+  }
+
+  return yield* rowRepo.findById({
+    datasetId: args.datasetId,
+    rowId: args.rowId,
+    ...(version !== undefined ? { version } : {}),
+  })
+})

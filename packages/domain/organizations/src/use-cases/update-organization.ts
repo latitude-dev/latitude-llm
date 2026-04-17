@@ -9,21 +9,22 @@ export interface UpdateOrganizationInput {
   readonly settings?: OrganizationSettings | undefined
 }
 
-export const updateOrganizationUseCase = (input: UpdateOrganizationInput) =>
-  Effect.gen(function* () {
-    const sqlClient = yield* SqlClient
-    const repo = yield* OrganizationRepository
+export const updateOrganizationUseCase = Effect.fn(
+  "organizations.updateOrganization",
+)(function* (input: UpdateOrganizationInput) {
+  const sqlClient = yield* SqlClient
+  const repo = yield* OrganizationRepository
 
-    const org = yield* repo.findById(sqlClient.organizationId)
+  const org = yield* repo.findById(sqlClient.organizationId)
 
-    const updated: Organization = {
-      ...org,
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.settings !== undefined ? { settings: input.settings } : {}),
-      updatedAt: new Date(),
-    }
+  const updated: Organization = {
+    ...org,
+    ...(input.name !== undefined ? { name: input.name } : {}),
+    ...(input.settings !== undefined ? { settings: input.settings } : {}),
+    updatedAt: new Date(),
+  }
 
-    yield* repo.save(updated)
+  yield* repo.save(updated)
 
-    return updated
-  }).pipe(Effect.withSpan("organizations.updateOrganization"))
+  return updated
+})

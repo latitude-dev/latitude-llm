@@ -17,8 +17,7 @@ export interface MarkReviewStartedInput {
  *
  * Skips if the score is not an annotation or has no traceId.
  */
-export const markReviewStartedUseCase = (input: MarkReviewStartedInput) =>
-  Effect.gen(function* () {
+export const markReviewStartedUseCase = Effect.fn("annotationQueues.markReviewStarted")(function* (input: MarkReviewStartedInput) {
     yield* Effect.annotateCurrentSpan("score.id", input.score.id)
     yield* Effect.annotateCurrentSpan("score.projectId", input.score.projectId)
 
@@ -68,5 +67,5 @@ export const markReviewStartedUseCase = (input: MarkReviewStartedInput) =>
       { concurrency: "unbounded" },
     )
 
-    return pendingItems.length
-  }).pipe(Effect.withSpan("annotationQueues.markReviewStarted"))
+  return pendingItems.length
+})

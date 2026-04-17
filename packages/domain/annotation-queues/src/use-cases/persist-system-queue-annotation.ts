@@ -44,8 +44,7 @@ export type PersistSystemQueueAnnotationError = BadRequestError | RepositoryErro
  * - Default to `passed = false`, `value = 0`, no anchor (conversation-level)
  * - Do NOT auto-publish (no `annotation-scores:publish` event)
  */
-export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnnotationInput) =>
-  Effect.gen(function* () {
+export const persistSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.persistSystemQueueAnnotation")(function* (input: PersistSystemQueueAnnotationInput) {
     yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
     yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
 
@@ -148,5 +147,5 @@ export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnn
       traceId: parsedInput.traceId,
       draftAnnotationId: result.draftAnnotationId,
       wasCreated: result.wasCreated,
-    }) as SystemQueueAnnotateOutput
-  }).pipe(Effect.withSpan("annotationQueues.persistSystemQueueAnnotation"))
+  }) as SystemQueueAnnotateOutput
+})

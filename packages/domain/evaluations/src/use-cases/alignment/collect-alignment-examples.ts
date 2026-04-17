@@ -11,14 +11,13 @@ import {
   toEvaluationConversationMessages,
 } from "../../runtime/evaluation-execution.ts"
 
-export const collectAlignmentExamplesUseCase = (input: {
+export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAlignmentExamples")(function* (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly issueId: string
   readonly createdAfter?: string | null
   readonly requirePositiveExamples?: boolean
-}) =>
-  Effect.gen(function* () {
+}) {
     yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
     yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
@@ -100,4 +99,4 @@ export const collectAlignmentExamplesUseCase = (input: {
       positiveExamples: positiveExamples.map(hydrateExample),
       negativeExamples: negativeExamples.map(hydrateExample),
     } satisfies CollectedEvaluationAlignmentExamples
-  }).pipe(Effect.withSpan("evaluations.collectAlignmentExamples"))
+  })

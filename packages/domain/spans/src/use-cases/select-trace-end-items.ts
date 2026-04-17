@@ -97,69 +97,68 @@ const buildFilterBatch = (entries: readonly [string, TraceEndSelectionSpec][]) =
     })) satisfies readonly FilterBatchEntry[]
   })
 
-export const selectTraceEndItemsUseCase = (input: TraceEndSelectionInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
-    yield* Effect.annotateCurrentSpan("selection.itemCount", Object.keys(input.items).length)
+export const selectTraceEndItemsUseCase = Effect.fn("spans.selectTraceEndItems")(function* (input: TraceEndSelectionInput) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("selection.itemCount", Object.keys(input.items).length)
 
-    const decisions: Record<string, TraceEndSelectionDecision> = {}
-    const sampledIn: Array<[string, TraceEndSelectionSpec]> = []
+  const decisions: Record<string, TraceEndSelectionDecision> = {}
+  const sampledIn: Array<[string, TraceEndSelectionSpec]> = []
 
-    for (const [itemKey, spec] of Object.entries(input.items)) {
-      const samplingKey = spec.sampleKey ?? itemKey
-      const isSampled = yield* Effect.promise(() =>
-        deterministicSampling({
-          sampling: spec.sampling,
-          keyParts: [input.organizationId, input.projectId, samplingKey, input.traceId],
-        }),
-      )
+  for (const [itemKey, spec] of Object.entries(input.items)) {
+    const samplingKey = spec.sampleKey ?? itemKey
+    const isSampled = yield* Effect.promise(() =>
+      deterministicSampling({
+        sampling: spec.sampling,
+        keyParts: [input.organizationId, input.projectId, samplingKey, input.traceId],
+      }),
+    )
 
-      if (!isSampled) {
-        decisions[itemKey] = skippedDecision("sampled-out")
-        continue
-      }
-
-      const normalizedFilter = normalizeFilterSet(spec.filter)
-      if (!normalizedFilter) {
-        decisions[itemKey] = selectedDecision()
-        continue
-      }
-
-      sampledIn.push([itemKey, { ...spec, filter: normalizedFilter }])
+    if (!isSampled) {
+      decisions[itemKey] = skippedDecision("sampled-out")
+      continue
     }
 
-    if (sampledIn.length === 0) {
-      return decisions satisfies TraceEndSelectionResult
+    const normalizedFilter = normalizeFilterSet(spec.filter)
+    if (!normalizedFilter) {
+      decisions[itemKey] = selectedDecision()
+      continue
     }
 
-    const filterBatch = yield* buildFilterBatch(sampledIn)
-    if (filterBatch.length === 0) {
-      return decisions satisfies TraceEndSelectionResult
-    }
+    sampledIn.push([itemKey, { ...spec, filter: normalizedFilter }])
+  }
 
-    const traceRepository = yield* TraceRepository
-    const matchingFingerprints = yield* traceRepository.listMatchingFilterIdsByTraceId({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      traceId: TraceId(input.traceId),
-      filterSets: filterBatch.map((entry) => ({
-        filterId: entry.fingerprint,
-        filters: entry.filter,
-      })),
-    })
-
-    const matchingFingerprintSet = new Set(matchingFingerprints)
-
-    for (const entry of filterBatch) {
-      const decision = matchingFingerprintSet.has(entry.fingerprint)
-        ? selectedDecision()
-        : skippedDecision("filter-miss")
-
-      for (const itemKey of entry.itemKeys) {
-        decisions[itemKey] = decision
-      }
-    }
-
+  if (sampledIn.length === 0) {
     return decisions satisfies TraceEndSelectionResult
-  }).pipe(Effect.withSpan("spans.selectTraceEndItems"))
+  }
+
+  const filterBatch = yield* buildFilterBatch(sampledIn)
+  if (filterBatch.length === 0) {
+    return decisions satisfies TraceEndSelectionResult
+  }
+
+  const traceRepository = yield* TraceRepository
+  const matchingFingerprints = yield* traceRepository.listMatchingFilterIdsByTraceId({
+    organizationId: OrganizationId(input.organizationId),
+    projectId: ProjectId(input.projectId),
+    traceId: TraceId(input.traceId),
+    filterSets: filterBatch.map((entry) => ({
+      filterId: entry.fingerprint,
+      filters: entry.filter,
+    })),
+  })
+
+  const matchingFingerprintSet = new Set(matchingFingerprints)
+
+  for (const entry of filterBatch) {
+    const decision = matchingFingerprintSet.has(entry.fingerprint)
+      ? selectedDecision()
+      : skippedDecision("filter-miss")
+
+    for (const itemKey of entry.itemKeys) {
+      decisions[itemKey] = decision
+    }
+  }
+
+  return decisions satisfies TraceEndSelectionResult
+})

@@ -9,14 +9,13 @@ import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-executio
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS
 // and this function's structure will remain the same — it just calls executeEvaluationScript.
-export const evaluateOptimizationCandidate = (input: {
+export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOptimizationCandidate")(function* (input: {
   readonly candidate: OptimizationCandidate
   readonly example: HydratedEvaluationAlignmentExample
   readonly issueName: string
   readonly issueDescription: string
   readonly judgeTelemetry: EvaluationOptimizationJudgeTelemetryScope
-}) =>
-  Effect.gen(function* () {
+}) {
     yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
     yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
 
@@ -48,7 +47,7 @@ export const evaluateOptimizationCandidate = (input: {
         predictedPositive,
         passed: execution.result.passed,
         score,
-        totalTokens: execution.totalTokens,
-      } satisfies OptimizationTrajectory,
-    }
-  }).pipe(Effect.withSpan("evaluations.evaluateOptimizationCandidate"))
+      totalTokens: execution.totalTokens,
+    } satisfies OptimizationTrajectory,
+  }
+})

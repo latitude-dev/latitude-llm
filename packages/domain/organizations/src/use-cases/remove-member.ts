@@ -8,8 +8,8 @@ export interface RemoveMemberInput {
   readonly requestingUserId: string
 }
 
-export const removeMemberUseCase = (input: RemoveMemberInput) =>
-  Effect.gen(function* () {
+export const removeMemberUseCase = Effect.fn("organizations.removeMember")(
+  function* (input: RemoveMemberInput) {
     yield* Effect.annotateCurrentSpan("membershipId", input.membershipId)
 
     const repository = yield* MembershipRepository
@@ -27,4 +27,5 @@ export const removeMemberUseCase = (input: RemoveMemberInput) =>
     }
 
     yield* repository.delete(input.membershipId)
-  }).pipe(Effect.withSpan("organizations.removeMember"))
+  },
+)

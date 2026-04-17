@@ -14,8 +14,7 @@ export interface CompleteQueueItemInput {
 
 export type CompleteQueueItemError = RepositoryError | QueueItemNotFoundError | QueueItemAlreadyCompletedError
 
-export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
-  Effect.gen(function* () {
+export const completeQueueItemUseCase = Effect.fn("annotationQueues.completeQueueItem")(function* (input: CompleteQueueItemInput) {
     yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("queue.itemId", input.itemId)
@@ -72,4 +71,4 @@ export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
         return updated
       }),
     )
-  }).pipe(Effect.withSpan("annotationQueues.completeQueueItem"))
+  })

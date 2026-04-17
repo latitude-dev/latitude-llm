@@ -22,8 +22,7 @@ export interface RetrievalResult {
   readonly similarityScore: number
 }
 
-export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) =>
-  Effect.gen(function* () {
+export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandidates")(function* (input: RerankIssueCandidatesInput) {
     yield* Effect.annotateCurrentSpan("candidateCount", input.candidates.length)
     const limitedCandidates = [...input.candidates]
       .sort((left, right) => right.score - left.score)
@@ -73,4 +72,4 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
       matchedIssueUuid: matchedIssue.uuid,
       similarityScore: best.relevanceScore,
     } satisfies RetrievalResult
-  }).pipe(Effect.withSpan("issues.rerankIssueCandidates"))
+  })

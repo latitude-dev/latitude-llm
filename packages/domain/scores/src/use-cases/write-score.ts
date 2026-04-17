@@ -142,67 +142,66 @@ const buildScore = ({
   )
 }
 
-export const writeScoreUseCase = (input: WriteScoreInput) =>
-  Effect.gen(function* () {
-    const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
-    yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
-    yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
-    const sqlClient = yield* SqlClient
+export const writeScoreUseCase = Effect.fn("scores.writeScore")(function* (input: WriteScoreInput) {
+  const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
+  yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
+  yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
+  const sqlClient = yield* SqlClient
 
-    const score = yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const scoreRepository = yield* ScoreRepository
-        const outboxEventWriter = yield* OutboxEventWriter
+  const score = yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const scoreRepository = yield* ScoreRepository
+      const outboxEventWriter = yield* OutboxEventWriter
 
-        const existingScore = parsedInput.id
-          ? yield* scoreRepository
-              .findById(parsedInput.id)
-              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-          : null
+      const existingScore = parsedInput.id
+        ? yield* scoreRepository
+            .findById(parsedInput.id)
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        : null
 
-        if (existingScore && existingScore.draftedAt === null) {
-          return yield* new ScoreDraftClosedError({ scoreId: existingScore.id })
+      if (existingScore && existingScore.draftedAt === null) {
+        return yield* new ScoreDraftClosedError({ scoreId: existingScore.id })
+      }
+
+      if (existingScore) {
+        const conflict = validateDraftUpdate(existingScore, parsedInput)
+        if (conflict) {
+          return yield* conflict
         }
+      }
 
-        if (existingScore) {
-          const conflict = validateDraftUpdate(existingScore, parsedInput)
-          if (conflict) {
-            return yield* conflict
-          }
-        }
-
-        const score = yield* buildScore({
-          input: parsedInput,
-          organizationId: sqlClient.organizationId,
-          existingScore,
-        })
-
-        yield* scoreRepository.save(score)
-
-        yield* outboxEventWriter.write({
-          eventName: "ScoreCreated",
-          aggregateType: "score",
-          aggregateId: score.id,
-          organizationId: score.organizationId,
-          payload: {
-            organizationId: score.organizationId,
-            projectId: score.projectId,
-            scoreId: score.id,
-            issueId: scoreDiscoveryPayloadIssueId(score, existingScore),
-            status: score.draftedAt === null ? "published" : "draft",
-          },
-        })
-
-        return score
-      }),
-    )
-
-    if (isImmutableScore(score)) {
-      yield* syncScoreAnalyticsUseCase({
-        organizationId: score.organizationId,
-        scoreId: score.id,
+      const score = yield* buildScore({
+        input: parsedInput,
+        organizationId: sqlClient.organizationId,
+        existingScore,
       })
-    }
 
-    return score
-  }).pipe(Effect.withSpan("scores.writeScore"))
+      yield* scoreRepository.save(score)
+
+      yield* outboxEventWriter.write({
+        eventName: "ScoreCreated",
+        aggregateType: "score",
+        aggregateId: score.id,
+        organizationId: score.organizationId,
+        payload: {
+          organizationId: score.organizationId,
+          projectId: score.projectId,
+          scoreId: score.id,
+          issueId: scoreDiscoveryPayloadIssueId(score, existingScore),
+          status: score.draftedAt === null ? "published" : "draft",
+        },
+      })
+
+      return score
+    }),
+  )
+
+  if (isImmutableScore(score)) {
+    yield* syncScoreAnalyticsUseCase({
+      organizationId: score.organizationId,
+      scoreId: score.id,
+    })
+  }
+
+  return score
+})

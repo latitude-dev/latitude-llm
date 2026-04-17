@@ -18,8 +18,7 @@ export interface EmbeddedScoreFeedback {
   readonly normalizedEmbedding: number[]
 }
 
-export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
-  Effect.gen(function* () {
+export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(function* (input: EmbedScoreFeedbackInput) {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const scoreRepository = yield* ScoreRepository
@@ -53,4 +52,4 @@ export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
       feedback: score.feedback,
       normalizedEmbedding: normalizeEmbedding(embedding.embedding),
     } satisfies EmbeddedScoreFeedback
-  }).pipe(Effect.withSpan("issues.embedScoreFeedback"))
+  })

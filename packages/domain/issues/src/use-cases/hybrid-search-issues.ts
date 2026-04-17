@@ -12,8 +12,7 @@ export interface HybridSearchIssuesResult {
   readonly candidates: readonly IssueProjectionCandidate[]
 }
 
-export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
-  Effect.gen(function* () {
+export const hybridSearchIssuesUseCase = Effect.fn("issues.hybridSearchIssues")(function* (input: HybridSearchIssuesInput) {
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const issueProjectionRepository = yield* IssueProjectionRepository
 
@@ -26,4 +25,4 @@ export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
     return {
       candidates,
     } satisfies HybridSearchIssuesResult
-  }).pipe(Effect.withSpan("issues.hybridSearchIssues"))
+  })

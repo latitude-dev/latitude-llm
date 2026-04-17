@@ -9,8 +9,7 @@ export interface SyncIssueProjectionsInput {
   readonly issueId: string
 }
 
-export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
-  Effect.gen(function* () {
+export const syncIssueProjectionsUseCase = Effect.fn("issues.syncProjections")(function* (input: SyncIssueProjectionsInput) {
     yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     const issueProjectionRepository = yield* IssueProjectionRepository
     const issueRepository = yield* IssueRepository
@@ -38,4 +37,4 @@ export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
       description: issue.description,
       vector,
     })
-  }).pipe(Effect.withSpan("issues.syncProjections"))
+  })

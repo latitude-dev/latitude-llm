@@ -9,23 +9,22 @@ export interface SyncScoreAnalyticsInput {
   readonly scoreId: string
 }
 
-export const syncScoreAnalyticsUseCase = (input: SyncScoreAnalyticsInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("score.scoreId", input.scoreId)
-    const scoreRepository = yield* ScoreRepository
-    const analyticsRepository = yield* ScoreAnalyticsRepository
+export const syncScoreAnalyticsUseCase = Effect.fn("scores.syncScoreAnalytics")(function* (input: SyncScoreAnalyticsInput) {
+  yield* Effect.annotateCurrentSpan("score.scoreId", input.scoreId)
+  const scoreRepository = yield* ScoreRepository
+  const analyticsRepository = yield* ScoreAnalyticsRepository
 
-    const score = yield* scoreRepository
-      .findById(ScoreId(input.scoreId))
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    if (!score || !isImmutableScore(score)) {
-      return
-    }
+  const score = yield* scoreRepository
+    .findById(ScoreId(input.scoreId))
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (!score || !isImmutableScore(score)) {
+    return
+  }
 
-    const alreadyStoredInAnalytics = yield* analyticsRepository.existsById(score.id)
-    if (alreadyStoredInAnalytics) {
-      return
-    }
+  const alreadyStoredInAnalytics = yield* analyticsRepository.existsById(score.id)
+  if (alreadyStoredInAnalytics) {
+    return
+  }
 
-    yield* analyticsRepository.insert(score)
-  }).pipe(Effect.withSpan("scores.syncScoreAnalytics"))
+  yield* analyticsRepository.insert(score)
+})

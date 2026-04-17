@@ -188,13 +188,12 @@ export const executeEvaluationScript = async (input: {
   }
 }
 
-export const executeEvaluationScriptWithAI = (input: {
+export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvaluationScriptWithAi")(function* (input: {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
   readonly issue: EvaluationIssueContext
   readonly telemetry?: GenerateTelemetryCapture
-}) =>
-  Effect.gen(function* () {
+}) {
     yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
 
     const ai = yield* AI
@@ -227,8 +226,7 @@ export const executeEvaluationScriptWithAI = (input: {
 
         return new EvaluationExecutionError({
           message: error instanceof Error ? error.message : "Evaluation execution failed",
-          cause: error,
         })
       },
     })
-  }).pipe(Effect.withSpan("evaluations.executeEvaluationScriptWithAi"))
+  })

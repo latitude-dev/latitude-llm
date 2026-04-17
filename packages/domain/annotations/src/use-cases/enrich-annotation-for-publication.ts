@@ -119,8 +119,8 @@ export type EnrichAnnotationForPublicationResult =
 
 export type EnrichAnnotationForPublicationError = RepositoryError | BadRequestError | AIError | AICredentialError
 
-export const enrichAnnotationForPublicationUseCase = (input: EnrichAnnotationForPublicationInput) =>
-  Effect.gen(function* () {
+export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enrichAnnotationForPublication")(
+  function* (input: EnrichAnnotationForPublicationInput) {
     yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
     const ai = yield* AI
 
@@ -199,4 +199,5 @@ export const enrichAnnotationForPublicationUseCase = (input: EnrichAnnotationFor
       resolvedSessionId: resolvedSessionId === null ? null : String(resolvedSessionId),
       resolvedSpanId: resolvedSpanId === null ? null : String(resolvedSpanId),
     }
-  }).pipe(Effect.withSpan("annotations.enrichAnnotationForPublication"))
+  },
+)

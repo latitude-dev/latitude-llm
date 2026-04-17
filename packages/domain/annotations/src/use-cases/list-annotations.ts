@@ -26,8 +26,8 @@ export type ListTraceAnnotationsInput = z.input<typeof listTraceAnnotationsInput
 
 export type ListAnnotationsError = RepositoryError | BadRequestError
 
-export const listTraceAnnotationsUseCase = (input: ListTraceAnnotationsInput) =>
-  Effect.gen(function* () {
+export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnotations")(
+  function* (input: ListTraceAnnotationsInput) {
     const parsed = yield* parseOrBadRequest(
       listTraceAnnotationsInputSchema,
       input,
@@ -48,4 +48,5 @@ export const listTraceAnnotationsUseCase = (input: ListTraceAnnotationsInput) =>
         draftMode: parsed.draftMode,
       },
     })
-  }).pipe(Effect.withSpan("annotations.listTraceAnnotations"))
+  },
+)

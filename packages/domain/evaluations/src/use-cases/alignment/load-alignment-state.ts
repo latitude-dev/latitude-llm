@@ -5,13 +5,12 @@ import { isDeletedEvaluation } from "../../helpers.ts"
 import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
-export const loadAlignmentStateUseCase = (input: {
+export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentState")(function* (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly issueId: string
   readonly evaluationId: string
-}) =>
-  Effect.gen(function* () {
+}) {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
     yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
@@ -57,4 +56,4 @@ export const loadAlignmentStateUseCase = (input: {
       },
       confusionMatrix: evaluation.alignment.confusionMatrix,
     } satisfies LoadedEvaluationAlignmentState
-  }).pipe(Effect.withSpan("evaluations.loadAlignmentState"))
+  })
