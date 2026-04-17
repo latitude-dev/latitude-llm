@@ -45,7 +45,7 @@ export function IssuesSettingsPanel() {
         title="Issues"
         description="Configure monitoring preferences for resolved issues in your organization."
       />
-      <div className="flex flex-col gap-4 rounded-lg border boder-secondary bg-secondary p-6">
+      <div className="flex flex-col gap-4 rounded-lg border border-secondary bg-secondary p-6">
         <div className="flex w-full flex-row items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <Label htmlFor="keep-monitoring">Monitor resolved issues</Label>

@@ -105,13 +105,14 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   const form = useForm({
     defaultValues: { name: apiKey.name ?? "" },
     onSubmit: async ({ value }) => {
-      const transaction = updateApiKeyMutation(apiKey.id, value.name)
-      await transaction.isPersisted.promise
-      toast({
-        title: "Success",
-        description: "API key name updated.",
-      })
-      onClose()
+      try {
+        const transaction = updateApiKeyMutation(apiKey.id, value.name)
+        await transaction.isPersisted.promise
+        toast({ title: "Success", description: "API key name updated." })
+        onClose()
+      } catch (error) {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+      }
     },
   })
 

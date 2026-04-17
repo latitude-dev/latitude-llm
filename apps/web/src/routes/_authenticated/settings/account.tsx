@@ -1,6 +1,6 @@
-import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
+import { Button, Container, FormWrapper, Input, Modal, Text, useToast, useValueWithDefault } from "@repo/ui"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
 import { authClient } from "../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
@@ -79,13 +79,9 @@ export function AccountSettingsPanel() {
   const user = useAuthenticatedUser()
   const { toast } = useToast()
   const router = useRouter()
-  const [name, setName] = useState(user.name ?? "")
+  const [name, setName] = useValueWithDefault(user.name ?? "")
   const [isSaving, setIsSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  useEffect(() => {
-    setName(user.name ?? "")
-  }, [user.id, user.name])
 
   const trimmed = name.trim()
   const baseline = (user.name ?? "").trim()

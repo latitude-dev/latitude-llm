@@ -34,7 +34,9 @@ function OrganizationNameSection() {
       if (!org) return
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        updateOrganizationMutation(org.id, { name })
+        const trimmed = name.trim()
+        if (!trimmed) return
+        updateOrganizationMutation(org.id, { name: trimmed })
         toast({ description: "Organization name updated" })
       }, 600)
     },

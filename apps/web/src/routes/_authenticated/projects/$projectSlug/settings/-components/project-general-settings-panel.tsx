@@ -1,7 +1,7 @@
-import { Button, Container, FormWrapper, Input, Label, Switch, Text, useToast } from "@repo/ui"
+import { Button, Container, FormWrapper, Input, Label, Switch, Text, useToast, useValueWithDefault } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { getRouteApi } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   renameProjectMutation,
   updateProjectMutation,
@@ -22,12 +22,8 @@ export function ProjectGeneralSettingsPanel() {
   )
   const currentProject = projectRow ?? routeProject
 
-  const [name, setName] = useState(currentProject.name)
+  const [name, setName] = useValueWithDefault(currentProject.name)
   const [isSavingName, setIsSavingName] = useState(false)
-
-  useEffect(() => {
-    setName(currentProject.name)
-  }, [currentProject.id, currentProject.name])
 
   const trimmed = name.trim()
   const baseline = currentProject.name.trim()
@@ -75,7 +71,7 @@ export function ProjectGeneralSettingsPanel() {
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-4 rounded-lg border boder-secondary bg-secondary p-6">
+      <div className="flex flex-col gap-4 rounded-lg border border-secondary bg-secondary p-6">
         <div className="flex w-full flex-row items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <Label htmlFor="project-keep-monitoring">Monitor resolved issues</Label>
