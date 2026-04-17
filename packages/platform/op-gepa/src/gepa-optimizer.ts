@@ -107,6 +107,10 @@ const resolveTrajectory = (input: {
 export const GepaOptimizerLive = Layer.succeed(Optimizer, {
   optimize: (input) =>
     Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("optimization.componentId", input.baselineCandidate.componentId)
+      yield* Effect.annotateCurrentSpan("optimization.trainsetSize", input.dataset.trainset.length)
+      yield* Effect.annotateCurrentSpan("optimization.valsetSize", input.dataset.valset.length)
+
       throwIfAborted(input.abortSignal)
 
       const candidateByHash = new Map<string, OptimizationCandidate>([
@@ -248,5 +252,5 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
           componentId: input.baselineCandidate.componentId,
         }),
       }
-    }),
+    }).pipe(Effect.withSpan("optimizations.gepaOptimize")),
 } satisfies OptimizerShape)

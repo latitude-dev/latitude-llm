@@ -6,7 +6,7 @@ import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Data, Effect } from "effect"
 
@@ -204,7 +204,7 @@ export const createDomainEventsWorker = ({
           ),
         )
 
-      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid)
+      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid, withTracing)
     },
   })
 }

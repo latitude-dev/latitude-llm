@@ -195,6 +195,8 @@ export const executeEvaluationScriptWithAI = (input: {
   readonly telemetry?: GenerateTelemetryCapture
 }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
+
     const ai = yield* AI
     const services = yield* Effect.services<never>()
 
@@ -229,4 +231,4 @@ export const executeEvaluationScriptWithAI = (input: {
         })
       },
     })
-  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError, AI>
+  }).pipe(Effect.withSpan("evaluations.executeEvaluationScriptWithAi"))

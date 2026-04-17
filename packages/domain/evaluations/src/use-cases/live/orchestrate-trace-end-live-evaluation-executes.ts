@@ -22,6 +22,10 @@ export const orchestrateTraceEndLiveEvaluationExecutesUseCase =
     readonly selectedEvaluations: readonly Evaluation[]
   }) =>
     Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+      yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+      yield* Effect.annotateCurrentSpan("evaluation.count", input.selectedEvaluations.length)
+
       const scoreRepository = yield* ScoreRepository
       let skippedTurnCount = 0
       let publishedExecuteCount = 0
@@ -66,4 +70,4 @@ export const orchestrateTraceEndLiveEvaluationExecutesUseCase =
       }
 
       return { skippedTurnCount, publishedExecuteCount }
-    })
+    }).pipe(Effect.withSpan("evaluations.orchestrateTraceEndLiveEvaluationExecutes"))

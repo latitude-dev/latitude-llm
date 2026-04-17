@@ -1,6 +1,6 @@
 import type { QueueConsumer } from "@domain/queue"
 import { mapEventToPostHog, mapOrganizationGroupIdentify, type PostHogClientShape } from "@platform/analytics-posthog"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getPostHogClient } from "../clients.ts"
 
@@ -52,6 +52,7 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
         // Analytics must never poison the queue. A prolonged outage surfaces
         // via the error logs above.
         Effect.ignore,
+        withTracing,
       ),
   })
 }

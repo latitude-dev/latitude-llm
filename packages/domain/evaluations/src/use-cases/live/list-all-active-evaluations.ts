@@ -8,6 +8,8 @@ const ACTIVE_EVALUATION_SCAN_PAGE_SIZE = 100
 
 export const listAllActiveEvaluations = ({ projectId }: { readonly projectId: ProjectId }) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", projectId)
+
     const evaluationRepository = yield* EvaluationRepository
     const evaluations: Evaluation[] = []
     let offset = 0
@@ -30,4 +32,4 @@ export const listAllActiveEvaluations = ({ projectId }: { readonly projectId: Pr
 
       offset += page.limit
     }
-  })
+  }).pipe(Effect.withSpan("evaluations.listAllActiveEvaluations"))
