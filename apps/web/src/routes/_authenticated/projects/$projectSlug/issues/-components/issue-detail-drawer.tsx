@@ -187,6 +187,10 @@ export function IssueDetailDrawer({
     })
   }
 
+  const getTraceHref = (trace: { readonly traceId: string }) => {
+    return `/projects/${projectSlug}?tab=traces&traceId=${trace.traceId}&traceDetailTab=annotations`
+  }
+
   const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
     const shortName = input.rootSpanName || input.traceId.slice(0, 8)
     return `Open trace ${shortName} with annotations tab in traces dashboard`
@@ -431,6 +435,7 @@ export function IssueDetailDrawer({
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
               onTraceClick={(trace) => handleTraceClick(trace.traceId)}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
+              getTraceHref={getTraceHref}
               rowInteractionRole="link"
               infiniteScroll={infiniteScroll}
               blankSlate="This issue has not been seen on any traces yet."
