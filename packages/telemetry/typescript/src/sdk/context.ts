@@ -33,9 +33,15 @@ function mergeArrays<T>(a: T[] | undefined, b: T[] | undefined): T[] | undefined
   return [...new Set([...a, ...b])]
 }
 
+function shouldReuseActiveLatitudeTrace(currentContext: Context): boolean {
+  return getLatitudeContext(currentContext) !== undefined
+}
+
 export function capture<T>(name: string, fn: () => T | Promise<T>, options: ContextOptions = {}): T | Promise<T> {
   const currentContext = context.active()
   const existingData = getLatitudeContext(currentContext)
+  const shouldReuseTrace = shouldReuseActiveLatitudeTrace(currentContext)
+  const parentContext = shouldReuseTrace ? currentContext : trace.deleteSpan(currentContext)
 
   const mergedData: LatitudeContextData = {
     name: options.name ?? name,
@@ -45,10 +51,10 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     userId: options.userId ?? existingData?.userId,
   }
 
-  const newContext = currentContext.setValue(LATITUDE_CONTEXT_KEY, mergedData)
+  const newContext = parentContext.setValue(LATITUDE_CONTEXT_KEY, mergedData)
   const existingSpan = trace.getSpan(currentContext)
 
-  if (existingSpan) {
+  if (existingSpan && shouldReuseTrace) {
     return context.with(newContext, fn)
   }
 

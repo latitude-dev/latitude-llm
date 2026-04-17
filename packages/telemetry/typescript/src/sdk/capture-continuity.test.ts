@@ -1,10 +1,12 @@
-import { context, type TracerProvider, trace } from "@opentelemetry/api"
+import { context, createContextKey, type TracerProvider, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import type { ReadableSpan, Span } from "@opentelemetry/sdk-trace-node"
 import { beforeAll, describe, expect, it, vi } from "vitest"
-import { capture, LATITUDE_CONTEXT_KEY } from "./context.ts"
+import { capture, getLatitudeContext, LATITUDE_CONTEXT_KEY } from "./context.ts"
 import { LatitudeSpanProcessor } from "./processor.ts"
 import { isDefaultExportSpan } from "./span-filter.ts"
+
+const TEST_CONTEXT_KEY = createContextKey("test-context-key")
 
 describe("capture trace continuity", () => {
   beforeAll(() => {
@@ -54,7 +56,7 @@ describe("capture trace continuity", () => {
       trace.setGlobalTracerProvider(originalGetTracerProvider)
     })
 
-    it("should propagate context when trace exists", async () => {
+    it("should create a new root capture span when only an external trace exists", async () => {
       const mockExistingSpan = {
         spanContext: () => ({
           traceId: "existing-trace-id",
@@ -63,22 +65,90 @@ describe("capture trace continuity", () => {
         }),
       }
 
-      const originalGetSpan = trace.getSpan
-      vi.spyOn(trace, "getSpan").mockReturnValue(mockExistingSpan as unknown as Span)
+      const getSpanSpy = vi.spyOn(trace, "getSpan").mockReturnValue(mockExistingSpan as unknown as Span)
+
+      const mockTracer = {
+        startActiveSpan: vi.fn((name: string, options: unknown, ctx: unknown, callback: (span: Span) => unknown) => {
+          const mockSpan = {
+            name,
+            attributes: (options as { attributes?: Record<string, unknown> }).attributes || {},
+            spanContext: () => ({
+              traceId: "new-root-trace-id",
+              spanId: "new-root-span-id",
+              traceFlags: 1,
+            }),
+            end: vi.fn(),
+            recordException: vi.fn(),
+          } as unknown as Span
+
+          expect(getLatitudeContext(ctx as Parameters<typeof getLatitudeContext>[0])?.name).toBe("nested-capture")
+          expect((ctx as Parameters<typeof getLatitudeContext>[0]).getValue(TEST_CONTEXT_KEY)).toBe("test-value")
+          return callback(mockSpan)
+        }),
+      }
+      const getTracerSpy = vi.spyOn(trace, "getTracer").mockReturnValue(mockTracer as never)
 
       let contextWasPropagated = false
 
-      await capture(
-        "nested-capture",
-        async () => {
-          contextWasPropagated = true
-          return "done"
-        },
-        { tags: ["nested"] },
+      await context.with(context.active().setValue(TEST_CONTEXT_KEY, "test-value"), () =>
+        capture(
+          "nested-capture",
+          async () => {
+            contextWasPropagated = true
+            return "done"
+          },
+          { tags: ["nested"] },
+        ),
       )
 
       expect(contextWasPropagated).toBe(true)
-      trace.getSpan = originalGetSpan
+      expect(mockTracer.startActiveSpan).toHaveBeenCalledTimes(1)
+      expect(mockTracer.startActiveSpan.mock.calls[0]?.[0]).toBe("nested-capture")
+      expect(mockTracer.startActiveSpan.mock.calls[0]?.[1]).toEqual({ attributes: { "latitude.capture.root": true } })
+      getTracerSpy.mockRestore()
+      getSpanSpy.mockRestore()
+    })
+
+    it("should reuse the current trace when Latitude capture context already exists", async () => {
+      const mockExistingSpan = {
+        spanContext: () => ({
+          traceId: "existing-latitude-trace-id",
+          spanId: "existing-latitude-span-id",
+          traceFlags: 1,
+        }),
+      }
+
+      const getSpanSpy = vi.spyOn(trace, "getSpan").mockReturnValue(mockExistingSpan as unknown as Span)
+      const mockStartActiveSpan = vi.fn()
+      const getTracerSpy = vi
+        .spyOn(trace, "getTracer")
+        .mockReturnValue({ startActiveSpan: mockStartActiveSpan } as never)
+
+      let contextWasPropagated = false
+
+      await context.with(
+        context.active().setValue(LATITUDE_CONTEXT_KEY, {
+          name: "outer-capture",
+          tags: ["outer"],
+          metadata: { foo: "bar" },
+          sessionId: undefined,
+          userId: undefined,
+        }),
+        async () => {
+          await capture(
+            "nested-latitude-capture",
+            async () => {
+              contextWasPropagated = true
+            },
+            { tags: ["inner"] },
+          )
+        },
+      )
+
+      expect(contextWasPropagated).toBe(true)
+      expect(mockStartActiveSpan).not.toHaveBeenCalled()
+      getTracerSpy.mockRestore()
+      getSpanSpy.mockRestore()
     })
   })
 

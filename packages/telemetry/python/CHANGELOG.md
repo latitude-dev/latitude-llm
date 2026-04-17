@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0a2] - 2026-04-17
+
+### Fixed
+
+- `capture()` now starts a new Latitude root trace when called under an active non-Latitude span, so wrapper spans such as workflow-level capture names are preserved instead of being absorbed into foreign traces.
+- Nested Latitude `capture()` calls still reuse the existing Latitude-owned trace and merge context as before.
+
 ## [3.0.0a1] - 2026-04-01
 
 ### Breaking Changes
