@@ -38,7 +38,16 @@ const {
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
   writeEvaluationAlignmentJobStatus,
-} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "5 minutes",
+  retry: {
+    initialInterval: "1 second",
+    backoffCoefficient: 2,
+    maximumInterval: "1 minute",
+    maximumAttempts: 5,
+    nonRetryableErrorTypes: ["EvaluationManualRealignmentRateLimitedError"],
+  },
+})
 
 const toFailurePayload = (error: unknown) => {
   const maybeTag = (error as { _tag?: string } | null)?._tag
