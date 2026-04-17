@@ -142,6 +142,8 @@ overrides:
   drizzle-orm: 1.0.0-beta.15-859cf75
   tslib: 2.8.1
 
+packageExtensionsChecksum: sha256-brkFOEWEolPby9MwoLWNXwqH4Z7YKK90EGtqRfDRJcw=
+
 importers:
 
   .:
@@ -21578,6 +21580,7 @@ snapshots:
       nice-grpc: 2.1.15
       nice-grpc-client-middleware-retry: 3.1.14
       nice-grpc-common: 2.0.3
+      protobufjs: 7.5.5
       uuid: 9.0.1
     transitivePeerDependencies:
       - encoding
