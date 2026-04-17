@@ -143,6 +143,56 @@ describe("buildOtlpRequest", () => {
     expect(unwrap(aSpans[0]).spanId).toBe(unwrap(bSpans[0]).spanId)
   })
 
+  it("attaches latitude.tags and latitude.metadata to every span when context is provided", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          toolCalls: [{ id: "tu_1", name: "Bash", input: { command: "ls" }, output: "ok" }],
+        }),
+      ],
+      context: {
+        tags: ["latitude-v2"],
+        metadata: {
+          "workspace.name": "latitude-v2",
+          "workspace.path": "/Users/x/src/latitude-v2",
+          "git.branch": "main",
+          "hook.event": "Stop",
+        },
+      },
+    })
+
+    const spans = otlpSpans(req)
+    expect(spans).toHaveLength(3)
+    for (const span of spans) {
+      const tags = getAttr(span.attributes, "latitude.tags")
+      const metadata = getAttr(span.attributes, "latitude.metadata")
+      expect(JSON.parse(unwrap(tags))).toEqual(["latitude-v2"])
+      expect(JSON.parse(unwrap(metadata))).toEqual({
+        "workspace.name": "latitude-v2",
+        "workspace.path": "/Users/x/src/latitude-v2",
+        "git.branch": "main",
+        "hook.event": "Stop",
+      })
+    }
+  })
+
+  it("omits latitude.tags and latitude.metadata when context is empty", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn()],
+      context: { tags: [], metadata: {} },
+    })
+
+    const spans = otlpSpans(req)
+    for (const span of spans) {
+      expect(getAttr(span.attributes, "latitude.tags")).toBeUndefined()
+      expect(getAttr(span.attributes, "latitude.metadata")).toBeUndefined()
+    }
+  })
+
   it("nests subagent interaction+llm_request+tool spans under the parent Agent tool span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-1",
