@@ -41,7 +41,7 @@ export function MarkdownContent({
     const preview = showFullText ? content : getLargeContentPreview(content)
 
     return (
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="flex flex-col gap-3">
         <Text.H6 color="foregroundMuted">
           This content is too large to render as Markdown safely, so we&apos;re showing it as plain text instead.
         </Text.H6>
