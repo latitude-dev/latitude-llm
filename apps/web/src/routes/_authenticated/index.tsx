@@ -22,6 +22,7 @@ import {
 import { extractLeadingEmoji, formatCount } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { DatabaseIcon, PlusIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
@@ -297,17 +298,28 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
 
 function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { toast } = useToast()
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const form = useForm({
     defaultValues: {
       name: "",
     },
     onSubmit: createFormSubmitHandler(
       async (value) => {
-        const transaction = createProjectMutation(value.name)
+        const { projectId, transaction } = createProjectMutation(value.name)
         await transaction.isPersisted.promise
+        return { projectId }
       },
       {
-        onSuccess: async () => {
+        onSuccess: async ({ projectId }) => {
+          const projects = queryClient.getQueryData<ProjectRecord[]>(["projects"])
+          const slug = projects?.find((p) => p.id === projectId)?.slug
+          if (slug) {
+            await router.navigate({
+              to: "/projects/$projectSlug",
+              params: { projectSlug: slug },
+            })
+          }
           onClose()
         },
         onError: (error) => {
