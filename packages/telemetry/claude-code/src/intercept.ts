@@ -49,27 +49,61 @@ async function interceptedFetch(
   if (!bodyText || !response.ok || !response.body) return response
 
   try {
-    const clone = response.clone()
-    // Fire and forget. SSE streams can take a while; we buffer in the background
-    // and write the file when the message_start event is seen.
-    clone
-      .text()
-      .then((text) => {
-        const messageId = extractMessageId(text)
-        if (!messageId) {
-          if (DEBUG) process.stderr.write("[latitude-intercept] no message_id in response\n")
-          return
-        }
-        writeRequest(messageId, bodyText ?? "", url)
-      })
-      .catch((err) => {
-        if (DEBUG) process.stderr.write(`[latitude-intercept] clone read failed: ${String(err)}\n`)
-      })
-  } catch (err) {
-    if (DEBUG) process.stderr.write(`[latitude-intercept] clone failed: ${String(err)}\n`)
-  }
+    // Tee the response stream: one side goes to the caller (the Anthropic SDK), the
+    // other side we scan for the message_start SSE event. As soon as that event
+    // arrives, we know the message id and write the request file synchronously —
+    // well before the Stop hook can fire, eliminating the race we'd have if we
+    // waited for the full response to drain.
+    const [forCaller, forScan] = response.body.tee()
+    void scanForMessageIdAndWrite(forScan, bodyText, url)
 
-  return response
+    return new Response(forCaller, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    })
+  } catch (err) {
+    if (DEBUG) process.stderr.write(`[latitude-intercept] tee failed: ${String(err)}\n`)
+    return response
+  }
+}
+
+async function scanForMessageIdAndWrite(
+  stream: ReadableStream<Uint8Array>,
+  bodyText: string,
+  url: string,
+): Promise<void> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buffered = ""
+  let wrote = false
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) buffered += decoder.decode(value, { stream: true })
+      if (!wrote) {
+        const messageId = extractMessageId(buffered)
+        if (messageId) {
+          writeRequest(messageId, bodyText, url)
+          wrote = true
+          // Drain the rest silently so the underlying source isn't back-pressured.
+          // We don't need any more bytes; just keep pulling until done.
+        }
+      }
+    }
+    if (!wrote && DEBUG) {
+      process.stderr.write("[latitude-intercept] stream ended without message_start\n")
+    }
+  } catch (err) {
+    if (DEBUG) process.stderr.write(`[latitude-intercept] scan failed: ${String(err)}\n`)
+  } finally {
+    try {
+      reader.releaseLock()
+    } catch {
+      // already released
+    }
+  }
 }
 
 function shouldCapture(url: string): boolean {

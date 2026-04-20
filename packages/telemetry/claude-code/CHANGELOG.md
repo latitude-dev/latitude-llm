@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Race between the intercept preload and the Stop hook** — the preload used to buffer the whole response in the background and only write the request file after `.text()` resolved. If Claude Code fired `Stop` before that write completed, the hook saw an empty dir and spans didn't get enriched. The preload now tees the response stream and writes the file the moment `message_start` arrives (the first SSE event), guaranteeing the file is on disk well before any hook can run.
+
 ## [0.0.3] - 2026-04-20
 
 ### Added
