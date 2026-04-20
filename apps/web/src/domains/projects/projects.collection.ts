@@ -26,13 +26,9 @@ const projectsCollection = createCollection(
             },
           })
           queryClient.setQueryData<ProjectRecord[]>(["projects"], (old) => {
-            if (!old) {
-              return [result]
-            }
+            if (!old) return undefined
             const hasId = old.some((p) => p.id === result.id)
-            if (!hasId) {
-              return [...old, result]
-            }
+            if (!hasId) return [...old, result]
             return old.map((p) => (p.id === result.id ? result : p))
           })
         }),
