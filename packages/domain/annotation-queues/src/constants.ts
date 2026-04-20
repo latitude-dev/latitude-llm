@@ -25,7 +25,7 @@ export const SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW = 8
 
 export const SYSTEM_QUEUE_FLAGGER_MODEL = {
   provider: "amazon-bedrock",
-  model: "amazon.nova-micro-v1:0",
+  model: "amazon.nova-lite-v1:0",
   temperature: 0,
 } as const
 
