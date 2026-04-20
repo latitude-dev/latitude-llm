@@ -20,12 +20,15 @@ export function buildOtlpRequest(opts: {
   turnStartNumber: number
   turns: Turn[]
   context?: TraceContext | undefined
+  conversationHistory?: Turn[] | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
+  const history = opts.conversationHistory ?? []
   const spans: OtlpSpan[] = []
   opts.turns.forEach((turn, i) => {
     const turnNum = opts.turnStartNumber + i
-    spans.push(...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs))
+    const priorTurns = [...history, ...opts.turns.slice(0, i)]
+    spans.push(...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs, priorTurns))
   })
 
   const rs: OtlpResourceSpans = {
@@ -47,6 +50,7 @@ function buildTurnSpans(
   turnNum: number,
   turn: Turn,
   contextAttrs: OtlpKeyValue[],
+  priorTurns: Turn[],
 ): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
@@ -64,6 +68,7 @@ function buildTurnSpans(
     interactionIdSalt: "turn",
     genIdSalt: "gen",
     contextAttrs,
+    priorTurns,
   })
   return out
 }
@@ -81,6 +86,7 @@ interface TreeCtx {
   interactionIdSalt: string
   genIdSalt: string
   contextAttrs: OtlpKeyValue[]
+  priorTurns: Turn[]
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
@@ -139,8 +145,9 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
-      str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
+      str("gen_ai.input.messages", JSON.stringify(buildInputMessages(ctx.priorTurns, turn.userText))),
       str("gen_ai.output.messages", JSON.stringify([messagePart("assistant", turn.assistantText)])),
+      int("gen_ai.input.messages.count", ctx.priorTurns.length * 2 + 1),
       ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
@@ -168,6 +175,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
         interactionIdSalt: `${subSalt}:turn`,
         genIdSalt: `${subSalt}:gen`,
         contextAttrs: ctx.contextAttrs,
+        priorTurns: subagent.turns.slice(0, subIdx),
       })
     })
   })
@@ -227,6 +235,16 @@ function buildContextAttrs(context: TraceContext | undefined): OtlpKeyValue[] {
 
 function messagePart(role: "user" | "assistant", content: string) {
   return { role, parts: [{ type: "text", content }] }
+}
+
+function buildInputMessages(priorTurns: Turn[], currentUserText: string) {
+  const messages = []
+  for (const t of priorTurns) {
+    messages.push(messagePart("user", t.userText))
+    if (t.assistantText.length > 0) messages.push(messagePart("assistant", t.assistantText))
+  }
+  messages.push(messagePart("user", currentUserText))
+  return messages
 }
 
 function resourceAttrs(): OtlpKeyValue[] {

@@ -143,6 +143,146 @@ describe("buildOtlpRequest", () => {
     expect(unwrap(aSpans[0]).spanId).toBe(unwrap(bSpans[0]).spanId)
   })
 
+  it("includes full conversation history in llm_request input messages", () => {
+    const history: Turn[] = [
+      {
+        userText: "turn 1 user",
+        assistantText: "turn 1 assistant",
+        model: "claude-sonnet-4-6",
+        tokens: {},
+        toolCalls: [],
+        startMs: 0,
+        endMs: 100,
+      },
+      {
+        userText: "turn 2 user",
+        assistantText: "turn 2 assistant",
+        model: "claude-sonnet-4-6",
+        tokens: {},
+        toolCalls: [],
+        startMs: 200,
+        endMs: 300,
+      },
+    ]
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 3,
+      turns: [baseTurn({ userText: "turn 3 user", assistantText: "turn 3 assistant" })],
+      conversationHistory: history,
+    })
+
+    const llm = unwrap(otlpSpans(req)[1])
+    const inputs = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.input.messages")))
+    expect(inputs).toEqual([
+      { role: "user", parts: [{ type: "text", content: "turn 1 user" }] },
+      { role: "assistant", parts: [{ type: "text", content: "turn 1 assistant" }] },
+      { role: "user", parts: [{ type: "text", content: "turn 2 user" }] },
+      { role: "assistant", parts: [{ type: "text", content: "turn 2 assistant" }] },
+      { role: "user", parts: [{ type: "text", content: "turn 3 user" }] },
+    ])
+    expect(getAttr(llm.attributes, "gen_ai.input.messages.count")).toBe("5")
+
+    // Interaction span stays narrow — just the current user prompt.
+    const interaction = unwrap(otlpSpans(req)[0])
+    const interactionInputs = JSON.parse(unwrap(getAttr(interaction.attributes, "gen_ai.input.messages")))
+    expect(interactionInputs).toEqual([{ role: "user", parts: [{ type: "text", content: "turn 3 user" }] }])
+  })
+
+  it("accumulates prior new turns into the history for later turns in the same batch", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({ userText: "first user", assistantText: "first assistant" }),
+        baseTurn({ userText: "second user", assistantText: "second assistant" }),
+      ],
+    })
+
+    const spans = otlpSpans(req)
+    // Two turns × (interaction + llm_request) = 4 spans.
+    const secondLlm = unwrap(spans[3])
+    const inputs = JSON.parse(unwrap(getAttr(secondLlm.attributes, "gen_ai.input.messages")))
+    expect(inputs).toEqual([
+      { role: "user", parts: [{ type: "text", content: "first user" }] },
+      { role: "assistant", parts: [{ type: "text", content: "first assistant" }] },
+      { role: "user", parts: [{ type: "text", content: "second user" }] },
+    ])
+  })
+
+  it("gives subagent turns their own isolated history, not the parent session's", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          userText: "parent user",
+          assistantText: "parent assistant",
+          toolCalls: [
+            {
+              id: "toolu_agent_1",
+              name: "Agent",
+              input: { subagent_type: "Explore", description: "look" },
+              output: "done",
+              subagent: {
+                agentId: "a1",
+                agentType: "Explore",
+                description: "look",
+                turns: [
+                  {
+                    userText: "sub turn 1 user",
+                    assistantText: "sub turn 1 assistant",
+                    model: "claude-haiku-4-5",
+                    tokens: {},
+                    toolCalls: [],
+                    startMs: 10,
+                    endMs: 20,
+                  },
+                  {
+                    userText: "sub turn 2 user",
+                    assistantText: "sub turn 2 assistant",
+                    model: "claude-haiku-4-5",
+                    tokens: {},
+                    toolCalls: [],
+                    startMs: 30,
+                    endMs: 40,
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      ],
+      conversationHistory: [
+        {
+          userText: "a previous parent turn",
+          assistantText: "a previous parent response",
+          model: "claude-sonnet-4-6",
+          tokens: {},
+          toolCalls: [],
+          startMs: -100,
+          endMs: -50,
+        },
+      ],
+    })
+
+    const spans = otlpSpans(req)
+    // Layout: 0 main interaction, 1 main llm_request, 2 Agent tool,
+    //         3 sub1 interaction, 4 sub1 llm_request,
+    //         5 sub2 interaction, 6 sub2 llm_request
+    const sub2Llm = unwrap(spans[6])
+    const inputs = JSON.parse(unwrap(getAttr(sub2Llm.attributes, "gen_ai.input.messages")))
+    expect(inputs).toEqual([
+      { role: "user", parts: [{ type: "text", content: "sub turn 1 user" }] },
+      { role: "assistant", parts: [{ type: "text", content: "sub turn 1 assistant" }] },
+      { role: "user", parts: [{ type: "text", content: "sub turn 2 user" }] },
+    ])
+
+    // First subagent turn has no history.
+    const sub1Llm = unwrap(spans[4])
+    const sub1Inputs = JSON.parse(unwrap(getAttr(sub1Llm.attributes, "gen_ai.input.messages")))
+    expect(sub1Inputs).toEqual([{ role: "user", parts: [{ type: "text", content: "sub turn 1 user" }] }])
+  })
+
   it("attaches latitude.tags and latitude.metadata to every span when context is provided", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-1",

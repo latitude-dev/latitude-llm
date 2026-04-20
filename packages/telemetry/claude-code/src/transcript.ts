@@ -17,6 +17,22 @@ interface ReadResult {
   newBuffer: string
 }
 
+export function readAllTurns(path: string, opts: { includeSidechain?: boolean } = {}): Turn[] {
+  if (!existsSync(path)) return []
+  const raw = readFileSync(path, "utf-8")
+  const rows: TranscriptRow[] = []
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    try {
+      rows.push(JSON.parse(trimmed) as TranscriptRow)
+    } catch {
+      // skip malformed line
+    }
+  }
+  return buildTurns(rows, opts)
+}
+
 export function readIncremental(path: string, offset: number, buffer: string): ReadResult {
   if (!existsSync(path)) return { rows: [], newOffset: offset, newBuffer: buffer }
 

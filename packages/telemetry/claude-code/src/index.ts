@@ -5,7 +5,14 @@ import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
-import { buildTurns, discoverSubagentFiles, firstPromptIdOf, readIncremental, readSubagentMeta } from "./transcript.ts"
+import {
+  buildTurns,
+  discoverSubagentFiles,
+  firstPromptIdOf,
+  readAllTurns,
+  readIncremental,
+  readSubagentMeta,
+} from "./transcript.ts"
 import type { HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
 
 async function readStdin(): Promise<string> {
@@ -84,11 +91,16 @@ async function main(): Promise<void> {
     const context = collectTraceContext(payload)
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
+    const allTurns = readAllTurns(transcriptPath)
+    const conversationHistory = allTurns.slice(0, Math.max(0, allTurns.length - turns.length))
+    logger.debug(`conversation history: ${conversationHistory.length} prior turn(s)`)
+
     const otlpRequest = buildOtlpRequest({
       sessionId,
       turnStartNumber: prior.turnCount + 1,
       turns,
       context,
+      conversationHistory,
     })
 
     return postTraces({
