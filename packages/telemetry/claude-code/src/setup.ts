@@ -278,6 +278,24 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
 
   const apiKey = flags.apiKey ?? existingEnv.LATITUDE_API_KEY ?? ""
   const project = flags.project ?? existingEnv.LATITUDE_PROJECT ?? ""
+
+  // Flag-driven mode can't fall back to prompts, so fail fast if either
+  // required value is missing. Writing settings.json with an empty key/project
+  // would look "installed" but the hook silently disables itself at runtime
+  // (loadConfig requires both), which is harder to diagnose than an exit 1 here.
+  const missing: string[] = []
+  if (!apiKey) missing.push("--api-key")
+  if (!project) missing.push("--project")
+  if (missing.length > 0) {
+    process.stderr.write(
+      `[latitude-claude-code] missing required value${missing.length === 1 ? "" : "s"} for non-interactive install: ${missing.join(", ")}\n`,
+    )
+    process.stderr.write(
+      `[latitude-claude-code] either pass ${missing.join(" + ")}, or drop --no-prompt to answer interactively.\n`,
+    )
+    process.exit(1)
+  }
+
   const envConfig = flags.environment ?? PRODUCTION_ENV
   const useLaunchctl = process.platform === "darwin" && !flags.noLaunchctl
 
