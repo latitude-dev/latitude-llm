@@ -67,11 +67,9 @@ export async function runInstall(flags: InstallFlags = {}): Promise<void> {
       (rl
         ? await askWithDefault(rl, "LATITUDE_PROJECT", existingEnv.LATITUDE_PROJECT)
         : (existingEnv.LATITUDE_PROJECT ?? ""))
-    const baseUrl =
-      flags.baseUrl ??
-      (rl
-        ? await askWithDefault(rl, "LATITUDE_BASE_URL", existingEnv.LATITUDE_BASE_URL ?? DEFAULT_BASE_URL)
-        : (existingEnv.LATITUDE_BASE_URL ?? DEFAULT_BASE_URL))
+    // Base URL is flag-only — most users never need to change it, so we skip the
+    // prompt. Pass `--base-url=https://...` to override the default.
+    const baseUrl = flags.baseUrl ?? existingEnv.LATITUDE_BASE_URL ?? DEFAULT_BASE_URL
 
     let useLaunchctl = false
     if (process.platform === "darwin" && !flags.noLaunchctl) {
@@ -394,10 +392,11 @@ export function parseFlags(argv: string[]): { subcommand: string; flags: Record<
 export function normalizeInstallFlags(flags: Record<string, string | boolean>): InstallFlags {
   const str = (v: string | boolean | undefined): string | undefined => (typeof v === "string" ? v : undefined)
   return {
-    apiKey: str(flags["api-key"]),
+    apiKey: str(flags["api-key"] ?? flags.api_key),
     project: str(flags.project),
-    baseUrl: str(flags["base-url"]),
-    noLaunchctl: flags["no-launchctl"] === true,
-    noPrompt: flags["no-prompt"] === true || flags.yes === true,
+    // Accept kebab-case and snake_case for the URL flag.
+    baseUrl: str(flags["base-url"] ?? flags.base_url),
+    noLaunchctl: flags["no-launchctl"] === true || flags.no_launchctl === true,
+    noPrompt: flags["no-prompt"] === true || flags.no_prompt === true || flags.yes === true,
   }
 }

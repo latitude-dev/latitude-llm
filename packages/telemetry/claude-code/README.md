@@ -144,7 +144,9 @@ A one-shot interactive installer covers everything above:
 npx -y @latitude-data/claude-code-telemetry install
 ```
 
-It prompts for your `LATITUDE_API_KEY`, project slug, and base URL, writes them to `settings.json` with the Stop hook entry, and — on macOS — offers to set `BUN_OPTIONS` via `launchctl` with persistent `LaunchAgents` wiring. Existing values in `settings.json` are shown as defaults; press Enter to keep them. A backup is always written first. Use `--yes` to accept all defaults non-interactively, or `--no-prompt` for CI.
+It prompts for your `LATITUDE_API_KEY` and project slug, writes them to `settings.json` with the Stop hook entry, and — on macOS — offers to set `BUN_OPTIONS` via `launchctl` with persistent `LaunchAgents` wiring. Existing values in `settings.json` are shown as defaults; press Enter to keep them. A backup is always written first.
+
+Pass `--base-url=https://staging-ingest.latitude.so` (or self-hosted URL) to override the default ingest endpoint — that one's flag-only since most users never need to change it. Use `--yes` / `--no-prompt` for CI. Other flags: `--api-key=…`, `--project=…`, `--no-launchctl`.
 
 **Caveats:**
 - The `claude` CLI is a Bun-compiled standalone. The preload relies on Bun honoring `BUN_OPTIONS=--preload=...` (verified against 2.1.x). If a future release removes this, the hook falls back to reconstruction automatically — nothing else breaks.
