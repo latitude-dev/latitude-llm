@@ -1,17 +1,125 @@
 # @latitude-data/claude-code-telemetry
 
-Claude Code `Stop` hook that streams session transcripts to [Latitude](https://latitude.so) as OTLP traces. Full conversation fidelity — user prompts, assistant responses, and tool I/O — without the truncation and flag combinatorics of Claude Code's native OpenTelemetry path.
+Claude Code `Stop` hook that streams session transcripts to [Latitude](https://latitude.so) as OTLP traces. Full conversation fidelity — user prompts, assistant responses, and tool I/O — plus the real system prompt and tool definitions that reached the model, without the truncation and flag combinatorics of Claude Code's native OpenTelemetry path.
 
-## Setup
+## Install
 
-Add this to your `~/.claude/settings.json`:
+```bash
+npx -y @latitude-data/claude-code-telemetry install
+```
+
+The installer walks you through the setup: prompts for your Latitude API key and project slug, wires the Stop hook into `~/.claude/settings.json`, and — on macOS — sets up `BUN_OPTIONS` via `launchctl` with a persistent `LaunchAgents` plist so the preload works for both terminal `claude` and the Claude Desktop app.
+
+Then fully quit and relaunch claude for the preload to attach:
+
+- **Terminal** — open a new terminal window.
+- **Claude Desktop** — ⌘Q to quit, then relaunch from Dock or Finder.
+
+That's it. Trace runs show up at `https://app.latitude.so/projects/<your-slug>`.
+
+### Install flags
+
+| Flag | What it does |
+| --- | --- |
+| `--api-key=<key>` | Pass the API key instead of being prompted. |
+| `--project=<slug>` | Pass the project slug instead of being prompted. |
+| `--staging` | Target `https://staging.latitude.so` / `https://staging-ingest.latitude.so`. |
+| `--dev` | Target `http://localhost:3000` / `http://localhost:3002`. |
+| `--no-launchctl` | Write `BUN_OPTIONS` into `settings.json` instead of setting it via `launchctl`. Useful if you only use terminal claude and don't want anything installed under `~/Library/LaunchAgents/`. |
+| `--yes` / `--no-prompt` | Skip all prompts. Required for non-TTY / CI invocations. |
+
+Re-running `install` is idempotent — existing values in `settings.json` are shown as defaults and the Stop hook isn't duplicated.
+
+## Uninstall
+
+```bash
+npx -y @latitude-data/claude-code-telemetry uninstall
+```
+
+Shows a plan and asks for confirmation before touching anything. Reverses only what the installer did:
+
+- Removes `LATITUDE_*` and (if it's ours) `BUN_OPTIONS` from `~/.claude/settings.json` (backup at `settings.json.latitude-bak`).
+- Removes the Stop hook entry — leaves any other hooks alone.
+- `launchctl unsetenv BUN_OPTIONS` only if it still points at our preload.
+- Unloads and removes `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist`.
+- Deletes `~/.claude/state/latitude/` (preload, state, captured request files).
+
+## What gets sent
+
+For each turn, the hook emits one trace with three span kinds:
+
+- **`interaction`** — the user prompt and turn-level timing / counts.
+- **`llm_request`** — one per model call. Carries the model name, token usage (input/output/cache), input and output messages, and — when the preload is active — the full system prompt (`gen_ai.system_instructions`), tool schemas (`gen_ai.tool.definitions`), and exact request parameters. A tool-loop turn produces N sibling `llm_request` spans, one per distinct assistant `message.id`.
+- **`tool_execution`** — one per tool call. Canonical `gen_ai.tool.*` attributes: `name`, `call.id`, `call.arguments`, `call.result`. Failures set `error.type` and OTel status code 2.
+
+All spans share the session id so they group together in the Latitude UI.
+
+## How it works
+
+Two parts, and the installer wires both up:
+
+### 1. Stop hook → OTLP export
+
+Claude Code's `Stop` hook fires at the end of each turn. Our hook reads the new rows of the session's JSONL transcript, reconstructs user → assistant → tool_use → tool_result turns, and POSTs OTLP spans to `${LATITUDE_BASE_URL}/v1/traces`. State lives at `~/.claude/state/latitude/state.json` so each invocation only processes new lines.
+
+This alone gets you conversation-level fidelity. The transcript, however, doesn't contain the system prompt or the tool definitions that reached the model — those are composed by `claude` at runtime and never written to disk.
+
+### 2. Bun `--preload` fetch intercept (optional but installed by default)
+
+The installer ships a small ESM module (`~/.claude/state/latitude/intercept.js`) and wires `BUN_OPTIONS=--preload=<path>` so Bun loads it into the `claude` process. Inside claude, it wraps `globalThis.fetch`, tees the response of every POST to Anthropic's `/v1/messages`, and — the moment the first `message_start` SSE event arrives — writes the full request body to `~/.claude/state/latitude/requests/<message_id>.json`.
+
+The Stop hook then matches those files to their assistant calls by `message_id` and enriches each `llm_request` span with:
+
+- `gen_ai.system_instructions` — the full composed system prompt.
+- `gen_ai.tool.definitions` — every tool schema offered to the model.
+- `gen_ai.request.model` / `max_tokens` / `temperature` / `top_p` / `stream`.
+- `gen_ai.input.messages` — the real message array, overriding the transcript reconstruction.
+- `llm_request.captured = "true"` — marker so you can filter for enriched spans.
+
+Request files are deleted after the hook consumes them, and anything older than 24h is swept on each run.
+
+### Why `launchctl` on macOS
+
+Claude Desktop doesn't forward `env` from `~/.claude/settings.json` to the `claude` subprocess it spawns — that field only reaches hook subprocesses. So setting `BUN_OPTIONS` there works for terminal `claude` but is silently ignored by Desktop. `launchctl setenv` puts the var in launchd's environment, which the GUI app inherits. The installer also writes a `LaunchAgents` plist so this survives reboots.
+
+## Configuration reference
+
+Everything the installer writes. Edit `~/.claude/settings.json` directly if you want to tweak:
+
+### `env`
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `LATITUDE_API_KEY` | yes | — | Bearer token for Latitude ingestion. |
+| `LATITUDE_PROJECT` | yes | — | Slug of the project to route traces into. |
+| `LATITUDE_BASE_URL` | no | `https://ingest.latitude.so` | Override ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
+| `BUN_OPTIONS` | written when `launchctl` isn't used (all non-macOS platforms, or macOS with `--no-launchctl`) | — | `--preload=<absolute-path-to-intercept.js>`. See "how it works" above. |
+| `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
+| `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
+
+### `hooks.Stop`
+
+A single hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn (async).
+
+### Files on disk
+
+- `~/.claude/state/latitude/intercept.js` — the preload shim `BUN_OPTIONS` points at. Written on every platform.
+- `~/.claude/state/latitude/state.json` — per-session bookkeeping (transcript offsets, turn counts) so each hook invocation only processes new lines.
+- `~/.claude/state/latitude/requests/<message_id>.json` — request bodies captured by the preload. Transient: consumed by the Stop hook and deleted after each turn.
+
+### macOS-only files
+
+- `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist` — a one-shot launchd agent that runs `launchctl setenv BUN_OPTIONS …` on every login. Only installed when you accept the launchctl prompt.
+
+### Manual installation
+
+If the installer doesn't fit your setup (e.g. you manage dotfiles with another tool), the equivalent settings.json is:
 
 ```json
 {
   "env": {
     "LATITUDE_API_KEY": "lat_xxx",
-    "LATITUDE_PROJECT": "my-project-slug",
-    "LATITUDE_BASE_URL": "https://ingest.latitude.so"
+    "LATITUDE_PROJECT": "my-project-slug"
   },
   "hooks": {
     "Stop": [
@@ -19,7 +127,8 @@ Add this to your `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry"
+            "command": "npx -y @latitude-data/claude-code-telemetry",
+            "async": true
           }
         ]
       }
@@ -28,161 +137,36 @@ Add this to your `~/.claude/settings.json`:
 }
 ```
 
-That's it. The hook fires after every assistant turn, reads new lines from the session transcript, converts them into OTLP traces, and POSTs them to `${LATITUDE_BASE_URL}/v1/traces`.
-
-`LATITUDE_PROJECT` is the slug of the Latitude project you want traces to land in — same value you'd pass in the `X-Latitude-Project` header when using the ingest API directly. The project must already exist under the organization that owns your API key.
-
-## Environment variables
-
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `LATITUDE_API_KEY` | yes | — | Bearer token for Latitude ingestion. |
-| `LATITUDE_PROJECT` | yes | — | Slug of the project to route traces into. |
-| `LATITUDE_BASE_URL` | no | `https://ingest.latitude.so` | Override for self-hosted deploys. |
-| `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to turn the hook off without removing it from `settings.json`. |
-| `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
-
-## Capturing the full system prompt and tool definitions (optional)
-
-By default the hook reconstructs each `llm_request` span's messages from the transcript on disk. That's good for the conversation — user prompts, assistant text, tool calls and results — but it doesn't include Claude Code's **system prompt** or the **tool definitions** sent to the model, because those aren't persisted to the transcript.
-
-If you want spans to carry the exact payload that reached Anthropic's API — the base prompt, every tool definition, request parameters like `max_tokens` and `temperature`, and the real message array — add a one-time preload that wraps `fetch` inside the `claude` process.
-
-1. Install the preload shim to a stable path:
-
-   ```bash
-   npx -y @latitude-data/claude-code-telemetry install
-   ```
-
-   This writes `intercept.js` to `~/.claude/state/latitude/intercept.js` and prints the env line to add.
-
-   On macOS, the install command will also offer to wire up `BUN_OPTIONS` via `launchctl` (covering both terminal `claude` and Claude Desktop). Say yes to the prompt and skip step 2.
-
-2. Expose `BUN_OPTIONS` to the `claude` runtime. Either:
-
-   **Option A — add it to `~/.claude/settings.json` under `env`:**
-   ```json
-   "env": {
-     "LATITUDE_API_KEY": "lat_xxx",
-     "LATITUDE_PROJECT": "my-project-slug",
-     "BUN_OPTIONS": "--preload=/Users/you/.claude/state/latitude/intercept.js"
-   }
-   ```
-
-   **Option B — export in your shell rc** (`~/.zshrc`, `~/.bashrc`):
-   ```bash
-   export BUN_OPTIONS="--preload=/Users/you/.claude/state/latitude/intercept.js"
-   ```
-
-   Use the absolute path printed by `install` — `~` isn't expanded inside these values.
-
-3. **Open a new terminal** (or restart your shell) so the env var takes effect, then start a new claude session.
-
-With this in place, every Anthropic `/v1/messages` request body is written to `~/.claude/state/latitude/requests/<message_id>.json` inside the `claude` process and consumed by the Stop hook, which attaches:
-
-- `gen_ai.system_instructions` — the full system prompt (base + CLAUDE.md + any billing/context blocks)
-- `gen_ai.tool.definitions` — every tool schema offered to the model
-- `gen_ai.request.model` / `max_tokens` / `temperature` / `top_p` / `stream`
-- `gen_ai.input.messages` — the real message array, overriding the transcript reconstruction
-- `llm_request.captured = "true"` — marker so you can filter for enriched spans
-
-Request files are pruned after the Stop hook consumes them, and anything older than 24h is swept on each run.
-
-### Using Claude Desktop (GUI) on macOS
-
-`BUN_OPTIONS` in `settings.json` and shell rc exports **do not reach the `claude` runtime** when claude is spawned by the Claude Desktop app — the GUI app doesn't forward `settings.json.env` to the claude subprocess, and GUI apps don't inherit shell rc. The workaround is to set it at macOS's launchd layer, which Claude Desktop (and terminal claude, and everything else you launch from the GUI) inherits:
-
-```bash
-launchctl setenv BUN_OPTIONS "--preload=/Users/you/.claude/state/latitude/intercept.js"
-```
-
-Then **fully quit Claude Desktop** (⌘Q) and relaunch from Finder/Dock.
-
-`launchctl setenv` resets on reboot. To persist it, save this as `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>so.latitude.claude-code-telemetry</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>launchctl</string>
-    <string>setenv</string>
-    <string>BUN_OPTIONS</string>
-    <string>--preload=/Users/you/.claude/state/latitude/intercept.js</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-</dict></plist>
-```
-
-Then `launchctl load ~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist`.
-
-The `install` command can do all of this for you — run it on macOS and say yes to the launchctl prompt.
-
-### Uninstalling
-
-To remove everything this package configured:
-
-```bash
-npx -y @latitude-data/claude-code-telemetry uninstall
-```
-
-The uninstall command shows a plan and asks for confirmation before touching anything. It reverses only what the install touched:
-
-- Removes `LATITUDE_API_KEY` / `LATITUDE_PROJECT` / `LATITUDE_BASE_URL` / `BUN_OPTIONS` from `~/.claude/settings.json` (backs up to `settings.json.latitude-bak` first).
-- Removes our Stop hook entry from `settings.json` — leaves any other hooks alone.
-- If `launchctl` has `BUN_OPTIONS` pointing at our preload, `unsetenv`s it; leaves any other value alone.
-- Removes the LaunchAgents plist if present.
-- Deletes `~/.claude/state/latitude/` (preload, state, captured request files).
-
-### Setup walkthrough
-
-A one-shot interactive installer covers everything above:
-
-```bash
-npx -y @latitude-data/claude-code-telemetry install
-```
-
-It prompts for your `LATITUDE_API_KEY` and project slug, writes them to `settings.json` with the Stop hook entry, and — on macOS — offers to set `BUN_OPTIONS` via `launchctl` with persistent `LaunchAgents` wiring. Existing values in `settings.json` are shown as defaults; press Enter to keep them. A backup is always written first.
-
-Pass `--base-url=https://staging-ingest.latitude.so` (or self-hosted URL) to override the default ingest endpoint — that one's flag-only since most users never need to change it. Use `--yes` / `--no-prompt` for CI. Other flags: `--api-key=…`, `--project=…`, `--no-launchctl`.
-
-**Caveats:**
-- The `claude` CLI is a Bun-compiled standalone. The preload relies on Bun honoring `BUN_OPTIONS=--preload=...` (verified against 2.1.x). If a future release removes this, the hook falls back to reconstruction automatically — nothing else breaks.
-- If the preload path is missing or invalid, **`claude` itself will refuse to start** (Bun errors out). Either keep the path in place or remove `BUN_OPTIONS` from your env.
-- Request bodies are big (often 100KB+ per call). Steady-state disk is small because the Stop hook prunes them, but sessions with many turns between Stop events will accumulate briefly.
-
-## What gets sent
-
-For each turn, the hook emits:
-
-- One `interaction` span — the user prompt.
-- One `llm_request` span — model, token usage (input/output/cache), and the full assistant response.
-- One `tool_execution` span per tool call — tool name, input, output.
-
-All spans carry `session.id` so they group into a single session in the Latitude UI. State lives in `~/.claude/state/latitude/state.json` so each invocation only processes new transcript lines.
+You still need `BUN_OPTIONS=--preload=<abs-path>/intercept.js` in the claude runtime's environment to get the full-request capture. Either run `install` once to materialize the preload and set things up, or copy the shim out of `node_modules/@latitude-data/claude-code-telemetry/dist/intercept.js` and wire it up yourself.
 
 ## Privacy
 
-This hook reads your session transcript from disk and sends the **full content** to Latitude — prompts, assistant responses, and tool I/O (including file contents returned by `Read`, `Bash` output, etc.). There is no per-flag opt-in: the moment the hook is installed, everything gets shipped.
+This hook reads your session transcript from disk and sends the **full content** to Latitude — prompts, assistant responses, tool I/O (including file contents returned by `Read`, `Bash` output, etc.). With the preload installed, it also sends Claude Code's system prompt and the list of tool schemas available to the model. There is no per-flag opt-in: the moment the hook is installed, everything gets shipped.
 
 If that's not what you want, either:
+
 - Don't install the hook.
 - Set `LATITUDE_CLAUDE_CODE_ENABLED=0` in your shell before starting a sensitive session.
+- Run `uninstall`.
 
 ## Supported surfaces
 
 | Surface | Works |
 | --- | --- |
 | CLI (`claude` in terminal) | ✅ |
-| Desktop app (Mac/Windows) | ✅ |
+| Desktop app (macOS / Windows) | ✅ (uses `launchctl` on macOS) |
 | IDE extensions (VS Code, JetBrains) | ✅ |
 | Web app (`claude.ai/code`) | ❌ — runs in Anthropic's cloud; no local hooks. |
 
+## Caveats
+
+- The `claude` CLI is a Bun-compiled standalone. The preload relies on Bun honoring `BUN_OPTIONS=--preload=...` (verified against 2.1.x). If a future release changes this, the hook falls back to transcript-only reconstruction automatically — spans still work, they just lose `gen_ai.system_instructions` and `gen_ai.tool.definitions`.
+- If `BUN_OPTIONS` points at a missing preload file, **`claude` itself will refuse to start** (Bun exits 1). Either keep the file in place or run `uninstall` / remove the env var.
+- Captured request bodies are big (50–150KB each). Steady-state disk use is small because the Stop hook prunes them, but long sessions between Stop events can accumulate briefly.
+
 ## How it fails
 
-The hook is fail-open by design. If the API is unreachable, your key is wrong, or the transcript is malformed, the hook logs to stderr (when `LATITUDE_DEBUG=1`) and exits `0`. It never blocks Claude from finishing a turn.
+Fail-open by design. If the API is unreachable, your key is wrong, or the transcript is malformed, the hook logs to stderr (when `LATITUDE_DEBUG=1`) and exits `0`. It never blocks Claude from finishing a turn.
 
 ## License
 

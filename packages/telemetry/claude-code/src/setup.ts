@@ -2,8 +2,9 @@ import { spawnSync } from "node:child_process"
 import { copyFileSync, existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
-import { createInterface } from "node:readline/promises"
 import { fileURLToPath } from "node:url"
+import { cancel, confirm, intro, isCancel, log, note, outro, password, spinner, text } from "@clack/prompts"
+import pc from "picocolors"
 import {
   addLatitudeStopHook,
   backupSettings,
@@ -24,134 +25,338 @@ const REQUESTS_DIR = join(STATE_DIR, "requests")
 const STATE_FILE = join(STATE_DIR, "state.json")
 const PLIST_PATH = join(homedir(), "Library", "LaunchAgents", "so.latitude.claude-code-telemetry.plist")
 const PLIST_LABEL = "so.latitude.claude-code-telemetry"
-const DEFAULT_BASE_URL = "https://ingest.latitude.so"
 const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry"
+const DOCS_URL = "https://docs.latitude.so/claude-code-telemetry"
+
+// Environments pick the app + ingest domain pair. Every URL shown or written
+// during install is derived from these two — there's no other source of truth.
+interface EnvironmentConfig {
+  name: "production" | "staging" | "dev"
+  label: string
+  app: string // user-facing dashboard + key management origin
+  ingest: string // OTLP ingest origin; stored in settings as LATITUDE_BASE_URL
+}
+
+const PRODUCTION_ENV: EnvironmentConfig = {
+  name: "production",
+  label: "production",
+  app: "https://app.latitude.so",
+  ingest: "https://ingest.latitude.so",
+}
+const STAGING_ENV: EnvironmentConfig = {
+  name: "staging",
+  label: "staging",
+  app: "https://staging.latitude.so",
+  ingest: "https://staging-ingest.latitude.so",
+}
+const DEV_ENV: EnvironmentConfig = {
+  name: "dev",
+  label: "local dev",
+  app: "http://localhost:3000",
+  ingest: "http://localhost:3002",
+}
+function urlsFor(env: EnvironmentConfig): {
+  apiKeys: string
+  projects: string
+  projectView: (slug: string) => string
+} {
+  return {
+    apiKeys: `${env.app}/settings/api-keys`,
+    projects: env.app,
+    projectView: (slug: string) => `${env.app}/projects/${slug}`,
+  }
+}
 
 interface InstallFlags {
   apiKey?: string | undefined
   project?: string | undefined
-  baseUrl?: string | undefined
+  environment?: EnvironmentConfig | undefined
   noLaunchctl?: boolean
   noPrompt?: boolean
 }
 
+// ─── Install ─────────────────────────────────────────────────────────────────
+
 export async function runInstall(flags: InstallFlags = {}): Promise<void> {
-  writeIntercept()
-
   const canPrompt = !flags.noPrompt && process.stdin.isTTY === true
-  const hasAnyFlags = Boolean(flags.apiKey || flags.project || flags.baseUrl || flags.noPrompt || flags.noLaunchctl)
+  const hasAnyFlags = Boolean(flags.apiKey || flags.project || flags.environment || flags.noPrompt || flags.noLaunchctl)
 
-  // Pure non-interactive (no TTY, no flags) = just install the preload silently so
-  // CI / scripts keep working. Adding any flag forces the wizard path (flag-driven
-  // when canPrompt is false).
-  if (!canPrompt && !hasAnyFlags) {
-    printMinimalInstallInstructions()
-    return
+  if (!canPrompt) {
+    if (!hasAnyFlags) {
+      // No flags, no TTY — we can't prompt and there's nothing to write to
+      // settings.json. Materialize just the preload file so users who want to
+      // wire BUN_OPTIONS themselves have the file available, then return.
+      writeIntercept()
+      printMinimalInstallInstructions()
+      return
+    }
+    return runFlagDrivenInstall(flags)
   }
 
-  const rl = canPrompt ? createInterface({ input: process.stdin, output: process.stdout }) : undefined
-  try {
-    process.stdout.write("\nLatitude Claude Code Telemetry — setup\n")
-    process.stdout.write("======================================\n\n")
+  await runInteractiveInstall(flags)
+}
 
-    const existing = readSettingsSafe()
-    const existingEnv = existing.env ?? {}
+async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
+  intro(pc.bgCyan(pc.black(" Latitude · Claude Code telemetry ")))
 
-    const apiKey =
-      flags.apiKey ??
-      (rl
-        ? await askWithDefault(rl, "LATITUDE_API_KEY", existingEnv.LATITUDE_API_KEY)
-        : (existingEnv.LATITUDE_API_KEY ?? ""))
-    const project =
-      flags.project ??
-      (rl
-        ? await askWithDefault(rl, "LATITUDE_PROJECT", existingEnv.LATITUDE_PROJECT)
-        : (existingEnv.LATITUDE_PROJECT ?? ""))
-    // Base URL is flag-only — most users never need to change it, so we skip the
-    // prompt. Pass `--base-url=https://...` to override the default.
-    const baseUrl = flags.baseUrl ?? existingEnv.LATITUDE_BASE_URL ?? DEFAULT_BASE_URL
+  const existing = readSettingsSafe()
+  const existingEnv = existing.env ?? {}
+  const envConfig = flags.environment ?? PRODUCTION_ENV
+  const urls = urlsFor(envConfig)
 
-    let useLaunchctl = false
-    if (process.platform === "darwin" && !flags.noLaunchctl) {
-      if (rl) {
-        process.stdout.write("\nmacOS detected.\n")
-        process.stdout.write("Set BUN_OPTIONS via launchctl? This lets the preload work for both terminal\n")
-        process.stdout.write("claude AND the Claude Desktop GUI, and persists across reboots.\n")
-        useLaunchctl = await confirm(rl, "Set up launchctl", true)
-      } else {
-        useLaunchctl = true // on macOS, default to launchctl when flag-driven unless --no-launchctl
-      }
-    }
+  const aboutLines = [
+    "Captures every Claude Code session and ships it to Latitude as",
+    "OpenTelemetry traces — full system prompt, tool defs, and",
+    "model I/O per call.",
+    "",
+    `${pc.dim("Docs")}   ${pc.cyan(DOCS_URL)}`,
+  ]
+  if (envConfig.name !== "production") {
+    aboutLines.push("", pc.yellow(`Using ${envConfig.label} environment (${envConfig.ingest})`))
+  }
+  note(aboutLines.join("\n"), "About")
 
-    let next = existing
-    if (apiKey) next = setEnv(next, "LATITUDE_API_KEY", apiKey)
-    if (project) next = setEnv(next, "LATITUDE_PROJECT", project)
-    if (baseUrl && baseUrl !== DEFAULT_BASE_URL) next = setEnv(next, "LATITUDE_BASE_URL", baseUrl)
-    else if (existingEnv.LATITUDE_BASE_URL === DEFAULT_BASE_URL) next = removeEnv(next, "LATITUDE_BASE_URL")
+  const apiKey = await promptApiKey(existingEnv.LATITUDE_API_KEY, flags.apiKey, urls.apiKeys)
+  const project = await promptProject(existingEnv.LATITUDE_PROJECT, flags.project, urls.projects)
 
-    if (useLaunchctl) {
-      // launchctl covers both CLI and GUI; remove the redundant settings.json entry.
-      next = removeEnv(next, "BUN_OPTIONS")
-    } else {
-      next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
-    }
-
-    const addedHook = !hasLatitudeStopHook(next)
-    next = addLatitudeStopHook(next, DEFAULT_HOOK_COMMAND)
-
-    const backedUp = backupSettings()
-    writeSettings(next)
-
-    if (useLaunchctl) {
-      setLaunchctlBunOptions()
-      writePlist()
-    }
-
-    printInstallSummary({
-      backedUp,
-      addedHook,
-      useLaunchctl,
-      apiKey: Boolean(apiKey),
-      project: Boolean(project),
-      baseUrl: Boolean(baseUrl) && baseUrl !== DEFAULT_BASE_URL,
+  let useLaunchctl = false
+  if (process.platform === "darwin" && !flags.noLaunchctl) {
+    log.info(
+      [
+        "macOS Claude Desktop doesn't forward settings.json env vars to the",
+        "claude runtime. Wiring BUN_OPTIONS via launchctl covers both the",
+        "GUI app and terminal claude, and survives reboots.",
+      ].join("\n"),
+    )
+    const answer = await confirm({
+      message: "Set up launchctl? (recommended)",
+      initialValue: true,
     })
-    printRelaunchReminder()
-  } finally {
-    rl?.close()
+    if (isCancel(answer)) return onCancel()
+    useLaunchctl = answer === true
+  }
+
+  await applyChanges({ apiKey, project, envConfig, useLaunchctl, existing, interactive: true })
+
+  note(
+    [
+      "Quit claude fully and relaunch for the preload to attach.",
+      "",
+      `${pc.dim("  Terminal       ")}close and reopen your terminal`,
+      `${pc.dim("  Claude Desktop ")}⌘Q, then relaunch from Dock / Finder`,
+      "",
+      `View your traces at  ${pc.cyan(urls.projectView(project))}`,
+    ].join("\n"),
+    "Next step",
+  )
+
+  outro(pc.green("Installed."))
+}
+
+async function promptApiKey(
+  existing: string | undefined,
+  flag: string | undefined,
+  apiKeysUrl: string,
+): Promise<string> {
+  if (flag) return flag
+
+  const description = existing
+    ? `Your Latitude API key. Press Enter to keep the existing one (${maskKey(existing)}),\nor generate a new one at ${pc.cyan(apiKeysUrl)}`
+    : `Your Latitude API key. Generate one at ${pc.cyan(apiKeysUrl)}`
+
+  const input = await password({
+    message: `Latitude API key\n${pc.dim(description)}`,
+    mask: "•",
+    validate: (value) => {
+      if (!value && !existing) return `An API key is required. Create one at ${apiKeysUrl}`
+      return undefined
+    },
+  })
+  if (isCancel(input)) return onCancel() as never
+  return input || existing || ""
+}
+
+async function promptProject(
+  existing: string | undefined,
+  flag: string | undefined,
+  projectsUrl: string,
+): Promise<string> {
+  if (flag) return flag
+
+  const description = existing
+    ? `The slug of the Latitude project to route traces into.\nPress Enter to keep the existing one (${existing}),\nor create a new one at ${pc.cyan(projectsUrl)}.`
+    : `The slug of the Latitude project to route traces into.\nCreate one at ${pc.cyan(projectsUrl)} if you don't have one yet.`
+
+  const input = await text({
+    message: `Project slug\n${pc.dim(description)}`,
+    validate: (value) => {
+      if (!value?.trim() && !existing) return "A project slug is required"
+      return undefined
+    },
+  })
+  if (isCancel(input)) return onCancel() as never
+  return input.trim() || existing || ""
+}
+
+// ─── Apply changes (shared between interactive + flag-driven) ────────────────
+
+interface ApplyArgs {
+  apiKey: string
+  project: string
+  envConfig: EnvironmentConfig
+  useLaunchctl: boolean
+  existing: ClaudeSettings
+  interactive: boolean
+}
+
+async function applyChanges(args: ApplyArgs): Promise<void> {
+  const { apiKey, project, envConfig, useLaunchctl, existing, interactive } = args
+
+  let next = existing
+  if (apiKey) next = setEnv(next, "LATITUDE_API_KEY", apiKey)
+  if (project) next = setEnv(next, "LATITUDE_PROJECT", project)
+  // Only persist LATITUDE_BASE_URL when it differs from production — production is
+  // the implicit default on the hook side, and writing it explicitly just adds
+  // noise to settings.json.
+  if (envConfig.name === "production") next = removeEnv(next, "LATITUDE_BASE_URL")
+  else next = setEnv(next, "LATITUDE_BASE_URL", envConfig.ingest)
+
+  if (useLaunchctl) next = removeEnv(next, "BUN_OPTIONS")
+  else next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
+
+  const hookAlreadyThere = hasLatitudeStopHook(next)
+  next = addLatitudeStopHook(next, DEFAULT_HOOK_COMMAND)
+
+  const step = stepLogger(interactive)
+
+  step.start("Writing ~/.claude/settings.json")
+  const backedUp = backupSettings()
+  writeSettings(next)
+  step.stop(
+    [
+      `~/.claude/settings.json updated`,
+      hookAlreadyThere ? "" : "  + Stop hook installed",
+      backedUp ? pc.dim(`  (backup at ${SETTINGS_BACKUP_PATH})`) : pc.dim("  (new file)"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  )
+
+  step.start("Installing preload")
+  writeIntercept()
+  step.stop(`Preload at ${INTERCEPT_INSTALL_PATH}`)
+
+  if (useLaunchctl) {
+    step.start("Setting BUN_OPTIONS via launchctl + installing persistence plist")
+    setLaunchctlBunOptions()
+    writePlist()
+    step.stop(`launchctl env set (persisted via ${PLIST_PATH})`)
   }
 }
 
+interface StepLogger {
+  start: (message: string) => void
+  stop: (message: string) => void
+}
+
+function stepLogger(interactive: boolean): StepLogger {
+  if (interactive) {
+    const s = spinner()
+    return { start: (m) => s.start(m), stop: (m) => s.stop(m) }
+  }
+  return {
+    start: (m) => process.stdout.write(`  … ${m}\n`),
+    stop: (m) => process.stdout.write(`  ✓ ${m.split("\n")[0]}\n`),
+  }
+}
+
+// ─── Flag-driven install (non-TTY or --no-prompt + flags) ────────────────────
+
+async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
+  const existing = readSettingsSafe()
+  const existingEnv = existing.env ?? {}
+
+  const apiKey = flags.apiKey ?? existingEnv.LATITUDE_API_KEY ?? ""
+  const project = flags.project ?? existingEnv.LATITUDE_PROJECT ?? ""
+
+  // Flag-driven mode can't fall back to prompts, so fail fast if either
+  // required value is missing. Writing settings.json with an empty key/project
+  // would look "installed" but the hook silently disables itself at runtime
+  // (loadConfig requires both), which is harder to diagnose than an exit 1 here.
+  const missing: string[] = []
+  if (!apiKey) missing.push("--api-key")
+  if (!project) missing.push("--project")
+  if (missing.length > 0) {
+    process.stderr.write(
+      `[latitude-claude-code] missing required value${missing.length === 1 ? "" : "s"} for non-interactive install: ${missing.join(", ")}\n`,
+    )
+    process.stderr.write(
+      `[latitude-claude-code] either pass ${missing.join(" + ")}, or drop --no-prompt to answer interactively.\n`,
+    )
+    process.exit(1)
+  }
+
+  const envConfig = flags.environment ?? PRODUCTION_ENV
+  const useLaunchctl = process.platform === "darwin" && !flags.noLaunchctl
+
+  process.stdout.write(`Installing Latitude Claude Code telemetry (${envConfig.label})…\n`)
+  await applyChanges({ apiKey, project, envConfig, useLaunchctl, existing, interactive: false })
+  process.stdout.write(`\nInstalled. Quit claude and relaunch (new terminal, or ⌘Q + relaunch Claude Desktop).\n`)
+}
+
+// ─── Uninstall ───────────────────────────────────────────────────────────────
+
 export async function runUninstall(flags: { noPrompt?: boolean } = {}): Promise<void> {
   const interactive = !flags.noPrompt && process.stdin.isTTY === true
-
   const plan = buildUninstallPlan()
 
-  process.stdout.write("\nLatitude Claude Code Telemetry — uninstall\n")
-  process.stdout.write("==========================================\n\n")
-  process.stdout.write("The following will be removed:\n")
-  for (const line of plan.description) process.stdout.write(`  • ${line}\n`)
+  if (interactive) {
+    intro(pc.bgRed(pc.white(" Latitude · Claude Code telemetry ")))
+  } else {
+    process.stdout.write("Uninstalling Latitude Claude Code telemetry…\n")
+  }
+
   if (plan.description.length === 0) {
-    process.stdout.write("  (nothing to remove — install artifacts not found)\n")
+    if (interactive) {
+      log.info("Nothing to remove. You're already clean.")
+      outro(pc.dim("Nothing to do."))
+    } else {
+      process.stdout.write("Nothing to remove.\n")
+    }
     return
   }
 
   if (interactive) {
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
-    try {
-      const ok = await confirm(rl, "\nProceed with uninstall", false)
-      if (!ok) {
-        process.stdout.write("Aborted.\n")
-        return
-      }
-    } finally {
-      rl.close()
-    }
+    note(plan.description.map((line) => pc.red("—  ") + line).join("\n"), "Will remove")
+
+    const ok = await confirm({ message: "Proceed?", initialValue: false })
+    if (isCancel(ok) || ok !== true) return onCancel("Uninstall cancelled.")
   }
 
-  plan.execute()
-  process.stdout.write("\nUninstall complete.\n")
-  process.stdout.write(`Settings backup: ${SETTINGS_BACKUP_PATH}\n`)
-  process.stdout.write("If launchctl was reset, open a new terminal / relaunch Claude Desktop to clear BUN_OPTIONS.\n")
+  if (interactive) {
+    const s = spinner()
+    s.start("Removing")
+    plan.execute()
+    s.stop("Removed")
+  } else {
+    plan.execute()
+    process.stdout.write("Removed.\n")
+  }
+
+  if (interactive) {
+    note(
+      [
+        `Settings backup kept at  ${pc.cyan(SETTINGS_BACKUP_PATH)}`,
+        "",
+        "If launchctl was cleared, open a new terminal or relaunch",
+        "Claude Desktop so the old BUN_OPTIONS fully drains.",
+      ].join("\n"),
+      "Cleanup notes",
+    )
+    outro(pc.green("Uninstalled."))
+  } else {
+    process.stdout.write(`Uninstalled. Backup at ${SETTINGS_BACKUP_PATH}\n`)
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -165,27 +370,14 @@ function readSettingsSafe(): ClaudeSettings {
   }
 }
 
-async function askWithDefault(
-  rl: ReturnType<typeof createInterface>,
-  label: string,
-  current: string | undefined,
-): Promise<string> {
-  const hint = current ? ` [${maskSecret(label, current)}]` : ""
-  const answer = (await rl.question(`${label}${hint}: `)).trim()
-  if (answer) return answer
-  return current ?? ""
+function maskKey(key: string): string {
+  if (key.length < 8) return "•".repeat(key.length)
+  return `${key.slice(0, 4)}${"•".repeat(3)}${key.slice(-3)}`
 }
 
-function maskSecret(label: string, value: string): string {
-  if (!/API_KEY|TOKEN|SECRET/i.test(label) || value.length <= 8) return value
-  return `${value.slice(0, 5)}…${value.slice(-3)}`
-}
-
-async function confirm(rl: ReturnType<typeof createInterface>, prompt: string, defaultYes: boolean): Promise<boolean> {
-  const hint = defaultYes ? "[Y/n]" : "[y/N]"
-  const answer = (await rl.question(`${prompt}? ${hint}: `)).trim().toLowerCase()
-  if (!answer) return defaultYes
-  return answer === "y" || answer === "yes"
+function onCancel(message = "Setup cancelled."): never {
+  cancel(message)
+  process.exit(0)
 }
 
 function writeIntercept(): void {
@@ -200,9 +392,15 @@ function writeIntercept(): void {
 
 function setLaunchctlBunOptions(): void {
   const value = `--preload=${INTERCEPT_INSTALL_PATH}`
-  const res = spawnSync("launchctl", ["setenv", "BUN_OPTIONS", value], { stdio: "inherit" })
+  const res = spawnSync("launchctl", ["setenv", "BUN_OPTIONS", value], { encoding: "utf-8" })
   if (res.status !== 0) {
-    process.stderr.write(`[latitude-claude-code] launchctl setenv failed (exit ${res.status}). Continuing.\n`)
+    const details = [res.stderr, res.stdout]
+      .filter((s) => s && s.trim().length > 0)
+      .join(" ")
+      .trim()
+    process.stderr.write(
+      `[latitude-claude-code] launchctl setenv failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
+    )
   }
 }
 
@@ -225,12 +423,30 @@ function writePlist(): void {
 </plist>
 `
   writeFileSync(PLIST_PATH, plist, "utf-8")
-  // (Re)load so it'll auto-set BUN_OPTIONS on every login.
+  // Unload may fail harmlessly if the agent was never loaded — we don't care.
   spawnSync("launchctl", ["unload", PLIST_PATH], { stdio: "ignore" })
-  const res = spawnSync("launchctl", ["load", PLIST_PATH], { stdio: "inherit" })
+  const res = spawnSync("launchctl", ["load", PLIST_PATH], { encoding: "utf-8" })
   if (res.status !== 0) {
-    process.stderr.write(`[latitude-claude-code] launchctl load failed (exit ${res.status}). Continuing.\n`)
+    const details = [res.stderr, res.stdout]
+      .filter((s) => s && s.trim().length > 0)
+      .join(" ")
+      .trim()
+    process.stderr.write(
+      `[latitude-claude-code] launchctl load failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
+    )
   }
+}
+
+function printMinimalInstallInstructions(): void {
+  process.stdout.write(
+    [
+      `Installed intercept preload to: ${INTERCEPT_INSTALL_PATH}`,
+      "",
+      "Non-interactive mode — settings.json and launchctl not touched.",
+      "To complete setup, expose BUN_OPTIONS to the claude runtime. See the README for options.",
+      "",
+    ].join("\n"),
+  )
 }
 
 interface UninstallPlan {
@@ -242,7 +458,6 @@ function buildUninstallPlan(): UninstallPlan {
   const description: string[] = []
   const steps: Array<() => void> = []
 
-  // Settings.json cleanup
   if (existsSync(SETTINGS_PATH)) {
     let settings: ClaudeSettings
     try {
@@ -275,9 +490,8 @@ function buildUninstallPlan(): UninstallPlan {
     }
   }
 
-  // launchctl BUN_OPTIONS (only if it's ours)
   const currentLaunchd = readLaunchctlBunOptions()
-  if (currentLaunchd && currentLaunchd.includes(INTERCEPT_INSTALL_PATH)) {
+  if (currentLaunchd?.includes(INTERCEPT_INSTALL_PATH)) {
     description.push(`launchctl: unsetenv BUN_OPTIONS (currently: ${currentLaunchd})`)
     steps.push(() => {
       spawnSync("launchctl", ["unsetenv", "BUN_OPTIONS"], { stdio: "ignore" })
@@ -286,7 +500,6 @@ function buildUninstallPlan(): UninstallPlan {
     description.push(`launchctl BUN_OPTIONS is set to something else (${currentLaunchd}); leaving it alone`)
   }
 
-  // LaunchAgents plist
   if (existsSync(PLIST_PATH)) {
     description.push(`~/Library/LaunchAgents/${PLIST_LABEL}.plist: unload + remove`)
     steps.push(() => {
@@ -299,7 +512,6 @@ function buildUninstallPlan(): UninstallPlan {
     })
   }
 
-  // State dir: intercept.js, requests/*.json, state.json
   if (existsSync(STATE_DIR)) {
     const pieces: string[] = []
     if (existsSync(INTERCEPT_INSTALL_PATH)) pieces.push("intercept.js")
@@ -335,47 +547,7 @@ function readLaunchctlBunOptions(): string | undefined {
   return out || undefined
 }
 
-function printMinimalInstallInstructions(): void {
-  process.stdout.write(
-    [
-      `Installed intercept preload to: ${INTERCEPT_INSTALL_PATH}`,
-      "",
-      "Non-interactive mode — settings.json and launchctl not touched.",
-      "To complete setup, expose BUN_OPTIONS to the claude runtime. See the README for options.",
-      "",
-    ].join("\n"),
-  )
-}
-
-function printInstallSummary(args: {
-  backedUp: boolean
-  addedHook: boolean
-  useLaunchctl: boolean
-  apiKey: boolean
-  project: boolean
-  baseUrl: boolean
-}): void {
-  process.stdout.write("\nDone. Summary:\n")
-  process.stdout.write(`  ✓ Preload installed at ${INTERCEPT_INSTALL_PATH}\n`)
-  if (args.backedUp) process.stdout.write(`  ✓ Backed up settings.json to ${SETTINGS_BACKUP_PATH}\n`)
-  process.stdout.write("  ✓ Updated ~/.claude/settings.json:\n")
-  if (args.apiKey) process.stdout.write("      - env.LATITUDE_API_KEY\n")
-  if (args.project) process.stdout.write("      - env.LATITUDE_PROJECT\n")
-  if (args.baseUrl) process.stdout.write("      - env.LATITUDE_BASE_URL\n")
-  if (args.useLaunchctl) process.stdout.write("      - env.BUN_OPTIONS (removed — now handled by launchctl)\n")
-  else process.stdout.write("      - env.BUN_OPTIONS (CLI path)\n")
-  if (args.addedHook) process.stdout.write("      - hooks.Stop (added our command)\n")
-  if (args.useLaunchctl) {
-    process.stdout.write(`  ✓ launchctl setenv BUN_OPTIONS "--preload=${INTERCEPT_INSTALL_PATH}"\n`)
-    process.stdout.write(`  ✓ Installed persistence plist at ${PLIST_PATH}\n`)
-  }
-}
-
-function printRelaunchReminder(): void {
-  process.stdout.write("\nNow fully quit and relaunch claude for the preload to take effect:\n")
-  process.stdout.write("  • Terminal: open a new terminal window\n")
-  process.stdout.write("  • Claude Desktop: ⌘Q to fully quit, then relaunch from Dock/Finder\n\n")
-}
+// ─── Flag parsing ────────────────────────────────────────────────────────────
 
 export function parseFlags(argv: string[]): { subcommand: string; flags: Record<string, string | boolean> } {
   const subcommand = argv[0] ?? ""
@@ -390,13 +562,35 @@ export function parseFlags(argv: string[]): { subcommand: string; flags: Record<
 }
 
 export function normalizeInstallFlags(flags: Record<string, string | boolean>): InstallFlags {
-  const str = (v: string | boolean | undefined): string | undefined => (typeof v === "string" ? v : undefined)
-  return {
-    apiKey: str(flags["api-key"] ?? flags.api_key),
-    project: str(flags.project),
-    // Accept kebab-case and snake_case for the URL flag.
-    baseUrl: str(flags["base-url"] ?? flags.base_url),
+  // Coerce raw flag values into a non-empty string, or undefined if the user
+  // passed the flag without a value (`--api-key=`) or omitted it entirely.
+  // Empty-string values are treated as "not provided" so downstream code falls
+  // through to the interactive prompt or the existing settings.json value,
+  // instead of silently writing an empty key/project to disk.
+  const str = (v: string | boolean | undefined): string | undefined => {
+    if (typeof v !== "string") return undefined
+    const trimmed = v.trim()
+    return trimmed === "" ? undefined : trimmed
+  }
+
+  let environment: EnvironmentConfig | undefined
+  const dev = flags.dev === true
+  const staging = flags.staging === true
+  if (dev && staging) {
+    process.stderr.write("[latitude-claude-code] --dev and --staging are mutually exclusive\n")
+    process.exit(1)
+  }
+  if (dev) environment = DEV_ENV
+  else if (staging) environment = STAGING_ENV
+
+  const result: InstallFlags = {
     noLaunchctl: flags["no-launchctl"] === true || flags.no_launchctl === true,
     noPrompt: flags["no-prompt"] === true || flags.no_prompt === true || flags.yes === true,
   }
+  const apiKey = str(flags["api-key"] ?? flags.api_key)
+  if (apiKey !== undefined) result.apiKey = apiKey
+  const project = str(flags.project)
+  if (project !== undefined) result.project = project
+  if (environment !== undefined) result.environment = environment
+  return result
 }
