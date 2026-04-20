@@ -394,7 +394,10 @@ function setLaunchctlBunOptions(): void {
   const value = `--preload=${INTERCEPT_INSTALL_PATH}`
   const res = spawnSync("launchctl", ["setenv", "BUN_OPTIONS", value], { encoding: "utf-8" })
   if (res.status !== 0) {
-    const details = [res.stderr, res.stdout].filter((s) => s && s.trim().length > 0).join(" ").trim()
+    const details = [res.stderr, res.stdout]
+      .filter((s) => s && s.trim().length > 0)
+      .join(" ")
+      .trim()
     process.stderr.write(
       `[latitude-claude-code] launchctl setenv failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
     )
@@ -424,7 +427,10 @@ function writePlist(): void {
   spawnSync("launchctl", ["unload", PLIST_PATH], { stdio: "ignore" })
   const res = spawnSync("launchctl", ["load", PLIST_PATH], { encoding: "utf-8" })
   if (res.status !== 0) {
-    const details = [res.stderr, res.stdout].filter((s) => s && s.trim().length > 0).join(" ").trim()
+    const details = [res.stderr, res.stdout]
+      .filter((s) => s && s.trim().length > 0)
+      .join(" ")
+      .trim()
     process.stderr.write(
       `[latitude-claude-code] launchctl load failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
     )
@@ -485,7 +491,7 @@ function buildUninstallPlan(): UninstallPlan {
   }
 
   const currentLaunchd = readLaunchctlBunOptions()
-  if (currentLaunchd && currentLaunchd.includes(INTERCEPT_INSTALL_PATH)) {
+  if (currentLaunchd?.includes(INTERCEPT_INSTALL_PATH)) {
     description.push(`launchctl: unsetenv BUN_OPTIONS (currently: ${currentLaunchd})`)
     steps.push(() => {
       spawnSync("launchctl", ["unsetenv", "BUN_OPTIONS"], { stdio: "ignore" })

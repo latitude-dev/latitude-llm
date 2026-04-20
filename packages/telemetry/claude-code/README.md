@@ -93,7 +93,7 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `LATITUDE_API_KEY` | yes | — | Bearer token for Latitude ingestion. |
 | `LATITUDE_PROJECT` | yes | — | Slug of the project to route traces into. |
 | `LATITUDE_BASE_URL` | no | `https://ingest.latitude.so` | Override ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
-| `BUN_OPTIONS` | macOS: only written when you decline `launchctl` during install | — | `--preload=<absolute-path-to-intercept.js>`. See "how it works" above. |
+| `BUN_OPTIONS` | written when `launchctl` isn't used (all non-macOS platforms, or macOS with `--no-launchctl`) | — | `--preload=<absolute-path-to-intercept.js>`. See "how it works" above. |
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
 
@@ -101,10 +101,15 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 
 A single hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn (async).
 
+### Files on disk
+
+- `~/.claude/state/latitude/intercept.js` — the preload shim `BUN_OPTIONS` points at. Written on every platform.
+- `~/.claude/state/latitude/state.json` — per-session bookkeeping (transcript offsets, turn counts) so each hook invocation only processes new lines.
+- `~/.claude/state/latitude/requests/<message_id>.json` — request bodies captured by the preload. Transient: consumed by the Stop hook and deleted after each turn.
+
 ### macOS-only files
 
-- `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist` — a one-shot launchd agent that `launchctl setenv BUN_OPTIONS …` on every login.
-- `~/.claude/state/latitude/intercept.js` — the preload shim `BUN_OPTIONS` points at.
+- `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist` — a one-shot launchd agent that runs `launchctl setenv BUN_OPTIONS …` on every login. Only installed when you accept the launchctl prompt.
 
 ### Manual installation
 
