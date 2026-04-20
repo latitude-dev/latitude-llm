@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-04-20
+
+### Changed
+
+- **Install UX rewritten with [`@clack/prompts`](https://www.npmjs.com/package/@clack/prompts)** — the interactive wizard now opens with a proper welcome banner, renders each prompt inside a gutter with a description line explaining the field + the relevant Latitude URL to fetch it from, masks the API key input with `•` as you type, and ends with a "Next step" panel plus a direct link to your project's trace view. Spinners stream in as each install step completes.
+- **README restructured around `install` / `uninstall`** — the one-liner setup is now the first thing users see. The "paste this JSON into settings.json" walkthrough is pushed into a secondary "Configuration reference" section for users who don't want the wizard.
+
+### Added
+
+- **`--staging` and `--dev` environment flags** replace `--base-url`. They target:
+  - `--staging` → `https://staging.latitude.so` / `https://staging-ingest.latitude.so`
+  - `--dev` → `http://localhost:3000` / `http://localhost:3002`
+  - no flag → `https://app.latitude.so` / `https://ingest.latitude.so` (production default)
+  Every URL shown or written during install (API-keys link, project-creation link, ingest endpoint, trace-view link, About banner) is derived from the selected environment. The two environments are mutually exclusive; passing both errors out.
+- **Per-prompt inline help** — the API key prompt's description line tells you where to generate one (with the env-correct URL); the project slug prompt tells you where to create a project. Both include the current value as "(Enter to keep …)" hints when re-running.
+- **`picocolors` dependency** for minimal ANSI styling (cyan links, dim hints, yellow warnings for non-production envs).
+
+### Removed
+
+- **`--base-url` flag.** Replaced by the `--staging` / `--dev` flags above. Self-hosted users can still hand-edit `settings.json` / pass `LATITUDE_BASE_URL` via env.
+- **`LATITUDE_BASE_URL` interactive prompt.** It was flag-only in `0.0.4`; now the concept is subsumed entirely by the environment flags.
+- **Default-value placeholder on the project slug prompt** — the input now starts empty when there's no existing value, so nothing looks pre-filled.
+
+### Fixed
+
+- **No more auto-detection of environment from existing settings.** `install` with no env flag always targets production. Previously, an existing `LATITUDE_BASE_URL` pointing at staging would cause a flagless re-run to silently stay on staging; surprising.
+
 ## [0.0.4] - 2026-04-20
 
 ### Added
