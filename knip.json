@@ -20,7 +20,12 @@
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": ["@temporalio/client"]
+      "ignoreDependencies": ["@temporalio/client"],
+      "ignore": [
+        "src/domains/datasets/datasets.functions.ts",
+        "src/domains/issues/issues.functions.ts",
+        "src/domains/traces/traces.functions.ts"
+      ]
     },
     "infra": {
       "entry": [],
@@ -29,6 +34,10 @@
     "packages/domain/email": {
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": ["@react-email/preview-server"]
+    },
+    "packages/domain/exports": {
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["@repo/vitest-config"]
     },
     "packages/domain/*": {
       "project": ["src/**/*.ts"]
@@ -74,6 +83,7 @@
   "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
   "ignoreIssues": {
     "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"],
+    "packages/domain/exports/src/entities.ts": ["exports"],
     "apps/web/src/domains/annotations/annotations.collection.ts": ["files"],
     "apps/web/src/domains/annotations/annotations.functions.ts": ["files"]
   },
