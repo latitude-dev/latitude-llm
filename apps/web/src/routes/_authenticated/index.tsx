@@ -312,13 +312,8 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
       },
       {
         onSuccess: async ({ projectId }) => {
-          let projects = queryClient.getQueryData<ProjectRecord[]>(["projects"])
-          let slug = projects?.find((p) => p.id === projectId)?.slug
-          if (!slug) {
-            await queryClient.refetchQueries({ queryKey: ["projects"] })
-            projects = queryClient.getQueryData<ProjectRecord[]>(["projects"])
-            slug = projects?.find((p) => p.id === projectId)?.slug
-          }
+          const projects = queryClient.getQueryData<ProjectRecord[]>(["projects"])
+          const slug = projects?.find((p) => p.id === projectId)?.slug
           if (slug) {
             await router.navigate({
               to: "/projects/$projectSlug",
