@@ -19,8 +19,7 @@ Add this to your `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
-            "async": true
+            "command": "npx -y @latitude-data/claude-code-telemetry"
           }
         ]
       }
@@ -32,8 +31,6 @@ Add this to your `~/.claude/settings.json`:
 That's it. The hook fires after every assistant turn, reads new lines from the session transcript, converts them into OTLP traces, and POSTs them to `${LATITUDE_BASE_URL}/v1/traces`.
 
 `LATITUDE_PROJECT` is the slug of the Latitude project you want traces to land in — same value you'd pass in the `X-Latitude-Project` header when using the ingest API directly. The project must already exist under the organization that owns your API key.
-
-`async: true` means Claude Code doesn't wait for the HTTP request — your terminal stays snappy.
 
 ## Environment variables
 
