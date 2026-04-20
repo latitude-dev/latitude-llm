@@ -70,7 +70,7 @@ export function createProjectMutation(name: string) {
     updatedAt: now,
   })
 
-  return { projectId: projectId as string, transaction }
+  return { projectId, transaction }
 }
 
 export function renameProjectMutation(id: string, name: string) {
