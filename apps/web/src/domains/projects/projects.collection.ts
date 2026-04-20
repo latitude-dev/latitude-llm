@@ -18,14 +18,24 @@ const projectsCollection = createCollection(
     getKey: (item: ProjectRecord) => item.id,
     onInsert: async ({ transaction }) => {
       await Promise.all(
-        transaction.mutations.map((mutation) =>
-          createProject({
+        transaction.mutations.map(async (mutation) => {
+          const result = await createProject({
             data: {
               id: mutation.modified.id,
               name: mutation.modified.name,
             },
-          }),
-        ),
+          })
+          queryClient.setQueryData<ProjectRecord[]>(["projects"], (old) => {
+            if (!old) {
+              return [result]
+            }
+            const hasId = old.some((p) => p.id === result.id)
+            if (!hasId) {
+              return [...old, result]
+            }
+            return old.map((p) => (p.id === result.id ? result : p))
+          })
+        }),
       )
     },
     onUpdate: async ({ transaction }) => {
