@@ -165,29 +165,29 @@ async function main(): Promise<void> {
 }
 
 function collectMessageIds(turns: Turn[]): string[] {
-  const ids: string[] = []
-  const visit = (ts: Turn[]) => {
-    for (const turn of ts) {
-      for (const call of turn.calls) {
-        if (call.messageId && !call.messageId.startsWith("noid:")) ids.push(call.messageId)
-      }
-      for (const turn2 of ts) collectSubagentIds(turn2.calls, ids)
-    }
+  // Flatten every real assistant message.id across the main turns and any nested
+  // subagent turns. Uses a Set so duplicates (e.g. an id that somehow appears in
+  // both a subagent's own turn list and its parent reference) don't cause
+  // redundant disk reads in loadRequestsByMessageId.
+  const ids = new Set<string>()
+  const addId = (id: string | undefined): void => {
+    if (id && !id.startsWith("noid:")) ids.add(id)
   }
-  visit(turns)
-  return ids
+  for (const turn of turns) {
+    for (const call of turn.calls) addId(call.messageId)
+    collectSubagentIds(turn.calls, addId)
+  }
+  return Array.from(ids)
 }
 
-function collectSubagentIds(calls: AssistantCall[], ids: string[]): void {
+function collectSubagentIds(calls: AssistantCall[], addId: (id: string | undefined) => void): void {
   for (const call of calls) {
     for (const tool of call.toolUses) {
       const sub = tool.subagent
       if (!sub) continue
       for (const subTurn of sub.turns) {
-        for (const subCall of subTurn.calls) {
-          if (subCall.messageId && !subCall.messageId.startsWith("noid:")) ids.push(subCall.messageId)
-        }
-        collectSubagentIds(subTurn.calls, ids)
+        for (const subCall of subTurn.calls) addId(subCall.messageId)
+        collectSubagentIds(subTurn.calls, addId)
       }
     }
   }
