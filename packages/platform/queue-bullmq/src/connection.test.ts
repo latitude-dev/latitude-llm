@@ -63,6 +63,7 @@ describe("createBullMqRedisConnection", () => {
     })
 
     expect(clusterConstructor).toHaveBeenCalledWith([{ host: "memorydb.example.com", port: 6379 }], {
+      dnsLookup: expect.any(Function),
       redisOptions: expect.objectContaining({
         host: "memorydb.example.com",
         port: 6379,
@@ -70,6 +71,14 @@ describe("createBullMqRedisConnection", () => {
         maxRetriesPerRequest: null,
       }),
     })
+
+    const clusterOptions = clusterConstructor.mock.calls[0]?.[1]
+    expect(clusterOptions.dnsLookup).toBeTypeOf("function")
+
+    const dnsLookupCallback = vi.fn()
+    clusterOptions.dnsLookup("memorydb.example.com", dnsLookupCallback)
+    expect(dnsLookupCallback).toHaveBeenCalledWith(null, "memorydb.example.com")
+
     expect(redisConstructor).not.toHaveBeenCalled()
     expect(connection).toEqual(
       expect.objectContaining({
