@@ -206,12 +206,12 @@ Trace count, metrics, and histogram queries should use the same search-constrain
 
 ### Phase 2 - Lexical Search Query Path
 
-- [ ] **P2-1**: Add `searchQuery` to the traces page URL state and data-fetching hooks.
-- [ ] **P2-2**: Extend trace server functions to accept and forward `searchQuery`.
-- [ ] **P2-3**: Extend the `TraceRepository` port so trace list/count/metrics/histogram methods accept search input.
-- [ ] **P2-4**: Implement lexical candidate subqueries in the ClickHouse trace repository using `trace_search_documents`.
-- [ ] **P2-5**: Apply lexical search constraints to trace list, count, metrics, and histogram queries.
-- [ ] **P2-6**: Add `relevance` ordering behavior when `searchQuery` is present, with lexical-only scoring at this stage.
+- [x] **P2-1**: Add `searchQuery` to the traces page URL state and data-fetching hooks.
+- [x] **P2-2**: Extend trace server functions to accept and forward `searchQuery`.
+- [x] **P2-3**: Extend the `TraceRepository` port so trace list/count/metrics/histogram methods accept search input.
+- [x] **P2-4**: Implement lexical candidate subqueries in the ClickHouse trace repository using `trace_search_documents`.
+- [x] **P2-5**: Apply lexical search constraints to trace list, count, metrics, and histogram queries.
+- [x] **P2-6**: Add `relevance` ordering behavior when `searchQuery` is present, with lexical-only scoring at this stage.
 
 **Exit gate**:
 
