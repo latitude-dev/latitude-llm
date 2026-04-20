@@ -19,7 +19,7 @@ Paste into `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
+            "command": "npx -y @latitude-data/claude-code-telemetry"
           }
         ]
       }
