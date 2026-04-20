@@ -1,3 +1,4 @@
+export { appendToDisk } from "@domain/shared"
 export {
   type BaseExportPayload,
   type DatasetExportPayload,
@@ -7,8 +8,12 @@ export {
   EXPORT_KINDS,
   type ExportKind,
   type ExportPayload,
+  type ExportProgress,
+  type ExportSelection,
+  type ExportWorkflowState,
   exportKindSchema,
   exportPayloadSchema,
+  exportSelectionSchema,
   type IssuesExportPayload,
   issuesExportPayloadSchema,
   type TracesExportPayload,

@@ -7,13 +7,20 @@ export function sanitizeExportFilename(name: string): string {
   return name.replace(/[^\w\s.-]/g, "").replace(/\s+/g, "_") || "export"
 }
 
+function formatExportTimestamp(value: Date): string {
+  return value
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z")
+}
+
 /**
  * Builds a filename for an export artifact.
  * All exports are compressed as `.csv.gz`.
  */
-export function buildExportFilename(kind: ExportKind, name: string): string {
+export function buildExportFilename(kind: ExportKind, name: string, at = new Date()): string {
   const safeName = sanitizeExportFilename(name)
-  return `${safeName}_${kind}_export.csv.gz`
+  return `${safeName}_${kind}_export_${formatExportTimestamp(at)}.csv.gz`
 }
 
 /**

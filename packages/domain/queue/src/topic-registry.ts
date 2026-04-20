@@ -62,14 +62,26 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly recipientEmail: string
-      // Dataset-specific fields
-      readonly datasetId?: string
+      // Shared selection fields
       readonly selection?:
         | { readonly mode: "selected"; readonly rowIds: readonly string[] }
         | { readonly mode: "all" }
         | { readonly mode: "allExcept"; readonly rowIds: readonly string[] }
+      // Dataset-specific fields
+      readonly datasetId?: string
       // Traces-specific fields - uses FilterSet shape
       readonly filters?: Readonly<Record<string, readonly { readonly op: string; readonly value: unknown }[]>>
+      // Issues-specific fields
+      readonly lifecycleGroup?: "active" | "archived"
+      readonly searchQuery?: string
+      readonly timeRange?: {
+        readonly fromIso?: string
+        readonly toIso?: string
+      }
+      readonly sort?: {
+        readonly field: "lastSeen" | "occurrences"
+        readonly direction: "asc" | "desc"
+      }
     }
   }>(),
 

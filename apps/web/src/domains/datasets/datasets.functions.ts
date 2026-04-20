@@ -35,9 +35,16 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getStorageDisk,
+} from "../../server/clients.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -352,6 +359,13 @@ export const enqueueDatasetExport = createServerFn({ method: "POST" })
         return yield* repo.findById(datasetId)
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
+
+    await enforceExportRequestRateLimit({
+      redis: getRedisClient(),
+      organizationId,
+      projectId: dataset.projectId,
+      recipientEmail: email,
+    })
 
     const { selection } = data
     const publisher = await getQueuePublisher()

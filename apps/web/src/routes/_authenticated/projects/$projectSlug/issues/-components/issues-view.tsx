@@ -1,4 +1,11 @@
-import { InfiniteTable, type InfiniteTableColumn, type InfiniteTableInfiniteScroll, Text, Tooltip } from "@repo/ui"
+import {
+  InfiniteTable,
+  type InfiniteTableColumn,
+  type InfiniteTableInfiniteScroll,
+  type InfiniteTableSelection,
+  Text,
+  Tooltip,
+} from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import type { RefObject } from "react"
@@ -76,6 +83,7 @@ export function IssuesView({
   occurrencesSum,
   visibleColumnIds,
   activeIssueId,
+  selection,
   onSortChange,
   onActiveIssueChange,
   issueIdsRef,
@@ -87,6 +95,7 @@ export function IssuesView({
   readonly occurrencesSum: number
   readonly visibleColumnIds: readonly IssuesColumnId[]
   readonly activeIssueId: string | undefined
+  readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: IssuesTableSorting) => void
   readonly onActiveIssueChange: (issueId: string | undefined) => void
   readonly issueIdsRef: RefObject<string[]>
@@ -225,6 +234,7 @@ export function IssuesView({
               : undefined
           }
           {...(activeIssueId ? { activeRowKey: activeIssueId } : {})}
+          selection={selection}
           onRowClick={(issue) => onActiveIssueChange(issue.id === activeIssueId ? undefined : issue.id)}
           getRowAriaLabel={(issue) => (issue.id === activeIssueId ? `Close ${issue.name}` : `Open ${issue.name}`)}
           infiniteScroll={infiniteScroll}

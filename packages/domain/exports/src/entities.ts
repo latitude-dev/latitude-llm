@@ -23,6 +23,10 @@ export const datasetExportSelectionSchema: z.ZodType<DatasetExportSelection> = z
   z.object({ mode: z.literal("allExcept"), rowIds: z.array(z.string()) }),
 ])
 
+export type ExportSelection = DatasetExportSelection
+
+export const exportSelectionSchema = datasetExportSelectionSchema
+
 /**
  * Base export job payload shared across all export kinds.
  */
@@ -47,6 +51,7 @@ export interface DatasetExportPayload extends BaseExportPayload {
 export interface TracesExportPayload extends BaseExportPayload {
   readonly kind: "traces"
   readonly filters?: FilterSet | undefined
+  readonly selection?: ExportSelection | undefined
 }
 
 /**
@@ -54,6 +59,21 @@ export interface TracesExportPayload extends BaseExportPayload {
  */
 export interface IssuesExportPayload extends BaseExportPayload {
   readonly kind: "issues"
+  readonly selection?: ExportSelection | undefined
+  readonly lifecycleGroup?: "active" | "archived" | undefined
+  readonly searchQuery?: string | undefined
+  readonly timeRange?:
+    | {
+        readonly fromIso?: string | undefined
+        readonly toIso?: string | undefined
+      }
+    | undefined
+  readonly sort?:
+    | {
+        readonly field: "lastSeen" | "occurrences"
+        readonly direction: "asc" | "desc"
+      }
+    | undefined
 }
 
 /**
@@ -84,10 +104,26 @@ const filterConditionSchema = z.object({
 export const tracesExportPayloadSchema = baseExportPayloadSchema.extend({
   kind: z.literal("traces"),
   filters: z.record(z.string(), z.array(filterConditionSchema)).optional(),
+  selection: exportSelectionSchema.optional(),
 })
 
 export const issuesExportPayloadSchema = baseExportPayloadSchema.extend({
   kind: z.literal("issues"),
+  selection: exportSelectionSchema.optional(),
+  lifecycleGroup: z.enum(["active", "archived"]).optional(),
+  searchQuery: z.string().optional(),
+  timeRange: z
+    .object({
+      fromIso: z.iso.datetime().optional(),
+      toIso: z.iso.datetime().optional(),
+    })
+    .optional(),
+  sort: z
+    .object({
+      field: z.enum(["lastSeen", "occurrences"]),
+      direction: z.enum(["asc", "desc"]),
+    })
+    .optional(),
 })
 
 export const exportPayloadSchema = z.discriminatedUnion("kind", [
@@ -95,3 +131,22 @@ export const exportPayloadSchema = z.discriminatedUnion("kind", [
   tracesExportPayloadSchema,
   issuesExportPayloadSchema,
 ]) as z.ZodType<ExportPayload>
+
+/**
+ * Progress tracking for resumable exports in workflow activities.
+ */
+export interface ExportProgress {
+  readonly processedCount: number
+  readonly hasMore: boolean
+}
+
+/**
+ * State for resumable export workflow.
+ */
+export interface ExportWorkflowState {
+  readonly fileKey: string
+  readonly filename: string
+  readonly processedCount: number
+  readonly isComplete: boolean
+  readonly error?: string
+}

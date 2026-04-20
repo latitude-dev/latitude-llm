@@ -1,3 +1,4 @@
+import { exportSelectionSchema } from "@domain/exports"
 import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import type {
   Trace,
@@ -19,9 +20,10 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
+import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getQueuePublisher } from "../../server/clients.ts"
+import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -289,6 +291,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string(),
       filters: filterSetSchema.optional(),
+      selection: exportSelectionSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<EnqueuedExportResult> => {
@@ -300,6 +303,13 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
       throw new Error("Unauthorized")
     }
 
+    await enforceExportRequestRateLimit({
+      redis: getRedisClient(),
+      organizationId,
+      projectId: data.projectId,
+      recipientEmail: email,
+    })
+
     const publisher = await getQueuePublisher()
 
     await Effect.runPromise(
@@ -309,6 +319,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
         projectId: data.projectId,
         recipientEmail: email,
         ...(data.filters ? { filters: data.filters } : {}),
+        ...(data.selection ? { selection: data.selection } : {}),
       }),
     )
 

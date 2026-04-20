@@ -188,3 +188,48 @@ export function deleteFromDisk(disk: StorageDiskPort, key: string): Effect.Effec
     catch: (cause) => new StorageError({ cause, operation: "deleteFromDisk" }),
   })
 }
+
+type AppendStorageOptions = {
+  readonly namespace: "exports"
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly filename: string
+  readonly content: string | Uint8Array
+}
+
+/**
+ * Appends content to an existing file in object storage.
+ * Creates the file if it doesn't exist.
+ * Returns the fileKey for the appended content.
+ */
+export function appendToDisk(
+  disk: StorageDiskPort,
+  options: AppendStorageOptions,
+): Effect.Effect<string, StorageError> {
+  return Effect.tryPromise({
+    try: async () => {
+      const fileKey = buildStorageKey(options)
+      if (!fileKey) throw new Error(`Unknown storage namespace: ${options.namespace}`)
+
+      // Read existing content if file exists
+      let existingContent: Uint8Array = new Uint8Array()
+      try {
+        existingContent = await disk.getBytes(fileKey)
+      } catch {
+        // File doesn't exist yet, start with empty content
+      }
+
+      // Append new content
+      const newContent =
+        typeof options.content === "string" ? new TextEncoder().encode(options.content) : options.content
+
+      const combined = new Uint8Array(existingContent.length + newContent.length)
+      combined.set(existingContent)
+      combined.set(newContent, existingContent.length)
+
+      await disk.put(fileKey, combined)
+      return fileKey
+    },
+    catch: (cause) => new StorageError({ cause, operation: "appendToDisk" }),
+  })
+}
