@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { loadBullMqConfig } from "./config.ts"
 
-const ENV_KEYS = ["LAT_BULLMQ_HOST", "LAT_BULLMQ_PORT", "LAT_BULLMQ_PASSWORD", "LAT_REDIS_TLS"]
+const ENV_KEYS = ["LAT_BULLMQ_HOST", "LAT_BULLMQ_PORT", "LAT_BULLMQ_PASSWORD", "LAT_BULLMQ_CLUSTER", "LAT_REDIS_TLS"]
 
 const BASE_ENV: Record<string, string> = {
   LAT_BULLMQ_HOST: "localhost",
@@ -75,6 +75,20 @@ describe("loadBullMqConfig", () => {
     const config = await Effect.runPromise(loadBullMqConfig())
 
     expect(config.tls).toBeUndefined()
+  })
+
+  it("loads config with cluster mode enabled", async () => {
+    setEnv({ ...BASE_ENV, LAT_BULLMQ_CLUSTER: "true" })
+    const config = await Effect.runPromise(loadBullMqConfig())
+
+    expect(config.cluster).toBe(true)
+  })
+
+  it("omits cluster when LAT_BULLMQ_CLUSTER is not 'true'", async () => {
+    setEnv({ ...BASE_ENV, LAT_BULLMQ_CLUSTER: "false" })
+    const config = await Effect.runPromise(loadBullMqConfig())
+
+    expect(config.cluster).toBeUndefined()
   })
 
   it("fails when host is missing", async () => {

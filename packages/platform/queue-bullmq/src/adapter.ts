@@ -10,12 +10,11 @@ import type {
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { buildRedisConnectionOptions } from "@platform/cache-redis"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
-import { Redis } from "ioredis"
 
+import { createBullMqRedisConnection } from "./connection.ts"
 import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-incidents.ts"
 
 const tracer = trace.getTracer("bullmq")
@@ -53,21 +52,17 @@ export interface BullMqRedisConfig {
     readonly port: number
     readonly password?: string
     readonly tls?: boolean
+    readonly cluster?: boolean
   }
   /** Optional sink for worker incidents (errors, failed jobs, stalls) for alerting and dashboards. */
   readonly onWorkerIncident?: (incident: BullMqWorkerIncident) => void
 }
 
-const buildRedisOptions = (redis: BullMqRedisConfig["redis"]) => ({
-  ...buildRedisConnectionOptions(redis),
-  maxRetriesPerRequest: null,
-})
-
 export const createBullMqQueuePublisher = (
   config: BullMqRedisConfig,
 ): Effect.Effect<QueuePublisherShape, QueueClientError> =>
   Effect.gen(function* () {
-    const connection = new Redis(buildRedisOptions(config.redis))
+    const connection = createBullMqRedisConnection(config.redis)
 
     const queues = new Map<string, Queue>()
 
@@ -123,8 +118,6 @@ type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, 
 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
   Effect.gen(function* () {
-    const redisConfig = buildRedisOptions(config.redis)
-
     const DEFAULT_CONCURRENCY = 10
     const services = yield* Effect.services<never>()
     const workers: Map<QueueName, Worker> = new Map()
@@ -205,7 +198,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                 )
               },
               {
-                connection: new Redis(redisConfig),
+                connection: createBullMqRedisConnection(config.redis),
                 prefix: "{bull}",
                 concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
                 removeOnComplete: { count: 1000 },

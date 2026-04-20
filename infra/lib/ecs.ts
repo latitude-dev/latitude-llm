@@ -403,6 +403,7 @@ function createTaskDefinition(
           },
           { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
           { name: "LAT_BULLMQ_PORT", value: "6379" },
+          { name: "LAT_BULLMQ_CLUSTER", value: config.redis.bullmq.type === "memorydb" ? "true" : "false" },
           { name: "LAT_STORAGE_DRIVER", value: "s3" },
           { name: "LAT_STORAGE_S3_BUCKET", value: s3BucketName },
           { name: "LAT_STORAGE_S3_REGION", value: config.region },

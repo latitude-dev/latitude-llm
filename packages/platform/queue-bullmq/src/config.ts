@@ -6,6 +6,7 @@ export interface BullMqConfig {
   readonly port: number
   readonly password?: string
   readonly tls?: boolean
+  readonly cluster?: boolean
 }
 
 export const loadBullMqConfig = () =>
@@ -13,12 +14,14 @@ export const loadBullMqConfig = () =>
     const host = yield* parseEnv("LAT_BULLMQ_HOST", "string")
     const port = yield* parseEnv("LAT_BULLMQ_PORT", "number", 6380)
     const password = yield* parseEnvOptional("LAT_BULLMQ_PASSWORD", "string")
-    const tls = yield* parseEnvOptional("LAT_REDIS_TLS", "string")
+    const tls = yield* parseEnvOptional("LAT_REDIS_TLS", "boolean")
+    const cluster = yield* parseEnvOptional("LAT_BULLMQ_CLUSTER", "boolean")
 
     return {
       host,
       port,
       ...(password ? { password } : {}),
-      ...(tls === "true" ? { tls: true } : {}),
+      ...(tls ? { tls: true } : {}),
+      ...(cluster ? { cluster: true } : {}),
     } satisfies BullMqConfig
   })
