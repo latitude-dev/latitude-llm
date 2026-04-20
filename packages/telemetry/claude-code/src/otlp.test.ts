@@ -383,8 +383,11 @@ describe("buildOtlpRequest", () => {
 
   it("emits one llm_request per AssistantCall with tools as siblings under the interaction", () => {
     // A tool-loop turn: call A → tool A → call B → tool B → call C (final text).
-    // The canonical OTel GenAI layout emits one llm_request per model call, with tool
-    // executions as children of the llm_request that emitted them.
+    // We emit one llm_request per model call and parent every tool_execution span
+    // to the interaction span (as a sibling of the llm_requests), not to the
+    // llm_request that emitted the tool. The model finishes generating BEFORE the
+    // tool runs, so sibling ordering reads the timeline correctly in the UI:
+    // llm_request → tool → llm_request → tool → llm_request.
     const turn: Turn = {
       userText: "run then echo",
       startMs: 1_000,
