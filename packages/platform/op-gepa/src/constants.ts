@@ -18,12 +18,12 @@ export const GEPA_RPC_METHODS = {
 
 export const GEPA_PROPOSER_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-opus-4-6-v1",
-  reasoning: "high",
+  model: "anthropic.claude-opus-4-7",
+  reasoning: "xhigh",
 } as const
 
 export const GEPA_DETAILS_GENERATOR_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-sonnet-4-6",
+  model: "minimax.minimax-m2.5",
   reasoning: "low",
 } as const

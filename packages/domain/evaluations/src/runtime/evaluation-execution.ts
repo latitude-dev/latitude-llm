@@ -18,7 +18,7 @@ export const evaluationRuntimeZod = z
 
 export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-sonnet-4-6",
+  model: "minimax.minimax-m2.5",
   reasoning: "low",
 } as const
 

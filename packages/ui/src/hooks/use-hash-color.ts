@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 
-function hashToHue(text: string): number {
+export function hashToHue(text: string): number {
+  text = text ?? "\u0000"
   let hash = 0
   for (let i = 0; i < text.length; i++) {
     hash = Math.imul(31, hash) + text.charCodeAt(i)
@@ -8,8 +9,6 @@ function hashToHue(text: string): number {
   }
   return ((hash % 360) + 360) % 360
 }
-
-export { hashToHue }
 
 /**
  * Deterministic color scheme derived from a text string.

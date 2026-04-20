@@ -1,9 +1,5 @@
-import {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  evaluationAlignmentRefreshWorkflowId,
-  type QueueConsumer,
-  type WorkflowStarterShape,
-} from "@domain/queue"
+import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/evaluations"
+import type { QueueConsumer, WorkflowStarterShape } from "@domain/queue"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -30,7 +26,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
             reason: "debounced-metric-refresh",
           },
           {
-            workflowId: evaluationAlignmentRefreshWorkflowId(payload.evaluationId),
+            workflowId: `evaluations:alignment:${payload.evaluationId}`,
             signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
             signalArgs: [
               {

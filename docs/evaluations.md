@@ -115,11 +115,11 @@ Rules:
 
 User-triggered background generation contract:
 
-- when a user clicks `Generate evaluation`, the server starts the `evaluation-alignment` workflow and returns a `jobId` immediately
-- progress is written to a Redis key following the background-task convention, for example `evaluation-alignment:<jobId>`
-- the frontend polls a dedicated status endpoint / server function that reads that Redis key rather than querying BullMQ directly
-- the status payload should at least support `pending`, `running`, `completed`, and `failed`
-- completion status includes the resulting `evaluationId`; failed status includes an error payload; key expiry is controlled by a named constant
+- when a user clicks `Generate evaluation`, the server starts the `evaluation-alignment` workflow with a stable, deterministic workflow id derived from the issue or evaluation id (one workflow per resource) and returns immediately — no `jobId` leaks back to the frontend
+- progress is tracked by Temporal itself; Temporal is the single source of truth for workflow state, and no Redis-backed status mirror exists
+- the frontend polls `getIssueAlignmentState`, which asks Temporal directly via `workflow.describe()` for the initial run and a workflow query handler for in-flight manual-realignment state
+- the response collapses to a minimal UI contract (`idle` / `generating` / `realigning` with `evaluationId`), intentionally omitting internal identifiers like `runId` or `currentJobId`
+- when the workflow terminates, its final status and any error are available through Temporal's own history — the UI infers "just finished" by observing the transition from `generating`/`realigning` back to `idle` across polls
 
 Required Postgres indexes:
 

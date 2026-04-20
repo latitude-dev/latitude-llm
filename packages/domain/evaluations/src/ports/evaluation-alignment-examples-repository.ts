@@ -44,14 +44,16 @@ export interface ListNegativeEvaluationAlignmentExamplesInput extends ListEvalua
 
 export const DEFAULT_ALIGNMENT_EXAMPLE_LIMIT = ALIGNMENT_CURATED_DATASET_MAX_ROWS
 
+export interface EvaluationAlignmentExamplesRepositoryShape {
+  listPositiveExamples(
+    input: ListEvaluationAlignmentExamplesInput,
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+  listNegativeExamples(
+    input: ListNegativeEvaluationAlignmentExamplesInput,
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+}
+
 export class EvaluationAlignmentExamplesRepository extends ServiceMap.Service<
   EvaluationAlignmentExamplesRepository,
-  {
-    listPositiveExamples(
-      input: ListEvaluationAlignmentExamplesInput,
-    ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
-    listNegativeExamples(
-      input: ListNegativeEvaluationAlignmentExamplesInput,
-    ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
-  }
+  EvaluationAlignmentExamplesRepositoryShape
 >()("@domain/evaluations/EvaluationAlignmentExamplesRepository") {}

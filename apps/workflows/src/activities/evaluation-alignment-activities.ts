@@ -1,17 +1,11 @@
 import { AI } from "@domain/ai"
 import {
-  ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS,
   type BaselineEvaluationResult,
-  buildEvaluationAlignmentJobStatus,
   buildEvaluationGepaSummaryTelemetryCapture,
   type CollectedEvaluationAlignmentExamples,
   collectAlignmentExamplesUseCase,
-  EVALUATION_JOB_STATUS_TTL_SECONDS,
-  type EvaluationAlignmentJobStatus,
-  EvaluationManualRealignmentRateLimitedError,
   evaluateBaselineDraftUseCase,
   evaluateIncrementalDraftUseCase,
-  evaluationAlignmentJobStatusKey,
   type GeneratedEvaluationDetails,
   type GeneratedEvaluationDraft,
   generateBaselineDraftUseCase,
@@ -20,10 +14,8 @@ import {
   type LoadedEvaluationAlignmentState,
   loadAlignmentStateUseCase,
   type PersistEvaluationAlignmentResult,
-  parseStoredEvaluationAlignmentJobStatus,
   persistAlignmentResultUseCase,
   truncateEvaluationName,
-  type WriteEvaluationAlignmentJobStatusInput,
 } from "@domain/evaluations"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
@@ -61,62 +53,6 @@ const evaluationAlignmentRepositoriesLive = Layer.mergeAll(
   EvaluationAlignmentExamplesRepositoryLive,
   IssueRepositoryLive,
 )
-
-export const writeEvaluationAlignmentJobStatus = async (
-  input: WriteEvaluationAlignmentJobStatusInput,
-): Promise<EvaluationAlignmentJobStatus> => {
-  try {
-    const redis = getRedisClient()
-    const key = evaluationAlignmentJobStatusKey(input.jobId)
-    const existingStatus = parseStoredEvaluationAlignmentJobStatus(await redis.get(key))
-    const status = buildEvaluationAlignmentJobStatus({
-      existingStatus,
-      jobId: input.jobId,
-      status: input.status,
-      evaluationId: input.evaluationId,
-      error: input.error,
-    })
-
-    await redis.set(key, JSON.stringify(status), "EX", EVALUATION_JOB_STATUS_TTL_SECONDS)
-
-    return status
-  } catch (cause) {
-    throw new EvaluationAlignmentActivityError({
-      activity: "writeEvaluationAlignmentJobStatus",
-      cause,
-    })
-  }
-}
-
-const evaluationManualRealignmentRateLimitKey = (evaluationId: string): string =>
-  `evaluation-alignment:manual-rate-limit:${evaluationId}`
-
-export const assertManualEvaluationRealignmentAllowed = async (input: {
-  readonly evaluationId: string
-}): Promise<void> => {
-  try {
-    const redis = getRedisClient()
-    const stored = await redis.set(
-      evaluationManualRealignmentRateLimitKey(input.evaluationId),
-      new Date().toISOString(),
-      "PX",
-      ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS,
-      "NX",
-    )
-
-    if (stored !== "OK") {
-      throw new EvaluationManualRealignmentRateLimitedError({
-        evaluationId: input.evaluationId,
-      })
-    }
-  } catch (cause) {
-    if (cause instanceof EvaluationManualRealignmentRateLimitedError) throw cause
-    throw new EvaluationAlignmentActivityError({
-      activity: "assertManualEvaluationRealignmentAllowed",
-      cause,
-    })
-  }
-}
 
 export const loadEvaluationAlignmentState = (input: {
   readonly organizationId: string

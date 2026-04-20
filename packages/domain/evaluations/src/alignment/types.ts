@@ -1,9 +1,4 @@
-import type {
-  ConfusionMatrix,
-  EvaluationAlignmentJobError,
-  EvaluationAlignmentJobStatus,
-  EvaluationTrigger,
-} from "../entities/evaluation.ts"
+import type { ConfusionMatrix, EvaluationTrigger } from "../entities/evaluation.ts"
 import type { EvaluationAlignmentMetrics } from "../helpers.ts"
 import type { EvaluationAlignmentExample } from "../ports/evaluation-alignment-examples-repository.ts"
 import type { EvaluationConversationMessage } from "../runtime/evaluation-execution.ts"
@@ -71,11 +66,4 @@ export interface CollectedEvaluationAlignmentExamples {
   readonly issueDescription: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
-}
-
-export interface WriteEvaluationAlignmentJobStatusInput {
-  readonly jobId: string
-  readonly status: EvaluationAlignmentJobStatus["status"]
-  readonly evaluationId?: string | null
-  readonly error?: EvaluationAlignmentJobError | null
 }

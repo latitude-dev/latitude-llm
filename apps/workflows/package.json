@@ -19,7 +19,6 @@
     "@domain/evaluations": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/optimizations": "workspace:*",
-    "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

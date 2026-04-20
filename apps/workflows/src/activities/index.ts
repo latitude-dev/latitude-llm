@@ -3,7 +3,6 @@ export {
   writePublishedAnnotationScore,
 } from "./annotation-publication-activities.ts"
 export {
-  assertManualEvaluationRealignmentAllowed,
   collectEvaluationAlignmentExamples,
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
@@ -11,7 +10,6 @@ export {
   generateEvaluationDetails,
   loadEvaluationAlignmentState,
   persistEvaluationAlignmentResult,
-  writeEvaluationAlignmentJobStatus,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
 export { draftAnnotate, persistAnnotation, runFlagger } from "./flagger-activities.ts"
