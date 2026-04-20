@@ -60,6 +60,7 @@
     "@traceloop/instrumentation-vertexai": "^0.25.0"
   },
   "devDependencies": {
+    "@ai-sdk/openai": "^3.0.53",
     "@anthropic-ai/sdk": "^0.82.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1032.0",
     "@biomejs/biome": "catalog:",
@@ -67,6 +68,7 @@
     "@langchain/core": "^1.1.39",
     "@langchain/openai": "^1.4.1",
     "@types/node": "catalog:",
+    "ai": "^6.0.168",
     "cohere-ai": "^7.21.0",
     "langchain": "^1.2.39",
     "llamaindex": "^0.12.1",

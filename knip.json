@@ -57,10 +57,12 @@
       "project": ["src/**/*.ts"],
       "ignore": ["src/constants/**/*.ts"],
       "ignoreDependencies": [
+        "@ai-sdk/openai",
         "@anthropic-ai/sdk",
         "@aws-sdk/client-bedrock-runtime",
         "@google-cloud/vertexai",
         "@langchain/openai",
+        "ai",
         "cohere-ai",
         "langchain",
         "llamaindex",

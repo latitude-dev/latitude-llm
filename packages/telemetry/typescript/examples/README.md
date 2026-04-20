@@ -90,8 +90,11 @@ These examples use `LatitudeTelemetry` — the simplest way to get started.
 | Together AI | `test_together.ts` | `together-ai` | `"togetherai"` |
 | AWS Bedrock | `test_bedrock.ts` | `@aws-sdk/client-bedrock-runtime` | `"bedrock"` |
 | Google Vertex AI | `test_vertex.ts` | `@google-cloud/vertexai` | `"vertexai"` |
+| Vercel AI SDK | `test_vercel_ai.ts` | `ai`, `@ai-sdk/openai` | custom tracer (`"vercelai"`) |
 | LangChain | `test_langchain.ts` | `langchain`, `@langchain/openai` | `"langchain"` |
 | LlamaIndex | `test_llamaindex.ts` | `llamaindex` | `"llamaindex"` |
+
+The Vercel AI SDK example shows both patterns: one generation wrapped in `capture()` and one plain AI SDK call using the stable `experimental_telemetry` hook with `getLatitudeTracer("vercelai")`. It does not require a Latitude auto-instrumentation entry.
 
 ### Running Provider Examples
 
@@ -104,6 +107,9 @@ npx tsx --env-file=.env test_anthropic.ts
 
 # LangChain example
 npx tsx --env-file=.env test_langchain.ts
+
+# Vercel AI SDK example
+npx tsx --env-file=.env test_vercel_ai.ts
 ```
 
 ---
@@ -159,7 +165,7 @@ provider.register()
 
 | Variable | Required For |
 |----------|--------------|
-| `OPENAI_API_KEY` | OpenAI, Azure OpenAI, LangChain, LlamaIndex |
+| `OPENAI_API_KEY` | OpenAI, Azure OpenAI, LangChain, LlamaIndex, Vercel AI SDK |
 | `ANTHROPIC_API_KEY` | Anthropic |
 | `COHERE_API_KEY` | Cohere |
 | `TOGETHER_API_KEY` | Together AI |
