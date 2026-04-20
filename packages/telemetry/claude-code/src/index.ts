@@ -9,6 +9,7 @@ import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
+import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
 import {
   buildTurns,
@@ -49,9 +50,13 @@ function pickSession(p: HookPayload): { sessionId?: string | undefined; transcri
 }
 
 async function main(): Promise<void> {
-  const subcommand = process.argv[2]
-  if (subcommand === "install-preload" || subcommand === "install") {
-    runInstallPreload()
+  const { subcommand, flags } = parseFlags(process.argv.slice(2))
+  if (subcommand === "install" || subcommand === "install-preload") {
+    await runInstall(normalizeInstallFlags(flags))
+    return
+  }
+  if (subcommand === "uninstall") {
+    await runUninstall({ noPrompt: flags["no-prompt"] === true || flags.yes === true })
     return
   }
 
@@ -223,41 +228,6 @@ function materializeIntercept(logger: Logger): void {
     }
   } catch (err) {
     logger.debug(`intercept: materialize failed: ${String(err)}`)
-  }
-}
-
-function runInstallPreload(): void {
-  try {
-    const src = fileURLToPath(new URL("./intercept.js", import.meta.url))
-    if (!existsSync(src)) {
-      process.stderr.write(`[latitude-claude-code] bundled intercept.js not found at ${src}\n`)
-      process.exit(1)
-    }
-    mkdirSync(dirname(INTERCEPT_INSTALL_PATH), { recursive: true })
-    copyFileSync(src, INTERCEPT_INSTALL_PATH)
-    process.stdout.write(
-      [
-        `Installed intercept preload to: ${INTERCEPT_INSTALL_PATH}`,
-        "",
-        "Expose BUN_OPTIONS to the claude runtime. Pick the right one for how you launch claude:",
-        "",
-        "  Terminal (CLI):  add to ~/.zshrc or ~/.bashrc:",
-        `    export BUN_OPTIONS="--preload=${INTERCEPT_INSTALL_PATH}"`,
-        "",
-        "  macOS Claude Desktop (GUI app): ~/.claude/settings.json DOES NOT work for BUN_OPTIONS,",
-        "  because that env is only applied to hook subprocesses, not the claude runtime.",
-        "  Instead, set it at the macOS launchd level and then fully quit+relaunch the app:",
-        `    launchctl setenv BUN_OPTIONS "--preload=${INTERCEPT_INSTALL_PATH}"`,
-        "  (resets on reboot; for persistence install a ~/Library/LaunchAgents plist — see README)",
-        "",
-        "Once BUN_OPTIONS reaches the claude process, your Stop-hook spans will carry the full",
-        "system prompt, tool definitions, and message body that hit the Anthropic API.",
-        "",
-      ].join("\n"),
-    )
-  } catch (err) {
-    process.stderr.write(`[latitude-claude-code] install failed: ${String(err)}\n`)
-    process.exit(1)
   }
 }
 

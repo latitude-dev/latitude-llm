@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-04-20
+
+### Added
+
+- **Interactive `install` wizard** — `npx -y @latitude-data/claude-code-telemetry install` now prompts for `LATITUDE_API_KEY`, `LATITUDE_PROJECT`, and `LATITUDE_BASE_URL`, merges them into `~/.claude/settings.json` under `env`, and installs the Stop-hook entry if missing. On macOS it also offers to set `BUN_OPTIONS` via `launchctl` and persist it with a `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist`. Existing values are shown as defaults (API keys masked); a backup of `settings.json` is always written to `settings.json.latitude-bak` before any change.
+- **Flag-driven install** for CI / automation: `--api-key=…`, `--project=…`, `--base-url=…`, `--no-launchctl`, `--no-prompt` / `--yes`.
+- **`uninstall` subcommand** — `npx -y @latitude-data/claude-code-telemetry uninstall` shows a plan and asks for confirmation, then reverses only what this package installed: removes `LATITUDE_*` / `BUN_OPTIONS` from `settings.json.env`, removes our Stop-hook entry (leaves other hooks alone), clears `launchctl` `BUN_OPTIONS` only when it points at our preload, unloads and removes the LaunchAgents plist, and deletes `~/.claude/state/latitude/` (preload, state, captured requests).
+- **Idempotent settings merge** — rerunning install with the same inputs is a no-op. The hook-detection regex matches both the published npm command and dev-checkout `dist/index.js` paths.
+
+### Changed
+
+- **Non-interactive `install`** (no TTY, no flags) now just copies the preload file, unchanged from before. Any flag or TTY opts into the wizard.
+
 ### Fixed
 
 - **Race between the intercept preload and the Stop hook** — the preload used to buffer the whole response in the background and only write the request file after `.text()` resolved. If Claude Code fired `Stop` before that write completed, the hook saw an empty dir and spans didn't get enriched. The preload now tees the response stream and writes the file the moment `message_start` arrives (the first SSE event), guaranteeing the file is on disk well before any hook can run.
