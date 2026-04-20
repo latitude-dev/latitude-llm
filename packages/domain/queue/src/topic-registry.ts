@@ -56,12 +56,20 @@ const _registry = {
     }
   }>(),
 
-  "dataset-export": payloads<{
-    export: {
-      readonly datasetId: string
+  exports: payloads<{
+    generate: {
+      readonly kind: "dataset" | "traces" | "issues"
       readonly organizationId: string
       readonly projectId: string
       readonly recipientEmail: string
+      // Dataset-specific fields
+      readonly datasetId?: string
+      readonly selection?:
+        | { readonly mode: "selected"; readonly rowIds: readonly string[] }
+        | { readonly mode: "all" }
+        | { readonly mode: "allExcept"; readonly rowIds: readonly string[] }
+      // Traces-specific fields - uses FilterSet shape
+      readonly filters?: Readonly<Record<string, readonly { readonly op: string; readonly value: unknown }[]>>
     }
   }>(),
 

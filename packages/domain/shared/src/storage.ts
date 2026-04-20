@@ -16,7 +16,7 @@ export interface StorageDiskPort {
 
 export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()("@domain/shared/StorageDisk") {}
 
-type FolderNamespace = "datasetExports" | "datasets" | "ingest" | "unknown"
+type FolderNamespace = "datasetExports" | "datasets" | "exports" | "ingest" | "unknown"
 
 type BaseStorageOptions = {
   readonly organizationId: OrganizationId
@@ -46,6 +46,12 @@ type IngestStorageOptions = BaseStorageOptions & {
   readonly projectId: ProjectId
 }
 
+type ExportsStorageOptions = BaseStorageOptions & {
+  readonly namespace: "exports"
+  readonly projectId: ProjectId
+  readonly filename: string
+}
+
 type DatasetExportsStreamOptions = BaseStreamStorageOptions & {
   readonly namespace: "datasetExports"
   readonly projectId: ProjectId
@@ -62,21 +68,31 @@ type IngestStreamOptions = BaseStreamStorageOptions & {
   readonly projectId: ProjectId
 }
 
+type ExportsStreamOptions = BaseStreamStorageOptions & {
+  readonly namespace: "exports"
+  readonly projectId: ProjectId
+  readonly filename: string
+}
+
 type PutInDiskStreamOptions<N extends FolderNamespace> = N extends "datasetExports"
   ? DatasetExportsStreamOptions
   : N extends "datasets"
     ? DatasetsStreamOptions
-    : N extends "ingest"
-      ? IngestStreamOptions
-      : never
+    : N extends "exports"
+      ? ExportsStreamOptions
+      : N extends "ingest"
+        ? IngestStreamOptions
+        : never
 
 type PutInDiskOptions<N extends FolderNamespace> = N extends "datasetExports"
   ? DatasetExportsStorageOptions
   : N extends "datasets"
     ? DatasetStorageOptions
-    : N extends "ingest"
-      ? IngestStorageOptions
-      : { readonly namespace: "unknown" } & BaseStorageOptions
+    : N extends "exports"
+      ? ExportsStorageOptions
+      : N extends "ingest"
+        ? IngestStorageOptions
+        : { readonly namespace: "unknown" } & BaseStorageOptions
 
 const projectsPath = (base: string, projectId: ProjectId) => `${base}/projects/${projectId}`
 
@@ -95,6 +111,11 @@ function buildStorageKey(options: KeyBuildingOptions): string | undefined {
       const id = crypto.randomUUID()
       const ext = options.extension ?? "csv"
       return `${projectsPath(basePath, options.projectId)}/datasets/${id}.${ext}`
+    }
+    case "exports": {
+      const exportId = crypto.randomUUID()
+      // For exports, use the provided filename which already includes the extension
+      return `${projectsPath(basePath, options.projectId)}/exports/${exportId}/${options.filename}`
     }
     case "ingest": {
       const id = crypto.randomUUID()

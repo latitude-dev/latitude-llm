@@ -1,11 +1,8 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
 import {
   addTracesToDataset,
-  buildDatasetCsvExport,
-  countRows,
   createDataset,
   createDatasetFromTraces,
-  DATASET_DOWNLOAD_DIRECT_THRESHOLD,
   DATASET_LIST_SORT_COLUMNS,
   DatasetRepository,
   type DeleteRowsSelection,
@@ -322,16 +319,23 @@ export const deleteDatasetFunction = createServerFn({ method: "POST" })
     )
   })
 
-type DatasetDownloadResult = { type: "direct"; csv: string; filename: string } | { type: "enqueued" }
+export type DatasetExportSelection =
+  | { mode: "selected"; rowIds: string[] }
+  | { mode: "all" }
+  | { mode: "allExcept"; rowIds: string[] }
 
-export const getDatasetDownload = createServerFn({ method: "GET" })
+export interface EnqueuedExportResult {
+  readonly type: "enqueued"
+}
+
+export const enqueueDatasetExport = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       datasetId: z.string(),
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<DatasetDownloadResult> => {
+  .handler(async ({ data }): Promise<EnqueuedExportResult> => {
     const session = await ensureSession()
     const email = session?.user?.email
     const organizationId = getSessionOrganizationId(session)
@@ -349,57 +353,29 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
 
-    const total = await Effect.runPromise(
-      countRows({ datasetId }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
-        withTracing,
-      ),
-    )
-
     const { selection } = data
-    const effectiveCount =
-      selection.mode === "all"
-        ? total
+    const publisher = await getQueuePublisher()
+
+    // Convert selection to the format expected by the exports worker
+    const exportSelection =
+      selection.mode === "selected"
+        ? { mode: "selected" as const, rowIds: selection.rowIds }
         : selection.mode === "allExcept"
-          ? Math.max(0, total - selection.rowIds.length)
-          : selection.rowIds.length
+          ? { mode: "allExcept" as const, rowIds: selection.rowIds }
+          : { mode: "all" as const }
 
-    if (effectiveCount > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
-      const publisher = await getQueuePublisher()
-      await Effect.runPromise(
-        publisher
-          .publish("dataset-export", "export", {
-            datasetId: data.datasetId,
-            organizationId,
-            projectId: dataset.projectId,
-            recipientEmail: email,
-          })
-          .pipe(withTracing),
-      )
-      return { type: "enqueued" }
-    }
-
-    const result = await Effect.runPromise(
-      listRows({ datasetId, limit: total, offset: 0 }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
-        withTracing,
-      ),
+    await Effect.runPromise(
+      publisher.publish("exports", "generate", {
+        kind: "dataset",
+        datasetId: data.datasetId,
+        selection: exportSelection,
+        organizationId,
+        projectId: dataset.projectId,
+        recipientEmail: email,
+      }),
     )
 
-    const rows =
-      selection.mode === "all"
-        ? result.rows
-        : (() => {
-            const ids = new Set(selection.rowIds.map(DatasetRowId))
-            return selection.mode === "allExcept"
-              ? result.rows.filter((r) => !ids.has(r.rowId))
-              : result.rows.filter((r) => ids.has(r.rowId))
-          })()
-
-    const { csv, filename } = buildDatasetCsvExport(dataset.name, rows)
-    return { type: "direct", csv, filename }
+    return { type: "enqueued" }
   })
 
 export const createDatasetFunction = createServerFn({ method: "POST" })

@@ -19,8 +19,9 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient } from "../../server/clients.ts"
+import { ensureSession } from "../../domains/sessions/session.functions.ts"
+import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
+import { getClickhouseClient, getQueuePublisher } from "../../server/clients.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -278,6 +279,41 @@ export const getTraceDetail = createServerFn({ method: "GET" })
   })
 
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
+
+export interface EnqueuedExportResult {
+  readonly type: "enqueued"
+}
+
+export const enqueueTracesExport = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<EnqueuedExportResult> => {
+    const session = await ensureSession()
+    const email = session?.user?.email
+    const organizationId = getSessionOrganizationId(session)
+
+    if (!organizationId || !email) {
+      throw new Error("Unauthorized")
+    }
+
+    const publisher = await getQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish("exports", "generate", {
+        kind: "traces",
+        organizationId,
+        projectId: data.projectId,
+        recipientEmail: email,
+        ...(data.filters ? { filters: data.filters } : {}),
+      }),
+    )
+
+    return { type: "enqueued" }
+  })
 
 export const getTraceDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(

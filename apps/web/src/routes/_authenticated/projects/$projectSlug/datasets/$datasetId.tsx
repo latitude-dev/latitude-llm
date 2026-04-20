@@ -22,7 +22,7 @@ import {
   type DatasetRecord,
   type DatasetRowRecord,
   deleteDatasetRows,
-  getDatasetDownload,
+  enqueueDatasetExport,
   getDatasetQuery,
   getRowQuery,
   insertDatasetRow,
@@ -518,29 +518,17 @@ function DatasetRowsView({
     async (sel: BulkSelection<string>) => {
       setDownloading(true)
       try {
-        const result = await getDatasetDownload({
+        await enqueueDatasetExport({
           data: { datasetId, selection: sel },
         })
-        if (result.type === "enqueued") {
-          toast({
-            title: "Export started",
-            description: "You'll receive an email with a download link when your export is ready.",
-          })
-          return
-        }
-        const blob = new Blob([result.csv], {
-          type: "text/csv;charset=utf-8;",
+        toast({
+          title: "Export started",
+          description: "You'll receive an email with a download link when your export is ready.",
         })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = result.filename
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 0)
       } catch (e) {
         toast({
           variant: "destructive",
-          description: e instanceof Error ? e.message : "Download failed",
+          description: e instanceof Error ? e.message : "Export failed",
         })
       } finally {
         setDownloading(false)

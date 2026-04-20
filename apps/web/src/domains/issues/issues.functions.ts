@@ -28,8 +28,15 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../../server/clients.ts"
+import { ensureSession } from "../../domains/sessions/session.functions.ts"
+import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getWeaviateClient,
+} from "../../server/clients.ts"
 import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
@@ -498,4 +505,37 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
     )
 
     return toIssueLifecycleCommandRecord(result)
+  })
+
+export interface EnqueuedExportResult {
+  readonly type: "enqueued"
+}
+
+export const enqueueIssuesExport = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<EnqueuedExportResult> => {
+    const session = await ensureSession()
+    const email = session?.user?.email
+    const organizationId = getSessionOrganizationId(session)
+
+    if (!organizationId || !email) {
+      throw new Error("Unauthorized")
+    }
+
+    const publisher = await getQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish("exports", "generate", {
+        kind: "issues",
+        organizationId,
+        projectId: data.projectId,
+        recipientEmail: email,
+      }),
+    )
+
+    return { type: "enqueued" }
   })
