@@ -67,13 +67,13 @@ describe("createRedisClient", () => {
     expect(clusterConstructor).toHaveBeenCalledWith(
       [{ host: "memorydb.example.com", port: 6379 }],
       expect.objectContaining({
+        enableOfflineQueue: true,
         redisOptions: expect.objectContaining({
           host: "memorydb.example.com",
           port: 6379,
-          enableOfflineQueue: false,
           connectTimeout: 5000,
           commandTimeout: 5000,
-          maxRetriesPerRequest: 1,
+          maxRetriesPerRequest: null,
         }),
         dnsLookup: expect.any(Function),
       }),
