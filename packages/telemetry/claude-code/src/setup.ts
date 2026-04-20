@@ -531,7 +531,16 @@ export function parseFlags(argv: string[]): { subcommand: string; flags: Record<
 }
 
 export function normalizeInstallFlags(flags: Record<string, string | boolean>): InstallFlags {
-  const str = (v: string | boolean | undefined): string | undefined => (typeof v === "string" ? v : undefined)
+  // Coerce raw flag values into a non-empty string, or undefined if the user
+  // passed the flag without a value (`--api-key=`) or omitted it entirely.
+  // Empty-string values are treated as "not provided" so downstream code falls
+  // through to the interactive prompt or the existing settings.json value,
+  // instead of silently writing an empty key/project to disk.
+  const str = (v: string | boolean | undefined): string | undefined => {
+    if (typeof v !== "string") return undefined
+    const trimmed = v.trim()
+    return trimmed === "" ? undefined : trimmed
+  }
 
   let environment: EnvironmentConfig | undefined
   const dev = flags.dev === true
