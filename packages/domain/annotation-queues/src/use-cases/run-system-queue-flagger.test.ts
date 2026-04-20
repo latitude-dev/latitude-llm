@@ -6,7 +6,7 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { SYSTEM_QUEUE_DEFINITIONS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
+import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
 import { type RunSystemQueueFlaggerInput, runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
 
 const INPUT: RunSystemQueueFlaggerInput = {
