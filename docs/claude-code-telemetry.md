@@ -162,7 +162,7 @@ echo '{"session_id":"smoke","transcript_path":"/tmp/latitude-hook-smoke/transcri
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| No state file after a session | Hook never ran (PATH issue or async swallowing output) | Absolute node path; add `async: true` |
+| No state file after a session | Hook never ran (PATH issue) | Use an absolute node path |
 | State file updates but never a `2xx` line | `LATITUDE_API_KEY` or `LATITUDE_PROJECT` missing | Both must be in settings.json `env` — hooks don't inherit shell env |
 | HTTP 400 "X-Latitude-Project header is required" | `LATITUDE_PROJECT` unset | Add it to settings.json |
 | HTTP 404 "Project not found" | Slug mismatch or project not in this org | Run `pnpm seed` to create `default-project`; verify org via API key |
