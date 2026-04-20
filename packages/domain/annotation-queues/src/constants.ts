@@ -145,35 +145,11 @@ export const SYSTEM_QUEUE_DEFINITIONS: readonly SystemQueueDefinition[] = [
     sampling: 10,
   },
   {
-    slug: "tool-call-errors",
-    name: "Tool Call Errors",
-    description: "A tool call failed or returned an error state",
-    instructions:
-      "Use this queue when a tool span errored, a tool execution failed, a malformed tool interaction occurred, or the conversation includes a tool-result message that clearly indicates failure. This queue is primarily matched through deterministic rules rather than the low-cost flagger model.",
-    sampling: 100,
-  },
-  {
     slug: "resource-outliers",
     name: "Resource Outliers",
     description: "The trace has unusually high latency, TTFT, token usage, or cost",
     instructions:
       "Use this queue when latency, time to first token, token usage, or cost materially exceeds project norms. This queue is primarily matched through deterministic outlier checks against project percentiles, medians, and configured thresholds rather than the low-cost flagger model.",
-    sampling: 100,
-  },
-  {
-    slug: "output-schema-validation",
-    name: "Output Schema Validation",
-    description: "a structured-output response did not conform to the declared schema",
-    instructions:
-      "Use this queue when a GenAI span was configured to produce structured output (JSON schema, JSON object, or tool-call response format) and the actual output either failed to parse or was truncated before completion.",
-    sampling: 100,
-  },
-  {
-    slug: "empty-response",
-    name: "Empty Response",
-    description: "the assistant returned an empty or degenerate response",
-    instructions:
-      "Use this queue when a GenAI span produced no meaningful output — the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Do not use this queue for intentionally empty tool-call-only responses where the model delegates entirely to tool use, or for spans whose finish_reasons indicate a content filter block (those are a distinct failure mode).",
     sampling: 100,
   },
 ] as const

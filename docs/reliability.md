@@ -206,7 +206,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 ### Annotation queues
 
 - annotation queues are trace-based review backlogs; session context is derived from related traces that share `session_id`
-- each project starts with default system-created manual queues such as `Jailbreaking`, `Refusal`, `Frustration`, `Forgetting`, `Laziness`, `NSFW`, `Tool Call Errors`, and `Resource Outliers`
+- each project starts with default system-created manual queues such as `Jailbreaking`, `Refusal`, `Frustration`, `Forgetting`, `Laziness`, `NSFW`, `Trashing`, and `Resource Outliers`; deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) skip the queue path and publish annotation scores directly so `issues:discovery` can cluster them
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table; session selection resolves to the newest trace and still creates `annotation_queue_items` with `trace_id` only and `completedAt = null`
 - system-created manual queues are marked with `system = true`, provision `settings.sampling` from a named default constant, and let users tune that sampling later without changing the canonical queue definitions
 - system-created manual queues are populated asynchronously from debounced `SpanIngested`: the `domain-events` dispatcher publishes `trace-end:run`, that runtime samples system queues first, and it starts one `system-queue-flagger` workflow per selected queue; the workflow performs deterministic routing or a limited-context flagger pass and, when it confirms a match, writes the queue item and pending-review draft annotation with full context

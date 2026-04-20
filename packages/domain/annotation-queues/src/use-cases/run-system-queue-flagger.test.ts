@@ -55,37 +55,6 @@ function makeTraceDetail(
 }
 
 describe("runSystemQueueFlaggerUseCase", () => {
-  it("matches tool-call-errors from conversation history without calling AI", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () =>
-        Effect.succeed(
-          makeTraceDetail([
-            {
-              role: "assistant",
-              parts: [{ type: "tool_call", id: "call-weather", name: "get_weather", arguments: { city: "BCN" } }],
-            },
-            {
-              role: "tool",
-              parts: [{ type: "tool_call_response", id: "call-weather", response: "timeout error" }],
-            },
-          ]),
-        ),
-    })
-
-    const { calls, layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI should not be called for deterministic flaggers"),
-    })
-
-    const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "tool-call-errors" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
-      ),
-    )
-
-    expect(result).toEqual({ matched: true })
-    expect(calls.generate).toHaveLength(0)
-  })
-
   it("uses the LLM flagger for jailbreaking", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>

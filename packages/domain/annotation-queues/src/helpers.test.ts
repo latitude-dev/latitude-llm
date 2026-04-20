@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 import {
   annotationQueueItemStatus,
   annotationQueueItemStatusRankFromTimestamps,
-  matchesToolCallErrorsSystemQueue,
+  detectOutputSchemaValidationSystemQueue,
+  detectToolCallErrorsSystemQueue,
 } from "./helpers.ts"
 
 const d = (s: string) => new Date(s)
@@ -24,6 +25,17 @@ function toolResponse(id: string, response: unknown): TraceMessage {
   return {
     role: "tool",
     parts: [{ type: "tool_call_response", id, response }],
+  }
+}
+
+function makeOutputTrace(outputMessages: TraceDetail["outputMessages"]): TraceDetail {
+  return { outputMessages } as TraceDetail
+}
+
+function assistantText(content: string): TraceDetail["outputMessages"][number] {
+  return {
+    role: "assistant",
+    parts: [{ type: "text", content }],
   }
 }
 
@@ -49,140 +61,172 @@ describe("annotationQueueItemStatusRankFromTimestamps", () => {
   })
 })
 
-describe("matchesToolCallErrorsSystemQueue", () => {
-  it("matches failed tool result payloads in conversation history", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+describe("detectToolCallErrorsSystemQueue", () => {
+  it("matches failed tool result payloads and includes the tool name + error snippet", () => {
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { ok: false, error: "timeout" })]),
     )
 
-    expect(matched).toBe(true)
+    expect(result).toEqual({ matched: true, feedback: 'Tool "get_weather" returned error: timeout' })
   })
 
-  it("matches malformed tool interactions in conversation history", () => {
-    const matched = matchesToolCallErrorsSystemQueue(makeTrace([assistantToolCall("")]))
+  it("matches malformed tool interactions with empty tool_call id", () => {
+    const result = detectToolCallErrorsSystemQueue(makeTrace([assistantToolCall("")]))
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("Malformed tool call")
+      expect(result.feedback).toContain("get_weather")
+    }
   })
 
   it("does not match healthy tool interactions", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { temp: 22, condition: "sunny" })]),
     )
 
-    expect(matched).toBe(false)
+    expect(result).toEqual({ matched: false })
   })
 
   it("matches duplicated tool call ids", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), assistantToolCall("call-weather", "lookup_weather")]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("Duplicate tool_call id")
+      expect(result.feedback).toContain("lookup_weather")
+    }
   })
 
   it("matches tool calls with blank names after trimming", () => {
-    const matched = matchesToolCallErrorsSystemQueue(makeTrace([assistantToolCall("call-weather", "   ")]))
+    const result = detectToolCallErrorsSystemQueue(makeTrace([assistantToolCall("call-weather", "   ")]))
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("Malformed tool call")
+    }
   })
 
   it("matches tool responses that appear before any tool call", () => {
-    const matched = matchesToolCallErrorsSystemQueue(makeTrace([toolResponse("call-weather", { temp: 22 })]))
+    const result = detectToolCallErrorsSystemQueue(makeTrace([toolResponse("call-weather", { temp: 22 })]))
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("unknown tool_call id")
+    }
   })
 
   it("matches tool responses with unknown tool call ids", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-hotels", { temp: 22 })]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("unknown tool_call id")
+    }
   })
 
-  it("matches plain-string error responses", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+  it("matches plain-string error responses and quotes the string as the snippet", () => {
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", "BookingUnavailableError: no rooms available"),
       ]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe('Tool "get_weather" returned error: BookingUnavailableError: no rooms available')
+    }
   })
 
   it("matches stringified JSON responses with failure status", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", '{"status":"failed"}')]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain('Tool "get_weather" returned error')
+    }
   })
 
   it("matches explicit isError true responses", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { isError: true })]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe('Tool "get_weather" returned an error')
+    }
   })
 
   it("matches explicit success false responses", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { success: false })]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
   })
 
-  it("matches non-empty error fields", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
-      makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { error: { code: "timeout" } })]),
+  it("matches non-empty error object responses", () => {
+    const result = detectToolCallErrorsSystemQueue(
+      makeTrace([
+        assistantToolCall("call-weather"),
+        toolResponse("call-weather", { error: { code: "timeout", message: "upstream timeout" } }),
+      ]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain('Tool "get_weather" returned error: upstream timeout')
+    }
   })
 
   it("matches non-empty errors arrays", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { errors: [{ message: "timeout" }] }),
       ]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
   })
 
   it("matches nested array responses containing a failure", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", [{ ok: true }, { status: "error" }])]),
     )
 
-    expect(matched).toBe(true)
+    expect(result.matched).toBe(true)
   })
 
   it("does not match blank string responses", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", "   ")]),
     )
 
-    expect(matched).toBe(false)
+    expect(result).toEqual({ matched: false })
   })
 
   it("does not match responses with empty error fields", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { ok: true, error: "", errors: [], status: "success" }),
       ]),
     )
 
-    expect(matched).toBe(false)
+    expect(result).toEqual({ matched: false })
   })
 
   it("does not match multiple healthy tool call / response pairs", () => {
-    const matched = matchesToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsSystemQueue(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { temp: 22 }),
@@ -191,6 +235,58 @@ describe("matchesToolCallErrorsSystemQueue", () => {
       ]),
     )
 
-    expect(matched).toBe(false)
+    expect(result).toEqual({ matched: false })
+  })
+})
+
+describe("detectOutputSchemaValidationSystemQueue", () => {
+  it("does not match when the assistant output is valid JSON", () => {
+    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"a": 1, "b": 2}')]))
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("does not match when the assistant output is not JSON-looking", () => {
+    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText("Hello! The answer is 42.")]))
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("matches with the trailing-comma message when JSON is truncated after a comma", () => {
+    // Order matters: the trailing-comma heuristic runs before JSON.parse so its
+    // specific clustering message takes precedence over the generic parse-failure one.
+    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"a": 1,')]))
+
+    expect(result).toEqual({
+      matched: true,
+      feedback: "Assistant output ended with a trailing comma, suggesting truncated JSON",
+    })
+  })
+
+  it("matches with the unclosed-string message when JSON is truncated mid-string", () => {
+    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"msg": "hello')]))
+
+    expect(result).toEqual({
+      matched: true,
+      feedback: "Assistant output contains an unclosed JSON string, suggesting truncated output",
+    })
+  })
+
+  it("ignores escaped quotes when detecting unclosed strings", () => {
+    // The outer string is properly closed — the \" inside should not flip the balance.
+    const result = detectOutputSchemaValidationSystemQueue(
+      makeOutputTrace([assistantText('{"msg": "quoted \\"ok\\" value"}')]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("falls back to the generic parse-failure message when JSON is malformed but not a truncation pattern", () => {
+    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText("{not valid json}")]))
+
+    expect(result).toEqual({
+      matched: true,
+      feedback: "Assistant output failed JSON parse (malformed or truncated structured output)",
+    })
   })
 })
