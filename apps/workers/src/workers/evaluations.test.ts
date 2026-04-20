@@ -1,8 +1,5 @@
-import {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  evaluationAlignmentRefreshWorkflowId,
-  type WorkflowStarterShape,
-} from "@domain/queue"
+import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/evaluations"
+import type { WorkflowStarterShape } from "@domain/queue"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
@@ -50,7 +47,7 @@ describe("createEvaluationsWorker", () => {
           reason: "debounced-metric-refresh",
         },
         options: {
-          workflowId: evaluationAlignmentRefreshWorkflowId("evaluation-1"),
+          workflowId: `evaluations:alignment:evaluation-1`,
           signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
           signalArgs: [
             {

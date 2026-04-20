@@ -1,7 +1,13 @@
 import { inspect } from "node:util"
-import type { WorkflowStarterShape } from "@domain/queue"
+import type {
+  WorkflowDescription,
+  WorkflowExecutionStatus,
+  WorkflowQuerierShape,
+  WorkflowStarterShape,
+} from "@domain/queue"
 import { createLogger } from "@repo/observability"
-import { Client, Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
+import type { WorkflowExecutionStatusName } from "@temporalio/client"
+import { Client, Connection, WorkflowExecutionAlreadyStartedError, WorkflowNotFoundError } from "@temporalio/client"
 import { Data, Effect } from "effect"
 import type { TemporalConfig } from "./config.ts"
 
@@ -148,15 +154,81 @@ export const createTemporalClient = (config: TemporalConfig): Promise<Client> =>
   return Effect.runPromise(createTemporalClientEffect(config))
 }
 
+const mapWorkflowStatus = (name: WorkflowExecutionStatusName): WorkflowExecutionStatus => {
+  switch (name) {
+    case "RUNNING":
+      return "running"
+    case "COMPLETED":
+      return "completed"
+    case "FAILED":
+      return "failed"
+    case "CANCELLED":
+      return "canceled"
+    case "TERMINATED":
+      return "terminated"
+    case "CONTINUED_AS_NEW":
+      return "continued-as-new"
+    case "TIMED_OUT":
+      return "timed-out"
+    case "PAUSED":
+      return "paused"
+    default:
+      return "unknown"
+  }
+}
+
+export function createWorkflowQuerier(client: Client): WorkflowQuerierShape {
+  return {
+    describe: (workflowId) =>
+      Effect.promise(async (): Promise<WorkflowDescription | null> => {
+        try {
+          const description = await client.workflow.getHandle(workflowId).describe()
+
+          return {
+            status: mapWorkflowStatus(description.status.name),
+            runId: description.runId,
+            startTime: description.startTime,
+            closeTime: description.closeTime ?? null,
+          }
+        } catch (error) {
+          if (error instanceof WorkflowNotFoundError) {
+            return null
+          }
+          throw error
+        }
+      }),
+    query: <T>(workflowId: string, queryName: string) =>
+      Effect.promise(async (): Promise<T | null> => {
+        try {
+          return (await client.workflow.getHandle(workflowId).query<T, []>(queryName)) as T
+        } catch (error) {
+          if (error instanceof WorkflowNotFoundError) {
+            return null
+          }
+          throw error
+        }
+      }),
+  }
+}
+
 export function createWorkflowStarter(client: Client, config: TemporalConfig): WorkflowStarterShape {
   return {
     start: (workflow, input, options) =>
       Effect.promise(async () => {
         try {
+          // `workflowId` is the dedupe key (analogous to BullMQ's `dedupeKey`).
+          // FAIL makes a duplicate start against a *running* workflow raise
+          // `WorkflowExecutionAlreadyStartedError` deterministically, and
+          // ALLOW_DUPLICATE lets a start against a *closed* workflow open a
+          // fresh run (so retries and subsequent refresh cycles keep working).
+          // We log the duplicate-start case for observability and then rethrow
+          // — callers must never confuse a deduped call with a fresh start.
           const handle = await client.workflow.start(workflow, {
             workflowId: options.workflowId,
             taskQueue: config.taskQueue,
             args: [input],
+            workflowIdReusePolicy: "ALLOW_DUPLICATE",
+            workflowIdConflictPolicy: "FAIL",
           })
           logger.info("started workflow", {
             workflow,
@@ -169,13 +241,17 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
               workflow,
               workflowId: options.workflowId,
             })
-            return
           }
           throw error
         }
       }),
     signalWithStart: (workflow, input, options) =>
       Effect.promise(async () => {
+        // `signalWithStart` is idempotent against running workflows: Temporal
+        // delivers the signal to the existing run if one exists (the
+        // `USE_EXISTING` semantic is implicit for this RPC) and otherwise
+        // starts a new one. Workflow-internal handlers are responsible for
+        // coalescing/deduping rapid signals.
         const handle = await client.workflow.signalWithStart(workflow, {
           workflowId: options.workflowId,
           taskQueue: config.taskQueue,

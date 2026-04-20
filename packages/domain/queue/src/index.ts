@@ -13,15 +13,26 @@ export type TaskHandlers<T extends QueueName> = {
 }
 
 export type WorkflowRegistry = WR
-export {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  evaluationAlignmentJobWorkflowId,
-  evaluationAlignmentRefreshWorkflowId,
-  WORKFLOW_NAMES,
-} from "./workflow-registry.ts"
+export { WORKFLOW_NAMES } from "./workflow-registry.ts"
 export type WorkflowName = keyof WorkflowRegistry & string
 export type WorkflowInput<W extends WorkflowName> = WorkflowRegistry[W]
 
+/**
+ * Starts workflows by id. Workflow id is the dedupe key (analogous to
+ * BullMQ's `dedupeKey`) — Temporal guarantees that two actively running
+ * workflows with the same id are never possible.
+ *
+ * `start` fails loudly when a workflow with the same id is already running:
+ * the underlying Temporal error propagates so callers can't mistake a
+ * deduped call for a fresh start. Callers that may legitimately retry for
+ * the same id should either query workflow state first or catch and handle
+ * the already-running case explicitly.
+ *
+ * `signalWithStart` is idempotent against running workflows by design:
+ * Temporal delivers the signal to the existing run if one exists, otherwise
+ * it starts a new one. Coalescing rapid signals is the workflow's
+ * responsibility.
+ */
 export interface WorkflowStarterShape {
   readonly start: <W extends WorkflowName>(
     workflow: W,
@@ -41,6 +52,33 @@ export interface WorkflowStarterShape {
 
 export class WorkflowStarter extends ServiceMap.Service<WorkflowStarter, WorkflowStarterShape>()(
   "@domain/queue/WorkflowStarter",
+) {}
+
+export type WorkflowExecutionStatus =
+  | "running"
+  | "completed"
+  | "failed"
+  | "canceled"
+  | "terminated"
+  | "continued-as-new"
+  | "timed-out"
+  | "paused"
+  | "unknown"
+
+export type WorkflowDescription = {
+  readonly status: WorkflowExecutionStatus
+  readonly runId: string
+  readonly startTime: Date
+  readonly closeTime: Date | null
+}
+
+export interface WorkflowQuerierShape {
+  readonly describe: (workflowId: string) => Effect.Effect<WorkflowDescription | null>
+  readonly query: <T>(workflowId: string, queryName: string) => Effect.Effect<T | null>
+}
+
+export class WorkflowQuerier extends ServiceMap.Service<WorkflowQuerier, WorkflowQuerierShape>()(
+  "@domain/queue/WorkflowQuerier",
 ) {}
 
 export interface PublishOptions {

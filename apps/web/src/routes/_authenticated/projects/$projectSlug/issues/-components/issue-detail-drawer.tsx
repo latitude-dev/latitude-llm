@@ -410,23 +410,20 @@ export function IssueDetailDrawer({
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"
           >
-            {issue ? (
-              <IssueDrawerEvaluations
-                projectId={projectId}
-                issueId={issueId}
-                evaluations={issue.evaluations}
-                canMonitorIssue={issue.resolvedAt === null && issue.ignoredAt === null}
-              />
-            ) : (
-              <Skeleton className="h-24 w-full" />
-            )}
+            <IssueDrawerEvaluations
+              projectId={projectId}
+              issueId={issueId}
+              evaluations={issue?.evaluations ?? []}
+              canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+            />
           </DetailSection>
 
           <DetailSection
             icon={<Icon icon={TextAlignStartIcon} size="sm" />}
             label="Traces"
             defaultOpen
-            contentClassName="pl-0 max-h-none overflow-hidden flex flex-col"
+            className="gap-1"
+            contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
             <ProjectTracesTable
               data={traces}

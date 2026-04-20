@@ -204,8 +204,8 @@ export function AnnotationInput({
                   </button>
                 }
               >
-                Leave this empty and Latitude will automatically link your feedback to the most relevant issue. Pick one
-                manually only if you want to override that choice.
+                The system will cluster your feedback to the most relevant issue, or it will create a new one. You can
+                manually select an issue to override this.
               </Tooltip>
             </>
           )}

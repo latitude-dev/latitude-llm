@@ -1,9 +1,19 @@
+// Import from the `./alignment/workflow` subpath (not from `@domain/evaluations`)
+// so the Temporal workflow bundle doesn't pull in `browser.ts`, which
+// re-exports `helpers.ts` — which imports from `@domain/shared`'s barrel
+// and in turn loads `cache.ts` / `ServiceMap.Service`. The `Service` ctor
+// writes to `Error.stackTraceLimit`, forbidden in the Temporal workflow
+// sandbox. This subpath file is self-contained (constants + a type only).
+import {
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+  EVALUATION_ALIGNMENT_STATE_QUERY,
+  type EvaluationAlignmentWorkflowState,
+} from "@domain/evaluations/alignment/workflow"
 import {
   ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
   ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
 } from "@domain/evaluations/constants"
-import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/queue/workflow-registry"
-import { condition, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
+import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -28,8 +38,9 @@ type ScheduleRefreshSignalInput = {
 
 const scheduleRefreshSignal = defineSignal<[ScheduleRefreshSignalInput]>(EVALUATION_ALIGNMENT_REFRESH_SIGNAL)
 
+const workflowStateQuery = defineQuery<EvaluationAlignmentWorkflowState>(EVALUATION_ALIGNMENT_STATE_QUERY)
+
 const {
-  assertManualEvaluationRealignmentAllowed,
   collectEvaluationAlignmentExamples,
   evaluateIncrementalEvaluationDraft,
   evaluateBaselineEvaluationDraft,
@@ -38,40 +49,10 @@ const {
   loadEvaluationAlignmentState,
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
-  writeEvaluationAlignmentJobStatus,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
-  retry: {
-    ...defaultActivityRetryPolicy,
-    nonRetryableErrorTypes: ["EvaluationManualRealignmentRateLimitedError"],
-  },
+  retry: defaultActivityRetryPolicy,
 })
-
-const toFailurePayload = (error: unknown) => {
-  const maybeTag = (error as { _tag?: string } | null)?._tag
-
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-      code: maybeTag,
-    }
-  }
-
-  if (typeof error === "string") {
-    return {
-      message: error,
-      code: maybeTag,
-    }
-  }
-
-  return {
-    message: "Evaluation alignment failed",
-    code: maybeTag,
-  }
-}
-
-const shouldTrackJobStatus = (input: EvaluationAlignmentWorkflowInput): boolean =>
-  input.reason === "initial-generation" || input.reason === "manual-realignment"
 
 const runFullAlignment = async (
   input: EvaluationAlignmentWorkflowInput,
@@ -81,133 +62,90 @@ const runFullAlignment = async (
   readonly positiveExampleCount: number
   readonly negativeExampleCount: number
 }> => {
-  const trackJobStatus = shouldTrackJobStatus(input)
-
-  if (trackJobStatus) {
-    await writeEvaluationAlignmentJobStatus({
-      jobId: input.jobId,
-      status: "running",
-      evaluationId: input.evaluationId ?? null,
-    })
-  }
-
-  try {
-    if (input.reason === "manual-realignment" && input.evaluationId) {
-      await assertManualEvaluationRealignmentAllowed({
+  const existingState = input.evaluationId
+    ? await loadEvaluationAlignmentState({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        issueId: input.issueId,
         evaluationId: input.evaluationId,
       })
-    }
+    : null
 
-    const existingState = input.evaluationId
-      ? await loadEvaluationAlignmentState({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          issueId: input.issueId,
-          evaluationId: input.evaluationId,
-        })
-      : null
+  const collected = await collectEvaluationAlignmentExamples({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+  })
 
-    const collected = await collectEvaluationAlignmentExamples({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      issueId: input.issueId,
-    })
+  const baselineDraft = await generateBaselineEvaluationDraft({
+    jobId: input.jobId,
+    issueName: collected.issueName,
+    issueDescription: collected.issueDescription,
+    positiveExamples: collected.positiveExamples,
+    negativeExamples: collected.negativeExamples,
+  })
 
-    const baselineDraft = await generateBaselineEvaluationDraft({
-      jobId: input.jobId,
-      issueName: collected.issueName,
-      issueDescription: collected.issueDescription,
-      positiveExamples: collected.positiveExamples,
-      negativeExamples: collected.negativeExamples,
-    })
+  const optimizedDraft = await optimizeEvaluationDraft({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: input.evaluationId ?? null,
+    jobId: input.jobId,
+    draft: baselineDraft,
+    issueName: collected.issueName,
+    issueDescription: collected.issueDescription,
+    positiveExamples: collected.positiveExamples,
+    negativeExamples: collected.negativeExamples,
+  })
 
-    const optimizedDraft = await optimizeEvaluationDraft({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      issueId: input.issueId,
-      evaluationId: input.evaluationId ?? null,
-      jobId: input.jobId,
-      draft: baselineDraft,
-      issueName: collected.issueName,
-      issueDescription: collected.issueDescription,
-      positiveExamples: collected.positiveExamples,
-      negativeExamples: collected.negativeExamples,
-    })
+  const baselineEvaluation = await evaluateBaselineEvaluationDraft({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: input.evaluationId ?? null,
+    jobId: input.jobId,
+    issueName: collected.issueName,
+    issueDescription: collected.issueDescription,
+    draft: optimizedDraft,
+    positiveExamples: collected.positiveExamples,
+    negativeExamples: collected.negativeExamples,
+  })
 
-    const baselineEvaluation = await evaluateBaselineEvaluationDraft({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      issueId: input.issueId,
-      evaluationId: input.evaluationId ?? null,
-      jobId: input.jobId,
-      issueName: collected.issueName,
-      issueDescription: collected.issueDescription,
-      draft: optimizedDraft,
-      positiveExamples: collected.positiveExamples,
-      negativeExamples: collected.negativeExamples,
-    })
-
-    const details = existingState
-      ? {
-          name: existingState.name,
-          description: existingState.description,
-        }
-      : await generateEvaluationDetails({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          issueId: input.issueId,
-          evaluationId: input.evaluationId ?? null,
-          jobId: input.jobId,
-          evaluationHash: optimizedDraft.evaluationHash,
-          issueName: collected.issueName,
-          issueDescription: collected.issueDescription,
-          script: optimizedDraft.script,
-        })
-
-    const persisted = await persistEvaluationAlignmentResult({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      issueId: input.issueId,
-      evaluationId: input.evaluationId ?? null,
-      script: optimizedDraft.script,
-      evaluationHash: optimizedDraft.evaluationHash,
-      confusionMatrix: baselineEvaluation.confusionMatrix,
-      trigger: optimizedDraft.trigger,
-      name: details.name,
-      description: details.description,
-    })
-
-    if (trackJobStatus) {
-      await writeEvaluationAlignmentJobStatus({
-        jobId: input.jobId,
-        status: "completed",
-        evaluationId: persisted.evaluationId,
-      })
-    }
-
-    return {
-      jobId: input.jobId,
-      evaluationId: persisted.evaluationId,
-      positiveExampleCount: collected.positiveExamples.length,
-      negativeExampleCount: collected.negativeExamples.length,
-    }
-  } catch (error) {
-    const failure = toFailurePayload(error)
-
-    if (trackJobStatus) {
-      try {
-        await writeEvaluationAlignmentJobStatus({
-          jobId: input.jobId,
-          status: "failed",
-          evaluationId: input.evaluationId ?? null,
-          error: failure,
-        })
-      } catch {
-        // Preserve the original workflow error if status reporting also fails.
+  const details = existingState
+    ? {
+        name: existingState.name,
+        description: existingState.description,
       }
-    }
+    : await generateEvaluationDetails({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        issueId: input.issueId,
+        evaluationId: input.evaluationId ?? null,
+        jobId: input.jobId,
+        evaluationHash: optimizedDraft.evaluationHash,
+        issueName: collected.issueName,
+        issueDescription: collected.issueDescription,
+        script: optimizedDraft.script,
+      })
 
-    throw error
+  const persisted = await persistEvaluationAlignmentResult({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: input.evaluationId ?? null,
+    script: optimizedDraft.script,
+    evaluationHash: optimizedDraft.evaluationHash,
+    confusionMatrix: baselineEvaluation.confusionMatrix,
+    trigger: optimizedDraft.trigger,
+    name: details.name,
+    description: details.description,
+  })
+
+  return {
+    jobId: input.jobId,
+    evaluationId: persisted.evaluationId,
+    positiveExampleCount: collected.positiveExamples.length,
+    negativeExampleCount: collected.negativeExamples.length,
   }
 }
 
@@ -285,6 +223,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
   let pendingMetricRefreshAtMs: number | null = null
   let pendingFullRealignmentAtMs: number | null = null
   let pendingManualJobId: string | null = null
+  let currentManualJobId: string | null = null
   let scheduleRevision = 0
 
   const requestRefresh = (payload: ScheduleRefreshSignalInput) => {
@@ -316,6 +255,15 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
   setHandler(scheduleRefreshSignal, (payload) => {
     requestRefresh(payload)
   })
+  setHandler(
+    workflowStateQuery,
+    (): EvaluationAlignmentWorkflowState => ({
+      manualRealignment: {
+        isBusy: currentManualJobId !== null || pendingManualJobId !== null,
+        currentJobId: currentManualJobId ?? pendingManualJobId,
+      },
+    }),
+  )
   if (input.reason !== "initial-generation") {
     requestRefresh({
       reason: input.reason,
@@ -329,6 +277,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
     if (pendingManualJobId !== null) {
       const manualJobId = pendingManualJobId
       pendingManualJobId = null
+      currentManualJobId = manualJobId
 
       try {
         await runFullAlignment({
@@ -339,7 +288,9 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
         pendingMetricRefreshAtMs = null
         pendingFullRealignmentAtMs = null
       } catch {
-        // Keep the refresh loop alive; manual callers receive the failed job status.
+        // Keep the refresh loop alive; the workflow query exposes the final state.
+      } finally {
+        currentManualJobId = null
       }
       continue
     }

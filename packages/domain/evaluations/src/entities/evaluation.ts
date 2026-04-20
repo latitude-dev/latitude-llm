@@ -1,12 +1,7 @@
 import { cuidSchema, evaluationIdSchema, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
-import {
-  DEFAULT_EVALUATION_SAMPLING,
-  EVALUATION_ALIGNMENT_JOB_STATUSES,
-  EVALUATION_NAME_MAX_LENGTH,
-  EVALUATION_TURNS,
-} from "../constants.ts"
+import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // EvaluationTrigger
@@ -92,52 +87,6 @@ export function emptyEvaluationAlignment(evaluationHash: string): EvaluationAlig
     },
   }
 }
-
-// ---------------------------------------------------------------------------
-// Evaluation alignment job status
-// ---------------------------------------------------------------------------
-
-export const evaluationAlignmentJobIdSchema = z.string().min(1)
-export type EvaluationAlignmentJobId = z.infer<typeof evaluationAlignmentJobIdSchema>
-
-export const evaluationAlignmentJobStatusStateSchema = z.enum(EVALUATION_ALIGNMENT_JOB_STATUSES)
-export type EvaluationAlignmentJobStatusState = z.infer<typeof evaluationAlignmentJobStatusStateSchema>
-
-export const evaluationAlignmentJobErrorSchema = z.object({
-  message: z.string().min(1),
-  code: z.string().min(1).optional(),
-})
-export type EvaluationAlignmentJobError = z.infer<typeof evaluationAlignmentJobErrorSchema>
-
-const baseEvaluationAlignmentJobStatusSchema = z.object({
-  jobId: evaluationAlignmentJobIdSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-
-export const evaluationAlignmentJobStatusSchema = z.discriminatedUnion("status", [
-  baseEvaluationAlignmentJobStatusSchema.extend({
-    status: z.literal("pending"),
-    evaluationId: z.null(),
-    error: z.null(),
-  }),
-  baseEvaluationAlignmentJobStatusSchema.extend({
-    status: z.literal("running"),
-    evaluationId: evaluationIdSchema.nullable(),
-    error: z.null(),
-  }),
-  baseEvaluationAlignmentJobStatusSchema.extend({
-    status: z.literal("completed"),
-    evaluationId: evaluationIdSchema,
-    error: z.null(),
-  }),
-  baseEvaluationAlignmentJobStatusSchema.extend({
-    status: z.literal("failed"),
-    evaluationId: evaluationIdSchema.nullable(),
-    error: evaluationAlignmentJobErrorSchema,
-  }),
-])
-export type EvaluationAlignmentJobStatus = z.infer<typeof evaluationAlignmentJobStatusSchema>
 
 // ---------------------------------------------------------------------------
 // Evaluation entity

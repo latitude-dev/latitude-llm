@@ -23,6 +23,20 @@ type BedrockGeographyPrefix = "eu" | "us" | "apac"
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
+/**
+ * Bedrock vendor families that ship with cross-region inference (CRI)
+ * profiles — only these get rewritten to `us.*` / `eu.*` / `apac.*` by the
+ * resolver. Every other vendor's model ID passes through unchanged, because
+ * prepending a geography prefix to a foundation-only model (e.g. MiniMax)
+ * produces an identifier AWS rejects with "The provided model identifier
+ * is invalid."
+ *
+ * Each entry matches on the vendor segment (everything before the first `.`
+ * in the geography-less model ID). Add new vendor slugs here as AWS expands
+ * CRI coverage.
+ */
+const BEDROCK_VENDORS_WITH_CROSS_REGION_INFERENCE = new Set<string>(["amazon", "anthropic", "meta"])
+
 const bedrockGeographyPrefixForAwsRegion = (region: string): BedrockGeographyPrefix => {
   if (region.startsWith("eu-")) {
     return "eu"
@@ -41,7 +55,9 @@ const bedrockGeographyPrefixForAwsRegion = (region: string): BedrockGeographyPre
 
 /**
  * Bedrock cross-region inference profiles are geography-scoped (`eu.*`, `us.*`, `apac.*`).
- * Keep `global.*` IDs intact and rewrite foundation model IDs to the current AWS geography.
+ * Keep `global.*` IDs intact, rewrite IDs from CRI-enabled vendors to the
+ * current AWS geography, and pass every other vendor's model ID through raw
+ * (foundation-only models break when wrapped with a geography prefix).
  */
 const resolveBedrockModelId = (model: string, region: string): string => {
   if (model.startsWith("global.")) {
@@ -51,6 +67,16 @@ const resolveBedrockModelId = (model: string, region: string): string => {
   const match = model.match(bedrockScopedModelIdPattern)
   if (!match) {
     return model
+  }
+
+  // `match[1]` is the geography-less ID (e.g. `anthropic.claude-sonnet-4-…`
+  // or `minimax.minimax-m2.5`), so its first dot-segment is the vendor
+  // family. Only CRI-enabled vendors get the geography prefix; everyone
+  // else passes through raw. This also strips a bogus `us.` / `eu.` /
+  // `apac.` prefix supplied by a caller for a non-CRI vendor.
+  const vendor = match[1].split(".")[0] ?? ""
+  if (!BEDROCK_VENDORS_WITH_CROSS_REGION_INFERENCE.has(vendor)) {
+    return match[1]
   }
 
   return `${bedrockGeographyPrefixForAwsRegion(region)}.${match[1]}`

@@ -1,37 +1,21 @@
 import {
-  buildEvaluationAlignmentJobStatus,
   deriveEvaluationAlignmentMetrics,
-  EVALUATION_JOB_STATUS_TTL_SECONDS,
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
   type Evaluation,
-  type EvaluationAlignmentJobStatus,
   EvaluationNotFoundError,
   EvaluationRepository,
-  evaluationAlignmentJobStatusKey,
-  parseStoredEvaluationAlignmentJobStatus,
+  isActiveEvaluation,
   softDeleteEvaluation,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
-import {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  evaluationAlignmentJobWorkflowId,
-  evaluationAlignmentRefreshWorkflowId,
-} from "@domain/queue"
-import {
-  BadRequestError,
-  EvaluationId,
-  generateId,
-  IssueId,
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-} from "@domain/shared"
+import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { EvaluationRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getOutboxWriter, getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getOutboxWriter, getPostgresClient, getWorkflowQuerier, getWorkflowStarter } from "../../server/clients.ts"
 
 const evaluationAlignmentJobInputSchema = z.object({
   projectId: z.string(),
@@ -50,58 +34,15 @@ const softDeleteEvaluationInputSchema = z.object({
   evaluationId: z.string(),
 })
 
-const evaluationAlignmentJobStatusInputSchema = z.object({
-  jobId: z.string().min(1),
+const issueAlignmentStateInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
 })
 
-const toFailurePayload = (error: unknown): { readonly message: string; readonly code?: string } => {
-  const maybeTag = (error as { _tag?: string } | null)?._tag
-
-  if (error instanceof Error) {
-    return maybeTag ? { message: error.message, code: maybeTag } : { message: error.message }
-  }
-
-  if (typeof error === "string") {
-    return maybeTag ? { message: error, code: maybeTag } : { message: error }
-  }
-
-  return maybeTag
-    ? { message: "Evaluation alignment failed to start", code: maybeTag }
-    : { message: "Evaluation alignment failed to start" }
-}
-
-const toJobStatusRecord = (status: EvaluationAlignmentJobStatus) => ({
-  jobId: status.jobId,
-  status: status.status,
-  evaluationId: status.evaluationId,
-  error: status.error,
-  createdAt: status.createdAt.toISOString(),
-  updatedAt: status.updatedAt.toISOString(),
-})
-
-export type EvaluationAlignmentJobStatusRecord = ReturnType<typeof toJobStatusRecord>
-
-const writeJobStatus = async (input: {
-  readonly jobId: string
-  readonly status: EvaluationAlignmentJobStatus["status"]
-  readonly evaluationId?: string | null
-  readonly error?: EvaluationAlignmentJobStatus["error"] | null
-}): Promise<EvaluationAlignmentJobStatusRecord> => {
-  const redis = getRedisClient()
-  const key = evaluationAlignmentJobStatusKey(input.jobId)
-  const existingStatus = parseStoredEvaluationAlignmentJobStatus(await redis.get(key))
-  const nextStatus = buildEvaluationAlignmentJobStatus({
-    existingStatus,
-    jobId: input.jobId,
-    status: input.status,
-    evaluationId: input.evaluationId,
-    error: input.error,
-  })
-
-  await redis.set(key, JSON.stringify(nextStatus), "EX", EVALUATION_JOB_STATUS_TTL_SECONDS)
-
-  return toJobStatusRecord(nextStatus)
-}
+export type IssueAlignmentStateRecord =
+  | { readonly kind: "idle" }
+  | { readonly kind: "generating" }
+  | { readonly kind: "realigning"; readonly evaluationId: string }
 
 export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   id: evaluation.id,
@@ -125,13 +66,15 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
 
 export const startEvaluationAlignment = createServerFn({ method: "POST" })
   .inputValidator(evaluationAlignmentJobInputSchema)
-  .handler(async ({ data }): Promise<EvaluationAlignmentJobStatusRecord> => {
+  .handler(async ({ data }): Promise<void> => {
     const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
+    const workflowQuerier = await getWorkflowQuerier()
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
+    const workflowId = `evaluations:alignment:${issueId}`
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -146,37 +89,36 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
       }).pipe(withPostgres(IssueRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
-    const pendingStatus = await writeJobStatus({
-      jobId,
-      status: "pending",
-    })
-
-    try {
-      await Effect.runPromise(
-        workflowStarter
-          .start(
-            "evaluationAlignmentWorkflow",
-            {
-              organizationId,
-              projectId,
-              issueId,
-              jobId,
-              reason: "initial-generation",
-            },
-            {
-              workflowId: evaluationAlignmentJobWorkflowId(jobId),
-            },
-          )
-          .pipe(withTracing),
-      )
-    } catch (error) {
-      await writeJobStatus({
-        jobId,
-        status: "failed",
-        error: toFailurePayload(error),
+    // Pre-check: reject with a friendly BadRequestError when a generation
+    // workflow is already running for this issue. Temporal's workflow-id
+    // dedupe (`workflowIdConflictPolicy: "FAIL"`) is still the ultimate
+    // safety net — if a second request slips through between this describe
+    // and the start below, `workflowStarter.start` propagates Temporal's
+    // `WorkflowExecutionAlreadyStartedError` so the outbox write is never
+    // reached and no duplicate kickoff occurs. This pre-check exists purely
+    // to surface a readable message to the UI.
+    const existingDescription = await Effect.runPromise(workflowQuerier.describe(workflowId))
+    if (existingDescription?.status === "running") {
+      throw new BadRequestError({
+        message: "An evaluation is already being generated for this issue",
       })
-      throw error
     }
+
+    await Effect.runPromise(
+      workflowStarter
+        .start(
+          "evaluationAlignmentWorkflow",
+          {
+            organizationId,
+            projectId,
+            issueId,
+            jobId,
+            reason: "initial-generation",
+          },
+          { workflowId },
+        )
+        .pipe(withTracing),
+    )
 
     const outboxWriter = getOutboxWriter()
     await Effect.runPromise(
@@ -196,37 +138,19 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
         })
         .pipe(withTracing),
     )
-
-    return pendingStatus
-  })
-
-export const getEvaluationAlignmentJobStatus = createServerFn({ method: "GET" })
-  .inputValidator(evaluationAlignmentJobStatusInputSchema)
-  .handler(async ({ data }): Promise<EvaluationAlignmentJobStatusRecord> => {
-    await requireSession()
-
-    const redis = getRedisClient()
-    const status = parseStoredEvaluationAlignmentJobStatus(await redis.get(evaluationAlignmentJobStatusKey(data.jobId)))
-
-    if (!status) {
-      throw new NotFoundError({
-        entity: "Evaluation alignment job",
-        id: data.jobId,
-      })
-    }
-
-    return toJobStatusRecord(status)
   })
 
 export const triggerManualEvaluationRealignment = createServerFn({ method: "POST" })
   .inputValidator(manualRealignmentInputSchema)
-  .handler(async ({ data }): Promise<EvaluationAlignmentJobStatusRecord> => {
+  .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
+    const workflowQuerier = await getWorkflowQuerier()
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
+    const workflowId = `evaluations:alignment:${data.evaluationId}`
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -247,44 +171,89 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
-    const pendingStatus = await writeJobStatus({
-      jobId,
-      status: "pending",
-    })
-
-    try {
-      await Effect.runPromise(
-        workflowStarter
-          .signalWithStart(
-            "evaluationAlignmentWorkflow",
-            {
-              organizationId,
-              projectId,
-              issueId,
-              evaluationId: data.evaluationId,
-              jobId,
-              refreshLoop: true,
-              reason: "manual-realignment",
-            },
-            {
-              workflowId: evaluationAlignmentRefreshWorkflowId(data.evaluationId),
-              signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-              signalArgs: [{ reason: "manual-realignment", jobId }],
-            },
-          )
-          .pipe(withTracing),
-      )
-    } catch (error) {
-      await writeJobStatus({
-        jobId,
-        status: "failed",
-        evaluationId: data.evaluationId,
-        error: toFailurePayload(error),
+    // Pre-check: reject with a friendly BadRequestError when a refresh-loop
+    // workflow is already running for this evaluation. The underlying
+    // `signalWithStart` is idempotent (Temporal delivers the signal to the
+    // existing run), but the UI contract here is "one manual realignment
+    // at a time per evaluation" — so we surface an explicit error instead
+    // of silently coalescing a second click into the in-flight run.
+    const existingDescription = await Effect.runPromise(workflowQuerier.describe(workflowId))
+    if (existingDescription?.status === "running") {
+      throw new BadRequestError({
+        message: "This evaluation is already being realigned",
       })
-      throw error
     }
 
-    return pendingStatus
+    await Effect.runPromise(
+      workflowStarter
+        .signalWithStart(
+          "evaluationAlignmentWorkflow",
+          {
+            organizationId,
+            projectId,
+            issueId,
+            evaluationId: data.evaluationId,
+            jobId,
+            refreshLoop: true,
+            reason: "manual-realignment",
+          },
+          {
+            workflowId,
+            signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+            signalArgs: [{ reason: "manual-realignment", jobId }],
+          },
+        )
+        .pipe(withTracing),
+    )
+  })
+
+export const getIssueAlignmentState = createServerFn({ method: "GET" })
+  .inputValidator(issueAlignmentStateInputSchema)
+  .handler(async ({ data }): Promise<IssueAlignmentStateRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const workflowQuerier = await getWorkflowQuerier()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    const initialDescription = await Effect.runPromise(workflowQuerier.describe(`evaluations:alignment:${issueId}`))
+
+    if (initialDescription?.status === "running") {
+      return { kind: "generating" }
+    }
+
+    const activeEvaluations = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationRepository
+        const page = yield* repository.listByIssueId({
+          projectId,
+          issueId,
+          options: { lifecycle: "active" },
+        })
+        return page.items.filter(isActiveEvaluation)
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
+    )
+
+    for (const evaluation of activeEvaluations) {
+      // We rely on `describe()` only (metadata-only RPC, no history replay)
+      // and treat any running refresh-loop workflow as "realigning". We
+      // deliberately avoid `query()` here: querying a *closed* workflow
+      // asks the server to replay its history via a worker, and if that
+      // replay can't complete (manual termination mid-run, no worker able
+      // to replay, etc.) the query hangs the whole request indefinitely.
+      // The trade-off: an idle-but-alive refresh loop shows as "realigning"
+      // until it exits — acceptable since the loop is short-lived between
+      // debounced refresh bursts, and the UI can poll again.
+      const description = await Effect.runPromise(workflowQuerier.describe(`evaluations:alignment:${evaluation.id}`))
+      if (description?.status === "running") {
+        return {
+          kind: "realigning",
+          evaluationId: evaluation.id,
+        }
+      }
+    }
+
+    return { kind: "idle" }
   })
 
 export const softDeleteIssueEvaluation = createServerFn({ method: "POST" })

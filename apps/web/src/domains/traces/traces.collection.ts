@@ -80,6 +80,7 @@ export function useTracesCount({ projectId, filters }: { readonly projectId: str
     queryKey: ["traces-count", projectId, filters],
     queryFn: () => countTracesByProject({ data: { projectId, filters } }),
     staleTime: 30_000,
+    enabled: projectId.length > 0,
   })
 
   return { totalCount, isLoading }

@@ -1,16 +1,7 @@
-import { BadRequestError, deterministicSampling, type ResolvedSettings } from "@domain/shared"
-import {
-  ALIGNMENT_MCC_TOLERANCE,
-  EVALUATION_ALIGNMENT_JOB_KEY_PREFIX,
-  EVALUATION_NAME_MAX_LENGTH,
-} from "./constants.ts"
-import type {
-  ConfusionMatrix,
-  Evaluation,
-  EvaluationAlignmentJobError,
-  EvaluationAlignmentJobStatus,
-} from "./entities/evaluation.ts"
-import { evaluationAlignmentJobStatusSchema, isPausedEvaluation } from "./entities/evaluation.ts"
+import { deterministicSampling, type ResolvedSettings } from "@domain/shared"
+import { ALIGNMENT_MCC_TOLERANCE, EVALUATION_NAME_MAX_LENGTH } from "./constants.ts"
+import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
+import { isPausedEvaluation } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import type { PublishLiveEvaluationExecuteInput } from "./ports/live-evaluation-queue-publisher.ts"
 
@@ -450,87 +441,6 @@ export const decideAlignmentRefreshStrategy = (input: {
     previousMatthewsCorrelationCoefficient,
     nextMatthewsCorrelationCoefficient,
     matthewsCorrelationCoefficientDrop,
-  }
-}
-
-export const evaluationAlignmentJobStatusKey = (jobId: string): string =>
-  `${EVALUATION_ALIGNMENT_JOB_KEY_PREFIX}:${jobId}`
-
-export const parseStoredEvaluationAlignmentJobStatus = (value: string | null): EvaluationAlignmentJobStatus | null => {
-  if (!value) {
-    return null
-  }
-
-  try {
-    const parsed = JSON.parse(value) as {
-      readonly createdAt?: string
-      readonly updatedAt?: string
-      readonly [key: string]: unknown
-    }
-
-    if (typeof parsed.createdAt !== "string" || typeof parsed.updatedAt !== "string") {
-      return null
-    }
-
-    return evaluationAlignmentJobStatusSchema.parse({
-      ...parsed,
-      createdAt: new Date(parsed.createdAt),
-      updatedAt: new Date(parsed.updatedAt),
-    })
-  } catch {
-    return null
-  }
-}
-
-export const buildEvaluationAlignmentJobStatus = (input: {
-  readonly existingStatus: EvaluationAlignmentJobStatus | null
-  readonly jobId: string
-  readonly status: EvaluationAlignmentJobStatus["status"]
-  readonly evaluationId: string | null | undefined
-  readonly error: EvaluationAlignmentJobError | null | undefined
-}): EvaluationAlignmentJobStatus => {
-  const now = new Date()
-  const base = {
-    jobId: input.jobId,
-    createdAt: input.existingStatus?.createdAt ?? now,
-    updatedAt: now,
-  }
-
-  switch (input.status) {
-    case "pending":
-      return evaluationAlignmentJobStatusSchema.parse({
-        ...base,
-        status: "pending",
-        evaluationId: null,
-        error: null,
-      })
-    case "running":
-      return evaluationAlignmentJobStatusSchema.parse({
-        ...base,
-        status: "running",
-        evaluationId: input.evaluationId ?? null,
-        error: null,
-      })
-    case "completed":
-      if (!input.evaluationId) {
-        throw new BadRequestError({
-          message: "Completed evaluation-alignment status requires an evaluationId",
-        })
-      }
-
-      return evaluationAlignmentJobStatusSchema.parse({
-        ...base,
-        status: "completed",
-        evaluationId: input.evaluationId,
-        error: null,
-      })
-    case "failed":
-      return evaluationAlignmentJobStatusSchema.parse({
-        ...base,
-        status: "failed",
-        evaluationId: input.evaluationId ?? null,
-        error: input.error ?? { message: "Evaluation alignment failed" },
-      })
   }
 }
 
