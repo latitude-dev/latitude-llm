@@ -1,5 +1,6 @@
 import { use, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
+import rehypeHighlight from "rehype-highlight"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
@@ -11,6 +12,17 @@ import { JsonContent } from "./json-content.tsx"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
 const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
+
+// `rehype-highlight` only tokenizes `<code>` elements that carry a
+// `language-*` class (i.e. fences with an explicit language); it leaves
+// prose and unknown-language fences untouched. `sourceMappedTextPlugin`
+// still runs afterwards on non-code text — code-fence text has no source
+// position to begin with (remark-to-hast limitation), so highlighting it
+// doesn't change annotation behavior there.
+//
+// Typed as a mutable tuple because react-markdown's `PluggableList` rejects
+// `readonly` tuples (no covariance through `as const`).
+const rehypeHighlightPlugin: [typeof rehypeHighlight, { detect: false }] = [rehypeHighlight, { detect: false }]
 
 // Route Markdown code fences through the same shell as JsonContent so whole-
 // part JSON and inline ```...``` blocks share one visual treatment.
@@ -92,7 +104,7 @@ export function MarkdownContent({
     <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
       <ReactMarkdown
         remarkPlugins={[...remarkPlugins]}
-        rehypePlugins={[sourceMappedTextPlugin(highlights)]}
+        rehypePlugins={[rehypeHighlightPlugin, sourceMappedTextPlugin(highlights)]}
         components={markdownComponents}
       >
         {content}

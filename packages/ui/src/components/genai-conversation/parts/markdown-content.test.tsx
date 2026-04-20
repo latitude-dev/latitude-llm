@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest"
 
 import { LARGE_MARKDOWN_CONTENT_THRESHOLD, MarkdownContent } from "./markdown-content.tsx"
 
+/** Strip HTML tags and decode the handful of entities we actually produce. */
+function textContentOf(markup: string): string {
+  return markup
+    .replace(/<[^>]+>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x27;/g, "'")
+}
+
 describe("MarkdownContent", () => {
   it("renders markdown normally for smaller content", () => {
     const markup = renderToStaticMarkup(<MarkdownContent content="**bold**" />)
@@ -54,7 +65,9 @@ describe("MarkdownContent", () => {
     expect(markup).toContain('data-content-type="json"')
     expect(markup).toContain("data-source-start")
     expect(markup).toContain("data-source-end")
-    expect(markup).toContain("&quot;hello&quot;")
+    // Concatenated text content must equal the original source verbatim —
+    // this is the invariant annotation offsets depend on.
+    expect(textContentOf(markup)).toBe(json)
     // Must NOT go through Markdown: no <p>, no <strong>.
     expect(markup).not.toContain("<p>")
   })
@@ -64,16 +77,52 @@ describe("MarkdownContent", () => {
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
 
     expect(markup).toContain('data-content-type="json"')
-    expect(markup).toContain("[1,2,3]")
+    expect(textContentOf(markup)).toBe(json)
   })
 
   it("renders verbatim: JSON offsets index into the original content", () => {
     const json = '{ "a": 1 }'
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
 
-    // Single unhighlighted span should cover the whole content range 0..length.
+    // Offsets start at 0 and the final segment reaches the full content length
+    // (with syntax highlighting the content is split into tokens, but together
+    // they cover the whole range).
     expect(markup).toContain(`data-source-start="0"`)
     expect(markup).toContain(`data-source-end="${json.length}"`)
+  })
+
+  it("applies JSON syntax highlighting to JsonContent", () => {
+    const json = '{"k":"v","n":42,"b":true}'
+    const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
+
+    // lowlight emits `hljs-attr` for JSON keys, `hljs-string` for strings,
+    // `hljs-number` for numbers, `hljs-literal` for true/false/null.
+    expect(markup).toContain("hljs-attr")
+    expect(markup).toContain("hljs-string")
+    expect(markup).toContain("hljs-number")
+    expect(markup).toContain("hljs-literal")
+  })
+
+  it("preserves source-offset coverage through the full JSON after tokenization", () => {
+    const json = '{"key":"value"}'
+    const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
+
+    // All source offsets together should cover the full content: first starts
+    // at 0 and the last one ends at content.length.
+    const starts = [...markup.matchAll(/data-source-start="(\d+)"/g)].map((m) => Number(m[1]))
+    const ends = [...markup.matchAll(/data-source-end="(\d+)"/g)].map((m) => Number(m[1]))
+    expect(Math.min(...starts)).toBe(0)
+    expect(Math.max(...ends)).toBe(json.length)
+  })
+
+  it("applies syntax highlighting to Markdown code fences", () => {
+    const fenced = "```js\nconst x = 1\n```"
+    const markup = renderToStaticMarkup(<MarkdownContent content={fenced} />)
+
+    // `rehype-highlight` adds the `hljs` class to the code element plus token
+    // classes for identifiers and numbers in the JS grammar.
+    expect(markup).toMatch(/class="[^"]*\bhljs\b/)
+    expect(markup).toMatch(/class="[^"]*hljs-(keyword|number|variable|title)/)
   })
 
   it("does not route JSON-looking-but-invalid content to JsonContent", () => {

@@ -1,0 +1,142 @@
+/*
+ * Syntax highlighting theme for highlight.js / lowlight classes.
+ *
+ * Applied to tokens produced by:
+ *   - `rehype-highlight` on Markdown code fences (wired in MarkdownContent)
+ *   - the direct `lowlight.highlight` call in JsonContent
+ *
+ * Palette is intentionally minimal — enough distinct hues to make JSON and
+ * common languages readable without adding a new design dimension. Uses
+ * hsl literals rather than design tokens so the theme is self-contained.
+ */
+
+/* Keys, identifiers, tags, attributes */
+.hljs-attr,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-variable,
+.hljs-template-variable {
+  color: hsl(220, 70%, 45%);
+}
+
+.dark .hljs-attr,
+.dark .hljs-name,
+.dark .hljs-selector-tag,
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: hsl(210, 80%, 72%);
+}
+
+/* String literals */
+.hljs-string,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-template-tag,
+.hljs-meta-string {
+  color: hsl(10, 70%, 42%);
+}
+
+.dark .hljs-string,
+.dark .hljs-attribute,
+.dark .hljs-symbol,
+.dark .hljs-template-tag,
+.dark .hljs-meta-string {
+  color: hsl(15, 80%, 72%);
+}
+
+/* Numbers, booleans, null */
+.hljs-number,
+.hljs-literal,
+.hljs-built_in,
+.hljs-type {
+  color: hsl(275, 55%, 50%);
+}
+
+.dark .hljs-number,
+.dark .hljs-literal,
+.dark .hljs-built_in,
+.dark .hljs-type {
+  color: hsl(285, 65%, 78%);
+}
+
+/* Keywords, control flow */
+.hljs-keyword,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-meta-keyword,
+.hljs-doctag {
+  color: hsl(330, 60%, 48%);
+  font-weight: 500;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-class,
+.dark .hljs-selector-id,
+.dark .hljs-meta-keyword,
+.dark .hljs-doctag {
+  color: hsl(325, 70%, 78%);
+}
+
+/* Comments */
+.hljs-comment,
+.hljs-quote {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+/* Titles, function names, class names */
+.hljs-title,
+.hljs-section,
+.hljs-class .hljs-title,
+.hljs-function .hljs-title {
+  color: hsl(30, 75%, 40%);
+}
+
+.dark .hljs-title,
+.dark .hljs-section,
+.dark .hljs-class .hljs-title,
+.dark .hljs-function .hljs-title {
+  color: hsl(35, 80%, 70%);
+}
+
+/* Regex, escape sequences, meta */
+.hljs-regexp,
+.hljs-meta,
+.hljs-link {
+  color: hsl(170, 55%, 40%);
+}
+
+.dark .hljs-regexp,
+.dark .hljs-meta,
+.dark .hljs-link {
+  color: hsl(170, 60%, 65%);
+}
+
+/* Diff additions / deletions */
+.hljs-addition {
+  background-color: hsl(140, 60%, 90%);
+  color: hsl(140, 50%, 25%);
+}
+
+.hljs-deletion {
+  background-color: hsl(0, 70%, 92%);
+  color: hsl(0, 55%, 30%);
+}
+
+.dark .hljs-addition {
+  background-color: hsl(140, 40%, 22%);
+  color: hsl(140, 60%, 78%);
+}
+
+.dark .hljs-deletion {
+  background-color: hsl(0, 40%, 25%);
+  color: hsl(0, 60%, 80%);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
