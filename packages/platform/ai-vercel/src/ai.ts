@@ -21,6 +21,7 @@ type ProviderModel = GenerateTextCall["model"]
 type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+const MAX_ERROR_TEXT_LENGTH = 500
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
 /**
@@ -90,6 +91,51 @@ const normalizeProviderOptions = (
   }
 
   return providerOptions as ProviderOptions
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+const truncateErrorText = (value: string): string =>
+  value.length <= MAX_ERROR_TEXT_LENGTH ? value : `${value.slice(0, MAX_ERROR_TEXT_LENGTH)}...`
+
+const formatErrorCause = (cause: unknown): string | undefined => {
+  if (cause instanceof Error) {
+    const message = cause.message.trim()
+    return message === "" ? undefined : message
+  }
+
+  if (typeof cause === "string") {
+    const message = cause.trim()
+    return message === "" ? undefined : message
+  }
+
+  return undefined
+}
+
+const formatGenerateError = (error: unknown): string => {
+  const baseMessage = error instanceof Error ? error.message : String(error)
+
+  if (!isRecord(error)) {
+    return baseMessage
+  }
+
+  const details: string[] = []
+  const finishReason = typeof error.finishReason === "string" ? error.finishReason.trim() : ""
+  if (finishReason !== "") {
+    details.push(`finishReason=${finishReason}`)
+  }
+
+  const text = typeof error.text === "string" ? error.text.trim() : ""
+  if (text !== "") {
+    details.push(`text=${JSON.stringify(truncateErrorText(text))}`)
+  }
+
+  const causeMessage = formatErrorCause(error.cause)
+  if (causeMessage !== undefined && causeMessage !== baseMessage) {
+    details.push(`cause=${JSON.stringify(causeMessage)}`)
+  }
+
+  return details.length === 0 ? baseMessage : `${baseMessage} (${details.join(", ")})`
 }
 
 const mapCredentialError = (message: string) =>
@@ -222,7 +268,7 @@ export const AIGenerateLive = Layer.effect(
             },
             catch: (error) =>
               new AIError({
-                message: `AI generation failed (${input.provider}/${input.model}): ${error instanceof Error ? error.message : String(error)}`,
+                message: `AI generation failed (${input.provider}/${input.model}): ${formatGenerateError(error)}`,
                 cause: error,
               }),
           })

@@ -73,7 +73,7 @@ const llmSystemQueueSlugs = [
 const llmSystemQueueSlugSet = new Set<string>(llmSystemQueueSlugs)
 
 const systemQueueFlaggerOutputSchema = z.object({
-  matched: z.boolean(),
+  matched: z.boolean().optional().default(false),
 })
 
 const FLAGGER_SYSTEM_PROMPT_TEMPLATE = `

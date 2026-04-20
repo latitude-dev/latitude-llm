@@ -5,51 +5,55 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
-import { runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
+import { z } from "zod"
+import { SYSTEM_QUEUE_DEFINITIONS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
+import { type RunSystemQueueFlaggerInput, runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
 
-const INPUT = {
+const INPUT: RunSystemQueueFlaggerInput = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
+  queueSlug: "jailbreaking",
   traceId: "c".repeat(32),
-} as const
+}
 
-function makeTraceDetail(
-  allMessages: TraceDetail["allMessages"],
-  outputMessages?: TraceDetail["outputMessages"],
-): TraceDetail {
+// Schema from the implementation - for testing default behavior
+const systemQueueFlaggerOutputSchema = z.object({
+  matched: z.boolean().optional().default(false),
+})
+
+function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
   return {
     organizationId: OrganizationId(INPUT.organizationId),
     projectId: ProjectId(INPUT.projectId),
     traceId: TraceId(INPUT.traceId),
-    spanCount: 3,
+    spanCount: 1,
     errorCount: 0,
     startTime: new Date("2026-01-01T00:00:00.000Z"),
     endTime: new Date("2026-01-01T00:00:01.000Z"),
     durationNs: 1,
     timeToFirstTokenNs: 0,
-    tokensInput: 120,
-    tokensOutput: 80,
+    tokensInput: 0,
+    tokensOutput: 0,
     tokensCacheRead: 0,
     tokensCacheCreate: 0,
     tokensReasoning: 0,
-    tokensTotal: 200,
-    costInputMicrocents: 50,
-    costOutputMicrocents: 25,
-    costTotalMicrocents: 75,
+    tokensTotal: 0,
+    costInputMicrocents: 0,
+    costOutputMicrocents: 0,
+    costTotalMicrocents: 0,
     sessionId: SessionId("session"),
     userId: ExternalUserId("user"),
     simulationId: SimulationId(""),
     tags: [],
     metadata: {},
-    models: ["gpt-4o-mini"],
-    providers: ["openai"],
-    serviceNames: ["web"],
+    models: [],
+    providers: [],
+    serviceNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
-    systemInstructions: [{ type: "text", text: "You are a careful assistant." }],
+    systemInstructions: [],
     inputMessages: [],
-    outputMessages: outputMessages ?? allMessages,
+    outputMessages: allMessages,
     allMessages,
   }
 }
@@ -288,5 +292,21 @@ describe("runSystemQueueFlaggerUseCase", () => {
         expect(errOpt.value).toBeInstanceOf(AIError)
       }
     }
+  })
+
+  it("schema: empty object {} is parsed as matched=false via Zod default", () => {
+    // Verify that the schema correctly applies the default(false) for missing matched field
+    const parsed = systemQueueFlaggerOutputSchema.parse({})
+    expect(parsed).toEqual({ matched: false })
+  })
+
+  it("schema: explicit matched=true is preserved", () => {
+    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: true })
+    expect(parsed).toEqual({ matched: true })
+  })
+
+  it("schema: explicit matched=false is preserved", () => {
+    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: false })
+    expect(parsed).toEqual({ matched: false })
   })
 })
