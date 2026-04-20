@@ -161,7 +161,8 @@ describe("buildOtlpRequest", () => {
     expect(getAttr(tool.attributes, "gen_ai.tool.call.id")).toBe("tu_1")
     expect(getAttr(tool.attributes, "gen_ai.tool.call.arguments")).toBe(JSON.stringify({ command: "ls" }))
     expect(getAttr(tool.attributes, "gen_ai.tool.call.result")).toBe("ok")
-    expect(tool.parentSpanId).toBe(unwrap(spans[1]).spanId)
+    // Tool is a sibling of the llm_request, parented to the interaction span.
+    expect(tool.parentSpanId).toBe(unwrap(spans[0]).spanId)
     expect(tool.traceId).toBe(unwrap(spans[0]).traceId)
   })
 
@@ -454,9 +455,10 @@ describe("buildOtlpRequest", () => {
     expect(llm2.parentSpanId).toBe(interaction.spanId)
     expect(llm3.parentSpanId).toBe(interaction.spanId)
 
-    // Each tool is a child of the llm_request that emitted it, not of the next.
-    expect(tool1.parentSpanId).toBe(llm1.spanId)
-    expect(tool2.parentSpanId).toBe(llm2.spanId)
+    // Tools are siblings of the llm_requests, all parented to the interaction.
+    // The tool runs AFTER the model finishes generating, not inside the generation.
+    expect(tool1.parentSpanId).toBe(interaction.spanId)
+    expect(tool2.parentSpanId).toBe(interaction.spanId)
 
     // Per-call tokens are NOT summed — each span reports its own usage.
     expect(getAttr(llm1.attributes, "input_tokens")).toBe("100")
@@ -543,7 +545,6 @@ describe("buildOtlpRequest", () => {
     expect(spans).toHaveLength(6)
 
     const mainInteraction = unwrap(spans[0])
-    const mainLlm = unwrap(spans[1])
     const agentTool = unwrap(spans[2])
     const subInteraction = unwrap(spans[3])
     const subLlm = unwrap(spans[4])
@@ -553,7 +554,8 @@ describe("buildOtlpRequest", () => {
     expect(getAttr(agentTool.attributes, "gen_ai.tool.name")).toBe("Agent")
     expect(getAttr(agentTool.attributes, "subagent.type")).toBe("Explore")
     expect(getAttr(agentTool.attributes, "subagent.turn_count")).toBe("1")
-    expect(agentTool.parentSpanId).toBe(mainLlm.spanId)
+    // Tool is a sibling of the llm_request that emitted it, parented to the interaction.
+    expect(agentTool.parentSpanId).toBe(mainInteraction.spanId)
 
     expect(getAttr(subInteraction.attributes, "span.type")).toBe("interaction")
     expect(getAttr(subInteraction.attributes, "interaction.kind")).toBe("subagent")
@@ -568,6 +570,8 @@ describe("buildOtlpRequest", () => {
 
     expect(getAttr(subTool.attributes, "span.type")).toBe("tool_execution")
     expect(getAttr(subTool.attributes, "gen_ai.tool.name")).toBe("Grep")
-    expect(subTool.parentSpanId).toBe(subLlm.spanId)
+    // Subagent tool is a sibling of the subagent llm_request, parented to the
+    // subagent interaction span (same sibling rule applied recursively).
+    expect(subTool.parentSpanId).toBe(subInteraction.spanId)
   })
 })

@@ -191,7 +191,10 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
 
   call.toolUses.forEach((tool, idx) => {
     const toolSpanId = hashHex(`${traceId}:${callSalt}:tool:${idx}:${tool.id}`, 16)
-    out.push(buildToolSpan(traceId, callSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
+    // Tool executions are siblings of the llm_request, not children — the model finishes
+    // generating and then the tool runs afterward, sequentially. Parent under the
+    // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
+    out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
     const subagent = tool.subagent
     if (!subagent) return
