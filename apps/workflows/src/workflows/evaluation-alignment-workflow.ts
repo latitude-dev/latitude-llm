@@ -1,17 +1,15 @@
-// Import from the `./alignment/workflow` subpath (not from `@domain/evaluations`)
-// so the Temporal workflow bundle doesn't pull in `browser.ts`, which
-// re-exports `helpers.ts` — which imports from `@domain/shared`'s barrel
-// and in turn loads `cache.ts` / `ServiceMap.Service`. The `Service` ctor
-// writes to `Error.stackTraceLimit`, forbidden in the Temporal workflow
-// sandbox. This subpath file is self-contained (constants + a type only).
-import {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  EVALUATION_ALIGNMENT_STATE_QUERY,
-  type EvaluationAlignmentWorkflowState,
-} from "@domain/evaluations/alignment/workflow"
+// Imported from the `./constants` subpath instead of the main barrel because
+// the Temporal workflow sandbox cannot load `@domain/evaluations`'s barrel:
+// it re-exports `browser.ts` → `helpers.ts` → `@domain/shared` → `cache.ts`
+// → `ServiceMap.Service`, whose constructor writes to `Error.stackTraceLimit`,
+// which is forbidden in the workflow sandbox. The `./constants` subpath is a
+// leaf module with no runtime dependencies, so it is safe to bundle here.
 import {
   ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
   ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+  EVALUATION_ALIGNMENT_STATE_QUERY,
+  type EvaluationAlignmentWorkflowState,
 } from "@domain/evaluations/constants"
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"

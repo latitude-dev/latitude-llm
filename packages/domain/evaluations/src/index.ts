@@ -11,11 +11,6 @@ export type {
   PersistEvaluationAlignmentResult,
 } from "./alignment/types.ts"
 export {
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  EVALUATION_ALIGNMENT_STATE_QUERY,
-  type EvaluationAlignmentWorkflowState,
-} from "./alignment/workflow.ts"
-export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
   ALIGNMENT_DEFAULT_SEED,
@@ -25,8 +20,11 @@ export {
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
   DEFAULT_EVALUATION_SAMPLING,
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+  EVALUATION_ALIGNMENT_STATE_QUERY,
   EVALUATION_NAME_MAX_LENGTH,
   EVALUATION_TURNS,
+  type EvaluationAlignmentWorkflowState,
 } from "./constants.ts"
 export {
   type ConfusionMatrix,

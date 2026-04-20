@@ -59,3 +59,28 @@ export const ALIGNMENT_TRAIN_SPLIT = 0.7
 
 /** Fraction of curated examples assigned to the validation split. */
 export const ALIGNMENT_VALIDATION_SPLIT = 0.3
+
+// ---------------------------------------------------------------------------
+// Cross-process contract for the evaluation alignment Temporal workflow
+// ---------------------------------------------------------------------------
+//
+// These live here (rather than in a separate `alignment/workflow.ts` subpath)
+// so the Temporal workflow bundle can import them from the same known-good
+// `@domain/evaluations/constants` subpath that it already uses for the
+// debounce windows above. The workflow file itself lives in `apps/workflows`,
+// but the signal name, query name, and query response shape are shared with
+// `apps/workers` (auto-refresh) and `apps/web` (manual triggers + polling).
+//
+// Workflow IDs use the format `evaluations:alignment:${issueId|evaluationId}`
+// and are inlined at each call site.
+
+export const EVALUATION_ALIGNMENT_REFRESH_SIGNAL = "scheduleRefresh"
+
+export const EVALUATION_ALIGNMENT_STATE_QUERY = "getEvaluationAlignmentWorkflowState"
+
+export type EvaluationAlignmentWorkflowState = {
+  readonly manualRealignment: {
+    readonly isBusy: boolean
+    readonly currentJobId: string | null
+  }
+}
