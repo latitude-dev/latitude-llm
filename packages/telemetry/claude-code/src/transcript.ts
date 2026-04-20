@@ -179,7 +179,11 @@ function buildAssistantCalls(
 
   const calls: AssistantCall[] = []
   const seenToolIds = new Set<string>()
-  let previousCallEnd = turnStartMs
+  // boundaryMs tracks the end of the previous phase (user prompt, or the last tool
+  // result of the preceding call). Each llm_request span runs from this boundary
+  // until the last-flushed row of its message.id — which approximates "time spent
+  // generating this response" and gives every call a visible non-zero duration.
+  let boundaryMs = turnStartMs
 
   for (const id of groupOrder) {
     const groupRows = groups.get(id) ?? []
@@ -196,33 +200,39 @@ function buildAssistantCalls(
       if (r.message?.usage) tokens = r.message.usage
     }
 
-    // Per-call start/end from row timestamps. Fall back to the prior boundary.
     const rowMs = groupRows.map((r) => parseTs(r.timestamp)).filter((ms): ms is number => ms !== undefined)
-    const startMs = rowMs.length > 0 ? Math.min(...rowMs) : previousCallEnd
-    const endMs = rowMs.length > 0 ? Math.max(...rowMs) : startMs
+    const lastRowMs = rowMs.length > 0 ? Math.max(...rowMs) : boundaryMs
+    const callStartMs = boundaryMs
+    // Guarantee a minimum 1ms duration so single-row calls (typical for the final
+    // text-only message) render as a visible span instead of a zero-width tick.
+    const callEndMs = Math.max(lastRowMs, callStartMs + 1)
 
     const toolUses: ToolCall[] = []
+    let latestToolEndMs = callEndMs
     for (const row of groupRows) {
       for (const block of iterToolUses(row)) {
         if (seenToolIds.has(block.id)) continue
         seenToolIds.add(block.id)
         const entry = toolResults.get(block.id)
+        const toolStartMs = callEndMs
+        const toolEndMs = Math.max(entry?.rowMs ?? callEndMs, toolStartMs + 1)
         const call: ToolCall = {
           id: block.id,
           name: block.name,
           input: block.input,
           output: entry?.block.content,
           isError: entry?.block.is_error === true,
-          startMs: endMs,
-          endMs: entry?.rowMs ?? endMs,
+          startMs: toolStartMs,
+          endMs: toolEndMs,
         }
         if (entry?.promptId) call.promptId = entry.promptId
         toolUses.push(call)
+        if (toolEndMs > latestToolEndMs) latestToolEndMs = toolEndMs
       }
     }
 
-    calls.push({ messageId: id, model, text, toolUses, tokens, startMs, endMs })
-    previousCallEnd = endMs
+    calls.push({ messageId: id, model, text, toolUses, tokens, startMs: callStartMs, endMs: callEndMs })
+    boundaryMs = latestToolEndMs
   }
 
   return calls

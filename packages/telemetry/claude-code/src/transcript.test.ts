@@ -321,6 +321,61 @@ describe("buildTurns", () => {
     expect(turns[1]?.calls[0]?.text).toBe("reply 2")
   })
 
+  it("emits a visible span for a final text-only call and gives each call a waterfall duration", () => {
+    // Single-row calls (typical for the final assistant text after a tool loop)
+    // used to produce zero-duration spans, which the UI could hide. Each call now
+    // spans from the prior phase boundary (user prompt or last tool result) to its
+    // last row timestamp, with a 1ms floor so the span always renders.
+    const rows: TranscriptRow[] = [
+      { type: "user", timestamp: "2026-04-10T12:00:00.000Z", message: { role: "user", content: "x" } },
+      {
+        type: "assistant",
+        timestamp: "2026-04-10T12:00:05.000Z",
+        message: {
+          id: "msg_tool",
+          role: "assistant",
+          content: [{ type: "tool_use", id: "tu_1", name: "Bash", input: { command: "ls" } }],
+        },
+      },
+      {
+        type: "user",
+        timestamp: "2026-04-10T12:00:06.000Z",
+        message: { role: "user", content: [{ type: "tool_result", tool_use_id: "tu_1", content: "ok" }] },
+      },
+      {
+        type: "assistant",
+        timestamp: "2026-04-10T12:00:06.000Z", // identical ts → would be zero-duration without the floor
+        message: {
+          id: "msg_final",
+          role: "assistant",
+          content: [{ type: "text", text: "all done" }],
+        },
+      },
+    ]
+
+    const turns = buildTurns(rows)
+    expect(turns).toHaveLength(1)
+    const turn = turns[0]
+    expect(turn?.calls).toHaveLength(2)
+
+    const toolCall = turn?.calls[0]
+    const finalCall = turn?.calls[1]
+
+    // Tool call span: user (t=0s) → tool row (t=5s).
+    expect(toolCall?.startMs).toBe(new Date("2026-04-10T12:00:00.000Z").getTime())
+    expect(toolCall?.endMs).toBe(new Date("2026-04-10T12:00:05.000Z").getTime())
+    // The Bash tool span: tool row (t=5s) → tool_result (t=6s).
+    expect(toolCall?.toolUses[0]?.startMs).toBe(new Date("2026-04-10T12:00:05.000Z").getTime())
+    expect(toolCall?.toolUses[0]?.endMs).toBe(new Date("2026-04-10T12:00:06.000Z").getTime())
+
+    // Final text call must be present, and must have at least 1ms of duration even though
+    // its row timestamp equals the tool_result's timestamp.
+    expect(finalCall?.messageId).toBe("msg_final")
+    expect(finalCall?.text).toBe("all done")
+    expect(finalCall?.toolUses).toHaveLength(0)
+    expect((finalCall?.endMs ?? 0) - (finalCall?.startMs ?? 0)).toBeGreaterThanOrEqual(1)
+  })
+
   it("keeps per-call token usage instead of summing across calls", () => {
     // Previously we summed tokens across distinct message.ids, which triple-counts
     // the conversation context for multi-call tool loops. Now each call owns its
