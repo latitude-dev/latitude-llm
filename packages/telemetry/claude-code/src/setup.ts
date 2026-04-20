@@ -392,9 +392,12 @@ function writeIntercept(): void {
 
 function setLaunchctlBunOptions(): void {
   const value = `--preload=${INTERCEPT_INSTALL_PATH}`
-  const res = spawnSync("launchctl", ["setenv", "BUN_OPTIONS", value], { stdio: "ignore" })
+  const res = spawnSync("launchctl", ["setenv", "BUN_OPTIONS", value], { encoding: "utf-8" })
   if (res.status !== 0) {
-    process.stderr.write(`[latitude-claude-code] launchctl setenv failed (exit ${res.status}). Continuing.\n`)
+    const details = [res.stderr, res.stdout].filter((s) => s && s.trim().length > 0).join(" ").trim()
+    process.stderr.write(
+      `[latitude-claude-code] launchctl setenv failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
+    )
   }
 }
 
@@ -417,10 +420,14 @@ function writePlist(): void {
 </plist>
 `
   writeFileSync(PLIST_PATH, plist, "utf-8")
+  // Unload may fail harmlessly if the agent was never loaded — we don't care.
   spawnSync("launchctl", ["unload", PLIST_PATH], { stdio: "ignore" })
-  const res = spawnSync("launchctl", ["load", PLIST_PATH], { stdio: "ignore" })
+  const res = spawnSync("launchctl", ["load", PLIST_PATH], { encoding: "utf-8" })
   if (res.status !== 0) {
-    process.stderr.write(`[latitude-claude-code] launchctl load failed (exit ${res.status}). Continuing.\n`)
+    const details = [res.stderr, res.stdout].filter((s) => s && s.trim().length > 0).join(" ").trim()
+    process.stderr.write(
+      `[latitude-claude-code] launchctl load failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
+    )
   }
 }
 
