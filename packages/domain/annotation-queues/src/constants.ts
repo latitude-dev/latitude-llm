@@ -1,5 +1,3 @@
-import { TRACE_RESOURCE_OUTLIER_MULTIPLIER } from "@domain/spans"
-
 // ---------------------------------------------------------------------------
 // Bulk import limits
 // ---------------------------------------------------------------------------
@@ -44,16 +42,6 @@ export const SYSTEM_QUEUE_DRAFT_DEFAULTS = {
   value: 0,
   hasAnchor: false,
 } as const
-
-// ---------------------------------------------------------------------------
-// Outlier thresholds (Resource Outliers system queue)
-// ---------------------------------------------------------------------------
-
-/**
- * Multiplier applied to the project median to determine the outlier boundary.
- * A trace is flagged when its value exceeds `median * multiplier`.
- */
-export const RESOURCE_OUTLIER_MULTIPLIER = TRACE_RESOURCE_OUTLIER_MULTIPLIER
 
 // ---------------------------------------------------------------------------
 // Queue name constraints
@@ -143,13 +131,5 @@ export const SYSTEM_QUEUE_DEFINITIONS: readonly SystemQueueDefinition[] = [
     instructions:
       "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.",
     sampling: 10,
-  },
-  {
-    slug: "resource-outliers",
-    name: "Resource Outliers",
-    description: "The trace has unusually high latency, TTFT, token usage, or cost",
-    instructions:
-      "Use this queue when latency, time to first token, token usage, or cost materially exceeds project norms. This queue is primarily matched through deterministic outlier checks against project percentiles, medians, and configured thresholds rather than the low-cost flagger model.",
-    sampling: 100,
   },
 ] as const

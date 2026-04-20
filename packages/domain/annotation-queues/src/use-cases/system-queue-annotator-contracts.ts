@@ -1,20 +1,10 @@
 import { z } from "zod"
 
-const matchReasonSchema = z.object({
-  key: z.string().min(1),
-  thresholdMode: z.string().min(1),
-  metric: z.string().min(1),
-  values: z.record(z.string(), z.number()),
-  thresholds: z.record(z.string(), z.number()),
-  medians: z.record(z.string(), z.number()),
-})
-
 export const systemQueueAnnotateInputSchema = z.object({
   organizationId: z.string().min(1),
   projectId: z.string().min(1),
   queueSlug: z.string().min(1),
   traceId: z.string().min(1),
-  matchReasons: z.array(matchReasonSchema).optional(),
 })
 
 export type SystemQueueAnnotateInput = z.infer<typeof systemQueueAnnotateInputSchema>

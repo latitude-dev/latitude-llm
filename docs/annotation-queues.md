@@ -28,7 +28,7 @@ When a project is created:
 5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
 6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
 
-The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`, `resource-outliers`) derived from their names, enabling slug-based routing throughout the pipeline. Other deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they publish annotation scores directly from the trace-end runtime — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
+The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`) derived from their names, enabling slug-based routing throughout the pipeline. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they publish annotation scores directly from the trace-end runtime — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
 ### Caching
 
@@ -83,12 +83,11 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
    - loads trace analytics context from the shared trace repository path
    - resolves the queue slug through a domain matcher map
-   - returns `{ matched, matchReasons }` where `matchReasons` contains outlier threshold details for resource-outliers matches
+   - returns `{ matched }`
 
 2. **`draftAnnotate`** (only when `matched: true`):
    - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
-   - receives `matchReasons` from the flagger result (when available) to provide context to the LLM annotator
-   - generates feedback using LLM with full conversation context and match reasons
+   - generates feedback using LLM with full conversation context
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
@@ -109,14 +108,7 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
   - `nsfw`
   - `trashing`
 
-- **Shared deterministic matcher implemented**:
-  - `resource-outliers`: evaluates duration, TTFT, token usage, and cost against project-scoped percentile and median-x3 baselines using the shared trace cohort evaluator in `@domain/spans`
-
-Deterministic signals for `tool-call-errors`, `output-schema-validation`, and `empty-response` no longer flow through this flagger workflow. They run inline in the trace-end runtime and publish annotation scores directly — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
-
-**Resource outliers: queue `matched` vs traces UI**
-
-The evaluator returns both `reasons` (every rule that fires) and `matched` (whether the trace should be enqueued by the `resource-outliers` system queue). `matched` is true only when at least one of these holds: **latency and cost** both at or above their p95 or p99 baselines, **any** single metric at or above **p99**, or **median×3** for a metric. Standalone single-metric **p95** hits can still appear in `reasons` (for example when browsing traces filtered by a p95 cohort and computing severity for sorting) but do **not** set `matched`, so they do not create queue items on their own.
+Deterministic signals for `tool-call-errors`, `output-schema-validation`, and `empty-response` do not flow through this flagger workflow. They run inline in the trace-end runtime and publish annotation scores directly — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
 **Retry Policy**:
 - Initial interval: 1s
@@ -259,10 +251,6 @@ Every project starts with these system-created manual queues:
 - description: the agent cycles between tools without making progress
 - instructions: use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
 
-### Resource Outliers
-
-- description: the trace has unusually high latency, TTFT, token usage, or cost
-- instructions: use this queue when latency, time to first token, token usage, or cost materially exceeds project norms. The matcher uses the shared trace cohort evaluator and workflow-owned retry handling when the candidate trace has not materialized yet.
 
 ## Population Flows
 
@@ -282,7 +270,7 @@ Every project starts with these system-created manual queues:
 - whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `trace-end:run` for that trace
 - `trace-end:run` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per selected queue
 - queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
-- the currently implemented deterministic matchers are `resource-outliers`; other deterministic signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) publish annotation scores directly from the trace-end runtime without going through this flagger — see [Direct Deterministic System Signals](#direct-deterministic-system-signals)
+- there are no deterministic matchers in this flagger anymore; deterministic signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) publish annotation scores directly from the trace-end runtime without going through this flagger — see [Direct Deterministic System Signals](#direct-deterministic-system-signals)
 - the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
 - positive workflow matches trigger `draftAnnotate` (LLM feedback generation) followed by `persistAnnotation` (transactional queue item + draft creation)
