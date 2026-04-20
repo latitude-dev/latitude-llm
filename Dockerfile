@@ -41,7 +41,7 @@ COPY . .
 # after `.npmrc` public-hoist-pattern changes, which is required in non-TTY
 # Docker builds.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  CI=true pnpm install --frozen-lockfile --ignore-scripts --offline
+  CI=true pnpm install --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
