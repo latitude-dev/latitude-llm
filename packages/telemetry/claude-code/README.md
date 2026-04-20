@@ -56,17 +56,38 @@ If you want spans to carry the exact payload that reached Anthropic's API — th
 
    This writes `intercept.js` to `~/.claude/state/latitude/intercept.js` and prints the env line to add.
 
-2. Add `BUN_OPTIONS` to your `~/.claude/settings.json`:
+2. Expose `BUN_OPTIONS` to the `claude` runtime. Where you put this depends on how you launch claude:
 
-   ```json
-   "env": {
-     "LATITUDE_API_KEY": "lat_xxx",
-     "LATITUDE_PROJECT": "my-project-slug",
-     "BUN_OPTIONS": "--preload=/Users/you/.claude/state/latitude/intercept.js"
-   }
+   **CLI (terminal `claude`):** put it in your shell rc (`~/.zshrc`, `~/.bashrc`, etc.):
+   ```bash
+   export BUN_OPTIONS="--preload=/Users/you/.claude/state/latitude/intercept.js"
    ```
 
-   (Use the absolute path printed by the install command — `~` isn't expanded here.)
+   **macOS Claude Desktop (Electron app):** shell exports don't reach GUI apps, and `settings.json.env` is only applied to hook subprocesses (not to the `claude` runtime itself). Use `launchctl` so launchd-spawned apps inherit the var:
+   ```bash
+   launchctl setenv BUN_OPTIONS "--preload=/Users/you/.claude/state/latitude/intercept.js"
+   ```
+   Then **fully quit and relaunch** Claude Desktop. `launchctl setenv` resets on reboot — make it permanent with a `~/Library/LaunchAgents/*.plist`:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0"><dict>
+     <key>Label</key><string>com.user.latitude.bunopts</string>
+     <key>ProgramArguments</key>
+     <array>
+       <string>launchctl</string>
+       <string>setenv</string>
+       <string>BUN_OPTIONS</string>
+       <string>--preload=/Users/you/.claude/state/latitude/intercept.js</string>
+     </array>
+     <key>RunAtLoad</key><true/>
+   </dict></plist>
+   ```
+   Save as `~/Library/LaunchAgents/com.user.latitude.bunopts.plist`, then `launchctl load ~/Library/LaunchAgents/com.user.latitude.bunopts.plist`.
+
+   Use the absolute path printed by `install` — `~` isn't expanded inside these values.
+
+   **Note:** `BUN_OPTIONS` in `~/.claude/settings.json`'s `env` does NOT work — that field only affects hook subprocesses, not the `claude` runtime that Bun's `--preload` flag needs to be set on at startup.
 
 With this in place, every Anthropic `/v1/messages` request body is written to `~/.claude/state/latitude/requests/<message_id>.json` inside the `claude` process and consumed by the Stop hook, which attaches:
 

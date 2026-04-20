@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Race between the intercept preload and the Stop hook** — the preload used to buffer the whole response in the background and only write the request file after `.text()` resolved. If Claude Code fired `Stop` before that write completed, the hook saw an empty dir and spans didn't get enriched. The preload now tees the response stream and writes the file the moment `message_start` arrives (the first SSE event), guaranteeing the file is on disk well before any hook can run.
+- **250ms flush delay at Stop-hook startup** — Claude Code could fire Stop before the transcript writer had flushed the final assistant row, so the last text-only `llm_request` span was occasionally missing and some turns weren't captured. The hook now waits briefly for disk flushes before reading.
+
+### Added
+
+- **Diagnostic span attributes** for the capture pipeline (`latitude.debug.message_ids`, `latitude.debug.captured_message_ids`, `latitude.debug.captured_count`, `latitude.debug.lookup_message_id`, `latitude.debug.request_file_found`) so the Latitude UI exposes exactly what the hook saw when a span isn't enriched.
+
+### Docs
+
+- **Claude Desktop setup correction** — `BUN_OPTIONS` in `~/.claude/settings.json`'s `env` does **NOT** reach the claude runtime; that field is only applied to hook subprocesses. README and `install` subcommand output now direct users to `launchctl setenv` for macOS Claude Desktop (followed by a full quit/relaunch) and to shell rc exports for terminal `claude`. A LaunchAgents plist template is included for persistence across reboots.
 
 ## [0.0.3] - 2026-04-20
 
