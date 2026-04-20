@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-04-20
+
+### Added
+
+- **Interactive `install` wizard** — `npx -y @latitude-data/claude-code-telemetry install` now prompts for `LATITUDE_API_KEY` and `LATITUDE_PROJECT`, merges them into `~/.claude/settings.json` under `env`, and installs the Stop-hook entry if missing. On macOS it also offers to set `BUN_OPTIONS` via `launchctl` and persist it with a `~/Library/LaunchAgents/so.latitude.claude-code-telemetry.plist`. Existing values are shown as defaults (API keys masked); a backup of `settings.json` is always written to `settings.json.latitude-bak` before any change.
+- **Flag-driven install** for CI / automation: `--api-key=…`, `--project=…`, `--base-url=…` (flag-only — no prompt), `--no-launchctl`, `--no-prompt` / `--yes`. Snake_case aliases also accepted (`--api_key`, `--base_url`, etc.).
+- **`uninstall` subcommand** — `npx -y @latitude-data/claude-code-telemetry uninstall` shows a plan and asks for confirmation, then reverses only what this package installed: removes `LATITUDE_*` / `BUN_OPTIONS` from `settings.json.env`, removes our Stop-hook entry (leaves other hooks alone), clears `launchctl` `BUN_OPTIONS` only when it points at our preload, unloads and removes the LaunchAgents plist, and deletes `~/.claude/state/latitude/` (preload, state, captured requests).
+- **Idempotent settings merge** — rerunning install with the same inputs is a no-op. The hook-detection regex matches both the published npm command and dev-checkout `dist/index.js` paths.
+
+### Changed
+
+- **Non-interactive `install`** (no TTY, no flags) now just copies the preload file, unchanged from before. Any flag or TTY opts into the wizard.
+
+### Fixed
+
+- **Race between the intercept preload and the Stop hook** — the preload used to buffer the whole response in the background and only write the request file after `.text()` resolved. If Claude Code fired `Stop` before that write completed, the hook saw an empty dir and spans didn't get enriched. The preload now tees the response stream and writes the file the moment `message_start` arrives (the first SSE event), guaranteeing the file is on disk well before any hook can run.
+- **250ms flush delay at Stop-hook startup** — Claude Code could fire Stop before the transcript writer had flushed the final assistant row, so the last text-only `llm_request` span was occasionally missing and some turns weren't captured. The hook now waits briefly for disk flushes before reading.
+
+### Added
+
+- **Diagnostic span attributes** for the capture pipeline (`latitude.debug.message_ids`, `latitude.debug.captured_message_ids`, `latitude.debug.captured_count`, `latitude.debug.lookup_message_id`, `latitude.debug.request_file_found`) so the Latitude UI exposes exactly what the hook saw when a span isn't enriched.
+
+### Docs
+
+- **Claude Desktop setup correction** — `BUN_OPTIONS` in `~/.claude/settings.json`'s `env` does **NOT** reach the claude runtime; that field is only applied to hook subprocesses. README and `install` subcommand output now direct users to `launchctl setenv` for macOS Claude Desktop (followed by a full quit/relaunch) and to shell rc exports for terminal `claude`. A LaunchAgents plist template is included for persistence across reboots.
+
+## [0.0.3] - 2026-04-20
+
+### Added
+
+- **Full LLM request capture via Bun preload (opt-in)** — a new `intercept.js` preload wraps `globalThis.fetch` inside the `claude` process and writes every Anthropic `/v1/messages` request body to `~/.claude/state/latitude/requests/<message_id>.json`. The Stop hook reads these files and enriches each `llm_request` span with the exact payload that reached the model:
+  - `gen_ai.system_instructions` — the real system prompt (base + CLAUDE.md + billing blocks)
+  - `gen_ai.tool.definitions` — every tool schema offered to the model
+  - `gen_ai.request.model` / `max_tokens` / `temperature` / `top_p` / `stream`
+  - `gen_ai.input.messages` rebuilt from the actual request (including `tool_use` / `tool_result` blocks), overriding the transcript reconstruction
+  - `llm_request.captured = "true"` marker for filtering enriched spans
+- **`install` subcommand** — `npx @latitude-data/claude-code-telemetry install` copies `intercept.js` to a stable path (`~/.claude/state/latitude/intercept.js`) and prints the `BUN_OPTIONS=--preload=...` line to paste into `settings.json`. The Stop hook also refreshes the installed copy on every run so package upgrades propagate.
+- **Anthropic → Latitude message format converter** — handles `text`, `tool_use`, `tool_result`, `thinking` (→ `reasoning`), and `image` blocks; falls back to stringified JSON for unknown types.
+- **Stale request-file sweep** — on every hook run, consumed request files are deleted and anything older than 24h is pruned.
+
+### Notes
+
+- The preload is fully optional. Without it, spans still work exactly as before (reconstructed from the transcript). With it, spans carry the ground truth.
+- If `BUN_OPTIONS` points to a missing preload file, `claude` itself will refuse to start — keep the path in place or remove the env var.
+
 ## [0.0.2] - 2026-04-20
 
 ### Added

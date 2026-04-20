@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildOtlpRequest } from "./otlp.ts"
+import type { StoredRequest } from "./request-store.ts"
 import type { AssistantCall, OtlpKeyValue, ToolCall, Turn, Usage } from "./types.ts"
 
 function unwrap<T>(value: T | undefined | null): T {
@@ -382,8 +383,11 @@ describe("buildOtlpRequest", () => {
 
   it("emits one llm_request per AssistantCall with tools as siblings under the interaction", () => {
     // A tool-loop turn: call A → tool A → call B → tool B → call C (final text).
-    // The canonical OTel GenAI layout emits one llm_request per model call, with tool
-    // executions as children of the llm_request that emitted them.
+    // We emit one llm_request per model call and parent every tool_execution span
+    // to the interaction span (as a sibling of the llm_requests), not to the
+    // llm_request that emitted the tool. The model finishes generating BEFORE the
+    // tool runs, so sibling ordering reads the timeline correctly in the UI:
+    // llm_request → tool → llm_request → tool → llm_request.
     const turn: Turn = {
       userText: "run then echo",
       startMs: 1_000,
@@ -516,6 +520,105 @@ describe("buildOtlpRequest", () => {
     const toNs = (ms: number) => (BigInt(ms) * 1_000_000n).toString()
     expect(tool1.startTimeUnixNano).toBe(toNs(1_050))
     expect(tool1.endTimeUnixNano).toBe(toNs(1_100))
+  })
+
+  it("enriches llm_request with captured system prompt, tool definitions, and real messages when available", () => {
+    const turn = baseTurn({ messageId: "msg_real", userText: "ping", assistantText: "pong" })
+
+    const captured: StoredRequest = {
+      messageId: "msg_real",
+      capturedAt: "2026-04-20T12:00:00.000Z",
+      url: "https://api.anthropic.com/v1/messages",
+      request: {
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 32000,
+        temperature: 0.2,
+        stream: true,
+        system: [
+          { type: "text", text: "You are Claude Code." },
+          { type: "text", text: "CLAUDE.md says: be brief." },
+        ],
+        tools: [
+          { name: "Bash", description: "Run a shell command", input_schema: { type: "object" } },
+          { name: "Read", description: "Read a file", input_schema: { type: "object" } },
+        ],
+        messages: [
+          { role: "user", content: "ping" },
+          {
+            role: "assistant",
+            content: [
+              { type: "text", text: "thinking..." },
+              { type: "tool_use", id: "tu_x", name: "Read", input: { path: "/tmp/x" } },
+            ],
+          },
+          {
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: "tu_x", content: "file contents" }],
+          },
+        ],
+      },
+    }
+    const requestsByMessageId = new Map<string, StoredRequest>([["msg_real", captured]])
+
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [turn],
+      requestsByMessageId,
+    })
+    const llm = unwrap(otlpSpans(req)[1])
+
+    // Marker that this span was enriched from a captured request.
+    expect(getAttr(llm.attributes, "llm_request.captured")).toBeDefined()
+
+    // System prompt materialized as the canonical gen_ai.system_instructions shape.
+    const sys = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.system_instructions")))
+    expect(sys).toEqual([
+      { type: "text", content: "You are Claude Code." },
+      { type: "text", content: "CLAUDE.md says: be brief." },
+    ])
+
+    // Tool definitions stored verbatim from the request.
+    const tools = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.tool.definitions")))
+    expect(tools).toHaveLength(2)
+    expect(tools[0].name).toBe("Bash")
+
+    // Request parameters.
+    expect(getAttr(llm.attributes, "gen_ai.request.model")).toBe("claude-sonnet-4-5-20250929")
+    expect(getAttr(llm.attributes, "gen_ai.request.max_tokens")).toBe("32000")
+    expect(getAttr(llm.attributes, "gen_ai.request.temperature")).toBe("0.2")
+
+    // Input messages come from the captured request, including the tool_use and
+    // tool_result blocks split into assistant + role:tool messages per Latitude's format.
+    const inputs = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.input.messages")))
+    expect(inputs).toEqual([
+      { role: "user", parts: [{ type: "text", content: "ping" }] },
+      {
+        role: "assistant",
+        parts: [
+          { type: "text", content: "thinking..." },
+          { type: "tool_call", id: "tu_x", name: "Read", arguments: { path: "/tmp/x" } },
+        ],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "tu_x", response: "file contents" }] },
+    ])
+  })
+
+  it("falls back to reconstructed messages when no captured request matches the call", () => {
+    // Empty map — simulates the preload not being installed. The span must still work
+    // and the reconstruction path from prior commits must kick in.
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn({ userText: "hello", assistantText: "hi" })],
+      requestsByMessageId: new Map(),
+    })
+    const llm = unwrap(otlpSpans(req)[1])
+    expect(getAttr(llm.attributes, "llm_request.captured")).toBeUndefined()
+    expect(getAttr(llm.attributes, "gen_ai.system_instructions")).toBeUndefined()
+    expect(getAttr(llm.attributes, "gen_ai.tool.definitions")).toBeUndefined()
+    const inputs = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.input.messages")))
+    expect(inputs).toEqual([{ role: "user", parts: [{ type: "text", content: "hello" }] }])
   })
 
   it("nests subagent interaction+llm_request+tool spans under the parent Agent tool span", () => {
