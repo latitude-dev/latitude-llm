@@ -7,6 +7,7 @@ import type {
   OtlpSpan,
   SubagentInvocation,
   ToolCall,
+  TraceContext,
   Turn,
 } from "./types.ts"
 
@@ -18,11 +19,13 @@ export function buildOtlpRequest(opts: {
   userId?: string | undefined
   turnStartNumber: number
   turns: Turn[]
+  context?: TraceContext | undefined
 }): OtlpExportRequest {
+  const contextAttrs = buildContextAttrs(opts.context)
   const spans: OtlpSpan[] = []
   opts.turns.forEach((turn, i) => {
     const turnNum = opts.turnStartNumber + i
-    spans.push(...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn))
+    spans.push(...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs))
   })
 
   const rs: OtlpResourceSpans = {
@@ -38,7 +41,13 @@ export function buildOtlpRequest(opts: {
   return { resourceSpans: [rs] }
 }
 
-function buildTurnSpans(sessionId: string, userId: string | undefined, turnNum: number, turn: Turn): OtlpSpan[] {
+function buildTurnSpans(
+  sessionId: string,
+  userId: string | undefined,
+  turnNum: number,
+  turn: Turn,
+  contextAttrs: OtlpKeyValue[],
+): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
   const out: OtlpSpan[] = []
@@ -54,6 +63,7 @@ function buildTurnSpans(sessionId: string, userId: string | undefined, turnNum: 
     turnNum,
     interactionIdSalt: "turn",
     genIdSalt: "gen",
+    contextAttrs,
   })
   return out
 }
@@ -70,6 +80,7 @@ interface TreeCtx {
   turnNum: number | undefined
   interactionIdSalt: string
   genIdSalt: string
+  contextAttrs: OtlpKeyValue[]
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
@@ -97,6 +108,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
+      ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
   }
@@ -129,6 +141,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
       str("gen_ai.output.messages", JSON.stringify([messagePart("assistant", turn.assistantText)])),
+      ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
   }
@@ -136,7 +149,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
 
   turn.toolCalls.forEach((call, idx) => {
     const toolSpanId = hashHex(`${traceId}:${ctx.genIdSalt}:tool:${idx}:${call.id}`, 16)
-    out.push(buildToolSpan(traceId, genSpanId, toolSpanId, sessionId, userId, startNs, endNs, call))
+    out.push(buildToolSpan(traceId, genSpanId, toolSpanId, sessionId, userId, startNs, endNs, call, ctx.contextAttrs))
 
     const subagent = call.subagent
     if (!subagent) return
@@ -154,6 +167,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
         turnNum: undefined,
         interactionIdSalt: `${subSalt}:turn`,
         genIdSalt: `${subSalt}:gen`,
+        contextAttrs: ctx.contextAttrs,
       })
     })
   })
@@ -172,6 +186,7 @@ function buildToolSpan(
   startNs: string,
   endNs: string,
   call: ToolCall,
+  contextAttrs: OtlpKeyValue[],
 ): OtlpSpan {
   return {
     traceId,
@@ -194,9 +209,20 @@ function buildToolSpan(
       call.subagent ? str("subagent.id", subagentAttr(call.subagent)) : undefined,
       call.subagent ? str("subagent.type", call.subagent.agentType) : undefined,
       call.subagent ? int("subagent.turn_count", call.subagent.turns.length) : undefined,
+      ...contextAttrs,
     ]),
     status: { code: call.isError ? 2 : 1 },
   }
+}
+
+function buildContextAttrs(context: TraceContext | undefined): OtlpKeyValue[] {
+  if (!context) return []
+  const attrs: OtlpKeyValue[] = []
+  if (context.tags.length > 0) attrs.push(str("latitude.tags", JSON.stringify(context.tags)))
+  if (Object.keys(context.metadata).length > 0) {
+    attrs.push(str("latitude.metadata", JSON.stringify(context.metadata)))
+  }
+  return attrs
 }
 
 function messagePart(role: "user" | "assistant", content: string) {

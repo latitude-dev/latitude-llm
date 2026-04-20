@@ -4,6 +4,13 @@ export interface HookPayload {
   transcript_path?: string
   transcriptPath?: string
   cwd?: string
+  hook_event_name?: string
+  hookEventName?: string
+}
+
+export interface TraceContext {
+  tags: string[]
+  metadata: Record<string, string>
 }
 
 export interface TextBlock {

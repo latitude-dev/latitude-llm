@@ -1,5 +1,6 @@
 import { postTraces } from "./client.ts"
 import { loadConfig } from "./config.ts"
+import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
@@ -80,10 +81,14 @@ async function main(): Promise<void> {
       logger,
     })
 
+    const context = collectTraceContext(payload)
+    logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
+
     const otlpRequest = buildOtlpRequest({
       sessionId,
       turnStartNumber: prior.turnCount + 1,
       turns,
+      context,
     })
 
     return postTraces({
