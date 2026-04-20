@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-04-20
+
+### Added
+
+- **Full LLM request capture via Bun preload (opt-in)** — a new `intercept.js` preload wraps `globalThis.fetch` inside the `claude` process and writes every Anthropic `/v1/messages` request body to `~/.claude/state/latitude/requests/<message_id>.json`. The Stop hook reads these files and enriches each `llm_request` span with the exact payload that reached the model:
+  - `gen_ai.system_instructions` — the real system prompt (base + CLAUDE.md + billing blocks)
+  - `gen_ai.tool.definitions` — every tool schema offered to the model
+  - `gen_ai.request.model` / `max_tokens` / `temperature` / `top_p` / `stream`
+  - `gen_ai.input.messages` rebuilt from the actual request (including `tool_use` / `tool_result` blocks), overriding the transcript reconstruction
+  - `llm_request.captured = "true"` marker for filtering enriched spans
+- **`install` subcommand** — `npx @latitude-data/claude-code-telemetry install` copies `intercept.js` to a stable path (`~/.claude/state/latitude/intercept.js`) and prints the `BUN_OPTIONS=--preload=...` line to paste into `settings.json`. The Stop hook also refreshes the installed copy on every run so package upgrades propagate.
+- **Anthropic → Latitude message format converter** — handles `text`, `tool_use`, `tool_result`, `thinking` (→ `reasoning`), and `image` blocks; falls back to stringified JSON for unknown types.
+- **Stale request-file sweep** — on every hook run, consumed request files are deleted and anything older than 24h is pruned.
+
+### Notes
+
+- The preload is fully optional. Without it, spans still work exactly as before (reconstructed from the transcript). With it, spans carry the ground truth.
+- If `BUN_OPTIONS` points to a missing preload file, `claude` itself will refuse to start — keep the path in place or remove the env var.
+
 ## [0.0.2] - 2026-04-20
 
 ### Added

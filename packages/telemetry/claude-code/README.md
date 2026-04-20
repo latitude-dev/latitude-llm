@@ -42,6 +42,47 @@ That's it. The hook fires after every assistant turn, reads new lines from the s
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to turn the hook off without removing it from `settings.json`. |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
 
+## Capturing the full system prompt and tool definitions (optional)
+
+By default the hook reconstructs each `llm_request` span's messages from the transcript on disk. That's good for the conversation — user prompts, assistant text, tool calls and results — but it doesn't include Claude Code's **system prompt** or the **tool definitions** sent to the model, because those aren't persisted to the transcript.
+
+If you want spans to carry the exact payload that reached Anthropic's API — the base prompt, every tool definition, request parameters like `max_tokens` and `temperature`, and the real message array — add a one-time preload that wraps `fetch` inside the `claude` process.
+
+1. Install the preload shim to a stable path:
+
+   ```bash
+   npx -y @latitude-data/claude-code-telemetry install
+   ```
+
+   This writes `intercept.js` to `~/.claude/state/latitude/intercept.js` and prints the env line to add.
+
+2. Add `BUN_OPTIONS` to your `~/.claude/settings.json`:
+
+   ```json
+   "env": {
+     "LATITUDE_API_KEY": "lat_xxx",
+     "LATITUDE_PROJECT": "my-project-slug",
+     "BUN_OPTIONS": "--preload=/Users/you/.claude/state/latitude/intercept.js"
+   }
+   ```
+
+   (Use the absolute path printed by the install command — `~` isn't expanded here.)
+
+With this in place, every Anthropic `/v1/messages` request body is written to `~/.claude/state/latitude/requests/<message_id>.json` inside the `claude` process and consumed by the Stop hook, which attaches:
+
+- `gen_ai.system_instructions` — the full system prompt (base + CLAUDE.md + any billing/context blocks)
+- `gen_ai.tool.definitions` — every tool schema offered to the model
+- `gen_ai.request.model` / `max_tokens` / `temperature` / `top_p` / `stream`
+- `gen_ai.input.messages` — the real message array, overriding the transcript reconstruction
+- `llm_request.captured = "true"` — marker so you can filter for enriched spans
+
+Request files are pruned after the Stop hook consumes them, and anything older than 24h is swept on each run.
+
+**Caveats:**
+- The `claude` CLI is a Bun-compiled standalone. The preload relies on Bun honoring `BUN_OPTIONS=--preload=...` (verified against 2.1.x). If a future release removes this, the hook falls back to reconstruction automatically — nothing else breaks.
+- If the preload path is missing or invalid, **`claude` itself will refuse to start** (Bun errors out). Either keep the path in place or remove `BUN_OPTIONS` from your env.
+- Request bodies are big (often 100KB+ per call). Steady-state disk is small because the Stop hook prunes them, but sessions with many turns between Stop events will accumulate briefly.
+
 ## What gets sent
 
 For each turn, the hook emits:

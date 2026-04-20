@@ -1,9 +1,14 @@
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs"
+import { homedir } from "node:os"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { postTraces } from "./client.ts"
 import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
+import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
 import {
   buildTurns,
@@ -13,7 +18,9 @@ import {
   readIncremental,
   readSubagentMeta,
 } from "./transcript.ts"
-import type { HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
+import type { AssistantCall, HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
+
+const INTERCEPT_INSTALL_PATH = join(homedir(), ".claude", "state", "latitude", "intercept.js")
 
 async function readStdin(): Promise<string> {
   if (process.stdin.isTTY) return ""
@@ -42,6 +49,12 @@ function pickSession(p: HookPayload): { sessionId?: string | undefined; transcri
 }
 
 async function main(): Promise<void> {
+  const subcommand = process.argv[2]
+  if (subcommand === "install-preload" || subcommand === "install") {
+    runInstallPreload()
+    return
+  }
+
   const config = loadConfig()
   const logger = createLogger(config.debug)
 
@@ -51,6 +64,10 @@ async function main(): Promise<void> {
     return
   }
   logger.debug(`enabled: project=${config.project} base=${config.baseUrl}`)
+
+  // Materialize the intercept preload to a stable path so users can reference it from
+  // settings.json once and receive bundle updates for free on subsequent hook runs.
+  materializeIntercept(logger)
 
   const raw = await readStdin()
   const payload = parsePayload(raw)
@@ -95,12 +112,17 @@ async function main(): Promise<void> {
     const conversationHistory = allTurns.slice(0, Math.max(0, allTurns.length - turns.length))
     logger.debug(`conversation history: ${conversationHistory.length} prior turn(s)`)
 
+    const messageIds = collectMessageIds(turns)
+    const requestsByMessageId = loadRequestsByMessageId(messageIds)
+    logger.debug(`captured requests: ${requestsByMessageId.size}/${messageIds.length} messages`)
+
     const otlpRequest = buildOtlpRequest({
       sessionId,
       turnStartNumber: prior.turnCount + 1,
       turns,
       context,
       conversationHistory,
+      requestsByMessageId,
     })
 
     return postTraces({
@@ -118,8 +140,93 @@ async function main(): Promise<void> {
       for (const s of subagentStates) {
         save(s.key, { offset: s.newOffset, buffer: s.newBuffer, turnCount: s.turnCount })
       }
+      // Prune the request files we just consumed, then sweep anything older than 24h.
+      for (const id of requestsByMessageId.keys()) deleteRequest(id)
+      const stalePruned = pruneStaleRequests()
+      if (stalePruned > 0) logger.debug(`pruned ${stalePruned} stale request file(s)`)
     })
   })
+}
+
+function collectMessageIds(turns: Turn[]): string[] {
+  const ids: string[] = []
+  const visit = (ts: Turn[]) => {
+    for (const turn of ts) {
+      for (const call of turn.calls) {
+        if (call.messageId && !call.messageId.startsWith("noid:")) ids.push(call.messageId)
+      }
+      for (const turn2 of ts) collectSubagentIds(turn2.calls, ids)
+    }
+  }
+  visit(turns)
+  return ids
+}
+
+function collectSubagentIds(calls: AssistantCall[], ids: string[]): void {
+  for (const call of calls) {
+    for (const tool of call.toolUses) {
+      const sub = tool.subagent
+      if (!sub) continue
+      for (const subTurn of sub.turns) {
+        for (const subCall of subTurn.calls) {
+          if (subCall.messageId && !subCall.messageId.startsWith("noid:")) ids.push(subCall.messageId)
+        }
+        collectSubagentIds(subTurn.calls, ids)
+      }
+    }
+  }
+}
+
+function materializeIntercept(logger: Logger): void {
+  try {
+    const src = fileURLToPath(new URL("./intercept.js", import.meta.url))
+    if (!existsSync(src)) {
+      logger.debug(`intercept: bundled file missing at ${src}`)
+      return
+    }
+    mkdirSync(dirname(INTERCEPT_INSTALL_PATH), { recursive: true })
+    if (!existsSync(INTERCEPT_INSTALL_PATH)) {
+      copyFileSync(src, INTERCEPT_INSTALL_PATH)
+      logger.debug(`intercept: installed to ${INTERCEPT_INSTALL_PATH}`)
+      return
+    }
+    const srcStat = statSync(src)
+    const dstStat = statSync(INTERCEPT_INSTALL_PATH)
+    if (srcStat.mtimeMs > dstStat.mtimeMs || srcStat.size !== dstStat.size) {
+      copyFileSync(src, INTERCEPT_INSTALL_PATH)
+      logger.debug(`intercept: refreshed ${INTERCEPT_INSTALL_PATH}`)
+    }
+  } catch (err) {
+    logger.debug(`intercept: materialize failed: ${String(err)}`)
+  }
+}
+
+function runInstallPreload(): void {
+  try {
+    const src = fileURLToPath(new URL("./intercept.js", import.meta.url))
+    if (!existsSync(src)) {
+      process.stderr.write(`[latitude-claude-code] bundled intercept.js not found at ${src}\n`)
+      process.exit(1)
+    }
+    mkdirSync(dirname(INTERCEPT_INSTALL_PATH), { recursive: true })
+    copyFileSync(src, INTERCEPT_INSTALL_PATH)
+    process.stdout.write(
+      [
+        `Installed intercept preload to: ${INTERCEPT_INSTALL_PATH}`,
+        "",
+        "Add this to ~/.claude/settings.json under `env`:",
+        "",
+        `  "BUN_OPTIONS": "--preload=${INTERCEPT_INSTALL_PATH}"`,
+        "",
+        "Then your Stop-hook spans will carry the full system prompt, tool definitions,",
+        "and message body that hit the Anthropic API.",
+        "",
+      ].join("\n"),
+    )
+  } catch (err) {
+    process.stderr.write(`[latitude-claude-code] install failed: ${String(err)}\n`)
+    process.exit(1)
+  }
 }
 
 interface SubagentReadResult {

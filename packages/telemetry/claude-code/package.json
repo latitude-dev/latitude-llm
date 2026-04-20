@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/claude-code-telemetry",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Claude Code Stop-hook that streams session transcripts to Latitude as OTLP traces",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -29,7 +29,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./intercept": "./dist/intercept.js"
   },
   "scripts": {
     "build": "tsup",

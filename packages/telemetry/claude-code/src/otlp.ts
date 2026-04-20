@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
+import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
   AssistantCall,
   OtlpExportRequest,
@@ -22,14 +23,18 @@ export function buildOtlpRequest(opts: {
   turns: Turn[]
   context?: TraceContext | undefined
   conversationHistory?: Turn[] | undefined
+  requestsByMessageId?: Map<string, StoredRequest> | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
+  const requestsByMessageId = opts.requestsByMessageId ?? new Map<string, StoredRequest>()
   const spans: OtlpSpan[] = []
   opts.turns.forEach((turn, i) => {
     const turnNum = opts.turnStartNumber + i
     const priorTurns = [...history, ...opts.turns.slice(0, i)]
-    spans.push(...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs, priorTurns))
+    spans.push(
+      ...buildTurnSpans(opts.sessionId, opts.userId, turnNum, turn, contextAttrs, priorTurns, requestsByMessageId),
+    )
   })
 
   const rs: OtlpResourceSpans = {
@@ -52,6 +57,7 @@ function buildTurnSpans(
   turn: Turn,
   contextAttrs: OtlpKeyValue[],
   priorTurns: Turn[],
+  requestsByMessageId: Map<string, StoredRequest>,
 ): OtlpSpan[] {
   const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
   const turnSpanId = hashHex(`${traceId}:turn`, 16)
@@ -70,6 +76,7 @@ function buildTurnSpans(
     genIdSalt: "gen",
     contextAttrs,
     priorTurns,
+    requestsByMessageId,
   })
   return out
 }
@@ -88,6 +95,7 @@ interface TreeCtx {
   genIdSalt: string
   contextAttrs: OtlpKeyValue[]
   priorTurns: Turn[]
+  requestsByMessageId: Map<string, StoredRequest>
 }
 
 function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
@@ -138,12 +146,18 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
   const callSalt = `${ctx.genIdSalt}:call:${callIdx}:${call.messageId}`
   const callSpanId = hashHex(`${traceId}:${callSalt}`, 16)
 
-  const inputMessages = buildCallInputMessages({
-    callIdx,
-    priorTurns: ctx.priorTurns,
-    turn,
-  })
+  const storedRequest = ctx.requestsByMessageId.get(call.messageId)
+  const captured = storedRequest?.request
+
+  // Prefer the exact payload that hit the Anthropic API when we captured it; otherwise
+  // fall back to the reconstruction we can synthesize from the transcript alone.
+  const inputMessages = captured?.messages
+    ? convertAnthropicMessages(captured.messages)
+    : buildCallInputMessages({ callIdx, priorTurns: ctx.priorTurns, turn })
   const outputMessages = [assistantMessageFromCall(call)]
+
+  const systemAttr = captured?.system ? buildSystemInstructions(captured.system) : undefined
+  const toolDefsAttr = captured?.tools && captured.tools.length > 0 ? JSON.stringify(captured.tools) : undefined
 
   const callSpan: OtlpSpan = {
     traceId,
@@ -161,9 +175,14 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
       str("llm_request.context", isSubagent ? "subagent_interaction" : "interaction"),
       int("llm_request.call_index", callIdx),
       str("llm_request.message_id", call.messageId),
+      captured ? str("llm_request.captured", "true") : undefined,
       str("model", call.model),
-      str("gen_ai.request.model", call.model),
+      str("gen_ai.request.model", captured?.model ?? call.model),
       str("gen_ai.response.model", call.model),
+      captured?.max_tokens !== undefined ? int("gen_ai.request.max_tokens", captured.max_tokens) : undefined,
+      captured?.temperature !== undefined ? str("gen_ai.request.temperature", String(captured.temperature)) : undefined,
+      captured?.top_p !== undefined ? str("gen_ai.request.top_p", String(captured.top_p)) : undefined,
+      captured?.stream !== undefined ? bool("gen_ai.request.stream", captured.stream) : undefined,
       call.tokens.input_tokens !== undefined ? int("input_tokens", call.tokens.input_tokens) : undefined,
       call.tokens.input_tokens !== undefined ? int("gen_ai.usage.input_tokens", call.tokens.input_tokens) : undefined,
       call.tokens.output_tokens !== undefined ? int("output_tokens", call.tokens.output_tokens) : undefined,
@@ -181,6 +200,8 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
+      systemAttr ? str("gen_ai.system_instructions", systemAttr) : undefined,
+      toolDefsAttr ? str("gen_ai.tool.definitions", toolDefsAttr) : undefined,
       str("gen_ai.input.messages", JSON.stringify(inputMessages)),
       str("gen_ai.output.messages", JSON.stringify(outputMessages)),
       ...ctx.contextAttrs,
@@ -214,6 +235,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         genIdSalt: `${subSalt}:gen`,
         contextAttrs: ctx.contextAttrs,
         priorTurns: subagent.turns.slice(0, subIdx),
+        requestsByMessageId: ctx.requestsByMessageId,
       })
     })
   })
@@ -312,6 +334,77 @@ function flattenTurnMessages(turn: Turn): Message[] {
     if (toolMsg) messages.push(toolMsg)
   }
   return messages
+}
+
+function buildSystemInstructions(system: AnthropicSystem): string {
+  if (!system) return JSON.stringify([])
+  if (typeof system === "string") {
+    return JSON.stringify([{ type: "text", content: system }])
+  }
+  const parts = system.map((block) => ({
+    type: "text",
+    content: typeof block.text === "string" ? block.text : typeof block.content === "string" ? block.content : "",
+  }))
+  return JSON.stringify(parts)
+}
+
+function convertAnthropicMessages(messages: AnthropicMessage[]): Message[] {
+  const out: Message[] = []
+  for (const m of messages) {
+    out.push(...convertAnthropicMessage(m))
+  }
+  return out
+}
+
+function convertAnthropicMessage(m: AnthropicMessage): Message[] {
+  if (typeof m.content === "string") {
+    return [{ role: m.role, parts: [{ type: "text", content: m.content }] }]
+  }
+  const primaryParts: MessagePart[] = []
+  const toolResponseParts: MessagePart[] = []
+  for (const block of m.content) {
+    convertBlock(block, primaryParts, toolResponseParts)
+  }
+  const result: Message[] = []
+  if (primaryParts.length > 0) result.push({ role: m.role, parts: primaryParts })
+  if (toolResponseParts.length > 0) result.push({ role: "tool", parts: toolResponseParts })
+  return result
+}
+
+function convertBlock(block: AnthropicMessageBlock, primary: MessagePart[], toolResponses: MessagePart[]): void {
+  if (block.type === "text" && typeof block.text === "string") {
+    primary.push({ type: "text", content: block.text })
+    return
+  }
+  if (block.type === "tool_use") {
+    primary.push({
+      type: "tool_call",
+      id: block.id ?? "",
+      name: block.name ?? "",
+      arguments: block.input ?? {},
+    })
+    return
+  }
+  if (block.type === "tool_result") {
+    toolResponses.push({
+      type: "tool_call_response",
+      id: block.tool_use_id ?? "",
+      response: block.content ?? "",
+    })
+    return
+  }
+  if (block.type === "thinking" && typeof block.thinking === "string") {
+    primary.push({ type: "reasoning", content: block.thinking })
+    return
+  }
+  if (block.type === "image" && block.source) {
+    const { media_type, data, url } = block.source
+    const uri = url ?? (data ? `data:${media_type ?? "image/unknown"};base64,${data}` : "")
+    if (uri) primary.push({ type: "uri", modality: "image", uri })
+    return
+  }
+  // Unknown block type — stringify as text so nothing is silently dropped.
+  primary.push({ type: "text", content: JSON.stringify(block) })
 }
 
 function buildCallInputMessages(args: { callIdx: number; priorTurns: Turn[]; turn: Turn }): Message[] {
