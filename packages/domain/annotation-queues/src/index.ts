@@ -36,9 +36,10 @@ export type { TraceSelection } from "./helpers/bulk-create-from-traces-helpers.t
 export {
   annotationQueueItemStatus,
   annotationQueueItemStatusRankFromTimestamps,
-  matchesEmptyResponseSystemQueue,
-  matchesOutputSchemaValidationSystemQueue,
-  matchesToolCallErrorsSystemQueue,
+  type DeterministicSystemMatch,
+  detectEmptyResponseSystemQueue,
+  detectOutputSchemaValidationSystemQueue,
+  detectToolCallErrorsSystemQueue,
 } from "./helpers.ts"
 export {
   type AdjacentItems,
@@ -143,6 +144,13 @@ export {
   type RequestBulkQueueItemsInput,
   requestBulkQueueItems,
 } from "./use-cases/request-bulk-queue-items.ts"
+export {
+  DETERMINISTIC_SYSTEM_MATCHERS,
+  type RunDeterministicSystemMatchersError,
+  type RunDeterministicSystemMatchersInput,
+  type RunDeterministicSystemMatchersResult,
+  runDeterministicSystemMatchersUseCase,
+} from "./use-cases/run-deterministic-system-matchers.ts"
 export {
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,

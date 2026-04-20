@@ -6,15 +6,25 @@ type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
+const ERROR_SNIPPET_MAX_LENGTH = 160
+
+export type DeterministicSystemMatch =
+  | { readonly matched: true; readonly feedback: string }
+  | { readonly matched: false }
+
+const NO_MATCH: DeterministicSystemMatch = { matched: false }
+
+const match = (feedback: string): DeterministicSystemMatch => ({ matched: true, feedback })
+
 function coalesceInstant(v: Date | string | null | undefined): Date | null {
   if (v == null) return null
   const d = v instanceof Date ? v : new Date(v)
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-/** Matches the Tool Call Errors system queue without any LLM classification. */
-export function matchesToolCallErrorsSystemQueue(trace: TraceMessagesOnly): boolean {
-  const seenToolCallIds = new Set<string>()
+/** Detects tool-call failures in the conversation and returns clusterable feedback on match. */
+export function detectToolCallErrorsSystemQueue(trace: TraceMessagesOnly): DeterministicSystemMatch {
+  const toolNameById = new Map<string, string>()
 
   for (const message of trace.allMessages) {
     for (const part of message.parts) {
@@ -22,28 +32,35 @@ export function matchesToolCallErrorsSystemQueue(trace: TraceMessagesOnly): bool
         const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
         const toolName = typeof part.name === "string" ? part.name.trim() : ""
 
-        if (!toolCallId || !toolName || seenToolCallIds.has(toolCallId)) {
-          return true
+        if (!toolCallId || !toolName) {
+          const label = toolName ? `tool "${toolName}"` : "an unnamed tool"
+          return match(`Malformed tool call: ${label} with missing or empty tool_call id`)
         }
 
-        seenToolCallIds.add(toolCallId)
+        if (toolNameById.has(toolCallId)) {
+          return match(`Duplicate tool_call id emitted for tool "${toolName}"`)
+        }
+
+        toolNameById.set(toolCallId, toolName)
         continue
       }
 
       if (part.type !== "tool_call_response") continue
 
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
-      if (!toolCallId || !seenToolCallIds.has(toolCallId)) {
-        return true
+      if (!toolCallId || !toolNameById.has(toolCallId)) {
+        return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`)
       }
 
       if (responseIndicatesFailure(part.response)) {
-        return true
+        const toolName = toolNameById.get(toolCallId) ?? "<unknown>"
+        const snippet = extractErrorSnippet(part.response)
+        return match(snippet ? `Tool "${toolName}" returned error: ${snippet}` : `Tool "${toolName}" returned an error`)
       }
     }
   }
 
-  return false
+  return NO_MATCH
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -52,6 +69,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null
+}
+
+function truncate(s: string | null): string | null {
+  if (!s) return null
+  return s.length > ERROR_SNIPPET_MAX_LENGTH ? `${s.slice(0, ERROR_SNIPPET_MAX_LENGTH)}…` : s
+}
+
+function extractErrorSnippet(response: unknown): string | null {
+  if (typeof response === "string") return truncate(response.trim() || null)
+
+  if (Array.isArray(response)) {
+    for (const item of response) {
+      const extracted = extractErrorSnippet(item)
+      if (extracted) return extracted
+    }
+    return null
+  }
+
+  if (!isRecord(response)) return null
+
+  const errorField = response.error
+  if (typeof errorField === "string") {
+    const snippet = truncate(errorField.trim() || null)
+    if (snippet) return snippet
+  }
+  if (isRecord(errorField)) {
+    const inner = toNonEmptyString(errorField.message) ?? toNonEmptyString(errorField.error)
+    if (inner) return truncate(inner)
+  }
+
+  const message = toNonEmptyString(response.message)
+  if (message) return truncate(message)
+
+  const status = toNonEmptyString(response.status)
+  if (status) return truncate(`status=${status}`)
+
+  return null
 }
 
 function responseIndicatesFailure(response: unknown): boolean {
@@ -95,8 +149,8 @@ function responseIndicatesFailure(response: unknown): boolean {
   return false
 }
 
-/** Matches the Output Schema Validation system queue without any LLM classification. */
-export function matchesOutputSchemaValidationSystemQueue(trace: TraceDetail): boolean {
+/** Detects malformed or truncated structured-output JSON in assistant text parts. */
+export function detectOutputSchemaValidationSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 
@@ -109,21 +163,15 @@ export function matchesOutputSchemaValidationSystemQueue(trace: TraceDetail): bo
       // Only check content that looks like JSON (starts with { or [)
       if (!content.startsWith("{") && !content.startsWith("[")) continue
 
-      // Attempt to parse as JSON
-      try {
-        JSON.parse(content)
-      } catch {
-        // JSON parsing failed - malformed or truncated JSON detected
-        return true
-      }
+      // Run the specific truncation heuristics first so their clustering messages
+      // are preferred over the generic parse-failure fallback.
 
-      // Check for truncation patterns that might pass JSON.parse but are incomplete
-      // e.g., content ending with comma suggests more data expected
+      // Trailing comma suggests the output was cut off mid-collection
       if (content.endsWith(",")) {
-        return true
+        return match("Assistant output ended with a trailing comma, suggesting truncated JSON")
       }
 
-      // Check for unclosed strings (odd number of unescaped quotes)
+      // Unclosed string (odd number of unescaped quotes) suggests mid-string truncation
       let inString = false
       let escaped = false
       for (let i = 0; i < content.length; i++) {
@@ -141,16 +189,22 @@ export function matchesOutputSchemaValidationSystemQueue(trace: TraceDetail): bo
         }
       }
       if (inString) {
-        return true
+        return match("Assistant output contains an unclosed JSON string, suggesting truncated output")
+      }
+
+      try {
+        JSON.parse(content)
+      } catch {
+        return match("Assistant output failed JSON parse (malformed or truncated structured output)")
       }
     }
   }
 
-  return false
+  return NO_MATCH
 }
 
-/** Matches the Empty Response system queue without any LLM classification. */
-export function matchesEmptyResponseSystemQueue(trace: TraceDetail): boolean {
+/** Detects empty or degenerate assistant responses, skipping intentional tool-call-only delegations. */
+export function detectEmptyResponseSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 
@@ -176,18 +230,20 @@ export function matchesEmptyResponseSystemQueue(trace: TraceDetail): boolean {
     // Skip tool-call-only responses (intentional delegation - don't flag)
     if (hasToolCall && !hasText) continue
 
-    // Check accumulated text content
     const accumulatedText = textParts.join("").trim()
 
-    // Empty or whitespace-only
-    if (accumulatedText === "") return true
+    if (accumulatedText === "") {
+      return match("Assistant response was empty or whitespace only")
+    }
 
-    // Degenerate pattern: single character repeated 3+ times
-    // Matches patterns like "...", "aaa", "!!!", "   "
-    if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) return true
+    // Degenerate pattern: single character repeated 3+ times (e.g. "...", "aaa", "!!!")
+    if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
+      const char = accumulatedText[0]
+      return match(`Assistant response was degenerate: only the character "${char}" repeated`)
+    }
   }
 
-  return false
+  return NO_MATCH
 }
 
 /** Accepts entity dates or ISO strings (e.g. from API records). */

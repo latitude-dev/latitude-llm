@@ -24,11 +24,6 @@ import {
   SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
   SYSTEM_QUEUE_FLAGGER_MODEL,
 } from "../constants.ts"
-import {
-  matchesEmptyResponseSystemQueue,
-  matchesOutputSchemaValidationSystemQueue,
-  matchesToolCallErrorsSystemQueue,
-} from "../helpers.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -44,11 +39,7 @@ export interface RunSystemQueueFlaggerResult {
 
 export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
-type DeterministicSystemQueueSlug =
-  | "empty-response"
-  | "output-schema-validation"
-  | "resource-outliers"
-  | "tool-call-errors"
+type DeterministicSystemQueueSlug = "resource-outliers"
 type LlmSystemQueueSlug = "jailbreaking" | "refusal" | "frustration" | "forgetting" | "laziness" | "nsfw" | "trashing"
 
 // Effect-based matcher: loads trace via repository and returns full result with optional match reasons
@@ -58,26 +49,6 @@ type SystemQueueMatcher = (
 
 // Effect-based matchers that load trace and apply domain logic
 const deterministicQueueMatchers: Record<DeterministicSystemQueueSlug, SystemQueueMatcher> = {
-  "empty-response": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesEmptyResponseSystemQueue(trace) }
-    }),
-  "output-schema-validation": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesOutputSchemaValidationSystemQueue(trace) }
-    }),
   "resource-outliers": (input) =>
     Effect.gen(function* () {
       const evaluation = yield* evaluateTraceResourceOutliersUseCase({
@@ -86,16 +57,6 @@ const deterministicQueueMatchers: Record<DeterministicSystemQueueSlug, SystemQue
         traceId: TraceId(input.traceId),
       })
       return { matched: evaluation.matched, matchReasons: evaluation.reasons }
-    }),
-  "tool-call-errors": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesToolCallErrorsSystemQueue(trace) }
     }),
 }
 

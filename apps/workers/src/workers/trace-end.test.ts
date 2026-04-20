@@ -425,6 +425,9 @@ describe("runTraceEndJob", () => {
           filterMissCount: 0,
           startedWorkflowCount: 1,
         },
+        deterministicSystemMatches: {
+          matchedSlugs: [],
+        },
       },
     })
 
@@ -574,6 +577,9 @@ describe("createRunHandler", () => {
         sampledOutCount: 0,
         filterMissCount: 0,
         startedWorkflowCount: 1,
+      },
+      deterministicSystemMatches: {
+        matchedSlugs: [],
       },
     })
   })

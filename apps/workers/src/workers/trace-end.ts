@@ -5,6 +5,7 @@ import {
   getProjectSystemQueuesUseCase,
   orchestrateTraceEndLiveQueueMaterializationUseCase,
   orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
+  runDeterministicSystemMatchersUseCase,
 } from "@domain/annotation-queues"
 import {
   buildTraceEndEvaluationSelectionInputs,
@@ -20,11 +21,17 @@ import {
   type TraceEndItemDecisionCounts,
 } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
-import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  type ClickHouseClient,
+  ScoreAnalyticsRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   AnnotationQueueItemRepositoryLive,
   AnnotationQueueRepositoryLive,
   EvaluationRepositoryLive,
+  OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
   withPostgres,
@@ -83,12 +90,17 @@ type SystemQueueSummary = TraceEndItemDecisionCounts & {
   readonly startedWorkflowCount: number
 }
 
+type DeterministicSystemMatchesSummary = {
+  readonly matchedSlugs: readonly string[]
+}
+
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
   readonly evaluations: EvaluationSummary
   readonly liveQueues: LiveQueueSummary
   readonly systemQueues: SystemQueueSummary
+  readonly deterministicSystemMatches: DeterministicSystemMatchesSummary
 }
 
 type TraceEndRunResult =
@@ -272,6 +284,8 @@ export const runTraceEndJob =
         selectedSystemQueues,
       })
 
+      const { matchedSlugs } = yield* runDeterministicSystemMatchersUseCase({ trace: traceDetail })
+
       return {
         action: "completed",
         summary: {
@@ -294,6 +308,7 @@ export const runTraceEndJob =
             systemQueuesScanned: systemQueues.length,
             startedWorkflowCount,
           },
+          deterministicSystemMatches: { matchedSlugs },
         },
       } satisfies TraceEndRunResult
     }).pipe(
@@ -302,12 +317,17 @@ export const runTraceEndJob =
           AnnotationQueueItemRepositoryLive,
           AnnotationQueueRepositoryLive,
           EvaluationRepositoryLive,
+          OutboxEventWriterLive,
           ScoreRepositoryLive,
         ),
         postgresClient,
         OrganizationId(payload.organizationId),
       ),
-      withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        clickhouseClient,
+        OrganizationId(payload.organizationId),
+      ),
       Effect.provide(RedisCacheStoreLive(redisClient)),
       withTracing,
     )
@@ -334,6 +354,7 @@ export const createRunHandler =
             evaluations: result.summary.evaluations,
             liveQueues: result.summary.liveQueues,
             systemQueues: result.summary.systemQueues,
+            deterministicSystemMatches: result.summary.deterministicSystemMatches,
           })
         }),
       ),
