@@ -41,7 +41,16 @@ export const createRedisClient = (connection: RedisConnection): Redis | Cluster 
       // AWS MemoryDB/ElastiCache with TLS expects the hostname to be preserved so
       // the cluster client can complete TLS validation while refreshing slots.
       dnsLookup: passthroughDnsLookup,
-      redisOptions: baseOptions,
+      // Enable offline queue for cluster mode to handle slot refresh gracefully
+      // Commands are queued briefly while cluster topology is being refreshed
+      enableOfflineQueue: true,
+      redisOptions: {
+        ...buildRedisConnectionOptions(connection),
+        connectTimeout: 5000,
+        commandTimeout: 5000,
+        // Let cluster client handle retries via slot refresh mechanism
+        maxRetriesPerRequest: null,
+      },
     })
   }
 
