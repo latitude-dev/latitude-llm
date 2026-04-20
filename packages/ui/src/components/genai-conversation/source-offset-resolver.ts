@@ -42,6 +42,11 @@ export function findIndices(node: Node) {
   let partIndex: number | null = null
   let contentType: string | null = null
 
+  // Read `data-content-type` from the part-wrapper element only (the one that
+  // carries `data-part-index`). Nested renderers inside a part can legitimately
+  // set their own `data-content-type` (e.g. JsonContent marks its <pre> as
+  // "json" for styling/testing), and an inside-out walk would otherwise latch
+  // onto the inner marker and misreport the part's content type.
   while (el) {
     if (messageIndex === null) {
       const v = el.getAttribute("data-message-index")
@@ -49,11 +54,11 @@ export function findIndices(node: Node) {
     }
     if (partIndex === null) {
       const v = el.getAttribute("data-part-index")
-      if (v !== null) partIndex = parseInt(v, 10)
-    }
-    if (contentType === null) {
-      const v = el.getAttribute("data-content-type")
-      if (v) contentType = v
+      if (v !== null) {
+        partIndex = parseInt(v, 10)
+        const ct = el.getAttribute("data-content-type")
+        if (ct) contentType = ct
+      }
     }
     if (messageIndex !== null && partIndex !== null) break
     el = el.parentElement
