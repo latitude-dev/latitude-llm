@@ -1583,9 +1583,6 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.12.14
-      ioredis:
-        specifier: 'catalog:'
-        version: 5.8.2
 
   packages/platform/workflows-temporal:
     dependencies:
