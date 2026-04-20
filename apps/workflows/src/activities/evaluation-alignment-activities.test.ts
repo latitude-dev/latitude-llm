@@ -6,6 +6,7 @@ import {
 import { createIssueCentroid } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId, ScoreId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { runSpansSeed } from "@platform/db-clickhouse/testing"
 import { evaluations as evaluationsTable } from "@platform/db-postgres/schema/evaluations"
@@ -13,7 +14,7 @@ import { issues as issuesTable } from "@platform/db-postgres/schema/issues"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
 import { setupTestPostgres } from "@platform/db-postgres/testing"
 import { setupTestClickHouse } from "@platform/testkit"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const pg = setupTestPostgres()
@@ -39,7 +40,10 @@ vi.mock("@platform/ai", async () => {
   const { Effect, Layer } = (await vi.importActual("effect")) as typeof import("effect")
 
   return {
-    withAi: () => Effect.provide(Layer.succeed(AI, mockAi)),
+    // Matches the real signature: `(layer, redis?) => Effect.provide(...)` — the
+    // returned transformer removes `AI` from `R`, so tests that pipe through it
+    // don't need a cast to satisfy the requirement channel.
+    withAi: (_layer?: unknown, _redisClient?: unknown) => Effect.provide(Layer.succeed(AI, mockAi)),
   }
 })
 
@@ -224,6 +228,9 @@ describe("evaluation-alignment activities", () => {
       ),
     )
 
+    // The `@platform/ai` mock above intercepts `withAi` at runtime; `Layer.empty`
+    // satisfies the real module's static signature with concrete generics so the
+    // requirement channel narrows to `never` without an `as unknown as` cast.
     const traceDetails = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* TraceRepository
@@ -232,7 +239,7 @@ describe("evaluation-alignment activities", () => {
           projectId,
           traceIds: seededTraceIds,
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, organizationId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, organizationId), withAi(Layer.empty)),
     )
 
     const hydratedCandidates = traceDetails.filter((detail) => detail.allMessages.length > 0).slice(0, 2)

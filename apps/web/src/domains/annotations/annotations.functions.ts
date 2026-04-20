@@ -8,6 +8,8 @@ import { WorkflowStarter } from "@domain/queue"
 import type { AnnotationScore, ScoreListPage } from "@domain/scores"
 import { annotationAnchorSchema, scoreDraftModeSchema } from "@domain/scores"
 import { ProjectId, ScoreId } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -21,7 +23,13 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getWorkflowStarter } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getWorkflowStarter,
+} from "../../server/clients.ts"
 
 const toRecord = (score: AnnotationScore) => ({
   id: score.id as string,
@@ -156,6 +164,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
           chClient,
           organizationId,
         ),
+        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )

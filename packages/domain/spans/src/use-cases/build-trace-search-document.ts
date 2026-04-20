@@ -1,3 +1,5 @@
+import { type CryptoError, hash } from "@repo/utils"
+import { Effect } from "effect"
 import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import { TRACE_SEARCH_DOCUMENT_MAX_LENGTH } from "../constants.ts"
 
@@ -41,9 +43,15 @@ function formatGenAIPart(part: GenAIPart): string {
     case "tool_call":
       return `[TOOL CALL: ${part.name}]`
     case "tool_call_response":
-      return "[TOOL RESULT]"
+      // Skip tool result content entirely. The tool output text (JSON, errors, etc.)
+      // is not searchable in any meaningful way and leaving a literal "[TOOL RESULT]"
+      // placeholder only added noise to embeddings without improving retrieval.
+      return ""
     default:
-      return `[${String((part as { type: string }).type)}]`
+      // Unknown part types are skipped rather than labeled. Emitting a
+      // `[<type>]` placeholder for parts we haven't modeled just feeds
+      // arbitrary tokens into embeddings and muddles retrieval signal.
+      return ""
   }
 }
 
@@ -101,38 +109,9 @@ function normalizeSearchText(text: string): string {
   return normalized
 }
 
-/**
- * Computes a deterministic content hash for the search document.
- * Used to skip redundant embedding work when content hasn't changed.
- */
-function computeContentHash(traceId: string, searchText: string): string {
-  // Simple hash: traceId + length prefix of content
-  // This is deterministic and changes when content changes
-  const contentPrefix = searchText.slice(0, 1000)
-  const contentLength = searchText.length
-
-  // Use a simple string combination that changes with content
-  // In production, a proper hash function would be used
-  return `${traceId}:${contentLength}:${hashString(contentPrefix)}`
-}
-
-/**
- * Simple string hash function for content hashing.
- * Returns a 32-character hex-like string.
- */
-function hashString(str: string): string {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // Convert to 32bit integer
-  }
-
-  // Convert to positive hex string and pad to 32 chars
-  const hashHex = Math.abs(hash).toString(16).padStart(8, "0")
-  // Repeat to get 32 chars (simplified approach)
-  return (hashHex + hashHex + hashHex + hashHex).slice(0, 32)
-}
+// SHA-256 hex digest (64 chars) from @repo/utils; matches the FixedString(64) column width.
+const computeContentHash = (traceId: string, searchText: string): Effect.Effect<string, CryptoError> =>
+  hash(`${traceId}\0${searchText}`)
 
 /**
  * Builds a canonical search document from trace data.
@@ -148,35 +127,26 @@ function hashString(str: string): string {
  *
  * The resulting text is normalized and truncated before storage.
  */
-export function buildTraceSearchDocument(input: TraceSearchDocumentInput): TraceSearchDocument {
-  // Extract text from input and output messages
-  const inputText = extractMessageText(input.inputMessages)
-  const outputText = extractMessageText(input.outputMessages)
+export const buildTraceSearchDocument = (
+  input: TraceSearchDocumentInput,
+): Effect.Effect<TraceSearchDocument, CryptoError> =>
+  Effect.gen(function* () {
+    const inputText = extractMessageText(input.inputMessages)
+    const outputText = extractMessageText(input.outputMessages)
 
-  // Combine with root span name as a metadata boost
-  const parts: string[] = []
+    const parts: string[] = []
+    if (input.rootSpanName && input.rootSpanName !== "") parts.push(input.rootSpanName)
+    if (inputText) parts.push(inputText)
+    if (outputText) parts.push(outputText)
 
-  if (input.rootSpanName && input.rootSpanName !== "") {
-    parts.push(input.rootSpanName)
-  }
+    const searchText = normalizeSearchText(parts.join("\n\n"))
+    const contentHash = yield* computeContentHash(input.traceId, searchText)
 
-  if (inputText) {
-    parts.push(inputText)
-  }
-
-  if (outputText) {
-    parts.push(outputText)
-  }
-
-  const rawText = parts.join("\n\n")
-  const searchText = normalizeSearchText(rawText)
-  const contentHash = computeContentHash(input.traceId, searchText)
-
-  return {
-    traceId: input.traceId,
-    startTime: input.startTime,
-    rootSpanName: input.rootSpanName,
-    searchText,
-    contentHash,
-  }
-}
+    return {
+      traceId: input.traceId,
+      startTime: input.startTime,
+      rootSpanName: input.rootSpanName,
+      searchText,
+      contentHash,
+    }
+  })

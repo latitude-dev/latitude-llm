@@ -25,7 +25,11 @@ export interface TraceSearchEmbeddingRow {
  * Repository port for trace search indexing operations.
  *
  * Handles upserts to trace_search_documents (lexical) and
- * trace_search_embeddings (semantic) tables.
+ * trace_search_embeddings (semantic) tables. Query-side semantic retrieval
+ * runs inline as a subquery inside the main `traces` SQL in
+ * `TraceRepositoryLive`, so the port intentionally exposes only write/dedup
+ * ops — a standalone `querySemanticCandidates` method would duplicate the
+ * cosine-distance SQL that the repository already embeds.
  */
 export interface TraceSearchRepositoryShape {
   /**
@@ -37,7 +41,6 @@ export interface TraceSearchRepositoryShape {
   /**
    * Upsert a semantic search embedding.
    * Uses ReplacingMergeTree semantics - later indexed_at wins.
-   * Only called for traces eligible under the semantic cap policy.
    */
   upsertEmbedding(row: TraceSearchEmbeddingRow): Effect.Effect<void, RepositoryError>
 
@@ -51,11 +54,6 @@ export interface TraceSearchRepositoryShape {
     traceId: TraceId,
     contentHash: string,
   ): Effect.Effect<boolean, RepositoryError>
-
-  /**
-   * Count indexed documents for a project (for semantic cap check).
-   */
-  countDocumentsByProject(organizationId: OrganizationId, projectId: ProjectId): Effect.Effect<number, RepositoryError>
 }
 
 export class TraceSearchRepository extends ServiceMap.Service<TraceSearchRepository, TraceSearchRepositoryShape>()(

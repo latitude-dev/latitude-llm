@@ -65,7 +65,7 @@ export const AIEmbedLive = Layer.succeed(AIEmbed, {
           const response = await client.embed({
             input: input.text,
             model: input.model,
-            inputType: "document",
+            inputType: input.inputType ?? "document",
             truncation: false,
             outputDimension: input.dimensions,
             outputDtype: "float",

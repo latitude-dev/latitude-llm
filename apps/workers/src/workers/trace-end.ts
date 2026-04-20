@@ -19,6 +19,8 @@ import {
   summarizeTraceEndItemDecisions,
   type TraceEndItemDecisionCounts,
 } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -317,6 +319,7 @@ export const runTraceEndJob =
         OrganizationId(payload.organizationId),
       ),
       withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
+      withAi(AIEmbedLive, redisClient),
       Effect.provide(RedisCacheStoreLive(redisClient)),
       withTracing,
     )
