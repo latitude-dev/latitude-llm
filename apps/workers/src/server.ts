@@ -42,6 +42,7 @@ import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
+import { createTraceSearchWorker } from "./workers/trace-search.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -161,6 +162,7 @@ const bootstrap = async () => {
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
     createProductFeedbackWorker(ctx)
+    createTraceSearchWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))

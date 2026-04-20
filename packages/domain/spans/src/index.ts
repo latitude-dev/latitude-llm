@@ -4,6 +4,10 @@ export {
   TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_MODEL,
+  TRACE_SEARCH_SEMANTIC_CAP,
 } from "./constants.ts"
 export type { Session } from "./entities/session.ts"
 export { sessionSchema } from "./entities/session.ts"
@@ -53,6 +57,12 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
+export type {
+  TraceSearchDocumentRow,
+  TraceSearchEmbeddingRow,
+  TraceSearchRepositoryShape,
+} from "./ports/trace-search-repository.ts"
+export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
 export {
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaseline,
@@ -90,6 +100,11 @@ export type {
   BuildTracesExportResult,
 } from "./use-cases/build-traces-export.ts"
 export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
+export type {
+  TraceSearchDocument,
+  TraceSearchDocumentInput,
+} from "./use-cases/build-trace-search-document.ts"
+export { buildTraceSearchDocument } from "./use-cases/build-trace-search-document.ts"
 export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"

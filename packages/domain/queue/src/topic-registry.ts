@@ -206,6 +206,16 @@ const _registry = {
     }
   }>(),
 
+  "trace-search": payloads<{
+    refreshTrace: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly startTime: string
+      readonly rootSpanName: string
+    }
+  }>(),
+
   // Writes annotations into the Latitude-owned dogfood project via
   // @platform/latitude-api. The worker is fire-and-forget from the reviewer's
   // perspective — the web route 202s immediately on enqueue, and BullMQ's

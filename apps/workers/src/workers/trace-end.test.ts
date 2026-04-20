@@ -431,26 +431,28 @@ describe("runTraceEndJob", () => {
       },
     })
 
-    expect(published).toEqual([
-      {
-        queue: "live-evaluations",
-        task: "execute",
-        payload: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          evaluationId: "e".repeat(24),
-          traceId: TRACE_ID,
-        },
-        options: {
-          dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+    expect(published).toEqual(
+      expect.arrayContaining([
+        {
+          queue: "live-evaluations",
+          task: "execute",
+          payload: {
             organizationId: ORGANIZATION_ID,
             projectId: PROJECT_ID,
             evaluationId: "e".repeat(24),
             traceId: TRACE_ID,
-          }),
+          },
+          options: {
+            dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+              organizationId: ORGANIZATION_ID,
+              projectId: PROJECT_ID,
+              evaluationId: "e".repeat(24),
+              traceId: TRACE_ID,
+            }),
+          },
         },
-      },
-    ])
+      ]),
+    )
 
     expect(startedWorkflows).toEqual([
       {
@@ -477,6 +479,15 @@ describe("runTraceEndJob", () => {
     const missedQueue = persistedQueues.find((queue) => queue.id === "r".repeat(24))
     expect(selectedQueue?.totalItems).toBe(1)
     expect(missedQueue?.totalItems).toBe(0)
+
+    // Verify trace-search refresh task was published
+    const traceSearchPublish = published.find((p) => p.queue === "trace-search")
+    expect(traceSearchPublish?.task).toBe("refreshTrace")
+    expect(traceSearchPublish?.payload).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+    })
   })
 })
 
