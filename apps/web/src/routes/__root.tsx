@@ -11,10 +11,10 @@ import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
-const TITLE = "Latitude - The Agent Engineering Platform"
+const TITLE = "Latitude - LLM Observability & Evaluation Platform"
 const DESCRIPTION =
-  "Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production."
-const URL = "https://app.latitude.so"
+  "Latitude is an open-source platform for building and operating LLM features in production. Get full observability into your LLM calls, run evaluations with LLM-as-judge and human-in-the-loop scoring, and turn production failures into repeatable fixes."
+const URL = "https://console.latitude.so"
 const AgentationToolbar = import.meta.env.DEV
   ? lazy(() => import("agentation").then((module) => ({ default: module.Agentation })))
   : null
