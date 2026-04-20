@@ -52,7 +52,7 @@
     "effect": "catalog:",
     "lucide-react": "^1.8.0",
     "nitro": "3.0.260311-beta",
-    "posthog-js": "^1.272.0",
+    "posthog-js": "^1.369.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-use": "^17.6.0",
