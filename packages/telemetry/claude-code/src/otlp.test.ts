@@ -119,10 +119,28 @@ describe("buildOtlpRequest", () => {
     const tool = unwrap(spans[2])
 
     expect(getAttr(tool.attributes, "span.type")).toBe("tool_execution")
-    expect(getAttr(tool.attributes, "tool.name")).toBe("Bash")
-    expect(getAttr(tool.attributes, "tool.id")).toBe("tu_1")
+    expect(getAttr(tool.attributes, "gen_ai.operation.name")).toBe("execute_tool")
+    expect(getAttr(tool.attributes, "gen_ai.tool.name")).toBe("Bash")
+    expect(getAttr(tool.attributes, "gen_ai.tool.call.id")).toBe("tu_1")
+    expect(getAttr(tool.attributes, "gen_ai.tool.call.arguments")).toBe(JSON.stringify({ command: "ls" }))
+    expect(getAttr(tool.attributes, "gen_ai.tool.call.result")).toBe("ok")
     expect(tool.parentSpanId).toBe(unwrap(spans[1]).spanId)
     expect(tool.traceId).toBe(unwrap(spans[0]).traceId)
+  })
+
+  it("marks tool failures with error.type and status code 2", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          toolCalls: [{ id: "tu_err", name: "Bash", input: { command: "exit 1" }, output: "boom", isError: true }],
+        }),
+      ],
+    })
+    const tool = unwrap(otlpSpans(req)[2])
+    expect(getAttr(tool.attributes, "error.type")).toBe("tool_error")
+    expect(tool.status.code).toBe(2)
   })
 
   it("uses deterministic IDs so retries over the same (session, turn) collapse", () => {
@@ -388,7 +406,7 @@ describe("buildOtlpRequest", () => {
     const subTool = unwrap(spans[5])
 
     expect(getAttr(agentTool.attributes, "span.type")).toBe("tool_execution")
-    expect(getAttr(agentTool.attributes, "tool.name")).toBe("Agent")
+    expect(getAttr(agentTool.attributes, "gen_ai.tool.name")).toBe("Agent")
     expect(getAttr(agentTool.attributes, "subagent.type")).toBe("Explore")
     expect(getAttr(agentTool.attributes, "subagent.turn_count")).toBe("1")
     expect(agentTool.parentSpanId).toBe(mainLlm.spanId)
@@ -405,7 +423,7 @@ describe("buildOtlpRequest", () => {
     expect(subLlm.parentSpanId).toBe(subInteraction.spanId)
 
     expect(getAttr(subTool.attributes, "span.type")).toBe("tool_execution")
-    expect(getAttr(subTool.attributes, "tool.name")).toBe("Grep")
+    expect(getAttr(subTool.attributes, "gen_ai.tool.name")).toBe("Grep")
     expect(subTool.parentSpanId).toBe(subLlm.spanId)
   })
 })
