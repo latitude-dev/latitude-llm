@@ -179,10 +179,12 @@ function stitchSubagents(args: {
 function indexAgentCallsByPromptId(turns: Turn[]): Map<string, ToolCall> {
   const map = new Map<string, ToolCall>()
   for (const turn of turns) {
-    for (const call of turn.toolCalls) {
-      if (call.name !== "Agent") continue
-      if (!call.promptId) continue
-      map.set(call.promptId, call)
+    for (const assistantCall of turn.calls) {
+      for (const toolCall of assistantCall.toolUses) {
+        if (toolCall.name !== "Agent") continue
+        if (!toolCall.promptId) continue
+        map.set(toolCall.promptId, toolCall)
+      }
     }
   }
   return map

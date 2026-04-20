@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
 import type {
+  AssistantCall,
   OtlpExportRequest,
   OtlpKeyValue,
   OtlpResourceSpans,
@@ -94,6 +95,8 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
   const startNs = msToNs(turn.startMs)
   const endNs = msToNs(turn.endMs)
   const durationMs = Math.max(0, turn.endMs - turn.startMs)
+  const callCount = turn.calls.length
+  const totalToolCalls = turn.calls.reduce((sum, c) => sum + c.toolUses.length, 0)
 
   const interactionSpan: OtlpSpan = {
     traceId,
@@ -111,6 +114,8 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       str("user_prompt", turn.userText),
       int("user_prompt_length", turn.userText.length),
       int("interaction.duration_ms", durationMs),
+      int("interaction.call_count", callCount),
+      int("interaction.tool_call_count", totalToolCalls),
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
@@ -120,45 +125,75 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
   }
   out.push(interactionSpan)
 
-  const genSpanId = hashHex(`${traceId}:${ctx.genIdSalt}`, 16)
-  const genSpan: OtlpSpan = {
+  turn.calls.forEach((call, callIdx) => {
+    emitCallAndTools(out, ctx, call, callIdx)
+  })
+}
+
+function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, callIdx: number): void {
+  const { traceId, sessionId, userId, turn, isSubagent, subagentLabel } = ctx
+  const callStartNs = msToNs(call.startMs)
+  const callEndNs = msToNs(call.endMs)
+
+  const callSalt = `${ctx.genIdSalt}:call:${callIdx}:${call.messageId}`
+  const callSpanId = hashHex(`${traceId}:${callSalt}`, 16)
+
+  const inputMessages = buildCallInputMessages({
+    callIdx,
+    priorTurns: ctx.priorTurns,
+    turn,
+  })
+  const outputMessages = [assistantMessageFromCall(call)]
+
+  const callSpan: OtlpSpan = {
     traceId,
-    spanId: genSpanId,
+    spanId: callSpanId,
     parentSpanId: ctx.turnSpanId,
     name: "llm_request",
     kind: 3,
-    startTimeUnixNano: startNs,
-    endTimeUnixNano: endNs,
+    startTimeUnixNano: callStartNs,
+    endTimeUnixNano: callEndNs,
     attributes: stripUndef([
       str("span.type", "llm_request"),
+      str("gen_ai.operation.name", "chat"),
       str("session.id", sessionId),
       userId ? str("user.id", userId) : undefined,
       str("llm_request.context", isSubagent ? "subagent_interaction" : "interaction"),
-      str("model", turn.model),
-      turn.tokens.input_tokens !== undefined ? int("input_tokens", turn.tokens.input_tokens) : undefined,
-      turn.tokens.output_tokens !== undefined ? int("output_tokens", turn.tokens.output_tokens) : undefined,
-      turn.tokens.cache_read_input_tokens !== undefined
-        ? int("cache_read_tokens", turn.tokens.cache_read_input_tokens)
+      int("llm_request.call_index", callIdx),
+      str("llm_request.message_id", call.messageId),
+      str("model", call.model),
+      str("gen_ai.request.model", call.model),
+      str("gen_ai.response.model", call.model),
+      call.tokens.input_tokens !== undefined ? int("input_tokens", call.tokens.input_tokens) : undefined,
+      call.tokens.input_tokens !== undefined ? int("gen_ai.usage.input_tokens", call.tokens.input_tokens) : undefined,
+      call.tokens.output_tokens !== undefined ? int("output_tokens", call.tokens.output_tokens) : undefined,
+      call.tokens.output_tokens !== undefined
+        ? int("gen_ai.usage.output_tokens", call.tokens.output_tokens)
         : undefined,
-      turn.tokens.cache_creation_input_tokens !== undefined
-        ? int("cache_creation_tokens", turn.tokens.cache_creation_input_tokens)
+      call.tokens.cache_read_input_tokens !== undefined
+        ? int("cache_read_tokens", call.tokens.cache_read_input_tokens)
+        : undefined,
+      call.tokens.cache_read_input_tokens !== undefined
+        ? int("gen_ai.usage.cache_read.input_tokens", call.tokens.cache_read_input_tokens)
+        : undefined,
+      call.tokens.cache_creation_input_tokens !== undefined
+        ? int("cache_creation_tokens", call.tokens.cache_creation_input_tokens)
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
-      str("gen_ai.input.messages", JSON.stringify(buildInputMessages(ctx.priorTurns, turn.userText))),
-      str("gen_ai.output.messages", JSON.stringify([messagePart("assistant", turn.assistantText)])),
-      int("gen_ai.input.messages.count", ctx.priorTurns.length * 2 + 1),
+      str("gen_ai.input.messages", JSON.stringify(inputMessages)),
+      str("gen_ai.output.messages", JSON.stringify(outputMessages)),
       ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
   }
-  out.push(genSpan)
+  out.push(callSpan)
 
-  turn.toolCalls.forEach((call, idx) => {
-    const toolSpanId = hashHex(`${traceId}:${ctx.genIdSalt}:tool:${idx}:${call.id}`, 16)
-    out.push(buildToolSpan(traceId, genSpanId, toolSpanId, sessionId, userId, startNs, endNs, call, ctx.contextAttrs))
+  call.toolUses.forEach((tool, idx) => {
+    const toolSpanId = hashHex(`${traceId}:${callSalt}:tool:${idx}:${tool.id}`, 16)
+    out.push(buildToolSpan(traceId, callSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
-    const subagent = call.subagent
+    const subagent = tool.subagent
     if (!subagent) return
     subagent.turns.forEach((subTurn, subIdx) => {
       const subSalt = `sub:${subagent.agentId}:${subIdx}`
@@ -191,8 +226,6 @@ function buildToolSpan(
   spanId: string,
   sessionId: string,
   userId: string | undefined,
-  startNs: string,
-  endNs: string,
   call: ToolCall,
   contextAttrs: OtlpKeyValue[],
 ): OtlpSpan {
@@ -202,8 +235,8 @@ function buildToolSpan(
     parentSpanId,
     name: `tool:${call.name}`,
     kind: 1,
-    startTimeUnixNano: startNs,
-    endTimeUnixNano: endNs,
+    startTimeUnixNano: msToNs(call.startMs),
+    endTimeUnixNano: msToNs(call.endMs),
     attributes: stripUndef([
       str("span.type", "tool_execution"),
       str("gen_ai.operation.name", "execute_tool"),
@@ -235,18 +268,62 @@ function buildContextAttrs(context: TraceContext | undefined): OtlpKeyValue[] {
   return attrs
 }
 
-function messagePart(role: "user" | "assistant", content: string) {
+interface MessagePart {
+  type: string
+  [key: string]: unknown
+}
+
+interface Message {
+  role: "user" | "assistant" | "tool"
+  parts: MessagePart[]
+}
+
+function messagePart(role: "user" | "assistant", content: string): Message {
   return { role, parts: [{ type: "text", content }] }
 }
 
-function buildInputMessages(priorTurns: Turn[], currentUserText: string) {
-  const messages = []
-  for (const t of priorTurns) {
-    messages.push(messagePart("user", t.userText))
-    if (t.assistantText.length > 0) messages.push(messagePart("assistant", t.assistantText))
+function assistantMessageFromCall(call: AssistantCall): Message {
+  const parts: MessagePart[] = []
+  if (call.text.length > 0) parts.push({ type: "text", content: call.text })
+  for (const tu of call.toolUses) {
+    parts.push({ type: "tool_call", id: tu.id, name: tu.name, arguments: tu.input })
   }
-  messages.push(messagePart("user", currentUserText))
+  return { role: "assistant", parts }
+}
+
+function toolResponseMessage(toolUses: ToolCall[]): Message | undefined {
+  const parts: MessagePart[] = []
+  for (const tu of toolUses) {
+    if (tu.output === undefined) continue
+    parts.push({ type: "tool_call_response", id: tu.id, response: tu.output })
+  }
+  if (parts.length === 0) return undefined
+  return { role: "tool", parts }
+}
+
+function flattenTurnMessages(turn: Turn): Message[] {
+  const messages: Message[] = [messagePart("user", turn.userText)]
+  for (const call of turn.calls) {
+    messages.push(assistantMessageFromCall(call))
+    const toolMsg = toolResponseMessage(call.toolUses)
+    if (toolMsg) messages.push(toolMsg)
+  }
   return messages
+}
+
+function buildCallInputMessages(args: { callIdx: number; priorTurns: Turn[]; turn: Turn }): Message[] {
+  const { callIdx, priorTurns, turn } = args
+  if (callIdx === 0) {
+    const messages: Message[] = []
+    for (const t of priorTurns) messages.push(...flattenTurnMessages(t))
+    messages.push(messagePart("user", turn.userText))
+    return messages
+  }
+  // Subsequent calls in the same turn receive the prior call's tool responses as new input.
+  const priorCall = turn.calls[callIdx - 1]
+  if (!priorCall) return []
+  const toolMsg = toolResponseMessage(priorCall.toolUses)
+  return toolMsg ? [toolMsg] : []
 }
 
 function resourceAttrs(): OtlpKeyValue[] {

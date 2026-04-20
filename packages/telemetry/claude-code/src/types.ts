@@ -80,6 +80,8 @@ export interface ToolCall {
   isError?: boolean
   promptId?: string
   subagent?: SubagentInvocation
+  startMs: number
+  endMs: number
 }
 
 export interface SubagentInvocation {
@@ -89,12 +91,19 @@ export interface SubagentInvocation {
   turns: Turn[]
 }
 
+export interface AssistantCall {
+  messageId: string
+  model: string
+  text: string
+  toolUses: ToolCall[]
+  tokens: Usage
+  startMs: number
+  endMs: number
+}
+
 export interface Turn {
   userText: string
-  assistantText: string
-  model: string
-  tokens: Usage
-  toolCalls: ToolCall[]
+  calls: AssistantCall[]
   startMs: number
   endMs: number
 }

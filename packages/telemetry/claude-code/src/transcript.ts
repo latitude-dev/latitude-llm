@@ -1,6 +1,7 @@
 import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs"
 import { basename, dirname, extname, join } from "node:path"
 import type {
+  AssistantCall,
   ContentBlock,
   SubagentFile,
   ToolCall,
@@ -68,6 +69,12 @@ export function readIncremental(path: string, offset: number, buffer: string): R
   }
 }
 
+interface ToolResultEntry {
+  block: ToolResultBlock
+  promptId?: string
+  rowMs?: number
+}
+
 export function buildTurns(
   rows: TranscriptRow[],
   opts: {
@@ -78,13 +85,12 @@ export function buildTurns(
   const turns: Turn[] = []
   let userRow: TranscriptRow | undefined
   let assistantRows: TranscriptRow[] = []
-  let toolResults = new Map<string, ToolResultBlock>()
-  let toolPromptIds = new Map<string, string>()
+  let toolResults = new Map<string, ToolResultEntry>()
 
   const flush = () => {
     if (!userRow) return
     if (assistantRows.length === 0) return
-    turns.push(buildTurn(userRow, assistantRows, toolResults, toolPromptIds))
+    turns.push(buildTurn(userRow, assistantRows, toolResults))
   }
 
   for (const row of rows) {
@@ -95,10 +101,13 @@ export function buildTurns(
     if (row.type === "summary") continue
 
     if (isToolResultRow(row)) {
+      const rowMs = parseTs(row.timestamp)
       for (const block of iterToolResults(row)) {
         if (!block.tool_use_id) continue
-        toolResults.set(block.tool_use_id, block)
-        if (row.promptId) toolPromptIds.set(block.tool_use_id, row.promptId)
+        const entry: ToolResultEntry = { block }
+        if (row.promptId) entry.promptId = row.promptId
+        if (rowMs !== undefined) entry.rowMs = rowMs
+        toolResults.set(block.tool_use_id, entry)
       }
       continue
     }
@@ -109,15 +118,14 @@ export function buildTurns(
       userRow = row
       assistantRows = []
       toolResults = new Map()
-      toolPromptIds = new Map()
       continue
     }
 
     if (role === "assistant") {
       if (!userRow) continue
-      // Claude Code writes each content block as its own JSONL row with the same message.id.
-      // We keep every row and aggregate text/tool_uses across them; usage is deduped per
-      // message.id (latest wins) in aggregateUsage.
+      // Claude Code writes each content block as its own JSONL row with the same message.id
+      // representing a single LLM call. Multiple distinct message.ids under one user turn
+      // indicate a tool loop — one LLM call per message.id.
       assistantRows.push(row)
     }
   }
@@ -129,74 +137,94 @@ export function buildTurns(
 function buildTurn(
   userRow: TranscriptRow,
   assistantRows: TranscriptRow[],
-  toolResults: Map<string, ToolResultBlock>,
-  toolPromptIds: Map<string, string>,
+  toolResults: Map<string, ToolResultEntry>,
 ): Turn {
   const userText = extractText(contentOf(userRow))
-  const assistantText = assistantRows
-    .map((r) => extractText(contentOf(r)))
-    .filter((t) => t.length > 0)
-    .join("\n\n")
-  const modelRow = assistantRows.find((r) => r.message?.model && r.message.model !== "<synthetic>")
-  const model = modelRow?.message?.model ?? "claude"
-  const lastAssistant = assistantRows[assistantRows.length - 1]
-
-  const tokens = aggregateUsage(assistantRows)
-  const toolCalls = collectToolCalls(assistantRows, toolResults, toolPromptIds)
-
   const startMs = parseTs(userRow.timestamp) ?? Date.now()
-  const endMs = parseTs(lastAssistant?.timestamp) ?? startMs
 
-  return { userText, assistantText, model, tokens, toolCalls, startMs, endMs }
+  const calls = buildAssistantCalls(assistantRows, toolResults, startMs)
+
+  const lastCallEnd = calls.length > 0 ? (calls[calls.length - 1]?.endMs ?? startMs) : startMs
+  const lastResultEnd = maxToolResultMs(toolResults)
+  const endMs = Math.max(lastCallEnd, lastResultEnd ?? lastCallEnd)
+
+  return { userText, calls, startMs, endMs }
 }
 
-function aggregateUsage(rows: TranscriptRow[]): Usage {
-  // Each assistant content block is its own row but shares message.id with its siblings,
-  // and usage is updated on each row (later rows supersede earlier ones for the same id).
-  // We keep only the last usage per message.id, then sum across distinct messages.
-  const perMessage = new Map<string, Usage>()
-  rows.forEach((r, idx) => {
-    const u = r.message?.usage
-    if (!u) return
-    const id = r.message?.id ?? `noid:${idx}`
-    perMessage.set(id, u)
-  })
-  const out: Usage = {}
-  for (const u of perMessage.values()) {
-    if (u.input_tokens !== undefined) out.input_tokens = (out.input_tokens ?? 0) + u.input_tokens
-    if (u.output_tokens !== undefined) out.output_tokens = (out.output_tokens ?? 0) + u.output_tokens
-    if (u.cache_read_input_tokens !== undefined)
-      out.cache_read_input_tokens = (out.cache_read_input_tokens ?? 0) + u.cache_read_input_tokens
-    if (u.cache_creation_input_tokens !== undefined)
-      out.cache_creation_input_tokens = (out.cache_creation_input_tokens ?? 0) + u.cache_creation_input_tokens
+function maxToolResultMs(toolResults: Map<string, ToolResultEntry>): number | undefined {
+  let max: number | undefined
+  for (const entry of toolResults.values()) {
+    if (entry.rowMs === undefined) continue
+    if (max === undefined || entry.rowMs > max) max = entry.rowMs
   }
-  return out
+  return max
 }
 
-function collectToolCalls(
+function buildAssistantCalls(
   assistantRows: TranscriptRow[],
-  toolResults: Map<string, ToolResultBlock>,
-  toolPromptIds: Map<string, string>,
-): ToolCall[] {
-  const seen = new Set<string>()
-  const calls: ToolCall[] = []
-  for (const row of assistantRows) {
-    for (const block of iterToolUses(row)) {
-      if (seen.has(block.id)) continue
-      seen.add(block.id)
-      const result = toolResults.get(block.id)
-      const promptId = toolPromptIds.get(block.id)
-      const call: ToolCall = {
-        id: block.id,
-        name: block.name,
-        input: block.input,
-        output: result?.content,
-        isError: result?.is_error === true,
-      }
-      if (promptId) call.promptId = promptId
-      calls.push(call)
+  toolResults: Map<string, ToolResultEntry>,
+  turnStartMs: number,
+): AssistantCall[] {
+  // Group assistant rows by message.id preserving arrival order. Each group = one LLM call.
+  const groupOrder: string[] = []
+  const groups = new Map<string, TranscriptRow[]>()
+  assistantRows.forEach((row, idx) => {
+    const id = row.message?.id ?? `noid:${idx}`
+    if (!groups.has(id)) {
+      groups.set(id, [])
+      groupOrder.push(id)
     }
+    groups.get(id)?.push(row)
+  })
+
+  const calls: AssistantCall[] = []
+  const seenToolIds = new Set<string>()
+  let previousCallEnd = turnStartMs
+
+  for (const id of groupOrder) {
+    const groupRows = groups.get(id) ?? []
+    const text = groupRows
+      .map((r) => extractText(contentOf(r)))
+      .filter((t) => t.length > 0)
+      .join("\n\n")
+    const modelRow = groupRows.find((r) => r.message?.model && r.message.model !== "<synthetic>")
+    const model = modelRow?.message?.model ?? "claude"
+
+    // Usage is updated cumulatively per row; last write wins within a call.
+    let tokens: Usage = {}
+    for (const r of groupRows) {
+      if (r.message?.usage) tokens = r.message.usage
+    }
+
+    // Per-call start/end from row timestamps. Fall back to the prior boundary.
+    const rowMs = groupRows.map((r) => parseTs(r.timestamp)).filter((ms): ms is number => ms !== undefined)
+    const startMs = rowMs.length > 0 ? Math.min(...rowMs) : previousCallEnd
+    const endMs = rowMs.length > 0 ? Math.max(...rowMs) : startMs
+
+    const toolUses: ToolCall[] = []
+    for (const row of groupRows) {
+      for (const block of iterToolUses(row)) {
+        if (seenToolIds.has(block.id)) continue
+        seenToolIds.add(block.id)
+        const entry = toolResults.get(block.id)
+        const call: ToolCall = {
+          id: block.id,
+          name: block.name,
+          input: block.input,
+          output: entry?.block.content,
+          isError: entry?.block.is_error === true,
+          startMs: endMs,
+          endMs: entry?.rowMs ?? endMs,
+        }
+        if (entry?.promptId) call.promptId = entry.promptId
+        toolUses.push(call)
+      }
+    }
+
+    calls.push({ messageId: id, model, text, toolUses, tokens, startMs, endMs })
+    previousCallEnd = endMs
   }
+
   return calls
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildOtlpRequest } from "./otlp.ts"
-import type { OtlpKeyValue, Turn } from "./types.ts"
+import type { AssistantCall, OtlpKeyValue, ToolCall, Turn, Usage } from "./types.ts"
 
 function unwrap<T>(value: T | undefined | null): T {
   expect(value).toBeDefined()
@@ -21,16 +21,53 @@ function getAttr(attrs: OtlpKeyValue[], key: string): string | undefined {
   return a?.value?.stringValue ?? a?.value?.intValue
 }
 
-function baseTurn(overrides: Partial<Turn> = {}): Turn {
+interface LegacyTurnOpts {
+  userText?: string
+  assistantText?: string
+  model?: string
+  tokens?: Usage
+  toolCalls?: (Partial<ToolCall> & Pick<ToolCall, "id" | "name" | "input">)[]
+  startMs?: number
+  endMs?: number
+  calls?: AssistantCall[]
+  messageId?: string
+}
+
+function baseTurn(overrides: LegacyTurnOpts = {}): Turn {
+  const startMs = overrides.startMs ?? 1_000
+  const endMs = overrides.endMs ?? 2_000
+  if (overrides.calls) {
+    return { userText: overrides.userText ?? "hello", calls: overrides.calls, startMs, endMs }
+  }
+  const toolUses: ToolCall[] = (overrides.toolCalls ?? []).map((tc) => {
+    const call: ToolCall = {
+      id: tc.id,
+      name: tc.name,
+      input: tc.input,
+      startMs: tc.startMs ?? startMs,
+      endMs: tc.endMs ?? endMs,
+    }
+    if (tc.output !== undefined) call.output = tc.output
+    if (tc.isError !== undefined) call.isError = tc.isError
+    if (tc.promptId !== undefined) call.promptId = tc.promptId
+    if (tc.subagent !== undefined) call.subagent = tc.subagent
+    return call
+  })
   return {
-    userText: "hello",
-    assistantText: "hi there",
-    model: "claude-sonnet-4-6",
-    tokens: { input_tokens: 10, output_tokens: 5 },
-    toolCalls: [],
-    startMs: 1_000,
-    endMs: 2_000,
-    ...overrides,
+    userText: overrides.userText ?? "hello",
+    startMs,
+    endMs,
+    calls: [
+      {
+        messageId: overrides.messageId ?? "msg_1",
+        model: overrides.model ?? "claude-sonnet-4-6",
+        text: overrides.assistantText ?? "hi there",
+        toolUses,
+        tokens: overrides.tokens ?? { input_tokens: 10, output_tokens: 5 },
+        startMs,
+        endMs,
+      },
+    ],
   }
 }
 
@@ -163,24 +200,20 @@ describe("buildOtlpRequest", () => {
 
   it("includes full conversation history in llm_request input messages", () => {
     const history: Turn[] = [
-      {
+      baseTurn({
         userText: "turn 1 user",
         assistantText: "turn 1 assistant",
-        model: "claude-sonnet-4-6",
         tokens: {},
-        toolCalls: [],
         startMs: 0,
         endMs: 100,
-      },
-      {
+      }),
+      baseTurn({
         userText: "turn 2 user",
         assistantText: "turn 2 assistant",
-        model: "claude-sonnet-4-6",
         tokens: {},
-        toolCalls: [],
         startMs: 200,
         endMs: 300,
-      },
+      }),
     ]
     const req = buildOtlpRequest({
       sessionId: "sess-1",
@@ -198,7 +231,6 @@ describe("buildOtlpRequest", () => {
       { role: "assistant", parts: [{ type: "text", content: "turn 2 assistant" }] },
       { role: "user", parts: [{ type: "text", content: "turn 3 user" }] },
     ])
-    expect(getAttr(llm.attributes, "gen_ai.input.messages.count")).toBe("5")
 
     // Interaction span stays narrow — just the current user prompt.
     const interaction = unwrap(otlpSpans(req)[0])
@@ -246,24 +278,22 @@ describe("buildOtlpRequest", () => {
                 agentType: "Explore",
                 description: "look",
                 turns: [
-                  {
+                  baseTurn({
                     userText: "sub turn 1 user",
                     assistantText: "sub turn 1 assistant",
                     model: "claude-haiku-4-5",
                     tokens: {},
-                    toolCalls: [],
                     startMs: 10,
                     endMs: 20,
-                  },
-                  {
+                  }),
+                  baseTurn({
                     userText: "sub turn 2 user",
                     assistantText: "sub turn 2 assistant",
                     model: "claude-haiku-4-5",
                     tokens: {},
-                    toolCalls: [],
                     startMs: 30,
                     endMs: 40,
-                  },
+                  }),
                 ],
               },
             },
@@ -271,15 +301,13 @@ describe("buildOtlpRequest", () => {
         }),
       ],
       conversationHistory: [
-        {
+        baseTurn({
           userText: "a previous parent turn",
           assistantText: "a previous parent response",
-          model: "claude-sonnet-4-6",
           tokens: {},
-          toolCalls: [],
           startMs: -100,
           endMs: -50,
-        },
+        }),
       ],
     })
 
@@ -351,6 +379,122 @@ describe("buildOtlpRequest", () => {
     }
   })
 
+  it("emits one llm_request per AssistantCall with tools as siblings under the interaction", () => {
+    // A tool-loop turn: call A → tool A → call B → tool B → call C (final text).
+    // The canonical OTel GenAI layout emits one llm_request per model call, with tool
+    // executions as children of the llm_request that emitted them.
+    const turn: Turn = {
+      userText: "run then echo",
+      startMs: 1_000,
+      endMs: 1_600,
+      calls: [
+        {
+          messageId: "msg_a",
+          model: "claude-sonnet-4-6",
+          text: "",
+          toolUses: [
+            {
+              id: "tu_1",
+              name: "Bash",
+              input: { command: "ls" },
+              output: "file1",
+              startMs: 1_050,
+              endMs: 1_100,
+            },
+          ],
+          tokens: { input_tokens: 100, output_tokens: 20 },
+          startMs: 1_000,
+          endMs: 1_050,
+        },
+        {
+          messageId: "msg_b",
+          model: "claude-sonnet-4-6",
+          text: "",
+          toolUses: [
+            {
+              id: "tu_2",
+              name: "Bash",
+              input: { command: "echo hi" },
+              output: "hi",
+              startMs: 1_250,
+              endMs: 1_300,
+            },
+          ],
+          tokens: { input_tokens: 200, output_tokens: 10 },
+          startMs: 1_200,
+          endMs: 1_250,
+        },
+        {
+          messageId: "msg_c",
+          model: "claude-sonnet-4-6",
+          text: "done",
+          toolUses: [],
+          tokens: { input_tokens: 300, output_tokens: 5 },
+          startMs: 1_400,
+          endMs: 1_500,
+        },
+      ],
+    }
+
+    const req = buildOtlpRequest({ sessionId: "sess-1", turnStartNumber: 1, turns: [turn] })
+    const spans = otlpSpans(req)
+
+    // Expected: interaction + 3 llm_requests + 2 tools = 6 spans.
+    expect(spans).toHaveLength(6)
+
+    const interaction = unwrap(spans[0])
+    const llm1 = unwrap(spans[1])
+    const tool1 = unwrap(spans[2])
+    const llm2 = unwrap(spans[3])
+    const tool2 = unwrap(spans[4])
+    const llm3 = unwrap(spans[5])
+
+    // All llm_requests are siblings under the interaction.
+    expect(llm1.parentSpanId).toBe(interaction.spanId)
+    expect(llm2.parentSpanId).toBe(interaction.spanId)
+    expect(llm3.parentSpanId).toBe(interaction.spanId)
+
+    // Each tool is a child of the llm_request that emitted it, not of the next.
+    expect(tool1.parentSpanId).toBe(llm1.spanId)
+    expect(tool2.parentSpanId).toBe(llm2.spanId)
+
+    // Per-call tokens are NOT summed — each span reports its own usage.
+    expect(getAttr(llm1.attributes, "input_tokens")).toBe("100")
+    expect(getAttr(llm2.attributes, "input_tokens")).toBe("200")
+    expect(getAttr(llm3.attributes, "input_tokens")).toBe("300")
+
+    // Call index is exposed so the UI can order calls within a turn.
+    expect(getAttr(llm1.attributes, "llm_request.call_index")).toBe("0")
+    expect(getAttr(llm2.attributes, "llm_request.call_index")).toBe("1")
+    expect(getAttr(llm3.attributes, "llm_request.call_index")).toBe("2")
+
+    // Call 1 output embeds the tool_call inside the assistant message.
+    const out1 = JSON.parse(unwrap(getAttr(llm1.attributes, "gen_ai.output.messages")))
+    expect(out1).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "tu_1", name: "Bash", arguments: { command: "ls" } }],
+      },
+    ])
+
+    // Call 2 input is the tool response from call 1, as a `role: tool` message.
+    const in2 = JSON.parse(unwrap(getAttr(llm2.attributes, "gen_ai.input.messages")))
+    expect(in2).toEqual([{ role: "tool", parts: [{ type: "tool_call_response", id: "tu_1", response: "file1" }] }])
+
+    // Call 3 input is the tool response from call 2.
+    const in3 = JSON.parse(unwrap(getAttr(llm3.attributes, "gen_ai.input.messages")))
+    expect(in3).toEqual([{ role: "tool", parts: [{ type: "tool_call_response", id: "tu_2", response: "hi" }] }])
+
+    // Call 3 has no tool calls — output is just the final text.
+    const out3 = JSON.parse(unwrap(getAttr(llm3.attributes, "gen_ai.output.messages")))
+    expect(out3).toEqual([{ role: "assistant", parts: [{ type: "text", content: "done" }] }])
+
+    // Tool spans carry per-call timing from their tool_use → tool_result timestamps.
+    const toNs = (ms: number) => (BigInt(ms) * 1_000_000n).toString()
+    expect(tool1.startTimeUnixNano).toBe(toNs(1_050))
+    expect(tool1.endTimeUnixNano).toBe(toNs(1_100))
+  })
+
   it("nests subagent interaction+llm_request+tool spans under the parent Agent tool span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-1",
@@ -370,7 +514,7 @@ describe("buildOtlpRequest", () => {
                 agentType: "Explore",
                 description: "find X",
                 turns: [
-                  {
+                  baseTurn({
                     userText: "find X in repo",
                     assistantText: "X is at foo.ts",
                     model: "claude-haiku-4-5",
@@ -378,7 +522,7 @@ describe("buildOtlpRequest", () => {
                     toolCalls: [{ id: "toolu_grep_1", name: "Grep", input: { pattern: "X" }, output: "match" }],
                     startMs: 1_100,
                     endMs: 1_900,
-                  },
+                  }),
                 ],
               },
             },
