@@ -6,6 +6,7 @@ import { formatLifecycleLabel, getLifecycleStatesForDisplay } from "./issue-form
 const STATE_VARIANTS = {
   new: "info",
   escalating: "warning",
+  ongoing: "neutral",
   resolved: "neutral",
   regressed: "destructive",
   ignored: "neutral",

@@ -20,6 +20,7 @@ import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
 export const ISSUES_COLUMN_OPTIONS = [
   { id: "issue", label: "Issue", required: true },
+  { id: "status", label: "Status" },
   { id: "trend", label: "Trend" },
   { id: "seenAt", label: "Seen at" },
   { id: "occurrences", label: "Occurrences" },
@@ -28,8 +29,10 @@ export const ISSUES_COLUMN_OPTIONS = [
 
 export type IssuesColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
 
-const ISSUE_COLUMN_WIDTH = 480
-const ISSUE_COLUMN_MIN_WIDTH = 360
+const ISSUE_COLUMN_WIDTH = 360
+const ISSUE_COLUMN_MIN_WIDTH = 280
+const STATUS_COLUMN_WIDTH = 200
+const STATUS_COLUMN_MIN_WIDTH = 160
 
 function SeenAtCell({
   lastSeenAtIso,
@@ -71,7 +74,7 @@ function MonitoredByTooltip({ evaluationNames }: { readonly evaluationNames: rea
 }
 
 export interface IssuesTableSorting {
-  readonly column: "lastSeen" | "occurrences"
+  readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
 }
 
@@ -139,28 +142,36 @@ export function IssuesView({
           <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
             {issue.name}
           </Text.H5>
-          <div className="shrink-0">
-            <IssueLifecycleStatuses
-              states={issue.states}
-              wrap={false}
-              {...(issue.evaluations.length > 0
-                ? {
-                    extraStatuses: [
-                      {
-                        key: "monitored",
-                        label: "Monitored",
-                        variant: "success",
-                        tooltip: (
-                          <MonitoredByTooltip
-                            evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)}
-                          />
-                        ),
-                      },
-                    ],
-                  }
-                : {})}
-            />
-          </div>
+          {issue.evaluations.length > 0 ? (
+            <div className="shrink-0">
+              <IssueLifecycleStatuses
+                states={[]}
+                wrap={false}
+                extraStatuses={[
+                  {
+                    key: "monitored",
+                    label: "Monitored",
+                    variant: "success",
+                    tooltip: (
+                      <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
+                    ),
+                  },
+                ]}
+              />
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: STATUS_COLUMN_WIDTH,
+      minWidth: STATUS_COLUMN_MIN_WIDTH,
+      sortKey: "state",
+      render: (issue) => (
+        <div className="flex min-w-0 items-center">
+          <IssueLifecycleStatuses states={issue.states} wrap={false} />
         </div>
       ),
     },
