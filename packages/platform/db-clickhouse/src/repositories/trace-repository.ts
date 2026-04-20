@@ -31,6 +31,37 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Trace Search Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds a subquery that returns matching trace_ids from trace_search_documents.
+ * Uses tokenbf_v1 and ngrambf_v1 indexes for efficient lexical search.
+ */
+function buildSearchSubquery(searchQuery: string): { subquery: string; params: Record<string, string> } {
+  // Normalize the search query for token matching
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+
+  return {
+    subquery: `SELECT trace_id FROM trace_search_documents 
+              WHERE organization_id = {organizationId:String} 
+                AND project_id = {projectId:String}
+                AND search_text ILIKE {searchPattern:String}`,
+    params: {
+      searchPattern: `%${normalizedQuery}%`,
+    },
+  }
+}
+
+/**
+ * Checks if searchQuery should trigger relevance ordering.
+ * For Phase 2, any non-empty searchQuery uses relevance ordering.
+ */
+function shouldOrderByRelevance(searchQuery: string | undefined): boolean {
+  return !!searchQuery && searchQuery.trim().length > 0
+}
+
 const LIST_SELECT = `
   organization_id,
   project_id,
@@ -483,12 +514,25 @@ export const TraceRepositoryLive = Layer.effect(
     }
 
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
-      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+      const hasSearch = shouldOrderByRelevance(options.searchQuery)
+
+      // When search is active and no explicit sort specified, default to relevance ordering
+      const effectiveSortBy = hasSearch && !options.sortBy ? "" : (options.sortBy ?? "")
+      const sort = SORT_COLUMNS[effectiveSortBy] ?? DEFAULT_SORT
       const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
       const cmp = orderDir === "DESC" ? "<" : ">"
       const limit = options.limit ?? 50
 
       const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+
+      // Build search condition if searchQuery is present
+      let searchCondition = ""
+      let searchParams: Record<string, string> = {}
+      if (hasSearch && options.searchQuery) {
+        const searchResult = buildSearchSubquery(options.searchQuery)
+        searchCondition = `AND trace_id IN (${searchResult.subquery})`
+        searchParams = searchResult.params
+      }
 
       const havingParts: string[] = [...havingClauses]
       if (options.cursor) {
@@ -509,6 +553,7 @@ export const TraceRepositoryLive = Layer.effect(
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         ${extraWhere}
+                        ${searchCondition}
                       GROUP BY organization_id, project_id, trace_id
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
@@ -518,6 +563,7 @@ export const TraceRepositoryLive = Layer.effect(
               projectId: projectId as string,
               limit: limit + 1,
               ...filterParams,
+              ...searchParams,
               ...(options.cursor
                 ? {
                     cursorSortValue: options.cursor.sortValue,
@@ -673,10 +719,19 @@ export const TraceRepositoryLive = Layer.effect(
       getCohortBaselineByProjectId,
       listByProjectId,
 
-      countByProjectId: ({ organizationId, projectId, filters }) => {
+      countByProjectId: ({ organizationId, projectId, filters, searchQuery }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
         const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+        // Build search condition if searchQuery is present
+        let searchCondition = ""
+        let searchParams: Record<string, string> = {}
+        if (searchQuery && searchQuery.trim().length > 0) {
+          const searchResult = buildSearchSubquery(searchQuery)
+          searchCondition = `AND trace_id IN (${searchResult.subquery})`
+          searchParams = searchResult.params
+        }
 
         return chSqlClient
           .query(async (client) => {
@@ -688,6 +743,7 @@ export const TraceRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           ${extraWhere}
+                          ${searchCondition}
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
@@ -695,6 +751,7 @@ export const TraceRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 ...filterParams,
+                ...searchParams,
               },
               format: "JSONEachRow",
             })
@@ -706,10 +763,19 @@ export const TraceRepositoryLive = Layer.effect(
           )
       },
 
-      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters, searchQuery }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
         const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+        // Build search condition if searchQuery is present
+        let searchCondition = ""
+        let searchParams: Record<string, string> = {}
+        if (searchQuery && searchQuery.trim().length > 0) {
+          const searchResult = buildSearchSubquery(searchQuery)
+          searchCondition = `AND trace_id IN (${searchResult.subquery})`
+          searchParams = searchResult.params
+        }
 
         return chSqlClient
           .query(async (client) => {
@@ -747,6 +813,7 @@ export const TraceRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           ${extraWhere}
+                          ${searchCondition}
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
@@ -754,6 +821,7 @@ export const TraceRepositoryLive = Layer.effect(
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 ...filterParams,
+                ...searchParams,
               },
               format: "JSONEachRow",
             })
@@ -765,11 +833,20 @@ export const TraceRepositoryLive = Layer.effect(
           )
       },
 
-      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) => {
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds, searchQuery }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
         const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
         const bs = Math.floor(bucketSeconds)
+
+        // Build search condition if searchQuery is present
+        let searchCondition = ""
+        let searchParams: Record<string, string> = {}
+        if (searchQuery && searchQuery.trim().length > 0) {
+          const searchResult = buildSearchSubquery(searchQuery)
+          searchCondition = `AND trace_id IN (${searchResult.subquery})`
+          searchParams = searchResult.params
+        }
 
         return chSqlClient
           .query(async (client) => {
@@ -786,6 +863,7 @@ export const TraceRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           ${extraWhere}
+                          ${searchCondition}
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )
@@ -796,6 +874,7 @@ export const TraceRepositoryLive = Layer.effect(
                 projectId: projectId as string,
                 bucketSeconds: bs,
                 ...filterParams,
+                ...searchParams,
               },
               format: "JSONEachRow",
             })

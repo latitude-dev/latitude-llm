@@ -28,6 +28,7 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
+    readonly searchQuery?: string
   }): Effect.Effect<number, RepositoryError>
 
   aggregateMetricsByProjectId(input: {
@@ -35,6 +36,7 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
+    readonly searchQuery?: string
   }): Effect.Effect<TraceMetrics, RepositoryError>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
@@ -44,6 +46,7 @@ export interface TraceRepositoryShape {
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
     readonly bucketSeconds: number
+    readonly searchQuery?: string
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError>
 
   findByTraceId(input: {
@@ -100,6 +103,7 @@ export interface TraceListOptions {
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
   readonly cohort?: TraceCohortListingSpec
+  readonly searchQuery?: string
 }
 
 export interface TraceListPage {

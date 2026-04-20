@@ -119,6 +119,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       sortBy: z.string().optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
       filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
     }),
   )
   .handler(async ({ data }): Promise<TraceListResult> => {
@@ -137,6 +138,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
             ...(data.sortBy ? { sortBy: data.sortBy } : {}),
             ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
             ...(data.filters ? { filters: data.filters } : {}),
+            ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           },
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
@@ -153,7 +155,13 @@ export const listTracesByProject = createServerFn({ method: "GET" })
   })
 
 export const countTracesByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -165,13 +173,20 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<TraceMetrics | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -183,6 +198,7 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -220,6 +236,7 @@ const traceHistogramInputSchema = z.object({
     .int()
     .positive()
     .max(90 * 24 * 60 * 60),
+  searchQuery: z.string().max(500).optional(),
 })
 
 export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
@@ -244,6 +261,7 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           filters: mergedFilters,
           bucketSeconds: data.bucketSeconds,
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
