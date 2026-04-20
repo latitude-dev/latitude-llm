@@ -479,13 +479,34 @@ describe("buildOtlpRequest", () => {
       },
     ])
 
-    // Call 2 input is the tool response from call 1, as a `role: tool` message.
+    // Call 2 input carries the FULL conversation accumulated up to that point: the
+    // user prompt, call 1's assistant message (with tool_call), and call 1's tool
+    // response. This mirrors what actually hit the model API.
     const in2 = JSON.parse(unwrap(getAttr(llm2.attributes, "gen_ai.input.messages")))
-    expect(in2).toEqual([{ role: "tool", parts: [{ type: "tool_call_response", id: "tu_1", response: "file1" }] }])
+    expect(in2).toEqual([
+      { role: "user", parts: [{ type: "text", content: "run then echo" }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "tu_1", name: "Bash", arguments: { command: "ls" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "tu_1", response: "file1" }] },
+    ])
 
-    // Call 3 input is the tool response from call 2.
+    // Call 3 input accumulates everything call 2 saw PLUS call 2's output and tool response.
     const in3 = JSON.parse(unwrap(getAttr(llm3.attributes, "gen_ai.input.messages")))
-    expect(in3).toEqual([{ role: "tool", parts: [{ type: "tool_call_response", id: "tu_2", response: "hi" }] }])
+    expect(in3).toEqual([
+      { role: "user", parts: [{ type: "text", content: "run then echo" }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "tu_1", name: "Bash", arguments: { command: "ls" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "tu_1", response: "file1" }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "tu_2", name: "Bash", arguments: { command: "echo hi" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "tu_2", response: "hi" }] },
+    ])
 
     // Call 3 has no tool calls — output is just the final text.
     const out3 = JSON.parse(unwrap(getAttr(llm3.attributes, "gen_ai.output.messages")))

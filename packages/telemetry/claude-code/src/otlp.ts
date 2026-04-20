@@ -316,17 +316,22 @@ function flattenTurnMessages(turn: Turn): Message[] {
 
 function buildCallInputMessages(args: { callIdx: number; priorTurns: Turn[]; turn: Turn }): Message[] {
   const { callIdx, priorTurns, turn } = args
-  if (callIdx === 0) {
-    const messages: Message[] = []
-    for (const t of priorTurns) messages.push(...flattenTurnMessages(t))
-    messages.push(messagePart("user", turn.userText))
-    return messages
+  // Each llm_request carries the FULL conversation that went to the model for that call:
+  // the session history so far, the current user prompt, and every prior call in this
+  // turn (assistant message with its tool_calls + the tool responses that came back).
+  // This matches what actually hit the API — the model sees the accumulated context on
+  // every step of a tool loop, and tokens are billed against it.
+  const messages: Message[] = []
+  for (const t of priorTurns) messages.push(...flattenTurnMessages(t))
+  messages.push(messagePart("user", turn.userText))
+  for (let i = 0; i < callIdx; i++) {
+    const prev = turn.calls[i]
+    if (!prev) continue
+    messages.push(assistantMessageFromCall(prev))
+    const toolMsg = toolResponseMessage(prev.toolUses)
+    if (toolMsg) messages.push(toolMsg)
   }
-  // Subsequent calls in the same turn receive the prior call's tool responses as new input.
-  const priorCall = turn.calls[callIdx - 1]
-  if (!priorCall) return []
-  const toolMsg = toolResponseMessage(priorCall.toolUses)
-  return toolMsg ? [toolMsg] : []
+  return messages
 }
 
 function resourceAttrs(): OtlpKeyValue[] {
