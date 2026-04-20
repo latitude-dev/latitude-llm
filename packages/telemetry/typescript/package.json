@@ -61,7 +61,7 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.1021.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1032.0",
     "@biomejs/biome": "catalog:",
     "@google-cloud/vertexai": "^1.10.4",
     "@langchain/core": "^1.1.39",
