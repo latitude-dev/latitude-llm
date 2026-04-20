@@ -78,16 +78,15 @@ interface InstallFlags {
 // ─── Install ─────────────────────────────────────────────────────────────────
 
 export async function runInstall(flags: InstallFlags = {}): Promise<void> {
-  // The preload file is materialized unconditionally — it's just a copy, and the
-  // hook's own runtime also refreshes it on every Stop, so a bare `install` in
-  // CI still produces the file that users later point `BUN_OPTIONS` at.
-  writeIntercept()
-
   const canPrompt = !flags.noPrompt && process.stdin.isTTY === true
   const hasAnyFlags = Boolean(flags.apiKey || flags.project || flags.environment || flags.noPrompt || flags.noLaunchctl)
 
   if (!canPrompt) {
     if (!hasAnyFlags) {
+      // No flags, no TTY — we can't prompt and there's nothing to write to
+      // settings.json. Materialize just the preload file so users who want to
+      // wire BUN_OPTIONS themselves have the file available, then return.
+      writeIntercept()
       printMinimalInstallInstructions()
       return
     }
@@ -244,8 +243,6 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   )
 
   step.start("Installing preload")
-  // Already copied at the top of runInstall(); we re-copy here to keep the UX
-  // honest — users see the step happen.
   writeIntercept()
   step.stop(`Preload at ${INTERCEPT_INSTALL_PATH}`)
 
