@@ -180,6 +180,16 @@ const _registry = {
       readonly occurredAt: string
     }
   }>(),
+
+  "trace-search": payloads<{
+    refreshTrace: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly startTime: string
+      readonly rootSpanName: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

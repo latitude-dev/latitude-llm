@@ -16,6 +16,7 @@
     "@bull-board/hono": "catalog:",
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
+    "@domain/ai": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",

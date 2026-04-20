@@ -272,6 +272,15 @@ export const runTraceEndJob =
         selectedSystemQueues,
       })
 
+      // Publish trace-search refresh task after successful trace-end completion
+      yield* publisher.publish("trace-search", "refreshTrace", {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        traceId: payload.traceId,
+        startTime: traceDetail.startTime.toISOString(),
+        rootSpanName: traceDetail.rootSpanName,
+      })
+
       return {
         action: "completed",
         summary: {
