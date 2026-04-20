@@ -33,7 +33,7 @@ async function interceptedFetch(
   if (!originalFetch) return fetch(input, init)
 
   const url = getUrl(input)
-  if (!url || !shouldCapture(url)) {
+  if (!url || !shouldCapture(url, input, init)) {
     return originalFetch(input, init)
   }
 
@@ -81,15 +81,18 @@ async function scanForMessageIdAndWrite(
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
+      // Once we've written the file we no longer need to decode or buffer any
+      // more bytes — we just keep pulling from our tee branch so the underlying
+      // source isn't back-pressured while the SDK consumes the other branch.
+      if (wrote) continue
       if (value) buffered += decoder.decode(value, { stream: true })
-      if (!wrote) {
-        const messageId = extractMessageId(buffered)
-        if (messageId) {
-          writeRequest(messageId, bodyText, url)
-          wrote = true
-          // Drain the rest silently so the underlying source isn't back-pressured.
-          // We don't need any more bytes; just keep pulling until done.
-        }
+      const messageId = extractMessageId(buffered)
+      if (messageId) {
+        writeRequest(messageId, bodyText, url)
+        wrote = true
+        // Free the buffer promptly so memory doesn't hold the partial SSE prefix
+        // for the rest of a long stream.
+        buffered = ""
       }
     }
     if (!wrote && DEBUG) {
@@ -106,11 +109,32 @@ async function scanForMessageIdAndWrite(
   }
 }
 
-function shouldCapture(url: string): boolean {
+function shouldCapture(
+  url: string,
+  input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1] | undefined,
+): boolean {
   if (!MESSAGES_PATH_RE.test(url)) return false
+  // Only capture POSTs — /v1/messages also serves GET listings, counters, etc.,
+  // and we don't want to read bodies we weren't going to log. If no explicit
+  // method is set we default to GET per the fetch spec, which we skip.
+  const method = getMethod(input, init) ?? "GET"
+  if (method.toUpperCase() !== "POST") return false
   // Match any Anthropic-style endpoint, including ANTHROPIC_BASE_URL overrides to
   // localhost proxies. We key off the path; the host check is permissive.
   return true
+}
+
+function getMethod(
+  input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1] | undefined,
+): string | undefined {
+  if (typeof init?.method === "string") return init.method
+  if (input && typeof input === "object" && !(input instanceof URL) && "method" in input) {
+    const method = (input as Request).method
+    if (typeof method === "string") return method
+  }
+  return undefined
 }
 
 function getUrl(input: Parameters<typeof fetch>[0]): string | undefined {
