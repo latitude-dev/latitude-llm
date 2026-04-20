@@ -14,7 +14,7 @@ export const annotationQueueQueryKey = (projectId: string, queueId: string) =>
   ["annotation-queue", projectId, queueId] as const
 
 export const ANNOTATION_QUEUES_DEFAULT_SORTING: InfiniteTableSorting = {
-  column: "createdAt",
+  column: "pending",
   direction: "desc",
 }
 
