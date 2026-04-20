@@ -157,27 +157,6 @@ describe("systemQueueFlaggerWorkflow", () => {
     expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
   })
 
-  it("returns not_matched without annotate side effects when the flagger does not match", async () => {
-    mockActivities.runFlagger.mockResolvedValueOnce({ matched: false })
-
-    const result = await systemQueueFlaggerWorkflow({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-1",
-      queueSlug: "resource-outliers",
-    })
-
-    expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({
-      action: "not_matched",
-      queueSlug: "resource-outliers",
-      traceId: "trace-1",
-      durationMs: expect.any(Number),
-    })
-    expect(mockActivities.draftAnnotate).not.toHaveBeenCalled()
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
-  })
-
   it("propagates draftAnnotate errors for Temporal retry", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockRejectedValueOnce(new Error("Draft annotator failed"))

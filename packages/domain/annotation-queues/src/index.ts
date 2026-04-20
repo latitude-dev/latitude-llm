@@ -4,7 +4,6 @@ export {
   LIVE_QUEUE_DEFAULT_SAMPLING,
   MAX_TRACES_PER_QUEUE_IMPORT,
   QUEUE_REVIEW_HOTKEYS,
-  RESOURCE_OUTLIER_MULTIPLIER,
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
   SYSTEM_QUEUE_ANNOTATOR_MODEL,
   SYSTEM_QUEUE_DEFAULT_SAMPLING,
@@ -158,7 +157,6 @@ export {
   runSystemQueueAnnotatorUseCase,
 } from "./use-cases/run-system-queue-annotator.ts"
 export {
-  getSystemQueueMatcherBySlug,
   type RunSystemQueueFlaggerError,
   type RunSystemQueueFlaggerInput,
   type RunSystemQueueFlaggerResult,

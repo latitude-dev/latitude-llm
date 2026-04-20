@@ -92,11 +92,6 @@ export type {
   BuildTraceCohortListingSpecInput,
 } from "./use-cases/build-trace-cohort-listing-spec.ts"
 export { buildTraceCohortListingSpecUseCase } from "./use-cases/build-trace-cohort-listing-spec.ts"
-export type {
-  EvaluateTraceResourceOutliersError,
-  EvaluateTraceResourceOutliersInput,
-} from "./use-cases/evaluate-trace-resource-outliers.ts"
-export { evaluateTraceResourceOutliersUseCase } from "./use-cases/evaluate-trace-resource-outliers.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type {

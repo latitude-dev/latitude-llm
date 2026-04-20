@@ -1,5 +1,4 @@
 import { BadRequestError, ProjectId, type RepositoryError } from "@domain/shared"
-import type { TraceResourceOutlierReason } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
@@ -29,7 +28,6 @@ interface DraftSystemQueueAnnotationInput {
   readonly projectId: string
   readonly queueSlug: string
   readonly traceId: string
-  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }
 
 export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError | RunSystemQueueAnnotatorError
@@ -77,7 +75,6 @@ export const draftSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.dra
     projectId: parsedInput.projectId,
     queueSlug: parsedInput.queueSlug,
     traceId: parsedInput.traceId,
-    ...(input.matchReasons ? { matchReasons: input.matchReasons } : {}),
   })
 
   return {
