@@ -68,7 +68,7 @@
       ]
     }
   },
-  "ignoreBinaries": ["tmuxinator", "pulumi", "tsup"],
+  "ignoreBinaries": ["tmuxinator", "pulumi"],
   "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
   "ignoreIssues": {
     "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"],
