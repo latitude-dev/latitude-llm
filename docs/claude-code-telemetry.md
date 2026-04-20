@@ -19,8 +19,7 @@ Paste into `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
-            "async": true
+            "command": "npx -y @latitude-data/claude-code-telemetry"
           }
         ]
       }
@@ -110,7 +109,7 @@ Notes on the config:
 - `LATITUDE_BASE_URL` points at the local `apps/ingest` dev server (port 3002 by default).
 - `LATITUDE_DEBUG=1` logs each hook step to stderr.
 - **Do not** use `npx -y @latitude-data/claude-code-telemetry` in local dev — that pulls the published package and ignores your local changes.
-- Omit `"async": true` while debugging. With the default (synchronous), Claude Code waits for the hook and its stderr lands in the same terminal right after the assistant's response — you'll see the `[latitude-claude-code]` debug lines without hunting through log files. Flip `async` on once the setup works; the CLI logs only on failure in that mode.
+
 
 ### 3. Absolute node path (especially for the Desktop app)
 
@@ -163,7 +162,7 @@ echo '{"session_id":"smoke","transcript_path":"/tmp/latitude-hook-smoke/transcri
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| No state file after a session | Hook never ran (PATH issue or async swallowing output) | Absolute node path; remove `async: true` |
+| No state file after a session | Hook never ran (PATH issue) | Use an absolute node path |
 | State file updates but never a `2xx` line | `LATITUDE_API_KEY` or `LATITUDE_PROJECT` missing | Both must be in settings.json `env` — hooks don't inherit shell env |
 | HTTP 400 "X-Latitude-Project header is required" | `LATITUDE_PROJECT` unset | Add it to settings.json |
 | HTTP 404 "Project not found" | Slug mismatch or project not in this org | Run `pnpm seed` to create `default-project`; verify org via API key |
