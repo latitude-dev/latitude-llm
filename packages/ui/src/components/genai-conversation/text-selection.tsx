@@ -22,7 +22,7 @@ export interface HighlightRange {
 interface TextSelectionContextValue {
   detected: DetectedSelection | null
   anchor: TextSelectionAnchor | null
-  resolveAndAnnotate: (clickPosition?: { x: number; y: number }) => TextSelectionAnchor | null
+  resolveAndAnnotate: (clickPosition?: { x: number; y: number }, passed?: boolean | null) => TextSelectionAnchor | null
   resolveAndCopy: () => void
   clearSelection: () => void
   getHighlightsForBlock: (messageIndex: number, partIndex: number) => HighlightRange[]
@@ -41,7 +41,9 @@ export function TextSelectionProvider({
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
   readonly containerRef: RefObject<HTMLElement | null>
-  readonly onSelect?: ((anchor: TextSelectionAnchor, position: { x: number; y: number }) => void) | undefined
+  readonly onSelect?:
+    | ((anchor: TextSelectionAnchor, position: { x: number; y: number }, passed: boolean | null) => void)
+    | undefined
   readonly onDismiss?: (() => void) | undefined
   readonly clearSelectionRef?: RefObject<(() => void) | null> | undefined
   readonly highlightRanges?: ReadonlyArray<HighlightRange> | undefined
@@ -53,7 +55,7 @@ export function TextSelectionProvider({
   const messagesRef = useMemo(() => ({ current: messages }), [messages])
 
   const resolveAndAnnotate = useCallback(
-    (clickPosition?: { x: number; y: number }): TextSelectionAnchor | null => {
+    (clickPosition?: { x: number; y: number }, passed: boolean | null = null): TextSelectionAnchor | null => {
       if (!detected?.isSinglePart) return null
 
       const result = resolveSourceOffsets(
@@ -64,7 +66,7 @@ export function TextSelectionProvider({
       )
       if (result) {
         setAnchor(result)
-        onSelect?.(result, clickPosition ?? detected.position)
+        onSelect?.(result, clickPosition ?? detected.position, passed)
       }
       window.getSelection()?.removeAllRanges()
       clearDetection()

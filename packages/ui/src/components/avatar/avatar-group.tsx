@@ -24,9 +24,18 @@ export interface AvatarGroupProps {
   readonly className?: string
   /** Rendered when `items` is empty. */
   readonly empty?: ReactNode
+  /** Disable per-avatar name tooltips. Useful when the parent already provides a tooltip. */
+  readonly disableTooltips?: boolean
 }
 
-export function AvatarGroup({ items, maxVisible = 3, size = "md", className, empty = null }: AvatarGroupProps) {
+export function AvatarGroup({
+  items,
+  maxVisible = 3,
+  size = "md",
+  className,
+  empty = null,
+  disableTooltips = false,
+}: AvatarGroupProps) {
   if (items.length === 0) {
     return empty
   }
@@ -37,38 +46,43 @@ export function AvatarGroup({ items, maxVisible = 3, size = "md", className, emp
   const overflowLabel = overflowItems.map((i) => i.name).join(", ")
 
   return (
-    <div className={cn("flex items-center pl-1", className)}>
-      {visible.map((item, i) => (
-        <Tooltip
-          key={item.id ?? `${item.name}-${i}`}
-          asChild
-          trigger={
-            <span className={cn("relative inline-flex", i > 0 && "-ml-2")} style={{ zIndex: visible.length - i }}>
-              <Avatar name={item.name} imageSrc={item.imageSrc ?? null} size={size} stacked />
-            </span>
-          }
-        >
-          {item.name}
-        </Tooltip>
-      ))}
-      {extraCount > 0 ? (
-        <Tooltip
-          asChild
-          trigger={
-            <span
-              className={cn(
-                "-ml-2 inline-flex shrink-0 items-center justify-center rounded-full border-2 border-background bg-secondary px-1 font-medium text-muted-foreground",
-                overflowChipClass[size],
-              )}
-              style={{ zIndex: 0 }}
-            >
-              +{extraCount}
-            </span>
-          }
-        >
-          {overflowLabel}
-        </Tooltip>
-      ) : null}
+    <div className={cn("flex items-center px-1", className)}>
+      {visible.map((item, i) => {
+        const avatar = (
+          <span className={cn("relative inline-flex", i > 0 && "-ml-2")} style={{ zIndex: visible.length - i }}>
+            <Avatar name={item.name} imageSrc={item.imageSrc ?? null} size={size} stacked />
+          </span>
+        )
+        if (disableTooltips) {
+          return <span key={item.id ?? `${item.name}-${i}`}>{avatar}</span>
+        }
+        return (
+          <Tooltip key={item.id ?? `${item.name}-${i}`} asChild trigger={avatar}>
+            {item.name}
+          </Tooltip>
+        )
+      })}
+      {extraCount > 0
+        ? (() => {
+            const chip = (
+              <span
+                className={cn(
+                  "-ml-2 inline-flex shrink-0 items-center justify-center rounded-full border-2 border-background bg-secondary px-1 font-medium text-muted-foreground",
+                  overflowChipClass[size],
+                )}
+                style={{ zIndex: 0 }}
+              >
+                +{extraCount}
+              </span>
+            )
+            if (disableTooltips) return chip
+            return (
+              <Tooltip asChild trigger={chip}>
+                {overflowLabel}
+              </Tooltip>
+            )
+          })()
+        : null}
     </div>
   )
 }

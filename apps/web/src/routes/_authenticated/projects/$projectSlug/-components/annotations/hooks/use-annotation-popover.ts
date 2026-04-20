@@ -87,7 +87,7 @@ export function useAnnotationPopover({
   )
 
   const handleTextSelect = useCallback(
-    (anchor: TextSelectionAnchor, position: { x: number; y: number }) => {
+    (anchor: TextSelectionAnchor, position: { x: number; y: number }, passed: boolean | null) => {
       const existing = highlightRanges.find(
         (r) =>
           r.messageIndex === anchor.messageIndex &&
@@ -106,7 +106,7 @@ export function useAnnotationPopover({
         kind: "new",
         anchor,
         position,
-        passed: null,
+        passed,
         comment: "",
         issueId: null,
       })
@@ -118,6 +118,7 @@ export function useAnnotationPopover({
   const isPopoverEditable = openPopover?.kind === "existing" ? isDraftAnnotation(openPopover.annotation) : true
 
   const textSelectionPopoverPosition = openPopover?.position ?? null
+  const textSelectionInitialPassed: boolean | null = openPopover?.kind === "new" ? openPopover.passed : null
   const textSelectionAnnotations: readonly AnnotationRecord[] =
     openPopover?.kind === "existing" ? [openPopover.annotation] : []
 
@@ -171,6 +172,7 @@ export function useAnnotationPopover({
     updateTextSelectionPopoverPosition,
     handleTextSelect,
     textSelectionPopoverPosition,
+    textSelectionInitialPassed,
     textSelectionAnnotations,
     createTextSelectionAnnotation,
     updateTextSelectionAnnotation,

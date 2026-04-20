@@ -9,6 +9,8 @@ export interface AnnotationPopoverProps {
   readonly projectId: string
   readonly annotations: readonly AnnotationRecord[]
   readonly showCreateForm?: boolean
+  readonly createInitialPassed?: boolean | null
+  readonly createAutoFocus?: boolean
   readonly isCreateLoading?: boolean
   readonly isUpdateLoading?: boolean
   readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
@@ -23,6 +25,8 @@ export function AnnotationPopover({
   projectId,
   annotations,
   showCreateForm = true,
+  createInitialPassed = null,
+  createAutoFocus = false,
   isCreateLoading = false,
   isUpdateLoading = false,
   onSave,
@@ -69,6 +73,8 @@ export function AnnotationPopover({
           projectId={projectId}
           annotations={annotations}
           showCreateForm={showCreateForm}
+          createInitialPassed={createInitialPassed}
+          createAutoFocus={createAutoFocus}
           isCreateLoading={isCreateLoading}
           isUpdateLoading={isUpdateLoading}
           onSave={onSave}
