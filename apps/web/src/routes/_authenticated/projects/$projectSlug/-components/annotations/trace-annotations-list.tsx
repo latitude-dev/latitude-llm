@@ -24,7 +24,7 @@ export function TraceAnnotationsList({
   readonly queueId?: string | undefined
   readonly selectedAnnotationId?: string | undefined
   readonly onAnnotationClick?: ((annotation: AnnotationRecord) => void) | undefined
-  /** When true, omit the Annotations title, count, and helper line (e.g. trace detail tab already shows the label). */
+  /** When true, omit the Annotations title and helper line (e.g. trace detail tab already shows the label). */
   readonly hideAnnotationIntro?: boolean | undefined
 }) {
   const {
@@ -110,15 +110,7 @@ export function TraceAnnotationsList({
       )}
       {!hideAnnotationIntro && (
         <div className="flex flex-col">
-          <div className="flex items-center gap-1">
-            <Text.H5M>Annotations</Text.H5M>
-            {annotationsError ? (
-              <Text.H5M color="foregroundMuted">–</Text.H5M>
-            ) : annotationsLoading ? null : annotations.length > 0 ? (
-              <Text.H5M color="foregroundMuted">{annotations.length}</Text.H5M>
-            ) : null}
-          </div>
-
+          <Text.H5M>Annotations</Text.H5M>
           <Text.H5 color="foregroundMuted">
             Select text, a message or annotate the entire conversation in this section
           </Text.H5>
