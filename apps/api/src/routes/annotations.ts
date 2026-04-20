@@ -1,4 +1,4 @@
-import { persistDraftAnnotationInputSchema, writeDraftAnnotationUseCase } from "@domain/annotations"
+import { submitApiAnnotationInputSchema, submitApiAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
@@ -17,11 +17,16 @@ import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURI
 import type { OrganizationScopedEnv } from "../types.ts"
 
 /**
- * POST body: use-case input without `projectId` (URL) or
- * `sourceId` (forced to `"API"`). */
-const RequestSchema = persistDraftAnnotationInputSchema
-  .omit({ projectId: true, sourceId: true })
-  .openapi("CreateAnnotationBody")
+ * POST body: caller-supplied annotation data plus a `trace` ref (id or filters)
+ * and an optional `draft` flag (default `false` = published). `projectId` comes
+ * from the URL and `sourceId` is forced to `"API"`.
+ *
+ * Note: we rebuild the schema here (rather than chaining `.openapi()` on the
+ * domain export) because Zod-OpenAPI's prototype augmentation does not survive
+ * schemas returned from `.omit().extend(...)` across package boundaries — the
+ * fresh `z.object` wrapper is the idiomatic way to attach an OpenAPI name.
+ */
+const RequestSchema = z.object(submitApiAnnotationInputSchema.shape).openapi("CreateAnnotationBody")
 
 const ResponseSchema = z
   .object({
@@ -41,7 +46,7 @@ const route = createRoute({
   tags: ["Annotations"],
   summary: "Create project annotation",
   description:
-    "Creates a human-reviewed annotation score. Annotations are the strongest human signal in the reliability system.",
+    'Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).',
   security: PROTECTED_SECURITY,
   request: {
     params: OrgAndProjectParamsSchema,
@@ -89,10 +94,9 @@ export const createAnnotationsRoutes = () => {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
-        return yield* writeDraftAnnotationUseCase({
+        return yield* submitApiAnnotationUseCase({
           ...body,
           projectId,
-          sourceId: "API",
           organizationId,
         })
       }).pipe(
