@@ -1,5 +1,6 @@
 import { use, useMemo } from "react"
 import { TextSelectionContext } from "../text-selection.tsx"
+import { CodeBlockShell } from "./code-block-shell.tsx"
 import { highlightAttributes, segmentForHighlights } from "./highlight-segments.ts"
 
 export function JsonContent({
@@ -26,7 +27,7 @@ export function JsonContent({
   }, [content, highlights])
 
   return (
-    <pre data-content-type="json" className="overflow-auto rounded-lg bg-muted p-3 text-xs">
+    <CodeBlockShell contentType="json">
       <code>
         {segments.map((segment, i) => {
           const attrs = highlightAttributes(segment.activeHighlight)
@@ -44,6 +45,6 @@ export function JsonContent({
           )
         })}
       </code>
-    </pre>
+    </CodeBlockShell>
   )
 }

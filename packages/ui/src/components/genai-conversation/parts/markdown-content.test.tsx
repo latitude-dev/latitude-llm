@@ -12,6 +12,31 @@ describe("MarkdownContent", () => {
     expect(markup).toContain(">bold<")
   })
 
+  it("routes Markdown code fences through the shared code-block shell", () => {
+    const fenced = "```js\nconst x = 1\n```"
+    const markup = renderToStaticMarkup(<MarkdownContent content={fenced} />)
+
+    // Shared shell classes applied to the <pre> that wraps the fence.
+    expect(markup).toContain("<pre")
+    expect(markup).toContain("not-prose")
+    expect(markup).toContain("bg-muted")
+    expect(markup).toContain("rounded-lg")
+    // Inner <code> still carries the fence language class from remark-gfm.
+    expect(markup).toContain("language-js")
+  })
+
+  it("JSON and Markdown code fences share the same shell classes", () => {
+    const jsonContent = '{"a":1}'
+    const fencedContent = "```js\nconst a = 1\n```"
+    const jsonMarkup = renderToStaticMarkup(<MarkdownContent content={jsonContent} />)
+    const fencedMarkup = renderToStaticMarkup(<MarkdownContent content={fencedContent} />)
+
+    for (const cls of ["not-prose", "bg-muted", "rounded-lg", "overflow-auto", "p-3", "text-xs"]) {
+      expect(jsonMarkup).toContain(cls)
+      expect(fencedMarkup).toContain(cls)
+    }
+  })
+
   it("falls back to a guarded plain-text view for oversized content", () => {
     const oversizedContent = `${"a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD + 1)}END_MARKER`
 

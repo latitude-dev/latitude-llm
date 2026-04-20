@@ -1,15 +1,22 @@
 import { use, useMemo, useState } from "react"
-import ReactMarkdown from "react-markdown"
+import ReactMarkdown, { type Components } from "react-markdown"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { Button } from "../../button/button.tsx"
 import { Text } from "../../text/text.tsx"
 import { TextSelectionContext } from "../text-selection.tsx"
+import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
 const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
+
+// Route Markdown code fences through the same shell as JsonContent so whole-
+// part JSON and inline ```...``` blocks share one visual treatment.
+const markdownComponents: Components = {
+  pre: ({ children }) => <CodeBlockShell>{children}</CodeBlockShell>,
+}
 export const LARGE_MARKDOWN_CONTENT_THRESHOLD = 20_000
 export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
 
@@ -83,7 +90,11 @@ export function MarkdownContent({
 
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
-      <ReactMarkdown remarkPlugins={[...remarkPlugins]} rehypePlugins={[sourceMappedTextPlugin(highlights)]}>
+      <ReactMarkdown
+        remarkPlugins={[...remarkPlugins]}
+        rehypePlugins={[sourceMappedTextPlugin(highlights)]}
+        components={markdownComponents}
+      >
         {content}
       </ReactMarkdown>
     </div>
