@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs"
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -78,6 +78,12 @@ async function main(): Promise<void> {
   }
   logger.debug(`session=${sessionId} transcript=${transcriptPath}`)
 
+  // Claude Code's transcript writes and our intercept's request-file writes happen
+  // just before Stop fires. Give them a brief window to flush to disk. Without this
+  // we occasionally miss the final assistant row (no final llm_request span) and
+  // miss request files (no llm_request.captured marker).
+  await delay(250)
+
   await withLock(() => {
     const key = stateKey(sessionId, transcriptPath)
     const prior = load(key)
@@ -115,6 +121,11 @@ async function main(): Promise<void> {
     const messageIds = collectMessageIds(turns)
     const requestsByMessageId = loadRequestsByMessageId(messageIds)
     logger.debug(`captured requests: ${requestsByMessageId.size}/${messageIds.length} messages`)
+    if (requestsByMessageId.size < messageIds.length) {
+      const missing = messageIds.filter((id) => !requestsByMessageId.has(id))
+      logger.debug(`missing ${missing.length}: ${missing.join(", ")}`)
+      logger.debug(`dir listing: ${listRequestFilenames().join(", ")}`)
+    }
 
     const otlpRequest = buildOtlpRequest({
       sessionId,
@@ -174,6 +185,20 @@ function collectSubagentIds(calls: AssistantCall[], ids: string[]): void {
         collectSubagentIds(subTurn.calls, ids)
       }
     }
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function listRequestFilenames(): string[] {
+  try {
+    const dir = join(homedir(), ".claude", "state", "latitude", "requests")
+    if (!existsSync(dir)) return []
+    return readdirSync(dir)
+  } catch {
+    return []
   }
 }
 

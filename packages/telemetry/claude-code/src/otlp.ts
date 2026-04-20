@@ -127,6 +127,18 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
       str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
+      // Diagnostic: per-interaction snapshot of what the hook saw from the intercept.
+      // Shows up in the Latitude UI so users can see exactly why llm_request.captured
+      // did or didn't land on a given trace.
+      str("latitude.debug.message_ids", turn.calls.map((c) => c.messageId).join(",")),
+      str(
+        "latitude.debug.captured_message_ids",
+        turn.calls
+          .filter((c) => ctx.requestsByMessageId.has(c.messageId))
+          .map((c) => c.messageId)
+          .join(","),
+      ),
+      int("latitude.debug.captured_count", countCapturedCalls(turn, ctx.requestsByMessageId)),
       ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
@@ -204,6 +216,9 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
       toolDefsAttr ? str("gen_ai.tool.definitions", toolDefsAttr) : undefined,
       str("gen_ai.input.messages", JSON.stringify(inputMessages)),
       str("gen_ai.output.messages", JSON.stringify(outputMessages)),
+      // Diagnostic: show the lookup outcome per span so it's visible in the UI.
+      str("latitude.debug.lookup_message_id", call.messageId),
+      str("latitude.debug.request_file_found", captured ? "true" : "false"),
       ...ctx.contextAttrs,
     ]),
     status: { code: 1 },
@@ -334,6 +349,10 @@ function flattenTurnMessages(turn: Turn): Message[] {
     if (toolMsg) messages.push(toolMsg)
   }
   return messages
+}
+
+function countCapturedCalls(turn: Turn, requestsByMessageId: Map<string, StoredRequest>): number {
+  return turn.calls.reduce((sum, call) => sum + (requestsByMessageId.has(call.messageId) ? 1 : 0), 0)
 }
 
 function buildSystemInstructions(system: AnthropicSystem): string {
