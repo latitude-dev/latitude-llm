@@ -66,6 +66,7 @@ function ConversationContent({
     handleTextSelect,
     openExistingAnnotationPopover,
     textSelectionPopoverPosition,
+    textSelectionInitialPassed,
     textSelectionAnnotations,
     createTextSelectionAnnotation,
     updateTextSelectionAnnotation,
@@ -116,12 +117,13 @@ function ConversationContent({
           clearSelectionRef={clearSelectionRef}
           highlightRanges={highlightRanges}
           onAnnotationClick={onAnnotationClick}
-          messageAnnotationSlot={(messageIndex) => {
+          messageAnnotationSlot={(messageIndex, role) => {
             const data = messageLevelAnnotations.get(messageIndex)
             return (
               <MessageAnnotationTrigger
                 key={data?.annotations.map((a) => a.id).join(",") ?? `no-annotation-${messageIndex}`}
                 messageIndex={messageIndex}
+                messageRole={role}
                 projectId={projectId}
                 traceId={traceDetail.traceId}
                 spanId={spanMaps?.messageSpanMap[messageIndex]}
@@ -140,6 +142,8 @@ function ConversationContent({
           projectId={projectId}
           annotations={textSelectionAnnotations}
           showCreateForm={textSelectionAnnotations.length === 0}
+          createInitialPassed={textSelectionInitialPassed}
+          createAutoFocus={textSelectionInitialPassed !== null}
           isCreateLoading={isCreatePending}
           isUpdateLoading={isUpdatePending}
           onSave={createTextSelectionAnnotation}

@@ -248,6 +248,7 @@ export function useAnnotationNavigation({
       if (container) {
         let handled = false
         const scrollTarget = findScrollport(element, container)
+        const scrollTopBefore = scrollTarget.scrollTop
 
         const cleanup = () => {
           scrollTarget.removeEventListener("scrollend", onScrollEnd)
@@ -263,6 +264,18 @@ export function useAnnotationNavigation({
         scrollTarget.addEventListener("scrollend", onScrollEnd, { once: true })
 
         element.scrollIntoView({ behavior: "smooth", block: "center" })
+
+        // `scrollend` only fires if a scroll actually happens. When the element is
+        // already in view, scrollIntoView is a no-op — fall through to openAndSelect
+        // on the next frame if scrollTop didn't change.
+        requestAnimationFrame(() => {
+          if (handled) return
+          if (scrollTarget.scrollTop === scrollTopBefore) {
+            handled = true
+            cleanup()
+            openAndSelectAnnotation()
+          }
+        })
       } else {
         element.scrollIntoView({ behavior: "instant", block: "center" })
         openAndSelectAnnotation()

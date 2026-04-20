@@ -1,8 +1,9 @@
-import { ClipboardCopyIcon, MessageSquarePlusIcon } from "lucide-react"
+import { ClipboardCopyIcon } from "lucide-react"
 import { type ReactNode, use, useRef } from "react"
 import { Button } from "../button/button.tsx"
 import { Icon } from "../icons/icons.tsx"
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/primitives.tsx"
+import { ThumbButton } from "../thumb-button/thumb-button.tsx"
 import { useToast } from "../toast/useToast.ts"
 import { TextSelectionContext } from "./text-selection.tsx"
 
@@ -56,14 +57,10 @@ export function SelectionActionPopover() {
   const selectionRect = detected.range.getBoundingClientRect()
   if (selectionRect.width === 0 && selectionRect.height === 0) return null
 
-  const handleAnnotate = () => {
+  const handleAnnotate = (passed: boolean) => {
     const el = contentRef.current
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      resolveAndAnnotate({ x: rect.left, y: rect.top })
-    } else {
-      resolveAndAnnotate()
-    }
+    const clickPosition = el ? { x: el.getBoundingClientRect().left, y: el.getBoundingClientRect().top } : undefined
+    resolveAndAnnotate(clickPosition, passed)
   }
 
   const handleCopy = () => {
@@ -78,10 +75,8 @@ export function SelectionActionPopover() {
           <Icon icon={ClipboardCopyIcon} size="sm" />
           Copy
         </Button>
-        <Button variant="default-soft" size="sm" onClick={handleAnnotate}>
-          <Icon icon={MessageSquarePlusIcon} size="sm" />
-          Annotate
-        </Button>
+        <ThumbButton selected={false} variant="up" appearance="icon" onClick={() => handleAnnotate(true)} />
+        <ThumbButton selected={false} variant="down" appearance="icon" onClick={() => handleAnnotate(false)} />
       </div>
     </SelectionPopover>
   )

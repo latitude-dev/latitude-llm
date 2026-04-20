@@ -142,6 +142,7 @@ describe("useAnnotationPopover", () => {
         result.current.handleTextSelect(
           { messageIndex: 2, partIndex: 0, startOffset: 0, endOffset: 10, selectedText: "some text" },
           { x: 50, y: 100 },
+          null,
         )
       })
 
@@ -159,6 +160,7 @@ describe("useAnnotationPopover", () => {
         result.current.handleTextSelect(
           { messageIndex: 1, partIndex: 0, startOffset: 5, endOffset: 15, selectedText: "good text" },
           { x: 50, y: 100 },
+          null,
         )
       })
 
@@ -351,6 +353,7 @@ describe("useAnnotationPopover", () => {
         result.current.handleTextSelect(
           { messageIndex: 1, partIndex: 0, startOffset: 5, endOffset: 15, selectedText: "good text" },
           { x: 50, y: 100 },
+          null,
         )
       })
 
