@@ -10,14 +10,13 @@
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@latitude-data/telemetry": "catalog:",
+    "@latitude-data/telemetry": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",

@@ -6,7 +6,6 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -17,6 +16,7 @@
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@opentelemetry/api": "catalog:",
+    "@platform/cache-redis": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
     "bullmq": "catalog:",

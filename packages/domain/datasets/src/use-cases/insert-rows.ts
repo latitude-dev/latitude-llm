@@ -5,7 +5,7 @@ import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 import { buildValidRowId } from "../validate-row-id.ts"
 
-export function insertRows(args: {
+export const insertRows = Effect.fn("datasets.insertRows")(function* (args: {
   readonly datasetId: DatasetId
   readonly rows: readonly {
     readonly id?: DatasetRowId
@@ -15,35 +15,35 @@ export function insertRows(args: {
   }[]
   readonly source?: string
 }) {
-  return Effect.gen(function* () {
-    const resolvedRows = yield* Effect.forEach(args.rows, (row) =>
-      buildValidRowId(row.id).pipe(Effect.map((id) => ({ ...row, id }))),
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+
+  const resolvedRows = yield* Effect.forEach(args.rows, (row) =>
+    buildValidRowId(row.id).pipe(Effect.map((id) => ({ ...row, id }))),
+  )
+
+  const datasetRepo = yield* DatasetRepository
+  const rowRepo = yield* DatasetRowRepository
+
+  const version = yield* datasetRepo.incrementVersion({
+    id: args.datasetId,
+    rowsInserted: resolvedRows.length,
+    source: args.source ?? "api",
+  })
+
+  const rowIds = yield* rowRepo
+    .insertBatch({
+      datasetId: args.datasetId,
+      version: version.version,
+      rows: resolvedRows,
+    })
+    .pipe(
+      Effect.tapError(() =>
+        datasetRepo.decrementVersion({
+          id: args.datasetId,
+          versionId: version.id,
+        }),
+      ),
     )
 
-    const datasetRepo = yield* DatasetRepository
-    const rowRepo = yield* DatasetRowRepository
-
-    const version = yield* datasetRepo.incrementVersion({
-      id: args.datasetId,
-      rowsInserted: resolvedRows.length,
-      source: args.source ?? "api",
-    })
-
-    const rowIds = yield* rowRepo
-      .insertBatch({
-        datasetId: args.datasetId,
-        version: version.version,
-        rows: resolvedRows,
-      })
-      .pipe(
-        Effect.tapError(() =>
-          datasetRepo.decrementVersion({
-            id: args.datasetId,
-            versionId: version.id,
-          }),
-        ),
-      )
-
-    return { versionId: version.id, version: version.version, rowIds }
-  })
-}
+  return { versionId: version.id, version: version.version, rowIds }
+})

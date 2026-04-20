@@ -2,13 +2,23 @@ import { AICredentialError } from "@domain/ai"
 import { Effect, Result } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { fromNodeProviderChainMock } = vi.hoisted(() => ({
-  fromNodeProviderChainMock: vi.fn(() =>
-    Promise.resolve({
-      accessKeyId: "provider-chain-access-key",
-      secretAccessKey: "provider-chain-secret-key",
-    }),
-  ),
+const { bedrockModelFactoryMock, createAmazonBedrockMock, fromNodeProviderChainMock } = vi.hoisted(() => {
+  const bedrockModelFactoryMock = vi.fn((modelId: string) => ({ modelId }))
+
+  return {
+    bedrockModelFactoryMock,
+    createAmazonBedrockMock: vi.fn(() => bedrockModelFactoryMock),
+    fromNodeProviderChainMock: vi.fn(() =>
+      Promise.resolve({
+        accessKeyId: "provider-chain-access-key",
+        secretAccessKey: "provider-chain-secret-key",
+      }),
+    ),
+  }
+})
+
+vi.mock("@ai-sdk/amazon-bedrock", () => ({
+  createAmazonBedrock: createAmazonBedrockMock,
 }))
 
 vi.mock("@aws-sdk/credential-providers", () => ({
@@ -22,8 +32,6 @@ const originalAwsAccessKeyId = process.env.LAT_AWS_ACCESS_KEY_ID
 const originalAwsSecretAccessKey = process.env.LAT_AWS_SECRET_ACCESS_KEY
 const originalAwsSessionToken = process.env.LAT_AWS_SESSION_TOKEN
 const originalAwsBearerTokenBedrock = process.env.LAT_AWS_BEARER_TOKEN_BEDROCK
-const originalAnthropicApiKey = process.env.LAT_ANTHROPIC_API_KEY
-const originalOpenAiApiKey = process.env.LAT_OPENAI_API_KEY
 
 beforeEach(() => {
   process.env.LAT_AWS_REGION = "us-east-1"
@@ -31,8 +39,8 @@ beforeEach(() => {
   process.env.LAT_AWS_SECRET_ACCESS_KEY = "test-secret-key"
   delete process.env.LAT_AWS_SESSION_TOKEN
   delete process.env.LAT_AWS_BEARER_TOKEN_BEDROCK
-  process.env.LAT_ANTHROPIC_API_KEY = "sk-ant-test"
-  process.env.LAT_OPENAI_API_KEY = "sk-openai-test"
+  bedrockModelFactoryMock.mockClear()
+  createAmazonBedrockMock.mockClear()
   fromNodeProviderChainMock.mockClear()
 })
 
@@ -42,8 +50,6 @@ afterEach(() => {
   process.env.LAT_AWS_SECRET_ACCESS_KEY = originalAwsSecretAccessKey
   process.env.LAT_AWS_SESSION_TOKEN = originalAwsSessionToken
   process.env.LAT_AWS_BEARER_TOKEN_BEDROCK = originalAwsBearerTokenBedrock
-  process.env.LAT_ANTHROPIC_API_KEY = originalAnthropicApiKey
-  process.env.LAT_OPENAI_API_KEY = originalOpenAiApiKey
 })
 
 describe("createProviderModel", () => {
@@ -67,6 +73,8 @@ describe("createProviderModel", () => {
 
     expect(model).toBeDefined()
     expect(typeof model).toBe("object")
+    expect(createAmazonBedrockMock).toHaveBeenCalledTimes(1)
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("us.anthropic.claude-sonnet-4-20250514-v1:0")
     expect(fromNodeProviderChainMock).not.toHaveBeenCalled()
   })
 
@@ -81,20 +89,21 @@ describe("createProviderModel", () => {
 
     expect(model).toBeDefined()
     expect(typeof model).toBe("object")
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("us.anthropic.claude-sonnet-4-20250514-v1:0")
     expect(fromNodeProviderChainMock).toHaveBeenCalledTimes(1)
   })
 
-  it("succeeds with a language model for anthropic", async () => {
-    const model = await Effect.runPromise(createProviderModel("anthropic", "claude-3-5-sonnet-20241022"))
+  it("rewrites already-scoped Bedrock model IDs to the configured AWS geography", async () => {
+    process.env.LAT_AWS_REGION = "eu-central-1"
 
-    expect(model).toBeDefined()
-    expect(typeof model).toBe("object")
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "us.amazon.nova-lite-v1:0"))
+
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.amazon.nova-lite-v1:0")
   })
 
-  it("succeeds with a language model for openai", async () => {
-    const model = await Effect.runPromise(createProviderModel("openai", "gpt-4o"))
+  it("preserves global Bedrock model IDs", async () => {
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "global.anthropic.claude-sonnet-4-20250514-v1:0"))
 
-    expect(model).toBeDefined()
-    expect(typeof model).toBe("object")
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("global.anthropic.claude-sonnet-4-20250514-v1:0")
   })
 })

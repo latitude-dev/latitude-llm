@@ -1,7 +1,7 @@
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { ScoreId, UserId } from "@domain/shared"
+import { NotFoundError, ScoreId, UserId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { publishHumanAnnotationUseCase } from "./publish-annotation.ts"
@@ -118,22 +118,31 @@ describe("publishAnnotationUseCase", () => {
     expect(startedWorkflows).toHaveLength(0)
   })
 
-  it("returns BadRequestError for non-existent score", async () => {
+  it("returns NotFoundError for non-existent score", async () => {
     const { repository: scoreRepository } = createFakeScoreRepository()
     const { workflowStarter } = createWorkflowStarter()
 
-    const exit = await Effect.runPromiseExit(
-      publishHumanAnnotationUseCase({ scoreId: ScoreId("x".repeat(24)) }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(ScoreRepository, scoreRepository),
-            Layer.succeed(WorkflowStarter, workflowStarter),
+    const err = await Effect.runPromise(
+      Effect.match(
+        publishHumanAnnotationUseCase({ scoreId: ScoreId("x".repeat(24)) }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(ScoreRepository, scoreRepository),
+              Layer.succeed(WorkflowStarter, workflowStarter),
+            ),
           ),
         ),
+        {
+          onFailure: (e) => e,
+          onSuccess: () => {
+            throw new Error("expected failure")
+          },
+        },
       ),
     )
 
-    expect(exit._tag).toBe("Failure")
+    expect(err).toBeInstanceOf(NotFoundError)
+    expect((err as NotFoundError).entity).toBe("Score")
   })
 
   it("does not start workflow for draft annotation without human annotator", async () => {

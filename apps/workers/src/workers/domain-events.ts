@@ -6,7 +6,7 @@ import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Data, Effect } from "effect"
 
@@ -30,6 +30,26 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
+  const buildSpanIngestedDedupeKey = (prefix: string, payload: EventPayloads["SpanIngested"]) =>
+    `${prefix}:${payload.organizationId}:${payload.projectId}:${payload.traceId}`
+
+  const publishScoreCreatedFanOut = (payload: EventPayloads["ScoreCreated"]) =>
+    Effect.all(
+      [
+        pub.publish("issues", "discovery", payload, {
+          dedupeKey: `issues:discovery:${payload.scoreId}:${payload.status}`,
+        }),
+        pub.publish("annotation-scores", "publishHumanAnnotation", payload, {
+          dedupeKey: `annotation-scores:publish-human:${payload.scoreId}`,
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+        }),
+        pub.publish("annotation-scores", "markReviewStarted", payload, {
+          dedupeKey: `annotation-scores:mark-review-started:${payload.scoreId}`,
+        }),
+      ],
+      { concurrency: "unbounded" },
+    ).pipe(Effect.asVoid)
+
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
       hash(event.payload.magicLinkUrl).pipe(
@@ -57,16 +77,8 @@ export const createDomainEventsWorker = ({
     SpanIngested: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload, {
-            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("live-annotation-queues", "curate", event.payload, {
-            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("system-annotation-queues", "fanOut", event.payload, {
-            dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
+          pub.publish("trace-end", "run", event.payload, {
+            dedupeKey: buildSpanIngestedDedupeKey("trace-end:run", event.payload),
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish(
@@ -83,24 +95,35 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    ScoreCreated: (event) =>
-      Effect.all([
-        pub.publish("issues", "discovery", event.payload, {
-          dedupeKey: `issues:discovery:${event.payload.scoreId}`,
-        }),
-        pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
-        }),
-        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
-          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
-        }),
-      ]),
+    ScoreCreated: (event) => publishScoreCreatedFanOut(event.payload),
 
     ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
         dedupeKey: `issues:refresh:${event.payload.issueId}`,
         debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
       }),
+
+    AnnotationDeleted: (event) => {
+      const { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt } = event.payload
+
+      return Effect.all(
+        [
+          pub.publish(
+            "scores",
+            "delete-analytics",
+            { organizationId, scoreId },
+            { dedupeKey: `scores:delete-analytics:${scoreId}` },
+          ),
+          pub.publish(
+            "issues",
+            "removeScore",
+            { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt },
+            { dedupeKey: `issues:remove-score:${scoreId}` },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid)
+    },
 
     OrganizationCreated: (event) =>
       pub.publish(
@@ -181,7 +204,7 @@ export const createDomainEventsWorker = ({
           ),
         )
 
-      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid)
+      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid, withTracing)
     },
   })
 }

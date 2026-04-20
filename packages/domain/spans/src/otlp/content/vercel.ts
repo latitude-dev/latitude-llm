@@ -42,11 +42,27 @@ function parseInputFromTopLevel(attrs: readonly OtlpKeyValue[]): {
   const prompt = parseJsonSafe(promptJson)
   if (!prompt || typeof prompt !== "object") return { messages: [], system: [] }
 
-  const { system, messages } = prompt as { system?: string; messages?: unknown[] }
+  const {
+    system,
+    messages,
+    prompt: singlePrompt,
+  } = prompt as {
+    system?: string
+    messages?: unknown[]
+    prompt?: string
+  }
 
   let translatedMessages: GenAIMessage[] = []
   if (Array.isArray(messages) && messages.length > 0) {
     const result = safeTranslate(messages as object[], { from: Provider.VercelAI, direction: "input" })
+    if (!result.error) {
+      translatedMessages = result.messages as GenAIMessage[]
+    }
+  } else if (typeof singlePrompt === "string" && singlePrompt) {
+    const result = safeTranslate([{ role: "user", content: singlePrompt }], {
+      from: Provider.VercelAI,
+      direction: "input",
+    })
     if (!result.error) {
       translatedMessages = result.messages as GenAIMessage[]
     }

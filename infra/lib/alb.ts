@@ -32,8 +32,13 @@ export function createAlb(
 
   const targetGroups: Record<string, LbTargetGroup> = {}
 
-  for (const domainKey of ["web", "api", "ingest"] as const) {
-    const serviceConfig = config.ecs.services.find((s) => s.name === domainKey)
+  // bull-board routes to the workers service, so we map "bullBoard" -> "workers" for
+  // the service config lookup.
+  const domainToService: Record<string, string> = { bullBoard: "workers" }
+
+  for (const domainKey of ["web", "api", "ingest", "bullBoard"] as const) {
+    const serviceName = domainToService[domainKey] ?? domainKey
+    const serviceConfig = config.ecs.services.find((s) => s.name === serviceName)
     const healthCheckPath = serviceConfig?.healthCheckPath ?? "/health"
 
     const shortEnv = config.name === "production" ? "prod" : "stg"
@@ -107,6 +112,10 @@ export function createAlb(
         hostname: config.domains.ingest,
         targetGroup: targetGroups.ingest,
       },
+      {
+        hostname: config.domains.bullBoard,
+        targetGroup: targetGroups.bullBoard,
+      },
     ]
 
     httpsListener = new aws.lb.Listener(`${name}-https`, {
@@ -118,9 +127,10 @@ export function createAlb(
       defaultActions: [defaultAction],
     })
 
+    const ruleNames = ["api", "ingest", "bull-board"] as const
     for (let i = 0; i < rules.length; i++) {
       const rule = rules[i]
-      const ruleName = i === 0 ? "api" : "ingest"
+      const ruleName = ruleNames[i]
       new aws.lb.ListenerRule(`${name}-${ruleName}-rule`, {
         listenerArn: httpsListener.arn,
         priority: 100 + i,

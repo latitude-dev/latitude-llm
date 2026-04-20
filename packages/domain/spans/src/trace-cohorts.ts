@@ -2,6 +2,7 @@ import type { Trace } from "./entities/trace.ts"
 
 export const TRACE_RESOURCE_OUTLIER_MULTIPLIER = 3
 
+export const TRACE_COHORT_P90_MIN_SAMPLES = 30
 export const TRACE_COHORT_P95_MIN_SAMPLES = 100
 export const TRACE_COHORT_P99_MIN_SAMPLES = 1000
 export const TRACE_COHORT_MEDIAN_X3_MIN_SAMPLES = 30
@@ -31,6 +32,7 @@ export type TraceCohortKey = (typeof traceCohortKeys)[number]
 
 export type TraceCohortUnavailableReason = "insufficient-baseline" | "mixed-mode-suppressed"
 export type TraceCohortThresholdMode = "p99" | "p95" | "median-x3" | "insufficient-baseline"
+export type TraceMetricPercentileLevel = "p90" | "p95" | "p99"
 
 export interface TraceMetricPercentiles {
   readonly sampleCount: number
@@ -174,12 +176,40 @@ export function buildTraceMetricBaselines(
   }
 }
 
-function isMetricCohortAvailable(baseline: TraceMetricBaseline, mode: "p95" | "p99" | "median-x3"): boolean {
-  switch (mode) {
+export function isTraceMetricPercentileAvailable(
+  baseline: Pick<TraceMetricBaseline, "sampleCount" | "p90" | "p95" | "p99">,
+  level: TraceMetricPercentileLevel,
+): boolean {
+  switch (level) {
+    case "p90":
+      return baseline.sampleCount >= TRACE_COHORT_P90_MIN_SAMPLES
     case "p95":
       return baseline.p95 !== null
     case "p99":
       return baseline.p99 !== null
+  }
+}
+
+export function getTraceMetricPercentileThreshold(
+  baseline: Pick<TraceMetricBaseline, "sampleCount" | "p90" | "p95" | "p99">,
+  level: TraceMetricPercentileLevel,
+): number | null {
+  switch (level) {
+    case "p90":
+      return isTraceMetricPercentileAvailable(baseline, "p90") ? baseline.p90 : null
+    case "p95":
+      return baseline.p95
+    case "p99":
+      return baseline.p99
+  }
+}
+
+function isMetricCohortAvailable(baseline: TraceMetricBaseline, mode: "p95" | "p99" | "median-x3"): boolean {
+  switch (mode) {
+    case "p95":
+      return isTraceMetricPercentileAvailable(baseline, "p95")
+    case "p99":
+      return isTraceMetricPercentileAvailable(baseline, "p99")
     case "median-x3":
       return baseline.medianX3 !== null
   }

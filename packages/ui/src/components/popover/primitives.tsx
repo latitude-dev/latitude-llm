@@ -21,6 +21,7 @@ function PopoverContent({
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
+        data-no-navigate
         align={align}
         sideOffset={sideOffset}
         className={cn(

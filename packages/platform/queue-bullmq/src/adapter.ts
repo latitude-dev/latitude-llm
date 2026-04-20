@@ -13,8 +13,8 @@ import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
-import { Redis } from "ioredis"
 
+import { createBullMqRedisConnection } from "./connection.ts"
 import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-incidents.ts"
 
 const tracer = trace.getTracer("bullmq")
@@ -51,6 +51,8 @@ export interface BullMqRedisConfig {
     readonly host: string
     readonly port: number
     readonly password?: string
+    readonly tls?: boolean
+    readonly cluster?: boolean
   }
   /** Optional sink for worker incidents (errors, failed jobs, stalls) for alerting and dashboards. */
   readonly onWorkerIncident?: (incident: BullMqWorkerIncident) => void
@@ -60,19 +62,14 @@ export const createBullMqQueuePublisher = (
   config: BullMqRedisConfig,
 ): Effect.Effect<QueuePublisherShape, QueueClientError> =>
   Effect.gen(function* () {
-    const connection = new Redis({
-      host: config.redis.host,
-      port: config.redis.port,
-      ...(config.redis.password ? { password: config.redis.password } : {}),
-      maxRetriesPerRequest: null,
-    })
+    const connection = createBullMqRedisConnection(config.redis)
 
     const queues = new Map<string, Queue>()
 
     const getQueue = (name: QueueName): Queue => {
       let queue = queues.get(name)
       if (!queue) {
-        queue = new Queue(name, { connection })
+        queue = new Queue(name, { connection, prefix: "{bull}" })
         queues.set(name, queue)
       }
       return queue
@@ -121,13 +118,6 @@ type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, 
 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
   Effect.gen(function* () {
-    const redisConfig = {
-      host: config.redis.host,
-      port: config.redis.port,
-      ...(config.redis.password ? { password: config.redis.password } : {}),
-      maxRetriesPerRequest: null,
-    }
-
     const DEFAULT_CONCURRENCY = 10
     const services = yield* Effect.services<never>()
     const workers: Map<QueueName, Worker> = new Map()
@@ -208,7 +198,8 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                 )
               },
               {
-                connection: new Redis(redisConfig),
+                connection: createBullMqRedisConnection(config.redis),
+                prefix: "{bull}",
                 concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
                 removeOnComplete: { count: 1000 },
                 removeOnFail: { count: 1000 },

@@ -268,11 +268,11 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" size="sm" disabled={disabled} className="w-auto justify-start gap-2">
           <span className="flex items-center gap-2">
-            <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foregroundMuted"} />
+            <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foreground"} />
             <span
               className={cn("whitespace-nowrap", {
-                "text-foreground": selection.selected,
-                "text-muted-foreground": !selection.selected,
+                "text-accent-foreground": selection.selected,
+                "text-foreground": !selection.selected,
               })}
             >
               {selection.label}

@@ -1,14 +1,14 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceCohortSummary } from "@domain/spans"
+import { getTraceMetricPercentileThreshold, type TraceCohortSummary } from "@domain/spans"
 import {
-  Badge,
-  type BadgeProps,
   CodeBlock,
   Conversation,
   DetailSection,
   DetailSummary,
   ProviderIcon,
   Skeleton,
+  Status,
+  type StatusProps,
   TagBadgeList,
   Text,
   Tooltip,
@@ -25,52 +25,72 @@ function JsonBlock({ value }: { readonly value: unknown }) {
 }
 
 type Baselines = TraceCohortSummary["baselines"]
+type PercentileLevel = "p99" | "p95" | "p90"
 
-/** Get percentile badge for a value based on baselines (highest matching only) */
-function getPercentileBadges(value: number, baselines: Baselines | undefined, metricKey: keyof Baselines): string[] {
-  if (!baselines) return []
+function getPercentileLevel(
+  value: number,
+  baselines: Baselines | undefined,
+  metricKey: keyof Baselines,
+): PercentileLevel | undefined {
+  if (!baselines) return undefined
 
   const baseline = baselines[metricKey]
-  if (baseline.sampleCount === 0) return []
+  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
+  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
+  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
 
-  const badges: string[] = []
-
-  // Show highest matching percentile badge only (p99 > p95 > p90)
-  if (baseline.p99 !== null && value >= baseline.p99) {
-    badges.push("p99")
-  } else if (baseline.p95 !== null && value >= baseline.p95) {
-    badges.push("p95")
-  } else if (value >= baseline.p90) {
-    badges.push("p90")
+  if (p99 !== null && value >= p99) {
+    return "p99"
   }
 
-  return badges
+  if (p95 !== null && value >= p95) {
+    return "p95"
+  }
+
+  if (p90 !== null && value >= p90) {
+    return "p90"
+  }
+
+  return undefined
 }
 
-function PercentileBadge({ level, onClick }: { readonly level: string; readonly onClick?: (() => void) | undefined }) {
-  const variant: BadgeProps["variant"] =
-    level === "p99" ? "outlineDestructiveMuted" : level === "p95" ? "outlineWarningMuted" : "outlineAccent"
+function getPercentileStatusVariant(level: PercentileLevel): NonNullable<StatusProps["variant"]> {
+  switch (level) {
+    case "p99":
+      return "destructive"
+    case "p95":
+      return "warning"
+    case "p90":
+      return "info"
+  }
+}
 
-  const badge = <Badge variant={variant}>{level}</Badge>
+function PercentileStatus({
+  level,
+  onClick,
+}: {
+  readonly level: PercentileLevel
+  readonly onClick?: (() => void) | undefined
+}) {
+  const status = <Status variant={getPercentileStatusVariant(level)} label={level} />
 
-  if (!onClick) return badge
+  if (!onClick) return status
 
   return (
     <button type="button" onClick={onClick} className="cursor-pointer hover:opacity-80 transition-opacity">
-      {badge}
+      {status}
     </button>
   )
 }
 
-function getThresholdForBadge(badge: string, baselines: Baselines, metricKey: keyof Baselines): number | null {
-  const baseline = baselines[metricKey]
-  switch (badge) {
+function getThresholdForLevel(level: PercentileLevel, baselines: Baselines, metricKey: keyof Baselines): number | null {
+  switch (level) {
     case "p99":
-      return baseline.p99
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p99")
     case "p95":
-      return baseline.p95
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p95")
     case "p90":
-      return baseline.p90
+      return getTraceMetricPercentileThreshold(baselines[metricKey], "p90")
     default:
       return null
   }
@@ -133,76 +153,78 @@ export function TraceTab({
     onFiltersChange(newFilters)
   }
 
-  const durationBadges =
+  const durationBadge =
     traceRecord && traceRecord.durationNs > 0
-      ? getPercentileBadges(traceRecord.durationNs, baselines, "durationNs")
-      : []
-  const costBadges = traceRecord
+      ? getPercentileLevel(traceRecord.durationNs, baselines, "durationNs")
+      : undefined
+  const costBadge = traceRecord
     ? traceRecord.costTotalMicrocents > 0
-      ? getPercentileBadges(traceRecord.costTotalMicrocents, baselines, "costTotalMicrocents")
-      : []
-    : []
-  const ttftBadges = traceRecord
+      ? getPercentileLevel(traceRecord.costTotalMicrocents, baselines, "costTotalMicrocents")
+      : undefined
+    : undefined
+  const ttftBadge = traceRecord
     ? traceRecord.timeToFirstTokenNs > 0
-      ? getPercentileBadges(traceRecord.timeToFirstTokenNs, baselines, "timeToFirstTokenNs")
-      : []
-    : []
+      ? getPercentileLevel(traceRecord.timeToFirstTokenNs, baselines, "timeToFirstTokenNs")
+      : undefined
+    : undefined
 
   const durationValue = traceRecord ? (
     <span className="flex items-center gap-1">
+      {durationBadge ? (
+        <PercentileStatus
+          level={durationBadge}
+          onClick={
+            baselines && onFiltersChange
+              ? () => {
+                  const threshold = getThresholdForLevel(durationBadge, baselines, "durationNs")
+                  if (threshold !== null) {
+                    handleFilterByThreshold("durationNs", threshold)
+                  }
+                }
+              : undefined
+          }
+        />
+      ) : null}
       {traceRecord.durationNs > 0 ? formatDuration(traceRecord.durationNs) : "-"}
-      {durationBadges.map((badge) => {
-        const threshold = baselines ? getThresholdForBadge(badge, baselines, "durationNs") : null
-        return (
-          <PercentileBadge
-            key={badge}
-            level={badge}
-            onClick={
-              threshold !== null && onFiltersChange ? () => handleFilterByThreshold("durationNs", threshold) : undefined
-            }
-          />
-        )
-      })}
     </span>
   ) : undefined
 
   const ttftValue = traceRecord ? (
     <span className="flex items-center gap-1">
+      {ttftBadge ? (
+        <PercentileStatus
+          level={ttftBadge}
+          onClick={
+            baselines && onFiltersChange
+              ? () => {
+                  const threshold = getThresholdForLevel(ttftBadge, baselines, "timeToFirstTokenNs")
+                  if (threshold !== null) {
+                    handleFilterByThreshold("timeToFirstTokenNs", threshold)
+                  }
+                }
+              : undefined
+          }
+        />
+      ) : null}
       {traceRecord.timeToFirstTokenNs > 0 ? formatDuration(traceRecord.timeToFirstTokenNs) : "-"}
-      {ttftBadges.map((badge) => {
-        const threshold = baselines ? getThresholdForBadge(badge, baselines, "timeToFirstTokenNs") : null
-        return (
-          <PercentileBadge
-            key={badge}
-            level={badge}
-            onClick={
-              threshold !== null && onFiltersChange
-                ? () => handleFilterByThreshold("timeToFirstTokenNs", threshold)
-                : undefined
-            }
-          />
-        )
-      })}
     </span>
   ) : undefined
 
-  const costBadgesNode =
-    costBadges.length > 0
-      ? costBadges.map((badge) => {
-          const threshold = baselines ? getThresholdForBadge(badge, baselines, "costTotalMicrocents") : null
-          return (
-            <PercentileBadge
-              key={badge}
-              level={badge}
-              onClick={
-                threshold !== null && onFiltersChange
-                  ? () => handleFilterByThreshold("costTotalMicrocents", threshold)
-                  : undefined
+  const costBadgesNode = costBadge ? (
+    <PercentileStatus
+      level={costBadge}
+      onClick={
+        baselines && onFiltersChange
+          ? () => {
+              const threshold = getThresholdForLevel(costBadge, baselines, "costTotalMicrocents")
+              if (threshold !== null) {
+                handleFilterByThreshold("costTotalMicrocents", threshold)
               }
-            />
-          )
-        })
-      : undefined
+            }
+          : undefined
+      }
+    />
+  ) : undefined
 
   return (
     <div className="flex flex-col gap-6 py-6 px-4 overflow-y-auto flex-1">
@@ -302,7 +324,7 @@ export function TraceTab({
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.systemInstructions.length ? (
             <div className="flex flex-col rounded-lg bg-secondary p-4">
-              <Conversation systemInstructions={traceDetail.systemInstructions} messages={[]} />
+              <Conversation messages={[{ role: "system", parts: traceDetail.systemInstructions }]} />
             </div>
           ) : (
             <Text.H6 color="foregroundMuted" italic>

@@ -18,7 +18,7 @@ import { type RefObject, useCallback, useMemo, useState } from "react"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import { listTracesByProject, type TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -176,7 +176,6 @@ interface SessionsViewProps {
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
-  readonly onActiveSessionChange?: (sessionId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
 }
 
@@ -193,7 +192,6 @@ export function SessionsView({
   onFiltersChange,
   onFiltersClose,
   onActiveTraceChange,
-  onActiveSessionChange,
   traceIdsRef,
 }: SessionsViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
@@ -302,21 +300,7 @@ export function SessionsView({
         width: 160,
         render: (row) => {
           if (row.kind === "session") {
-            if (onActiveSessionChange) {
-              return (
-                <button
-                  type="button"
-                  className="max-w-full cursor-pointer truncate text-left font-inherit text-primary hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onActiveSessionChange(row.session.sessionId)
-                  }}
-                >
-                  {row.session.sessionId}
-                </button>
-              )
-            }
-            return row.session.sessionId
+            return <span className="block max-w-full truncate">{row.session.sessionId}</span>
           }
           return row.trace.sessionId
         },
@@ -375,7 +359,7 @@ export function SessionsView({
         ),
       },
     ]
-  }, [sessionMetrics, sessionMetricsLoading, onActiveSessionChange])
+  }, [sessionMetrics, sessionMetricsLoading])
 
   const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions, sorting)
 
@@ -446,6 +430,7 @@ export function SessionsView({
       )}
       <Layout.List>
         <InfiniteTable
+          {...listingLayoutIntrinsicScroll.infiniteTable}
           data={tableData}
           isLoading={isLoading}
           columns={columns}

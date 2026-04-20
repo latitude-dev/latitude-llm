@@ -1,4 +1,12 @@
-import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+  formatGenAIMessage,
+} from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import type { TraceResourceOutlierReason } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
@@ -112,43 +120,47 @@ const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
     })
   })
 
-export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInput) =>
-  Effect.gen(function* () {
-    const ai = yield* AI
+export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
+  input: RunSystemQueueAnnotatorInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
-    const trace = yield* loadTraceDetail(input)
+  const ai = yield* AI
 
-    const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
+  const trace = yield* loadTraceDetail(input)
 
-    const conversationText =
-      trace.allMessages.length > 0
-        ? formatConversationForAnnotator(trace.allMessages)
-        : "<no conversation messages available>"
+  const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
 
-    const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
+  const conversationText =
+    trace.allMessages.length > 0
+      ? formatConversationForAnnotator(trace.allMessages)
+      : "<no conversation messages available>"
 
-    const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
+  const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
 
-    const result = yield* ai.generate({
-      ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
-      maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
-      system: systemPrompt,
-      prompt,
-      schema: systemQueueAnnotatorOutputSchema,
-      telemetry: {
-        spanName: "system-queue-annotator",
-        tags: ["annotation-queue", "system-annotator"],
-        metadata: {
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          queueSlug: input.queueSlug,
-        },
-      },
-    })
+  const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
-    return {
-      feedback: result.object.feedback,
-      traceCreatedAt: trace.startTime.toISOString(),
-    }
+  const result = yield* ai.generate({
+    ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
+    maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
+    system: systemPrompt,
+    prompt,
+    schema: systemQueueAnnotatorOutputSchema,
+    telemetry: {
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      metadata: buildProjectScopedAiMetadata(
+        { organizationId: input.organizationId, projectId: input.projectId },
+        { traceId: input.traceId, queueSlug: input.queueSlug },
+      ),
+    },
   })
+
+  return {
+    feedback: result.object.feedback,
+    traceCreatedAt: trace.startTime.toISOString(),
+  }
+})

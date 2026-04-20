@@ -43,6 +43,8 @@ const COLOR_GROUPS: { title: string; colors: { token: string; label: string; fgT
     colors: [
       { token: "secondary", label: "secondary", fgToken: "secondary-foreground" },
       { token: "secondary-foreground", label: "secondary-foreground", fgToken: "secondary" },
+      { token: "secondary-muted", label: "secondary-muted" },
+      { token: "secondary-muted-hover", label: "secondary-muted-hover" },
     ],
   },
   {
@@ -67,6 +69,7 @@ const COLOR_GROUPS: { title: string; colors: { token: string; label: string; fgT
       { token: "destructive-foreground", label: "destructive-foreground", fgToken: "destructive" },
       { token: "destructive-muted", label: "destructive-muted" },
       { token: "destructive-muted-foreground", label: "destructive-muted-foreground", fgToken: "destructive-muted" },
+      { token: "destructive-muted-hover", label: "destructive-muted-hover" },
     ],
   },
   {

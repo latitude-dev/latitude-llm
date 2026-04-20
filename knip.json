@@ -20,7 +20,7 @@
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": []
+      "ignoreDependencies": ["@temporalio/client"]
     },
     "infra": {
       "entry": [],
@@ -55,7 +55,19 @@
     },
     "packages/telemetry/typescript": {
       "project": ["src/**/*.ts"],
-      "ignore": ["src/constants/**/*.ts"]
+      "ignore": ["src/constants/**/*.ts"],
+      "ignoreDependencies": [
+        "@ai-sdk/openai",
+        "@anthropic-ai/sdk",
+        "@aws-sdk/client-bedrock-runtime",
+        "@google-cloud/vertexai",
+        "@langchain/openai",
+        "ai",
+        "cohere-ai",
+        "langchain",
+        "llamaindex",
+        "openai"
+      ]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],

@@ -13,7 +13,7 @@ export interface MagicLinkEmailData {
 export async function magicLinkTemplate(data: MagicLinkEmailData): Promise<RenderedEmail> {
   return {
     html: await renderEmail(<MagicLinkEmail userName={data.userName} magicLinkUrl={data.magicLinkUrl} />),
-    subject: "Your Latitude magic link",
-    text: `Use this link to sign in: ${data.magicLinkUrl}`,
+    subject: `${data.userName}, here's your sign-in link for Latitude`,
+    text: `Hi ${data.userName}, use this link to sign in to Latitude: ${data.magicLinkUrl}`,
   }
 }

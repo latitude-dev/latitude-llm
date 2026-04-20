@@ -13,11 +13,55 @@ description: Queues and workers, domain event publishers, async notifications or
 - **Workers** handle notifications, integrations, projections, and other I/O **asynchronously**.
 - **Do not** orchestrate side effects (fan-out integrations, “fire and forget” HTTP, etc.) inside HTTP handlers — enqueue / publish and return.
 
+## Domain event naming and publisher–consumer decoupling
+
+Domain events represent **facts that happened** — state transitions on an aggregate — not instructions for what should happen next. The publisher must never know or care which handlers are subscribed.
+
+### Rules
+
+1. **Name events after what the aggregate did**, not what consumers need to hear. Good: `ScoreCreated`, `ScoreStatusChanged`. Bad: `ScoreDraftSaved` (named to route around a handler), `ScoreReadyForDiscovery` (named after a consumer concern).
+2. **Smell test**: if you deleted every event handler, would you still emit this event because it describes a meaningfully different thing that happened? If the answer is no, the event is coupling in disguise.
+3. **One canonical event per state transition.** Do not split a single write operation into multiple event types to route to different handlers. If a score is written, emit `ScoreCreated` — regardless of whether the score is a draft or published.
+4. **Consumers own their filtering logic.** If a handler only cares about published scores, the handler checks the payload or re-fetches state and skips drafts. The publisher does not pre-filter by emitting different event names.
+5. **Dedupe keys must not collide across lifecycle stages.** If the same entity emits the same event at different lifecycle points (e.g., draft save then final publish), include the relevant discriminator in the dedupe key — not in the event name. Example: `issues:discovery:${scoreId}:${status}` instead of splitting into separate event types.
+6. **Payload carries facts, not routing hints.** Include the aggregate's current state (or the fields consumers might filter on) in the payload. Let consumers decide relevance from payload data.
+
+### When a new event type IS warranted
+
+A new event type is justified when it represents a **genuinely distinct state transition** that would exist even with zero handlers — for example, `ScoreDeleted` is a different fact from `ScoreCreated`. The test: does the aggregate's lifecycle model include this transition independently of downstream concerns?
+
+### Anti-pattern: conditional event publishing
+
+```ts
+// BAD — publisher decides routing based on consumer needs
+const eventName = score.draftedAt === null ? “ScorePublished” : “ScoreDraftSaved”
+yield* outboxEventWriter.write({ eventName, ... })
+
+// GOOD — one canonical event, consumers filter
+yield* outboxEventWriter.write({
+  eventName: “ScoreCreated”,
+  payload: { scoreId: score.id, organizationId, projectId, status: score.draftedAt === null ? “published” : “draft” },
+})
+
+// Consumer side — handler owns its filtering
+ScoreCreated: (event) =>
+  Effect.all([
+    // discovery uses status-aware dedupe key, skips drafts internally
+    pub.publish(“issues”, “discovery”, event.payload, {
+      dedupeKey: `issues:discovery:${event.payload.scoreId}:${event.payload.status}`,
+    }),
+    pub.publish(“annotation-scores”, “publishHumanAnnotation”, event.payload, {
+      debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+    }),
+  ])
+```
+
 ## Async and background tasks
 
 - Put **IDs** or opaque storage keys in job payloads — not full mutable entities.
 - **Re-fetch** authoritative state inside the worker before acting.
 - Make **stale or deleted** entities an explicit outcome (skip, dead-letter, or record failure) instead of assuming rows still exist.
+- Worker handler effects must include `withTracing` from `@repo/observability` in their pipe chain so that Effect spans flow into the OTel pipeline. See [effect-and-errors](../effect-and-errors/SKILL.md) for tracing rules.
 - For **transactional domain events**, write through the **`OutboxEventWriter`** service (or a plain `OutboxEventWriterShape` from `createOutboxWriter` in `@platform/db-postgres`) instead of inserting outbox rows directly.
 - For **high-volume or otherwise non-transactional producers** whose upstream write is already durable, publish directly through **`createEventsPublisher(queuePublisher)`** into `domain-events` instead of persisting an outbox row only to forward it.
 - Domain-event consumers should act as **dispatchers**: publish downstream topic tasks or start workflows, but do not run synchronous business logic inline inside the event handler.

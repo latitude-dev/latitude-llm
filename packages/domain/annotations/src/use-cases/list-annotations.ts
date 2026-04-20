@@ -26,24 +26,27 @@ export type ListTraceAnnotationsInput = z.input<typeof listTraceAnnotationsInput
 
 export type ListAnnotationsError = RepositoryError | BadRequestError
 
-export const listTraceAnnotationsUseCase = (input: ListTraceAnnotationsInput) =>
-  Effect.gen(function* () {
-    const parsed = yield* parseOrBadRequest(
-      listTraceAnnotationsInputSchema,
-      input,
-      "Invalid list trace annotations input",
-    )
+export const listTraceAnnotationsUseCase = Effect.fn("annotations.listTraceAnnotations")(function* (
+  input: ListTraceAnnotationsInput,
+) {
+  const parsed = yield* parseOrBadRequest(
+    listTraceAnnotationsInputSchema,
+    input,
+    "Invalid list trace annotations input",
+  )
+  yield* Effect.annotateCurrentSpan("annotation.projectId", parsed.projectId)
+  yield* Effect.annotateCurrentSpan("annotation.traceId", parsed.traceId)
 
-    const scoreRepository = yield* ScoreRepository
+  const scoreRepository = yield* ScoreRepository
 
-    return yield* scoreRepository.listByTraceId({
-      projectId: parsed.projectId,
-      traceId: parsed.traceId,
-      source: "annotation",
-      options: {
-        limit: parsed.limit,
-        offset: parsed.offset,
-        draftMode: parsed.draftMode,
-      },
-    })
+  return yield* scoreRepository.listByTraceId({
+    projectId: parsed.projectId,
+    traceId: parsed.traceId,
+    source: "annotation",
+    options: {
+      limit: parsed.limit,
+      offset: parsed.offset,
+      draftMode: parsed.draftMode,
+    },
   })
+})

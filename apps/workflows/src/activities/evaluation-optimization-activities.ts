@@ -3,6 +3,7 @@ import {
   ALIGNMENT_DEFAULT_SEED,
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
+  buildEvaluationGepaProposeTelemetryCapture,
   evaluateOptimizationCandidate,
   type GeneratedEvaluationDraft,
   type HydratedEvaluationAlignmentExample,
@@ -27,6 +28,7 @@ import {
   GepaOptimizerLive,
   gepaProposalOutputSchema,
 } from "@platform/op-gepa"
+import { withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getRedisClient } from "../clients.ts"
 
@@ -42,6 +44,12 @@ class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationAl
 }
 
 const proposeOptimizationCandidate = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
+  readonly draftEvaluationHash: string
   readonly candidate: OptimizationCandidate
   readonly issueName: string
   readonly issueDescription: string
@@ -49,6 +57,11 @@ const proposeOptimizationCandidate = (input: {
 }): Promise<OptimizationCandidate> =>
   Effect.runPromise(
     Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+      yield* Effect.annotateCurrentSpan("jobId", input.jobId)
+      yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
+
       if (!validateEvaluationScript(input.candidate.text)) {
         return yield* new EvaluationOptimizationActivityError({
           activity: "optimizeEvaluationDraft",
@@ -59,6 +72,15 @@ const proposeOptimizationCandidate = (input: {
       const ai = yield* AI
       const result = yield* ai.generate({
         ...GEPA_PROPOSER_MODEL,
+        telemetry: buildEvaluationGepaProposeTelemetryCapture({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId,
+          jobId: input.jobId,
+          evaluationHash: input.draftEvaluationHash,
+          candidateHash: input.candidate.hash,
+        }),
         system: GEPA_PROPOSER_SYSTEM_PROMPT,
         prompt: buildGepaProposalPrompt({
           issueName: input.issueName,
@@ -92,6 +114,8 @@ const proposeOptimizationCandidate = (input: {
       } satisfies OptimizationCandidate
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
+      Effect.withSpan("evaluations.proposeOptimizationCandidate"),
       Effect.mapError(
         (cause) =>
           new EvaluationOptimizationActivityError({
@@ -103,6 +127,11 @@ const proposeOptimizationCandidate = (input: {
   )
 
 export const optimizeEvaluationDraft = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string | null
+  readonly jobId: string
   readonly draft: GeneratedEvaluationDraft
   readonly issueName: string
   readonly issueDescription: string
@@ -111,6 +140,12 @@ export const optimizeEvaluationDraft = (input: {
 }): Promise<GeneratedEvaluationDraft> =>
   Effect.runPromise(
     Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+      yield* Effect.annotateCurrentSpan("jobId", input.jobId)
+      yield* Effect.annotateCurrentSpan("alignment.positiveExampleCount", input.positiveExamples.length)
+      yield* Effect.annotateCurrentSpan("alignment.negativeExampleCount", input.negativeExamples.length)
+
       const optimizer = yield* Optimizer
       const services = yield* Effect.services<never>()
       const allExamples = [...input.positiveExamples, ...input.negativeExamples]
@@ -149,8 +184,16 @@ export const optimizeEvaluationDraft = (input: {
               example: hydratedExample,
               issueName: input.issueName,
               issueDescription: input.issueDescription,
+              judgeTelemetry: {
+                organizationId: input.organizationId,
+                projectId: input.projectId,
+                issueId: input.issueId,
+                evaluationId: input.evaluationId,
+                jobId: input.jobId,
+              },
             }).pipe(
               withAi(AIGenerateLive, getRedisClient()),
+              withTracing,
               Effect.mapError(
                 (cause) =>
                   new EvaluationOptimizationActivityError({
@@ -163,6 +206,12 @@ export const optimizeEvaluationDraft = (input: {
         },
         propose: ({ candidate, context }: OptimizeProposalInput) =>
           proposeOptimizationCandidate({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            issueId: input.issueId,
+            evaluationId: input.evaluationId,
+            jobId: input.jobId,
+            draftEvaluationHash: input.draft.evaluationHash,
             candidate,
             issueName: input.issueName,
             issueDescription: input.issueDescription,
@@ -177,6 +226,8 @@ export const optimizeEvaluationDraft = (input: {
       }
     }).pipe(
       Effect.provide(GepaOptimizerLive),
+      withTracing,
+      Effect.withSpan("evaluations.optimizeEvaluationDraft"),
       Effect.mapError(
         (cause) =>
           new EvaluationOptimizationActivityError({

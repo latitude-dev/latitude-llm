@@ -17,12 +17,17 @@ import { useState } from "react"
 
 const VARIANTS = [
   { value: "default", label: "Default" },
+  { value: "default-soft", label: "Default soft" },
   { value: "secondary", label: "Secondary" },
+  { value: "secondary-soft", label: "Secondary soft" },
   { value: "outline", label: "Outline" },
   { value: "ghost", label: "Ghost" },
   { value: "destructive", label: "Destructive" },
+  { value: "destructive-soft", label: "Destructive soft" },
   { value: "link", label: "Link" },
 ] as const
+
+type ButtonVariant = (typeof VARIANTS)[number]["value"]
 
 const SIZES = [
   { value: "sm", label: "Small" },
@@ -76,9 +81,7 @@ function ButtonPage() {
     }
   })
 
-  const [variant, setVariant] = useState<"default" | "secondary" | "outline" | "ghost" | "destructive" | "link">(
-    "default",
-  )
+  const [variant, setVariant] = useState<ButtonVariant>("default")
   const [size, setSize] = useState<"sm" | "default" | "lg" | "icon" | "full">("default")
   const [state, setState] = useState<"normal" | "loading" | "disabled">("normal")
   const [label, setLabel] = useState("Button")
@@ -160,9 +163,7 @@ function ButtonPage() {
                 <select
                   id="button-variant"
                   value={variant}
-                  onChange={(e) =>
-                    setVariant(e.target.value as "default" | "secondary" | "outline" | "ghost" | "destructive" | "link")
-                  }
+                  onChange={(e) => setVariant(e.target.value as ButtonVariant)}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {VARIANTS.map((v) => (

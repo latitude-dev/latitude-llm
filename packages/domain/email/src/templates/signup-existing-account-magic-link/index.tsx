@@ -17,7 +17,7 @@ export async function signupExistingAccountMagicLinkTemplate(
     html: await renderEmail(
       <SignupExistingAccountMagicLinkEmail userName={data.userName} magicLinkUrl={data.magicLinkUrl} />,
     ),
-    subject: "Sign in to your Latitude account",
-    text: `This email is already registered in Latitude. Use this secure link to sign in: ${data.magicLinkUrl}`,
+    subject: `${data.userName}, you already have a Latitude account`,
+    text: `Hi ${data.userName}, it looks like you already have an account. Sign in here: ${data.magicLinkUrl}`,
   }
 }

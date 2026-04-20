@@ -94,95 +94,96 @@ function fetchTraces(args: {
 
 const EMPTY_RESULT = { versionId: "" as const, version: 0, rowIds: [] as string[] }
 
-export function addTracesToDataset(args: {
+export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(function* (args: {
   readonly projectId: ProjectId
   readonly datasetId: DatasetId
   readonly selection: TraceSelection
 }) {
-  return Effect.gen(function* () {
-    const chSqlClient = yield* ChSqlClient
-    const rowRepo = yield* DatasetRowRepository
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
+  yield* Effect.annotateCurrentSpan("projectId", args.projectId)
 
+  const chSqlClient = yield* ChSqlClient
+  const rowRepo = yield* DatasetRowRepository
+
+  const traceIds = yield* resolveTraceIds({
+    organizationId: chSqlClient.organizationId,
+    projectId: args.projectId,
+    selection: args.selection,
+  })
+  if (traceIds.length === 0) return EMPTY_RESULT
+  if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
+    return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
+  }
+
+  const existingTraceIds = yield* rowRepo.findExistingTraceIds({
+    datasetId: args.datasetId,
+    traceIds,
+  })
+
+  const newTraceIds = traceIds.filter((id) => !existingTraceIds.has(id))
+  if (newTraceIds.length === 0) return EMPTY_RESULT
+
+  const traces = yield* fetchTraces({
+    organizationId: chSqlClient.organizationId,
+    projectId: args.projectId,
+    traceIds: newTraceIds,
+  })
+  const rows = traces.map(mapTraceToRow)
+  if (rows.length === 0) return EMPTY_RESULT
+
+  return yield* insertRows({
+    datasetId: args.datasetId,
+    rows,
+    source: "traces",
+  })
+})
+
+export const createDatasetFromTraces = Effect.fn("datasets.createDatasetFromTraces")(function* (args: {
+  readonly projectId: ProjectId
+  readonly name: string
+  readonly selection: TraceSelection
+}) {
+  yield* Effect.annotateCurrentSpan("projectId", args.projectId)
+
+  const chSqlClient = yield* ChSqlClient
+  const datasetRepo = yield* DatasetRepository
+
+  const dataset = yield* createDataset({
+    projectId: args.projectId,
+    name: args.name,
+  })
+
+  const populateDataset = Effect.gen(function* () {
     const traceIds = yield* resolveTraceIds({
       organizationId: chSqlClient.organizationId,
       projectId: args.projectId,
       selection: args.selection,
     })
-    if (traceIds.length === 0) return EMPTY_RESULT
+    if (traceIds.length === 0) {
+      return { datasetId: dataset.id, ...EMPTY_RESULT }
+    }
     if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
       return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
     }
 
-    const existingTraceIds = yield* rowRepo.findExistingTraceIds({
-      datasetId: args.datasetId,
-      traceIds,
-    })
-
-    const newTraceIds = traceIds.filter((id) => !existingTraceIds.has(id))
-    if (newTraceIds.length === 0) return EMPTY_RESULT
-
     const traces = yield* fetchTraces({
       organizationId: chSqlClient.organizationId,
       projectId: args.projectId,
-      traceIds: newTraceIds,
+      traceIds,
     })
     const rows = traces.map(mapTraceToRow)
-    if (rows.length === 0) return EMPTY_RESULT
+    if (rows.length === 0) {
+      return { datasetId: dataset.id, ...EMPTY_RESULT }
+    }
 
-    return yield* insertRows({
-      datasetId: args.datasetId,
+    const result = yield* insertRows({
+      datasetId: dataset.id,
       rows,
       source: "traces",
     })
+
+    return { datasetId: dataset.id, ...result }
   })
-}
 
-export function createDatasetFromTraces(args: {
-  readonly projectId: ProjectId
-  readonly name: string
-  readonly selection: TraceSelection
-}) {
-  return Effect.gen(function* () {
-    const chSqlClient = yield* ChSqlClient
-    const datasetRepo = yield* DatasetRepository
-
-    const dataset = yield* createDataset({
-      projectId: args.projectId,
-      name: args.name,
-    })
-
-    const populateDataset = Effect.gen(function* () {
-      const traceIds = yield* resolveTraceIds({
-        organizationId: chSqlClient.organizationId,
-        projectId: args.projectId,
-        selection: args.selection,
-      })
-      if (traceIds.length === 0) {
-        return { datasetId: dataset.id, ...EMPTY_RESULT }
-      }
-      if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
-        return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
-      }
-
-      const traces = yield* fetchTraces({
-        organizationId: chSqlClient.organizationId,
-        projectId: args.projectId,
-        traceIds,
-      })
-      const rows = traces.map(mapTraceToRow)
-      if (rows.length === 0) {
-        return { datasetId: dataset.id, ...EMPTY_RESULT }
-      }
-
-      const result = yield* insertRows({
-        datasetId: dataset.id,
-        rows,
-        source: "traces",
-      })
-
-      return { datasetId: dataset.id, ...result }
-    })
-
-    return yield* populateDataset.pipe(Effect.tapError(() => datasetRepo.softDelete(dataset.id)))
-  })
-}
+  return yield* populateDataset.pipe(Effect.tapError(() => datasetRepo.softDelete(dataset.id)))
+})

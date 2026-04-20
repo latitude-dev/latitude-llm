@@ -5,12 +5,15 @@
 # ---------------------------------------------------------------------------
 FROM node:25-slim AS base
 
-# Install pnpm using npm (corepack was removed from Node.js 25)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
-  npm install -g pnpm@10.30.3 && \
-  rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
+
+# Install pnpm — version is read from package.json's packageManager field
+# so it stays in sync automatically (no more manual bumps in Dockerfile).
+COPY package.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
+  PNPM_VERSION=$(node -p "require('./package.json').packageManager.split('@')[1]") && \
+  npm install -g "pnpm@${PNPM_VERSION}" && \
+  rm -rf /var/lib/apt/lists/*
 
 # Enable pipefail for proper error handling in piped commands
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -20,7 +23,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 
 # Populate pnpm store from lockfile only for better cache reuse
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -33,37 +36,40 @@ FROM deps AS source
 
 COPY . .
 
-# Skip postinstall scripts (chdb and other dev-only native deps)
+# Skip postinstall scripts (chdb and other dev-only native deps).
+# CI=true tells pnpm to auto-confirm operations like purging node_modules
+# after `.npmrc` public-hoist-pattern changes, which is required in non-TTY
+# Docker builds.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --ignore-scripts --offline
+  CI=true pnpm install --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-api
 
-RUN pnpm --filter @app/api build
+RUN pnpm turbo run build --filter @app/api
 
 # ---------------------------------------------------------------------------
 # Build ingest — compile ingest app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-ingest
 
-RUN pnpm --filter @app/ingest build
+RUN pnpm turbo run build --filter @app/ingest
 
 # ---------------------------------------------------------------------------
 # Build workers — compile workers app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-workers
 
-RUN pnpm --filter @app/workers build
+RUN pnpm turbo run build --filter @app/workers
 
 # ---------------------------------------------------------------------------
 # Build workflows — Temporal worker app
 # ---------------------------------------------------------------------------
 FROM source AS build-workflows
 
-RUN pnpm --filter @app/workflows build
+RUN pnpm turbo run build --filter @app/workflows
 
 # ---------------------------------------------------------------------------
 # Build web — compile web app (turbo builds dependencies automatically)
@@ -76,16 +82,12 @@ ARG VITE_LAT_TURNSTILE_SITE_KEY
 ARG VITE_LAT_POSTHOG_KEY
 ARG VITE_LAT_POSTHOG_HOST
 
-RUN pnpm --filter @app/web build
+RUN pnpm turbo run build --filter @app/web
 
 # ---------------------------------------------------------------------------
-# Build migrations — compile packages needed for migrations
+# Build migrations — source stage already has everything needed (tsx/drizzle-kit read .ts directly)
 # ---------------------------------------------------------------------------
 FROM source AS build-migrations
-
-RUN pnpm --filter @platform/db-postgres build && \
-  pnpm --filter @platform/db-clickhouse build && \
-  pnpm --filter @platform/db-weaviate build
 
 # ---------------------------------------------------------------------------
 # Runtime base — shared runtime settings and cleanup helper
@@ -121,7 +123,9 @@ RUN cat <<'EOF' > /usr/local/bin/install-prod-deps && chmod +x /usr/local/bin/in
 #!/bin/bash
 set -euo pipefail
 
-pnpm install --frozen-lockfile --ignore-scripts --production
+# CI=true auto-confirms pnpm's modules-purge prompt in non-TTY Docker builds,
+# which is needed when `.npmrc` public-hoist-pattern changes the expected layout.
+CI=true pnpm install --frozen-lockfile --ignore-scripts --production
 EOF
 
 # ---------------------------------------------------------------------------
@@ -134,12 +138,14 @@ COPY --from=build-api /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build-api /app/package.json ./package.json
 COPY --from=build-api /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-api /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-api /app/.npmrc ./.npmrc
 COPY --from=build-api /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
   install-prod-deps
 
 RUN prune-workspace
+
 USER latitude
 EXPOSE 8080
 
@@ -155,6 +161,7 @@ COPY --from=build-ingest /app/apps/ingest/package.json ./apps/ingest/package.jso
 COPY --from=build-ingest /app/package.json ./package.json
 COPY --from=build-ingest /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-ingest /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-ingest /app/.npmrc ./.npmrc
 COPY --from=build-ingest /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -176,6 +183,7 @@ COPY --from=build-workers /app/apps/workers/package.json ./apps/workers/package.
 COPY --from=build-workers /app/package.json ./package.json
 COPY --from=build-workers /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-workers /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workers /app/.npmrc ./.npmrc
 COPY --from=build-workers /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -205,6 +213,7 @@ COPY --from=build-workflows /app/apps/workflows/src/activities ./apps/workflows/
 COPY --from=build-workflows /app/package.json ./package.json
 COPY --from=build-workflows /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-workflows /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workflows /app/.npmrc ./.npmrc
 COPY --from=build-workflows /app/packages ./packages
 
 # Install GEPA Python dependencies into a venv via uv
@@ -239,6 +248,7 @@ COPY --from=build-web /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build-web /app/package.json ./package.json
 COPY --from=build-web /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-web /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-web /app/.npmrc ./.npmrc
 COPY --from=build-web /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -279,9 +289,10 @@ COPY --from=build-migrations /app/apps/workflows ./apps/workflows
 COPY --from=build-migrations /app/package.json ./package.json
 COPY --from=build-migrations /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-migrations /app/.npmrc ./.npmrc
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --ignore-scripts
+  CI=true pnpm install --frozen-lockfile --ignore-scripts
 
 USER latitude
 

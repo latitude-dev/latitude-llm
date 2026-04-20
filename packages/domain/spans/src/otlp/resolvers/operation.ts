@@ -41,6 +41,7 @@ const VERCEL_OPERATION: Record<string, Operation> = {
 const CLAUDE_CODE_OPERATION: Record<string, string> = {
   llm_request: "chat",
   interaction: "prompt",
+  tool_execution: "execute_tool",
 }
 
 export const operationCandidates = [

@@ -1,6 +1,7 @@
 import { OrganizationRepository } from "@domain/organizations"
 import { BadRequestError, OrganizationId, PermissionError } from "@domain/shared"
 import { OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 
@@ -24,7 +25,7 @@ export const createOrganizationContextMiddleware = (): MiddlewareHandler => {
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
         return yield* repo.findById(organizationId)
-      }).pipe(withPostgres(OrganizationRepositoryLive, c.var.postgresClient, organizationId)),
+      }).pipe(withPostgres(OrganizationRepositoryLive, c.var.postgresClient, organizationId), withTracing),
     )
 
     c.set("organization", organization)

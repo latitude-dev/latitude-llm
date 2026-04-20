@@ -1,5 +1,7 @@
 import type { GenerateTelemetryCapture } from "@domain/ai"
-import { type ContextOptions, capture } from "@latitude-data/telemetry"
+import { type ContextOptions, capture, getLatitudeTracer } from "@latitude-data/telemetry"
+
+export { getLatitudeTracer }
 
 /**
  * Runs an async AI provider call inside Latitude `capture` when `telemetry` is set.

@@ -36,6 +36,9 @@ export const updateQueueUseCase = (
   input: UpdateQueueInput,
 ): Effect.Effect<UpdateQueueResult, UpdateQueueError, AnnotationQueueRepository> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+
     const repo = yield* AnnotationQueueRepository
 
     const existing = yield* repo.findByIdInProject({
@@ -51,16 +54,15 @@ export const updateQueueUseCase = (
     let updated: AnnotationQueue
 
     if (existing.system) {
-      const newSampling = input.settings?.sampling ?? existing.settings.sampling
-      const newSettings: AnnotationQueueSettings = {
+      const mergedSettings: AnnotationQueueSettings = {
         ...existing.settings,
-        ...(newSampling !== undefined ? { sampling: newSampling } : {}),
+        ...(input.settings?.sampling !== undefined ? { sampling: input.settings.sampling } : {}),
       }
+      const normalizedSettings = normalizeQueueSettings(mergedSettings)
 
       updated = {
         ...existing,
-        assignees: input.assignees ? [...input.assignees] : [...existing.assignees],
-        settings: newSettings,
+        settings: normalizedSettings,
         updatedAt: now,
       }
     } else {
@@ -90,4 +92,4 @@ export const updateQueueUseCase = (
     const saved = yield* repo.save(updated)
 
     return { queue: saved }
-  })
+  }).pipe(Effect.withSpan("annotationQueues.updateQueue"))

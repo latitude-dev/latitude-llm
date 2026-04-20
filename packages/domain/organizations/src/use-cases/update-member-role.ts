@@ -16,42 +16,47 @@ export interface UpdateMemberRoleInput {
   readonly newRole: MembershipRole
 }
 
-export const updateMemberRoleUseCase = (input: UpdateMemberRoleInput) =>
-  Effect.gen(function* () {
-    const repository = yield* MembershipRepository
+export const updateMemberRoleUseCase = Effect.fn("organizations.updateMemberRole")(function* (
+  input: UpdateMemberRoleInput,
+) {
+  yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("targetUserId", input.targetUserId)
+  yield* Effect.annotateCurrentSpan("newRole", input.newRole)
 
-    // Check if requesting user is an admin
-    const isAdmin = yield* repository.isAdmin(input.organizationId, input.requestingUserId)
-    if (!isAdmin) {
-      return yield* new NotAdminError({ userId: input.requestingUserId })
-    }
+  const repository = yield* MembershipRepository
 
-    // Cannot change your own role
-    if (input.requestingUserId === input.targetUserId) {
-      return yield* new CannotChangeOwnRoleError({ userId: input.requestingUserId })
-    }
+  // Check if requesting user is an admin
+  const isAdmin = yield* repository.isAdmin(input.organizationId, input.requestingUserId)
+  if (!isAdmin) {
+    return yield* new NotAdminError({ userId: input.requestingUserId })
+  }
 
-    // Find target member's membership
-    const targetMembership = yield* repository
-      .findByOrganizationAndUser(input.organizationId, input.targetUserId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new TargetMembershipNotFoundError({ userId: input.targetUserId })),
-        ),
-      )
+  // Cannot change your own role
+  if (input.requestingUserId === input.targetUserId) {
+    return yield* new CannotChangeOwnRoleError({ userId: input.requestingUserId })
+  }
 
-    // Cannot change owner's role directly
-    if (targetMembership.role === "owner") {
-      return yield* new CannotChangeOwnerRoleError({ userId: input.targetUserId })
-    }
+  // Find target member's membership
+  const targetMembership = yield* repository
+    .findByOrganizationAndUser(input.organizationId, input.targetUserId)
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new TargetMembershipNotFoundError({ userId: input.targetUserId })),
+      ),
+    )
 
-    // Update the role
-    const updatedMembership: Membership = {
-      ...targetMembership,
-      role: input.newRole,
-    }
+  // Cannot change owner's role directly
+  if (targetMembership.role === "owner") {
+    return yield* new CannotChangeOwnerRoleError({ userId: input.targetUserId })
+  }
 
-    yield* repository.save(updatedMembership)
+  // Update the role
+  const updatedMembership: Membership = {
+    ...targetMembership,
+    role: input.newRole,
+  }
 
-    return { success: true }
-  })
+  yield* repository.save(updatedMembership)
+
+  return { success: true }
+})

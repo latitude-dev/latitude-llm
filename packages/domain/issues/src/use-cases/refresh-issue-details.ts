@@ -62,7 +62,10 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
 
 export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const generatedDetailsResult = yield* generateIssueDetailsUseCase({
+      organizationId: input.organizationId,
       projectId: input.projectId,
       issueId: input.issueId,
     }).pipe(
@@ -132,4 +135,7 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
     }
 
     return result
-  }) as Effect.Effect<RefreshIssueDetailsResult, RefreshIssueDetailsError>
+  }).pipe(Effect.withSpan("issues.refreshIssueDetails")) as Effect.Effect<
+    RefreshIssueDetailsResult,
+    RefreshIssueDetailsError
+  >

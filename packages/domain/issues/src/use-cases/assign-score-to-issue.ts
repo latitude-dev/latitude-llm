@@ -100,6 +100,9 @@ const buildIssueWithAssignedScore = ({
 
 export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
+    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const sqlClient = yield* SqlClient
     const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
 
@@ -176,4 +179,7 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
         } satisfies AssignScoreToIssueResult
       }),
     )
-  }) as Effect.Effect<AssignScoreToIssueResult, AssignScoreToIssueError>
+  }).pipe(Effect.withSpan("issues.assignScoreToIssue")) as Effect.Effect<
+    AssignScoreToIssueResult,
+    AssignScoreToIssueError
+  >

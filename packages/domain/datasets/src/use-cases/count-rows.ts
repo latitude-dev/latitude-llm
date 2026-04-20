@@ -3,27 +3,27 @@ import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 
-export function countRows(args: {
+export const countRows = Effect.fn("datasets.countRows")(function* (args: {
   readonly datasetId: DatasetId
   readonly versionId?: DatasetVersionId
   readonly search?: string
 }) {
-  return Effect.gen(function* () {
-    const rowRepo = yield* DatasetRowRepository
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
 
-    let version: number | undefined
-    if (args.versionId) {
-      const datasetRepo = yield* DatasetRepository
-      version = yield* datasetRepo.resolveVersion({
-        datasetId: args.datasetId,
-        versionId: args.versionId,
-      })
-    }
+  const rowRepo = yield* DatasetRowRepository
 
-    return yield* rowRepo.count({
+  let version: number | undefined
+  if (args.versionId) {
+    const datasetRepo = yield* DatasetRepository
+    version = yield* datasetRepo.resolveVersion({
       datasetId: args.datasetId,
-      ...(version !== undefined ? { version } : {}),
-      ...(args.search ? { search: args.search } : {}),
+      versionId: args.versionId,
     })
+  }
+
+  return yield* rowRepo.count({
+    datasetId: args.datasetId,
+    ...(version !== undefined ? { version } : {}),
+    ...(args.search ? { search: args.search } : {}),
   })
-}
+})

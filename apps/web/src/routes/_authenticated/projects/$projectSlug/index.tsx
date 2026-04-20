@@ -1,18 +1,9 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Icon, type InfiniteTableSorting, Input, type SortDirection, Tabs, Tooltip } from "@repo/ui"
+import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  AppWindowIcon,
-  ChevronDown,
-  DatabaseIcon,
-  FilterIcon,
-  LayersIcon,
-  MessagesSquareIcon,
-  SearchIcon,
-  TextIcon,
-} from "lucide-react"
+import { DatabaseIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
@@ -123,6 +114,7 @@ function ProjectPage() {
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
+  const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_TRACE_SORTING.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
@@ -133,8 +125,10 @@ function ProjectPage() {
     serializeTraceColumnIds(DEFAULT_TRACE_COLUMNS),
   )
 
-  // Tracks which drawer tab is active so J/K knows when to defer to span navigation
-  const [activeDrawerTab, setActiveDrawerTab] = useState<string>("trace")
+  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
+    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
+      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
+  })
 
   // Ref to the ordered list of trace IDs from the currently loaded table page
   const traceIdsRef = useRef<string[]>([])
@@ -205,12 +199,18 @@ function ProjectPage() {
     setRawFilters("")
   }
 
-  const onActiveTraceChange = (traceId: string | undefined) => {
-    setActiveTraceId(traceId ?? "")
-  }
-
-  const onActiveSessionChange = (_sessionId: string | undefined) => {
+  const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
+    setSelectedSpanId("")
+    setTraceDetailTab("trace")
+  }, [setActiveTraceId, setSelectedSpanId, setTraceDetailTab])
+
+  const onActiveTraceChange = (traceId: string | undefined) => {
+    if (!traceId) {
+      closeTraceDrawer()
+      return
+    }
+    setActiveTraceId(traceId)
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
@@ -241,7 +241,7 @@ function ProjectPage() {
     { hotkey: "2", callback: () => setActiveTab("sessions"), options: { enabled: !activeTraceId } },
     {
       hotkey: "Escape",
-      callback: () => setActiveTraceId(""),
+      callback: closeTraceDrawer,
       options: { enabled: !!activeTraceId, ignoreInputs: true },
     },
   ])
@@ -251,7 +251,7 @@ function ProjectPage() {
     filters,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
-    activeDrawerTab,
+    activeDrawerTab: traceDetailTab,
     baselines: cohortSummary?.baselines,
     sorting,
     onSortingChange,
@@ -269,11 +269,6 @@ function ProjectPage() {
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
-            <Button variant="outline" size="sm" disabled>
-              <AppWindowIcon className="h-4 w-4" />
-              All logs
-              <ChevronDown className="h-4 w-4" />
-            </Button>
             <TimeFilterDropdown
               {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
               {...(timeTo ? { startTimeTo: timeTo } : {})}
@@ -346,15 +341,6 @@ function ProjectPage() {
                 setActiveTab(id)
               }}
             />
-            <div className="relative">
-              <Input
-                placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
-                size="sm"
-                className="peer w-60 pl-8"
-                disabled
-              />
-              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground peer-disabled:opacity-50" />
-            </div>
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>
@@ -379,7 +365,7 @@ function ProjectPage() {
       {activeTab === "traces" ? (
         <TracesView {...sharedViewProps} visibleColumnIds={visibleTraceColumnIds} />
       ) : (
-        <SessionsView {...sharedViewProps} onActiveSessionChange={onActiveSessionChange} />
+        <SessionsView {...sharedViewProps} />
       )}
 
       {activeTraceId ? (
@@ -391,12 +377,11 @@ function ProjectPage() {
             baselines={cohortSummary?.baselines}
             filters={filters}
             onFiltersChange={onFiltersChange}
-            onClose={() => setActiveTraceId("")}
+            onClose={closeTraceDrawer}
             onNextTrace={onNextTrace}
             onPrevTrace={onPrevTrace}
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
-            onTabChange={setActiveDrawerTab}
           />
         </Layout.Aside>
       ) : null}

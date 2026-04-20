@@ -10,6 +10,7 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
@@ -55,20 +56,25 @@ function CreateOrganizationModal({ open, setOpen }: { open: boolean; setOpen: (o
 
   const form = useForm({
     defaultValues: { name: "" },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         const org = await createOrganization({ data: { name: value.name } })
-        toast({ description: "Organization created" })
-        form.reset()
         await setActiveOrganization({
           data: { organizationId: org.id, organizationSlug: org.slug },
         })
-        setOpen(false)
-        window.location.href = "/"
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
-    },
+        return org
+      },
+      {
+        onSuccess: async () => {
+          toast({ description: "Organization created" })
+          setOpen(false)
+          window.location.href = "/"
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (
@@ -94,6 +100,7 @@ function CreateOrganizationModal({ open, setOpen }: { open: boolean; setOpen: (o
                     label="Organization Name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="My Organization"
                   />
                 )}

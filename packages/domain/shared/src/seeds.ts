@@ -217,6 +217,14 @@ function fixedSpanHex(prefix: string, index: number): string {
   return `${prefix}${index.toString(16).padStart(6, "0")}${"0".repeat(8)}`
 }
 
+export function seedIssueOccurrenceTraceId(index: number): string {
+  return fixedTraceHex("ef", index)
+}
+
+export function seedIssueOccurrenceSpanId(index: number): string {
+  return fixedSpanHex("ef", index)
+}
+
 /** 48 annotation trace IDs (Issue 1: 0-15, Issue 2: 16-37, Issue 3: 38-47). */
 export const SEED_ANNOTATION_TRACE_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedTraceHex("af", i))
 export const SEED_ANNOTATION_SPAN_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedSpanHex("af", i))
@@ -262,6 +270,34 @@ export const SEED_COMBINATION_SIMULATION_SPAN_IDS: readonly string[] = Array.fro
 )
 
 // ---------------------------------------------------------------------------
+// Annotation UI demo (mixed provenances, anchors, draft/published states)
+// ---------------------------------------------------------------------------
+
+/** Dedicated trace for annotation UI polish feature testing (30+ messages). */
+export const SEED_ANNOTATION_DEMO_TRACE_ID = "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0"
+export const SEED_ANNOTATION_DEMO_SPAN_ID = "b0b0b0b0b0b0b0b0"
+
+/** Kitchen Sink queue for testing all annotation features. */
+export const SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID = AnnotationQueueId("ksink0demo0queue0000000x")
+export const SEED_ANNOTATION_QUEUE_ITEM_KITCHEN_SINK_ID = AnnotationQueueItemId("ksink0demo0item00000000x")
+
+/** 12 annotation score IDs for the demo trace (see PRD for provenance/anchor distribution). */
+export const SEED_UI_POLISH_SCORE_IDS = {
+  humanDraft1: ScoreId("uip01humandraft1xxxxxxxx"),
+  humanDraft2: ScoreId("uip02humandraft2xxxxxxxx"),
+  humanDraft3: ScoreId("uip03humandraft3xxxxxxxx"),
+  humanPublished1: ScoreId("uip04humanpub01xxxxxxxxx"),
+  humanPublished2: ScoreId("uip05humanpub02xxxxxxxxx"),
+  humanPublished3: ScoreId("uip06humanpub03xxxxxxxxx"),
+  agentDraft1: ScoreId("uip07agentdraft1xxxxxxxx"),
+  agentDraft2: ScoreId("uip08agentdraft2xxxxxxxx"),
+  agentDraft3: ScoreId("uip09agentdraft3xxxxxxxx"),
+  agentPublished1: ScoreId("uip10agentpub01xxxxxxxxx"),
+  agentPublished2: ScoreId("uip11agentpub02xxxxxxxxx"),
+  apiPublished1: ScoreId("uip12apipub0001xxxxxxxxx"),
+} as const
+
+// ---------------------------------------------------------------------------
 // Organization/project display values
 // ---------------------------------------------------------------------------
 
@@ -271,3 +307,4 @@ export const SEED_OWNER_EMAIL = "owner@acme.com"
 export const SEED_ADMIN_EMAIL = "admin@acme.com"
 export const SEED_PROJECT_NAME = "Default Project"
 export const SEED_PROJECT_SLUG = "default-project"
+export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"

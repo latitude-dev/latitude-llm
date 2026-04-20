@@ -26,6 +26,7 @@ import {
   ProjectId,
 } from "@domain/shared"
 import { EvaluationRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -142,7 +143,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
             message: `Issue ${issue.id} does not belong to project ${projectId}`,
           })
         }
-      }).pipe(withPostgres(IssueRepositoryLive, client, OrganizationId(organizationId))),
+      }).pipe(withPostgres(IssueRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
     const pendingStatus = await writeJobStatus({
@@ -239,7 +240,7 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
             message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
           })
         }
-      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId))),
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
     const pendingStatus = await writeJobStatus({
@@ -307,6 +308,6 @@ export const softDeleteIssueEvaluation = createServerFn({ method: "POST" })
         yield* repository.save(deletedEvaluation)
 
         return toEvaluationSummaryRecord(deletedEvaluation)
-      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId))),
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
   })

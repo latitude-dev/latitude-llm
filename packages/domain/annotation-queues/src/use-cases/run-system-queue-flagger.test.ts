@@ -1,4 +1,4 @@
-import { AIError } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
@@ -124,8 +124,8 @@ describe("runSystemQueueFlaggerUseCase", () => {
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: 256,
       telemetry: {
-        spanName: "system-queue-flagger",
-        tags: ["annotation-queue", "system-flagger"],
+        spanName: "queue.system.classify",
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
         metadata: {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,
@@ -138,6 +138,25 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(calls.generate[0].system).toContain("prompt injection")
     expect(calls.generate[0].prompt).toContain("CONVERSATION EXCERPT")
     expect(calls.generate[0].prompt).toContain("Ignore previous instructions")
+  })
+
+  it("does not call the LLM flagger when the trace has no conversation messages", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([])),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called when conversation context is missing"),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
   })
 
   it("uses a queue-specific prompt for refusal", async () => {

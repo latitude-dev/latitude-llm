@@ -1,4 +1,11 @@
-import { AI, type AICredentialError, type AIError } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+} from "@domain/ai"
 import { ScoreRepository, type ScoreSource } from "@domain/scores"
 import { IssueId, ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
@@ -41,6 +48,7 @@ export interface GeneratedIssueDetails {
 }
 
 export interface GenerateIssueDetailsInput {
+  readonly organizationId: string
   readonly projectId: string
   readonly issueId?: string | null
   readonly occurrences?: readonly IssueOccurrenceInput[]
@@ -103,6 +111,10 @@ You must:
 
 export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    if (input.issueId) {
+      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    }
     const ai = yield* AI
 
     let previousName: string | null = null
@@ -163,13 +175,15 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
     const result = yield* ai.generate({
       ...ISSUE_DETAILS_GENERATION_MODEL,
       telemetry: {
-        spanName: "issue-details-generation",
-        tags: ["issues", "llm"],
-        metadata: {
-          projectId: input.projectId,
-          ...(input.issueId ? { issueId: input.issueId } : {}),
-          occurrenceCount: occurrences.length,
-        },
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.issueDetails,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.issueDetails],
+        metadata: buildProjectScopedAiMetadata(
+          { organizationId: input.organizationId, projectId: input.projectId },
+          {
+            ...(input.issueId ? { issueId: input.issueId } : {}),
+            occurrenceCount: occurrences.length,
+          },
+        ),
       },
       system: ISSUE_DETAILS_SYSTEM_PROMPT,
       prompt: buildPrompt({
@@ -184,4 +198,7 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
       name: truncateIssueName(result.object.name),
       description: collapseWhitespace(result.object.description),
     } satisfies GeneratedIssueDetails
-  }) as Effect.Effect<GeneratedIssueDetails, GenerateIssueDetailsError>
+  }).pipe(Effect.withSpan("issues.generateIssueDetails")) as Effect.Effect<
+    GeneratedIssueDetails,
+    GenerateIssueDetailsError
+  >

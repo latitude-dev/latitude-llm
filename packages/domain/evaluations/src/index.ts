@@ -66,6 +66,7 @@ export {
   applyIssueResolutionToEvaluation,
   archiveEvaluation,
   buildEvaluationAlignmentJobStatus,
+  buildLiveEvaluationExecutePublication,
   buildLiveEvaluationExecuteScopeDedupeKey,
   buildLiveEvaluationExecuteTraceDedupeKey,
   type ConfusionMatrixObservation,
@@ -125,6 +126,15 @@ export {
   type PublishLiveEvaluationExecuteInput,
 } from "./ports/live-evaluation-queue-publisher.ts"
 export {
+  buildEvaluationAlignmentJudgeTelemetryCapture,
+  buildEvaluationGepaProposeTelemetryCapture,
+  buildEvaluationGepaSummaryTelemetryCapture,
+  buildEvaluationJudgeLiveTelemetryCapture,
+  buildEvaluationOptimizationJudgeTelemetryCapture,
+  type EvaluationAlignmentJudgeTelemetryScope,
+  type EvaluationOptimizationJudgeTelemetryScope,
+} from "./runtime/ai-telemetry.ts"
+export {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
@@ -157,12 +167,9 @@ export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-bas
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
-  type EnqueueLiveEvaluationsError,
-  type EnqueueLiveEvaluationsInput,
-  type EnqueueLiveEvaluationsResult,
-  type EnqueueLiveEvaluationsSummary,
-  enqueueLiveEvaluationsUseCase,
-} from "./use-cases/live/enqueue-live-evaluations.ts"
+  buildLiveTraceEndEvaluationSelectionKey,
+  buildTraceEndEvaluationSelectionInputs,
+} from "./use-cases/live/build-trace-end-evaluation-selection.ts"
 export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
@@ -177,6 +184,8 @@ export {
   liveEvaluationIssueContextSchema,
   liveEvaluationResultPayloadSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
+export { listAllActiveEvaluations } from "./use-cases/live/list-all-active-evaluations.ts"
+export { orchestrateTraceEndLiveEvaluationExecutesUseCase } from "./use-cases/live/orchestrate-trace-end-live-evaluation-executes.ts"
 export {
   type RunLiveEvaluationCompletedExecution,
   type RunLiveEvaluationError,

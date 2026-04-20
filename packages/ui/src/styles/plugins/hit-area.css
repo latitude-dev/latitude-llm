@@ -171,3 +171,26 @@
     pointer-events: inherit;
   }
 }
+
+/*
+ * hit-area-inline-y-*  — vertical hit area for inline spans inside text.
+ * Extends vertically by the given spacing value and stretches horizontally
+ * to fill the containing block width (via -100vw/100vw insets clipped by
+ * the block ancestor's overflow).
+ */
+@utility hit-area-inline-y-* {
+  position: relative;
+  --hit-area-inline-t: --spacing(--value(number) * -1);
+  --hit-area-inline-t: calc(--value([*]) * -1);
+  --hit-area-inline-b: --spacing(--value(number) * -1);
+  --hit-area-inline-b: calc(--value([*]) * -1);
+  &::before {
+    content: "";
+    position: absolute;
+    top: var(--hit-area-inline-t, 0px);
+    bottom: var(--hit-area-inline-b, 0px);
+    left: -100vw;
+    right: -100vw;
+    pointer-events: inherit;
+  }
+}

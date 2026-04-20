@@ -16,18 +16,18 @@ interface DatasetExportEmailProps {
 
 export function DatasetExportEmail({ datasetName, downloadUrl, recipientName = "there" }: DatasetExportEmailProps) {
   return (
-    <ContainerLayout previewText="Your dataset export is ready">
+    <ContainerLayout previewText={`Your "${datasetName}" export is ready`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${recipientName},`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Your dataset "${datasetName}" export is ready to download.`}
+        {`Good news — your "${datasetName}" dataset has been exported and is ready for download.`}
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={downloadUrl} label="Download CSV" />
+        <EmailButton href={downloadUrl} label="Download Your Export" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>
-        This link expires in 7 days.
+        This download link will remain active for 7 days.
       </EmailText>
     </ContainerLayout>
   )

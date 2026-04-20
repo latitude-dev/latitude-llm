@@ -1,4 +1,13 @@
-import { AI, type AICredentialError, type AIError, formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  type AICredentialError,
+  type AIError,
+  buildProjectScopedAiMetadata,
+  formatGenAIConversation,
+  formatGenAIMessage,
+} from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import {
   evaluateTraceResourceOutliersUseCase,
@@ -267,14 +276,12 @@ const runLlmFlagger = (
       prompt: buildFlaggerPrompt(trace),
       schema: systemQueueFlaggerOutputSchema,
       telemetry: {
-        spanName: "system-queue-flagger",
-        tags: ["annotation-queue", "system-flagger"],
-        metadata: {
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          queueSlug: input.queueSlug,
-        },
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemClassify,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
+        metadata: buildProjectScopedAiMetadata(
+          { organizationId: input.organizationId, projectId: input.projectId },
+          { traceId: input.traceId, queueSlug: input.queueSlug },
+        ),
       },
     })
 
@@ -285,22 +292,33 @@ export function getSystemQueueMatcherBySlug(queueSlug: string): SystemQueueMatch
   return isDeterministicQueueSlug(queueSlug) ? deterministicQueueMatchers[queueSlug] : undefined
 }
 
-export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) =>
-  Effect.gen(function* () {
-    const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
+export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
+  input: RunSystemQueueFlaggerInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
-    if (deterministicMatcher) {
-      return yield* deterministicMatcher(input)
-    }
+  const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
 
-    if (!isLlmQueueSlug(input.queueSlug)) {
-      return { matched: false }
-    }
+  if (deterministicMatcher) {
+    return yield* deterministicMatcher(input)
+  }
 
-    const trace = yield* loadTraceDetail(input)
-    const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
+  if (!isLlmQueueSlug(input.queueSlug)) {
+    return { matched: false }
+  }
 
-    return {
-      matched: decisions.matched,
-    } satisfies RunSystemQueueFlaggerResult
-  })
+  const trace = yield* loadTraceDetail(input)
+
+  if (trace.allMessages.length === 0) {
+    return { matched: false }
+  }
+
+  const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
+
+  return {
+    matched: decisions.matched,
+  } satisfies RunSystemQueueFlaggerResult
+})

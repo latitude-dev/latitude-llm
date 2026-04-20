@@ -15,23 +15,23 @@ interface InviteMagicLinkEmailProps {
 
 export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkUrl }: InviteMagicLinkEmailProps) {
   return (
-    <ContainerLayout previewText={`${inviterName} invited you to join ${organizationName} on Latitude`}>
+    <ContainerLayout previewText={`${inviterName} wants you to join ${organizationName} on Latitude`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        {`${inviterName} invited you`}
+        {`You're invited to ${organizationName}`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`${inviterName} has invited you to join the ${organizationName} workspace on Latitude, an LLM observability platform for monitoring and evaluating AI applications.`}
+        {`${inviterName} would like you to collaborate in the ${organizationName} workspace on Latitude — a platform for monitoring and evaluating LLM-powered applications.`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Click the button below to accept the invitation and join the workspace.
+        Tap the button below to join the team and start exploring.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={magicLinkUrl} label="Accept Invitation" />
+        <EmailButton href={magicLinkUrl} label="Join the Workspace" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>
-        This link will expire in 1 hour and can only be used once.
+        For security, this link is valid for 1 hour and works only once.
       </EmailText>
     </ContainerLayout>
   )

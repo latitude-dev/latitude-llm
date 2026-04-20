@@ -1,4 +1,4 @@
-import type { TraceCohortSummary, TraceMetrics } from "@domain/spans"
+import { getTraceMetricPercentileThreshold, type TraceCohortSummary, type TraceMetrics } from "@domain/spans"
 import {
   InfiniteTable,
   type InfiniteTableColumn,
@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import { type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -38,10 +39,17 @@ function getPercentileLevel(
   value: number,
   baseline: Baselines[keyof Baselines] | undefined,
 ): "p99" | "p95" | "p90" | undefined {
-  if (!baseline || baseline.sampleCount === 0) return undefined
-  if (baseline.p99 !== null && value >= baseline.p99) return "p99"
-  if (baseline.p95 !== null && value >= baseline.p95) return "p95"
-  if (value >= baseline.p90) return "p90"
+  if (!baseline) return undefined
+
+  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
+  if (p99 !== null && value >= p99) return "p99"
+
+  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
+  if (p95 !== null && value >= p95) return "p95"
+
+  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
+  if (p90 !== null && value >= p90) return "p90"
+
   return undefined
 }
 
@@ -71,9 +79,13 @@ interface ProjectTracesTableProps {
   readonly onTraceClick?: (trace: TraceRecord) => void
   readonly getTraceRowAriaLabel?: (trace: TraceRecord) => string
   readonly rowInteractionRole?: "button" | "link"
+  /** When provided, renders the name column as a real link for accessibility (e.g., open in new tab). */
+  readonly getTraceHref?: (trace: TraceRecord) => string
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
   readonly baselines?: Baselines | undefined
+  readonly scrollAreaLayout?: "fill" | "intrinsic"
+  readonly scrollContainerClassName?: string
 }
 
 export function ProjectTracesTable({
@@ -91,9 +103,12 @@ export function ProjectTracesTable({
   onTraceClick,
   getTraceRowAriaLabel,
   rowInteractionRole,
+  getTraceHref,
   traceMetrics,
   metricsLoading,
   baselines,
+  scrollAreaLayout,
+  scrollContainerClassName,
 }: ProjectTracesTableProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
 
@@ -114,7 +129,21 @@ export function ProjectTracesTable({
         key: "name",
         header: "Name",
         width: 180,
-        render: (trace) => trace.rootSpanName || trace.traceId.slice(0, 8),
+        render: (trace) => {
+          const displayName = trace.rootSpanName || trace.traceId.slice(0, 8)
+          if (getTraceHref) {
+            return (
+              <Link
+                to={getTraceHref(trace)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                className="hover:underline"
+              >
+                {displayName}
+              </Link>
+            )
+          }
+          return displayName
+        },
       },
       {
         key: "tags",
@@ -278,7 +307,7 @@ export function ProjectTracesTable({
           : {}),
       },
     ]
-  }, [showMetricSubheaders, traceMetrics, metricsLoading, baselines])
+  }, [showMetricSubheaders, traceMetrics, metricsLoading, baselines, getTraceHref])
 
   const columns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
@@ -306,6 +335,8 @@ export function ProjectTracesTable({
     <InfiniteTable
       data={data}
       {...(isLoading !== undefined ? { isLoading } : {})}
+      {...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {})}
+      {...(scrollContainerClassName !== undefined ? { className: scrollContainerClassName } : {})}
       columns={columns}
       getRowKey={(trace) => trace.traceId}
       {...(onTraceClick

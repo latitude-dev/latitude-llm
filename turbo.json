@@ -3,7 +3,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "passThroughEnv": [
+        "NODE_ENV",
+        "VITE_LAT_API_URL",
+        "VITE_LAT_WEB_URL",
+        "VITE_LAT_TURNSTILE_SITE_KEY",
+        "VITE_LAT_POSTHOG_KEY",
+        "VITE_LAT_POSTHOG_HOST"
+      ]
     },
     "dev": {
       "cache": false,
@@ -16,7 +24,7 @@
       "cache": false
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^build", "^typecheck"]
     },
     "test": {
       "dependsOn": ["^build"],

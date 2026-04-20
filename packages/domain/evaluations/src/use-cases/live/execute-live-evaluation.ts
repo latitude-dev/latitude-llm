@@ -63,6 +63,8 @@ const toGenerateTelemetryCapture = (
 
 export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
+
     if (!validateEvaluationScript(input.script)) {
       return yield* new LiveEvaluationExecutionError({
         evaluationId: input.evaluationId,
@@ -99,4 +101,8 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
           cause: error,
         }),
     })
-  }) as Effect.Effect<LiveEvaluationExecutionResult, ExecuteLiveEvaluationError, AI>
+  }).pipe(Effect.withSpan("evaluations.executeLiveEvaluation")) as Effect.Effect<
+    LiveEvaluationExecutionResult,
+    ExecuteLiveEvaluationError,
+    AI
+  >

@@ -1,8 +1,10 @@
 import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 const { runFlagger, draftAnnotate, persistAnnotation } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 seconds",
+  retry: defaultActivityRetryPolicy,
 })
 
 /**

@@ -179,4 +179,27 @@ describe("buildClickHouseWhere", () => {
     const { clauses } = buildClickHouseWhere(filters, registry)
     expect(clauses).toHaveLength(0)
   })
+
+  it("emits in/notIn with an empty value list (matches no tag / no status)", () => {
+    const filters: FilterSet = {
+      status: [{ op: "in", value: [] }],
+      tags: [{ op: "in", value: [] }],
+    }
+    const { clauses, params } = buildClickHouseWhere(filters, registry)
+    expect(clauses).toHaveLength(2)
+    expect(params.f_0).toEqual([])
+    expect(params.f_1).toEqual([])
+    expect(clauses[0]).toBe("overall_status IN ({f_0:Array(UInt8)})")
+    expect(clauses[1]).toBe("hasAny(tags, {f_1:Array(String)})")
+  })
+
+  it("emits metadata in with an empty value list", () => {
+    const filters: FilterSet = { "metadata.env": [{ op: "in", value: [] }] }
+    const { clauses, params } = buildClickHouseWhere(filters, registry)
+    expect(clauses).toHaveLength(1)
+    expect(clauses[0]).toMatch(/ifNull\(metadata\[\{f_\d+:String\}\], ''\) IN \(\{f_\d+:Array\(String\)\}\)/)
+    const values = Object.values(params)
+    expect(values).toContain("env")
+    expect(values).toContainEqual([])
+  })
 })

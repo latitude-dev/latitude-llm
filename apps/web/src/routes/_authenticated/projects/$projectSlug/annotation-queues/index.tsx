@@ -1,3 +1,4 @@
+import { isSystemQueue } from "@domain/annotation-queues"
 import {
   AvatarGroup,
   Button,
@@ -6,6 +7,7 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableSorting,
   optionsColumn,
+  Status,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -22,7 +24,7 @@ import type { AnnotationQueueRecord } from "../../../../../domains/annotation-qu
 import { useMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
 import { pickUsersFromMembersMap } from "../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { AqListBreadcrumb } from "./-components/aq-list-breadcrumb.tsx"
 import { DeleteQueueModal } from "./-components/delete-queue-modal.tsx"
 import { QueueBadge } from "./-components/queue-badge.tsx"
@@ -80,14 +82,29 @@ function AnnotationQueuesPage() {
         minWidth: 240,
         width: 320,
         sortKey: "name",
-        render: (q) => (
-          <div className="flex min-w-0 items-center justify-between gap-3 py-0.5">
-            <Text.H5 weight="medium" ellipsis lineClamp={3} className="min-w-0 flex-1">
-              {q.name}
-            </Text.H5>
-            <QueueBadge queue={q} />
-          </div>
-        ),
+        render: (q) => {
+          const sampling = q.settings.sampling ?? 0
+          const showDisabled = isSystemQueue(q) && sampling === 0
+          return (
+            <div className="flex min-w-0 items-center justify-between gap-3 py-0.5">
+              <div className="min-w-0 flex-1">
+                {showDisabled ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <Text.H5 weight="medium" ellipsis lineClamp={3} className="min-w-0">
+                      {q.name}
+                    </Text.H5>
+                    <Status variant="destructive" label="Disabled" className="shrink-0" />
+                  </div>
+                ) : (
+                  <Text.H5 weight="medium" ellipsis lineClamp={3} className="min-w-0">
+                    {q.name}
+                  </Text.H5>
+                )}
+              </div>
+              <QueueBadge queue={q} />
+            </div>
+          )
+        },
       },
       {
         key: "createdAt",
@@ -145,6 +162,7 @@ function AnnotationQueuesPage() {
           {
             label: "Delete",
             type: "destructive",
+            disabled: q.system,
             onClick: () => openDeleteModal(q),
           },
         ],
@@ -186,6 +204,7 @@ function AnnotationQueuesPage() {
       <Layout.Body>
         <Layout.List>
           <InfiniteTable
+            {...listingLayoutIntrinsicScroll.infiniteTable}
             data={queues}
             isLoading={isLoading}
             columns={columns}
@@ -212,6 +231,7 @@ function AnnotationQueuesPage() {
 
       {editQueue && (
         <QueueModal
+          key={editQueue.id}
           open={!!editQueue}
           onOpenChange={(open) => !open && setEditQueue(null)}
           projectId={projectId}

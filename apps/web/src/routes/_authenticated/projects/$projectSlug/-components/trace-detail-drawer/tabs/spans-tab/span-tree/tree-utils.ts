@@ -12,6 +12,8 @@ export interface TraceTimeRange {
   readonly totalDuration: number
 }
 
+const MAX_TREE_DEPTH = 1000
+
 export function buildSpanTree(spans: readonly SpanRecord[]): SpanTreeNode[] {
   const byId = new Map<string, SpanTreeNode>()
   const roots: SpanTreeNode[] = []
@@ -22,6 +24,11 @@ export function buildSpanTree(spans: readonly SpanRecord[]): SpanTreeNode[] {
 
   for (const node of byId.values()) {
     const parentId = node.span.parentSpanId
+    // Skip self-references to prevent cycles
+    if (parentId && parentId === node.span.spanId) {
+      roots.push(node)
+      continue
+    }
     const parent = parentId ? byId.get(parentId) : undefined
     if (parent) {
       parent.children.push(node)
@@ -30,13 +37,22 @@ export function buildSpanTree(spans: readonly SpanRecord[]): SpanTreeNode[] {
     }
   }
 
-  function setDepth(node: SpanTreeNode, depth: number) {
+  function setDepth(node: SpanTreeNode, depth: number, visited: Set<string>) {
+    // Cycle detection: skip if already visited
+    if (visited.has(node.span.spanId)) {
+      return
+    }
+    // Depth limit: prevent stack overflow on extremely deep trees
+    if (depth > MAX_TREE_DEPTH) {
+      return
+    }
+    visited.add(node.span.spanId)
     node.depth = depth
     node.children.sort((a, b) => a.span.startTime.localeCompare(b.span.startTime))
-    for (const child of node.children) setDepth(child, depth + 1)
+    for (const child of node.children) setDepth(child, depth + 1, visited)
   }
 
-  for (const root of roots) setDepth(root, 0)
+  for (const root of roots) setDepth(root, 0, new Set())
   roots.sort((a, b) => a.span.startTime.localeCompare(b.span.startTime))
 
   return roots
@@ -50,22 +66,33 @@ export interface FlattenedNode {
 
 export function flattenTree(roots: readonly SpanTreeNode[], collapsed: ReadonlySet<string>): FlattenedNode[] {
   const result: FlattenedNode[] = []
+  const visited = new Set<string>()
 
-  function walk(node: SpanTreeNode, parentConnectors: readonly boolean[], isLast: boolean) {
+  function walk(node: SpanTreeNode, parentConnectors: readonly boolean[], isLast: boolean, depth: number) {
+    // Cycle detection: skip if already visited
+    if (visited.has(node.span.spanId)) {
+      return
+    }
+    // Depth limit: prevent stack overflow
+    if (depth > MAX_TREE_DEPTH) {
+      return
+    }
+    visited.add(node.span.spanId)
+
     const connectors = node.depth > 0 ? [...parentConnectors, !isLast] : []
     result.push({ node, connectors, isLastChild: isLast })
     if (!collapsed.has(node.span.spanId)) {
       const kids = node.children
       for (let i = 0; i < kids.length; i++) {
         const child = kids[i]
-        if (child) walk(child, connectors, i === kids.length - 1)
+        if (child) walk(child, connectors, i === kids.length - 1, depth + 1)
       }
     }
   }
 
   for (let i = 0; i < roots.length; i++) {
     const root = roots[i]
-    if (root) walk(root, [], i === roots.length - 1)
+    if (root) walk(root, [], i === roots.length - 1, 0)
   }
   return result
 }

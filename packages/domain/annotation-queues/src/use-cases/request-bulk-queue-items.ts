@@ -59,6 +59,11 @@ export function requestBulkQueueItems(
   ChSqlClient | QueuePublisher | AnnotationQueueRepository
 > {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.projectId", args.projectId)
+    if ("queueId" in args) {
+      yield* Effect.annotateCurrentSpan("queue.id", args.queueId)
+    }
+
     const chSqlClient = yield* ChSqlClient
     const queueRepository = yield* AnnotationQueueRepository
     const queuePublisher = yield* QueuePublisher
@@ -99,5 +104,5 @@ export function requestBulkQueueItems(
     })
 
     return { queueId }
-  })
+  }).pipe(Effect.withSpan("annotationQueues.requestBulkQueueItems"))
 }

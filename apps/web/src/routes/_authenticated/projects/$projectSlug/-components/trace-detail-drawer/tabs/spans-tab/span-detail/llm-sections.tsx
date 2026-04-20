@@ -14,7 +14,7 @@ export function LlmSections({ span }: { readonly span: SpanDetailRecord }) {
       <DetailSection icon={<BrainIcon className="w-4 h-4" />} label="System Instructions">
         {system.length ? (
           <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
-            <Conversation systemInstructions={system} messages={[]} />
+            <Conversation messages={[{ role: "system", parts: system }]} />
           </div>
         ) : (
           <Text.H6 color="foregroundMuted">No system instructions</Text.H6>

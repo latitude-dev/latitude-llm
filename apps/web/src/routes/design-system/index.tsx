@@ -34,6 +34,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
 import { useState } from "react"
+import { listingLayoutIntrinsicScroll } from "../../layouts/ListingLayout/index.tsx"
 
 export const Route = createFileRoute("/design-system/")({
   component: DesignSystemPage,
@@ -421,6 +422,7 @@ function InfiniteTableSubheaderDemo() {
   return (
     <div className="h-[200px] min-h-0 flex flex-col rounded-lg border border-border/60">
       <InfiniteTable
+        {...listingLayoutIntrinsicScroll.infiniteTable}
         data={data}
         columns={demoTableColumns}
         getRowKey={(r) => r.id}

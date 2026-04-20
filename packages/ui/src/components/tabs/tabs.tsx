@@ -122,6 +122,8 @@ export type TabOption<T extends string = string> = {
   readonly id: T
   readonly label: string
   readonly icon?: ReactNode
+  /** Renders after the label (e.g. a count pill). */
+  readonly suffix?: ReactNode
   /** Extra content appended to the tab's tooltip (e.g. a HotkeyBadge). When hideLabels is true the label is automatically prepended. */
   readonly tooltip?: ReactNode
 }
@@ -334,6 +336,7 @@ export function Tabs<T extends string>({
               <>
                 {option.icon}
                 <Text.H5 color={isActive ? "foreground" : "foregroundMuted"}>{option.label}</Text.H5>
+                {option.suffix}
               </>
             )}
           </button>

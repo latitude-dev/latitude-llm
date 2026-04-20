@@ -83,7 +83,12 @@ export const getPostHogClient = (): PostHogClientShape => {
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   if (!workflowStarterPromise) {
     const config = loadTemporalConfig()
-    workflowStarterPromise = createTemporalClient(config).then((client) => createWorkflowStarter(client, config))
+    workflowStarterPromise = createTemporalClient(config)
+      .then((client) => createWorkflowStarter(client, config))
+      .catch((error) => {
+        workflowStarterPromise = undefined
+        throw error
+      })
   }
 
   return workflowStarterPromise

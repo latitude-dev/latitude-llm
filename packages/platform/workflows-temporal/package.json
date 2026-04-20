@@ -10,7 +10,6 @@
     "./worker": "./src/worker.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -19,8 +18,10 @@
   },
   "dependencies": {
     "@domain/queue": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@temporalio/activity": "catalog:",
     "@temporalio/client": "catalog:",
     "@temporalio/worker": "catalog:",
     "effect": "catalog:"

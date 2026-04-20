@@ -7,7 +7,7 @@ export default defineConfig({
   outDir: "dist",
   platform: "node",
   noExternal: [/@(platform|domain|repo)\/.*/],
-  external: ["@temporalio/worker"],
+  external: ["@temporalio/worker", "voyageai"],
   splitting: false,
   sourcemap: true,
   clean: true,

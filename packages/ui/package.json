@@ -12,7 +12,6 @@
     "./styles/globals.css": "./src/styles/globals.css"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -42,10 +41,12 @@
     "date-fns": "^3.6.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
+    "lowlight": "^3.3.0",
     "lucide-react": "^1.8.0",
     "react-day-picker": "8.10.1",
     "react-markdown": "^10.1.0",
     "react-textarea-autosize": "^8.5.9",
+    "rehype-highlight": "^7.0.2",
     "remark-breaks": "^4.0.0",
     "remark-emoji": "^5.0.2",
     "remark-gfm": "^4.0.1",

@@ -1,6 +1,4 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"
-import { createAnthropic } from "@ai-sdk/anthropic"
-import { createOpenAI } from "@ai-sdk/openai"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
   AICredentialError,
@@ -10,20 +8,53 @@ import {
   type GenerateInput,
   type GenerateResult,
 } from "@domain/ai"
-import { runWithAiTelemetry } from "@platform/ai-latitude"
+import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { generateText, Output } from "ai"
 import { Effect, Layer } from "effect"
-import { resolveAmazonBedrockModelId } from "./bedrock-nova-inference-model-id.ts"
+
+const latitudeTracer = getLatitudeTracer("vercelai")
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
 type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
 type ProviderModel = GenerateTextCall["model"]
+type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
-const BEDROCK_PROVIDER = "amazon-bedrock"
+const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
-const isSupportedBedrockProvider = (provider: string) => provider === BEDROCK_PROVIDER
+const bedrockGeographyPrefixForAwsRegion = (region: string): BedrockGeographyPrefix => {
+  if (region.startsWith("eu-")) {
+    return "eu"
+  }
+  if (region.startsWith("us-") || region.startsWith("ca-") || region.startsWith("sa-") || region.startsWith("mx-")) {
+    return "us"
+  }
+  if (region.startsWith("ap-") || region.startsWith("me-") || region.startsWith("af-")) {
+    return "apac"
+  }
+  if (region.startsWith("il-")) {
+    return "eu"
+  }
+  return "eu"
+}
+
+/**
+ * Bedrock cross-region inference profiles are geography-scoped (`eu.*`, `us.*`, `apac.*`).
+ * Keep `global.*` IDs intact and rewrite foundation model IDs to the current AWS geography.
+ */
+const resolveBedrockModelId = (model: string, region: string): string => {
+  if (model.startsWith("global.")) {
+    return model
+  }
+
+  const match = model.match(bedrockScopedModelIdPattern)
+  if (!match) {
+    return model
+  }
+
+  return `${bedrockGeographyPrefixForAwsRegion(region)}.${match[1]}`
+}
 
 const normalizeProviderOptions = (
   providerOptions: GenerateInput<unknown>["providerOptions"],
@@ -37,35 +68,9 @@ const normalizeProviderOptions = (
 
 const mapCredentialError = (message: string) =>
   new AICredentialError({
-    provider: BEDROCK_PROVIDER,
+    provider: "amazon-bedrock",
     message,
   })
-
-const getRequiredApiKey = (
-  provider: "anthropic" | "openai",
-  envVar: string,
-): Effect.Effect<string, AICredentialError> =>
-  parseEnvOptional(envVar, "string").pipe(
-    Effect.mapError(
-      () =>
-        new AICredentialError({
-          provider,
-          message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} credentials are invalid: ${envVar} must be a string.`,
-        }),
-    ),
-    Effect.flatMap((apiKey) => {
-      if (apiKey !== undefined) {
-        return Effect.succeed(apiKey)
-      }
-
-      return Effect.fail(
-        new AICredentialError({
-          provider,
-          message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} is unavailable: set ${envVar}.`,
-        }),
-      )
-    }),
-  )
 
 const createBedrockProvider = (): Effect.Effect<
   { bedrock: ReturnType<typeof createAmazonBedrock>; region: string },
@@ -127,21 +132,12 @@ export const createProviderModel = (
   model: string,
 ): Effect.Effect<ProviderModel, AICredentialError> => {
   switch (provider) {
-    case "anthropic":
-      return getRequiredApiKey(provider, "LAT_ANTHROPIC_API_KEY").pipe(
-        Effect.map((apiKey) => createAnthropic({ apiKey })(model)),
+    case "amazon-bedrock":
+      return createBedrockProvider().pipe(
+        Effect.map(({ bedrock, region }) => bedrock(resolveBedrockModelId(model, region))),
       )
-    case "openai":
-      return getRequiredApiKey(provider, "LAT_OPENAI_API_KEY").pipe(
-        Effect.map((apiKey) => createOpenAI({ apiKey })(model)),
-      )
-    default:
-      if (isSupportedBedrockProvider(provider)) {
-        return createBedrockProvider().pipe(
-          Effect.map(({ bedrock, region }) => bedrock(resolveAmazonBedrockModelId(model, region))),
-        )
-      }
 
+    default:
       return Effect.fail(
         new AICredentialError({
           provider,
@@ -183,6 +179,7 @@ export const AIGenerateLive = Layer.effect(
                   ...(providerOptions !== undefined ? { providerOptions } : {}),
                   experimental_telemetry: {
                     isEnabled: true,
+                    tracer: latitudeTracer,
                   },
                 }
 

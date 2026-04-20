@@ -1,4 +1,4 @@
-import { AIError } from "@domain/ai"
+import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
@@ -100,8 +100,8 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
     expect(generateCall.telemetry).toMatchObject({
-      spanName: "system-queue-annotator",
-      tags: ["annotation-queue", "system-annotator"],
+      spanName: "queue.system.draft",
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
       metadata: {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,

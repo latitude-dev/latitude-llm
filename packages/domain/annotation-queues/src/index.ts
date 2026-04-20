@@ -76,6 +76,12 @@ export {
 } from "./ports/annotation-queue-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
+  buildLiveTraceEndQueueSelectionKey,
+  buildLiveTraceEndSystemQueueSelectionKey,
+  buildTraceEndLiveQueueSelectionInputs,
+  buildTraceEndSystemQueueSelectionInputs,
+} from "./use-cases/build-trace-end-queue-selection.ts"
+export {
   type CompleteQueueItemError,
   type CompleteQueueItemInput,
   completeQueueItemUseCase,
@@ -86,13 +92,6 @@ export {
   type CreateQueueResult,
   createQueueUseCase,
 } from "./use-cases/create-queue.ts"
-export {
-  type CurateLiveAnnotationQueuesError,
-  type CurateLiveAnnotationQueuesInput,
-  type CurateLiveAnnotationQueuesResult,
-  type CurateLiveAnnotationQueuesSummary,
-  curateLiveAnnotationQueuesUseCase,
-} from "./use-cases/curate-live-annotation-queues.ts"
 export {
   type DeleteQueueError,
   type DeleteQueueInput,
@@ -117,6 +116,17 @@ export {
   type MarkReviewStartedInput,
   markReviewStartedUseCase,
 } from "./use-cases/mark-review-started.ts"
+export {
+  type MaterializeLiveQueueItemsError,
+  type MaterializeLiveQueueItemsInput,
+  type MaterializeLiveQueueItemsResult,
+  materializeLiveQueueItemsUseCase,
+} from "./use-cases/materialize-live-queue-items.ts"
+export {
+  orchestrateTraceEndLiveQueueMaterializationUseCase,
+  orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
+  type StartSystemQueueFlaggerForTraceOnce,
+} from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
 export {
   type PersistSystemQueueAnnotationError,
   type PersistSystemQueueAnnotationInput,

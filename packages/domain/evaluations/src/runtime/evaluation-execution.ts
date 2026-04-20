@@ -17,8 +17,8 @@ export type EvaluationScriptSchema<T> = z.ZodType<T>
 export const evaluationRuntimeZod = z
 
 export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
-  provider: "openai",
-  model: "gpt-5.4",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-sonnet-4-6",
   reasoning: "low",
 } as const
 
@@ -188,45 +188,45 @@ export const executeEvaluationScript = async (input: {
   }
 }
 
-export const executeEvaluationScriptWithAI = (input: {
+export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvaluationScriptWithAi")(function* (input: {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
   readonly issue: EvaluationIssueContext
   readonly telemetry?: GenerateTelemetryCapture
-}) =>
-  Effect.gen(function* () {
-    const ai = yield* AI
-    const services = yield* Effect.services<never>()
+}) {
+  yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
 
-    return yield* Effect.tryPromise({
-      try: () =>
-        executeEvaluationScript({
-          script: input.script,
-          conversation: input.conversation,
-          issue: input.issue,
-          generateStructuredObject: <T>(llmInput: {
-            readonly prompt: string
-            readonly schema: EvaluationScriptSchema<T>
-          }): Promise<GenerateResult<T>> =>
-            Effect.runPromiseWith(services)(
-              ai.generate({
-                ...EVALUATION_SCRIPT_RUNTIME_MODEL,
-                system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-                prompt: llmInput.prompt,
-                schema: llmInput.schema,
-                ...(input.telemetry ? { telemetry: input.telemetry } : {}),
-              }),
-            ),
-        }),
-      catch: (error) => {
-        if (error instanceof AIError || error instanceof AICredentialError) {
-          return error
-        }
+  const ai = yield* AI
+  const services = yield* Effect.services<never>()
 
-        return new EvaluationExecutionError({
-          message: error instanceof Error ? error.message : "Evaluation execution failed",
-          cause: error,
-        })
-      },
-    })
-  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError, AI>
+  return yield* Effect.tryPromise({
+    try: () =>
+      executeEvaluationScript({
+        script: input.script,
+        conversation: input.conversation,
+        issue: input.issue,
+        generateStructuredObject: <T>(llmInput: {
+          readonly prompt: string
+          readonly schema: EvaluationScriptSchema<T>
+        }): Promise<GenerateResult<T>> =>
+          Effect.runPromiseWith(services)(
+            ai.generate({
+              ...EVALUATION_SCRIPT_RUNTIME_MODEL,
+              system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
+              prompt: llmInput.prompt,
+              schema: llmInput.schema,
+              ...(input.telemetry ? { telemetry: input.telemetry } : {}),
+            }),
+          ),
+      }),
+    catch: (error) => {
+      if (error instanceof AIError || error instanceof AICredentialError) {
+        return error
+      }
+
+      return new EvaluationExecutionError({
+        message: error instanceof Error ? error.message : "Evaluation execution failed",
+      })
+    },
+  })
+})

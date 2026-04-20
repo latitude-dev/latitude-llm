@@ -2,6 +2,7 @@ import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -144,7 +145,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* SpanRepository
         return yield* repo.listByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpan)
   })
@@ -176,7 +177,10 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
           if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
 
           return buildConversationSpanMaps(traceDetail.allMessages, spans)
-        }).pipe(withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId)),
+        }).pipe(
+          withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
+          withTracing,
+        ),
       )
     },
   )
@@ -194,7 +198,7 @@ export const getSpanDetail = createServerFn({ method: "GET" })
           traceId: TraceId(data.traceId),
           spanId: SpanId(data.spanId),
         })
-      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return serializeSpanDetail(span)
   })

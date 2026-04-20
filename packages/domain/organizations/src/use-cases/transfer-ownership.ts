@@ -15,51 +15,55 @@ export interface TransferOwnershipInput {
   readonly newOwnerUserId: UserId
 }
 
-export const transferOwnershipUseCase = (input: TransferOwnershipInput) =>
-  Effect.gen(function* () {
-    const repository = yield* MembershipRepository
+export const transferOwnershipUseCase = Effect.fn("organizations.transferOwnership")(function* (
+  input: TransferOwnershipInput,
+) {
+  yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("newOwnerUserId", input.newOwnerUserId)
 
-    // Check if current owner is actually the owner
-    const currentOwnerMembership = yield* repository
-      .findByOrganizationAndUser(input.organizationId, input.currentOwnerUserId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new MembershipNotFoundError({ userId: input.currentOwnerUserId })),
-        ),
-      )
+  const repository = yield* MembershipRepository
 
-    if (currentOwnerMembership.role !== "owner") {
-      return yield* new NotOwnerError({ userId: input.currentOwnerUserId })
-    }
+  // Check if current owner is actually the owner
+  const currentOwnerMembership = yield* repository
+    .findByOrganizationAndUser(input.organizationId, input.currentOwnerUserId)
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new MembershipNotFoundError({ userId: input.currentOwnerUserId })),
+      ),
+    )
 
-    // Cannot transfer to self
-    if (input.currentOwnerUserId === input.newOwnerUserId) {
-      return yield* new CannotTransferToSelfError({ userId: input.currentOwnerUserId })
-    }
+  if (currentOwnerMembership.role !== "owner") {
+    return yield* new NotOwnerError({ userId: input.currentOwnerUserId })
+  }
 
-    // Find target member's membership
-    const newOwnerMembership = yield* repository
-      .findByOrganizationAndUser(input.organizationId, input.newOwnerUserId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new CannotTransferToNonMemberError({ userId: input.newOwnerUserId })),
-        ),
-      )
+  // Cannot transfer to self
+  if (input.currentOwnerUserId === input.newOwnerUserId) {
+    return yield* new CannotTransferToSelfError({ userId: input.currentOwnerUserId })
+  }
 
-    // Swap roles: current owner becomes admin, new owner becomes owner
-    const updatedCurrentOwnerMembership: Membership = {
-      ...currentOwnerMembership,
-      role: "admin",
-    }
+  // Find target member's membership
+  const newOwnerMembership = yield* repository
+    .findByOrganizationAndUser(input.organizationId, input.newOwnerUserId)
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new CannotTransferToNonMemberError({ userId: input.newOwnerUserId })),
+      ),
+    )
 
-    const updatedNewOwnerMembership: Membership = {
-      ...newOwnerMembership,
-      role: "owner",
-    }
+  // Swap roles: current owner becomes admin, new owner becomes owner
+  const updatedCurrentOwnerMembership: Membership = {
+    ...currentOwnerMembership,
+    role: "admin",
+  }
 
-    // Save both memberships
-    yield* repository.save(updatedCurrentOwnerMembership)
-    yield* repository.save(updatedNewOwnerMembership)
+  const updatedNewOwnerMembership: Membership = {
+    ...newOwnerMembership,
+    role: "owner",
+  }
 
-    return { success: true }
-  })
+  // Save both memberships
+  yield* repository.save(updatedCurrentOwnerMembership)
+  yield* repository.save(updatedNewOwnerMembership)
+
+  return { success: true }
+})

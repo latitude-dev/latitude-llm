@@ -1,3 +1,6 @@
+/** Horizontal inset for waterfall bars & time labels so bars don’t touch column edges (matches `px-3`). */
+export const WATERFALL_H_INSET_PX = 12
+
 export const ROW_HEIGHT = 32
 export const INDENT_PX = 16
 export const MIN_TREE_WIDTH = 180

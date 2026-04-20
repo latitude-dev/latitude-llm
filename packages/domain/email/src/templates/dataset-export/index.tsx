@@ -20,7 +20,7 @@ export async function datasetExportTemplate(data: DatasetExportEmailData): Promi
         {...(data.recipientName !== undefined ? { recipientName: data.recipientName } : {})}
       />,
     ),
-    subject: "Your dataset export is ready",
-    text: `Your dataset "${data.datasetName}" export is ready. Download: ${data.downloadUrl}`,
+    subject: `Your "${data.datasetName}" export is ready to download`,
+    text: `Hi, your Latitude dataset "${data.datasetName}" has been exported. Download it here: ${data.downloadUrl}`,
   }
 }

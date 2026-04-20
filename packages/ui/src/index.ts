@@ -87,7 +87,11 @@ export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
 export { Conversation } from "./components/genai-conversation/conversation.tsx"
 export { Message } from "./components/genai-conversation/message.tsx"
 export { Part, ReasoningGroup, type ToolCallResult } from "./components/genai-conversation/part.tsx"
-export type { HighlightRange, TextSelectionAnchor } from "./components/genai-conversation/text-selection.tsx"
+export {
+  type HighlightRange,
+  SELECTION_HIGHLIGHT_CLASSES,
+  type TextSelectionAnchor,
+} from "./components/genai-conversation/text-selection.tsx"
 export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
@@ -144,6 +148,7 @@ export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { Slider, type SliderProps } from "./components/slider/index.tsx"
 export { Status, type StatusProps, statusVariants } from "./components/status/status.tsx"
 export { Switch, type SwitchProps } from "./components/switch/switch.tsx"
+export { SwitchInput, type SwitchInputProps } from "./components/switch/switch-input.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/table/table.tsx"
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"

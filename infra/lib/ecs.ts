@@ -209,18 +209,18 @@ export function createEcs(
         securityGroups: [securityGroup.id],
         assignPublicIp: false,
       },
-      loadBalancers:
-        ["web", "api", "ingest"].includes(serviceConfig.name) &&
-        albTargetGroupArns[serviceConfig.name] &&
-        serviceConfig.port
-          ? [
-              {
-                targetGroupArn: albTargetGroupArns[serviceConfig.name],
-                containerName: serviceConfig.name,
-                containerPort: serviceConfig.port,
-              },
-            ]
-          : undefined,
+      loadBalancers: serviceConfig.port
+        ? Object.entries(albTargetGroupArns)
+            .filter(([key]) => {
+              if (serviceConfig.name === "workers") return key === "bullBoard"
+              return key === serviceConfig.name
+            })
+            .map(([_, arn]) => ({
+              targetGroupArn: arn,
+              containerName: serviceConfig.name,
+              containerPort: serviceConfig.port!,
+            }))
+        : undefined,
       deploymentController: {
         type: "ECS",
       },
@@ -348,6 +348,8 @@ function createTaskDefinition(
       secrets["latitude-telemetry-project-slug"].arn,
       secrets["turnstile-secret-key"].arn,
       secrets["posthog-api-key"].arn,
+      secrets["bull-board-username"].arn,
+      secrets["bull-board-password"].arn,
       s3Bucket.id,
     ])
     .apply(
@@ -382,6 +384,8 @@ function createTaskDefinition(
         latitudeTelemetryProjectSlugArn,
         turnstileSecretKeyArn,
         posthogApiKeyArn,
+        bullBoardUsernameArn,
+        bullBoardPasswordArn,
         s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
@@ -393,8 +397,13 @@ function createTaskDefinition(
           { name: "LAT_WORKERS_HEALTH_PORT", value: "8080" },
           { name: "LAT_REDIS_HOST", value: cacheRedis },
           { name: "LAT_REDIS_PORT", value: "6379" },
+          {
+            name: "LAT_REDIS_TLS",
+            value: config.redis.cache.type === "memorydb" || config.redis.bullmq.type === "memorydb" ? "true" : "false",
+          },
           { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
           { name: "LAT_BULLMQ_PORT", value: "6379" },
+          { name: "LAT_BULLMQ_CLUSTER", value: config.redis.bullmq.type === "memorydb" ? "true" : "false" },
           { name: "LAT_STORAGE_DRIVER", value: "s3" },
           { name: "LAT_STORAGE_S3_BUCKET", value: s3BucketName },
           { name: "LAT_STORAGE_S3_REGION", value: config.region },
@@ -456,6 +465,8 @@ function createTaskDefinition(
         const workflowsMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
 
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
+          // The web app starts workflows from server functions (e.g. issue monitoring).
+          web: temporalEnvVars,
           workflows: [
             { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
             { name: "NODE_OPTIONS", value: `--max-old-space-size=${workflowsMaxOldSpaceMb}` },
@@ -476,10 +487,15 @@ function createTaskDefinition(
 
         const temporalSecret = { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }
 
+        const bullBoardSecrets = [
+          { name: "LAT_BULL_BOARD_USERNAME", valueFrom: bullBoardUsernameArn },
+          { name: "LAT_BULL_BOARD_PASSWORD", valueFrom: bullBoardPasswordArn },
+        ]
+
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          web: oauthSecrets,
+          web: [...oauthSecrets, temporalSecret],
           workflows: [temporalSecret],
-          workers: [temporalSecret],
+          workers: [temporalSecret, ...bullBoardSecrets],
         }
 
         const secrets = [...baseSecrets, ...(serviceSpecificSecrets[serviceConfig.name] ?? [])]

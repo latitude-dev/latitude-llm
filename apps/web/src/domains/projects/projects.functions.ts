@@ -13,7 +13,7 @@ import {
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -45,7 +45,7 @@ export const listProjects = createServerFn({ method: "GET" }).handler(async (): 
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
       return yield* repo.list()
-    }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+    }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
   )
 
   return projects.map(toRecord)
@@ -61,7 +61,7 @@ export const getProjectBySlug = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findBySlug(data.slug)
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
     )
 
     return toRecord(project)
@@ -88,7 +88,10 @@ export const createProject = createServerFn({ method: "POST" })
         ...(data.id ? { id: ProjectId(data.id) } : {}),
         name: data.name,
         actorUserId: userId,
-      }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), client, organizationId)),
+      }).pipe(
+        withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), client, organizationId),
+        withTracing,
+      ),
     )
 
     return toRecord(project)
@@ -102,7 +105,7 @@ export const updateProject = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       id: z.string(),
-      name: z.string().optional(),
+      name: z.string().min(1, { message: "Name is required" }).optional(),
       settings: projectSettingsSchema.optional(),
     }),
   )
@@ -113,6 +116,7 @@ export const updateProject = createServerFn({ method: "POST" })
     const project = await Effect.runPromise(
       updateProjectUseCase({ id: ProjectId(data.id), name: data.name, settings: data.settings }).pipe(
         withPostgres(ProjectRepositoryLive, client, organizationId),
+        withTracing,
       ),
     )
 
@@ -129,7 +133,7 @@ export const deleteProject = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(ProjectId(data.id))
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
     )
 
     const outboxWriter = getOutboxWriter()
@@ -172,6 +176,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
       return result.datasets.length
     }).pipe(
       withPostgres(DatasetRepositoryLive, pgClient, orgId),
+      withTracing,
       Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countDatasets" }))),
       Effect.orElseSucceed(() => 0),
     )
@@ -184,6 +189,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
       })
     }).pipe(
       withClickHouse(TraceRepositoryLive, chClient, orgId),
+      withTracing,
       Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countTraces" }))),
       Effect.orElseSucceed(() => 0),
     )
@@ -208,6 +214,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
           hybridSearch: () => Effect.succeed([]),
         }),
       ),
+      withTracing,
       Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countActiveIssues" }))),
       Effect.orElseSucceed(() => 0),
     )

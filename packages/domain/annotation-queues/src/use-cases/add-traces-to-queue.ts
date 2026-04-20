@@ -25,6 +25,9 @@ export function addTracesToQueue(args: {
   SqlClient | ChSqlClient | TraceRepository | AnnotationQueueItemRepository | AnnotationQueueRepository
 > {
   return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.id", args.queueId)
+    yield* Effect.annotateCurrentSpan("queue.projectId", args.projectId)
+
     const items = yield* resolveQueueItems({
       projectId: args.projectId,
       selection: args.selection,
@@ -57,5 +60,5 @@ export function addTracesToQueue(args: {
         return { insertedCount }
       }),
     )
-  })
+  }).pipe(Effect.withSpan("annotationQueues.addTracesToQueue"))
 }

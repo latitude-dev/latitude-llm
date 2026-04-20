@@ -41,16 +41,16 @@ Project system queue state is cached in Redis with a read-through pattern:
 
 The cache stores the full list of system queues for a project, making fan-out operations fast and reducing database load.
 
-### Trace Routing: Fan-Out + Per-Queue Workflow Start
+### Trace Routing: Trace-End Runtime + Per-Queue Workflow Start
 
-When a trace ends, the system fans out across the project's provisioned system queues and starts one workflow per sampled queue:
+When a trace ends, the debounced trace-end runtime evaluates the project's provisioned system queues and starts one workflow per selected queue:
 
-**Fan-Out (`system-annotation-queues:fanOut`)**:
+**Selection (`trace-end:run`)**:
 
-1. Triggered by `TraceEnded` domain event
+1. Triggered by debounced `SpanIngested`
 2. Reads all active system queues for the project (cached or from DB)
 3. Applies deterministic sampling per queue and skips queues with `sampling <= 0`
-4. Starts `systemQueueFlaggerWorkflow` directly for each sampled queue
+4. Starts `systemQueueFlaggerWorkflow` directly for each selected queue
 
 **Workflow start dedupe**:
 
@@ -130,13 +130,13 @@ The evaluator returns both `reasons` (every rule that fires) and `matched` (whet
 Complete flow from trace ingestion to queue assignment:
 
 ```
-TraceEnded (domain event)
+SpanIngested (domain event, debounced)
     ↓
-domain-events worker
+domain-events dispatcher
     ↓
-system-annotation-queues:fanOut (list queues, apply sampling)
+trace-end:run (sample queues, batch live filters, start workflows)
     ↓
-systemQueueFlaggerWorkflow (one workflow per sampled queue)
+systemQueueFlaggerWorkflow (one workflow per selected queue)
     ↓
 runFlagger activity
     ↓
@@ -155,13 +155,16 @@ The workflow now fully automates the path from trace to reviewable draft annotat
 - **Domain**: `packages/domain/annotation-queues/src/use-cases/`
   - `provision-system-queues.ts` - Idempotent queue creation
   - `get-project-system-queues.ts` - Cached queue listing
+  - `materialize-live-queue-items.ts` - Batch insert pending live-queue rows after the shared trace-end selection pass
+  - `build-trace-end-queue-selection.ts` - Build `TraceEndSelectionSpec` maps and stable keys for live and system queues in that pass
+  - `orchestrate-trace-end-annotation-queue-effects.ts` - Run live-queue materialization and sequential system-queue workflow starts (the worker supplies the idempotent Temporal start hook)
   - `run-system-queue-flagger.ts` - Slug-to-matcher queue evaluation
   - `draft-system-queue-annotation.ts` - LLM feedback generation
   - `persist-system-queue-annotation.ts` - Transactional queue item + draft creation
 
 - **Workers**: `apps/workers/src/workers/`
   - `project-provisioning.ts` - BullMQ-based provisioning
-  - `system-annotation-queues.ts` - Fan-out and per-queue workflow start
+  - `trace-end.ts` - `trace-end` topic worker: `runTraceEndJob` wires Postgres/ClickHouse/Redis, the queue publisher, and Temporal/Redis dedupe, and composes `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` orchestrators for one debounced `run`
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
@@ -177,7 +180,7 @@ The workflow now fully automates the path from trace to reviewable draft annotat
 All routing uses slugs rather than IDs:
 
 - Provisioning creates queues with fixed canonical slugs
-- Fan-out and workflow start use `queueSlug` in task/workflow payloads
+- Trace-end runtime and workflow start use `queueSlug` in task/workflow payloads
 - Repository methods support `findBySlugInProject` for lookups
 - This enables durable routing even if queue rows are replaced
 
@@ -255,8 +258,8 @@ Every project starts with these system-created manual queues:
 ### System-Created Manual Queues
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
-- `system-annotation-queues:fanOut` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per sampled queue
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `trace-end:run` for that trace
+- `trace-end:run` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per selected queue
 - queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
 - the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, `empty-response`, and `resource-outliers`
 - the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
@@ -268,11 +271,12 @@ Every project starts with these system-created manual queues:
 
 - a queue becomes live when `settings.filter` is present
 - live queues are incremental: they grow as new matching traces arrive
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `live-annotation-queues:curate` for that trace
-- `live-annotation-queues:curate` lists all non-deleted live queues in that project
-- queue selection order is `settings.filter` first, then `settings.sampling`
-- if both pass, `live-annotation-queues:curate` batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
-- `live-annotation-queues:curate` is separate from `live-evaluations:enqueue` and does not fan out per-queue execution tasks
+- whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `trace-end:run` for that trace
+- `trace-end:run` lists all non-deleted live queues in that project together with active evaluations
+- queue selection order is `settings.sampling` first, then shared batched `settings.filter`
+- live-queue filters are deduped and evaluated in the same trace query as live-evaluation filters
+- if both pass, `trace-end:run` batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
+- `trace-end:run` does not fan out per-queue execution tasks for live queues; it materializes membership directly after the shared selection pass
 - when a live queue is created with `settings.filter` and no explicit sampling, `settings.sampling` is initialized from a named constant in `packages/domain/annotation-queues`; the initial default is `10`
 - live queues do not need a full historical rescan on every read; they materialize queue items incrementally as traces arrive
 
@@ -369,7 +373,7 @@ Required Postgres indexes:
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
 - system-created queue insertion happens automatically via the `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation transactionally
-- live queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
+- live queue materialization is incremental on debounced `SpanIngested` and evaluates `sampling` before the shared batched `filter` query
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 
 ## Project Page

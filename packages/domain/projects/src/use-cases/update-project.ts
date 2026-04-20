@@ -26,66 +26,66 @@ export type UpdateProjectError =
   | ProjectNotFoundError
   | InvalidProjectNameError
 
-export const updateProjectUseCase = (input: UpdateProjectInput) =>
-  Effect.gen(function* () {
-    const sqlClient = yield* SqlClient
-    const { organizationId } = sqlClient
+export const updateProjectUseCase = Effect.fn("projects.updateProject")(function* (input: UpdateProjectInput) {
+  yield* Effect.annotateCurrentSpan("project.id", input.id)
+  const sqlClient = yield* SqlClient
+  const { organizationId } = sqlClient
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const existingProject = yield* repo
-          .findById(input.id)
-          .pipe(
-            Effect.catchTag("NotFoundError", () =>
-              Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId })),
-            ),
-          )
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      const existingProject = yield* repo
+        .findById(input.id)
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId })),
+          ),
+        )
 
-        let nextName = existingProject.name
+      let nextName = existingProject.name
 
-        if (input.name !== undefined) {
-          const trimmedName = input.name.trim()
+      if (input.name !== undefined) {
+        const trimmedName = input.name.trim()
 
-          if (!trimmedName) {
-            return yield* new InvalidProjectNameError({
-              name: input.name,
-              reason: "Name cannot be empty",
-            })
-          }
-
-          if (trimmedName.length > 256) {
-            return yield* new InvalidProjectNameError({
-              name: input.name,
-              reason: "Name exceeds 256 characters",
-            })
-          }
-
-          if (trimmedName !== existingProject.name) {
-            const nameExists = yield* repo.existsByName(trimmedName)
-            if (nameExists) {
-              return yield* new InvalidProjectNameError({
-                name: trimmedName,
-                reason: "Project name already exists in this organization",
-              })
-            }
-          }
-
-          nextName = trimmedName
+        if (!trimmedName) {
+          return yield* new InvalidProjectNameError({
+            name: input.name,
+            reason: "Name cannot be empty",
+          })
         }
 
-        const now = new Date()
-        const updatedProject: Project = {
-          ...existingProject,
-          name: nextName,
-          ...(input.settings !== undefined ? { settings: input.settings } : {}),
-          lastEditedAt: now,
-          updatedAt: now,
+        if (trimmedName.length > 256) {
+          return yield* new InvalidProjectNameError({
+            name: input.name,
+            reason: "Name exceeds 256 characters",
+          })
         }
 
-        yield* repo.save(updatedProject)
+        if (trimmedName !== existingProject.name) {
+          const nameExists = yield* repo.existsByName(trimmedName)
+          if (nameExists) {
+            return yield* new InvalidProjectNameError({
+              name: trimmedName,
+              reason: "Project name already exists in this organization",
+            })
+          }
+        }
 
-        return updatedProject
-      }),
-    )
-  })
+        nextName = trimmedName
+      }
+
+      const now = new Date()
+      const updatedProject: Project = {
+        ...existingProject,
+        name: nextName,
+        ...(input.settings !== undefined ? { settings: input.settings } : {}),
+        lastEditedAt: now,
+        updatedAt: now,
+      }
+
+      yield* repo.save(updatedProject)
+
+      return updatedProject
+    }),
+  )
+})

@@ -23,7 +23,7 @@ import { extractLeadingEmoji, formatCount } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { DatabaseIcon, FrownIcon, PlusIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, PlusIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
 import {
@@ -35,6 +35,7 @@ import {
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../lib/form-server-action.ts"
 import { useAuthenticatedOrganizationId } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -123,7 +124,7 @@ function ProjectsTable({
             <TableHead>Name</TableHead>
             <TableHead className="w-44">
               <div className="flex items-center gap-1.5">
-                <Icon icon={FrownIcon} size="sm" color="foregroundMuted" />
+                <Icon icon={ShieldAlertIcon} size="sm" color="foregroundMuted" />
                 <span>Issues</span>
               </div>
             </TableHead>
@@ -221,15 +222,29 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
     defaultValues: {
       name: project.name,
     },
-    onSubmit: async ({ value }) => {
-      const transaction = renameProjectMutation(project.id, value.name)
-      await transaction.isPersisted.promise
-      toast({
-        title: "Success",
-        description: `Project renamed to "${value.name}".`,
-      })
-      onClose()
-    },
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
+        const transaction = renameProjectMutation(project.id, value.name)
+        await transaction.isPersisted.promise
+        return value.name
+      },
+      {
+        onSuccess: async (newName) => {
+          toast({
+            title: "Success",
+            description: `Project renamed to "${newName}".`,
+          })
+          onClose()
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Error renaming project",
+            description: toUserMessage(error),
+          })
+        },
+      },
+    ),
   })
 
   return (
@@ -264,10 +279,12 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
             {(field) => (
               <Input
                 required
+                name={field.name}
                 type="text"
                 label="Name"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 placeholder="New project name"
               />
             )}
@@ -284,19 +301,24 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
     defaultValues: {
       name: "",
     },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         const transaction = createProjectMutation(value.name)
         await transaction.isPersisted.promise
-        onClose()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error creating project",
-          description: toUserMessage(error),
-        })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          onClose()
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Error creating project",
+            description: toUserMessage(error),
+          })
+        },
+      },
+    ),
   })
 
   return (
@@ -335,6 +357,7 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
                 label="Name"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 placeholder="My awesome project"
               />
             )}

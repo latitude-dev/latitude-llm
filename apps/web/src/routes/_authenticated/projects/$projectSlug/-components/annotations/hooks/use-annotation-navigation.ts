@@ -5,6 +5,28 @@ import type { TextSelectionPopoverControls } from "./use-annotation-popover.ts"
 const HIGHLIGHT_BOX_SHADOW = "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5)"
 const HIGHLIGHT_DURATION_MS = 4000
 const POPOVER_VIEWPORT_PADDING = 24
+/**
+ * `scrollend` does not bubble — it fires only on the element whose scroll offset changed.
+ * `scrollIntoView` may scroll an ancestor of `container`, so we walk up from the target.
+ */
+function findScrollport(element: HTMLElement, root: HTMLElement): HTMLElement {
+  let node: HTMLElement | null = element
+  while (node) {
+    if (node === root) {
+      return root
+    }
+    const { overflowY } = getComputedStyle(node)
+    const canScrollY = node.scrollHeight > node.clientHeight + 1
+    if (canScrollY && (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay")) {
+      return node
+    }
+    node = node.parentElement
+    if (node && !root.contains(node)) {
+      return root
+    }
+  }
+  return root
+}
 
 export function isGlobalAnnotation(annotation: AnnotationRecord): boolean {
   return annotation.metadata.messageIndex === undefined
@@ -38,7 +60,6 @@ export function useAnnotationNavigation({
   const currentPopoverCardRef = useRef<HTMLElement | null>(null)
   const observerRef = useRef<MutationObserver | null>(null)
   const observerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const popoverPositionSyncCleanupRef = useRef<(() => void) | null>(null)
 
   const clearObserver = useCallback(() => {
     if (observerRef.current) {
@@ -62,11 +83,6 @@ export function useAnnotationNavigation({
     }
   }, [])
 
-  const clearPopoverPositionSync = useCallback(() => {
-    popoverPositionSyncCleanupRef.current?.()
-    popoverPositionSyncCleanupRef.current = null
-  }, [])
-
   const clearHighlight = useCallback(() => {
     if (highlightTimeoutRef.current) {
       clearTimeout(highlightTimeoutRef.current)
@@ -81,9 +97,8 @@ export function useAnnotationNavigation({
   const clearAll = useCallback(() => {
     clearHighlight()
     clearPopoverCardHighlight()
-    clearPopoverPositionSync()
     clearObserver()
-  }, [clearHighlight, clearPopoverCardHighlight, clearPopoverPositionSync, clearObserver])
+  }, [clearHighlight, clearPopoverCardHighlight, clearObserver])
 
   useEffect(() => () => clearAll(), [clearAll])
 
@@ -200,69 +215,26 @@ export function useAnnotationNavigation({
     }
   }, [])
 
-  const syncTextSelectionPopoverPosition = useCallback(
-    (container: HTMLElement, element: HTMLElement, annotationId: string) => {
-      const controls = textSelectionPopoverControlsRef?.current
-      if (!controls) return
-
-      clearPopoverPositionSync()
-
-      let frameId: number | null = null
-      const updatePosition = () => {
-        controls.updateTextSelectionPopoverPosition(getTextSelectionPopoverPosition(element, annotationId))
-      }
-      const onScroll = () => {
-        if (frameId !== null) return
-        frameId = requestAnimationFrame(() => {
-          frameId = null
-          updatePosition()
-        })
-      }
-
-      container.addEventListener("scroll", onScroll, { passive: true })
-      updatePosition()
-
-      popoverPositionSyncCleanupRef.current = () => {
-        container.removeEventListener("scroll", onScroll)
-        if (frameId !== null) {
-          cancelAnimationFrame(frameId)
-        }
-      }
-    },
-    [textSelectionPopoverControlsRef, clearPopoverPositionSync, getTextSelectionPopoverPosition],
-  )
-
   const scrollToElement = useCallback(
     ({ element, clickTarget, annotation, openTextSelectionPopoverImmediately = false }: ScrollToElementOptions) => {
       const container = scrollContainerRef.current
-      clearPopoverPositionSync()
-
-      if (openTextSelectionPopoverImmediately) {
-        const controls = textSelectionPopoverControlsRef?.current
-        if (controls) {
-          controls.openExistingAnnotationPopover(annotation, getTextSelectionPopoverPosition(element, annotation.id))
-          highlightAnnotationInPopover(annotation.id)
-          if (container) {
-            syncTextSelectionPopoverPosition(container, element, annotation.id)
-          }
-        }
-      }
 
       const openAndSelectAnnotation = () => {
-        clearPopoverPositionSync()
+        if (openTextSelectionPopoverImmediately) {
+          const controls = textSelectionPopoverControlsRef?.current
+          if (controls) {
+            controls.openExistingAnnotationPopover(annotation, getTextSelectionPopoverPosition(element, annotation.id))
+            highlightAnnotationInPopover(annotation.id)
+            return
+          }
+        }
+
         applyHighlight(element)
 
         const popover = document.querySelector("[data-radix-popper-content-wrapper]")
         const cardInPopover = popover?.querySelector(`[data-annotation-card-id="${annotation.id}"]`)
 
         if (cardInPopover) {
-          highlightAnnotationInPopover(annotation.id)
-          return
-        }
-
-        const controls = textSelectionPopoverControlsRef?.current
-        if (openTextSelectionPopoverImmediately && controls) {
-          controls.updateTextSelectionPopoverPosition(getTextSelectionPopoverPosition(element, annotation.id))
           highlightAnnotationInPopover(annotation.id)
           return
         }
@@ -275,18 +247,22 @@ export function useAnnotationNavigation({
 
       if (container) {
         let handled = false
+        const scrollTarget = findScrollport(element, container)
+
+        const cleanup = () => {
+          scrollTarget.removeEventListener("scrollend", onScrollEnd)
+        }
+
         const onScrollEnd = () => {
           if (handled) return
           handled = true
-          container.removeEventListener("scrollend", onScrollEnd)
+          cleanup()
           openAndSelectAnnotation()
         }
 
-        container.addEventListener("scrollend", onScrollEnd)
-        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        scrollTarget.addEventListener("scrollend", onScrollEnd, { once: true })
 
-        // Fallback: scrollend won't fire if element is already in view
-        setTimeout(onScrollEnd, 600)
+        element.scrollIntoView({ behavior: "smooth", block: "center" })
       } else {
         element.scrollIntoView({ behavior: "instant", block: "center" })
         openAndSelectAnnotation()
@@ -295,11 +271,9 @@ export function useAnnotationNavigation({
     [
       scrollContainerRef,
       textSelectionPopoverControlsRef,
-      clearPopoverPositionSync,
       applyHighlight,
       getTextSelectionPopoverPosition,
       highlightAnnotationInPopover,
-      syncTextSelectionPopoverPosition,
     ],
   )
 

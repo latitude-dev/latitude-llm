@@ -71,7 +71,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(persistedRows).toHaveLength(0)
   })
 
-  it("writes ScoreCreated for draft and published score updates (discovery worker noops when ineligible)", async () => {
+  it("writes ScoreCreated with status=draft for draft writes and status=published for published writes", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const scoreId = "ssssssssssssssssssssssss"
 
@@ -101,6 +101,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(draftOutboxRows).toHaveLength(1)
     expect(draftOutboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(draftOutboxRows[0]?.payload).toMatchObject({ status: "draft" })
 
     const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
@@ -139,9 +140,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(publicationRequests).toHaveLength(2)
     expect(publicationRequests.every((r) => r.eventName === "ScoreCreated")).toBe(true)
+    expect(publicationRequests.map((r) => (r.payload as { status: string }).status)).toEqual(["draft", "published"])
   })
 
-  it("queues ScoreCreated for failed non-draft scores that still need issue assignment", async () => {
+  it("queues ScoreCreated with status=published for failed non-draft scores that still need issue assignment", async () => {
     const organizationId = "ffffffffffffffffffffffff"
 
     const score = await Effect.runPromise(
@@ -168,6 +170,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       projectId: customProjectId,
       scoreId: score.id,
       issueId: null,
+      status: "published",
     })
   })
 

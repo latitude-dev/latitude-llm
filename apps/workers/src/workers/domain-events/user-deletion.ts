@@ -6,7 +6,7 @@ import {
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient } from "../../clients.ts"
 
@@ -24,6 +24,7 @@ export const createUserDeletionWorker = ({ consumer }: UserDeletionDeps) => {
 
       return deleteUserUseCase({ userId: payload.userId }).pipe(
         withPostgres(repoLayer, pgClient),
+        withTracing,
         Effect.tap(() => Effect.sync(() => logger.info(`User ${payload.userId} permanently deleted`))),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`User deletion failed for ${payload.userId}`, error)),

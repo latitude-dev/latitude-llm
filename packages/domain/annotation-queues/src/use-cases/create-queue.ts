@@ -28,6 +28,9 @@ export const createQueueUseCase = (
   input: CreateQueueInput,
 ): Effect.Effect<CreateQueueResult, CreateQueueError, AnnotationQueueRepository> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+
     const repo = yield* AnnotationQueueRepository
 
     const now = new Date()
@@ -64,4 +67,4 @@ export const createQueueUseCase = (
     const queue = yield* repo.save(queueData)
 
     return { queue }
-  })
+  }).pipe(Effect.withSpan("annotationQueues.createQueue"))

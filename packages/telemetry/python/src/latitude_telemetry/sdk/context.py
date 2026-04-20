@@ -58,11 +58,14 @@ def get_latitude_context(ctx: Context) -> _LatitudeContextData | None:
     return data if isinstance(data, _LatitudeContextData) else None
 
 
-def _set_capture_context(name: str, options: ContextOptions | None = None) -> Context:
+def _should_reuse_active_latitude_trace(current_context: Context) -> bool:
+    return get_latitude_context(current_context) is not None
+
+
+def _set_capture_context(name: str, base_context: Context, options: ContextOptions | None = None) -> Context:
     """Set up the capture context and return the new OTel context."""
     opts = options or {}
-    current_context = otel_context.get_current()
-    existing_data = get_latitude_context(current_context)
+    existing_data = get_latitude_context(base_context)
 
     # Merge logic matching TypeScript SDK:
     # - name: options.name takes precedence over capture name
@@ -81,22 +84,23 @@ def _set_capture_context(name: str, options: ContextOptions | None = None) -> Co
         user_id=opts.get("user_id") or (existing_data.user_id if existing_data else None),
     )
 
-    return otel_context.set_value(LATITUDE_CONTEXT_KEY, merged_data, current_context)
+    return otel_context.set_value(LATITUDE_CONTEXT_KEY, merged_data, base_context)
 
 
 def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOptions | None = None) -> T:
-    """Execute a function within the capture context, creating a parent span if no trace exists."""
+    """Execute within capture context, reusing only Latitude-owned active traces."""
     current_context = otel_context.get_current()
-    new_context = _set_capture_context(name, options)
+    should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
+    base_context = (
+        current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
+    )
+    new_context = _set_capture_context(name, base_context, options)
 
-    # Check if there's already an active span in the current context
     existing_span = trace.get_current_span(current_context)
 
-    if existing_span and existing_span.is_recording():
-        # There's already a trace ongoing - just propagate context without creating a new parent
+    if existing_span and existing_span.is_recording() and should_reuse_trace:
         return _execute_with_existing_context(fn, new_context)
 
-    # No active span - create a parent span to establish trace continuity
     return _execute_with_new_parent_span(name, fn, new_context)
 
 
@@ -203,8 +207,9 @@ def capture(
     The context includes tags, metadata, session_id, and user_id which are
     stamped onto all spans via the LatitudeSpanProcessor.on_start() method.
 
-    If no active trace exists, capture() creates a parent span to establish
-    trace continuity. If a trace already exists, it participates in that trace.
+    If no active Latitude trace exists, capture() creates a parent span to
+    establish trace continuity. Nested Latitude capture() calls reuse the
+    existing Latitude trace instead of creating another root span.
 
     Args:
         name: Name for the capture context (stored as latitude.capture.name attribute)
@@ -270,20 +275,21 @@ async def _execute_with_context_async(
 ) -> object:
     """Execute async function with capture context."""
     current_context = otel_context.get_current()
-    new_context = _set_capture_context(name, options)
+    should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
+    base_context = (
+        current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
+    )
+    new_context = _set_capture_context(name, base_context, options)
 
-    # Check if there's already an active span in the current context
     existing_span = trace.get_current_span(current_context)
 
-    if existing_span and existing_span.is_recording():
-        # There's already a trace ongoing - just propagate context without creating a new parent
+    if existing_span and existing_span.is_recording() and should_reuse_trace:
         token = otel_context.attach(new_context)
         try:
             return await fn(*args, **kwargs)
         finally:
             otel_context.detach(token)
 
-    # No active span - create a parent span to establish trace continuity
     tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
     token = otel_context.attach(new_context)
     try:
@@ -309,20 +315,21 @@ def _execute_with_context_sync(
 ) -> object:
     """Execute sync function with capture context."""
     current_context = otel_context.get_current()
-    new_context = _set_capture_context(name, options)
+    should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
+    base_context = (
+        current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
+    )
+    new_context = _set_capture_context(name, base_context, options)
 
-    # Check if there's already an active span in the current context
     existing_span = trace.get_current_span(current_context)
 
-    if existing_span and existing_span.is_recording():
-        # There's already a trace ongoing - just propagate context without creating a new parent
+    if existing_span and existing_span.is_recording() and should_reuse_trace:
         token = otel_context.attach(new_context)
         try:
             return fn(*args, **kwargs)
         finally:
             otel_context.detach(token)
 
-    # No active span - create a parent span to establish trace continuity
     tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
     token = otel_context.attach(new_context)
     try:

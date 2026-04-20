@@ -2,6 +2,7 @@ import { OptimizationProtocolError, Optimizer } from "@domain/optimizations"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { GepaOptimizerLive } from "./gepa-optimizer.ts"
+import { JsonRpcResponseError } from "./protocol.ts"
 
 const clientState = vi.hoisted(() => ({
   started: 0,
@@ -13,6 +14,7 @@ const clientState = vi.hoisted(() => ({
   }>,
   proposeComponent: "evaluation-script",
   proposeContextIds: null as string[] | null,
+  rpcError: null as Error | null,
 }))
 
 vi.mock("./client.ts", () => {
@@ -41,6 +43,10 @@ vi.mock("./client.ts", () => {
         trainset: params.trainset as Array<{ readonly id: string }>,
         valset: params.valset as Array<{ readonly id: string }>,
       })
+
+      if (clientState.rpcError) {
+        throw clientState.rpcError
+      }
 
       const evaluate = this.handlers.get("gepa_evaluate")
       const propose = this.handlers.get("gepa_propose")
@@ -82,6 +88,7 @@ describe("GepaOptimizerLive", () => {
     clientState.optimizeCalls.length = 0
     clientState.proposeComponent = "evaluation-script"
     clientState.proposeContextIds = null
+    clientState.rpcError = null
   })
 
   const runOptimization = () =>
@@ -192,6 +199,47 @@ describe("GepaOptimizerLive", () => {
     expect(error).toBeInstanceOf(OptimizationProtocolError)
     expect(error).toMatchObject({
       message: "GEPA referenced an unknown trajectory id: missing-trajectory",
+    })
+  })
+
+  it("maps remote RPC failures into protocol errors with the serialized remote cause", async () => {
+    clientState.rpcError = new JsonRpcResponseError({
+      code: -32603,
+      message:
+        'Evaluation alignment activity "optimizeEvaluationDraft" failed: Bedrock is unable to process your request.',
+      data: {
+        remoteError: {
+          type: "EvaluationOptimizationActivityError",
+          httpMessage: 'Evaluation alignment activity "optimizeEvaluationDraft" failed',
+          cause: {
+            type: "AIError",
+            message: "Bedrock is unable to process your request.",
+          },
+        },
+      },
+      method: "gepa_optimize",
+      requestId: 1,
+    })
+
+    let error: unknown
+    try {
+      await runOptimization()
+    } catch (cause) {
+      error = cause
+    }
+
+    expect(error).toBeInstanceOf(OptimizationProtocolError)
+    expect(error).toMatchObject({
+      message:
+        'Evaluation alignment activity "optimizeEvaluationDraft" failed: Bedrock is unable to process your request.',
+      cause: {
+        type: "EvaluationOptimizationActivityError",
+        httpMessage: 'Evaluation alignment activity "optimizeEvaluationDraft" failed',
+        cause: {
+          type: "AIError",
+          message: "Bedrock is unable to process your request.",
+        },
+      },
     })
   })
 })

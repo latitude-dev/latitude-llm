@@ -10,7 +10,6 @@
     "./testing": "./src/testing.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "ch:create": "bash clickhouse/scripts/create.sh",
     "ch:up": "bash clickhouse/scripts/up.sh",
     "ch:down": "bash clickhouse/scripts/down.sh",

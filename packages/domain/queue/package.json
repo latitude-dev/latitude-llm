@@ -10,7 +10,6 @@
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check .",
     "format": "biome format --write . && biome check --fix .",
     "typecheck": "tsc --noEmit"

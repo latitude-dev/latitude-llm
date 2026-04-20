@@ -108,6 +108,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
@@ -181,6 +182,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
@@ -268,6 +270,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
@@ -320,6 +323,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
   })
 
@@ -402,6 +406,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
@@ -463,6 +468,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       scoreId: body.id,
       issueId: null,
+      status: "published",
     })
   })
 

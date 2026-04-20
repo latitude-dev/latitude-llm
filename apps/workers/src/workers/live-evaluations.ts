@@ -1,12 +1,5 @@
-import {
-  enqueueLiveEvaluationsUseCase,
-  LiveEvaluationQueuePublishError,
-  LiveEvaluationQueuePublisher,
-  type LiveEvaluationQueuePublisherShape,
-  type RunLiveEvaluationResult,
-  runLiveEvaluationUseCase,
-} from "@domain/evaluations"
-import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
+import type { QueueConsumer } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
@@ -26,20 +19,13 @@ import {
   ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("live-evaluations")
 const LIVE_EVALUATIONS_QUEUE = "live-evaluations" as const
-const LIVE_EVALUATIONS_ENQUEUE_TASK = "enqueue" as const
 const LIVE_EVALUATIONS_EXECUTE_TASK = "execute" as const
-
-interface EnqueuePayload {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly traceId: string
-}
 
 interface ExecutePayload {
   readonly organizationId: string
@@ -52,21 +38,12 @@ type LiveEvaluationsLogger = Pick<ReturnType<typeof createLogger>, "info" | "err
 
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
-  publisher: QueuePublisherShape
   postgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
   redisClient?: RedisClient
   runLiveEvaluation?: typeof runLiveEvaluationUseCase
   logger?: LiveEvaluationsLogger
 }
-
-const buildEnqueueLogContext = (payload: EnqueuePayload) => ({
-  queue: LIVE_EVALUATIONS_QUEUE,
-  task: LIVE_EVALUATIONS_ENQUEUE_TASK,
-  organizationId: payload.organizationId,
-  projectId: payload.projectId,
-  traceId: payload.traceId,
-})
 
 const buildExecuteLogContext = (payload: ExecutePayload) => ({
   queue: LIVE_EVALUATIONS_QUEUE,
@@ -112,7 +89,6 @@ const buildExecutePersistedLogContext = (
 // approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
 export const createLiveEvaluationsWorker = ({
   consumer,
-  publisher,
   postgresClient,
   clickhouseClient,
   redisClient,
@@ -122,42 +98,6 @@ export const createLiveEvaluationsWorker = ({
   const pgClient = postgresClient ?? getPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
   const liveEvaluationsLogger = injectedLogger ?? logger
-  const liveEvaluationQueuePublisher = {
-    publishExecute: ({ organizationId, projectId, evaluationId, traceId, dedupeKey, debounceMs }) => {
-      const publishOptions =
-        dedupeKey === undefined
-          ? debounceMs === undefined
-            ? undefined
-            : { debounceMs }
-          : debounceMs === undefined
-            ? { dedupeKey }
-            : { dedupeKey, debounceMs }
-
-      return publisher
-        .publish(
-          "live-evaluations",
-          "execute",
-          {
-            organizationId,
-            projectId,
-            evaluationId,
-            traceId,
-          },
-          publishOptions,
-        )
-        .pipe(
-          Effect.mapError(
-            (cause) =>
-              new LiveEvaluationQueuePublishError({
-                evaluationId,
-                traceId,
-                cause,
-              }),
-          ),
-        )
-    },
-  } satisfies LiveEvaluationQueuePublisherShape
-
   const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) => {
     const rdClient = redisClient ?? getRedisClient()
     return effect.pipe(withAi(AIGenerateLive, rdClient))
@@ -165,50 +105,6 @@ export const createLiveEvaluationsWorker = ({
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
 
   consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
-    enqueue: (payload: EnqueuePayload) =>
-      enqueueLiveEvaluationsUseCase(payload).pipe(
-        withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, ScoreRepositoryLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withClickHouse(TraceRepositoryLive, chClient, OrganizationId(payload.organizationId)),
-        Effect.provide(Layer.succeed(LiveEvaluationQueuePublisher, liveEvaluationQueuePublisher)),
-        Effect.tap((result) =>
-          Effect.sync(() => {
-            if (result.action === "skipped") {
-              liveEvaluationsLogger.info("Live evaluation enqueue skipped", {
-                ...buildEnqueueLogContext(payload),
-                outcome: result.action,
-                reason: result.reason,
-              })
-              return
-            }
-
-            liveEvaluationsLogger.info("Live evaluation enqueue completed", {
-              ...buildEnqueueLogContext(payload),
-              outcome: result.action,
-              sessionId: result.summary.sessionId,
-              activeEvaluationsScanned: result.summary.activeEvaluationsScanned,
-              filterMatchedCount: result.summary.filterMatchedCount,
-              skippedPausedCount: result.summary.skippedPausedCount,
-              skippedSamplingCount: result.summary.skippedSamplingCount,
-              skippedTurnCount: result.summary.skippedTurnCount,
-              publishedExecuteCount: result.summary.publishedExecuteCount,
-            })
-          }),
-        ),
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            liveEvaluationsLogger.error("Live evaluation enqueue failed", {
-              ...buildEnqueueLogContext(payload),
-              outcome: "failed",
-              error,
-            }),
-          ),
-        ),
-        Effect.asVoid,
-      ),
     execute: (payload: ExecutePayload) =>
       executeLiveEvaluation(payload).pipe(
         withPostgres(
@@ -222,6 +118,7 @@ export const createLiveEvaluationsWorker = ({
           OrganizationId(payload.organizationId),
         ),
         withDefaultAi,
+        withTracing,
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "skipped") {

@@ -311,6 +311,7 @@ export const listIssuesUseCase = (
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
+    yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const issueRepository = yield* IssueRepository
     const evaluationRepository = yield* EvaluationRepository
@@ -431,6 +432,7 @@ export const listIssuesUseCase = (
         hasSearch: parsed.search !== undefined,
       },
     )
+
     const occurrencesSum = tableCandidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0)
     const pageCandidates = tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit)
     const pageIssueIds = pageCandidates.map((candidate) => candidate.issue.id)
@@ -519,4 +521,4 @@ export const listIssuesUseCase = (
       offset: parsed.offset,
       occurrencesSum,
     } satisfies ListIssuesResult
-  })
+  }).pipe(Effect.withSpan("issues.listIssues"))

@@ -1,6 +1,8 @@
 import { CopyableText } from "@repo/ui"
+import { eq } from "@tanstack/react-db"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { DatabaseIcon, FrownIcon, LayersIcon, SettingsIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, LayersIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
@@ -71,7 +73,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             collapsed={collapsed}
           />
           <NavItem
-            icon={FrownIcon}
+            icon={ShieldAlertIcon}
             label="Issues"
             to={`/projects/${projectSlug}/issues`}
             active={isIssuesActive}
@@ -92,7 +94,12 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
 
 function ProjectLayout() {
   const { projectSlug } = Route.useParams()
-  const project = Route.useLoaderData({ select: (data) => data.project })
+  const projectFromLoader = Route.useLoaderData({ select: (data) => data.project })
+  const { data: projectFromCollection } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
+  const project: ProjectRecord = projectFromCollection ?? projectFromLoader
   return (
     <div className="flex h-full">
       <ProjectSidebar project={project} projectSlug={projectSlug} />

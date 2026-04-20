@@ -12,43 +12,48 @@ export interface UncompleteQueueItemInput {
 
 export type UncompleteQueueItemError = RepositoryError | QueueItemNotFoundError | QueueItemNotCompletedError
 
-export const uncompleteQueueItemUseCase = (input: UncompleteQueueItemInput) =>
-  Effect.gen(function* () {
-    const sqlClient = yield* SqlClient
-    const itemRepo = yield* AnnotationQueueItemRepository
-    const queueRepo = yield* AnnotationQueueRepository
+export const uncompleteQueueItemUseCase = Effect.fn("annotationQueues.uncompleteQueueItem")(function* (
+  input: UncompleteQueueItemInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.itemId", input.itemId)
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const item = yield* itemRepo.findById({
-          projectId: input.projectId,
-          queueId: input.queueId,
-          itemId: input.itemId,
-        })
+  const sqlClient = yield* SqlClient
+  const itemRepo = yield* AnnotationQueueItemRepository
+  const queueRepo = yield* AnnotationQueueRepository
 
-        if (!item) {
-          return yield* new QueueItemNotFoundError({ itemId: input.itemId })
-        }
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const item = yield* itemRepo.findById({
+        projectId: input.projectId,
+        queueId: input.queueId,
+        itemId: input.itemId,
+      })
 
-        if (!item.completedAt) {
-          return yield* new QueueItemNotCompletedError({ itemId: input.itemId })
-        }
+      if (!item) {
+        return yield* new QueueItemNotFoundError({ itemId: input.itemId })
+      }
 
-        const updated = yield* itemRepo.update({
-          projectId: input.projectId,
-          queueId: input.queueId,
-          itemId: input.itemId,
-          completedAt: null,
-          completedBy: null,
-        })
+      if (!item.completedAt) {
+        return yield* new QueueItemNotCompletedError({ itemId: input.itemId })
+      }
 
-        yield* queueRepo.incrementCompletedItems({
-          projectId: input.projectId,
-          queueId: input.queueId,
-          delta: -1,
-        })
+      const updated = yield* itemRepo.update({
+        projectId: input.projectId,
+        queueId: input.queueId,
+        itemId: input.itemId,
+        completedAt: null,
+        completedBy: null,
+      })
 
-        return updated
-      }),
-    )
-  })
+      yield* queueRepo.incrementCompletedItems({
+        projectId: input.projectId,
+        queueId: input.queueId,
+        delta: -1,
+      })
+
+      return updated
+    }),
+  )
+})

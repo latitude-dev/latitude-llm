@@ -4,7 +4,7 @@ import {
   type QueueConsumer,
   type WorkflowStarterShape,
 } from "@domain/queue"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 const logger = createLogger("evaluations")
@@ -59,6 +59,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
             ),
           ),
           Effect.asVoid,
+          withTracing,
         ),
   })
 }

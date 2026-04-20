@@ -9,10 +9,22 @@ export {
   annotationSchema,
   annotationSourceIdSchema,
 } from "./entities/annotation.ts"
+export { canUpdateAnnotation } from "./helpers/can-update-annotation.ts"
+export {
+  ANNOTATION_PROVENANCE,
+  type AnnotationProvenance,
+  getAnnotationProvenance,
+} from "./helpers/get-annotation-provenance.ts"
 export {
   type AnnotationPublicationEnrichmentFields,
   mergeEnrichmentIntoAnnotationScoreForPublication,
 } from "./helpers/merge-publication-enrichment-into-annotation-score.ts"
+export {
+  type ApproveSystemAnnotationError,
+  type ApproveSystemAnnotationInput,
+  type ApproveSystemAnnotationResult,
+  approveSystemAnnotationUseCase,
+} from "./use-cases/approve-system-annotation.ts"
 export {
   type DeleteAnnotationError,
   type DeleteAnnotationInput,

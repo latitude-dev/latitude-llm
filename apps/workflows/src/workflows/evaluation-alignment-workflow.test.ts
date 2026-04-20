@@ -329,6 +329,12 @@ describe("evaluationAlignmentWorkflow", () => {
     ])
 
     expect(mockActivities.generateEvaluationDetails).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      issueId: "issue-1",
+      evaluationId: null,
+      jobId: "job-1",
+      evaluationHash: "hash-1",
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       script: wrapPromptAsEvaluationScript("Placeholder evaluation prompt."),
@@ -402,23 +408,17 @@ describe("evaluationAlignmentWorkflow", () => {
   })
 
   it("coalesces repeated metric-refresh signals into one incremental pass", async () => {
-    let waitForSignal = true
     workflowRuntime.setConditionImpl(async (_predicate, timeout) => {
-      if (timeout === undefined && waitForSignal) {
-        waitForSignal = false
-        workflowRuntime.signalHandler?.({
-          reason: "debounced-metric-refresh",
-          jobId: "auto-refresh:eval-existing",
-        })
-        workflowRuntime.signalHandler?.({
-          reason: "debounced-metric-refresh",
-          jobId: "auto-refresh:eval-existing",
-        })
-        return true
-      }
-
       if (timeout !== undefined) {
         workflowRuntime.nowMs += timeout
+        workflowRuntime.signalHandler?.({
+          reason: "debounced-metric-refresh",
+          jobId: "auto-refresh:eval-existing",
+        })
+        workflowRuntime.signalHandler?.({
+          reason: "debounced-metric-refresh",
+          jobId: "auto-refresh:eval-existing",
+        })
         workflowRuntime.setConditionImpl(async () => {
           throw workflowRuntime.stopRefreshLoop
         })
@@ -433,10 +433,10 @@ describe("evaluationAlignmentWorkflow", () => {
         organizationId: "org-1",
         projectId: "proj-1",
         issueId: "issue-1",
-        jobId: "refresh-loop",
+        jobId: "auto-refresh:eval-existing",
         evaluationId: "eval-existing",
         refreshLoop: true,
-        reason: "initial-generation",
+        reason: "debounced-metric-refresh",
       }),
     ).rejects.toThrow("stop refresh loop")
 
@@ -502,9 +502,6 @@ describe("evaluationAlignmentWorkflow", () => {
     workflowRuntime.setConditionImpl(async (_predicate, timeout) => {
       if (timeout !== undefined) {
         workflowRuntime.nowMs += timeout
-        workflowRuntime.setConditionImpl(async () => {
-          throw workflowRuntime.stopRefreshLoop
-        })
         return false
       }
 
@@ -521,7 +518,7 @@ describe("evaluationAlignmentWorkflow", () => {
         refreshLoop: true,
         reason: "debounced-metric-refresh",
       }),
-    ).rejects.toThrow("stop refresh loop")
+    ).resolves.toBeUndefined()
 
     expect(callOrder).toEqual([
       "loadEvaluationAlignmentState",
@@ -537,18 +534,12 @@ describe("evaluationAlignmentWorkflow", () => {
   })
 
   it("runs a manual signal through the full realignment path inside the refresh loop", async () => {
-    let waitForSignal = true
     workflowRuntime.setConditionImpl(async () => {
-      if (waitForSignal) {
-        waitForSignal = false
-        workflowRuntime.signalHandler?.({
-          reason: "manual-realignment",
-          jobId: "manual-job-1",
-        })
-        return true
-      }
-
-      throw workflowRuntime.stopRefreshLoop
+      workflowRuntime.signalHandler?.({
+        reason: "manual-realignment",
+        jobId: "manual-job-1",
+      })
+      return true
     })
 
     await expect(
@@ -556,12 +547,12 @@ describe("evaluationAlignmentWorkflow", () => {
         organizationId: "org-1",
         projectId: "proj-1",
         issueId: "issue-1",
-        jobId: "refresh-loop",
+        jobId: "auto-refresh:eval-existing",
         evaluationId: "eval-existing",
         refreshLoop: true,
-        reason: "initial-generation",
+        reason: "debounced-metric-refresh",
       }),
-    ).rejects.toThrow("stop refresh loop")
+    ).resolves.toBeUndefined()
 
     expect(callOrder).toEqual([
       "status:running",

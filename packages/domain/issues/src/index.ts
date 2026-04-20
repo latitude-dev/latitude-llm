@@ -8,17 +8,16 @@ export {
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
-  ISSUE_DISCOVERY_MAX_CANDIDATES,
-  ISSUE_DISCOVERY_MIN_KEYWORDS,
+  ISSUE_DISCOVERY_MIN_RELEVANCE,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_RERANK_CANDIDATES,
+  ISSUE_DISCOVERY_RERANK_MODEL,
+  ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   ISSUE_REFRESH_DEBOUNCE_MS,
   ISSUE_STATES,
   MIN_OCCURRENCES_FOR_VISIBILITY,
-  MIN_RERANK_RELEVANCE,
   NEW_ISSUE_AGE_DAYS,
-  RERANK_LIMIT,
-  RERANK_MODEL,
 } from "./constants.ts"
 export {
   type Issue,
@@ -136,6 +135,12 @@ export {
   type RefreshIssueDetailsResult,
   refreshIssueDetailsUseCase,
 } from "./use-cases/refresh-issue-details.ts"
+export {
+  type RemoveScoreFromIssueError,
+  type RemoveScoreFromIssueInput,
+  type RemoveScoreFromIssueResult,
+  removeScoreFromIssueUseCase,
+} from "./use-cases/remove-score-from-issue.ts"
 export {
   type RerankIssueCandidatesInput,
   type RetrievalResult,

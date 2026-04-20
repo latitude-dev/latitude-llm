@@ -3,6 +3,7 @@ import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -99,7 +100,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to 4 targets including firstTrace check", async () => {
+  it("routes SpanIngested to the debounced trace-end runtime and immediate firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
@@ -110,43 +111,21 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "live-annotation-queues:curate",
-      "live-evaluations:enqueue",
-      "projects:checkFirstTrace",
-      "system-annotation-queues:fanOut",
-    ])
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["projects:checkFirstTrace", "trace-end:run"])
 
+    const traceEnd = published.find((p) => p.queue === "trace-end")
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
-    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
-  })
 
-  it("rejects legacy TraceEnded events", async () => {
-    const { consumer } = setupDispatcher()
-
-    const envelope = makeEnvelope("TraceEnded", {
+    expect(traceEnd?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
     })
-
-    const result = await Effect.runPromise(
-      consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope)).pipe(
-        Effect.match({
-          onFailure: (error) => ({
-            ok: false as const,
-            error: error as { _tag: string; name: string },
-          }),
-          onSuccess: () => ({ ok: true as const, error: null }),
-        }),
-      ),
-    )
-
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error._tag).toBe("UnhandledEventError")
-      expect(result.error.name).toBe("TraceEnded")
-    }
+    expect(traceEnd?.options).toEqual({
+      dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
+    })
+    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
   })
 
   it("routes ProjectCreated to projects:provision", async () => {
@@ -256,7 +235,7 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
 
-  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted", async () => {
+  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted with status-aware dedupe", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ScoreCreated", {
@@ -264,53 +243,55 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       scoreId: "score-3",
       issueId: null,
+      status: "published",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    // Primary handler publishes to issues + annotation-scores; ScoreCreated is
-    // also in the PostHog whitelist so a third publish goes to posthog-analytics.
-    const primary = published.filter((p) => p.queue !== "posthog-analytics")
-    expect(primary).toEqual([
-      {
-        queue: "issues",
-        task: "discovery",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "issues:discovery:score-3",
-        },
-      },
-      {
-        queue: "annotation-scores",
-        task: "publishHumanAnnotation",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
-        },
-      },
-      {
-        queue: "annotation-scores",
-        task: "markReviewStarted",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          scoreId: "score-3",
-          issueId: null,
-        },
-        options: {
-          dedupeKey: "annotation-scores:mark-review-started:score-3",
-        },
-      },
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "annotation-scores:markReviewStarted",
+      "annotation-scores:publishHumanAnnotation",
+      "issues:discovery",
     ])
+
+    const discovery = published.find((p) => p.task === "discovery")
+    expect(discovery?.options?.dedupeKey).toBe("issues:discovery:score-3:published")
+
+    const publish = published.find((p) => p.task === "publishHumanAnnotation")
+    expect(publish?.options).toEqual({
+      dedupeKey: "annotation-scores:publish-human:score-3",
+      debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+    })
+
+    const review = published.find((p) => p.task === "markReviewStarted")
+    expect(review?.options?.dedupeKey).toBe("annotation-scores:mark-review-started:score-3")
+  })
+
+  it("uses distinct discovery dedupe keys for draft vs published scores", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const draftEnvelope = makeEnvelope("ScoreCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+      issueId: null,
+      status: "draft",
+    })
+
+    const publishedEnvelope = makeEnvelope("ScoreCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+      issueId: null,
+      status: "published",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(draftEnvelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(publishedEnvelope))
+
+    const discoveryPublishes = published.filter((p) => p.task === "discovery")
+    const dedupeKeys = discoveryPublishes.map((p) => p.options?.dedupeKey)
+    expect(dedupeKeys).toContain("issues:discovery:score-3:draft")
+    expect(dedupeKeys).toContain("issues:discovery:score-3:published")
   })
 })

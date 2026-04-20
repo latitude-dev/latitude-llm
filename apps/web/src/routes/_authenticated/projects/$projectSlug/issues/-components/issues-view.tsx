@@ -3,7 +3,10 @@ import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import type { RefObject } from "react"
 import type { IssueRecord } from "../../../../../../domains/issues/issues.functions.ts"
-import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
+import {
+  ListingLayout as Layout,
+  listingLayoutIntrinsicScroll,
+} from "../../../../../../layouts/ListingLayout/index.tsx"
 import { formatPercent, formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
@@ -211,6 +214,7 @@ export function IssuesView({
     <Layout.Body>
       <Layout.List>
         <InfiniteTable
+          {...listingLayoutIntrinsicScroll.infiniteTable}
           data={issues}
           isLoading={isLoading}
           columns={columns}

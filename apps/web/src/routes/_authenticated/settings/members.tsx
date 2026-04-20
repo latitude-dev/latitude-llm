@@ -38,6 +38,7 @@ import {
 } from "../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
@@ -48,15 +49,20 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   const { toast } = useToast()
   const form = useForm({
     defaultValues: { email: "" },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         await inviteMemberMutation(value.email)
-        setOpen(false)
-        toast({ description: "Invitation sent" })
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          setOpen(false)
+          toast({ description: "Invitation sent" })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (
@@ -79,6 +85,7 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
                     label="Email"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
                     placeholder="jon@latitude.so"
                   />
                 )}
@@ -290,6 +297,12 @@ function MembersTable({
   const [transferOpen, setTransferOpen] = useState(false)
   const [changeRoleOpen, setChangeRoleOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<MemberRecord | null>(null)
+  const [isMutatingMember, setIsMutatingMember] = useState(false)
+  const [pendingMemberMutation, setPendingMemberMutation] = useState<
+    | { type: "remove-member"; membershipId: string; email: string; name: string | null }
+    | { type: "cancel-invite"; inviteId: string; email: string; name: string | null }
+    | null
+  >(null)
 
   const isExpired = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return false
@@ -313,6 +326,32 @@ function MembersTable({
     return true
   }
 
+  const handleConfirmMemberMutation = async () => {
+    if (!pendingMemberMutation) return
+
+    setIsMutatingMember(true)
+    try {
+      const transaction =
+        pendingMemberMutation.type === "cancel-invite"
+          ? cancelMemberInviteMutation(pendingMemberMutation.inviteId)
+          : removeMemberMutation(pendingMemberMutation.membershipId)
+
+      await transaction.isPersisted.promise
+
+      toast({
+        description: pendingMemberMutation.type === "cancel-invite" ? "Invitation canceled" : "Member removed",
+      })
+      setPendingMemberMutation(null)
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsMutatingMember(false)
+    }
+  }
+
+  const pendingMemberDisplayName = pendingMemberMutation?.name ?? pendingMemberMutation?.email ?? "this member"
+  const isCancelInviteMutation = pendingMemberMutation?.type === "cancel-invite"
+
   return (
     <>
       <TransferOwnershipModal
@@ -327,6 +366,41 @@ function MembersTable({
         member={selectedMember}
         onRoleChange={handleRoleChange}
       />
+      <Modal.Root
+        open={pendingMemberMutation !== null}
+        onOpenChange={(open) => {
+          if (!open && !isMutatingMember) {
+            setPendingMemberMutation(null)
+          }
+        }}
+      >
+        <Modal.Content dismissible>
+          <Modal.Header
+            title={isCancelInviteMutation ? "Cancel invitation?" : "Remove member?"}
+            description={
+              isCancelInviteMutation
+                ? `Are you sure you want to cancel the pending invitation for ${pendingMemberDisplayName}?`
+                : `Are you sure you want to remove ${pendingMemberDisplayName} from this organization?`
+            }
+          />
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmMemberMutation()}
+              disabled={pendingMemberMutation === null || isMutatingMember}
+            >
+              {isMutatingMember
+                ? isCancelInviteMutation
+                  ? "Canceling..."
+                  : "Removing..."
+                : isCancelInviteMutation
+                  ? "Cancel invitation"
+                  : "Remove member"}
+            </Button>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
       <Table>
         <TableHeader>
           <TableRow verticalPadding>
@@ -404,20 +478,21 @@ function MembersTable({
                       <Button
                         variant="ghost"
                         onClick={() => {
-                          const transaction =
+                          setPendingMemberMutation(
                             member.status === "invited"
-                              ? cancelMemberInviteMutation(member.id)
-                              : removeMemberMutation(member.id)
-
-                          void transaction.isPersisted.promise
-                            .then(() => {
-                              toast({
-                                description: member.status === "invited" ? "Invitation canceled" : "Member removed",
-                              })
-                            })
-                            .catch((error) => {
-                              toast({ variant: "destructive", description: toUserMessage(error) })
-                            })
+                              ? {
+                                  type: "cancel-invite",
+                                  inviteId: member.id,
+                                  email: member.email,
+                                  name: member.name,
+                                }
+                              : {
+                                  type: "remove-member",
+                                  membershipId: member.id,
+                                  email: member.email,
+                                  name: member.name,
+                                },
+                          )
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />

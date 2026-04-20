@@ -1,5 +1,5 @@
-import type { HighlightRange, TextSelectionAnchor } from "@repo/ui"
-import { useCallback, useMemo, useState } from "react"
+import type { TextSelectionAnchor } from "@repo/ui"
+import { useCallback, useState } from "react"
 import {
   type AnnotationRecord,
   isDraftAnnotation,
@@ -78,17 +78,13 @@ export function useAnnotationPopover({
     })
   }, [])
 
-  const highlightRangesWithHandlers: HighlightRange[] = useMemo(() => {
-    return highlightRanges.map((range) => {
-      const annotation = annotations.find((a) => a.id === range.id)
-      if (!annotation) return range
-
-      return {
-        ...range,
-        onClick: (position: { x: number; y: number }) => openExistingAnnotationPopover(annotation, position),
-      }
-    })
-  }, [highlightRanges, annotations, openExistingAnnotationPopover])
+  const onAnnotationClick = useCallback(
+    (annotationId: string, position: { x: number; y: number }) => {
+      const annotation = annotations.find((a) => a.id === annotationId)
+      if (annotation) openExistingAnnotationPopover(annotation, position)
+    },
+    [annotations, openExistingAnnotationPopover],
+  )
 
   const handleTextSelect = useCallback(
     (anchor: TextSelectionAnchor, position: { x: number; y: number }) => {
@@ -164,7 +160,8 @@ export function useAnnotationPopover({
   )
 
   return {
-    highlightRanges: highlightRangesWithHandlers,
+    highlightRanges,
+    onAnnotationClick,
     popoverState: openPopover,
     isPopoverLoading,
     isPopoverEditable,

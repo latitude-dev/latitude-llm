@@ -21,92 +21,94 @@ export interface CreateProjectInput {
 
 export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError
 
-export const createProjectUseCase = (input: CreateProjectInput) =>
-  Effect.gen(function* () {
-    const trimmedName = input.name.trim()
-    const sqlClient = yield* SqlClient
-    const { organizationId } = sqlClient
+export const createProjectUseCase = Effect.fn("projects.createProject")(function* (input: CreateProjectInput) {
+  if (input.id) {
+    yield* Effect.annotateCurrentSpan("project.id", input.id)
+  }
+  const trimmedName = input.name.trim()
+  const sqlClient = yield* SqlClient
+  const { organizationId } = sqlClient
 
-    if (!trimmedName || trimmedName.length === 0) {
-      return yield* new InvalidProjectNameError({
-        field: input.name,
-        message: "Name cannot be empty",
-      })
-    }
+  if (!trimmedName || trimmedName.length === 0) {
+    return yield* new InvalidProjectNameError({
+      field: input.name,
+      message: "Name cannot be empty",
+    })
+  }
 
-    if (trimmedName.length > 256) {
-      return yield* new InvalidProjectNameError({
-        field: input.name,
-        message: "Name exceeds 256 characters",
-      })
-    }
+  if (trimmedName.length > 256) {
+    return yield* new InvalidProjectNameError({
+      field: input.name,
+      message: "Name exceeds 256 characters",
+    })
+  }
 
-    const trimmedSlug = toSlug(trimmedName)
-    if (!trimmedSlug || trimmedSlug.length === 0) {
-      return yield* new InvalidProjectNameError({
-        field: trimmedSlug,
-        message: "Slug cannot be empty",
-      })
-    }
+  const trimmedSlug = toSlug(trimmedName)
+  if (!trimmedSlug || trimmedSlug.length === 0) {
+    return yield* new InvalidProjectNameError({
+      field: trimmedSlug,
+      message: "Slug cannot be empty",
+    })
+  }
 
-    if (trimmedSlug.length > 256) {
-      return yield* new InvalidProjectNameError({
-        field: trimmedSlug,
-        message: "Slug exceeds 256 characters, try with a shorter project name.",
-      })
-    }
+  if (trimmedSlug.length > 256) {
+    return yield* new InvalidProjectNameError({
+      field: trimmedSlug,
+      message: "Slug exceeds 256 characters, try with a shorter project name.",
+    })
+  }
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const outboxEventWriter = yield* OutboxEventWriter
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      const outboxEventWriter = yield* OutboxEventWriter
 
-        // Generate unique slug by appending numbers if needed
-        let uniqueSlug = trimmedSlug
-        let found = false
-        for (let i = 1; i <= 100; i++) {
-          const exists = yield* repo.existsBySlug(uniqueSlug)
-          if (!exists) {
-            found = true
-            break
-          }
-          uniqueSlug = `${trimmedSlug}-${i}`
+      // Generate unique slug by appending numbers if needed
+      let uniqueSlug = trimmedSlug
+      let found = false
+      for (let i = 1; i <= 100; i++) {
+        const exists = yield* repo.existsBySlug(uniqueSlug)
+        if (!exists) {
+          found = true
+          break
         }
+        uniqueSlug = `${trimmedSlug}-${i}`
+      }
 
-        if (!found) {
-          return yield* new InvalidProjectNameError({
-            field: trimmedSlug,
-            message: "Could not generate a unique project slug, try with a different project name.",
-          })
-        }
-
-        const project = createProject({
-          id: input.id,
-          organizationId,
-          name: trimmedName,
-          slug: uniqueSlug,
+      if (!found) {
+        return yield* new InvalidProjectNameError({
+          field: trimmedSlug,
+          message: "Could not generate a unique project slug, try with a different project name.",
         })
+      }
 
-        yield* repo.save(project)
+      const project = createProject({
+        id: input.id,
+        organizationId,
+        name: trimmedName,
+        slug: uniqueSlug,
+      })
 
-        // Publish ProjectCreated event for downstream provisioning
-        yield* outboxEventWriter
-          .write({
-            eventName: "ProjectCreated",
-            aggregateType: "project",
-            aggregateId: project.id,
+      yield* repo.save(project)
+
+      // Publish ProjectCreated event for downstream provisioning
+      yield* outboxEventWriter
+        .write({
+          eventName: "ProjectCreated",
+          aggregateType: "project",
+          aggregateId: project.id,
+          organizationId: project.organizationId,
+          payload: {
             organizationId: project.organizationId,
-            payload: {
-              organizationId: project.organizationId,
-              actorUserId: input.actorUserId ?? "",
-              projectId: project.id,
-              name: project.name,
-              slug: project.slug,
-            },
-          })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+            actorUserId: input.actorUserId ?? "",
+            projectId: project.id,
+            name: project.name,
+            slug: project.slug,
+          },
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
-        return project
-      }),
-    )
-  })
+      return project
+    }),
+  )
+})

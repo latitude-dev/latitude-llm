@@ -6,6 +6,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
 from latitude_telemetry import capture, get_latitude_context
+from latitude_telemetry.sdk.context import LATITUDE_CONTEXT_KEY, _LatitudeContextData
 
 
 class TestTraceContinuity:
@@ -53,11 +54,10 @@ class TestTraceContinuity:
         # First span should be the capture parent span (recording)
         assert spans[0]["is_recording"] is True
 
-    def test_capture_reuses_existing_trace(self):
-        """Test that capture() joins existing trace when one exists."""
+    def test_capture_creates_new_root_trace_when_only_external_trace_exists(self):
+        """Test that capture() starts a new root trace when the active trace is not Latitude-owned."""
         tracer = trace.get_tracer("test.tracer")
 
-        # First, create an outer span manually
         with tracer.start_as_current_span("outer-manual-span") as outer:
             outer_trace_id = outer.get_span_context().trace_id
 
@@ -70,7 +70,33 @@ class TestTraceContinuity:
 
             capture("nested-capture", my_function)
 
-            # The captured span should be in the same trace
+            assert captured_trace_id[0] != outer_trace_id
+
+    def test_capture_reuses_existing_latitude_trace(self):
+        """Test that nested Latitude capture() calls stay inside the existing Latitude trace."""
+        tracer = trace.get_tracer("test.tracer")
+
+        with tracer.start_as_current_span("outer-manual-span") as outer:
+            outer_trace_id = outer.get_span_context().trace_id
+            latitude_context = otel_context.set_value(
+                LATITUDE_CONTEXT_KEY,
+                _LatitudeContextData(name="outer-capture", tags=["outer"], metadata={"foo": "bar"}),
+                otel_context.get_current(),
+            )
+
+            captured_trace_id = []
+
+            def my_function():
+                current_span = trace.get_current_span()
+                captured_trace_id.append(current_span.get_span_context().trace_id)
+                return "done"
+
+            token = otel_context.attach(latitude_context)
+            try:
+                capture("nested-capture", my_function, {"tags": ["inner"]})
+            finally:
+                otel_context.detach(token)
+
             assert captured_trace_id[0] == outer_trace_id
 
     def test_child_spans_share_trace_id(self):

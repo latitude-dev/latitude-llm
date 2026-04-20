@@ -164,24 +164,7 @@ describe("updateQueueUseCase", () => {
   })
 
   describe("system queues", () => {
-    it("allows updating assignees for system queue", async () => {
-      const existing = createExistingQueue({ system: true })
-      const { layer } = createTestLayer(existing)
-
-      const input: UpdateQueueInput = {
-        projectId: PROJECT_ID,
-        queueId: QUEUE_ID,
-        description: existing.description,
-        instructions: existing.instructions,
-        assignees: ["user-new"],
-      }
-
-      const result = await Effect.runPromise(updateQueueUseCase(input).pipe(Effect.provide(layer)))
-
-      expect(result.queue.assignees).toEqual(["user-new"])
-    })
-
-    it("allows updating sampling for system queue", async () => {
+    it("updates sampling for system queue", async () => {
       const existing = createExistingQueue({ system: true, settings: { sampling: 10 } })
       const { layer } = createTestLayer(existing)
 
@@ -196,6 +179,23 @@ describe("updateQueueUseCase", () => {
       const result = await Effect.runPromise(updateQueueUseCase(input).pipe(Effect.provide(layer)))
 
       expect(result.queue.settings.sampling).toBe(50)
+    })
+
+    it("ignores assignee changes for system queue", async () => {
+      const existing = createExistingQueue({ system: true, assignees: ["user-1"] })
+      const { layer } = createTestLayer(existing)
+
+      const input: UpdateQueueInput = {
+        projectId: PROJECT_ID,
+        queueId: QUEUE_ID,
+        description: existing.description,
+        instructions: existing.instructions,
+        assignees: ["user-new"],
+      }
+
+      const result = await Effect.runPromise(updateQueueUseCase(input).pipe(Effect.provide(layer)))
+
+      expect(result.queue.assignees).toEqual(["user-1"])
     })
 
     it("ignores name change for system queue", async () => {

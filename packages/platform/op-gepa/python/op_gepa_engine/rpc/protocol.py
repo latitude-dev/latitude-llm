@@ -1,4 +1,5 @@
 import json
+import traceback
 from typing import Any
 
 from op_gepa_engine.util import Field, Model
@@ -46,6 +47,62 @@ class RpcErrorCode:
     METHOD_NOT_FOUND = -32601
     INVALID_PARAMS = -32602
     INTERNAL_ERROR = -32603
+
+
+def _first_remote_message(value: Any, depth: int = 0) -> str | None:
+    if depth >= 4 or not isinstance(value, dict):
+        return None
+
+    for key in ("message", "httpMessage", "_tag", "name", "type"):
+        candidate = value.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+
+    return _first_remote_message(value.get("cause"), depth + 1)
+
+
+class RpcRemoteError(RuntimeError):
+    code: int
+    data: Any
+
+    def __init__(self, *, code: int, message: str, data: Any) -> None:
+        resolved_message = message.strip() if isinstance(message, str) and message.strip() else _first_remote_message(data)
+        super().__init__(resolved_message or "Remote RPC failed")
+        self.code = code
+        self.data = data
+
+
+def create_remote_error_exception(error: JsonRpcError) -> RpcRemoteError:
+    return RpcRemoteError(
+        code=error.code,
+        message=error.message,
+        data=error.data,
+    )
+
+
+def create_exception_error(error: Exception, error_traceback: str | None = None) -> JsonRpcError:
+    traceback_text = error_traceback or traceback.format_exc()
+    error_data: dict[str, Any] = {"traceback": traceback_text}
+
+    if isinstance(error, RpcRemoteError):
+        error_data["remoteError"] = error.data
+
+    return JsonRpcError(
+        code=error.code if isinstance(error, RpcRemoteError) else RpcErrorCode.INTERNAL_ERROR,
+        message=str(error),
+        data=error_data,
+    )
+
+
+def create_error_response(
+    request_id: int | str | None,
+    error: Exception,
+    error_traceback: str | None = None,
+) -> JsonRpcResponse:
+    return JsonRpcResponse(
+        id=request_id,
+        error=create_exception_error(error, error_traceback),
+    )
 
 
 def parse_message(line: str) -> JsonRpcRequest | JsonRpcResponse | None:

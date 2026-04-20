@@ -22,5 +22,8 @@ export const NUMBER_RANGE_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === 
 }))
 
 export function getTextFieldsForMode(mode: FilterMode) {
-  return mode === "sessions" ? TEXT_FIELDS.filter((f) => f.field !== "name") : TEXT_FIELDS
+  if (mode === "sessions") {
+    return TEXT_FIELDS.filter((f) => f.field !== "name" && f.field !== "traceId")
+  }
+  return TEXT_FIELDS
 }

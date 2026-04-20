@@ -5,6 +5,9 @@ import {
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaselines,
   evaluateTraceResourceOutliers,
+  getTraceMetricPercentileThreshold,
+  isTraceMetricPercentileAvailable,
+  TRACE_COHORT_P90_MIN_SAMPLES,
   type Trace,
   type TraceCohortBaselineData,
 } from "./index.ts"
@@ -84,6 +87,42 @@ describe("trace cohorts", () => {
 
     const spec = buildTraceCohortListingSpec("latency-and-cost-p95-plus", baselines)
     expect(spec.unavailableReason).toBe("mixed-mode-suppressed")
+  })
+
+  it("hides p90 thresholds until the baseline has enough samples", () => {
+    const insufficientP90Baseline = buildTraceMetricBaselines({
+      ...baselineData,
+      metrics: {
+        ...baselineData.metrics,
+        durationNs: {
+          sampleCount: TRACE_COHORT_P90_MIN_SAMPLES - 1,
+          p50: 100,
+          p90: 200,
+          p95: null,
+          p99: null,
+        },
+      },
+    }).durationNs
+
+    expect(isTraceMetricPercentileAvailable(insufficientP90Baseline, "p90")).toBe(false)
+    expect(getTraceMetricPercentileThreshold(insufficientP90Baseline, "p90")).toBeNull()
+
+    const sufficientP90Baseline = buildTraceMetricBaselines({
+      ...baselineData,
+      metrics: {
+        ...baselineData.metrics,
+        durationNs: {
+          sampleCount: TRACE_COHORT_P90_MIN_SAMPLES,
+          p50: 100,
+          p90: 200,
+          p95: null,
+          p99: null,
+        },
+      },
+    }).durationNs
+
+    expect(isTraceMetricPercentileAvailable(sufficientP90Baseline, "p90")).toBe(true)
+    expect(getTraceMetricPercentileThreshold(sufficientP90Baseline, "p90")).toBe(200)
   })
 
   it("matches p99 and combined cohort reasons for severe traces", () => {

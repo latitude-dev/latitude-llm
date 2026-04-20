@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 
-export function listRows(args: {
+export const listRows = Effect.fn("datasets.listRows")(function* (args: {
   readonly datasetId: DatasetId
   readonly versionId?: DatasetVersionId
   readonly search?: string
@@ -12,26 +12,26 @@ export function listRows(args: {
   readonly offset?: number
   readonly cursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
 }) {
-  return Effect.gen(function* () {
-    const rowRepo = yield* DatasetRowRepository
+  yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
 
-    let version: number | undefined
-    if (args.versionId) {
-      const datasetRepo = yield* DatasetRepository
-      version = yield* datasetRepo.resolveVersion({
-        datasetId: args.datasetId,
-        versionId: args.versionId,
-      })
-    }
+  const rowRepo = yield* DatasetRowRepository
 
-    return yield* rowRepo.list({
+  let version: number | undefined
+  if (args.versionId) {
+    const datasetRepo = yield* DatasetRepository
+    version = yield* datasetRepo.resolveVersion({
       datasetId: args.datasetId,
-      ...(version !== undefined ? { version } : {}),
-      ...(args.search ? { search: args.search } : {}),
-      ...(args.sortDirection !== undefined ? { sortDirection: args.sortDirection } : {}),
-      ...(args.limit !== undefined ? { limit: args.limit } : {}),
-      ...(args.offset !== undefined ? { offset: args.offset } : {}),
-      ...(args.cursor ? { cursor: args.cursor } : {}),
+      versionId: args.versionId,
     })
+  }
+
+  return yield* rowRepo.list({
+    datasetId: args.datasetId,
+    ...(version !== undefined ? { version } : {}),
+    ...(args.search ? { search: args.search } : {}),
+    ...(args.sortDirection !== undefined ? { sortDirection: args.sortDirection } : {}),
+    ...(args.limit !== undefined ? { limit: args.limit } : {}),
+    ...(args.offset !== undefined ? { offset: args.offset } : {}),
+    ...(args.cursor ? { cursor: args.cursor } : {}),
   })
-}
+})

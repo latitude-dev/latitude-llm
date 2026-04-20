@@ -50,6 +50,57 @@ const validRequest = {
   ],
 }
 
+const vercelWrapperRequest = {
+  resourceSpans: [
+    {
+      resource: {
+        attributes: [{ key: "service.name", value: { stringValue: "test-service" } }],
+      },
+      scopeSpans: [
+        {
+          scope: { name: "ai", version: "6.0.116" },
+          spans: [
+            {
+              traceId: "11111111111111111111111111111111",
+              spanId: "aaaaaaaaaaaaaaaa",
+              name: "ai.generateText",
+              kind: 1,
+              startTimeUnixNano: "1710590400000000000",
+              endTimeUnixNano: "1710590401000000000",
+              attributes: [
+                { key: "ai.operationId", value: { stringValue: "ai.generateText" } },
+                { key: "ai.model.id", value: { stringValue: "gpt-4o" } },
+                { key: "ai.model.provider", value: { stringValue: "openai.responses" } },
+                { key: "ai.usage.promptTokens", value: { intValue: "918" } },
+                { key: "ai.usage.completionTokens", value: { intValue: "31" } },
+              ],
+              status: { code: 1 },
+            },
+            {
+              traceId: "11111111111111111111111111111111",
+              spanId: "bbbbbbbbbbbbbbbb",
+              parentSpanId: "aaaaaaaaaaaaaaaa",
+              name: "ai.generateText.doGenerate",
+              kind: 1,
+              startTimeUnixNano: "1710590400001000000",
+              endTimeUnixNano: "1710590400999000000",
+              attributes: [
+                { key: "ai.operationId", value: { stringValue: "ai.generateText.doGenerate" } },
+                { key: "gen_ai.system", value: { stringValue: "openai.responses" } },
+                { key: "ai.model.id", value: { stringValue: "gpt-4o" } },
+                { key: "ai.model.provider", value: { stringValue: "openai.responses" } },
+                { key: "ai.usage.promptTokens", value: { intValue: "918" } },
+                { key: "ai.usage.completionTokens", value: { intValue: "31" } },
+              ],
+              status: { code: 1 },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 describe("createSpanIngestionWorker", () => {
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
@@ -166,5 +217,84 @@ describe("createSpanIngestionWorker", () => {
     } finally {
       warnSpy.mockRestore()
     }
+  })
+
+  it("keeps Vercel outer wrappers for tree structure while moving estimated cost onto the inner token span", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const fileKey = "span-ingestion/test-vercel-wrapper.json"
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(vercelWrapperRequest), "utf-8"))
+
+    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_vercel_wrapper_test",
+      projectId: "proj_vercel_wrapper_test",
+      apiKeyId: "api_key_vercel_wrapper_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{
+        name: string
+        trace_id: string
+        tokens_input: string
+        tokens_output: string
+        cost_total_microcents: string
+        parent_span_id: string
+        ai_operation_id: string
+        provider: string
+        model: string
+      }>(
+        ch.client,
+        `SELECT
+           name,
+           trace_id,
+           tokens_input,
+           tokens_output,
+           cost_total_microcents,
+           parent_span_id,
+           attr_string['ai.operationId'] AS ai_operation_id,
+           provider,
+           model
+         FROM spans
+         WHERE organization_id = {organizationId:String}
+         ORDER BY start_time ASC`,
+        { organizationId: "org_vercel_wrapper_test" },
+      ),
+    )
+
+    expect(rows).toHaveLength(2)
+
+    expect(rows[0]?.name).toBe("ai.generateText")
+    expect(rows[0]?.trace_id).toBe("11111111111111111111111111111111")
+    expect(Number(rows[0]?.tokens_input ?? 0)).toBe(0)
+    expect(Number(rows[0]?.tokens_output ?? 0)).toBe(0)
+    expect(Number(rows[0]?.cost_total_microcents ?? 0)).toBe(0)
+    expect(rows[0]?.parent_span_id).toBe("")
+    expect(rows[0]?.ai_operation_id).toBe("ai.generateText")
+    expect(rows[0]?.provider).toBe("openai")
+    expect(rows[0]?.model).toBe("gpt-4o")
+
+    expect(rows[1]?.name).toBe("ai.generateText.doGenerate")
+    expect(rows[1]?.trace_id).toBe("11111111111111111111111111111111")
+    expect(Number(rows[1]?.tokens_input ?? 0)).toBe(918)
+    expect(Number(rows[1]?.tokens_output ?? 0)).toBe(31)
+    expect(Number(rows[1]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)
+    expect(rows[1]?.parent_span_id).toBe("aaaaaaaaaaaaaaaa")
+    expect(rows[1]?.ai_operation_id).toBe("ai.generateText.doGenerate")
+    expect(rows[1]?.provider).toBe("openai.responses")
+    expect(rows[1]?.model).toBe("gpt-4o")
+
+    expect(pub.published).toHaveLength(1)
+    expect(pub.published[0]?.payload).toEqual({
+      organizationId: "org_vercel_wrapper_test",
+      projectId: "proj_vercel_wrapper_test",
+      traceId: "11111111111111111111111111111111",
+    })
   })
 })

@@ -46,9 +46,7 @@ jobs:
     concurrency:
       group: deploy-staging-apply
       cancel-in-progress: false
-    environment:
-      name: staging
-      deployment: false
+    environment: staging
     permissions:
       id-token: write
       contents: read
@@ -365,7 +363,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build all apps
-        run: pnpm --filter "@app/*" build
+        run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
@@ -396,13 +394,6 @@ jobs:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
 
-  staging-deploy-complete:
-    needs: [staging-apply, staging-upload-sourcemaps]
-    runs-on: ubuntu-latest
-    environment: staging
-    steps:
-      - run: echo "All staging services deployed successfully"
-
   # ── Production ───────────────────────────────────────────
 
   production-build:
@@ -422,9 +413,7 @@ jobs:
     concurrency:
       group: deploy-production-apply
       cancel-in-progress: false
-    environment:
-      name: production
-      deployment: false
+    environment: production
     permissions:
       id-token: write
       contents: read
@@ -741,7 +730,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build all apps
-        run: pnpm --filter "@app/*" build
+        run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
@@ -771,9 +760,3 @@ jobs:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
 
-  production-deploy-complete:
-    needs: [production-apply, production-upload-sourcemaps]
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - run: echo "All production services deployed successfully"

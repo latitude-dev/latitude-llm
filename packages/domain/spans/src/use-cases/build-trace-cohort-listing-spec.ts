@@ -13,22 +13,26 @@ export interface BuildTraceCohortListingSpecInput {
 
 export type BuildTraceCohortListingSpecError = TraceCohortUnavailableError | RepositoryError
 
-export const buildTraceCohortListingSpecUseCase = (input: BuildTraceCohortListingSpecInput) =>
-  Effect.gen(function* () {
-    const traceRepository = yield* TraceRepository
-    const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      ...(input.filters ? { filters: input.filters } : {}),
-    })
-    const baselines = buildTraceMetricBaselines(baselineData)
-    const spec = buildTraceCohortListingSpec(input.cohort, baselines)
-    if (spec.unavailableReason) {
-      return yield* new TraceCohortUnavailableError({
-        cohort: input.cohort,
-        reason: spec.unavailableReason,
-      })
-    }
+export const buildTraceCohortListingSpecUseCase = Effect.fn("spans.buildTraceCohortListingSpec")(function* (
+  input: BuildTraceCohortListingSpecInput,
+) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("cohort", input.cohort)
 
-    return spec
+  const traceRepository = yield* TraceRepository
+  const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    ...(input.filters ? { filters: input.filters } : {}),
   })
+  const baselines = buildTraceMetricBaselines(baselineData)
+  const spec = buildTraceCohortListingSpec(input.cohort, baselines)
+  if (spec.unavailableReason) {
+    return yield* new TraceCohortUnavailableError({
+      cohort: input.cohort,
+      reason: spec.unavailableReason,
+    })
+  }
+
+  return spec
+})

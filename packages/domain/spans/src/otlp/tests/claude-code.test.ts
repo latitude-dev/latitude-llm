@@ -67,6 +67,34 @@ describe("Claude Code OTLP span expansion", () => {
     expect(parts?.[0]).toMatchObject({ type: "text", content: "hi claudio" })
   })
 
+  it("maps tool_execution spans to execute_tool operation", () => {
+    const span: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "cccccccccccccccc",
+      parentSpanId: "bbbbbbbbbbbbbbbb",
+      name: "tool:Bash",
+      kind: 1,
+      startTimeUnixNano: "1710590402100000000",
+      endTimeUnixNano: "1710590402200000000",
+      attributes: [
+        str("span.type", "tool_execution"),
+        str("session.id", SESSION),
+        str("user.id", USER_ID),
+        str("tool.name", "Bash"),
+        str("tool.id", "toolu_01ABC"),
+        str("tool.input", '{"command":"ls"}'),
+        str("tool.output", "file1\nfile2"),
+        str("success", "true"),
+      ],
+      status: { code: 1 },
+    }
+
+    const d = runTransform(span)
+
+    expect(d.sessionId).toBe(SESSION)
+    expect(d.operation).toBe("execute_tool")
+  })
+
   it("maps llm_request spans: model, tokens, cache, TTFT, provider", () => {
     const span: OtlpSpan = {
       traceId: TRACE_ID,

@@ -15,7 +15,7 @@ export const redisCacheAdapter = {
 }
 
 export type { RedisClient } from "./client.ts"
-export { createRedisClient } from "./client.ts"
+export { buildRedisConnectionOptions, createRedisClient } from "./client.ts"
 export type { RedisConnection } from "./connection.ts"
 export {
   createRedisConnection,

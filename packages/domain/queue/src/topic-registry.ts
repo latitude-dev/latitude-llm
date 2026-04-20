@@ -65,14 +65,6 @@ const _registry = {
     }
   }>(),
 
-  "live-traces": payloads<{
-    end: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
-  }>(),
-
   issues: payloads<{
     discovery: {
       readonly organizationId: string
@@ -84,6 +76,16 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string
+    }
+    removeScore: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+      readonly issueId: string | null
+      readonly draftedAt: string | null
+      readonly feedback: string
+      readonly source: string
+      readonly createdAt: string
     }
   }>(),
 
@@ -109,12 +111,14 @@ const _registry = {
     }
   }>(),
 
-  "live-evaluations": payloads<{
-    enqueue: {
+  scores: payloads<{
+    "delete-analytics": {
       readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
+      readonly scoreId: string
     }
+  }>(),
+
+  "live-evaluations": payloads<{
     execute: {
       readonly organizationId: string
       readonly projectId: string
@@ -123,16 +127,8 @@ const _registry = {
     }
   }>(),
 
-  "live-annotation-queues": payloads<{
-    curate: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
-  }>(),
-
-  "system-annotation-queues": payloads<{
-    fanOut: {
+  "trace-end": payloads<{
+    run: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string

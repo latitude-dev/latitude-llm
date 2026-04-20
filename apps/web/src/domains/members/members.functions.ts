@@ -6,6 +6,7 @@ import {
 } from "@domain/organizations"
 import { MembershipId, UserId } from "@domain/shared"
 import { MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
@@ -37,7 +38,7 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
     Effect.gen(function* () {
       const membershipRepo = yield* MembershipRepository
       return yield* membershipRepo.listMembersWithUser(organizationId)
-    }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+    }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId), withTracing),
   )
 
   const invitationResult = await getBetterAuth().api.listInvitations({
@@ -88,7 +89,7 @@ export const removeMember = createServerFn({ method: "POST" })
       removeMemberUseCase({
         membershipId: MembershipId(data.membershipId),
         requestingUserId: UserId(userId),
-      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId), withTracing),
     )
   })
 
@@ -138,7 +139,7 @@ export const transferOwnership = createServerFn({ method: "POST" })
         organizationId,
         currentOwnerUserId: userId,
         newOwnerUserId: UserId(data.newOwnerUserId),
-      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId), withTracing),
     )
   })
 
@@ -154,6 +155,6 @@ export const updateMemberRole = createServerFn({ method: "POST" })
         requestingUserId: userId,
         targetUserId: UserId(data.targetUserId),
         newRole: data.newRole,
-      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId), withTracing),
     )
   })

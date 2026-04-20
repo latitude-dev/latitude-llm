@@ -286,30 +286,39 @@ describe("useAnnotationPopover", () => {
     })
   })
 
-  describe("highlightRanges with handlers", () => {
-    it("adds onClick handlers to highlight ranges", () => {
+  describe("onAnnotationClick", () => {
+    it("returns highlight ranges without onClick handlers", () => {
       const { result } = renderHook(() =>
         useAnnotationPopover({ projectId: "proj-1", traceId: "trace-1", isActive: true }),
       )
 
       expect(result.current.highlightRanges).toHaveLength(1)
-      expect(result.current.highlightRanges[0]?.onClick).toBeDefined()
+      expect("onClick" in (result.current.highlightRanges[0] ?? {})).toBe(false)
     })
 
-    it("opens existing annotation popover when highlight is clicked", () => {
+    it("opens existing annotation popover via onAnnotationClick", () => {
       const { result } = renderHook(() =>
         useAnnotationPopover({ projectId: "proj-1", traceId: "trace-1", isActive: true }),
       )
 
-      const onClick = result.current.highlightRanges[0]?.onClick
-      expect(onClick).toBeDefined()
-
       act(() => {
-        onClick?.({ x: 150, y: 250 })
+        result.current.onAnnotationClick("ann-1", { x: 150, y: 250 })
       })
 
       expect(result.current.popoverState?.kind).toBe("existing")
       expect(result.current.popoverState?.position).toEqual({ x: 150, y: 250 })
+    })
+
+    it("does nothing for unknown annotation id", () => {
+      const { result } = renderHook(() =>
+        useAnnotationPopover({ projectId: "proj-1", traceId: "trace-1", isActive: true }),
+      )
+
+      act(() => {
+        result.current.onAnnotationClick("unknown-id", { x: 150, y: 250 })
+      })
+
+      expect(result.current.popoverState).toBeNull()
     })
   })
 

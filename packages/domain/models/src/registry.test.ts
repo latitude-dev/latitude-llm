@@ -126,6 +126,25 @@ describe("getModelForProvider", () => {
     const model = getModelForProvider("openai", "nonexistent-model-xyz")
     expect(model).toBeUndefined()
   })
+
+  it("finds Bedrock model with regional prefix by falling back to stripped ID", () => {
+    const base = getModelForProvider("amazon_bedrock", "amazon.nova-micro-v1:0")
+    expect(base).toBeDefined()
+
+    // Regional prefixed IDs should resolve to the same base model
+    const eu = getModelForProvider("amazon_bedrock", "eu.amazon.nova-micro-v1:0")
+    const us = getModelForProvider("amazon_bedrock", "us.amazon.nova-micro-v1:0")
+    const apac = getModelForProvider("amazon_bedrock", "apac.amazon.nova-micro-v1:0")
+
+    expect(eu?.id).toBe(base?.id)
+    expect(us?.id).toBe(base?.id)
+    expect(apac?.id).toBe(base?.id)
+  })
+
+  it("does not strip regional prefix for non-Bedrock providers", () => {
+    const model = getModelForProvider("openai", "eu.gpt-4o")
+    expect(model).toBeUndefined()
+  })
 })
 
 describe("getAllModels", () => {
@@ -145,6 +164,13 @@ describe("getAllModels", () => {
 describe("getCostSpec", () => {
   it("returns implemented cost for a known model", () => {
     const result = getCostSpec("openai", "gpt-4o")
+    expect(result.costImplemented).toBe(true)
+    expect(result.cost).toHaveProperty("input")
+    expect(result.cost).toHaveProperty("output")
+  })
+
+  it("normalizes Vercel provider suffixes for cost lookup", () => {
+    const result = getCostSpec("openai.responses", "gpt-4o")
     expect(result.costImplemented).toBe(true)
     expect(result.cost).toHaveProperty("input")
     expect(result.cost).toHaveProperty("output")

@@ -65,6 +65,8 @@ export interface InfiniteTableSharedProps<T> {
   defaultSorting?: InfiniteTableSorting
   onSortChange?: (sorting: InfiniteTableSorting) => void
   blankSlate?: ReactNode | string
+  /** `fill` (default) stretches in a fixed parent; `intrinsic` sizes to content up to scroll `className` max-height. */
+  scrollAreaLayout?: "fill" | "intrinsic"
   className?: string
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>

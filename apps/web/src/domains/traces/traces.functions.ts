@@ -14,6 +14,7 @@ import {
   TraceRepository,
 } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -138,7 +139,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
             ...(data.filters ? { filters: data.filters } : {}),
           },
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
 
     if (!page.nextCursor) {
@@ -165,7 +166,7 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -183,7 +184,7 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -205,7 +206,7 @@ export const getTraceCohortSummaryByProject = createServerFn({ method: "GET" })
         filters: effectiveFilters,
         effectiveRangeStartIso,
         effectiveRangeEndIso,
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -244,7 +245,7 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
           filters: mergedFilters,
           bucketSeconds: data.bucketSeconds,
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })
 
@@ -265,7 +266,7 @@ export const getTraceDetail = createServerFn({ method: "GET" })
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return detail ? serializeTraceDetail(detail) : null
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
 
     // rosetta-ai GenAI types use [x: string]: unknown index signatures, but
@@ -301,6 +302,6 @@ export const getTraceDistinctValues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.search ? { search: data.search } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

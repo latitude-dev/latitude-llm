@@ -5,6 +5,7 @@ import {
 import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/queue/workflow-registry"
 import { condition, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 type EvaluationAlignmentWorkflowInput = {
   readonly organizationId: string
@@ -38,7 +39,13 @@ const {
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
   writeEvaluationAlignmentJobStatus,
-} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "5 minutes",
+  retry: {
+    ...defaultActivityRetryPolicy,
+    nonRetryableErrorTypes: ["EvaluationManualRealignmentRateLimitedError"],
+  },
+})
 
 const toFailurePayload = (error: unknown) => {
   const maybeTag = (error as { _tag?: string } | null)?._tag
@@ -115,6 +122,11 @@ const runFullAlignment = async (
     })
 
     const optimizedDraft = await optimizeEvaluationDraft({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId ?? null,
+      jobId: input.jobId,
       draft: baselineDraft,
       issueName: collected.issueName,
       issueDescription: collected.issueDescription,
@@ -123,6 +135,11 @@ const runFullAlignment = async (
     })
 
     const baselineEvaluation = await evaluateBaselineEvaluationDraft({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId ?? null,
+      jobId: input.jobId,
       issueName: collected.issueName,
       issueDescription: collected.issueDescription,
       draft: optimizedDraft,
@@ -136,6 +153,12 @@ const runFullAlignment = async (
           description: existingState.description,
         }
       : await generateEvaluationDetails({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId ?? null,
+          jobId: input.jobId,
+          evaluationHash: optimizedDraft.evaluationHash,
           issueName: collected.issueName,
           issueDescription: collected.issueDescription,
           script: optimizedDraft.script,
@@ -193,6 +216,7 @@ const runIncrementalMetricRefresh = async (input: {
   readonly projectId: string
   readonly issueId: string
   readonly evaluationId: string
+  readonly jobId: string
 }): Promise<{
   readonly strategy: "no-op" | "metric-only" | "full-reoptimization"
   readonly evaluationId: string
@@ -212,6 +236,11 @@ const runIncrementalMetricRefresh = async (input: {
     requirePositiveExamples: false,
   })
   const refresh = await evaluateIncrementalEvaluationDraft({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: state.evaluationId,
+    jobId: input.jobId,
     issueName: state.issueName,
     issueDescription: state.issueDescription,
     draft: state.draft,
@@ -244,7 +273,9 @@ const runIncrementalMetricRefresh = async (input: {
 
 export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWorkflowInput) => {
   if (!input.refreshLoop) {
-    return runFullAlignment(input)
+    const result = await runFullAlignment(input)
+
+    return result
   }
 
   if (!input.evaluationId) {
@@ -337,6 +368,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
           projectId: input.projectId,
           issueId: input.issueId,
           evaluationId: input.evaluationId,
+          jobId: input.jobId,
         })
 
         if (result.strategy === "full-reoptimization") {
@@ -357,8 +389,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
     const currentRevision = scheduleRevision
 
     if (nextDueAtMs === null) {
-      await condition(() => scheduleRevision !== currentRevision || pendingManualJobId !== null)
-      continue
+      return
     }
 
     await condition(

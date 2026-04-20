@@ -19,7 +19,7 @@ Reliability adds:
 - `simulation_id` on spans as an optional simulation link stored as a non-null `FixedString(24)` with the empty-string sentinel when absent
 - propagation of `simulation_id` into trace/session-level reporting where needed
 - a `SpanIngested` domain event emitted directly through `createEventsPublisher(queuePublisher)` after the span-ingestion process durably writes spans for a trace
-- a debounced `TraceEnded` domain event emitted directly through `createEventsPublisher(queuePublisher)` after a trace has received no new spans for a named debounce window whose initial default is `5 minutes`
+- one debounced downstream runtime task, `trace-end:run`, published directly from the `SpanIngested` handler with a debounce window defined by a named constant whose initial default is `90 seconds`
 
 These telemetry additions should land through new ClickHouse migrations rather than by rewriting existing migration history. Because they are additive extensions to existing unreleased tables, ordinary additive statements and sensible defaults are preferred over bespoke compatibility choreography unless a later change truly requires a rebuild.
 
@@ -30,13 +30,19 @@ Reliability should not treat each span arrival as the moment a trace is complete
 Instead:
 
 - the span-ingestion process publishes `SpanIngested` directly through `createEventsPublisher(queuePublisher)` after the span write succeeds
-- the `domain-events` dispatcher reacts to `SpanIngested` by publishing `live-traces:end` keyed by `(organizationId, projectId, traceId)`
-- if another span for that trace arrives before the delay elapses, the same logical `live-traces:end` task is replaced/rescheduled so the debounce window starts over
-- when the debounce window elapses, `live-traces:end` publishes `TraceEnded` directly through `createEventsPublisher(queuePublisher)`
-- the `domain-events` dispatcher then reacts to `TraceEnded` by publishing downstream tasks such as `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
+- the `domain-events` dispatcher reacts to `SpanIngested` by publishing `trace-end:run`, debounced and deduped by `(organizationId, projectId, traceId)`
+- if another span for that trace arrives before the debounce window elapses, the pending tasks are replaced/rescheduled so the window starts over
+- when the debounce window elapses, `trace-end:run` loads the trace once, samples candidate live evaluations, live queues, and system queues, batches shared live filters into one trace query, and then applies the selected downstream work
+- downstream side effects stay split by responsibility: `live-evaluations:execute` remains the execution rail for evaluation runs, live queue membership is inserted directly, and sampled system queues start `systemQueueFlaggerWorkflow`
 - the `domain-events` dispatcher never executes downstream reliability side effects inline; it only dispatches tasks
 
-This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and task fan-out pattern.
+This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and a single debounced trace-end runtime rather than several parallel selection tasks.
+
+### Trace-end code map
+
+- **Worker composition root**: `apps/workers/src/workers/trace-end.ts` exports `runTraceEndJob` (and `createTraceEndWorker` / `createRunHandler`). That module owns transport and infrastructure wiring only; it is not named as a domain use case.
+- `**@domain/spans`**: `loadTraceForTraceEndUseCase`, `selectTraceEndItemsUseCase`, and `summarizeTraceEndItemDecisions` in `packages/domain/spans/src/use-cases/` implement trace load, sample-first + batched filter selection, and per-candidate decision counts for logging.
+- `**@domain/evaluations**` and `**@domain/annotation-queues**`: see `docs/evaluations.md` and `docs/annotation-queues.md` for the live-evaluation and queue halves of the same debounced pass.
 
 ## Why Sessions Matter
 

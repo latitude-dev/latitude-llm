@@ -14,44 +14,46 @@ export interface GenerateApiKeyInput {
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
 
-export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
-  Effect.gen(function* () {
-    const { organizationId } = yield* SqlClient
+export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(function* (input: GenerateApiKeyInput) {
+  const { organizationId } = yield* SqlClient
+  if (input.id) {
+    yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
+  }
 
-    if (!input.name || input.name.trim().length === 0) {
-      return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name cannot be empty" })
-    }
+  if (!input.name || input.name.trim().length === 0) {
+    return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name cannot be empty" })
+  }
 
-    if (input.name.length > 256) {
-      return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name exceeds 256 characters" })
-    }
+  if (input.name.length > 256) {
+    return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name exceeds 256 characters" })
+  }
 
-    const token = generateApiKeyToken()
-    const tokenHash = yield* hash(token)
-    const apiKey = createApiKey({
-      id: input.id,
-      organizationId,
-      token,
-      tokenHash,
-      name: input.name.trim(),
-    })
-
-    const repo = yield* ApiKeyRepository
-    yield* repo.save(apiKey)
-
-    const outboxEventWriter = yield* OutboxEventWriter
-    yield* outboxEventWriter.write({
-      eventName: "ApiKeyCreated",
-      aggregateType: "api_key",
-      aggregateId: apiKey.id,
-      organizationId,
-      payload: {
-        organizationId,
-        actorUserId: input.actorUserId ?? "",
-        apiKeyId: apiKey.id,
-        name: apiKey.name,
-      },
-    })
-
-    return apiKey
+  const token = generateApiKeyToken()
+  const tokenHash = yield* hash(token)
+  const apiKey = createApiKey({
+    id: input.id,
+    organizationId,
+    token,
+    tokenHash,
+    name: input.name.trim(),
   })
+
+  const repo = yield* ApiKeyRepository
+  yield* repo.save(apiKey)
+
+  const outboxEventWriter = yield* OutboxEventWriter
+  yield* outboxEventWriter.write({
+    eventName: "ApiKeyCreated",
+    aggregateType: "api_key",
+    aggregateId: apiKey.id,
+    organizationId,
+    payload: {
+      organizationId,
+      actorUserId: input.actorUserId ?? "",
+      apiKeyId: apiKey.id,
+      name: apiKey.name,
+    },
+  })
+
+  return apiKey
+})

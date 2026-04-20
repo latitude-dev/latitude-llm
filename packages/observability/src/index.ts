@@ -9,6 +9,7 @@ import { startTracing } from "./otel.ts"
 import { getObservabilityState } from "./state.ts"
 import type { InitializeObservabilityOptions } from "./types.ts"
 
+export { EffectOtelTracerLive, withTracing } from "./effect-tracer.ts"
 export { recordSpanExceptionForDatadog } from "./record-span-exception.ts"
 export { trace, SpanStatusCode }
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)

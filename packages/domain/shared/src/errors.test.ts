@@ -16,8 +16,34 @@ describe("static httpStatus and httpMessage", () => {
     expect(err._tag).toBe("RepositoryError")
     expect(err.httpStatus).toBe(500)
     expect(err.httpMessage).toBe("Internal server error")
+    expect(err.message).toBe("Repository findById failed: timeout")
     expect(err.cause).toBe("timeout")
     expect(err.operation).toBe("findById")
+  })
+
+  it("reuses the wrapped error stack when cause is an Error", () => {
+    const cause = new Error("query failed")
+
+    cause.stack = [
+      "Error: query failed",
+      "at query (file:///app/packages/platform/db-clickhouse/src/ch-sql-client.ts:12:9)",
+    ].join("\n")
+
+    const err = new RepositoryError({ cause, operation: "findById" })
+
+    expect(err.stack).toBe(cause.stack)
+  })
+
+  it("includes nested cause messages for wrapped database errors", () => {
+    const postgresError = new Error('null value in column "aligned_at" violates not-null constraint')
+    const drizzleError = new Error("Failed query: insert into evaluations ...\nparams: ...")
+    drizzleError.cause = postgresError
+
+    const err = new RepositoryError({ cause: drizzleError, operation: "save" })
+
+    expect(err.message).toBe(
+      'Repository save failed: Failed query: insert into evaluations ...\nparams: ... Caused by: null value in column "aligned_at" violates not-null constraint',
+    )
   })
 })
 

@@ -1,4 +1,4 @@
-import { discoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
+import { discoverIssueUseCase, refreshIssueDetailsUseCase, removeScoreFromIssueUseCase } from "@domain/issues"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -6,6 +6,7 @@ import {
   WorkflowStarter,
   type WorkflowStarterShape,
 } from "@domain/queue"
+import type { ScoreSource } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
@@ -22,7 +23,7 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, type WeaviateClient, withWeaviate } from "@platform/db-weaviate"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
 
@@ -73,6 +74,7 @@ export const createIssuesWorker = async ({
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
+        withTracing,
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
         Effect.asVoid,
       ),
@@ -85,6 +87,7 @@ export const createIssuesWorker = async ({
         ),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIGenerateLive, rdClient),
+        withTracing,
         Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         Effect.tap(() =>
           Effect.sync(() =>
@@ -93,6 +96,36 @@ export const createIssuesWorker = async ({
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Issue refresh failed for ${payload.projectId}/${payload.issueId}`, error)),
+        ),
+        Effect.asVoid,
+      ),
+    removeScore: (payload) =>
+      removeScoreFromIssueUseCase({
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        issueId: payload.issueId,
+        draftedAt: payload.draftedAt ? new Date(payload.draftedAt) : null,
+        feedback: payload.feedback,
+        source: payload.source as ScoreSource,
+        createdAt: new Date(payload.createdAt),
+      }).pipe(
+        withPostgres(IssueRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+        withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
+        withAi(AIEmbedLive, rdClient),
+        withTracing,
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            if (result.action === "removed") {
+              logger.info(`Removed score contribution from issue centroid for ${payload.projectId}/${payload.issueId}`)
+            } else if (result.action === "issue-not-found") {
+              logger.info(`Issue ${payload.issueId} not found when removing score contribution`)
+            }
+          }),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Failed to remove score from issue ${payload.projectId}/${payload.issueId}`, error),
+          ),
         ),
         Effect.asVoid,
       ),

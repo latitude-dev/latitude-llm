@@ -13,21 +13,25 @@ export interface EvaluateTraceResourceOutliersInput {
 
 export type EvaluateTraceResourceOutliersError = NotFoundError | RepositoryError
 
-export const evaluateTraceResourceOutliersUseCase = (input: EvaluateTraceResourceOutliersInput) =>
-  Effect.gen(function* () {
-    const traceRepository = yield* TraceRepository
-    const trace = yield* traceRepository.findByTraceId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-    })
-    const effectiveFilters = resolveTraceCohortFilters(input.filters, trace.startTime.getTime()).effectiveFilters
-    const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      filters: effectiveFilters,
-      excludeTraceId: input.traceId,
-    })
+export const evaluateTraceResourceOutliersUseCase = Effect.fn("spans.evaluateTraceResourceOutliers")(function* (
+  input: EvaluateTraceResourceOutliersInput,
+) {
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("traceId", input.traceId)
 
-    return evaluateTraceResourceOutliers(trace, buildTraceMetricBaselines(baselineData))
+  const traceRepository = yield* TraceRepository
+  const trace = yield* traceRepository.findByTraceId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    traceId: input.traceId,
   })
+  const effectiveFilters = resolveTraceCohortFilters(input.filters, trace.startTime.getTime()).effectiveFilters
+  const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    filters: effectiveFilters,
+    excludeTraceId: input.traceId,
+  })
+
+  return evaluateTraceResourceOutliers(trace, buildTraceMetricBaselines(baselineData))
+})

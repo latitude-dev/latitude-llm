@@ -30,7 +30,7 @@ import {
   saveDatasetCsv,
   updateDatasetRow,
 } from "../../../../../domains/datasets/datasets.functions.ts"
-import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
@@ -608,7 +608,13 @@ function DatasetRowsView({
                     if (file) handleImportFile(file)
                   }}
                 />
-                <Button variant="outline" size="sm" onClick={handleAddRow} disabled={saving}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={handleAddRow}
+                  disabled={saving}
+                >
                   <CirclePlus className="h-4 w-4" />
                   Add row
                 </Button>
@@ -617,6 +623,7 @@ function DatasetRowsView({
           </Layout.Actions>
           <Layout.List>
             <InfiniteTable<DatasetRowRecord>
+              {...listingLayoutIntrinsicScroll.infiniteTable}
               data={displayRows}
               isLoading={isLoading}
               columns={rowColumns}

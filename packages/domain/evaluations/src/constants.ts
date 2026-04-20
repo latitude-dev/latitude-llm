@@ -49,7 +49,7 @@ export const ALIGNMENT_MCC_TOLERANCE = 0.05
 export const ALIGNMENT_CURATED_DATASET_MIN_ROWS = 4
 
 /** Maximum curated example count sent into alignment in one run. */
-export const ALIGNMENT_CURATED_DATASET_MAX_ROWS = 1000
+export const ALIGNMENT_CURATED_DATASET_MAX_ROWS = 250
 
 /** Default seed used for deterministic dataset ordering and splitting. */
 export const ALIGNMENT_DEFAULT_SEED = 310700
