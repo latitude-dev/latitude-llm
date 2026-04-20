@@ -140,7 +140,7 @@ describe("MarkdownContent", () => {
   })
 
   it("falls back to plain-text preview for oversized JSON instead of JsonContent", () => {
-    const filler = '"x": "' + "a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD) + '"'
+    const filler = `"x": "${"a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD)}"`
     const oversizedJson = `{${filler}}`
 
     const markup = renderToStaticMarkup(<MarkdownContent content={oversizedJson} />)
