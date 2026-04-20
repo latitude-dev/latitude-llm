@@ -49,18 +49,20 @@ export const createOrganization = createServerFn({ method: "POST" })
 
     const outboxWriter = getOutboxWriter()
     await Effect.runPromise(
-      outboxWriter.write({
-        eventName: "OrganizationCreated",
-        aggregateType: "organization",
-        aggregateId: organization.id,
-        organizationId: OrganizationId(organization.id),
-        payload: {
-          organizationId: organization.id,
-          actorUserId: userId,
-          name: data.name,
-          slug,
-        },
-      }),
+      outboxWriter
+        .write({
+          eventName: "OrganizationCreated",
+          aggregateType: "organization",
+          aggregateId: organization.id,
+          organizationId: OrganizationId(organization.id),
+          payload: {
+            organizationId: organization.id,
+            actorUserId: userId,
+            name: data.name,
+            slug,
+          },
+        })
+        .pipe(withTracing),
     )
 
     return organization

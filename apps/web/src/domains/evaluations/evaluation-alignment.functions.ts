@@ -153,19 +153,21 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
 
     try {
       await Effect.runPromise(
-        workflowStarter.start(
-          "evaluationAlignmentWorkflow",
-          {
-            organizationId,
-            projectId,
-            issueId,
-            jobId,
-            reason: "initial-generation",
-          },
-          {
-            workflowId: evaluationAlignmentJobWorkflowId(jobId),
-          },
-        ),
+        workflowStarter
+          .start(
+            "evaluationAlignmentWorkflow",
+            {
+              organizationId,
+              projectId,
+              issueId,
+              jobId,
+              reason: "initial-generation",
+            },
+            {
+              workflowId: evaluationAlignmentJobWorkflowId(jobId),
+            },
+          )
+          .pipe(withTracing),
       )
     } catch (error) {
       await writeJobStatus({
@@ -178,19 +180,21 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
 
     const outboxWriter = getOutboxWriter()
     await Effect.runPromise(
-      outboxWriter.write({
-        eventName: "EvaluationConfigured",
-        aggregateType: "evaluation",
-        aggregateId: jobId,
-        organizationId,
-        payload: {
+      outboxWriter
+        .write({
+          eventName: "EvaluationConfigured",
+          aggregateType: "evaluation",
+          aggregateId: jobId,
           organizationId,
-          actorUserId: userId,
-          projectId: data.projectId,
-          evaluationId: jobId,
-          issueId: data.issueId,
-        },
-      }),
+          payload: {
+            organizationId,
+            actorUserId: userId,
+            projectId: data.projectId,
+            evaluationId: jobId,
+            issueId: data.issueId,
+          },
+        })
+        .pipe(withTracing),
     )
 
     return pendingStatus
@@ -250,23 +254,25 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
 
     try {
       await Effect.runPromise(
-        workflowStarter.signalWithStart(
-          "evaluationAlignmentWorkflow",
-          {
-            organizationId,
-            projectId,
-            issueId,
-            evaluationId: data.evaluationId,
-            jobId,
-            refreshLoop: true,
-            reason: "manual-realignment",
-          },
-          {
-            workflowId: evaluationAlignmentRefreshWorkflowId(data.evaluationId),
-            signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-            signalArgs: [{ reason: "manual-realignment", jobId }],
-          },
-        ),
+        workflowStarter
+          .signalWithStart(
+            "evaluationAlignmentWorkflow",
+            {
+              organizationId,
+              projectId,
+              issueId,
+              evaluationId: data.evaluationId,
+              jobId,
+              refreshLoop: true,
+              reason: "manual-realignment",
+            },
+            {
+              workflowId: evaluationAlignmentRefreshWorkflowId(data.evaluationId),
+              signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+              signalArgs: [{ reason: "manual-realignment", jobId }],
+            },
+          )
+          .pipe(withTracing),
       )
     } catch (error) {
       await writeJobStatus({

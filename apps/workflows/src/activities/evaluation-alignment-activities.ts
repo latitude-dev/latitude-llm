@@ -155,6 +155,7 @@ export const generateBaselineEvaluationDraft = (input: {
 }): Promise<GeneratedEvaluationDraft> =>
   Effect.runPromise(
     generateBaselineDraftUseCase(input).pipe(
+      withTracing,
       Effect.mapError(
         (cause) =>
           new EvaluationAlignmentActivityError({

@@ -1,5 +1,6 @@
 import { parseEnvOptional } from "@platform/env"
 import { verifySignedExportToken } from "@platform/storage-object"
+import { withTracing } from "@repo/observability"
 import { createFileRoute } from "@tanstack/react-router"
 import { Effect } from "effect"
 import { getStorageDisk } from "../../server/clients.ts"
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/downloads/export")({
 
         let key: string
         try {
-          key = await Effect.runPromise(verifySignedExportToken(token, secret))
+          key = await Effect.runPromise(verifySignedExportToken(token, secret).pipe(withTracing))
         } catch {
           return new Response("Forbidden", { status: 403 })
         }

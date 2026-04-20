@@ -45,10 +45,25 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
   })
 
 export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger: Logger }) =>
-  createMiddleware({ type: "function" }).server(async ({ next }) => {
-    return tracer.startActiveSpan("server-fn", async (span: Span) => {
+  createMiddleware({ type: "function" }).server(async (args) => {
+    const request = (args as { readonly request?: Request }).request
+    const url = request ? new URL(request.url) : undefined
+    const spanName = request && url ? `server-fn ${request.method} ${url.pathname}` : "server-fn"
+
+    return tracer.startActiveSpan(spanName, async (span: Span) => {
+      if (request && url) {
+        span.setAttributes({
+          "http.method": request.method,
+          "http.url": request.url,
+          "http.route": url.pathname,
+          "http.host": url.host,
+        })
+      }
+
       try {
-        return await next()
+        const result = await args.next()
+        span.setStatus({ code: SpanStatusCode.OK })
+        return result
       } catch (e) {
         recordSpanExceptionForDatadog(span, e)
 

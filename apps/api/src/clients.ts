@@ -6,6 +6,7 @@ import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -60,7 +61,7 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisherPromise) {
     queuePublisherPromise = (async () => {
       const config = Effect.runSync(loadBullMqConfig())
-      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }).pipe(withTracing))
     })().catch((error) => {
       queuePublisherPromise = undefined
       throw error

@@ -368,12 +368,14 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     if (effectiveCount > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
       const publisher = await getQueuePublisher()
       await Effect.runPromise(
-        publisher.publish("dataset-export", "export", {
-          datasetId: data.datasetId,
-          organizationId,
-          projectId: dataset.projectId,
-          recipientEmail: email,
-        }),
+        publisher
+          .publish("dataset-export", "export", {
+            datasetId: data.datasetId,
+            organizationId,
+            projectId: dataset.projectId,
+            recipientEmail: email,
+          })
+          .pipe(withTracing),
       )
       return { type: "enqueued" }
     }
@@ -456,7 +458,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
         organizationId: orgId,
         projectId: ProjectId(projectId),
         content,
-      }),
+      }).pipe(withTracing),
     )
 
     await Effect.runPromise(

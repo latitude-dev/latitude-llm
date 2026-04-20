@@ -3,7 +3,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { UserRepository } from "@domain/users"
 import { SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../../clients.ts"
 
@@ -55,6 +55,7 @@ export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => 
           Effect.sync(() => logger.error(`Magic link email failed for ${payload.email}`, error)),
         ),
         Effect.provide(repoLayer),
+        withTracing,
       )
     },
   })

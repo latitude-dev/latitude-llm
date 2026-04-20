@@ -101,7 +101,7 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
       const config = Effect.runSync(loadBullMqConfig())
-      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }).pipe(withTracing))
     })().catch((error) => {
       queuePublisher = undefined
       throw error
