@@ -34,5 +34,3 @@ ExportFailedEmail.PreviewProps = {
   exportName: "Project Traces",
   recipientName: "Alex",
 } satisfies ExportFailedEmailProps
-
-export default ExportFailedEmail
