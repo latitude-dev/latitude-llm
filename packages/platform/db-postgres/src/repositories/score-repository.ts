@@ -86,24 +86,27 @@ export const ScoreRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-    const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: ScoreListOptions | undefined }) => {
-      const limit = input.options?.limit ?? 50
-      const offset = input.options?.offset ?? 0
-      const draftClause = applyDraftMode(input.options)
-      const whereClause = draftClause ? and(input.baseWhere, draftClause) : input.baseWhere
+    const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: ScoreListOptions | undefined }) =>
+      sqlClient
+        .query((db, organizationId) => {
+          const limit = input.options?.limit ?? 50
+          const offset = input.options?.offset ?? 0
+          const draftClause = applyDraftMode(input.options)
+          const whereClause = draftClause
+            ? and(eq(scores.organizationId, organizationId), input.baseWhere, draftClause)
+            : and(eq(scores.organizationId, organizationId), input.baseWhere)
 
-      return sqlClient
-        .query((db) =>
-          db
+          return db
             .select()
             .from(scores)
             .where(whereClause)
             .orderBy(desc(scores.createdAt), desc(scores.id))
             .limit(limit + 1)
-            .offset(offset),
-        )
+            .offset(offset)
+        })
         .pipe(
           Effect.map((rows) => {
+            const limit = input.options?.limit ?? 50
             const hasMore = rows.length > limit
             const items = rows.slice(0, limit).map(toDomainScore)
 
@@ -111,11 +114,10 @@ export const ScoreRepositoryLive = Layer.effect(
               items,
               hasMore,
               limit,
-              offset,
+              offset: input.options?.offset ?? 0,
             }
           }),
         )
-    }
 
     const existsCanonicalEvaluationScore = (input: {
       readonly projectId: ProjectId
@@ -123,12 +125,13 @@ export const ScoreRepositoryLive = Layer.effect(
       readonly whereClause: SQL<unknown>
     }) =>
       sqlClient
-        .query((db) =>
+        .query((db, organizationId) =>
           db
             .select({ id: scores.id })
             .from(scores)
             .where(
               and(
+                eq(scores.organizationId, organizationId),
                 eq(scores.projectId, input.projectId),
                 eq(scores.source, "evaluation"),
                 eq(scores.sourceId, input.evaluationId),
@@ -143,7 +146,13 @@ export const ScoreRepositoryLive = Layer.effect(
     return {
       findById: (id: ScoreId) =>
         sqlClient
-          .query((db) => db.select().from(scores).where(eq(scores.id, id)).limit(1))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(scores)
+              .where(and(eq(scores.organizationId, organizationId), eq(scores.id, id)))
+              .limit(1),
+          )
           .pipe(
             Effect.flatMap((rows) => {
               const row = rows[0]
@@ -187,19 +196,22 @@ export const ScoreRepositoryLive = Layer.effect(
 
       assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .update(scores)
               .set({
                 issueId,
                 updatedAt,
               })
-              .where(and(eq(scores.id, scoreId), isNull(scores.issueId)))
+              .where(and(eq(scores.organizationId, organizationId), eq(scores.id, scoreId), isNull(scores.issueId)))
               .returning({ id: scores.id }),
           )
           .pipe(Effect.map((rows) => rows.length > 0)),
 
-      delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
+      delete: (id: ScoreId) =>
+        sqlClient.query((db, organizationId) =>
+          db.delete(scores).where(and(eq(scores.organizationId, organizationId), eq(scores.id, id))),
+        ),
 
       existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) =>
         existsCanonicalEvaluationScore({
@@ -327,12 +339,13 @@ export const ScoreRepositoryLive = Layer.effect(
         readonly traceId: TraceId
       }) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select()
               .from(scores)
               .where(
                 and(
+                  eq(scores.organizationId, organizationId),
                   eq(scores.projectId, projectId),
                   eq(scores.source, "annotation"),
                   eq(scores.sourceId, queueId),

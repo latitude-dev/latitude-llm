@@ -28,7 +28,13 @@ export const SettingsReaderLive = Layer.effect(
             db
               .select({ settings: projects.settings })
               .from(projects)
-              .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+              .where(
+                and(
+                  eq(projects.organizationId, sqlClient.organizationId),
+                  eq(projects.id, projectId),
+                  isNull(projects.deletedAt),
+                ),
+              )
               .limit(1),
           )
           .pipe(Effect.map((results) => results[0]?.settings ?? null)),
