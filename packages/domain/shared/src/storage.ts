@@ -194,6 +194,7 @@ type AppendStorageOptions = {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly filename: string
+  readonly fileKey?: string
   readonly content: string | Uint8Array
 }
 
@@ -208,7 +209,7 @@ export function appendToDisk(
 ): Effect.Effect<string, StorageError> {
   return Effect.tryPromise({
     try: async () => {
-      const fileKey = buildStorageKey(options)
+      const fileKey = options.fileKey ?? buildStorageKey(options)
       if (!fileKey) throw new Error(`Unknown storage namespace: ${options.namespace}`)
 
       // Read existing content if file exists

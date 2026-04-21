@@ -9,7 +9,7 @@ import {
 } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import { buildExportFilename, type ExportPayload, type ExportSelection } from "@domain/exports"
-import { IssueRepository } from "@domain/issues"
+import { embedIssueSearchQueryUseCase, IssueProjectionRepository, listIssuesUseCase } from "@domain/issues"
 import type { QueueConsumer } from "@domain/queue"
 import {
   DatasetId,
@@ -21,16 +21,31 @@ import {
   type ProjectId as ProjectIdType,
   putInDisk,
   type StorageDiskPort,
+  TraceId,
 } from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
+import { type Trace, TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
-import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, IssueRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
+import {
+  DatasetRowRepositoryLive,
+  ScoreAnalyticsRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
+import {
+  DatasetRepositoryLive,
+  EvaluationRepositoryLive,
+  IssueRepositoryLive,
+  type PostgresClient,
+  withPostgres,
+} from "@platform/db-postgres"
+import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
-import { Data, Effect, Schema } from "effect"
-import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import { Data, Effect, Layer, Schema } from "effect"
+import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
 
 const gzipAsync = promisify(gzip)
 
@@ -42,8 +57,17 @@ class ExportError extends Data.TaggedError("ExportError")<{
 const logger = createLogger("exports")
 
 const BATCH_SIZE = 1000
+const ISSUES_EXPORT_BATCH_SIZE = 100
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 const traceMetadataFromJsonStringSchema = Schema.fromJsonString(Schema.Record(Schema.String, Schema.String))
+
+const withEmptyIssueProjection = Effect.provide(
+  Layer.succeed(IssueProjectionRepository, {
+    upsert: () => Effect.void,
+    delete: () => Effect.void,
+    hybridSearch: () => Effect.succeed([]),
+  }),
+)
 
 interface ExportsWorkerDeps {
   consumer: QueueConsumer
@@ -64,8 +88,8 @@ async function compressCsv(csv: string): Promise<Uint8Array> {
 /**
  * Generates a dataset export CSV.
  */
-function generateDatasetExport(
-  organizationId: OrganizationIdType,
+function buildDatasetExportEffect(
+  _organizationId: OrganizationIdType,
   _projectId: ProjectIdType,
   datasetId: DatasetId,
   selection: ExportSelection,
@@ -137,16 +161,47 @@ function generateDatasetExport(
       filename: buildExportFilename("dataset", dataset.name),
       exportName: dataset.name,
     }
-  }).pipe(
-    withPostgres(DatasetRepositoryLive, getPostgresClient(), organizationId),
-    withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), organizationId),
-  )
+  })
 }
 
 /**
  * Generates a traces export CSV.
  */
-function generateTracesExport(organizationId: OrganizationIdType, projectId: ProjectIdType, filters?: FilterSet) {
+const traceToCsvRow = (trace: Trace): string[] => [
+  trace.traceId,
+  String(trace.spanCount),
+  String(trace.errorCount),
+  trace.startTime.toISOString(),
+  trace.endTime.toISOString(),
+  String(trace.durationNs),
+  String(trace.timeToFirstTokenNs),
+  String(trace.tokensInput),
+  String(trace.tokensOutput),
+  String(trace.tokensCacheRead),
+  String(trace.tokensCacheCreate),
+  String(trace.tokensReasoning),
+  String(trace.tokensTotal),
+  String(trace.costInputMicrocents),
+  String(trace.costOutputMicrocents),
+  String(trace.costTotalMicrocents),
+  trace.sessionId,
+  trace.userId,
+  trace.simulationId || "",
+  trace.tags.join("|"),
+  Schema.encodeSync(traceMetadataFromJsonStringSchema)(trace.metadata),
+  trace.models.join("|"),
+  trace.providers.join("|"),
+  trace.serviceNames.join("|"),
+  trace.rootSpanId,
+  trace.rootSpanName,
+]
+
+export function buildTracesExportEffect(input: {
+  readonly organizationId: OrganizationIdType
+  readonly projectId: ProjectIdType
+  readonly filters?: FilterSet
+  readonly selection?: ExportSelection
+}) {
   return Effect.gen(function* () {
     const traceRepo = yield* TraceRepository
 
@@ -182,56 +237,65 @@ function generateTracesExport(organizationId: OrganizationIdType, projectId: Pro
 
     const csvRows: string[][] = [headers]
 
-    // Stream traces using cursor pagination
-    let cursor: { sortValue: string; traceId: string } | undefined
-    while (true) {
-      const page = yield* traceRepo.listByProjectId({
-        organizationId,
-        projectId,
-        options: {
-          limit: BATCH_SIZE,
-          ...(cursor ? { cursor } : {}),
-          ...(filters ? { filters } : {}),
-          sortBy: "startTime",
-          sortDirection: "desc",
-        },
-      })
-
-      if (page.items.length === 0) break
-
-      for (const trace of page.items) {
-        csvRows.push([
-          trace.traceId,
-          String(trace.spanCount),
-          String(trace.errorCount),
-          trace.startTime.toISOString(),
-          trace.endTime.toISOString(),
-          String(trace.durationNs),
-          String(trace.timeToFirstTokenNs),
-          String(trace.tokensInput),
-          String(trace.tokensOutput),
-          String(trace.tokensCacheRead),
-          String(trace.tokensCacheCreate),
-          String(trace.tokensReasoning),
-          String(trace.tokensTotal),
-          String(trace.costInputMicrocents),
-          String(trace.costOutputMicrocents),
-          String(trace.costTotalMicrocents),
-          trace.sessionId,
-          trace.userId,
-          trace.simulationId || "",
-          trace.tags.join("|"),
-          Schema.encodeSync(traceMetadataFromJsonStringSchema)(trace.metadata),
-          trace.models.join("|"),
-          trace.providers.join("|"),
-          trace.serviceNames.join("|"),
-          trace.rootSpanId,
-          trace.rootSpanName,
-        ])
+    const appendTraces = (traces: readonly Trace[]) => {
+      for (const trace of traces) {
+        csvRows.push(traceToCsvRow(trace))
       }
+    }
 
-      if (!page.hasMore || !page.nextCursor) break
-      cursor = page.nextCursor
+    if (input.selection?.mode === "selected") {
+      const selectedTraceIds = input.selection.rowIds.map((traceId) => TraceId(traceId))
+      const traces = yield* traceRepo.listByTraceIds({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        traceIds: selectedTraceIds,
+      })
+      const tracesById = new Map(traces.map((trace) => [trace.traceId, trace] as const))
+
+      for (const traceId of selectedTraceIds) {
+        const trace = tracesById.get(traceId)
+        if (!trace) continue
+
+        if (input.filters) {
+          const matches = yield* traceRepo.matchesFiltersByTraceId({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traceId,
+            filters: input.filters,
+          })
+
+          if (!matches) continue
+        }
+
+        appendTraces([trace])
+      }
+    } else {
+      const excludedTraceIds =
+        input.selection?.mode === "allExcept"
+          ? new Set(input.selection.rowIds.map((traceId) => TraceId(traceId)))
+          : null
+
+      let cursor: { sortValue: string; traceId: string } | undefined
+      while (true) {
+        const page = yield* traceRepo.listByProjectId({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          options: {
+            limit: BATCH_SIZE,
+            ...(cursor ? { cursor } : {}),
+            ...(input.filters ? { filters: input.filters } : {}),
+            sortBy: "startTime",
+            sortDirection: "desc",
+          },
+        })
+
+        if (page.items.length === 0) break
+
+        appendTraces(excludedTraceIds ? page.items.filter((trace) => !excludedTraceIds.has(trace.traceId)) : page.items)
+
+        if (!page.hasMore || !page.nextCursor) break
+        cursor = page.nextCursor
+      }
     }
 
     // Convert to CSV string
@@ -247,7 +311,7 @@ function generateTracesExport(organizationId: OrganizationIdType, projectId: Pro
       filename: buildExportFilename("traces", "project_traces"),
       exportName: "Project Traces",
     }
-  }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), organizationId))
+  })
 }
 
 /**
@@ -265,9 +329,48 @@ function escapeCsvField(value: string): string {
 /**
  * Generates an issues export CSV.
  */
-function generateIssuesExport(organizationId: OrganizationIdType, projectId: ProjectIdType) {
+type IssuesExportInput = {
+  readonly organizationId: OrganizationIdType
+  readonly projectId: ProjectIdType
+  readonly selection?: ExportSelection
+  readonly lifecycleGroup?: "active" | "archived"
+  readonly search?: {
+    readonly query: string
+    readonly normalizedEmbedding: number[]
+  }
+  readonly timeRange?: {
+    readonly from?: Date
+    readonly to?: Date
+  }
+  readonly sort?: {
+    readonly field: "lastSeen" | "occurrences"
+    readonly direction: "asc" | "desc"
+  }
+}
+
+const toIssueTimeRange = (
+  timeRange:
+    | {
+        readonly fromIso?: string | undefined
+        readonly toIso?: string | undefined
+      }
+    | undefined,
+): IssuesExportInput["timeRange"] => {
+  if (!timeRange?.fromIso && !timeRange?.toIso) {
+    return undefined
+  }
+
+  return {
+    ...(timeRange.fromIso ? { from: new Date(timeRange.fromIso) } : {}),
+    ...(timeRange.toIso ? { to: new Date(timeRange.toIso) } : {}),
+  }
+}
+
+export function buildIssuesExportEffect(input: IssuesExportInput) {
   return Effect.gen(function* () {
-    const issueRepo = yield* IssueRepository
+    const selectionIds =
+      input.selection?.mode === "all" || input.selection === undefined ? null : new Set(input.selection.rowIds)
+    const remainingSelectedIds = input.selection?.mode === "selected" ? new Set(input.selection.rowIds) : null
 
     // V1 minimal canonical columns per plan
     const headers = [
@@ -284,18 +387,30 @@ function generateIssuesExport(organizationId: OrganizationIdType, projectId: Pro
 
     const csvRows: string[][] = [headers]
 
-    // Stream issues using offset pagination
     let offset = 0
     while (true) {
-      const page = yield* issueRepo.list({
-        projectId,
-        limit: BATCH_SIZE,
+      const page = yield* listIssuesUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        limit: ISSUES_EXPORT_BATCH_SIZE,
         offset,
+        ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
+        ...(input.search ? { search: input.search } : {}),
+        ...(input.timeRange ? { timeRange: input.timeRange } : {}),
+        ...(input.sort ? { sort: input.sort } : {}),
       })
 
       if (page.items.length === 0) break
 
       for (const issue of page.items) {
+        if (input.selection?.mode === "selected" && !selectionIds?.has(issue.id)) {
+          continue
+        }
+
+        if (input.selection?.mode === "allExcept" && selectionIds?.has(issue.id)) {
+          continue
+        }
+
         csvRows.push([
           issue.id,
           issue.uuid,
@@ -307,10 +422,13 @@ function generateIssuesExport(organizationId: OrganizationIdType, projectId: Pro
           issue.resolvedAt?.toISOString() ?? "",
           issue.ignoredAt?.toISOString() ?? "",
         ])
+
+        remainingSelectedIds?.delete(issue.id)
       }
 
+      if (remainingSelectedIds && remainingSelectedIds.size === 0) break
       if (!page.hasMore) break
-      offset += BATCH_SIZE
+      offset += page.limit
     }
 
     // Convert to CSV string
@@ -326,7 +444,94 @@ function generateIssuesExport(organizationId: OrganizationIdType, projectId: Pro
       filename: buildExportFilename("issues", "project_issues"),
       exportName: "Project Issues",
     }
-  }).pipe(withPostgres(IssueRepositoryLive, getPostgresClient(), organizationId))
+  })
+}
+
+function generateDatasetExport(
+  organizationId: OrganizationIdType,
+  projectId: ProjectIdType,
+  datasetId: DatasetId,
+  selection: ExportSelection,
+) {
+  return buildDatasetExportEffect(organizationId, projectId, datasetId, selection).pipe(
+    withPostgres(DatasetRepositoryLive, getPostgresClient(), organizationId),
+    withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), organizationId),
+  )
+}
+
+function generateTracesExport(
+  organizationId: OrganizationIdType,
+  projectId: ProjectIdType,
+  filters?: FilterSet,
+  selection?: ExportSelection,
+) {
+  return buildTracesExportEffect({
+    organizationId,
+    projectId,
+    ...(filters ? { filters } : {}),
+    ...(selection ? { selection } : {}),
+  }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), organizationId))
+}
+
+function generateIssuesExport(
+  organizationId: OrganizationIdType,
+  projectId: ProjectIdType,
+  input: {
+    readonly selection?: ExportSelection
+    readonly lifecycleGroup?: "active" | "archived"
+    readonly searchQuery?: string
+    readonly timeRange?: {
+      readonly fromIso?: string | undefined
+      readonly toIso?: string | undefined
+    }
+    readonly sort?: {
+      readonly field: "lastSeen" | "occurrences"
+      readonly direction: "asc" | "desc"
+    }
+  },
+) {
+  const timeRange = toIssueTimeRange(input.timeRange)
+  const baseEffectInput = {
+    organizationId,
+    projectId,
+    ...(input.selection ? { selection: input.selection } : {}),
+    ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
+    ...(input.sort ? { sort: input.sort } : {}),
+    ...(timeRange ? { timeRange } : {}),
+  } satisfies Omit<IssuesExportInput, "search">
+
+  const trimmedSearchQuery = input.searchQuery?.trim() || undefined
+  if (!trimmedSearchQuery) {
+    return buildIssuesExportEffect(baseEffectInput).pipe(
+      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
+      withEmptyIssueProjection,
+    )
+  }
+
+  return Effect.gen(function* () {
+    const search = yield* embedIssueSearchQueryUseCase({
+      organizationId,
+      projectId,
+      query: trimmedSearchQuery,
+    }).pipe(withAi(AIEmbedLive, getRedisClient()))
+    const weaviateClient = yield* Effect.tryPromise({
+      try: () => getWeaviateClient(),
+      catch: (cause) => new ExportError({ cause, kind: "issues" }),
+    })
+
+    return yield* buildIssuesExportEffect({
+      ...baseEffectInput,
+      search: {
+        query: search.query,
+        normalizedEmbedding: search.normalizedEmbedding,
+      },
+    }).pipe(
+      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
+      withWeaviate(IssueProjectionRepositoryLive, weaviateClient, organizationId),
+    )
+  })
 }
 
 /**
@@ -344,10 +549,19 @@ function dispatchExport(payload: ExportPayload) {
     case "traces": {
       // Cast filters to FilterSet - the queue payload is validated at the boundary
       const filters = payload.filters as FilterSet | undefined
-      return generateTracesExport(organizationId, projectId, filters)
+      const selection = payload.selection as ExportSelection | undefined
+      return generateTracesExport(organizationId, projectId, filters, selection)
     }
-    case "issues":
-      return generateIssuesExport(organizationId, projectId)
+    case "issues": {
+      const selection = payload.selection as ExportSelection | undefined
+      return generateIssuesExport(organizationId, projectId, {
+        ...(selection ? { selection } : {}),
+        ...(payload.lifecycleGroup ? { lifecycleGroup: payload.lifecycleGroup } : {}),
+        ...(payload.searchQuery ? { searchQuery: payload.searchQuery } : {}),
+        ...(payload.timeRange ? { timeRange: payload.timeRange } : {}),
+        ...(payload.sort ? { sort: payload.sort } : {}),
+      })
+    }
     default:
       return Effect.fail(new ExportError({ cause: new Error(`Unknown export kind`) }))
   }
