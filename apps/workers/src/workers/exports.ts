@@ -29,7 +29,7 @@ import { DatasetRepositoryLive, IssueRepositoryLive, type PostgresClient, withPo
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
-import { Data, Effect } from "effect"
+import { Data, Effect, Schema } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const gzipAsync = promisify(gzip)
@@ -43,6 +43,7 @@ const logger = createLogger("exports")
 
 const BATCH_SIZE = 1000
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
+const traceMetadataFromJsonStringSchema = Schema.fromJsonString(Schema.Record(Schema.String, Schema.String))
 
 interface ExportsWorkerDeps {
   consumer: QueueConsumer
@@ -220,7 +221,7 @@ function generateTracesExport(organizationId: OrganizationIdType, projectId: Pro
           trace.userId,
           trace.simulationId || "",
           trace.tags.join("|"),
-          JSON.stringify(trace.metadata),
+          Schema.encodeSync(traceMetadataFromJsonStringSchema)(trace.metadata),
           trace.models.join("|"),
           trace.providers.join("|"),
           trace.serviceNames.join("|"),
