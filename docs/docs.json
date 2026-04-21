@@ -128,11 +128,7 @@
       },
       {
         "group": "Simulations",
-        "pages": [
-          "v2/simulations/overview",
-          "v2/simulations/cli",
-          "v2/simulations/reporting"
-        ]
+        "pages": ["v2/simulations/overview"]
       }
     ]
   },

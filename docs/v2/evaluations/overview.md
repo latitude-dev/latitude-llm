@@ -74,7 +74,7 @@ if (parsed.valid && result.on_topic) {
 return Failed(result.feedback)
 ```
 
-The script never talks directly to the outside world. All external capabilities are exposed as host-controlled functions. The same scripts run both in backend monitoring and in the [simulation CLI](../simulations/cli).
+The script never talks directly to the outside world. All external capabilities are exposed as host-controlled functions. The same scripts run both in backend monitoring and in [simulations](../simulations/overview).
 
 ## Creating Evaluations
 
