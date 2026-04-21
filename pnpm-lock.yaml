@@ -783,6 +783,9 @@ importers:
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
+      obscenity:
+        specifier: ^0.4.3
+        version: 0.4.6
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -9931,6 +9934,10 @@ packages:
   object-hash@3.0.0:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
+
+  obscenity@0.4.6:
+    resolution: {integrity: sha512-pHk7kNN7j3L3zGhhGnwxjvXIGsPpLrcZl2r58fqWh/V/rH6b/dafscj2sMmAY+A/9/wPsocLmimgGk2DKeKsFQ==}
+    engines: {node: '>=18.0.0'}
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
@@ -20893,6 +20900,8 @@ snapshots:
   object-assign@4.1.1: {}
 
   object-hash@3.0.0: {}
+
+  obscenity@0.4.6: {}
 
   obug@2.1.1: {}
 

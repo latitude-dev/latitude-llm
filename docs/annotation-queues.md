@@ -97,16 +97,32 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
    - handles idempotency (checks for existing drafts)
    - returns `{ queueId, draftAnnotationId, wasCreated }`
 
-**Current matcher coverage**:
+**Queue-Specific Strategy Architecture**:
 
-- **Matcher entrypoints present but currently noop**:
-  - `jailbreaking`
-  - `refusal`
-  - `frustration`
-  - `forgetting`
-  - `laziness`
-  - `nsfw`
-  - `trashing`
+The flagger uses an internal per-queue strategy registry. Each queue strategy implements a hybrid detection pipeline:
+
+1. **Deterministic Phase** (optional):
+   - `hasRequiredContext(trace)` - checks if trace has necessary data
+   - `detectDeterministically(trace)` - returns `matched`, `no-match`, or `ambiguous`
+   - Deterministic matches queue immediately without LLM call (reduces tokens)
+   - Deterministic clean traces skip immediately without LLM call
+
+2. **LLM Fallback Phase** (when deterministic is ambiguous or unavailable):
+   - `buildSystemPrompt(trace)` - queue-specific system prompt
+   - `buildPrompt(trace)` - queue-specific user prompt with bounded context
+   - No shared trace summary; each queue extracts only what it needs
+
+**Strategy Registry**:
+
+| Queue | Detection Type | Context | Key Signals |
+|-------|---------------|---------|-------------|
+| `frustration` | LLM only | User messages only | Frustration wording, disappointment |
+| `nsfw` | Hybrid (deterministic + LLM) | Text-only excerpts | Profanity, sexual content, slurs, harassment |
+| `refusal` | LLM only | Top 3 conversation stages | Refusal language, deflection patterns |
+| `laziness` | LLM only | Top 3 stages + work signals | Punt patterns, shallow answers, tool usage |
+| `jailbreaking` | Hybrid (deterministic + LLM) | Suspicious snippets | Direct injection, indirect injection patterns |
+| `forgetting` | LLM only (default) | Conversation excerpt | Memory loss patterns (baseline implementation) |
+| `trashing` | LLM only (default) | Conversation excerpt | Tool cycling patterns (baseline implementation) |
 
 Deterministic signals for `tool-call-errors`, `output-schema-validation`, and `empty-response` do not flow through this flagger workflow. They run inline in the trace-end runtime and publish annotation scores directly — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
@@ -243,8 +259,8 @@ Every project starts with these system-created manual queues:
 
 ### NSFW
 
-- description: sexual or otherwise not-safe-for-work content appears
-- instructions: use this queue when the trace contains sexual content, explicit erotic material, or other clearly NSFW content that should be reviewed. Do not use it for benign anatomy or health discussion, mild romance, or safety-oriented policy discussion that is not itself NSFW.
+- description: workplace-inappropriate or toxic content appears
+- instructions: use this queue when the trace contains explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language. Do not use it for benign anatomy or health discussion, mild romance, neutral policy/safety discussion about unsafe content, or non-abusive colloquial language without clear toxicity.
 
 ### Trashing
 

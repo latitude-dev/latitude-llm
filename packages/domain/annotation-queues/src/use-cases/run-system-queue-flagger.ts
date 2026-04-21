@@ -5,20 +5,13 @@ import {
   type AICredentialError,
   AIError,
   buildProjectScopedAiMetadata,
-  formatGenAIConversation,
-  formatGenAIMessage,
 } from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import Mustache from "mustache"
 import { z } from "zod"
-import {
-  SYSTEM_QUEUE_DEFINITIONS,
-  SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW,
-  SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
-  SYSTEM_QUEUE_FLAGGER_MODEL,
-} from "../constants.ts"
+import { SYSTEM_QUEUE_FLAGGER_MAX_TOKENS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
+import { type DetectionResult, getQueueStrategy, hasQueueStrategy } from "../flagger-strategies/index.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -33,46 +26,9 @@ export interface RunSystemQueueFlaggerResult {
 
 export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
-type LlmSystemQueueSlug = "jailbreaking" | "refusal" | "frustration" | "forgetting" | "laziness" | "nsfw" | "trashing"
-
-const llmSystemQueueSlugs = [
-  "jailbreaking",
-  "refusal",
-  "frustration",
-  "forgetting",
-  "laziness",
-  "nsfw",
-  "trashing",
-] as const satisfies readonly LlmSystemQueueSlug[]
-
-const llmSystemQueueSlugSet = new Set<string>(llmSystemQueueSlugs)
-
 const systemQueueFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
 })
-
-const FLAGGER_SYSTEM_PROMPT_TEMPLATE = `
-You are a triage flagger for LLM telemetry traces. Decide whether the trace belongs in a single annotation queue for human review.
-
-Queue name: {{queueName}}
-Queue description: {{queueDescription}}
-
-Queue instructions:
-{{queueInstructions}}
-
-Rules:
-- Return matched=true only when the trace clearly belongs in this queue.
-- If uncertain, return matched=false.
-- Base your decision only on the provided trace summary.
-- Return no explanation outside the structured output.
-
-Output format:
-Return a JSON object with exactly one boolean field named "matched". No other fields, no prose, no markdown, no code fences.
-
-Examples of valid responses:
-{"matched": true}
-{"matched": false}
-`.trim()
 
 const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
   Effect.gen(function* () {
@@ -85,122 +41,6 @@ const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
     })
   })
 
-const isLlmQueueSlug = (queueSlug: string): queueSlug is LlmSystemQueueSlug => {
-  return llmSystemQueueSlugSet.has(queueSlug)
-}
-
-const getSystemQueueDefinition = (queueSlug: LlmSystemQueueSlug) => {
-  return SYSTEM_QUEUE_DEFINITIONS.find((definition) => definition.slug === queueSlug)
-}
-
-const buildFlaggerSystemPrompt = (queueSlug: LlmSystemQueueSlug): string => {
-  const queueDefinition = getSystemQueueDefinition(queueSlug)
-
-  return Mustache.render(FLAGGER_SYSTEM_PROMPT_TEMPLATE, {
-    queueName: queueDefinition?.name ?? queueSlug,
-    queueDescription: queueDefinition?.description ?? "System queue for trace triage",
-    queueInstructions:
-      queueDefinition?.instructions ?? "Review the trace summary and decide whether it belongs in this queue.",
-  })
-}
-
-const summarizeToolCalls = (trace: TraceDetail) => {
-  const sequence: string[] = []
-  const counts = new Map<string, number>()
-  let maxConsecutiveSameTool = 0
-  let maxToolCallsWithoutUser = 0
-  let currentToolStreak = 0
-  let currentWithoutUser = 0
-  let previousToolName: string | null = null
-
-  for (const message of trace.allMessages) {
-    if (message.role === "user") {
-      currentWithoutUser = 0
-    }
-
-    for (const part of message.parts) {
-      if (part.type !== "tool_call") continue
-
-      const toolName = typeof part.name === "string" && part.name.trim() !== "" ? part.name.trim() : "<unknown>"
-      sequence.push(toolName)
-      counts.set(toolName, (counts.get(toolName) ?? 0) + 1)
-
-      currentWithoutUser += 1
-      maxToolCallsWithoutUser = Math.max(maxToolCallsWithoutUser, currentWithoutUser)
-
-      if (previousToolName === toolName) {
-        currentToolStreak += 1
-      } else {
-        currentToolStreak = 1
-        previousToolName = toolName
-      }
-
-      maxConsecutiveSameTool = Math.max(maxConsecutiveSameTool, currentToolStreak)
-    }
-  }
-
-  const repeatedToolCalls = [...counts.entries()]
-    .filter(([, count]) => count > 1)
-    .sort((left, right) => right[1] - left[1])
-    .map(([toolName, callCount]) => `${toolName}:${callCount}`)
-
-  const uniqueToolCallRate = sequence.length === 0 ? 1 : Number((counts.size / sequence.length).toFixed(2))
-
-  return {
-    totalCalls: sequence.length,
-    toolsUsed: [...counts.keys()],
-    repeatedToolCalls,
-    uniqueToolCallRate,
-    maxConsecutiveSameTool,
-    maxToolCallsWithoutUser,
-  }
-}
-
-const formatSystemPromptExcerpt = (trace: TraceDetail): string => {
-  if (trace.systemInstructions.length === 0) {
-    return "<no system instructions>"
-  }
-
-  const formatted = formatGenAIMessage({
-    role: "system",
-    parts: trace.systemInstructions,
-  })
-
-  const excerpt = formatted.trim()
-  return excerpt === "" ? "<no system instructions>" : excerpt
-}
-
-const buildFlaggerPrompt = (trace: TraceDetail): string => {
-  const conversationExcerpt =
-    trace.allMessages.length === 0
-      ? "<no conversation messages available>"
-      : formatGenAIConversation(trace.allMessages.slice(-SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW))
-
-  const toolSummary = summarizeToolCalls(trace)
-
-  return [
-    `SYSTEM PROMPT EXCERPT:\n${formatSystemPromptExcerpt(trace)}`,
-    `CONVERSATION EXCERPT (last ${SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW} messages):\n${conversationExcerpt.trim()}`,
-    [
-      "TRACE METADATA:",
-      `turn_count=${trace.allMessages.length}`,
-      `span_count=${trace.spanCount}`,
-      `models_used=${trace.models.length > 0 ? trace.models.join(", ") : "<none>"}`,
-      `providers=${trace.providers.length > 0 ? trace.providers.join(", ") : "<none>"}`,
-      `total_tokens=${trace.tokensTotal}`,
-      `total_cost_microcents=${trace.costTotalMicrocents}`,
-      `total_duration_ns=${trace.durationNs}`,
-      `error_count=${trace.errorCount}`,
-      `tool_calls_total=${toolSummary.totalCalls}`,
-      `tool_calls_unique_rate=${toolSummary.uniqueToolCallRate}`,
-      `max_consecutive_same_tool=${toolSummary.maxConsecutiveSameTool}`,
-      `max_tool_calls_without_user=${toolSummary.maxToolCallsWithoutUser}`,
-      `repeated_tool_calls=${toolSummary.repeatedToolCalls.length > 0 ? toolSummary.repeatedToolCalls.join(", ") : "<none>"}`,
-      `tools_used=${toolSummary.toolsUsed.length > 0 ? toolSummary.toolsUsed.join(", ") : "<none>"}`,
-    ].join("\n"),
-  ].join("\n\n")
-}
-
 // The Vercel AI SDK raises a `NoObjectGeneratedError` (name `AI_NoObjectGeneratedError`)
 // when the model returns output that does not match the requested schema. The flagger
 // treats this as a "no match" signal instead of propagating the failure — the model
@@ -212,18 +52,23 @@ const isSchemaMismatchCause = (cause: unknown): boolean => {
   return typeof cause.message === "string" && cause.message.includes("response did not match schema")
 }
 
-const runLlmFlagger = (
-  input: RunSystemQueueFlaggerInput & { readonly queueSlug: LlmSystemQueueSlug },
-  trace: TraceDetail,
-) =>
+/**
+ * Run LLM flagger with the given strategy.
+ */
+const runLlmFlagger = (input: RunSystemQueueFlaggerInput, trace: TraceDetail) =>
   Effect.gen(function* () {
     const ai = yield* AI
+    const strategy = getQueueStrategy(input.queueSlug)
+
+    if (!strategy) {
+      return { matched: false }
+    }
 
     const result = yield* ai.generate({
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
-      system: buildFlaggerSystemPrompt(input.queueSlug),
-      prompt: buildFlaggerPrompt(trace),
+      system: strategy.buildSystemPrompt(trace),
+      prompt: strategy.buildPrompt(trace),
       schema: systemQueueFlaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemClassify,
@@ -238,6 +83,19 @@ const runLlmFlagger = (
     return result.object
   })
 
+/**
+ * Run deterministic detection phase for a queue strategy.
+ * Returns the detection result or null if the strategy doesn't support deterministic detection.
+ */
+function runDeterministicDetection(queueSlug: string, trace: TraceDetail): DetectionResult | null {
+  const strategy = getQueueStrategy(queueSlug)
+  if (!strategy?.detectDeterministically) {
+    return null
+  }
+
+  return strategy.detectDeterministically(trace)
+}
+
 export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
   input: RunSystemQueueFlaggerInput,
 ) {
@@ -246,17 +104,42 @@ export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSyste
   yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
   yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
-  if (!isLlmQueueSlug(input.queueSlug)) {
+  // Check if this is a known queue slug
+  if (!hasQueueStrategy(input.queueSlug)) {
+    // Unknown slug - short circuit with no match
     return { matched: false }
   }
 
   const trace = yield* loadTraceDetail(input)
+  const strategy = getQueueStrategy(input.queueSlug)
 
-  if (trace.allMessages.length === 0) {
+  if (!strategy) {
     return { matched: false }
   }
 
-  const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace).pipe(
+  // Check if required context is present
+  if (!strategy.hasRequiredContext(trace)) {
+    return { matched: false }
+  }
+
+  // Phase 1: Try deterministic detection if available
+  const deterministicResult = runDeterministicDetection(input.queueSlug, trace)
+
+  if (deterministicResult) {
+    switch (deterministicResult.kind) {
+      case "matched":
+        // Deterministic match - queue it immediately without LLM
+        return { matched: true }
+      case "no-match":
+        // Deterministic clean - skip it immediately without LLM
+        return { matched: false }
+      case "ambiguous":
+      // Ambiguous - fall through to LLM
+    }
+  }
+
+  // Phase 2: LLM fallback for ambiguous cases or strategies without deterministic detection
+  const decisions = yield* runLlmFlagger(input, trace).pipe(
     Effect.catchIf(
       (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
       () =>
