@@ -1,6 +1,7 @@
 import type {
   EvaluationAlignmentExample,
   EvaluationAlignmentNegativePriority,
+  EvaluationAlignmentPositivePriority,
   ListEvaluationAlignmentExamplesInput,
   ListNegativeEvaluationAlignmentExamplesInput,
 } from "@domain/evaluations"
@@ -37,6 +38,7 @@ const toExample = (input: {
   readonly rows: readonly AlignmentScoreRow[]
   readonly evidenceRows: readonly AlignmentScoreRow[]
   readonly label: "positive" | "negative"
+  readonly positivePriority: EvaluationAlignmentPositivePriority | null
   readonly negativePriority: EvaluationAlignmentNegativePriority | null
 }): EvaluationAlignmentExample => {
   const rows = sortRows(input.rows)
@@ -55,6 +57,7 @@ const toExample = (input: {
     sessionId: getExampleSessionId(rows),
     scoreIds: evidenceRows.map((row) => row.id),
     label: input.label,
+    positivePriority: input.positivePriority,
     negativePriority: input.negativePriority,
     annotationFeedback,
   })
@@ -86,6 +89,8 @@ const isPositiveGroup = (rows: readonly AlignmentScoreRow[], issueId: IssueId): 
   rows.some((row) => row.source === "annotation" && row.issueId === issueId && row.passed === false)
 
 const hasFailedScore = (rows: readonly AlignmentScoreRow[]): boolean => rows.some((row) => row.passed === false)
+
+const hasPassedScore = (rows: readonly AlignmentScoreRow[]): boolean => rows.some((row) => row.passed === true)
 
 const hasPassedAnnotation = (rows: readonly AlignmentScoreRow[]): boolean =>
   rows.some((row) => row.source === "annotation" && row.passed === true)
@@ -125,21 +130,38 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
     return {
       listPositiveExamples: (input: ListEvaluationAlignmentExamplesInput) =>
         loadProjectRows(input).pipe(
-          Effect.map((rows) =>
-            groupRowsByTrace(rows)
-              .filter((group) => isPositiveGroup(group, input.issueId))
-              .map((group) =>
+          Effect.map((rows) => {
+            const candidates = groupRowsByTrace(rows).filter((group) => isPositiveGroup(group, input.issueId))
+
+            const failedAnnotationNoPasses = candidates.filter((group) => !hasPassedScore(group))
+            const failedAnnotationWithPasses = candidates.filter((group) => hasPassedScore(group))
+
+            const buildEvidence = (group: readonly AlignmentScoreRow[]) =>
+              group.filter(
+                (row) => row.source === "annotation" && row.issueId === input.issueId && row.passed === false,
+              )
+
+            return [
+              ...failedAnnotationNoPasses.map((group) =>
                 toExample({
                   rows: group,
-                  evidenceRows: group.filter(
-                    (row) => row.source === "annotation" && row.issueId === input.issueId && row.passed === false,
-                  ),
+                  evidenceRows: buildEvidence(group),
                   label: "positive",
+                  positivePriority: "failed-annotation-no-passes",
                   negativePriority: null,
                 }),
-              )
-              .slice(0, input.limit ?? DEFAULT_ALIGNMENT_EXAMPLE_LIMIT),
-          ),
+              ),
+              ...failedAnnotationWithPasses.map((group) =>
+                toExample({
+                  rows: group,
+                  evidenceRows: buildEvidence(group),
+                  label: "positive",
+                  positivePriority: "failed-annotation-with-passes",
+                  negativePriority: null,
+                }),
+              ),
+            ].slice(0, input.limit ?? DEFAULT_ALIGNMENT_EXAMPLE_LIMIT)
+          }),
         ),
 
       listNegativeExamples: (input: ListNegativeEvaluationAlignmentExamplesInput) =>
@@ -151,45 +173,33 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
               return traceId !== undefined && traceId !== null && !excludeTraceIds.has(traceId)
             })
 
-            const remaining = groupedRows.filter(
-              (group) => !isPositiveGroup(group, input.issueId) && !hasTargetIssueScore(group, input.issueId),
+            const candidates = groupedRows.filter(
+              (group) => !hasTargetIssueScore(group, input.issueId) && hasPassedAnnotation(group),
             )
 
-            const passedAnnotationNoFailures = remaining.filter(
-              (group) => hasPassedAnnotation(group) && !hasFailedScore(group),
-            )
+            const passedAnnotationNoFailures = candidates.filter((group) => !hasFailedScore(group))
+            const passedAnnotationUnrelatedFailures = candidates.filter((group) => hasFailedScore(group))
 
-            const noFailedScores = remaining.filter(
-              (group) => !hasFailedScore(group) && !passedAnnotationNoFailures.includes(group),
-            )
-
-            const unrelatedIssueScores = remaining.filter(
-              (group) => !passedAnnotationNoFailures.includes(group) && !noFailedScores.includes(group),
-            )
+            const buildEvidence = (group: readonly AlignmentScoreRow[]) =>
+              group.filter((row) => row.source === "annotation" && row.passed === true)
 
             return [
               ...passedAnnotationNoFailures.map((group) =>
                 toExample({
                   rows: group,
-                  evidenceRows: group.filter((row) => row.source === "annotation" && row.passed === true),
+                  evidenceRows: buildEvidence(group),
                   label: "negative",
+                  positivePriority: null,
                   negativePriority: "passed-annotation-no-failures",
                 }),
               ),
-              ...noFailedScores.map((group) =>
+              ...passedAnnotationUnrelatedFailures.map((group) =>
                 toExample({
                   rows: group,
-                  evidenceRows: group,
+                  evidenceRows: buildEvidence(group),
                   label: "negative",
-                  negativePriority: "no-failed-scores",
-                }),
-              ),
-              ...unrelatedIssueScores.map((group) =>
-                toExample({
-                  rows: group,
-                  evidenceRows: group,
-                  label: "negative",
-                  negativePriority: "unrelated-issue-scores",
+                  positivePriority: null,
+                  negativePriority: "passed-annotation-unrelated-failures",
                 }),
               ),
             ].slice(0, input.limit ?? DEFAULT_ALIGNMENT_EXAMPLE_LIMIT)
