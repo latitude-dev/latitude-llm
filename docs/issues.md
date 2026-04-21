@@ -294,7 +294,7 @@ Issue-linked evaluation creation is explicit:
 - issues may have several linked evaluations
 - the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
 - each trigger starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id; the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal directly until the workflow terminates and the resulting evaluation appears via normal data-fetching
-- once created, automatic debounced realignment continues as new annotations arrive
+- once created, automatic debounced realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToIssue`, which the `domain-events` dispatcher routes to `issues:refresh`, which in turn publishes `evaluations:automaticRefreshAlignment` (1h debounce, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (8h debounce) when the incremental MCC drop exceeds tolerance
 
 Once an issue-linked evaluation exists:
 

@@ -621,6 +621,9 @@ importers:
       '@domain/optimizations':
         specifier: workspace:*
         version: link:../../packages/domain/optimizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../../packages/domain/queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../../packages/domain/scores
@@ -657,6 +660,9 @@ importers:
       '@platform/op-gepa':
         specifier: workspace:*
         version: link:../../packages/platform/op-gepa
+      '@platform/queue-bullmq':
+        specifier: workspace:*
+        version: link:../../packages/platform/queue-bullmq
       '@platform/workflows-temporal':
         specifier: workspace:*
         version: link:../../packages/platform/workflows-temporal

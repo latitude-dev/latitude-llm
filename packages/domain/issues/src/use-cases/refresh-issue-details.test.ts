@@ -1,6 +1,7 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
+  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
   defaultEvaluationTrigger,
   type Evaluation,
   EvaluationRepository,
@@ -222,7 +223,7 @@ describe("refreshIssueDetailsUseCase", () => {
       expect.arrayContaining([
         {
           queue: "evaluations",
-          task: "align",
+          task: "automaticRefreshAlignment",
           payload: {
             organizationId,
             projectId,
@@ -230,12 +231,13 @@ describe("refreshIssueDetailsUseCase", () => {
             evaluationId: "eeeeeeeeeeeeeeeeeeeeeeee",
           },
           options: {
-            dedupeKey: "evaluations:align:eeeeeeeeeeeeeeeeeeeeeeee",
+            dedupeKey: "evaluations:refreshAlignment:eeeeeeeeeeeeeeeeeeeeeeee",
+            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
           },
         },
         {
           queue: "evaluations",
-          task: "align",
+          task: "automaticRefreshAlignment",
           payload: {
             organizationId,
             projectId,
@@ -243,7 +245,8 @@ describe("refreshIssueDetailsUseCase", () => {
             evaluationId: "ffffffffffffffffffffffff",
           },
           options: {
-            dedupeKey: "evaluations:align:ffffffffffffffffffffffff",
+            dedupeKey: "evaluations:refreshAlignment:ffffffffffffffffffffffff",
+            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
           },
         },
       ]),
@@ -312,7 +315,7 @@ describe("refreshIssueDetailsUseCase", () => {
     expect(published).toEqual([
       {
         queue: "evaluations",
-        task: "align",
+        task: "automaticRefreshAlignment",
         payload: {
           organizationId,
           projectId,
@@ -320,7 +323,8 @@ describe("refreshIssueDetailsUseCase", () => {
           evaluationId: "gggggggggggggggggggggggg",
         },
         options: {
-          dedupeKey: "evaluations:align:gggggggggggggggggggggggg",
+          dedupeKey: "evaluations:refreshAlignment:gggggggggggggggggggggggg",
+          debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
         },
       },
     ])
@@ -379,5 +383,79 @@ describe("refreshIssueDetailsUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expect(store.size).toBe(0)
     expect(published).toEqual([])
+  })
+
+  it("does not enqueue refresh-alignment tasks for archived or deleted linked evaluations", async () => {
+    const issue = makeIssue({
+      name: "Stable issue title",
+      description: "Stable issue description",
+    })
+    const { layer: aiLayer } = createFakeAI({
+      generate: createGenerateIssueDetails("Stable issue title", "Stable issue description"),
+    })
+    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      listByIssueId: () =>
+        Effect.succeed({
+          items: [makeScore("The assistant leaks access tokens in tool output.")],
+          hasMore: false,
+          limit: 25,
+          offset: 0,
+        }),
+    })
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const archivedEvaluation = {
+      ...makeEvaluation("aaaaaaaaaaaaaaaaaaaaaaaa", issue.id),
+      archivedAt: new Date("2026-04-10T00:00:00.000Z"),
+    } as Evaluation
+    const deletedEvaluation = {
+      ...makeEvaluation("dddddddddddddddddddddddd", issue.id),
+      deletedAt: new Date("2026-04-10T00:00:00.000Z"),
+    } as Evaluation
+    const activeEvaluation = makeEvaluation("bbbbbbbbbbbbbbbbbbbbbbbb", issue.id)
+
+    await Effect.runPromise(
+      refreshIssueDetailsUseCase({
+        organizationId,
+        projectId,
+        issueId: issue.id,
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() =>
+            Effect.succeed({
+              items: [archivedEvaluation, deletedEvaluation, activeEvaluation],
+              hasMore: false,
+              limit: 100,
+              offset: 0,
+            }),
+          ),
+        ),
+        Effect.provideService(QueuePublisher, publisher),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+    expect(published[0]).toEqual({
+      queue: "evaluations",
+      task: "automaticRefreshAlignment",
+      payload: {
+        organizationId,
+        projectId,
+        issueId: issue.id,
+        evaluationId: "bbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+      options: {
+        dedupeKey: "evaluations:refreshAlignment:bbbbbbbbbbbbbbbbbbbbbbbb",
+        debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+      },
+    })
   })
 })

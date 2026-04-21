@@ -1,4 +1,4 @@
-import { EvaluationRepository } from "@domain/evaluations"
+import { ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import { IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
@@ -36,16 +36,21 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
     const evaluations = yield* evaluationRepository.listByIssueId({
       projectId: ProjectId(input.projectId),
       issueId: IssueId(input.issueId),
+      options: { lifecycle: "active" },
     })
 
-    // The refresh-loop workflow owns the real 1h/8h cadence; this fan-out only
-    // needs to stay idempotent per linked evaluation.
+    // Publish the debounced 1h metric-refresh task per active linked evaluation.
+    // BullMQ owns the timing via `dedupeKey` + `debounceMs`; the consumer
+    // starts `refreshEvaluationAlignmentWorkflow` when the debounce window
+    // elapses. If the incremental evaluator escalates to a full re-optimization
+    // the workflow itself publishes `evaluations:automaticOptimization` with
+    // the 8h debounce — this use case never schedules optimization directly.
     yield* Effect.forEach(
-      evaluations.items,
+      evaluations.items.filter(isActiveEvaluation),
       (evaluation) =>
         queuePublisher.publish(
           "evaluations",
-          "align",
+          "automaticRefreshAlignment",
           {
             organizationId: input.organizationId,
             projectId: input.projectId,
@@ -53,7 +58,8 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
             evaluationId: evaluation.id,
           },
           {
-            dedupeKey: `evaluations:align:${evaluation.id}`,
+            dedupeKey: `evaluations:refreshAlignment:${evaluation.id}`,
+            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
           },
         ),
       { concurrency: "unbounded" },

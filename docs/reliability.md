@@ -167,8 +167,8 @@ Rules:
 Initial reliability async contracts:
 
 - domain events: `SpanIngested`, `ScoreCreated`, `ScoreAssignedToIssue`
-- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`
-- workflows: `issue-discovery`, `evaluation-alignment`, `annotation-publication`, `system-queue-flagger`
+- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`, `evaluations:automaticRefreshAlignment`, `evaluations:automaticOptimization`
+- workflows: `issue-discovery`, `evaluation-alignment`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -251,7 +251,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - GEPA is the first optimizer, but the optimizer interface must stay replaceable
 - the optimizer objective is the scalar trajectory score derived from whether `predictedPositive` equals `expectedPositive`
 - only the confusion matrix is persisted; MCC, accuracy, F1, and other metrics are derived from it
-- unchanged scripts can refresh alignment incrementally before a full re-optimization run, and debounced/manual refresh work runs through the `evaluation-alignment` workflow
+- unchanged scripts can refresh alignment incrementally before a full re-optimization run; annotation-driven automatic refresh flows through the debounced `evaluations:automaticRefreshAlignment` queue task (1h) into `refresh-evaluation-alignment`, which on a `full-reoptimization` outcome publishes `evaluations:automaticOptimization` (8h) to start `optimize-evaluation`; manual refresh still runs through the `evaluation-alignment` workflow until it is migrated onto `optimize-evaluation` in a follow-up change
 - v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, Node workers remain the primary runtime, and Python can remain just the search engine behind a stdio JSON-RPC boundary packaged into the workers image
 
 ### Simulations

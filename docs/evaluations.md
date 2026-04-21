@@ -111,7 +111,7 @@ Rules:
 - workers and workflow activities re-fetch current evaluation/example state before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream tasks or starts workflows and never runs synchronous business logic inline
 - user-triggered issue generation starts the same aligner pipeline through the `evaluation-alignment` workflow rather than running alignment in the request itself
-- debounced/manual alignment refresh uses workflow timers inside `evaluation-alignment`, not implicit BullMQ delayed/repeat jobs or persisted due-work scans
+- annotation-driven automatic realignment flows through two debounced BullMQ tasks — `evaluations:automaticRefreshAlignment` (1h) starts `refresh-evaluation-alignment`, and on an incremental MCC drop that workflow publishes `evaluations:automaticOptimization` (8h) which starts `optimize-evaluation`; workflows never sleep, the queue owns both debounce windows
 
 User-triggered background generation contract:
 
@@ -157,7 +157,7 @@ Alignment rules from the proposal:
 - manual realignment is available and rate-limited
 - unchanged scripts may refresh alignment incrementally instead of fully re-optimizing
 - when the script hash is unchanged, new examples are evaluated and added into the existing confusion-matrix counters
-- debounced and manual background refreshes should reuse the `evaluation-alignment` workflow path
+- debounced automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-debounced `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-debounced `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh reuses the `evaluation-alignment` workflow path until it is migrated onto `optimize-evaluation` in a follow-up change
 
 These cadence and tuning values, including the default sampling percentage for newly created issue-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.
 

@@ -152,6 +152,10 @@ export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evalu
 export { evaluateIncrementalDraftUseCase } from "./use-cases/alignment/evaluate-incremental-draft.ts"
 export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-baseline-draft.ts"
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
+export {
+  type LoadAlignmentStateOrInactiveResult,
+  loadAlignmentStateOrInactiveUseCase,
+} from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
   buildLiveTraceEndEvaluationSelectionKey,

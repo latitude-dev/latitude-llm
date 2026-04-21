@@ -1,1 +1,5 @@
-export { createFakeQueuePublisher, type PublishedMessage } from "./fake-queue-publisher.ts"
+export {
+  createFakeQueuePublisher,
+  type FakeQueuePublisherHandle,
+  type PublishedMessage,
+} from "./fake-queue-publisher.ts"
