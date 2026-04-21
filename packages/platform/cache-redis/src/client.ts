@@ -1,6 +1,52 @@
 import { Cluster, Redis, type RedisOptions } from "ioredis"
 import type { RedisConnection } from "./connection.ts"
 
+type ReadyCapableRedisClient = Redis | Cluster
+
+export const waitForRedisClientReady = async <T extends ReadyCapableRedisClient>(client: T): Promise<T> => {
+  if (client.status === "ready") {
+    return client
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const cleanup = () => {
+      client.off("ready", onReady)
+      client.off("error", onError)
+      client.off("close", onClose)
+      client.off("end", onClose)
+    }
+
+    const onReady = () => {
+      cleanup()
+      resolve(client)
+    }
+
+    const onError = (error: unknown) => {
+      cleanup()
+      reject(error)
+    }
+
+    const onClose = () => {
+      cleanup()
+      reject(new Error("Redis client closed before becoming ready"))
+    }
+
+    client.once("ready", onReady)
+    client.once("error", onError)
+    client.once("close", onClose)
+    client.once("end", onClose)
+
+    if (client.status === "ready") {
+      onReady()
+      return
+    }
+
+    if (client.status === "wait") {
+      void client.connect().catch(onError)
+    }
+  })
+}
+
 export const buildRedisConnectionOptions = (
   connection: Pick<RedisConnection, "host" | "port" | "password" | "tls">,
 ): Pick<RedisOptions, "host" | "port" | "password" | "tls"> => ({

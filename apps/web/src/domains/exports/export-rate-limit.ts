@@ -1,5 +1,5 @@
 import { RateLimitError } from "@domain/shared"
-import type { RedisClient } from "@platform/cache-redis"
+import { type RedisClient, waitForRedisClientReady } from "@platform/cache-redis"
 
 const EXPORT_RATE_LIMIT_REQUESTS = process.env.NODE_ENV === "production" ? 10 : 30
 const EXPORT_RATE_LIMIT_WINDOW_SECONDS = 60 * 60 // 1 hour
@@ -12,6 +12,8 @@ interface EnforceExportRequestRateLimitInput {
 }
 
 export async function enforceExportRequestRateLimit(input: EnforceExportRequestRateLimitInput): Promise<void> {
+  await waitForRedisClientReady(input.redis)
+
   const key = `export:rate_limit:${input.organizationId}:${input.projectId}:${input.recipientEmail}`
 
   const current = await input.redis.get(key)

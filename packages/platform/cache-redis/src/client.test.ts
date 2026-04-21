@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const redisConstructor = vi.fn()
@@ -97,5 +98,36 @@ describe("createRedisClient", () => {
         tls: {},
       }),
     )
+  })
+
+  it("waits for a cold client to become ready", async () => {
+    const { waitForRedisClientReady } = await import("./client.ts")
+
+    class FakeRedisClient extends EventEmitter {
+      status = "wait"
+      connect = vi.fn(async () => {
+        this.status = "ready"
+        queueMicrotask(() => this.emit("ready"))
+      })
+    }
+
+    const client = new FakeRedisClient()
+
+    await expect(waitForRedisClientReady(client as never)).resolves.toBe(client)
+    expect(client.connect).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns immediately for an already-ready client", async () => {
+    const { waitForRedisClientReady } = await import("./client.ts")
+
+    class FakeRedisClient extends EventEmitter {
+      status = "ready"
+      connect = vi.fn()
+    }
+
+    const client = new FakeRedisClient()
+
+    await expect(waitForRedisClientReady(client as never)).resolves.toBe(client)
+    expect(client.connect).not.toHaveBeenCalled()
   })
 })
