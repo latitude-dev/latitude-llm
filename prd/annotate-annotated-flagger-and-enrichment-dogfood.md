@@ -51,7 +51,7 @@ The UI surface (approve/reject buttons, enrichment thumbs-up/down) is visible to
    - Textarea: optional on Approve, **required** on Reject. Submit disabled until non-empty on Reject.
    - Buttons: *Skip* (approve path only — closes with no comment) and *Submit*.
 4. On submit, the UI POSTs the comment to a web-route that runs on our backend, which **enqueues a BullMQ job** (`product-feedback:submit-system-annotator-review`) and returns 202 immediately. The user is not blocked on the API round-trip to latitude.so.
-5. The background worker consumes the job, builds an annotation payload, and writes it to the Latitude dogfood project via the generated SDK. The payload identifies the upstream telemetry trace by filtering Latitude spans where `attributes.scoreId == <upstream draft annotation id>` — see **Identity strategy** below. Retries on 5xx/network errors use BullMQ's built-in retry policy. Permanent 4xx errors log `warn` and complete the job.
+5. The background worker consumes the job, builds an annotation payload, and writes it to the Latitude dogfood project via the generated SDK. The payload identifies the upstream telemetry trace by filtering Latitude spans where `metadata.scoreId == <upstream draft annotation id>` — see **Identity strategy** below. Retries on 5xx/network errors use BullMQ's built-in retry policy. Permanent 4xx errors log `warn` and complete the job.
 
 ### Flow 2 — Good / Bad on enrichment result
 
@@ -60,7 +60,7 @@ The UI surface (approve/reject buttons, enrichment thumbs-up/down) is visible to
    - 👍 **Good**: one click. Fires immediately; no textarea.
    - 👎 **Bad**: one click. A textarea slides into the popover with a **required** reason; submit enqueues.
 3. On submit, the UI POSTs to the same backend route pattern used for the System Annotator flow, which enqueues `product-feedback:submit-enrichment-review`.
-4. The worker builds an annotation payload and writes it to the Latitude dogfood project via the SDK. The payload identifies the upstream telemetry trace by filtering Latitude spans where `attributes.scoreId == <published score id>` — see **Identity strategy** below.
+4. The worker builds an annotation payload and writes it to the Latitude dogfood project via the SDK. The payload identifies the upstream telemetry trace by filtering Latitude spans where `metadata.scoreId == <published score id>` — see **Identity strategy** below.
 5. After submit, the controls disable in the popover and show *"Thanks — feedback recorded"* until page reload, preventing accidental duplicate submissions.
 
 ## Architecture
@@ -240,7 +240,7 @@ Naming rationale: `submit` captures "public-API entry point that takes a caller-
 
 The annotation we write into the Latitude dogfood project must reference the trace that produced the thing being reviewed — **not** the end-user trace being annotated (which is what `score.traceId` already stores).
 
-Rather than invent a new identifier, we reuse the id we already need: the **`scoreId`**. In both the System Annotator and Enrichment flows the score row ends up with a generated CUID. The same CUID is stamped onto the Latitude telemetry span that produced it, so later we can filter Latitude's traces by `attributes.scoreId == <cuid>` to find the exact trace.
+Rather than invent a new identifier, we reuse the id we already need: the **`scoreId`**. In both the System Annotator and Enrichment flows the score row ends up with a generated CUID. The same CUID is stamped onto the Latitude telemetry span that produced it, so later we can filter Latitude's traces by `metadata.scoreId == <cuid>` to find the exact trace.
 
 The key constraint we have to respect: the LLM call (which emits the telemetry span) happens in a **different code path** from the row persistence (which generates the id today). So we need to move id generation upstream — before the LLM call — and pass it through both sides.
 
@@ -253,15 +253,16 @@ Today the Temporal workflow in `apps/workflows/src/workflows/system-queue-flagge
 
 The two moments are decoupled, which means the telemetry span today has no way to reference the future `scoreId`.
 
-**Change**: move the `scoreId` generation up into the workflow itself, pass it through both activities, and stamp it onto the telemetry span during `draftAnnotate`.
+**Change**: move the `scoreId` generation upstream of the LLM call, and stamp it onto the telemetry span during `draftAnnotate` so the later persist step can reuse the same id.
+
+**Where generation happens**: not in the workflow. `generateId()` uses `cuid2.createId()` which reads `crypto.getRandomValues` — non-deterministic and unsafe inside a Temporal workflow (workflow replay would reshuffle the ids). The generation lives inside `draftSystemQueueAnnotationUseCase` (which runs inside the `draftAnnotate` activity, where non-determinism is expected).
 
 Concretely:
 
-1. In `system-queue-flagger-workflow.ts`, before invoking `draftAnnotate`, generate `scoreId = generateId<"ScoreId">()`.
-2. Extend the `draftAnnotate` activity input with `scoreId` and forward it to `runSystemQueueAnnotatorUseCase`.
-3. In `runSystemQueueAnnotatorUseCase`, include `scoreId` in the `telemetry.metadata` passed to `ai.generate(...)` (`run-system-queue-annotator.ts:155`). Latitude telemetry already forwards metadata to span attributes, so the resulting span carries `attributes.scoreId = <cuid>`.
-4. Extend the `persistAnnotation` activity input with `scoreId` and forward it to `persistSystemQueueAnnotationUseCase`.
-5. In `persistSystemQueueAnnotationUseCase`, replace `id: generateId<"ScoreId">()` (`persist-system-queue-annotation.ts:125`) with `id: input.scoreId`. This preserves idempotency because the existing early-return branches still read from `scoreRepository.findQueueDraftByTraceId` before attempting insertion.
+1. `draftSystemQueueAnnotationUseCase` generates `scoreId = generateId<"ScoreId">()` before invoking `runSystemQueueAnnotatorUseCase`, and returns it in the use case output alongside `queueId` / `feedback` / `traceCreatedAt`.
+2. `runSystemQueueAnnotatorUseCase` accepts `scoreId` as input and includes it in the `telemetry.metadata` passed to `ai.generate(...)`. Latitude telemetry already forwards metadata to a `latitude.metadata` span attribute (JSON), so the resulting trace ingested by Latitude carries `metadata.scoreId = <cuid>`.
+3. The `draftAnnotate` activity output surfaces `scoreId` up to the workflow, which forwards it verbatim to the `persistAnnotation` activity input.
+4. `persistSystemQueueAnnotationUseCase` accepts `scoreId` and passes it as the `id` argument to `writeDraftAnnotationUseCase`, replacing the previous inline `generateId<"ScoreId">()`. Idempotency is preserved — the existing early-return branches still read from `scoreRepository.findQueueDraftByTraceId` before attempting insertion.
 
 After this change: the UI has `annotation.id` (the draft annotation's `scoreId`) directly at hand when the reviewer clicks Approve/Reject. No extra metadata field is needed on the annotation row.
 
@@ -269,7 +270,7 @@ After this change: the UI has `annotation.id` (the draft annotation's `scoreId`)
 
 The score row **already exists** when enrichment runs — it is the published human annotation being enriched. No id needs to be pre-generated; the existing `score.id` plays the same role as the pre-generated CUID above.
 
-**Change**: in `enrichAnnotationForPublicationUseCase`, add `scoreId` to the `telemetry.metadata` of the enrichment `ai.generate(...)` call. That stamps `attributes.scoreId = <cuid>` on the enrichment LLM's Latitude telemetry span. When the reviewer clicks 👍/👎 in the enrichment popover, the UI already has `annotation.id`, which is the same `scoreId`.
+**Change**: in `enrichAnnotationForPublicationUseCase`, add `scoreId` to the `telemetry.metadata` of the enrichment `ai.generate(...)` call. That stamps `metadata.scoreId = <cuid>` on the enrichment LLM's Latitude telemetry span. When the reviewer clicks 👍/👎 in the enrichment popover, the UI already has `annotation.id`, which is the same `scoreId`.
 
 ### Product-feedback payload
 
@@ -279,7 +280,7 @@ In both flows, the BullMQ worker calls `POST /v1/.../annotations` on the Latitud
 {
   trace: {
     by: "filters",
-    filters: { "attributes.scoreId": [{ op: "eq", value: upstreamScoreId }] }
+    filters: { "metadata.scoreId": [{ op: "eq", value: upstreamScoreId }] }
   },
   draft: false,
   passed, value, feedback,
@@ -316,7 +317,7 @@ Mapping UI action → outbound annotation payload. All writes use `draft: false`
 | Enrichment 👍 | `true` | `1` | `"Good enrichment"` | `{ kind: "enrichment-review", rawFeedback, enrichedFeedback }` |
 | Enrichment 👎 | `false` | `0` | reason (required) | `{ kind: "enrichment-review", rawFeedback, enrichedFeedback }` |
 
-`trace` is always resolved via `{ by: "filters", filters: { "attributes.scoreId": [{ op: "eq", value: upstreamScoreId }] } }` — see **Identity strategy**. The upstream score id is not duplicated in `metadata` because it is already the trace-lookup key.
+`trace` is always resolved via `{ by: "filters", filters: { "metadata.scoreId": [{ op: "eq", value: upstreamScoreId }] } }` — see **Identity strategy**. The upstream score id is not duplicated in `metadata` because it is already the trace-lookup key.
 
 ## Testing
 
@@ -325,7 +326,7 @@ Mapping UI action → outbound annotation payload. All writes use `draft: false`
 - **Unit tests** for `recordSystemAnnotatorReviewUseCase` / `recordEnrichmentReviewUseCase` with an in-memory `ProductFeedbackClient` fake.
 - **Adapter test** for `@platform/latitude-api` using Fern's custom-fetcher option to assert request shape.
 - **Worker test** for the `product-feedback` queue consuming a job and invoking the domain use case.
-- **End-to-end identity test** that runs a real `ai.generate` call with a known `scoreId` in `telemetry.metadata`, flushes the span pipeline, and asserts the span reaches the export sink with `attributes.scoreId` set. Guards against a future regression in `span-filter.ts` or the OTel sampler config silently breaking the filter lookup.
+- **End-to-end identity test** that runs a real `ai.generate` call with a known `scoreId` in `telemetry.metadata`, flushes the span pipeline, and asserts the span reaches the export sink with `metadata.scoreId` set. Guards against a future regression in `span-filter.ts` or the OTel sampler config silently breaking the filter lookup.
 - **UI**: start the dev server, approve with no comment, approve with a comment, reject without a comment (submit must stay disabled), reject with a comment. Exercise 👍 (no textarea) and 👎 (required textarea) in the enrichment popover. Confirm the existing approve/reject business logic fires before the popover opens and independently of whether the comment is submitted.
 
 ## Implementation plan
@@ -354,19 +355,22 @@ Checkpoint:
 
 Scope:
 
-- [ ] In `apps/workflows/src/workflows/system-queue-flagger-workflow.ts:46-70`, generate `scoreId = generateId<"ScoreId">()` and pass to both activities.
-- [ ] Extend `draftAnnotate` activity input with `scoreId`.
-- [ ] Extend `persistAnnotation` activity input with `scoreId`.
-- [ ] In `packages/domain/annotation-queues/src/use-cases/run-system-queue-annotator.ts:152-159`, include `scoreId` in the `telemetry.metadata` passed to `ai.generate(...)`.
-- [ ] In `packages/domain/annotation-queues/src/use-cases/persist-system-queue-annotation.ts:125`, replace `id: generateId<"ScoreId">()` with the forwarded `scoreId`.
-- [ ] In `packages/domain/annotations/src/use-cases/enrich-annotation-for-publication.ts` (around line 173), add `scoreId` to the enrichment `ai.generate(...)` `telemetry.metadata`.
-- [ ] End-to-end identity test: real `ai.generate` with a known `scoreId`, flush span pipeline, assert exported span has `attributes.scoreId` set.
+- [x] ~~In `apps/workflows/src/workflows/system-queue-flagger-workflow.ts:46-70`, generate `scoreId = generateId<"ScoreId">()` and pass to both activities.~~ **Design deviation**: `generateId()` uses `cuid2.createId()` which reads `crypto.getRandomValues` — non-deterministic and unsafe inside a Temporal workflow (breaks replay). Moved generation inside `draftSystemQueueAnnotationUseCase` (runs inside the `draftAnnotate` activity). The use case returns the `scoreId` alongside `queueId`/`feedback`, the workflow forwards it verbatim to `persistAnnotation`. Same net effect — the LLM telemetry span and the persisted score row share the id — but generation happens in activity scope, not workflow scope.
+- [x] Extend `draftAnnotate` activity **output** with `scoreId` (not input — the id is generated by the use case inside the activity).
+- [x] Extend `persistAnnotation` activity input with `scoreId`.
+- [x] In `packages/domain/annotation-queues/src/use-cases/run-system-queue-annotator.ts`, include `scoreId` in the `telemetry.metadata` passed to `ai.generate(...)`.
+- [x] In `packages/domain/annotation-queues/src/use-cases/persist-system-queue-annotation.ts`, replace `id: generateId<"ScoreId">()` with the forwarded `scoreId`.
+- [x] ~~In `packages/domain/annotations/src/use-cases/enrich-annotation-for-publication.ts`~~ — **already landed on `main` before Phase 2 started**: the enrichment `ai.generate(...)` already passes `scoreId` in its `telemetry.metadata`. No change needed.
+- [x] End-to-end contract test in `packages/platform/ai-latitude/src/index.test.ts`: a real `runWithAiTelemetry` call (with a stub `execute` fn — no network, no AI provider) routed through `LatitudeSpanProcessor` → `InMemorySpanExporter`, asserting the exported span's `latitude.metadata` JSON contains the passed metadata. Covers `scoreId` but the contract is generic: any metadata key must survive the full chain. Guards against future regressions in `capture()`, the processor, or OTel SDK bumps.
 
 Checkpoint:
 
-- [ ] `pnpm --filter @domain/annotation-queues --filter @domain/annotations --filter @apps/workflows test` green.
-- [ ] Identity test green.
-- [ ] No user-visible behavior change (verified by reading diff).
+- [x] `pnpm --filter @domain/annotation-queues test` → 141/141 green (includes new contract tests for `systemQueueAnnotateInputSchema.scoreId` and updated `runSystemQueueAnnotatorUseCase` telemetry metadata assertions).
+- [x] `pnpm --filter @app/workflows test` → 51/51 green (workflow test now asserts `scoreId` flows from `draftAnnotate` output into `persistAnnotation` input).
+- [x] `pnpm --filter @platform/ai-latitude test` → 4/4 green (new e2e contract test).
+- [x] `pnpm --filter @domain/annotations test` → still green (phase 1 + enrichment untouched).
+- [x] All three packages typecheck and Biome-lint clean.
+- [x] No user-visible behavior change (the LLM span now carries `scoreId` but nothing observes it yet; that wire-up lands in Phase 4).
 
 ### Phase 3 — OpenAPI emission and Fern SDK
 

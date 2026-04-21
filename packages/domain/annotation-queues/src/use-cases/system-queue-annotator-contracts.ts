@@ -5,6 +5,13 @@ export const systemQueueAnnotateInputSchema = z.object({
   projectId: z.string().min(1),
   queueSlug: z.string().min(1),
   traceId: z.string().min(1),
+  /**
+   * Score id to use for the draft annotation row. Generated upstream by
+   * `draftSystemQueueAnnotationUseCase` so the Latitude telemetry span for the
+   * LLM call carries the same id as the persisted score (see PRD: "Identity
+   * strategy").
+   */
+  scoreId: z.string().min(1),
 })
 
 export type SystemQueueAnnotateInput = z.infer<typeof systemQueueAnnotateInputSchema>

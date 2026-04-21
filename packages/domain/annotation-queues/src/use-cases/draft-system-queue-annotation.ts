@@ -1,4 +1,4 @@
-import { BadRequestError, ProjectId, type RepositoryError } from "@domain/shared"
+import { BadRequestError, generateId, ProjectId, type RepositoryError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
@@ -21,6 +21,17 @@ export interface DraftSystemQueueAnnotationOutput {
   readonly traceId: string
   readonly feedback: string
   readonly traceCreatedAt: string
+  /**
+   * Pre-generated id for the draft annotation score this use case will produce.
+   *
+   * Generated here (upstream of the LLM call) and passed through
+   * `telemetry.metadata` on `ai.generate(...)`. Latitude's span processor
+   * serializes it into the `latitude.metadata` JSON attribute on the exported
+   * span, which the dogfood tenant sees as `metadata.scoreId`. The persist
+   * step later writes the score row with this exact id. See PRD: "Identity
+   * strategy".
+   */
+  readonly scoreId: ScoreId
 }
 
 interface DraftSystemQueueAnnotationInput {
@@ -48,9 +59,15 @@ export const draftSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.dra
   yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
   yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
+  // Generate the score id up front so it can (a) flow into the annotator's
+  // `telemetry.metadata` and (b) satisfy the shared `systemQueueAnnotateInputSchema`
+  // which requires `scoreId` — that schema is also validated by the downstream
+  // `persistSystemQueueAnnotationUseCase` so both paths stay symmetric.
+  const scoreId = generateId<"ScoreId">()
+
   const parsedInput = yield* parseOrBadRequest(
     systemQueueAnnotateInputSchema,
-    input,
+    { ...input, scoreId },
     "Invalid system queue annotate input",
   )
 
@@ -75,6 +92,7 @@ export const draftSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.dra
     projectId: parsedInput.projectId,
     queueSlug: parsedInput.queueSlug,
     traceId: parsedInput.traceId,
+    scoreId,
   })
 
   return {
@@ -82,5 +100,6 @@ export const draftSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.dra
     traceId: parsedInput.traceId,
     feedback: annotatorResult.feedback,
     traceCreatedAt: annotatorResult.traceCreatedAt,
+    scoreId,
   } as DraftSystemQueueAnnotationOutput
 })

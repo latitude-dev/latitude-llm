@@ -22,6 +22,16 @@ export interface RunSystemQueueAnnotatorInput {
   readonly projectId: string
   readonly queueSlug: string
   readonly traceId: string
+  /**
+   * Pre-generated score id for the draft annotation this LLM call will produce.
+   *
+   * Passed through `telemetry.metadata` on `ai.generate(...)`. Latitude's span
+   * processor serializes it into the `latitude.metadata` JSON attribute on the
+   * exported span, which the dogfood tenant sees as `metadata.scoreId` — the
+   * filter key the product-feedback flow (see PRD: "Identity strategy") uses
+   * to recover this trace later without a separate id field on the score row.
+   */
+  readonly scoreId: string
 }
 
 export interface RunSystemQueueAnnotatorResult {
@@ -121,7 +131,7 @@ export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSys
       tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
-        { traceId: input.traceId, queueSlug: input.queueSlug },
+        { traceId: input.traceId, queueSlug: input.queueSlug, scoreId: input.scoreId },
       ),
     },
   })
