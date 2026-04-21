@@ -1,7 +1,7 @@
 import { submitApiAnnotationInputSchema, submitApiAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
-import { cuidSchema, ProjectId } from "@domain/shared"
+import { cuidSchema, FILTER_OPERATORS, traceIdSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
   ScoreAnalyticsRepositoryLive,
@@ -16,17 +16,65 @@ import { Effect, Layer } from "effect"
 import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
+// Filter sub-schemas are redefined locally (with the same semantics as
+// `@domain/shared.filterConditionSchema`) so we can attach OpenAPI component
+// names via `.openapi(...)`. Without named components, the Fern TypeScript
+// generator inlines them and has trouble naming the anonymous array-item
+// types, producing a broken `Item` reference. The constants `FILTER_OPERATORS`
+// are imported from shared to keep both definitions in lockstep.
+const FilterConditionSchema = z
+  .object({
+    op: z.enum(FILTER_OPERATORS),
+    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
+  })
+  .openapi("FilterCondition")
+
+const FilterSetSchema = z.record(z.string(), z.array(FilterConditionSchema)).openapi("FilterSet")
+
+const TraceRefSchema = z
+  .discriminatedUnion("by", [
+    z.object({ by: z.literal("id"), id: traceIdSchema }),
+    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
+  ])
+  .openapi("TraceRef")
+
 /**
  * POST body: caller-supplied annotation data plus a `trace` ref (id or filters)
  * and an optional `draft` flag (default `false` = published). `projectId` comes
  * from the URL and `sourceId` is forced to `"API"`.
  *
- * Note: we rebuild the schema here (rather than chaining `.openapi()` on the
- * domain export) because Zod-OpenAPI's prototype augmentation does not survive
- * schemas returned from `.omit().extend(...)` across package boundaries — the
- * fresh `z.object` wrapper is the idiomatic way to attach an OpenAPI name.
+ * We rebuild the schema here (rather than chaining `.openapi()` on the domain
+ * export) for two reasons:
+ *   1. Zod-OpenAPI's prototype augmentation does not survive schemas returned
+ *      from `.omit().extend(...)` across package boundaries — the fresh
+ *      `z.object` wrapper is the idiomatic way to attach an OpenAPI name.
+ *   2. The nested `trace.filters` field needs a named `FilterCondition`
+ *      component (declared above) so SDK generators emit a clean `$ref`
+ *      rather than a broken inline anonymous type.
  */
-const RequestSchema = z.object(submitApiAnnotationInputSchema.shape).openapi("CreateAnnotationBody")
+const RequestSchema = z
+  .object({
+    ...submitApiAnnotationInputSchema.shape,
+    trace: TraceRefSchema,
+  })
+  .openapi("CreateAnnotationBody", {
+    // Example mirrors the Latitude dogfood flow: resolve the upstream LLM
+    // trace by the `metadata.scoreId` attribute the span carries (see PRD
+    // "Identity strategy"), then write a published annotation into the
+    // dogfood project. Also the canonical SDK usage for any caller who
+    // doesn't have the raw OTel trace id at hand.
+    example: {
+      value: 1,
+      passed: true,
+      feedback: "Approved - the system annotator correctly flagged this as a refusal.",
+      trace: {
+        by: "filters",
+        filters: {
+          "metadata.scoreId": [{ op: "eq", value: "abc123def456ghi789jkl012" }],
+        },
+      },
+    },
+  })
 
 const ResponseSchema = z
   .object({
@@ -43,6 +91,7 @@ const ResponseSchema = z
 const route = createRoute({
   method: "post",
   path: "/",
+  operationId: "annotations.create",
   tags: ["Annotations"],
   summary: "Create project annotation",
   description:
@@ -85,18 +134,17 @@ export const createAnnotationsRoutes = () => {
 
   app.openapi(route, async (c) => {
     const body = c.req.valid("json")
-    const { projectId: projectIdParam } = c.req.valid("param")
-    const projectId = ProjectId(projectIdParam)
+    const { projectSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
 
     const score = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepository = yield* ProjectRepository
-        yield* projectRepository.findById(projectId)
+        const project = yield* projectRepository.findBySlug(projectSlug)
 
         return yield* submitApiAnnotationUseCase({
           ...body,
-          projectId,
+          projectId: project.id,
           organizationId,
         })
       }).pipe(

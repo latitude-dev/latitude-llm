@@ -1,0 +1,53 @@
+{
+  "name": "@latitude-data/sdk",
+  "version": "6.0.0-alpha.0",
+  "description": "Official TypeScript SDK for the Latitude API",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "MIT",
+  "keywords": [
+    "AI",
+    "Latitude",
+    "sdk",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/typescript"
+  },
+  "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/typescript#readme",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "echo 'SDK source is Fern-generated — skipping lint (see fern/README.md)'",
+    "format": "echo 'SDK source is Fern-generated — formatter controlled by the generator'",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --dir src"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsup": "^8.0.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

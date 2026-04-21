@@ -9,7 +9,8 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src"
+    "test": "vitest run --passWithNoTests --dir src",
+    "openapi:emit": "tsx scripts/emit-openapi.ts"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",

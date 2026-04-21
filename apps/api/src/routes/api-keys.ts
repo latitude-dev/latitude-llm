@@ -81,10 +81,30 @@ const toListItemResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
+// Fern uses `x-fern-sdk-group-name` + `x-fern-sdk-method-name` to derive the
+// SDK resource namespace (`client.apiKeys.*`) and method names
+// (`.create` / `.list` / `.revoke`) independently of the OpenAPI `tag` and
+// `operationId`. Without these explicit overrides:
+//   - a multi-word tag like "API Keys" makes Fern fall back to concatenating
+//     the operationId into method names (`apiKeysList` instead of `.list`);
+//   - a single-word tag like "ApiKeys" forces Fern to lowercase the whole
+//     resource path (`apikeys/` directory), which then breaks the case-
+//     sensitive filesystem on CI (macOS APFS is case-insensitive and hides
+//     the problem locally).
+// Extending each route's config with the Fern vendor extensions sidesteps
+// both tag-based heuristics entirely.
+const apiKeysFernGroup = (methodName: string) =>
+  ({
+    "x-fern-sdk-group-name": "apiKeys",
+    "x-fern-sdk-method-name": methodName,
+  }) as const
+
 const generateRoute = createRoute({
   method: "post",
   path: "/",
+  operationId: "apiKeys.create",
   tags: ["API Keys"],
+  ...apiKeysFernGroup("create"),
   summary: "Generate API key",
   description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
   security: PROTECTED_SECURITY,
@@ -98,7 +118,9 @@ const generateRoute = createRoute({
 const listRoute = createRoute({
   method: "get",
   path: "/",
+  operationId: "apiKeys.list",
   tags: ["API Keys"],
+  ...apiKeysFernGroup("list"),
   summary: "List API keys",
   description: "Returns all API keys for the organization. Tokens are not included in the list response.",
   security: PROTECTED_SECURITY,
@@ -112,7 +134,9 @@ const listRoute = createRoute({
 const revokeRoute = createRoute({
   method: "delete",
   path: "/{id}",
+  operationId: "apiKeys.revoke",
   tags: ["API Keys"],
+  ...apiKeysFernGroup("revoke"),
   summary: "Revoke API key",
   description: "Soft-deletes an API key, immediately invalidating it.",
   security: PROTECTED_SECURITY,

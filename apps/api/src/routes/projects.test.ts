@@ -15,7 +15,7 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
     slug,
   })
 
-  return { id }
+  return { id, slug }
 }
 
 describe("Projects Routes Integration", () => {
@@ -45,7 +45,7 @@ describe("Projects Routes Integration", () => {
     expect(ids).not.toContain(tenantBProject.id)
   })
 
-  it<ApiTestContext>("DELETE /v1/organizations/:organizationId/projects/:id does not delete cross-tenant project", async ({
+  it<ApiTestContext>("DELETE /v1/organizations/:organizationId/projects/:projectSlug does not delete cross-tenant project", async ({
     app,
     database,
   }) => {
@@ -54,7 +54,7 @@ describe("Projects Routes Integration", () => {
     const tenantBProject = await createProjectRecord(database, tenantB.organizationId, "Tenant B Project")
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/projects/${tenantBProject.id}`, {
+      new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/projects/${tenantBProject.slug}`, {
         method: "DELETE",
         headers: createApiKeyAuthHeaders(tenantA.apiKeyToken),
       }),

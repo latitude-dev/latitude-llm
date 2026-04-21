@@ -5,7 +5,6 @@ import {
   ProjectRepository,
   updateProjectUseCase,
 } from "@domain/projects"
-import { ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -14,7 +13,7 @@ import {
   errorResponse,
   jsonBody,
   jsonResponse,
-  OrgAndIdParamsSchema,
+  OrgAndProjectParamsSchema,
   OrgParamsSchema,
   openApiNoContentResponses,
   openApiResponses,
@@ -61,6 +60,7 @@ const toResponse = (project: Project) => ({
 const createProjectRoute = createRoute({
   method: "post",
   path: "/",
+  operationId: "projects.create",
   tags: ["Projects"],
   summary: "Create project",
   description: "Creates a new project within the organization.",
@@ -75,6 +75,7 @@ const createProjectRoute = createRoute({
 const listProjectsRoute = createRoute({
   method: "get",
   path: "/",
+  operationId: "projects.list",
   tags: ["Projects"],
   summary: "List projects",
   description: "Returns all projects in the organization.",
@@ -88,12 +89,13 @@ const listProjectsRoute = createRoute({
 
 const getProjectRoute = createRoute({
   method: "get",
-  path: "/{id}",
+  path: "/{projectSlug}",
+  operationId: "projects.get",
   tags: ["Projects"],
   summary: "Get project",
-  description: "Returns a single project by ID.",
+  description: "Returns a single project by slug.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgAndIdParamsSchema },
+  request: { params: OrgAndProjectParamsSchema },
   responses: {
     200: jsonResponse(ResponseSchema, "Project details"),
     401: errorResponse("Unauthorized"),
@@ -103,13 +105,14 @@ const getProjectRoute = createRoute({
 
 const updateProjectRoute = createRoute({
   method: "patch",
-  path: "/{id}",
+  path: "/{projectSlug}",
+  operationId: "projects.update",
   tags: ["Projects"],
   summary: "Update project",
   description: "Updates a project's name and/or description.",
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgAndIdParamsSchema,
+    params: OrgAndProjectParamsSchema,
     body: jsonBody(UpdateRequestSchema),
   },
   responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
@@ -117,12 +120,13 @@ const updateProjectRoute = createRoute({
 
 const deleteProjectRoute = createRoute({
   method: "delete",
-  path: "/{id}",
+  path: "/{projectSlug}",
+  operationId: "projects.delete",
   tags: ["Projects"],
   summary: "Delete project",
-  description: "Soft-deletes a project by ID.",
+  description: "Soft-deletes a project by slug.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgAndIdParamsSchema },
+  request: { params: OrgAndProjectParamsSchema },
   responses: openApiNoContentResponses({ description: "Project deleted successfully" }),
 })
 
@@ -161,13 +165,12 @@ export const createProjectsRoutes = () => {
   })
 
   app.openapi(getProjectRoute, async (c) => {
-    const { id: idParam } = c.req.valid("param")
-    const id = ProjectId(idParam)
+    const { projectSlug } = c.req.valid("param")
 
     const project = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
-        return yield* repo.findById(id)
+        return yield* repo.findBySlug(projectSlug)
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
@@ -175,14 +178,17 @@ export const createProjectsRoutes = () => {
   })
 
   app.openapi(updateProjectRoute, async (c) => {
-    const { id: idParam } = c.req.valid("param")
-    const id = ProjectId(idParam)
+    const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
 
     const updatedProject = await Effect.runPromise(
-      updateProjectUseCase({
-        id,
-        ...(body.name !== undefined ? { name: body.name } : {}),
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
+        const project = yield* repo.findBySlug(projectSlug)
+        return yield* updateProjectUseCase({
+          id: project.id,
+          ...(body.name !== undefined ? { name: body.name } : {}),
+        })
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
@@ -190,13 +196,13 @@ export const createProjectsRoutes = () => {
   })
 
   app.openapi(deleteProjectRoute, async (c) => {
-    const { id: idParam } = c.req.valid("param")
-    const id = ProjectId(idParam)
+    const { projectSlug } = c.req.valid("param")
 
     await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
-        return yield* repo.softDelete(id)
+        const project = yield* repo.findBySlug(projectSlug)
+        return yield* repo.softDelete(project.id)
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
     return c.body(null, 204)

@@ -43,6 +43,10 @@
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
     },
+    "packages/sdk/typescript": {
+      "entry": [],
+      "project": []
+    },
     "packages/ui": {
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
@@ -71,5 +75,5 @@
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
-  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"]
+  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random", "fern-api"]
 }

@@ -17,7 +17,7 @@ export const OrgAndIdParamsSchema = z.object({
 
 export const OrgAndProjectParamsSchema = z.object({
   organizationId: z.string().openapi({ description: "Organization ID" }),
-  projectId: z.string().openapi({ description: "Project ID" }),
+  projectSlug: z.string().openapi({ description: "Project slug (human-readable identifier)" }),
 })
 
 /** Security scheme applied to protected endpoints. */

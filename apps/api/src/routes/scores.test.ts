@@ -14,13 +14,19 @@ import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-ut
 
 const API_TEST_ANCHOR_TRACE_ID = "22222222222222222222222222222222" as const
 
-const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, projectId: string) => {
+const createProjectRecord = async (
+  database: InMemoryPostgres,
+  organizationId: string,
+  projectId: string,
+): Promise<string> => {
+  const slug = `project-${projectId.slice(0, 8)}`
   await database.db.insert(projects).values({
     id: projectId,
     organizationId,
     name: `Project ${projectId}`,
-    slug: `project-${projectId.slice(0, 8)}`,
+    slug,
   })
+  return slug
 }
 
 const queryAnalyticsScores = (clickhouse: ApiTestContext["clickhouse"], organizationId: string, scoreId: string) =>
@@ -50,10 +56,10 @@ describe("Scores Routes Integration", () => {
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -124,10 +130,10 @@ describe("Scores Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
     const evaluationId = "ffffffffffffffffffffffff"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -199,7 +205,7 @@ describe("Scores Routes Integration", () => {
     const projectId = "aa11aa11aa11aa11aa11aa11"
     const evaluationId = "bb22bb22bb22bb22bb22bb22"
     const issueId = "ii33ii33ii33ii33ii33ii33"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     await database.db.insert(issues).values({
       id: issueId,
@@ -226,7 +232,7 @@ describe("Scores Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -284,10 +290,10 @@ describe("Scores Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "dd44dd44dd44dd44dd44dd44"
     const missingEvalId = "nn55nn55nn55nn55nn55nn55"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -336,7 +342,7 @@ describe("Scores Routes Integration", () => {
     const projectId = "gg88gg88gg88gg88gg88gg88"
     const evaluationId = "hh99hh99hh99hh99hh99hh99"
     const issueId = "kk00kk00kk00kk00kk00kk00"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     await database.db.insert(issues).values({
       id: issueId,
@@ -363,7 +369,7 @@ describe("Scores Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -419,10 +425,10 @@ describe("Scores Routes Integration", () => {
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "bbbbbbbbbbbbbbbbbbbbbbbb"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -475,10 +481,10 @@ describe("Scores Routes Integration", () => {
   it<ApiTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "dddddddddddddddddddddddd"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/scores`, {
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
