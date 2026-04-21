@@ -148,7 +148,12 @@ function IssuesPage() {
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
   const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
-  const showEmptyState = !isLoading && issues.length === 0 && !hasActiveFilters
+  const hasNoIssues = issues.length === 0 && !hasActiveFilters
+  const showEmptyState = !isLoading && hasNoIssues
+
+  if (isLoading && hasNoIssues) {
+    return null
+  }
 
   if (showEmptyState) {
     return (

@@ -19,6 +19,7 @@ import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
+import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
 import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
@@ -148,7 +149,7 @@ function ProjectPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount } = useTracesCount({
+  const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
     projectId: currentProject.id,
     ...(hasActiveFilters ? { filters } : {}),
   })
@@ -277,6 +278,21 @@ function ProjectPage() {
       options: { enabled: !!activeTraceId, ignoreInputs: true },
     },
   ])
+
+  const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters
+  const showEmptyState = !isTracesCountLoading && hasNoTraces
+
+  if (isTracesCountLoading && hasNoTraces) {
+    return null
+  }
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <TracesEmptyState />
+      </Layout>
+    )
+  }
 
   const sharedViewProps = {
     projectId: currentProject.id,
