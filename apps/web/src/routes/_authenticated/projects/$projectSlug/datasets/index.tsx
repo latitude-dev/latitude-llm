@@ -20,6 +20,7 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { DatasetsEmptyState } from "./-components/datasets-empty-state.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
   component: DatasetsPage,
@@ -91,6 +92,9 @@ function DatasetsPage() {
 
   const getRowAriaLabel = useCallback((d: DatasetRecord) => `Open dataset ${d.name}`, [])
 
+  const hasNoDatasets = datasets.length === 0
+  const showEmptyState = !isLoading && hasNoDatasets
+
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
@@ -110,6 +114,20 @@ function DatasetsPage() {
       setCreating(false)
     }
   }, [project, projectSlug, navigate, toast])
+
+  if (isLoading && hasNoDatasets) {
+    return null
+  }
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <DatasetsEmptyState onCreate={() => void handleCreate()} creating={creating} />
+        </Layout.Content>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

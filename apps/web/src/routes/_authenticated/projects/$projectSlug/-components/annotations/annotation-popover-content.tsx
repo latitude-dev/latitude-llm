@@ -8,6 +8,8 @@ interface AnnotationPopoverContentProps {
   readonly projectId: string
   readonly annotations: readonly AnnotationRecord[]
   readonly showCreateForm?: boolean
+  readonly createInitialPassed?: boolean | null
+  readonly createAutoFocus?: boolean
   readonly isCreateLoading?: boolean
   readonly isUpdateLoading?: boolean
   readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
@@ -19,6 +21,8 @@ export function AnnotationPopoverContent({
   projectId,
   annotations,
   showCreateForm = true,
+  createInitialPassed = null,
+  createAutoFocus = false,
   isCreateLoading = false,
   isUpdateLoading = false,
   onSave,
@@ -27,7 +31,15 @@ export function AnnotationPopoverContent({
 }: AnnotationPopoverContentProps) {
   return (
     <div className="flex flex-col gap-2">
-      {showCreateForm && <AnnotationInput projectId={projectId} isLoading={isCreateLoading} onSave={onSave} />}
+      {showCreateForm && (
+        <AnnotationInput
+          projectId={projectId}
+          isLoading={isCreateLoading}
+          initialPassed={createInitialPassed}
+          autoFocus={createAutoFocus}
+          onSave={onSave}
+        />
+      )}
 
       {annotations.length > 0 && (
         <div className="flex flex-col gap-2">

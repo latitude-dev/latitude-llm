@@ -1,6 +1,6 @@
-import { Button, cn, Icon, Select, type SelectOption, Textarea } from "@repo/ui"
-import { SparklesIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
-import { memo, useState } from "react"
+import { Button, cn, Icon, Select, type SelectOption, Text, Textarea, ThumbButton, Tooltip } from "@repo/ui"
+import { InfoIcon, SparklesIcon } from "lucide-react"
+import { memo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
 import { useIssue, useIssues } from "../../../../../../domains/issues/issues.collection.ts"
 
@@ -76,7 +76,7 @@ const IssueSelector = memo(function IssueSelector({
   return (
     <Select<string>
       name="issue"
-      placeholderIcon={<Icon icon={SparklesIcon} />}
+      placeholderIcon={<Icon icon={SparklesIcon} size="sm" />}
       placeholder="Discover issue"
       options={issueOptions}
       value={value ?? undefined}
@@ -110,25 +110,48 @@ export function AnnotationInput({
   const [passed, setPassed] = useState<boolean | null>(initialPassed)
   const [comment, setComment] = useState(initialComment)
   const [issueId, setIssueId] = useState<string | null>(initialIssueId)
+  const [ratingError, setRatingError] = useState(false)
+  const [commentError, setCommentError] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   function handleSave() {
-    if (passed === null || isLoading) return
-    onSave({ passed, comment: comment.trim(), issueId })
+    if (isLoading) return
+    const trimmedComment = comment.trim()
+    if (passed === null || trimmedComment.length === 0) {
+      setRatingError(passed === null)
+      setCommentError(trimmedComment.length === 0)
+      return
+    }
+    onSave({ passed, comment: trimmedComment, issueId })
     setPassed(initialPassed)
     setComment(initialComment)
     setIssueId(initialIssueId)
+    setRatingError(false)
+    setCommentError(false)
   }
 
   function handleThumbUp() {
     setPassed(true)
     setIssueId(null)
+    setRatingError(false)
+    textareaRef.current?.focus()
   }
 
   function handleThumbDown() {
     setPassed(false)
+    setRatingError(false)
+    textareaRef.current?.focus()
   }
 
-  const canSave = passed !== null && comment.trim().length > 0 && !isLoading
+  function handleCommentChange(value: string) {
+    setComment(value)
+    if (commentError && value.trim().length > 0) {
+      setCommentError(false)
+    }
+  }
+
+  const commentPlaceholder =
+    passed === true ? "What did the AI do well?" : passed === false ? "What could be improved?" : "How did the AI do?"
 
   return (
     <div
@@ -139,77 +162,66 @@ export function AnnotationInput({
     >
       <div className="p-3">
         <Textarea
+          ref={textareaRef}
           unstyled
           minRows={2}
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(e) => handleCommentChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape" && onCancel) {
               e.preventDefault()
               onCancel()
             }
           }}
-          placeholder="Leave feedback on how the AI did"
+          placeholder={commentPlaceholder}
           disabled={isLoading}
           autoFocus={autoFocus}
         />
+        {commentError && <Text.H6 color="destructiveMutedForeground">Add a comment to save</Text.H6>}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-2 pb-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0">
           <ThumbButton selected={passed === true} variant="up" onClick={handleThumbUp} disabled={isLoading} />
           <ThumbButton selected={passed === false} variant="down" onClick={handleThumbDown} disabled={isLoading} />
+          {passed === null && (
+            <Text.H6 color={ratingError ? "destructiveMutedForeground" : "foregroundMuted"}>How did the AI do?</Text.H6>
+          )}
+          {passed === false && (
+            <>
+              <div className="w-48 shrink-0">
+                <IssueSelector projectId={projectId} value={issueId} onChange={setIssueId} />
+              </div>
+              <Tooltip
+                asChild
+                trigger={
+                  <button
+                    type="button"
+                    aria-label="About issue linking"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Icon icon={InfoIcon} size="sm" />
+                  </button>
+                }
+              >
+                The system will cluster your feedback to the most relevant issue, or it will create a new one. You can
+                manually select an issue to override this.
+              </Tooltip>
+            </>
+          )}
         </div>
 
-        <div className="flex items-center gap-1 min-w-0">
-          {passed === false && (
-            <div className="w-48 shrink-0">
-              <IssueSelector projectId={projectId} value={issueId} onChange={setIssueId} />
-            </div>
-          )}
+        <div className="flex items-center gap-1">
           {cancellable && onCancel && (
             <Button variant="ghost" size="sm" disabled={isLoading} onClick={onCancel}>
               Cancel
             </Button>
           )}
-          <Button variant="default" size="sm" disabled={!canSave} isLoading={isLoading} onClick={handleSave}>
+          <Button variant="default" size="sm" isLoading={isLoading} onClick={handleSave}>
             Save
           </Button>
         </div>
       </div>
     </div>
-  )
-}
-
-function ThumbButton({
-  selected,
-  variant,
-  onClick,
-  disabled,
-}: {
-  readonly selected: boolean
-  readonly variant: "up" | "down"
-  readonly onClick: () => void
-  readonly disabled?: boolean
-}) {
-  const isUp = variant === "up"
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        selected
-          ? isUp
-            ? "bg-success-muted text-success-muted-foreground"
-            : "bg-destructive-muted text-destructive-muted-foreground"
-          : "text-muted-foreground hover:bg-muted",
-      )}
-    >
-      <Icon icon={isUp ? ThumbsUpIcon : ThumbsDownIcon} size="sm" />
-    </button>
   )
 }

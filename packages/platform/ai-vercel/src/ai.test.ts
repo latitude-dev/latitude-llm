@@ -106,4 +106,18 @@ describe("createProviderModel", () => {
 
     expect(bedrockModelFactoryMock).toHaveBeenCalledWith("global.anthropic.claude-sonnet-4-20250514-v1:0")
   })
+
+  it("passes foundation-only Bedrock model IDs through without a geography prefix", async () => {
+    // MiniMax on Bedrock ships as a raw foundation model; wrapping it with
+    // `us.`, `eu.`, or `apac.` yields an identifier AWS rejects.
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "minimax.minimax-m2.5"))
+
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("minimax.minimax-m2.5")
+  })
+
+  it("strips a bogus geography prefix from foundation-only Bedrock model IDs", async () => {
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "us.minimax.minimax-m2.5"))
+
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("minimax.minimax-m2.5")
+  })
 })

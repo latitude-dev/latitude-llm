@@ -18,14 +18,20 @@ const projectsCollection = createCollection(
     getKey: (item: ProjectRecord) => item.id,
     onInsert: async ({ transaction }) => {
       await Promise.all(
-        transaction.mutations.map((mutation) =>
-          createProject({
+        transaction.mutations.map(async (mutation) => {
+          const result = await createProject({
             data: {
               id: mutation.modified.id,
               name: mutation.modified.name,
             },
-          }),
-        ),
+          })
+          queryClient.setQueryData<ProjectRecord[]>(["projects"], (old) => {
+            if (!old) return undefined
+            const hasId = old.some((p) => p.id === result.id)
+            if (!hasId) return [...old, result]
+            return old.map((p) => (p.id === result.id ? result : p))
+          })
+        }),
       )
     },
     onUpdate: async ({ transaction }) => {
@@ -57,9 +63,10 @@ const projectsCollection = createCollection(
 
 export function createProjectMutation(name: string) {
   const now = new Date().toISOString()
+  const projectId = generateId<"ProjectId">()
 
-  return projectsCollection.insert({
-    id: generateId<"ProjectId">(),
+  const transaction = projectsCollection.insert({
+    id: projectId,
     organizationId: OrganizationId(""),
     name,
     slug: "",
@@ -68,6 +75,8 @@ export function createProjectMutation(name: string) {
     createdAt: now,
     updatedAt: now,
   })
+
+  return { projectId, transaction }
 }
 
 export function renameProjectMutation(id: string, name: string) {

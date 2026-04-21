@@ -1,4 +1,5 @@
 import { useMountEffect } from "@repo/ui"
+import { useEffect } from "react"
 import { identifyOrganization, identifyUser, initPostHog, resetPostHog } from "./posthog-client.ts"
 
 export function PostHogProvider() {
@@ -31,11 +32,13 @@ export function PostHogIdentity({
         email: userEmail,
         ...(userName != null ? { name: userName } : {}),
       })
-      await identifyOrganization({
-        id: organizationId,
-        ...(organizationName != null ? { name: organizationName } : {}),
-      })
     })()
   })
+
+  useEffect(() => {
+    if (!organizationName) return
+    void identifyOrganization({ id: organizationId, name: organizationName })
+  }, [organizationId, organizationName])
+
   return null
 }

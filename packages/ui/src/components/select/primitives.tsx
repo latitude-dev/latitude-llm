@@ -32,7 +32,7 @@ const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive
           "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
           font.size.h5,
           {
-            "h-8 py-1": size === "small",
+            "h-7 py-1": size === "small",
             "h-9 py-2": size === "default",
           },
           className,

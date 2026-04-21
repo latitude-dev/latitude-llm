@@ -1,12 +1,27 @@
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs"
+import { homedir } from "node:os"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { postTraces } from "./client.ts"
 import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
+import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
+import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
-import { buildTurns, discoverSubagentFiles, firstPromptIdOf, readIncremental, readSubagentMeta } from "./transcript.ts"
-import type { HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
+import {
+  buildTurns,
+  discoverSubagentFiles,
+  firstPromptIdOf,
+  readAllTurns,
+  readIncremental,
+  readSubagentMeta,
+} from "./transcript.ts"
+import type { AssistantCall, HookPayload, SubagentFile, ToolCall, TranscriptRow, Turn } from "./types.ts"
+
+const INTERCEPT_INSTALL_PATH = join(homedir(), ".claude", "state", "latitude", "intercept.js")
 
 async function readStdin(): Promise<string> {
   if (process.stdin.isTTY) return ""
@@ -35,6 +50,16 @@ function pickSession(p: HookPayload): { sessionId?: string | undefined; transcri
 }
 
 async function main(): Promise<void> {
+  const { subcommand, flags } = parseFlags(process.argv.slice(2))
+  if (subcommand === "install" || subcommand === "install-preload") {
+    await runInstall(normalizeInstallFlags(flags))
+    return
+  }
+  if (subcommand === "uninstall") {
+    await runUninstall({ noPrompt: flags["no-prompt"] === true || flags.yes === true })
+    return
+  }
+
   const config = loadConfig()
   const logger = createLogger(config.debug)
 
@@ -45,6 +70,10 @@ async function main(): Promise<void> {
   }
   logger.debug(`enabled: project=${config.project} base=${config.baseUrl}`)
 
+  // Materialize the intercept preload to a stable path so users can reference it from
+  // settings.json once and receive bundle updates for free on subsequent hook runs.
+  materializeIntercept(logger)
+
   const raw = await readStdin()
   const payload = parsePayload(raw)
   const { sessionId, transcriptPath } = pickSession(payload)
@@ -53,6 +82,12 @@ async function main(): Promise<void> {
     return
   }
   logger.debug(`session=${sessionId} transcript=${transcriptPath}`)
+
+  // Claude Code's transcript writes and our intercept's request-file writes happen
+  // just before Stop fires. Give them a brief window to flush to disk. Without this
+  // we occasionally miss the final assistant row (no final llm_request span) and
+  // miss request files (no llm_request.captured marker).
+  await delay(250)
 
   await withLock(() => {
     const key = stateKey(sessionId, transcriptPath)
@@ -84,11 +119,26 @@ async function main(): Promise<void> {
     const context = collectTraceContext(payload)
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
+    const allTurns = readAllTurns(transcriptPath)
+    const conversationHistory = allTurns.slice(0, Math.max(0, allTurns.length - turns.length))
+    logger.debug(`conversation history: ${conversationHistory.length} prior turn(s)`)
+
+    const messageIds = collectMessageIds(turns)
+    const requestsByMessageId = loadRequestsByMessageId(messageIds)
+    logger.debug(`captured requests: ${requestsByMessageId.size}/${messageIds.length} messages`)
+    if (requestsByMessageId.size < messageIds.length) {
+      const missing = messageIds.filter((id) => !requestsByMessageId.has(id))
+      logger.debug(`missing ${missing.length}: ${missing.join(", ")}`)
+      logger.debug(`dir listing: ${listRequestFilenames().join(", ")}`)
+    }
+
     const otlpRequest = buildOtlpRequest({
       sessionId,
       turnStartNumber: prior.turnCount + 1,
       turns,
       context,
+      conversationHistory,
+      requestsByMessageId,
     })
 
     return postTraces({
@@ -106,8 +156,79 @@ async function main(): Promise<void> {
       for (const s of subagentStates) {
         save(s.key, { offset: s.newOffset, buffer: s.newBuffer, turnCount: s.turnCount })
       }
+      // Prune the request files we just consumed, then sweep anything older than 24h.
+      for (const id of requestsByMessageId.keys()) deleteRequest(id)
+      const stalePruned = pruneStaleRequests()
+      if (stalePruned > 0) logger.debug(`pruned ${stalePruned} stale request file(s)`)
     })
   })
+}
+
+function collectMessageIds(turns: Turn[]): string[] {
+  // Flatten every real assistant message.id across the main turns and any nested
+  // subagent turns. Uses a Set so duplicates (e.g. an id that somehow appears in
+  // both a subagent's own turn list and its parent reference) don't cause
+  // redundant disk reads in loadRequestsByMessageId.
+  const ids = new Set<string>()
+  const addId = (id: string | undefined): void => {
+    if (id && !id.startsWith("noid:")) ids.add(id)
+  }
+  for (const turn of turns) {
+    for (const call of turn.calls) addId(call.messageId)
+    collectSubagentIds(turn.calls, addId)
+  }
+  return Array.from(ids)
+}
+
+function collectSubagentIds(calls: AssistantCall[], addId: (id: string | undefined) => void): void {
+  for (const call of calls) {
+    for (const tool of call.toolUses) {
+      const sub = tool.subagent
+      if (!sub) continue
+      for (const subTurn of sub.turns) {
+        for (const subCall of subTurn.calls) addId(subCall.messageId)
+        collectSubagentIds(subTurn.calls, addId)
+      }
+    }
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function listRequestFilenames(): string[] {
+  try {
+    const dir = join(homedir(), ".claude", "state", "latitude", "requests")
+    if (!existsSync(dir)) return []
+    return readdirSync(dir)
+  } catch {
+    return []
+  }
+}
+
+function materializeIntercept(logger: Logger): void {
+  try {
+    const src = fileURLToPath(new URL("./intercept.js", import.meta.url))
+    if (!existsSync(src)) {
+      logger.debug(`intercept: bundled file missing at ${src}`)
+      return
+    }
+    mkdirSync(dirname(INTERCEPT_INSTALL_PATH), { recursive: true })
+    if (!existsSync(INTERCEPT_INSTALL_PATH)) {
+      copyFileSync(src, INTERCEPT_INSTALL_PATH)
+      logger.debug(`intercept: installed to ${INTERCEPT_INSTALL_PATH}`)
+      return
+    }
+    const srcStat = statSync(src)
+    const dstStat = statSync(INTERCEPT_INSTALL_PATH)
+    if (srcStat.mtimeMs > dstStat.mtimeMs || srcStat.size !== dstStat.size) {
+      copyFileSync(src, INTERCEPT_INSTALL_PATH)
+      logger.debug(`intercept: refreshed ${INTERCEPT_INSTALL_PATH}`)
+    }
+  } catch (err) {
+    logger.debug(`intercept: materialize failed: ${String(err)}`)
+  }
 }
 
 interface SubagentReadResult {
@@ -167,10 +288,12 @@ function stitchSubagents(args: {
 function indexAgentCallsByPromptId(turns: Turn[]): Map<string, ToolCall> {
   const map = new Map<string, ToolCall>()
   for (const turn of turns) {
-    for (const call of turn.toolCalls) {
-      if (call.name !== "Agent") continue
-      if (!call.promptId) continue
-      map.set(call.promptId, call)
+    for (const assistantCall of turn.calls) {
+      for (const toolCall of assistantCall.toolUses) {
+        if (toolCall.name !== "Agent") continue
+        if (!toolCall.promptId) continue
+        map.set(toolCall.promptId, toolCall)
+      }
     }
   }
   return map

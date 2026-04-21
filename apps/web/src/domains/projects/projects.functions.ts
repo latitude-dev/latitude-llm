@@ -138,17 +138,19 @@ export const deleteProject = createServerFn({ method: "POST" })
 
     const outboxWriter = getOutboxWriter()
     await Effect.runPromise(
-      outboxWriter.write({
-        eventName: "ProjectDeleted",
-        aggregateType: "project",
-        aggregateId: data.id,
-        organizationId,
-        payload: {
+      outboxWriter
+        .write({
+          eventName: "ProjectDeleted",
+          aggregateType: "project",
+          aggregateId: data.id,
           organizationId,
-          actorUserId: userId,
-          projectId: data.id,
-        },
-      }),
+          payload: {
+            organizationId,
+            actorUserId: userId,
+            projectId: data.id,
+          },
+        })
+        .pipe(withTracing),
     )
   })
 
@@ -220,7 +222,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
     )
 
     const [activeIssueCount, datasetCount, traceCount] = await Effect.runPromise(
-      Effect.all([issueEffect, datasetEffect, traceEffect]),
+      Effect.all([issueEffect, datasetEffect, traceEffect]).pipe(withTracing),
     )
 
     return { activeIssueCount, datasetCount, traceCount }

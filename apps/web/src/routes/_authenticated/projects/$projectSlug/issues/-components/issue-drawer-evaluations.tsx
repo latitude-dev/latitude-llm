@@ -1,10 +1,10 @@
-import { Button, CloseTrigger, Icon, Modal, Status, Text, Tooltip, useMountEffect, useToast } from "@repo/ui"
+import { Button, CloseTrigger, Icon, Modal, Skeleton, Status, Text, Tooltip, useMountEffect, useToast } from "@repo/ui"
 import { BellPlusIcon, RotateCwIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useRef, useState } from "react"
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react"
 import {
-  type EvaluationAlignmentJobStatusRecord,
   type EvaluationSummaryRecord,
-  getEvaluationAlignmentJobStatus,
+  getIssueAlignmentState,
+  type IssueAlignmentStateRecord,
   softDeleteIssueEvaluation,
   startEvaluationAlignment,
   triggerManualEvaluationRealignment,
@@ -13,21 +13,9 @@ import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { formatPercent } from "./issue-formatters.ts"
 
-const POLL_INTERVAL_MS = 1500
+const POLL_INTERVAL_MS = 5000
 
-type ActiveAlignmentJob =
-  | {
-      readonly kind: "initial"
-      readonly status: EvaluationAlignmentJobStatusRecord
-    }
-  | {
-      readonly kind: "realign"
-      readonly evaluationId: string
-      readonly status: EvaluationAlignmentJobStatusRecord
-    }
-
-const isTerminalStatus = (status: EvaluationAlignmentJobStatusRecord["status"]) =>
-  status === "completed" || status === "failed"
+type TrackedWorkflow = { readonly kind: "initial" } | { readonly kind: "realign"; readonly evaluationId: string }
 
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
@@ -55,7 +43,6 @@ function AlignmentTooltipContent({ evaluation }: { readonly evaluation: Evaluati
 
   return (
     <div className="flex flex-col gap-2">
-      <Text.H6 color="foregroundMuted">Alignment is computed as the Matthews Correlation Coefficient</Text.H6>
       <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
       <div className="flex flex-col gap-1 pt-1">
         <div className="grid grid-cols-[auto_auto_auto]">
@@ -71,25 +58,37 @@ function AlignmentTooltipContent({ evaluation }: { readonly evaluation: Evaluati
             <Text.H6 color="foregroundMuted">Actual +</Text.H6>
           </div>
           <div className="border-b border-r border-border px-2 py-1">
-            <Text.H6B>{confusionMatrix.truePositives}</Text.H6B>
+            <Text.H6B color="success">{confusionMatrix.truePositives}</Text.H6B>
           </div>
           <div className="border-b border-border px-2 py-1">
-            <Text.H6B>{confusionMatrix.falseNegatives}</Text.H6B>
+            <Text.H6B color="destructive">{confusionMatrix.falseNegatives}</Text.H6B>
           </div>
 
           <div className="border-r border-border px-2 py-1">
             <Text.H6 color="foregroundMuted">Actual -</Text.H6>
           </div>
           <div className="border-r border-border px-2 py-1">
-            <Text.H6B>{confusionMatrix.falsePositives}</Text.H6B>
+            <Text.H6B color="destructive">{confusionMatrix.falsePositives}</Text.H6B>
           </div>
           <div className="px-2 py-1">
-            <Text.H6B>{confusionMatrix.trueNegatives}</Text.H6B>
+            <Text.H6B color="success">{confusionMatrix.trueNegatives}</Text.H6B>
           </div>
         </div>
       </div>
     </div>
   )
+}
+
+const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => {
+  if (state.kind === "generating") {
+    return { kind: "initial" }
+  }
+
+  if (state.kind === "realigning") {
+    return { kind: "realign", evaluationId: state.evaluationId }
+  }
+
+  return null
 }
 
 export function IssueDrawerEvaluations({
@@ -104,14 +103,18 @@ export function IssueDrawerEvaluations({
   readonly canMonitorIssue: boolean
 }) {
   const { toast } = useToast()
-  const [activeJob, setActiveJob] = useState<ActiveAlignmentJob | null>(null)
+  const [tracked, setTracked] = useState<TrackedWorkflow | null>(null)
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [hasAlignmentStateSynced, setHasAlignmentStateSynced] = useState(false)
   const mountedRef = useRef(true)
+  const trackedRef = useRef<TrackedWorkflow | null>(null)
+
+  trackedRef.current = tracked
 
   useMountEffect(() => {
     return () => {
@@ -119,58 +122,56 @@ export function IssueDrawerEvaluations({
     }
   })
 
-  const syncJobStatus = async (job: ActiveAlignmentJob) => {
-    let currentJob = job
+  useEffect(() => {
+    let cancelled = false
+    mountedRef.current = true
+    setHasAlignmentStateSynced(false)
 
-    while (mountedRef.current) {
-      const nextStatus = await getEvaluationAlignmentJobStatus({
-        data: {
-          jobId: currentJob.status.jobId,
-        },
-      })
+    const poll = async () => {
+      try {
+        const state = await getIssueAlignmentState({
+          data: { projectId, issueId },
+        })
 
-      if (!mountedRef.current) {
-        return
+        if (cancelled || !mountedRef.current) {
+          return
+        }
+
+        const next = toTracked(state)
+        const previous = trackedRef.current
+
+        if (previous !== null && next === null) {
+          await invalidateIssueQueries(projectId, issueId)
+          toast({
+            description:
+              previous.kind === "initial" ? "An evaluation has been generated" : "An evaluation has been realigned",
+          })
+        }
+
+        setTracked(next)
+        setHasAlignmentStateSynced(true)
+      } catch {
+        // Transient failures keep the last known state until the next tick.
       }
-
-      currentJob =
-        currentJob.kind === "initial"
-          ? {
-              kind: "initial",
-              status: nextStatus,
-            }
-          : {
-              kind: "realign",
-              evaluationId: currentJob.evaluationId,
-              status: nextStatus,
-            }
-      setActiveJob(currentJob)
-
-      if (isTerminalStatus(nextStatus.status)) {
-        await invalidateIssueQueries(projectId, issueId)
-        return
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
-  }
+
+    void poll()
+    const intervalId = setInterval(() => void poll(), POLL_INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [projectId, issueId, toast])
 
   const handleGenerate = async () => {
     setIsStartingGenerate(true)
     try {
-      const status = await startEvaluationAlignment({
-        data: {
-          projectId,
-          issueId,
-        },
+      await startEvaluationAlignment({
+        data: { projectId, issueId },
       })
-      const job: ActiveAlignmentJob = {
-        kind: "initial",
-        status,
-      }
-      setActiveJob(job)
+      setTracked({ kind: "initial" })
       setMonitorModalOpen(false)
-      void syncJobStatus(job)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -184,21 +185,11 @@ export function IssueDrawerEvaluations({
   const handleRealign = async (evaluationId: string) => {
     setIsStartingRealign(true)
     try {
-      const status = await triggerManualEvaluationRealignment({
-        data: {
-          projectId,
-          issueId,
-          evaluationId,
-        },
+      await triggerManualEvaluationRealignment({
+        data: { projectId, issueId, evaluationId },
       })
-      const job: ActiveAlignmentJob = {
-        kind: "realign",
-        evaluationId,
-        status,
-      }
-      setActiveJob(job)
+      setTracked({ kind: "realign", evaluationId })
       setRealignEvaluationId(null)
-      void syncJobStatus(job)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -236,7 +227,7 @@ export function IssueDrawerEvaluations({
     }
   }
 
-  const isBusy = activeJob !== null && !isTerminalStatus(activeJob.status.status)
+  const isBusy = tracked !== null
   const visibleEvaluations = evaluations.filter(
     (evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null,
   )
@@ -244,12 +235,33 @@ export function IssueDrawerEvaluations({
   const hiddenEvaluationCount = Math.max(0, visibleEvaluations.length - 1)
   const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
   const monitorBlockedByLifecycle = !canMonitorIssue
-  const isGenerating = isStartingGenerate || (activeJob?.kind === "initial" && isBusy)
+  const isGenerating = isStartingGenerate || tracked?.kind === "initial"
   const isPrimaryEvaluationRealigning =
-    primaryEvaluation !== null &&
-    activeJob?.kind === "realign" &&
-    activeJob.evaluationId === primaryEvaluation.id &&
-    !isTerminalStatus(activeJob.status.status)
+    primaryEvaluation !== null && tracked?.kind === "realign" && tracked.evaluationId === primaryEvaluation.id
+
+  if (!hasAlignmentStateSynced) {
+    return visibleEvaluations.length === 0 ? (
+      <Skeleton className="h-20 w-full rounded-xl" />
+    ) : (
+      <div aria-busy className="flex w-full flex-col justify-center gap-2 px-1 pt-2">
+        <div className="flex flex-row flex-wrap items-end gap-8">
+          <div className="flex shrink-0 flex-col gap-1">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-7 w-16" />
+          </div>
+          <div className="flex shrink-0 flex-col gap-1">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-7 w-12" />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-row flex-wrap justify-end gap-1">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+        {hiddenEvaluationCount > 0 ? <Skeleton className="h-4 w-48 self-center" /> : null}
+      </div>
+    )
+  }
 
   if (visibleEvaluations.length === 0) {
     const monitorButton = (
@@ -265,7 +277,7 @@ export function IssueDrawerEvaluations({
 
     return (
       <>
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border px-5 py-4">
+        <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-dashed border-border px-5 py-4">
           <div className="flex min-w-0 flex-col gap-1">
             <Text.H5M>No evaluations</Text.H5M>
             <Text.H6 color="foregroundMuted">Generate an evaluation to monitor this issue</Text.H6>
@@ -301,7 +313,7 @@ export function IssueDrawerEvaluations({
 
   return (
     <>
-      <div className="flex flex-col gap-2 px-1 pt-2">
+      <div className="flex w-full flex-col gap-2 px-1 pt-2">
         {primaryEvaluation ? (
           <div className="flex flex-row flex-wrap items-end gap-8">
             <SummaryField

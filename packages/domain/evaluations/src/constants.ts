@@ -27,9 +27,6 @@ export const ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS = 1 * 60 * 60 * 1000
 /** Debounce window for full re-optimization after new annotations (8 hours in milliseconds). */
 export const ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS = 8 * 60 * 60 * 1000
 
-/** Default cooldown for user-triggered manual realignment requests (1 hour in milliseconds). */
-export const ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS = 1 * 60 * 60 * 1000
-
 // ---------------------------------------------------------------------------
 // Alignment tolerances
 // ---------------------------------------------------------------------------
@@ -48,8 +45,11 @@ export const ALIGNMENT_MCC_TOLERANCE = 0.05
 /** Minimum curated example count before the aligner expands beyond sparse bootstrap behavior. */
 export const ALIGNMENT_CURATED_DATASET_MIN_ROWS = 4
 
-/** Maximum curated example count sent into alignment in one run. */
-export const ALIGNMENT_CURATED_DATASET_MAX_ROWS = 250
+/**
+ * Maximum total curated examples (positive + negative) sent into alignment in one run.
+ * Collection targets a balanced split (up to half from each label, then backfill from the other).
+ */
+export const ALIGNMENT_CURATED_DATASET_MAX_ROWS = 100
 
 /** Default seed used for deterministic dataset ordering and splitting. */
 export const ALIGNMENT_DEFAULT_SEED = 310700
@@ -61,15 +61,26 @@ export const ALIGNMENT_TRAIN_SPLIT = 0.7
 export const ALIGNMENT_VALIDATION_SPLIT = 0.3
 
 // ---------------------------------------------------------------------------
-// Evaluation-generation job status
+// Cross-process contract for the evaluation alignment Temporal workflow
 // ---------------------------------------------------------------------------
+//
+// These live here (rather than in a separate `alignment/workflow.ts` subpath)
+// so the Temporal workflow bundle can import them from the same known-good
+// `@domain/evaluations/constants` subpath that it already uses for the
+// debounce windows above. The workflow file itself lives in `apps/workflows`,
+// but the signal name, query name, and query response shape are shared with
+// `apps/workers` (auto-refresh) and `apps/web` (manual triggers + polling).
+//
+// Workflow IDs use the format `evaluations:alignment:${issueId|evaluationId}`
+// and are inlined at each call site.
 
-export const EVALUATION_ALIGNMENT_JOB_KEY_PREFIX = "evaluation-alignment"
+export const EVALUATION_ALIGNMENT_REFRESH_SIGNAL = "scheduleRefresh"
 
-export const EVALUATION_ALIGNMENT_JOB_STATUSES = ["pending", "running", "completed", "failed"] as const
+export const EVALUATION_ALIGNMENT_STATE_QUERY = "getEvaluationAlignmentWorkflowState"
 
-/**
- * TTL in seconds for Redis-backed evaluation-generation job status keys.
- * After this period the status key expires and the frontend stops polling.
- */
-export const EVALUATION_JOB_STATUS_TTL_SECONDS = 3600
+export type EvaluationAlignmentWorkflowState = {
+  readonly manualRealignment: {
+    readonly isBusy: boolean
+    readonly currentJobId: string | null
+  }
+}

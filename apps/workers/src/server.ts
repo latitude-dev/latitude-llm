@@ -17,6 +17,7 @@ import {
   recordSpanExceptionForDatadog,
   shutdownObservability,
   trace,
+  withTracing,
 } from "@repo/observability"
 import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
@@ -27,12 +28,12 @@ import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowSt
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
-import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
+import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
@@ -101,7 +102,9 @@ const bootstrap = async () => {
     })
     app.route("/bull-board", serverAdapter.registerPlugin())
 
-    const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
+    const queuePublisher = await Effect.runPromise(
+      createBullMqQueuePublisher({ redis: bullMqConfig }).pipe(withTracing),
+    )
     const eventsPublisher = createEventsPublisher(queuePublisher)
 
     const outboxConsumer = await Effect.runPromise(
@@ -112,7 +115,7 @@ const bootstrap = async () => {
           batchSize: 100,
         },
         eventsPublisher,
-      ),
+      ).pipe(withTracing),
     )
 
     const queueConsumer = await Effect.runPromise(
@@ -129,7 +132,7 @@ const bootstrap = async () => {
           }
           logger.warn("BullMQ job stalled", incident.queue, incident.jobId)
         },
-      }),
+      }).pipe(withTracing),
     )
     const workflowStarter = await getWorkflowStarter()
 
@@ -146,7 +149,7 @@ const bootstrap = async () => {
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
-    createDatasetExportWorker(ctx)
+    createExportsWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
@@ -157,8 +160,8 @@ const bootstrap = async () => {
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
 
-    await Effect.runPromise(outboxConsumer.start())
-    await Effect.runPromise(queueConsumer.start())
+    await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
+    await Effect.runPromise(queueConsumer.start().pipe(withTracing))
 
     ready = true
     logger.info("workers ready - outbox consumer and queue consumer started")
@@ -179,9 +182,9 @@ const bootstrap = async () => {
     try {
       const { consumers, queuePublisher } = await workersPromise
 
-      await Effect.runPromise(consumers.outboxConsumer.stop())
-      await Effect.runPromise(consumers.queueConsumer.stop())
-      await Effect.runPromise(queuePublisher.close())
+      await Effect.runPromise(consumers.outboxConsumer.stop().pipe(withTracing))
+      await Effect.runPromise(consumers.queueConsumer.stop().pipe(withTracing))
+      await Effect.runPromise(queuePublisher.close().pipe(withTracing))
       // Flush in-flight PostHog events before process exit. No-op when the
       // integration isn't configured.
       await getPostHogClient()

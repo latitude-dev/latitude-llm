@@ -1,4 +1,4 @@
-import type { QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
@@ -7,7 +7,12 @@ import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
-import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
+import {
+  createTemporalClient,
+  createWorkflowQuerier,
+  createWorkflowStarter,
+  loadTemporalConfig,
+} from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
@@ -21,7 +26,9 @@ let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
 let outboxWriterInstance: ReturnType<typeof createOutboxWriter> | undefined
 let redisInstance: RedisClient | undefined
+let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
+let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
 
 const getEmailFlowFromMagicLinkUrl = ({
   magicLinkUrl,
@@ -101,7 +108,7 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
       const config = Effect.runSync(loadBullMqConfig())
-      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }).pipe(withTracing))
     })().catch((error) => {
       queuePublisher = undefined
       throw error
@@ -110,10 +117,21 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   return queuePublisher
 }
 
+const getTemporalClient = (): ReturnType<typeof createTemporalClient> => {
+  if (!temporalClientPromise) {
+    const config = loadTemporalConfig()
+    temporalClientPromise = createTemporalClient(config).catch((error) => {
+      temporalClientPromise = undefined
+      throw error
+    })
+  }
+  return temporalClientPromise
+}
+
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   if (!workflowStarterPromise) {
     const config = loadTemporalConfig()
-    workflowStarterPromise = createTemporalClient(config)
+    workflowStarterPromise = getTemporalClient()
       .then((client) => createWorkflowStarter(client, config))
       .catch((error) => {
         workflowStarterPromise = undefined
@@ -121,6 +139,18 @@ export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
       })
   }
   return workflowStarterPromise
+}
+
+export function getWorkflowQuerier(): Promise<WorkflowQuerierShape> {
+  if (!workflowQuerierPromise) {
+    workflowQuerierPromise = getTemporalClient()
+      .then((client) => createWorkflowQuerier(client))
+      .catch((error) => {
+        workflowQuerierPromise = undefined
+        throw error
+      })
+  }
+  return workflowQuerierPromise
 }
 
 export const getBetterAuth = () => {

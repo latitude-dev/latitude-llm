@@ -10,6 +10,7 @@ const { mockActivities } = vi.hoisted(() => {
       traceId: "trace-1",
       feedback: "Test feedback",
       traceCreatedAt: "2024-01-15T10:00:00.000Z",
+      scoreId: "score-default",
     })),
     persistAnnotation: vi.fn(async () => ({
       queueId: "queue-1",
@@ -69,6 +70,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-from-draft",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -109,6 +111,9 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueSlug: "refusal",
     })
     expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    // The scoreId emitted by draftAnnotate must flow verbatim into
+    // persistAnnotation so the LLM telemetry span and the persisted score row
+    // share the same id (see PRD: "Identity strategy").
     expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -117,6 +122,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-123",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-from-draft",
     })
   })
 
@@ -127,6 +133,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-existing",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -157,27 +164,6 @@ describe("systemQueueFlaggerWorkflow", () => {
     expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
   })
 
-  it("returns not_matched without annotate side effects when the flagger does not match", async () => {
-    mockActivities.runFlagger.mockResolvedValueOnce({ matched: false })
-
-    const result = await systemQueueFlaggerWorkflow({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-1",
-      queueSlug: "resource-outliers",
-    })
-
-    expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({
-      action: "not_matched",
-      queueSlug: "resource-outliers",
-      traceId: "trace-1",
-      durationMs: expect.any(Number),
-    })
-    expect(mockActivities.draftAnnotate).not.toHaveBeenCalled()
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
-  })
-
   it("propagates draftAnnotate errors for Temporal retry", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockRejectedValueOnce(new Error("Draft annotator failed"))
@@ -203,6 +189,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-persist-failure",
     })
     mockActivities.persistAnnotation.mockRejectedValueOnce(new Error("Persist failed"))
 
@@ -227,6 +214,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-tool",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-tool",
@@ -262,6 +250,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-tool",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-tool",
     })
   })
 })

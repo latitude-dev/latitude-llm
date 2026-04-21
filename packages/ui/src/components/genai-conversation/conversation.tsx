@@ -109,7 +109,9 @@ export function Conversation({
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
   readonly toolCallActions?: ToolCallActions
   /** Called when the user selects text within a message part. Emits the canonical anchor and popover position. */
-  readonly onTextSelect?: ((anchor: TextSelectionAnchor, position: { x: number; y: number }) => void) | undefined
+  readonly onTextSelect?:
+    | ((anchor: TextSelectionAnchor, position: { x: number; y: number }, passed: boolean | null) => void)
+    | undefined
   /** Called when the selection highlight is cleared (e.g. ESC, click outside). Use to close external popovers. */
   readonly onSelectionDismiss?: (() => void) | undefined
   /** Ref that receives a function to imperatively clear the selection highlight from outside. */
@@ -213,14 +215,14 @@ export function Conversation({
           >
             {isUser ? (
               <div className="flex min-w-0 flex-col items-end">
-                <div className="inline-flex min-w-0 max-w-full flex-col items-start">
+                <div className="flex min-w-0 max-w-[85%] flex-col items-start">
                   <Message
                     message={message}
                     messageIndex={index}
                     alignment="left"
                     {...(toolCallActions ? { toolCallActions } : {})}
                   />
-                  {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
+                  {annotationSlot && <div className="mt-3 flex w-full justify-end">{annotationSlot}</div>}
                 </div>
               </div>
             ) : (

@@ -164,6 +164,7 @@ export {
 export { TagList, type TagListProps } from "./components/tag-badge/tag-list.tsx"
 export { type Common as TextCommonProps, Text, TextAtom, type TextProps } from "./components/text/text.tsx"
 export { Textarea, type TextareaProps } from "./components/textarea/textarea.tsx"
+export { ThumbButton } from "./components/thumb-button/thumb-button.tsx"
 export type { ToastActionElement, ToastProps } from "./components/toast/toast.tsx"
 export {
   Toast,

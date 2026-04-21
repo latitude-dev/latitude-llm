@@ -15,7 +15,7 @@ export function getAnnotationProvenance(annotation: AnnotationProvenanceInput): 
 
   if (sourceId === "API") return "api"
 
-  if (isValidId(sourceId)) return "agent"
+  if (sourceId === "SYSTEM" || isValidId(sourceId)) return "agent"
 
   return null
 }

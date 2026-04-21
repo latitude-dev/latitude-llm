@@ -1,7 +1,7 @@
 import { inviteMagicLinkTemplate, sendEmail } from "@domain/email"
 import type { QueueConsumer } from "@domain/queue"
 import { createEmailTransportSender } from "@platform/email-transport"
-import { createLogger } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
 const logger = createLogger("invitation-email")
@@ -39,6 +39,7 @@ export const createInvitationEmailWorker = ({ consumer }: InvitationEmailDeps) =
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Invitation email failed for ${payload.email}`, error)),
         ),
+        withTracing,
       )
     },
   })

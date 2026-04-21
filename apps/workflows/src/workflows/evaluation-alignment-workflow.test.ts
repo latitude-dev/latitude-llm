@@ -55,20 +55,6 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
   let signalHandler: ((payload: { readonly reason: string; readonly jobId?: string | null }) => void) | null = null
 
   const mockActivities = {
-    writeEvaluationAlignmentJobStatus: vi.fn(
-      async (input: { readonly status: string; readonly error?: { readonly message: string } | null }) => {
-        callOrder.push(`status:${input.status}`)
-        return {
-          jobId: "job-1",
-          status: input.status,
-          evaluationId: null,
-          error: input.error ?? null,
-        }
-      },
-    ),
-    assertManualEvaluationRealignmentAllowed: vi.fn(async () => {
-      callOrder.push("assertManualEvaluationRealignmentAllowed")
-    }),
     loadEvaluationAlignmentState: vi.fn(async () => {
       callOrder.push("loadEvaluationAlignmentState")
       return {
@@ -277,8 +263,11 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
 vi.mock("@temporalio/workflow", () => ({
   proxyActivities: () => mockActivities,
   defineSignal: (name: string) => name,
-  setHandler: (_signal: string, handler: typeof workflowRuntime.signalHandler) => {
-    workflowRuntime.signalHandler = handler
+  defineQuery: (name: string) => name,
+  setHandler: (signal: string, handler: typeof workflowRuntime.signalHandler) => {
+    if (signal === "scheduleRefresh") {
+      workflowRuntime.signalHandler = handler
+    }
   },
   condition: workflowPrimitives.condition,
 }))
@@ -318,14 +307,12 @@ describe("evaluationAlignmentWorkflow", () => {
     })
 
     expect(callOrder).toEqual([
-      "status:running",
       "collectEvaluationAlignmentExamples",
       "generateBaselineEvaluationDraft",
       "optimizeEvaluationDraft",
       "evaluateBaselineEvaluationDraft",
       "generateEvaluationDetails",
       "persistEvaluationAlignmentResult",
-      "status:completed",
     ])
 
     expect(mockActivities.generateEvaluationDetails).toHaveBeenCalledWith({
@@ -341,10 +328,7 @@ describe("evaluationAlignmentWorkflow", () => {
     })
   })
 
-  it("writes failed status before surfacing activity errors", async () => {
-    mockActivities.assertManualEvaluationRealignmentAllowed.mockImplementationOnce(async () => {
-      callOrder.push("assertManualEvaluationRealignmentAllowed")
-    })
+  it("surfaces activity errors from the initial-generation path", async () => {
     mockActivities.generateBaselineEvaluationDraft.mockImplementationOnce(async () => {
       callOrder.push("generateBaselineEvaluationDraft")
       throw Object.assign(new Error("baseline generation failed"), {
@@ -364,12 +348,9 @@ describe("evaluationAlignmentWorkflow", () => {
     ).rejects.toThrow("baseline generation failed")
 
     expect(callOrder).toEqual([
-      "status:running",
-      "assertManualEvaluationRealignmentAllowed",
       "loadEvaluationAlignmentState",
       "collectEvaluationAlignmentExamples",
       "generateBaselineEvaluationDraft",
-      "status:failed",
     ])
   })
 
@@ -404,7 +385,6 @@ describe("evaluationAlignmentWorkflow", () => {
       "evaluateIncrementalEvaluationDraft",
       "persistEvaluationAlignmentResult",
     ])
-    expect(mockActivities.writeEvaluationAlignmentJobStatus).not.toHaveBeenCalled()
   })
 
   it("coalesces repeated metric-refresh signals into one incremental pass", async () => {
@@ -555,20 +535,12 @@ describe("evaluationAlignmentWorkflow", () => {
     ).resolves.toBeUndefined()
 
     expect(callOrder).toEqual([
-      "status:running",
-      "assertManualEvaluationRealignmentAllowed",
       "loadEvaluationAlignmentState",
       "collectEvaluationAlignmentExamples",
       "generateBaselineEvaluationDraft",
       "optimizeEvaluationDraft",
       "evaluateBaselineEvaluationDraft",
       "persistEvaluationAlignmentResult",
-      "status:completed",
     ])
-    expect(mockActivities.writeEvaluationAlignmentJobStatus).toHaveBeenNthCalledWith(1, {
-      jobId: "manual-job-1",
-      status: "running",
-      evaluationId: "eval-existing",
-    })
   })
 })

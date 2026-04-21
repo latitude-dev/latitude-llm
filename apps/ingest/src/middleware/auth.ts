@@ -1,4 +1,5 @@
 import { validateApiKey } from "@platform/api-key-auth"
+import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"
 import { getAdminPostgresClient, getRedisClient } from "../clients.ts"
@@ -20,7 +21,7 @@ export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
       redis: getRedisClient(),
       adminClient,
       onKeyValidated: (keyId) => touchBuffer.touch(keyId),
-    }),
+    }).pipe(withTracing),
   )
 
   if (!result) {

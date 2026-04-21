@@ -21,9 +21,47 @@ function walk(directory) {
 
     if (extname(entry.name) === ".map" && entry.name.endsWith(".mjs.map")) {
       repairMap(entryPath)
+      hydrateMapSourcesContent(entryPath)
       createJsMapAlias(entryPath)
     }
   }
+}
+
+function hydrateMapSourcesContent(targetMapPath) {
+  const targetMap = JSON.parse(readFileSync(targetMapPath, "utf8"))
+  if (!Array.isArray(targetMap.sources)) {
+    return
+  }
+
+  const targetMapDir = dirname(targetMapPath)
+  const existingSourcesContent = Array.isArray(targetMap.sourcesContent) ? targetMap.sourcesContent : []
+  let didChange = !Array.isArray(targetMap.sourcesContent) || existingSourcesContent.length !== targetMap.sources.length
+
+  const sourcesContent = targetMap.sources.map((source, index) => {
+    const existing = existingSourcesContent[index]
+    if (typeof existing === "string") {
+      return existing
+    }
+
+    const absoluteSourcePath = resolveSourcePath(source, targetMapDir)
+    if (!absoluteSourcePath || !statExists(absoluteSourcePath)) {
+      return existing ?? null
+    }
+
+    didChange = true
+    return readFileSync(absoluteSourcePath, "utf8")
+  })
+
+  if (!didChange) {
+    return
+  }
+
+  const hydratedMap = {
+    ...targetMap,
+    sourcesContent,
+  }
+
+  writeFileSync(targetMapPath, `${JSON.stringify(hydratedMap)}\n`)
 }
 
 function repairMap(targetMapPath) {
@@ -60,16 +98,24 @@ function repairMap(targetMapPath) {
 }
 
 function rewriteSourcePath(source, assetMapDir, targetMapDir) {
-  if (typeof source !== "string") {
+  const absoluteSourcePath = resolveSourcePath(source, assetMapDir)
+  if (!absoluteSourcePath) {
     return source
+  }
+
+  return relative(targetMapDir, absoluteSourcePath)
+}
+
+function resolveSourcePath(source, sourceMapDir) {
+  if (typeof source !== "string") {
+    return null
   }
 
   if (source.startsWith("#") || source.includes("://") || source.startsWith("data:")) {
-    return source
+    return null
   }
 
-  const absoluteSourcePath = resolve(assetMapDir, source)
-  return relative(targetMapDir, absoluteSourcePath)
+  return resolve(sourceMapDir, source)
 }
 
 function createJsModuleAlias(targetModulePath) {

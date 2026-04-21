@@ -9,12 +9,7 @@ import {
   formatGenAIMessage,
 } from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
-import {
-  evaluateTraceResourceOutliersUseCase,
-  type TraceDetail,
-  TraceRepository,
-  type TraceResourceOutlierReason,
-} from "@domain/spans"
+import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import Mustache from "mustache"
 import { z } from "zod"
@@ -24,11 +19,6 @@ import {
   SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
   SYSTEM_QUEUE_FLAGGER_MODEL,
 } from "../constants.ts"
-import {
-  matchesEmptyResponseSystemQueue,
-  matchesOutputSchemaValidationSystemQueue,
-  matchesToolCallErrorsSystemQueue,
-} from "../helpers.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -39,65 +29,11 @@ export interface RunSystemQueueFlaggerInput {
 
 export interface RunSystemQueueFlaggerResult {
   readonly matched: boolean
-  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }
 
 export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
-type DeterministicSystemQueueSlug =
-  | "empty-response"
-  | "output-schema-validation"
-  | "resource-outliers"
-  | "tool-call-errors"
 type LlmSystemQueueSlug = "jailbreaking" | "refusal" | "frustration" | "forgetting" | "laziness" | "nsfw" | "trashing"
-
-// Effect-based matcher: loads trace via repository and returns full result with optional match reasons
-type SystemQueueMatcher = (
-  input: RunSystemQueueFlaggerInput,
-) => Effect.Effect<RunSystemQueueFlaggerResult, NotFoundError | RepositoryError, TraceRepository>
-
-// Effect-based matchers that load trace and apply domain logic
-const deterministicQueueMatchers: Record<DeterministicSystemQueueSlug, SystemQueueMatcher> = {
-  "empty-response": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesEmptyResponseSystemQueue(trace) }
-    }),
-  "output-schema-validation": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesOutputSchemaValidationSystemQueue(trace) }
-    }),
-  "resource-outliers": (input) =>
-    Effect.gen(function* () {
-      const evaluation = yield* evaluateTraceResourceOutliersUseCase({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: evaluation.matched, matchReasons: evaluation.reasons }
-    }),
-  "tool-call-errors": (input) =>
-    Effect.gen(function* () {
-      const traceRepository = yield* TraceRepository
-      const trace = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        traceId: TraceId(input.traceId),
-      })
-      return { matched: matchesToolCallErrorsSystemQueue(trace) }
-    }),
-}
 
 const llmSystemQueueSlugs = [
   "jailbreaking",
@@ -112,7 +48,7 @@ const llmSystemQueueSlugs = [
 const llmSystemQueueSlugSet = new Set<string>(llmSystemQueueSlugs)
 
 const systemQueueFlaggerOutputSchema = z.object({
-  matched: z.boolean(),
+  matched: z.boolean().optional().default(false),
 })
 
 const FLAGGER_SYSTEM_PROMPT_TEMPLATE = `
@@ -141,10 +77,6 @@ const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
       traceId: TraceId(input.traceId),
     })
   })
-
-const isDeterministicQueueSlug = (queueSlug: string): queueSlug is DeterministicSystemQueueSlug => {
-  return queueSlug in deterministicQueueMatchers
-}
 
 const isLlmQueueSlug = (queueSlug: string): queueSlug is LlmSystemQueueSlug => {
   return llmSystemQueueSlugSet.has(queueSlug)
@@ -288,10 +220,6 @@ const runLlmFlagger = (
     return result.object
   })
 
-export function getSystemQueueMatcherBySlug(queueSlug: string): SystemQueueMatcher | undefined {
-  return isDeterministicQueueSlug(queueSlug) ? deterministicQueueMatchers[queueSlug] : undefined
-}
-
 export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
   input: RunSystemQueueFlaggerInput,
 ) {
@@ -299,12 +227,6 @@ export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSyste
   yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
   yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
-
-  const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
-
-  if (deterministicMatcher) {
-    return yield* deterministicMatcher(input)
-  }
 
   if (!isLlmQueueSlug(input.queueSlug)) {
     return { matched: false }

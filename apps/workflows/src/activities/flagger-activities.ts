@@ -6,7 +6,6 @@ import {
   type SystemQueueAnnotateOutput,
 } from "@domain/annotation-queues"
 import { OrganizationId } from "@domain/shared"
-import type { TraceResourceOutlierReason } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import {
@@ -58,6 +57,8 @@ interface DraftAnnotateOutput {
   readonly traceId: string
   readonly feedback: string
   readonly traceCreatedAt: string
+  /** Pre-generated score id; forwarded verbatim to `persistAnnotation`. */
+  readonly scoreId: string
 }
 
 export const draftAnnotate = async (input: {
@@ -65,13 +66,9 @@ export const draftAnnotate = async (input: {
   readonly projectId: string
   readonly traceId: string
   readonly queueSlug: string
-  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }): Promise<DraftAnnotateOutput> =>
   Effect.runPromise(
-    draftSystemQueueAnnotationUseCase({
-      ...input,
-      ...(input.matchReasons ? { matchReasons: [...input.matchReasons] } : {}),
-    }).pipe(
+    draftSystemQueueAnnotationUseCase(input).pipe(
       withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
@@ -102,6 +99,7 @@ export const persistAnnotation = async (input: {
   readonly queueId: string
   readonly feedback: string
   readonly traceCreatedAt: string
+  readonly scoreId: string
 }): Promise<SystemQueueAnnotateOutput> =>
   Effect.runPromise(
     persistSystemQueueAnnotationUseCase(input).pipe(

@@ -28,12 +28,13 @@ describe("export-csv", () => {
       expect(rowsToCsvFragment([])).toBe("")
     })
 
-    it("serializes rows to CSV lines with header row", () => {
+    it("serializes rows to CSV lines without a header row", () => {
       const rows: DatasetRow[] = [
         row({ input: "prompt", output: "answer", metadata: "{}" }),
         row({ input: "a,b", output: "x\ny", metadata: "" }),
       ]
       const fragment = rowsToCsvFragment(rows)
+      expect(fragment).not.toContain(csvExportHeader())
       expect(fragment).toContain("prompt")
       expect(fragment).toContain("answer")
       expect(fragment).toContain("a,b")

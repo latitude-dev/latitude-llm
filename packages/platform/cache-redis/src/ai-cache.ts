@@ -1,8 +1,8 @@
 import { CacheError, CacheStore } from "@domain/shared"
 import { Effect, Layer } from "effect"
-import type { Redis } from "ioredis"
+import type { RedisClient } from "./client.ts"
 
-export const RedisCacheStoreLive = (redis: Redis) =>
+export const RedisCacheStoreLive = (redis: RedisClient) =>
   Layer.succeed(CacheStore, {
     get: (key) =>
       Effect.tryPromise({

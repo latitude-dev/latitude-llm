@@ -19,7 +19,7 @@ function joinTextParts(parts: GenAIMessage["parts"]): string {
  */
 export function resolveAnnotationAnchorText(
   messages: readonly GenAIMessage[],
-  anchor: Pick<AnnotationAnchor, "messageIndex" | "partIndex" | "startOffset" | "endOffset">,
+  anchor: AnnotationAnchor,
 ): string | undefined {
   if (anchor.messageIndex === undefined) {
     return undefined

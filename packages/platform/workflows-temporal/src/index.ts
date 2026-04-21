@@ -1,6 +1,7 @@
 export {
   createTemporalClient,
   createTemporalClientEffect,
+  createWorkflowQuerier,
   createWorkflowStarter,
   TemporalConnectionError,
 } from "./client.ts"

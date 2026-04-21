@@ -40,18 +40,20 @@ export function DetailSection({
   label,
   children,
   defaultOpen = true,
+  className,
   contentClassName,
 }: {
   readonly icon: ReactNode
   readonly label: string
   readonly defaultOpen?: boolean
+  readonly className?: string
   readonly contentClassName?: string
   readonly children: ReactNode | (() => ReactNode)
 }) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", className)}>
       <Header icon={icon} label={label} open={open} onClick={() => setOpen((prev) => !prev)} />
       {open && (
         <div className={cn("flex flex-col pl-2 max-h-60 overflow-y-auto", contentClassName)}>

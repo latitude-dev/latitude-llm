@@ -1,6 +1,6 @@
 import { type PersistDraftAnnotationError, writeDraftAnnotationUseCase } from "@domain/annotations"
 import { ScoreRepository } from "@domain/scores"
-import { BadRequestError, generateId, ProjectId, type RepositoryError, SqlClient, TraceId } from "@domain/shared"
+import { BadRequestError, ProjectId, type RepositoryError, ScoreId, SqlClient, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { SYSTEM_QUEUE_DRAFT_DEFAULTS } from "../constants.ts"
@@ -122,7 +122,7 @@ export const persistSystemQueueAnnotationUseCase = Effect.fn("annotationQueues.p
         }
 
         const draftAnnotation = yield* writeDraftAnnotationUseCase({
-          id: generateId<"ScoreId">(),
+          id: ScoreId(parsedInput.scoreId),
           projectId,
           sourceId: queueId,
           traceId,

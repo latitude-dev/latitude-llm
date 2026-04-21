@@ -96,7 +96,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
     const loadProjectRows = (input: ListEvaluationAlignmentExamplesInput) =>
-      sqlClient.query((db) =>
+      sqlClient.query((db, organizationId) =>
         db
           .select({
             id: scores.id,
@@ -111,6 +111,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
           .from(scores)
           .where(
             and(
+              eq(scores.organizationId, organizationId),
               eq(scores.projectId, input.projectId),
               isNull(scores.draftedAt),
               eq(scores.errored, false),

@@ -9,6 +9,7 @@ export {
   annotationSchema,
   annotationSourceIdSchema,
 } from "./entities/annotation.ts"
+export { submitApiAnnotationInputSchema } from "./helpers/annotation-public-api-schema.ts"
 export { canUpdateAnnotation } from "./helpers/can-update-annotation.ts"
 export {
   ANNOTATION_PROVENANCE,
@@ -49,6 +50,7 @@ export {
   type PublishAnnotationResult,
   publishHumanAnnotationUseCase,
 } from "./use-cases/publish-annotation.ts"
+export { submitApiAnnotationUseCase } from "./use-cases/submit-api-annotation.ts"
 export {
   type PersistDraftAnnotationError,
   persistDraftAnnotationInputSchema,

@@ -21,7 +21,22 @@ type ProviderModel = GenerateTextCall["model"]
 type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+const MAX_ERROR_TEXT_LENGTH = 500
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
+
+/**
+ * Bedrock vendor families that ship with cross-region inference (CRI)
+ * profiles — only these get rewritten to `us.*` / `eu.*` / `apac.*` by the
+ * resolver. Every other vendor's model ID passes through unchanged, because
+ * prepending a geography prefix to a foundation-only model (e.g. MiniMax)
+ * produces an identifier AWS rejects with "The provided model identifier
+ * is invalid."
+ *
+ * Each entry matches on the vendor segment (everything before the first `.`
+ * in the geography-less model ID). Add new vendor slugs here as AWS expands
+ * CRI coverage.
+ */
+const BEDROCK_VENDORS_WITH_CROSS_REGION_INFERENCE = new Set<string>(["amazon", "anthropic", "meta"])
 
 const bedrockGeographyPrefixForAwsRegion = (region: string): BedrockGeographyPrefix => {
   if (region.startsWith("eu-")) {
@@ -41,7 +56,9 @@ const bedrockGeographyPrefixForAwsRegion = (region: string): BedrockGeographyPre
 
 /**
  * Bedrock cross-region inference profiles are geography-scoped (`eu.*`, `us.*`, `apac.*`).
- * Keep `global.*` IDs intact and rewrite foundation model IDs to the current AWS geography.
+ * Keep `global.*` IDs intact, rewrite IDs from CRI-enabled vendors to the
+ * current AWS geography, and pass every other vendor's model ID through raw
+ * (foundation-only models break when wrapped with a geography prefix).
  */
 const resolveBedrockModelId = (model: string, region: string): string => {
   if (model.startsWith("global.")) {
@@ -51,6 +68,16 @@ const resolveBedrockModelId = (model: string, region: string): string => {
   const match = model.match(bedrockScopedModelIdPattern)
   if (!match) {
     return model
+  }
+
+  // `match[1]` is the geography-less ID (e.g. `anthropic.claude-sonnet-4-…`
+  // or `minimax.minimax-m2.5`), so its first dot-segment is the vendor
+  // family. Only CRI-enabled vendors get the geography prefix; everyone
+  // else passes through raw. This also strips a bogus `us.` / `eu.` /
+  // `apac.` prefix supplied by a caller for a non-CRI vendor.
+  const vendor = match[1].split(".")[0] ?? ""
+  if (!BEDROCK_VENDORS_WITH_CROSS_REGION_INFERENCE.has(vendor)) {
+    return match[1]
   }
 
   return `${bedrockGeographyPrefixForAwsRegion(region)}.${match[1]}`
@@ -64,6 +91,51 @@ const normalizeProviderOptions = (
   }
 
   return providerOptions as ProviderOptions
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+const truncateErrorText = (value: string): string =>
+  value.length <= MAX_ERROR_TEXT_LENGTH ? value : `${value.slice(0, MAX_ERROR_TEXT_LENGTH)}...`
+
+const formatErrorCause = (cause: unknown): string | undefined => {
+  if (cause instanceof Error) {
+    const message = cause.message.trim()
+    return message === "" ? undefined : message
+  }
+
+  if (typeof cause === "string") {
+    const message = cause.trim()
+    return message === "" ? undefined : message
+  }
+
+  return undefined
+}
+
+const formatGenerateError = (error: unknown): string => {
+  const baseMessage = error instanceof Error ? error.message : String(error)
+
+  if (!isRecord(error)) {
+    return baseMessage
+  }
+
+  const details: string[] = []
+  const finishReason = typeof error.finishReason === "string" ? error.finishReason.trim() : ""
+  if (finishReason !== "") {
+    details.push(`finishReason=${finishReason}`)
+  }
+
+  const text = typeof error.text === "string" ? error.text.trim() : ""
+  if (text !== "") {
+    details.push(`text=${JSON.stringify(truncateErrorText(text))}`)
+  }
+
+  const causeMessage = formatErrorCause(error.cause)
+  if (causeMessage !== undefined && causeMessage !== baseMessage) {
+    details.push(`cause=${JSON.stringify(causeMessage)}`)
+  }
+
+  return details.length === 0 ? baseMessage : `${baseMessage} (${details.join(", ")})`
 }
 
 const mapCredentialError = (message: string) =>
@@ -196,7 +268,7 @@ export const AIGenerateLive = Layer.effect(
             },
             catch: (error) =>
               new AIError({
-                message: `AI generation failed (${input.provider}/${input.model}): ${error instanceof Error ? error.message : String(error)}`,
+                message: `AI generation failed (${input.provider}/${input.model}): ${formatGenerateError(error)}`,
                 cause: error,
               }),
           })

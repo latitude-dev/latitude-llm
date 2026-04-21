@@ -14,5 +14,12 @@
   "dependencies": {
     "@domain/ai": "workspace:*",
     "@latitude-data/telemetry": "workspace:*"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/context-async-hooks": "^2.6.0",
+    "@opentelemetry/sdk-trace-base": "^2.6.1",
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

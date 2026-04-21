@@ -47,7 +47,7 @@ Rules:
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
 - `ScoreAssignedToIssue` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
-- issue-generated evaluation creation is also asynchronous: kickoff returns a `jobId`, and the frontend polls a status endpoint backed by a Redis job-status key for that alignment run
+- issue-generated evaluation creation is also asynchronous: kickoff starts a deterministic-id Temporal workflow and returns nothing to the caller; the frontend polls `getIssueAlignmentState`, which asks Temporal directly (`workflow.describe()` for the initial run, a query handler for in-flight manual-realignment) — there is no Redis-backed job-status key
 
 ## Lifecycle
 
@@ -293,7 +293,7 @@ Issue-linked evaluation creation is explicit:
 - issue discovery and issue creation do not automatically create evaluations
 - issues may have several linked evaluations
 - the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
-- each trigger publishes a background generation/alignment job, returns a `jobId`, and then the frontend polls its Redis-backed status until the resulting evaluation is ready
+- each trigger starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id; the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal directly until the workflow terminates and the resulting evaluation appears via normal data-fetching
 - once created, automatic debounced realignment continues as new annotations arrive
 
 Once an issue-linked evaluation exists:

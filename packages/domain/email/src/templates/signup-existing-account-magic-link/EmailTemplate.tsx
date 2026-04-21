@@ -46,5 +46,3 @@ SignupExistingAccountMagicLinkEmail.PreviewProps = {
   userName: "Alex",
   magicLinkUrl: "https://app.latitude.so/auth/verify?token=signup-existing-preview",
 } satisfies SignupExistingAccountMagicLinkEmailProps
-
-export default SignupExistingAccountMagicLinkEmail

@@ -1,0 +1,148 @@
+name: Scheduled Production Deploy
+
+on:
+  schedule:
+    # Run every day at 9:00 AM UTC (adjust as needed)
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    # Allow manual trigger with optional version bump type
+    inputs:
+      bump_type:
+        description: "Version bump type (only used for manual triggers)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  check-for-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      latest_tag: ${{ steps.check.outputs.latest_tag }}
+      new_version: ${{ steps.version.outputs.new_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check for new commits
+        id: check
+        run: |
+          # Get the latest version tag matching v*
+          latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n1 || echo "")
+
+          if [ -z "$latest_tag" ]; then
+            echo "No existing version tags found"
+            echo "has_changes=true"
+            echo "latest_tag=v0.0.0"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "latest_tag=v0.0.0" >> "$GITHUB_OUTPUT"
+          else
+            echo "Latest tag: $latest_tag"
+            echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+
+            # Check if there are commits since the latest tag
+            commits_since=$(git log "$latest_tag..HEAD" --oneline | wc -l)
+
+            if [ "$commits_since" -gt 0 ]; then
+              echo "Found $commits_since new commit(s) since $latest_tag"
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No new commits since $latest_tag"
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Compute next version
+        id: version
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          latest_tag="${{ steps.check.outputs.latest_tag }}"
+
+          # Parse the version number (remove 'v' prefix)
+          version=${latest_tag#v}
+          version=${version#.}
+
+          IFS='.' read -r current_major current_minor current_patch <<< "$version"
+
+          # Default to patch increment
+          next_major=$current_major
+          next_minor=$current_minor
+          next_patch=$((current_patch + 1))
+
+          # For scheduled runs, always use patch
+          # For manual runs, use the specified bump_type
+          bump_type="${{ github.event.inputs.bump_type || 'patch' }}"
+
+          if [ "$bump_type" = "major" ]; then
+            next_major=$((current_major + 1))
+            next_minor=0
+            next_patch=0
+          elif [ "$bump_type" = "minor" ]; then
+            next_minor=$((current_minor + 1))
+            next_patch=0
+          fi
+
+          new_version="v${next_major}.${next_minor}.${next_patch}"
+          echo "New version: $new_version"
+          echo "new_version=$new_version" >> "$GITHUB_OUTPUT"
+
+  create-tag:
+    needs: check-for-changes
+    if: needs.check-for-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      tag_created: ${{ steps.create-tag.outputs.tag_created }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Create and push tag
+        id: create-tag
+        run: |
+          new_version="${{ needs.check-for-changes.outputs.new_version }}"
+
+          # Check if tag already exists (safety check)
+          if git ls-remote --tags origin "refs/tags/${new_version}" | grep -q "${new_version}"; then
+            echo "Tag $new_version already exists on remote, skipping"
+            echo "tag_created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Create the tag
+          echo "Creating tag: $new_version"
+          git tag "$new_version"
+
+          # Push the tag
+          git push origin "$new_version"
+
+          echo "tag_created=true" >> "$GITHUB_OUTPUT"
+          echo "Created and pushed tag: $new_version"
+
+  notify-no-changes:
+    needs: check-for-changes
+    if: needs.check-for-changes.outputs.has_changes == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log skip message
+        run: |
+          echo "No new commits since ${{ needs.check-for-changes.outputs.latest_tag }}"
+          echo "Skipping scheduled deployment."

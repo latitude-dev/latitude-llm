@@ -401,6 +401,7 @@ function createTaskDefinition(
             name: "LAT_REDIS_TLS",
             value: config.redis.cache.type === "memorydb" || config.redis.bullmq.type === "memorydb" ? "true" : "false",
           },
+          { name: "LAT_REDIS_CLUSTER", value: config.redis.cache.type === "memorydb" ? "true" : "false" },
           { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
           { name: "LAT_BULLMQ_PORT", value: "6379" },
           { name: "LAT_BULLMQ_CLUSTER", value: config.redis.bullmq.type === "memorydb" ? "true" : "false" },

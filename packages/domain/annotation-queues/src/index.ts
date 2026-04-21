@@ -4,7 +4,6 @@ export {
   LIVE_QUEUE_DEFAULT_SAMPLING,
   MAX_TRACES_PER_QUEUE_IMPORT,
   QUEUE_REVIEW_HOTKEYS,
-  RESOURCE_OUTLIER_MULTIPLIER,
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
   SYSTEM_QUEUE_ANNOTATOR_MODEL,
   SYSTEM_QUEUE_DEFAULT_SAMPLING,
@@ -36,9 +35,10 @@ export type { TraceSelection } from "./helpers/bulk-create-from-traces-helpers.t
 export {
   annotationQueueItemStatus,
   annotationQueueItemStatusRankFromTimestamps,
-  matchesEmptyResponseSystemQueue,
-  matchesOutputSchemaValidationSystemQueue,
-  matchesToolCallErrorsSystemQueue,
+  type DeterministicSystemMatch,
+  detectEmptyResponseSystemQueue,
+  detectOutputSchemaValidationSystemQueue,
+  detectToolCallErrorsSystemQueue,
 } from "./helpers.ts"
 export {
   type AdjacentItems,
@@ -144,13 +144,19 @@ export {
   requestBulkQueueItems,
 } from "./use-cases/request-bulk-queue-items.ts"
 export {
+  DETERMINISTIC_SYSTEM_MATCHERS,
+  type RunDeterministicSystemMatchersError,
+  type RunDeterministicSystemMatchersInput,
+  type RunDeterministicSystemMatchersResult,
+  runDeterministicSystemMatchersUseCase,
+} from "./use-cases/run-deterministic-system-matchers.ts"
+export {
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,
   type RunSystemQueueAnnotatorResult,
   runSystemQueueAnnotatorUseCase,
 } from "./use-cases/run-system-queue-annotator.ts"
 export {
-  getSystemQueueMatcherBySlug,
   type RunSystemQueueFlaggerError,
   type RunSystemQueueFlaggerInput,
   type RunSystemQueueFlaggerResult,

@@ -48,7 +48,6 @@ export const systemQueueFlaggerWorkflow = async (input: {
       projectId: input.projectId,
       traceId: input.traceId,
       queueSlug: input.queueSlug,
-      ...(result.matchReasons ? { matchReasons: result.matchReasons } : {}),
     })
 
     log.info("System queue draft annotate completed, starting persist", {
@@ -67,6 +66,7 @@ export const systemQueueFlaggerWorkflow = async (input: {
       queueId: draftResult.queueId,
       feedback: draftResult.feedback,
       traceCreatedAt: draftResult.traceCreatedAt,
+      scoreId: draftResult.scoreId,
     })
 
     log.info("System queue persist annotation completed", {

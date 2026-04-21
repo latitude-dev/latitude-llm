@@ -48,7 +48,7 @@ const issueRepositoryCoreLive = Layer.effect(
     return {
       list: ({ projectId, limit, offset }) =>
         sqlClient
-          .query((db) => {
+          .query((db, organizationId) => {
             const hasAnnotationEvidence = sql<boolean>`exists (
               select 1
               from ${scores}
@@ -67,7 +67,13 @@ const issueRepositoryCoreLive = Layer.effect(
             return db
               .select()
               .from(issues)
-              .where(and(eq(issues.projectId, projectId), or(hasAnnotationEvidence, meetsVisibilityThreshold)))
+              .where(
+                and(
+                  eq(issues.organizationId, organizationId),
+                  eq(issues.projectId, projectId),
+                  or(hasAnnotationEvidence, meetsVisibilityThreshold),
+                ),
+              )
               .orderBy(desc(issues.createdAt))
               .limit(limit + 1)
               .offset(offset)
@@ -83,7 +89,13 @@ const issueRepositoryCoreLive = Layer.effect(
 
       findById: (id: IssueId) =>
         sqlClient
-          .query((db) => db.select().from(issues).where(eq(issues.id, id)).limit(1))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(issues)
+              .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+              .limit(1),
+          )
           .pipe(
             Effect.flatMap((rows) => {
               const row = rows[0]
@@ -94,7 +106,14 @@ const issueRepositoryCoreLive = Layer.effect(
 
       findByIdForUpdate: (id: IssueId) =>
         sqlClient
-          .query((db) => db.select().from(issues).where(eq(issues.id, id)).limit(1).for("update"))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(issues)
+              .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+              .limit(1)
+              .for("update"),
+          )
           .pipe(
             Effect.flatMap((rows) => {
               const row = rows[0]
@@ -103,34 +122,35 @@ const issueRepositoryCoreLive = Layer.effect(
             }),
           ),
 
-      findByIds: ({
-        projectId,
-        issueIds,
-      }: {
-        readonly projectId: ProjectId
-        readonly issueIds: readonly IssueId[]
-      }) => {
-        if (issueIds.length === 0) {
-          return Effect.succeed([])
-        }
+      findByIds: ({ projectId, issueIds }: { readonly projectId: ProjectId; readonly issueIds: readonly IssueId[] }) =>
+        sqlClient
+          .query((db, organizationId) => {
+            if (issueIds.length === 0) {
+              return db.select().from(issues).where(sql`1 = 0`) // Return empty result
+            }
 
-        return sqlClient
-          .query((db) =>
-            db
+            return db
               .select()
               .from(issues)
-              .where(and(eq(issues.projectId, projectId), inArray(issues.id, issueIds))),
-          )
-          .pipe(Effect.map((rows) => rows.map(toDomainIssue)))
-      },
+              .where(
+                and(
+                  eq(issues.organizationId, organizationId),
+                  eq(issues.projectId, projectId),
+                  inArray(issues.id, issueIds),
+                ),
+              )
+          })
+          .pipe(Effect.map((rows) => rows.map(toDomainIssue))),
 
       findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select()
               .from(issues)
-              .where(and(eq(issues.projectId, projectId), eq(issues.uuid, uuid)))
+              .where(
+                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.uuid, uuid)),
+              )
               .limit(1),
           )
           .pipe(

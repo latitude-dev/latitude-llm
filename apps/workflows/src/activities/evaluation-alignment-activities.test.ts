@@ -19,7 +19,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 
-const { mockAi, mockOptimizer, mockRedis } = vi.hoisted(() => ({
+const { mockAi, mockOptimizer } = vi.hoisted(() => ({
   mockAi: {
     generate: vi.fn(),
     embed: vi.fn(),
@@ -27,10 +27,6 @@ const { mockAi, mockOptimizer, mockRedis } = vi.hoisted(() => ({
   },
   mockOptimizer: {
     optimize: vi.fn(),
-  },
-  mockRedis: {
-    get: vi.fn(),
-    set: vi.fn(),
   },
 }))
 
@@ -58,12 +54,11 @@ vi.mock("../clients.ts", async () => {
   return {
     getPostgresClient: () => pg.appPostgresClient,
     getClickhouseClient: () => ch.client,
-    getRedisClient: () => mockRedis,
+    getRedisClient: () => ({}),
   }
 })
 
 import {
-  assertManualEvaluationRealignmentAllowed,
   collectEvaluationAlignmentExamples,
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
@@ -72,7 +67,6 @@ import {
   loadEvaluationAlignmentState,
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
-  writeEvaluationAlignmentJobStatus,
 } from "./index.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -196,14 +190,10 @@ describe("evaluation-alignment activities", () => {
     mockAi.embed.mockReset()
     mockAi.rerank.mockReset()
     mockOptimizer.optimize.mockReset()
-    mockRedis.get.mockReset()
-    mockRedis.set.mockReset()
     mockAi.generate.mockImplementation(() => Effect.die("generate should be mocked per test"))
     mockAi.embed.mockImplementation(() => Effect.die("embed should not be called in activity tests"))
     mockAi.rerank.mockImplementation(() => Effect.die("rerank should not be called in activity tests"))
     mockOptimizer.optimize.mockImplementation(() => Effect.die("optimize should be mocked per test"))
-    mockRedis.get.mockResolvedValue(null)
-    mockRedis.set.mockResolvedValue("OK")
 
     await pg.db.delete(scoresTable)
     await pg.db.delete(evaluationsTable)
@@ -657,70 +647,6 @@ describe("evaluation-alignment activities", () => {
     expect(result.matthewsCorrelationCoefficientDrop).toBeGreaterThan(0.05)
   })
 
-  it("enforces the manual realignment rate-limit through Redis", async () => {
-    await assertManualEvaluationRealignmentAllowed({
-      evaluationId: "e".repeat(24),
-    })
-
-    mockRedis.set.mockResolvedValueOnce(null)
-
-    await expect(
-      assertManualEvaluationRealignmentAllowed({
-        evaluationId: "e".repeat(24),
-      }),
-    ).rejects.toMatchObject({
-      _tag: "EvaluationManualRealignmentRateLimitedError",
-    })
-  })
-
-  it("preserves createdAt while progressing job status updates", async () => {
-    let storedStatus: string | null = null
-    mockRedis.get.mockImplementation(async () => storedStatus)
-    mockRedis.set.mockImplementation(async (_key: string, value: string) => {
-      storedStatus = value
-      return "OK"
-    })
-
-    vi.useFakeTimers()
-    try {
-      vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"))
-      const pending = await writeEvaluationAlignmentJobStatus({
-        jobId: "job-123",
-        status: "pending",
-      })
-
-      vi.setSystemTime(new Date("2026-04-01T00:05:00.000Z"))
-      const running = await writeEvaluationAlignmentJobStatus({
-        jobId: "job-123",
-        status: "running",
-        evaluationId: null,
-      })
-
-      vi.setSystemTime(new Date("2026-04-01T00:10:00.000Z"))
-      const failed = await writeEvaluationAlignmentJobStatus({
-        jobId: "job-123",
-        status: "failed",
-        evaluationId: "e".repeat(24),
-        error: {
-          message: "alignment failed",
-          code: "EvaluationAlignmentActivityError",
-        },
-      })
-
-      expect(pending.createdAt).toEqual(new Date("2026-04-01T00:00:00.000Z"))
-      expect(running.createdAt).toEqual(pending.createdAt)
-      expect(failed.createdAt).toEqual(pending.createdAt)
-      expect(running.updatedAt).toEqual(new Date("2026-04-01T00:05:00.000Z"))
-      expect(failed.updatedAt).toEqual(new Date("2026-04-01T00:10:00.000Z"))
-      expect(failed.error).toEqual({
-        message: "alignment failed",
-        code: "EvaluationAlignmentActivityError",
-      })
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
   it("runs the workflow optimization seam through the optimizer port", async () => {
     const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`
     const expectedOptimizedScript = wrapPromptAsEvaluationScript(optimizedPrompt)
@@ -746,7 +672,7 @@ describe("evaluation-alignment activities", () => {
           })
         }
 
-        expect(input.reasoning).toBe("high")
+        expect(input.reasoning).toBe("xhigh")
         expect(input.prompt).toContain("Current evaluation script:")
         expect(input.prompt).toContain(baselineScript)
 

@@ -17,6 +17,7 @@
     "db:reset": "pnpm --filter \"@platform/db-postgres\" pg:reset && pnpm --filter \"@platform/db-clickhouse\" ch:reset",
     "db:up": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate",
     "seed": "pnpm --filter \"@platform/db-postgres\" pg:seed && pnpm --filter \"@platform/db-clickhouse\" ch:seed && pnpm --filter \"@platform/db-weaviate\" wv:seed",
+    "migrate": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate",
     "reset": "pnpm clean && pnpm install && pnpm build && pnpm db:reset",
     "catchup": "pnpm clean && pnpm install && pnpm build && pnpm db:up",
     "prepare": "pnpm hooks && effect-language-service patch"

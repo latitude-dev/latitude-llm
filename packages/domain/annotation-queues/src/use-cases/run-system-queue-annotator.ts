@@ -8,7 +8,6 @@ import {
   formatGenAIMessage,
 } from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
-import type { TraceResourceOutlierReason } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import {
@@ -23,7 +22,16 @@ export interface RunSystemQueueAnnotatorInput {
   readonly projectId: string
   readonly queueSlug: string
   readonly traceId: string
-  readonly matchReasons?: readonly TraceResourceOutlierReason[]
+  /**
+   * Pre-generated score id for the draft annotation this LLM call will produce.
+   *
+   * Passed through `telemetry.metadata` on `ai.generate(...)`. Latitude's span
+   * processor serializes it into the `latitude.metadata` JSON attribute on the
+   * exported span, which the dogfood tenant sees as `metadata.scoreId` — the
+   * filter key the product-feedback flow (see PRD: "Identity strategy") uses
+   * to recover this trace later without a separate id field on the score row.
+   */
+  readonly scoreId: string
 }
 
 export interface RunSystemQueueAnnotatorResult {
@@ -80,35 +88,6 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
   return blocks.join("\n\n---\n\n")
 }
 
-const formatMatchReasonsForAnnotator = (matchReasons: readonly TraceResourceOutlierReason[] | undefined): string => {
-  if (!matchReasons || matchReasons.length === 0) {
-    return "<no deterministic match reasons available>"
-  }
-
-  return matchReasons
-    .map((reason, index) => {
-      const values = Object.entries(reason.values)
-        .map(([metric, value]) => `${metric}=${value}`)
-        .join(", ")
-      const thresholds = Object.entries(reason.thresholds)
-        .map(([metric, value]) => `${metric}=${value}`)
-        .join(", ")
-      const medians = Object.entries(reason.medians)
-        .map(([metric, value]) => `${metric}=${value}`)
-        .join(", ")
-
-      return [
-        `[reason ${index}] key=${reason.key} metric=${reason.metric} mode=${reason.thresholdMode}`,
-        values ? `values: ${values}` : undefined,
-        thresholds ? `thresholds: ${thresholds}` : undefined,
-        medians ? `medians: ${medians}` : undefined,
-      ]
-        .filter((part): part is string => Boolean(part))
-        .join("\n")
-    })
-    .join("\n\n")
-}
-
 const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
   Effect.gen(function* () {
     const traceRepository = yield* TraceRepository
@@ -139,9 +118,7 @@ export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSys
       ? formatConversationForAnnotator(trace.allMessages)
       : "<no conversation messages available>"
 
-  const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
-
-  const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
+  const prompt = `Full conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
   const result = yield* ai.generate({
     ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
@@ -154,7 +131,7 @@ export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSys
       tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
-        { traceId: input.traceId, queueSlug: input.queueSlug },
+        { traceId: input.traceId, queueSlug: input.queueSlug, scoreId: input.scoreId },
       ),
     },
   })

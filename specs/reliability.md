@@ -506,7 +506,7 @@ Even before the full runtime exists, MVP must already treat this as the real arc
 
 Evaluations generated from issues (by user demand) are the mainline flow of the reliability system.
 
-Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `evaluation-alignment` workflow, returns a `jobId` immediately, and the frontend polls a dedicated status endpoint that reads a Redis key for that job while the initial generation/alignment pipeline runs in the background. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
+Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id and returns immediately without exposing any internal identifier; the frontend polls a dedicated status endpoint that asks Temporal directly (`workflow.describe()` for the initial run, plus a workflow query for in-flight manual-realignment) while the generation/alignment pipeline runs in the background. Temporal is the single source of truth for workflow state; no Redis-backed job-status mirror exists. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
 
 After explicit creation, automatic dynamic realignment remains unchanged for each linked evaluation: the system still refreshes alignment asynchronously as new annotations arrive.
 
@@ -1873,11 +1873,11 @@ Issue discovery never auto-creates those evaluations. The managed UI exposes `Mo
 
 That action is asynchronous:
 
-- the server starts the `evaluation-alignment` workflow and returns a `jobId`
-- progress is written to a Redis key named with the background-task convention, for example `evaluation-alignment:<jobId>`
-- the frontend polls a dedicated status endpoint that reads that Redis key until the job completes or fails
-- the status payload should at least support `pending`, `running`, `completed`, and `failed`
-- a completed status returns the resulting `evaluationId`, after which the linked evaluation appears in the normal issue/evaluation reads
+- the server starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id derived from the issue (initial generation) or evaluation (manual realignment) and returns immediately — no internal identifier leaks back to the frontend
+- Temporal is the single source of truth for workflow state: no Redis-backed job-status mirror is written, and no `jobId` contract is exposed to the UI
+- the frontend polls a dedicated server function (`getIssueAlignmentState`) that asks Temporal directly via `workflow.describe()` for the initial run and a workflow query handler for in-flight manual-realignment state
+- that response is reduced to a minimal UI contract (`idle` / `generating` / `realigning` with `evaluationId`), intentionally omitting internal identifiers like `runId` or `currentJobId`
+- when the workflow terminates, its final status and any error are available through Temporal's own history; the frontend infers "just finished" by observing the transition back to `idle`, then re-fetches the issue/evaluation reads through the normal data-fetching path
 
 Direct monitoring rule:
 
@@ -2582,7 +2582,7 @@ Row click opens a detailed view with:
 - [x] Define the canonical shared Zod schemas for evaluations, triggers, and evaluation lifecycle; infer TypeScript types.
 - [x] Add the Postgres `evaluations` table with full Drizzle definition using repo-convention helpers, support for multiple linked evaluations per issue, RLS, and the exact secondary indexes defined by this spec.
 - [x] Add representative seed data for evaluations, including linked-issue examples where the schema supports them.
-- [x] Define the evaluations-domain named constants for cadence, default sampling, alignment tolerances, and evaluation-generation job-status TTL.
+- [x] Define the evaluations-domain named constants for cadence, default sampling, and alignment tolerances. (Historical note: an earlier job-status TTL constant backed a Redis-based status mirror that has since been removed — Temporal is now the single source of truth for workflow state.)
 - [x] Define `EvaluationTrigger.filter` as the shared `FilterSet` from `@domain/shared`, using the shared trace field registry semantics instead of a reliability-only string grammar.
 
 **Exit gate**: evaluations schema and table are complete; later phases can build generation, alignment, and execution.
@@ -2711,15 +2711,15 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [x] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
 - [x] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
 - [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
-- [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
+- [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, a deterministic per-resource workflow id so the workflow is the queryable resource (no `jobId` leaked to callers), and a polling server function that asks Temporal directly via `workflow.describe()` and workflow queries for frontend status — Temporal is the single source of truth, no Redis-backed job-status mirror.
 - [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
 - [x] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
-- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
+- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same deterministic per-resource workflow id contract where a user-triggered run needs polling feedback — the polling server function asks Temporal directly (via `workflow.describe()` and workflow query handlers) rather than reading any Redis-backed job-status mirror.
 - [x] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
 - [x] Implement curated example sizing plus deterministic balanced train/validation splitting for alignment runs using the configured bounds and defaults from this spec.
 - [x] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
 
-**Exit gate**: users can generate evaluations from issues when needed through background jobs with Redis-backed polling feedback and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
+**Exit gate**: users can generate evaluations from issues when needed through Temporal-backed `evaluation-alignment` workflows with deterministic per-resource ids polled directly from Temporal (no Redis-backed job-status mirror) and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
 
 ### (LAT-470) Phase 13 - Live Monitoring And Evaluation Execution
 

@@ -12,6 +12,7 @@ const INPUT: RunSystemQueueAnnotatorInput = {
   projectId: "b".repeat(24),
   queueSlug: "jailbreaking",
   traceId: "c".repeat(32),
+  scoreId: "s".repeat(24),
 }
 
 function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
@@ -107,6 +108,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
         projectId: INPUT.projectId,
         traceId: INPUT.traceId,
         queueSlug: INPUT.queueSlug,
+        scoreId: INPUT.scoreId,
       },
     })
   })

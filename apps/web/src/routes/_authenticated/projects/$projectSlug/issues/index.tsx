@@ -1,16 +1,20 @@
-import { Input, Tabs } from "@repo/ui"
+import { Button, Icon, Input, Tabs, toast } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { ActivityIcon, ArchiveIcon, SearchIcon } from "lucide-react"
-import { useRef, useState } from "react"
+import { ActivityIcon, ArchiveIcon, DownloadIcon, SearchIcon } from "lucide-react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
 import { useIssues } from "../../../../../domains/issues/issues.collection.ts"
+import { enqueueIssuesExport } from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
+import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { IssueDetailDrawer } from "./-components/issue-detail-drawer.tsx"
 import { IssuesAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
+import { IssuesEmptyState } from "./-components/issues-empty-state.tsx"
 import {
   ISSUES_COLUMN_OPTIONS,
   type IssuesColumnId,
@@ -56,6 +60,9 @@ function IssuesPage() {
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
   const [searchInput, setSearchInput] = useState(searchQuery)
   const [sorting, setSorting] = useState<IssuesTableSorting>(DEFAULT_SORTING)
+  const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const issueIdsRef = useRef<string[]>([])
 
   useDebounce(
@@ -82,6 +89,7 @@ function IssuesPage() {
     data: issues,
     analytics,
     occurrencesSum,
+    totalCount,
     isLoading,
     infiniteScroll,
   } = useIssues({
@@ -93,9 +101,69 @@ function IssuesPage() {
   })
 
   const currentIssueIndex = activeIssueId ? issueIdsRef.current.indexOf(activeIssueId) : -1
+  const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
+  const selection = useSelectableRows({
+    rowIds: issueIds,
+    totalRowCount: totalCount,
+    controlledState: selectionState,
+    onStateChange: setSelectionState,
+  })
   const canNavigateNext =
     issueIdsRef.current.length > 0 && (currentIssueIndex < 0 || currentIssueIndex < issueIdsRef.current.length - 1)
   const canNavigatePrev = issueIdsRef.current.length > 0 && (currentIssueIndex < 0 || currentIssueIndex > 0)
+
+  const handleExportIssues = useCallback(async () => {
+    const bulkSelection = selection.bulkSelection
+    if (!bulkSelection) return
+
+    setExporting(true)
+    try {
+      await enqueueIssuesExport({
+        data: {
+          projectId: project.id,
+          selection: bulkSelection,
+          lifecycleGroup,
+          sort: {
+            field: sorting.column,
+            direction: sorting.direction,
+          },
+          ...(searchQuery ? { searchQuery } : {}),
+          ...(timeRange ? { timeRange } : {}),
+        },
+      })
+      toast({
+        title: "Export started",
+        description: "You'll receive an email with a download link when your export is ready.",
+      })
+      selection.clearSelections()
+      setExportModalOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "Export failed",
+      })
+    } finally {
+      setExporting(false)
+    }
+  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+
+  const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
+  const hasNoIssues = issues.length === 0 && !hasActiveFilters
+  const showEmptyState = !isLoading && hasNoIssues
+
+  if (isLoading && hasNoIssues) {
+    return null
+  }
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <IssuesEmptyState projectSlug={projectSlug} />
+        </Layout.Content>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -149,6 +217,14 @@ function IssuesPage() {
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
+        {selection.selectedCount > 0 && (
+          <div className="flex items-center gap-2 px-6">
+            <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+              <Icon icon={DownloadIcon} size="sm" />
+              Export Issues ({selection.selectedCount.toLocaleString()})
+            </Button>
+          </div>
+        )}
         <div className="px-6">
           <IssuesAnalyticsPanel
             analytics={analytics}
@@ -167,10 +243,21 @@ function IssuesPage() {
           occurrencesSum={occurrencesSum}
           visibleColumnIds={visibleColumnIds}
           activeIssueId={activeIssueId || undefined}
+          selection={selection}
           onSortChange={setSorting}
           onActiveIssueChange={(issueId) => setActiveIssueId(issueId ?? "")}
           issueIdsRef={issueIdsRef}
         />
+        {selection.bulkSelection && (
+          <ExportConfirmationModal
+            open={exportModalOpen}
+            onOpenChange={setExportModalOpen}
+            itemLabel="issue"
+            selectedCount={selection.selectedCount}
+            onConfirm={() => void handleExportIssues()}
+            exporting={exporting}
+          />
+        )}
       </Layout.Content>
       {activeIssueId ? (
         <Layout.Aside>

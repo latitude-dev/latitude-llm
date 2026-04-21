@@ -18,7 +18,6 @@ import {
   deriveConfusionMatrix,
   deriveEvaluationAlignmentMetrics,
   emptyConfusionMatrix,
-  evaluationAlignmentJobStatusKey,
   getLiveEvaluationEligibility,
   getLiveEvaluationTurnScope,
   hasMatthewsCorrelationCoefficientDropExceededTolerance,
@@ -485,11 +484,5 @@ describe("confusion-matrix metric helpers", () => {
         nextConfusionMatrix: decision.nextConfusionMatrix,
       }),
     ).toBe(true)
-  })
-})
-
-describe("evaluationAlignmentJobStatusKey", () => {
-  it("uses the canonical Redis key prefix", () => {
-    expect(evaluationAlignmentJobStatusKey("job-123")).toBe("evaluation-alignment:job-123")
   })
 })

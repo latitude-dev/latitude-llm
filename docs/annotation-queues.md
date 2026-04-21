@@ -28,7 +28,7 @@ When a project is created:
 5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
 6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
 
-The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`, `tool-call-errors`, `resource-outliers`, `output-schema-validation`, `empty-response`) derived from their names, enabling slug-based routing throughout the pipeline.
+The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`) derived from their names, enabling slug-based routing throughout the pipeline. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they publish annotation scores directly from the trace-end runtime — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
 ### Caching
 
@@ -83,12 +83,11 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
    - loads trace analytics context from the shared trace repository path
    - resolves the queue slug through a domain matcher map
-   - returns `{ matched, matchReasons }` where `matchReasons` contains outlier threshold details for resource-outliers matches
+   - returns `{ matched }`
 
 2. **`draftAnnotate`** (only when `matched: true`):
    - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
-   - receives `matchReasons` from the flagger result (when available) to provide context to the LLM annotator
-   - generates feedback using LLM with full conversation context and match reasons
+   - generates feedback using LLM with full conversation context
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
@@ -100,10 +99,6 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
 
 **Current matcher coverage**:
 
-- **Deterministic matchers implemented**:
-  - `tool-call-errors`: inspects conversation history for malformed or failed tool interactions
-  - `output-schema-validation`: inspects assistant output text for malformed or truncated structured-output JSON
-  - `empty-response`: detects empty, whitespace-only, or degenerate assistant responses while intentionally skipping tool-call-only delegations
 - **Matcher entrypoints present but currently noop**:
   - `jailbreaking`
   - `refusal`
@@ -113,12 +108,7 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
   - `nsfw`
   - `trashing`
 
-- **Shared deterministic matcher implemented**:
-  - `resource-outliers`: evaluates duration, TTFT, token usage, and cost against project-scoped percentile and median-x3 baselines using the shared trace cohort evaluator in `@domain/spans`
-
-**Resource outliers: queue `matched` vs traces UI**
-
-The evaluator returns both `reasons` (every rule that fires) and `matched` (whether the trace should be enqueued by the `resource-outliers` system queue). `matched` is true only when at least one of these holds: **latency and cost** both at or above their p95 or p99 baselines, **any** single metric at or above **p99**, or **median×3** for a metric. Standalone single-metric **p95** hits can still appear in `reasons` (for example when browsing traces filtered by a p95 cohort and computing severity for sorting) but do **not** set `matched`, so they do not create queue items on their own.
+Deterministic signals for `tool-call-errors`, `output-schema-validation`, and `empty-response` do not flow through this flagger workflow. They run inline in the trace-end runtime and publish annotation scores directly — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
 **Retry Policy**:
 - Initial interval: 1s
@@ -149,6 +139,44 @@ If matched:
 ```
 
 The workflow now fully automates the path from trace to reviewable draft annotation.
+
+### Direct Deterministic System Signals
+
+Some deterministic signals are code-driven (zero false positives) and do not benefit from human review before becoming issues. Those skip the annotation queue entirely and publish annotation scores directly from the trace-end runtime so the existing `issues:discovery` pipeline (embeddings + BM25 hybrid search) can cluster them.
+
+**Signals handled inline** (no queue, no Temporal workflow, no LLM annotator):
+
+- `tool-call-errors`: inspects conversation history for malformed tool interactions or failed tool responses, and writes a score with feedback like `Tool "<name>" returned error: <snippet>`.
+- `output-schema-validation`: inspects assistant output text for malformed or truncated structured-output JSON, and writes a score with feedback like `Assistant output failed JSON parse (malformed or truncated structured output)`.
+- `empty-response`: detects empty, whitespace-only, or single-character degenerate assistant responses, and writes a score with feedback like `Assistant response was empty or whitespace only`. Intentional tool-call-only delegations are skipped.
+
+**Score shape** for each match:
+
+- `source = "annotation"`, `sourceId = "SYSTEM"` (new sentinel added alongside `UI`/`API`)
+- `draftedAt = null` (published immediately — not a draft)
+- `annotatorId = null` (system-authored)
+- `passed = false`, `value = 0`, `feedback = <deterministic template>`
+- `metadata.rawFeedback = feedback`
+
+Published scores emit `ScoreCreated` inside the same transaction, so `issues:discovery` picks them up and clusters them by feedback text similarity — identical signals collapse into one issue, while meaningfully different ones (different tool names, different error classes) form distinct issues.
+
+**Flow**:
+
+```
+SpanIngested (domain event, debounced)
+    ↓
+domain-events dispatcher
+    ↓
+trace-end:run (loads TraceDetail once)
+    ↓
+runDeterministicSystemMatchersUseCase (inline detector evaluation; matching detectors then persist scores)
+    ↓
+For each matching detector → writeScoreUseCase(source="annotation", sourceId="SYSTEM", draftedAt=null)
+    ↓
+ScoreCreated published → issues:discovery picks it up → issue created or attached
+```
+
+Because these signals are not gated by a queue sampling setting, every trace is evaluated.
 
 ### Key Infrastructure Files
 
@@ -223,25 +251,6 @@ Every project starts with these system-created manual queues:
 - description: the agent cycles between tools without making progress
 - instructions: use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
 
-### Tool Call Errors
-
-- description: a tool call failed or returned an error state
-- instructions: use this queue when the trace conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. The deterministic matcher currently inspects conversation history directly instead of calling the low-cost flagger model.
-
-### Resource Outliers
-
-- description: the trace has unusually high latency, TTFT, token usage, or cost
-- instructions: use this queue when latency, time to first token, token usage, or cost materially exceeds project norms. The matcher uses the shared trace cohort evaluator and workflow-owned retry handling when the candidate trace has not materialized yet.
-
-### Output Schema Validation
-
-- description: a structured-output response did not conform to the declared schema
-- instructions: use this queue when a GenAI span was configured to produce structured output and the actual assistant output either failed to parse as JSON or was visibly truncated before completion. The current deterministic matcher inspects assistant output text directly.
-
-### Empty Response
-
-- description: the assistant returned an empty or degenerate response
-- instructions: use this queue when a GenAI span produced no meaningful output — the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. The current deterministic matcher intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text.
 
 ## Population Flows
 
@@ -261,7 +270,7 @@ Every project starts with these system-created manual queues:
 - whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `trace-end:run` for that trace
 - `trace-end:run` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per selected queue
 - queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
-- the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, `empty-response`, and `resource-outliers`
+- there are no deterministic matchers in this flagger anymore; deterministic signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) publish annotation scores directly from the trace-end runtime without going through this flagger — see [Direct Deterministic System Signals](#direct-deterministic-system-signals)
 - the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
 - positive workflow matches trigger `draftAnnotate` (LLM feedback generation) followed by `persistAnnotation` (transactional queue item + draft creation)

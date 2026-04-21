@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { createRedisConnectionEffect } from "./connection.ts"
 
-const ENV_KEYS = ["LAT_REDIS_HOST", "LAT_REDIS_PORT", "LAT_REDIS_TLS"]
+const ENV_KEYS = ["LAT_REDIS_HOST", "LAT_REDIS_PORT", "LAT_REDIS_TLS", "LAT_REDIS_CLUSTER"]
 
 const BASE_ENV: Record<string, string> = {
   LAT_REDIS_HOST: "localhost",
@@ -65,6 +65,24 @@ describe("createRedisConnectionEffect", () => {
     const config = await Effect.runPromise(createRedisConnectionEffect())
 
     expect(config.tls).toBeUndefined()
+  })
+
+  it("enables cluster mode when LAT_REDIS_CLUSTER is true", async () => {
+    setEnv({ ...BASE_ENV, LAT_REDIS_CLUSTER: "true" })
+    const config = await Effect.runPromise(createRedisConnectionEffect())
+
+    expect(config).toEqual({
+      host: "localhost",
+      port: 6379,
+      cluster: true,
+    })
+  })
+
+  it("omits cluster mode when LAT_REDIS_CLUSTER is not set", async () => {
+    setEnv(BASE_ENV)
+    const config = await Effect.runPromise(createRedisConnectionEffect())
+
+    expect(config.cluster).toBeUndefined()
   })
 
   it("fails when host is missing", async () => {

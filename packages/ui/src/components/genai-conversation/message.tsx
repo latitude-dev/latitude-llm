@@ -61,7 +61,7 @@ function UserMessage({
 }) {
   return (
     <div className={cn("flex flex-col gap-1", alignment === "right" ? "items-end" : "items-start")}>
-      <div className={cn("rounded-2xl bg-accent px-4 py-3 max-w-[85%]")}>
+      <div className={cn("rounded-2xl bg-accent px-4 py-3")}>
         <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
       </div>
     </div>

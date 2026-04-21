@@ -1,5 +1,5 @@
 export const ANNOTATION_ENRICHMENT_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-sonnet-4-6",
+  model: "minimax.minimax-m2.5",
   reasoning: "medium",
 } as const

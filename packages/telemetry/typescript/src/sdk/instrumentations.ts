@@ -109,7 +109,7 @@ async function tryRequire(moduleName: string): Promise<unknown | undefined> {
   } catch {
     // Fallback to dynamic import for ESM environments
     try {
-      const mod = await import(moduleName)
+      const mod = await import(/* @vite-ignore */ moduleName)
       return mod.default ?? mod
     } catch {
       return undefined

@@ -38,5 +38,3 @@ DatasetExportEmail.PreviewProps = {
   downloadUrl: "https://app.latitude.so/downloads/export-abc123",
   recipientName: "Alex",
 } satisfies DatasetExportEmailProps
-
-export default DatasetExportEmail

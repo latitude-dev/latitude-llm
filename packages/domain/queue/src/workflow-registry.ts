@@ -1,10 +1,3 @@
-export const EVALUATION_ALIGNMENT_REFRESH_SIGNAL = "scheduleRefresh"
-
-export const evaluationAlignmentJobWorkflowId = (jobId: string): string => `evaluation-alignment:job:${jobId}`
-
-export const evaluationAlignmentRefreshWorkflowId = (evaluationId: string): string =>
-  `evaluation-alignment:${evaluationId}`
-
 function input<T extends Record<string, unknown>>(): T {
   return {} as T
 }

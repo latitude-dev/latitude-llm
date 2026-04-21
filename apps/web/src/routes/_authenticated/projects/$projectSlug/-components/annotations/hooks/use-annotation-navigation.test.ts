@@ -80,7 +80,11 @@ describe("useAnnotationNavigation", () => {
     textElement.setAttribute("data-annotation-id", "ann-text-1")
     let currentRect = createRect(40, 140)
     textElement.getBoundingClientRect = () => currentRect
-    textElement.scrollIntoView = vi.fn()
+    // Simulate a real smooth scroll: scrollTop changes, so the rAF fallback that
+    // handles the "already in view" case defers to `scrollend` instead of firing early.
+    textElement.scrollIntoView = vi.fn(() => {
+      container.scrollTop = 100
+    })
     const clickSpy = vi.spyOn(textElement, "click")
 
     partRoot.appendChild(textElement)

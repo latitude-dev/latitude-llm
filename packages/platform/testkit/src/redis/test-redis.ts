@@ -1,6 +1,5 @@
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { Data, Effect } from "effect"
-import type { Redis } from "ioredis"
 
 class TestRedisError extends Data.TaggedError("TestRedisError")<{ cause: unknown }> {}
 
@@ -17,7 +16,7 @@ export interface TestRedisConfig {
  * Test Redis client
  */
 export interface TestRedis {
-  readonly client: Redis
+  readonly client: RedisClient
   readonly config: TestRedisConfig
 }
 
@@ -33,8 +32,10 @@ export const createTestRedis = (config: TestRedisConfig = {}): TestRedis => {
   const redisConn = createRedisConnection(config.host, config.port)
 
   const client = createRedisClient(redisConn)
-  // Switch to test database
-  client.select(testDbIndex)
+  // Switch to test database (only for non-cluster Redis)
+  if ("select" in client) {
+    client.select(testDbIndex)
+  }
 
   return {
     client,
