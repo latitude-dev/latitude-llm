@@ -75,6 +75,40 @@ describe("createFakeQueuePublisher", () => {
     expect(listDeduped()).toHaveLength(2)
   })
 
+  it("preserves the first payload for repeated publishes with the same dedupeKey + rateLimitMs", async () => {
+    const { publisher, getPublishedByDedupeKey, listDeduped } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish(
+        "evaluations",
+        "automaticRefreshAlignment",
+        { organizationId: "o", projectId: "p", issueId: "i-first", evaluationId: "e" },
+        { dedupeKey: "rl", rateLimitMs: 1000 },
+      ),
+    )
+    await Effect.runPromise(
+      publisher.publish(
+        "evaluations",
+        "automaticRefreshAlignment",
+        { organizationId: "o", projectId: "p", issueId: "i-second", evaluationId: "e" },
+        { dedupeKey: "rl", rateLimitMs: 1000 },
+      ),
+    )
+    await Effect.runPromise(
+      publisher.publish(
+        "evaluations",
+        "automaticRefreshAlignment",
+        { organizationId: "o", projectId: "p", issueId: "i-third", evaluationId: "e" },
+        { dedupeKey: "rl", rateLimitMs: 1000 },
+      ),
+    )
+
+    const pending = getPublishedByDedupeKey("evaluations", "rl")
+    expect(pending).toBeDefined()
+    expect((pending?.payload as { issueId: string }).issueId).toBe("i-first")
+    expect(listDeduped()).toHaveLength(1)
+  })
+
   it("records rateLimitMs on the published message alongside dedupeKey", async () => {
     const { publisher, published } = createFakeQueuePublisher()
 
