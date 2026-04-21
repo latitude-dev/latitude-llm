@@ -30,12 +30,14 @@ const buildAnnotationSpanDetail = ({
   organizationId,
   projectId,
   traceId,
+  sessionId = "session",
   inputMessages,
   outputMessages,
 }: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
+  readonly sessionId?: string
   readonly inputMessages: SpanDetail["inputMessages"]
   readonly outputMessages: SpanDetail["outputMessages"]
 }): SpanDetail => ({
@@ -43,7 +45,7 @@ const buildAnnotationSpanDetail = ({
     organizationId: OrganizationId(organizationId),
     projectId: ProjectId(projectId),
     traceId: TraceId(traceId),
-    sessionId: SessionId("session"),
+    sessionId: SessionId(sessionId),
     spanId: SpanId("cccccccccccccccc"),
     operation: "chat",
     startTime: new Date("2026-03-24T00:00:00.000Z"),
@@ -64,6 +66,7 @@ const seedAnnotationTrace = async ({
   organizationId,
   projectId,
   traceId,
+  sessionId,
   inputMessages = [textMessage("user", "hello")],
   outputMessages = [textMessage("assistant", "hello")],
 }: {
@@ -71,6 +74,7 @@ const seedAnnotationTrace = async ({
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
+  readonly sessionId?: string
   readonly inputMessages?: SpanDetail["inputMessages"]
   readonly outputMessages?: SpanDetail["outputMessages"]
 }) => {
@@ -78,6 +82,7 @@ const seedAnnotationTrace = async ({
     organizationId,
     projectId,
     traceId,
+    ...(sessionId !== undefined ? { sessionId } : {}),
     inputMessages,
     outputMessages,
   })
@@ -93,7 +98,11 @@ const seedAnnotationTrace = async ({
 describe("Annotations Routes Integration", () => {
   setupTestApi()
 
-  it<ApiTestContext>("creates an annotation via API with correct defaults", async ({ app, database, clickhouse }) => {
+  it<ApiTestContext>("creates a published annotation by default (draftedAt=null)", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "aaaaaaaaaaaaaaaaaaaaaaaa"
     const traceId = "11111111111111111111111111111111"
@@ -116,7 +125,7 @@ describe("Annotations Routes Integration", () => {
           value: 0.2,
           passed: false,
           feedback: "The model hallucinated a date",
-          traceId,
+          trace: { by: "id", id: traceId },
         }),
       }),
     )
@@ -125,8 +134,7 @@ describe("Annotations Routes Integration", () => {
     const body = await response.json()
     expect(body.source).toBe("annotation")
     expect(body.sourceId).toBe("API")
-    expect(typeof body.draftedAt).toBe("string")
-    expect(Number.isNaN(Date.parse(body.draftedAt as string))).toBe(false)
+    expect(body.draftedAt).toBeNull()
     expect(body.metadata.rawFeedback).toBe("The model hallucinated a date")
     expect(body.feedback).toBe("The model hallucinated a date")
 
@@ -138,18 +146,13 @@ describe("Annotations Routes Integration", () => {
     expect(persistedScores).toHaveLength(1)
     expect(persistedScores[0]?.source).toBe("annotation")
     expect(persistedScores[0]?.sourceId).toBe("API")
-    expect(persistedScores[0]?.draftedAt).toBeInstanceOf(Date)
-    expect(persistedScores[0]?.draftedAt?.toISOString()).toBe(body.draftedAt)
+    expect(persistedScores[0]?.draftedAt).toBeNull()
   })
 
-  it<ApiTestContext>("does not allow overriding sourceId; public API is always API", async ({
-    app,
-    database,
-    clickhouse,
-  }) => {
+  it<ApiTestContext>("creates a draft annotation when draft=true is passed", async ({ app, database, clickhouse }) => {
     const tenant = await createTenantSetup(database)
-    const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
-    const traceId = "33333333333333333333333333333333"
+    const projectId = "ffffffffffffffffffffffff"
+    const traceId = "99999999999999999999999999999999"
     await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
@@ -168,16 +171,153 @@ describe("Annotations Routes Integration", () => {
         body: JSON.stringify({
           value: 0.5,
           passed: true,
-          feedback: "Trying to pose as UI",
-          traceId,
-          sourceId: "UI",
+          feedback: "Mid-edit draft",
+          trace: { by: "id", id: traceId },
+          draft: true,
         }),
       }),
     )
 
     expect(response.status).toBe(201)
     const body = await response.json()
-    expect(body.sourceId).toBe("API")
+    expect(typeof body.draftedAt).toBe("string")
+    expect(Number.isNaN(Date.parse(body.draftedAt as string))).toBe(false)
+
+    const persistedScores = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.organizationId, tenant.organizationId))
+
+    expect(persistedScores).toHaveLength(1)
+    expect(persistedScores[0]?.draftedAt).toBeInstanceOf(Date)
+  })
+
+  it<ApiTestContext>("resolves a trace by filters when exactly one trace matches", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "gggggggggggggggggggggggg"
+    const traceId = "88888888888888888888888888888888"
+    await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId,
+      sessionId: "unique-filter-session",
+    })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          value: 1,
+          passed: true,
+          feedback: "Resolved by filter",
+          trace: {
+            by: "filters",
+            filters: { sessionId: [{ op: "eq", value: "unique-filter-session" }] },
+          },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(201)
+    const body = await response.json()
+    expect(body.traceId).toBe(traceId)
+  })
+
+  it<ApiTestContext>("returns 404 when trace filters resolve to zero traces", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "hhhhhhhhhhhhhhhhhhhhhhhh"
+    await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          value: 0,
+          passed: false,
+          feedback: "Should not persist",
+          trace: {
+            by: "filters",
+            filters: { sessionId: [{ op: "eq", value: "does-not-exist-session" }] },
+          },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(404)
+
+    const persistedScores = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.organizationId, tenant.organizationId))
+    expect(persistedScores).toHaveLength(0)
+  })
+
+  it<ApiTestContext>("returns 400 when trace filters resolve to more than one trace", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "iiiiiiiiiiiiiiiiiiiiiiii"
+    await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: "66666666666666666666666666666666",
+      sessionId: "shared-ambiguous-session",
+    })
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: "77777777777777777777777777777777",
+      sessionId: "shared-ambiguous-session",
+    })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          value: 0,
+          passed: false,
+          feedback: "Should not persist",
+          trace: {
+            by: "filters",
+            filters: { sessionId: [{ op: "eq", value: "shared-ambiguous-session" }] },
+          },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body.error).toContain("more than one trace")
+    expect(body.error).toContain("Refine the filter set")
+
+    const persistedScores = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.organizationId, tenant.organizationId))
+    expect(persistedScores).toHaveLength(0)
   })
 
   it<ApiTestContext>("creates annotation with anchor metadata", async ({ app, database, clickhouse }) => {
@@ -204,7 +344,7 @@ describe("Annotations Routes Integration", () => {
           value: 0.1,
           passed: false,
           feedback: "Wrong claim highlighted",
-          traceId: API_TEST_ANCHOR_TRACE_ID,
+          trace: { by: "id", id: API_TEST_ANCHOR_TRACE_ID },
           anchor: {
             messageIndex: 2,
             partIndex: 0,
@@ -238,7 +378,7 @@ describe("Annotations Routes Integration", () => {
         body: JSON.stringify({
           value: 2,
           passed: "not-a-bool",
-          traceId: "44444444444444444444444444444444",
+          trace: { by: "id", id: "44444444444444444444444444444444" },
           feedback: "x",
         }),
       }),
@@ -248,7 +388,6 @@ describe("Annotations Routes Integration", () => {
     const body = await response.json()
     expect(body).toHaveProperty("error")
     expect(typeof body.error).toBe("string")
-    // Should NOT have the raw ZodError shape
     expect(body).not.toHaveProperty("success")
 
     const persistedScores = await database.db
@@ -274,7 +413,7 @@ describe("Annotations Routes Integration", () => {
           value: 0.5,
           passed: true,
           feedback: "Good response",
-          traceId: "55555555555555555555555555555555",
+          trace: { by: "id", id: "55555555555555555555555555555555" },
         }),
       }),
     )

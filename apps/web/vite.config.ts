@@ -50,7 +50,7 @@ export default defineConfig({
     external: ["@temporalio/client", "@temporalio/proto", "@grpc/grpc-js", "protobufjs", "long"],
   },
   resolve: {
-    conditions: ["source"],
+    conditions: ["source", "browser"],
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default
       // export, which breaks Vite 8 / Rolldown's consistent CJS interop.
