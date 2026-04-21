@@ -74,6 +74,7 @@ function makePositiveExample(index: number): EvaluationAlignmentExample {
     sessionId: null,
     scoreIds: [ScoreId("a".repeat(24))],
     label: "positive",
+    positivePriority: "failed-annotation-no-passes",
     negativePriority: null,
     annotationFeedback: null,
   }
@@ -86,7 +87,8 @@ function makeNegativeExample(index: number): EvaluationAlignmentExample {
     sessionId: null,
     scoreIds: [ScoreId("b".repeat(24))],
     label: "negative",
-    negativePriority: "no-failed-scores",
+    positivePriority: null,
+    negativePriority: "passed-annotation-no-failures",
     annotationFeedback: null,
   }
 }

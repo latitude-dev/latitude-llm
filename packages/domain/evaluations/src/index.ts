@@ -89,9 +89,11 @@ export {
   EvaluationAlignmentExamplesRepository,
   type EvaluationAlignmentExamplesRepositoryShape,
   type EvaluationAlignmentNegativePriority,
+  type EvaluationAlignmentPositivePriority,
   evaluationAlignmentExampleLabelSchema,
   evaluationAlignmentExampleSchema,
   evaluationAlignmentNegativePrioritySchema,
+  evaluationAlignmentPositivePrioritySchema,
   type ListEvaluationAlignmentExamplesInput,
   type ListNegativeEvaluationAlignmentExamplesInput,
 } from "./ports/evaluation-alignment-examples-repository.ts"

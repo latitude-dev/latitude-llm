@@ -95,6 +95,7 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
             sessionId: null,
             scoreIds: ["score-1"],
             label: "positive",
+            positivePriority: "failed-annotation-no-passes",
             negativePriority: null,
             annotationFeedback: "Leaked deployment token in response",
             conversation: [
@@ -110,7 +111,8 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
             sessionId: null,
             scoreIds: ["score-2"],
             label: "negative",
-            negativePriority: "no-failed-scores",
+            positivePriority: null,
+            negativePriority: "passed-annotation-no-failures",
             annotationFeedback: null,
             conversation: [
               { role: "user", content: "Summarize the deployment checklist." },

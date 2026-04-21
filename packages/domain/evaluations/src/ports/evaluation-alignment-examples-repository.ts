@@ -14,10 +14,15 @@ import { ALIGNMENT_CURATED_DATASET_MAX_ROWS } from "../constants.ts"
 export const evaluationAlignmentExampleLabelSchema = z.enum(["positive", "negative"])
 export type EvaluationAlignmentExampleLabel = z.infer<typeof evaluationAlignmentExampleLabelSchema>
 
+export const evaluationAlignmentPositivePrioritySchema = z.enum([
+  "failed-annotation-no-passes",
+  "failed-annotation-with-passes",
+])
+export type EvaluationAlignmentPositivePriority = z.infer<typeof evaluationAlignmentPositivePrioritySchema>
+
 export const evaluationAlignmentNegativePrioritySchema = z.enum([
   "passed-annotation-no-failures",
-  "no-failed-scores",
-  "unrelated-issue-scores",
+  "passed-annotation-unrelated-failures",
 ])
 export type EvaluationAlignmentNegativePriority = z.infer<typeof evaluationAlignmentNegativePrioritySchema>
 
@@ -26,6 +31,7 @@ export const evaluationAlignmentExampleSchema = z.object({
   sessionId: z.string().min(1).transform(SessionId).nullable(),
   scoreIds: z.array(scoreIdSchema).min(1),
   label: evaluationAlignmentExampleLabelSchema,
+  positivePriority: evaluationAlignmentPositivePrioritySchema.nullable(),
   negativePriority: evaluationAlignmentNegativePrioritySchema.nullable(),
   annotationFeedback: z.string().nullable(),
 })

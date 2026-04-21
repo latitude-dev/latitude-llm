@@ -515,11 +515,16 @@ To generate or realign an evaluation for an issue, annotation-derived truth foll
 - drafts and errored scores must never be used as alignment examples
 - alignment reads only published, non-errored canonical Postgres scores
 
-1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue; the minimum required positive-example count is `1`
-2. negative examples where the issue is absent, using this priority order among non-draft, non-errored scores when they exist:
-   1. conversations with no failed scores and at least one passed annotation as long as that score is also non-draft and non-errored
-   2. conversations with no failed scores
-   3. conversations with scores, either passed or failed, but unrelated to the issue we are trying to align for, as long as those scores are also non-draft and non-errored
+1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue, using this priority order:
+   1. conversations with at least one failed annotation linked to the target issue and no passed scores at all
+   2. conversations with at least one failed annotation linked to the target issue, regardless of any passed scores that may also be on the same conversation
+
+   The minimum required positive-example count is `1` (this happens naturally because otherwise the issue would not have been created in the first place).
+2. negative examples where the issue is absent, drawn only from conversations that have at least one passed annotation (non-draft, non-errored), using this priority order:
+   1. conversations with at least one passed annotation and no failed scores at all
+   2. conversations with at least one passed annotation and failed scores, as long as every failed score is unrelated to the issue we are trying to align for
+
+   Conversations without any passed annotation are never used as negatives, even when only passed evaluation/custom scores exist — the signal is considered too weak. Any score tied to the target issue (regardless of `passed`) disqualifies the conversation as a negative.
 
 There is no minimum negative-example count. This means a user can still generate a monitor for a brand new issue from a single failed, non-errored, non-draft human annotation linked to that issue, even before any explicit negatives exist.
 
