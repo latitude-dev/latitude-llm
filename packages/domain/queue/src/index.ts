@@ -83,7 +83,27 @@ export class WorkflowQuerier extends ServiceMap.Service<WorkflowQuerier, Workflo
 
 export interface PublishOptions {
   readonly dedupeKey?: string
+  /**
+   * Debounce window in ms. Each publish within the window extends the TTL
+   * and replaces the pending payload, so the task fires after `debounceMs`
+   * of quiet on this `dedupeKey`. Appropriate when you want to wait for a
+   * stream of events to settle (e.g. `trace-end:run` after `SpanIngested`).
+   *
+   * Mutually exclusive with `rateLimitMs`.
+   */
   readonly debounceMs?: number
+  /**
+   * Rate-limit window in ms. The first publish schedules the task for
+   * `now + rateLimitMs`; subsequent publishes within the window are dropped
+   * (clock not extended, payload not replaced). Guarantees a hard upper
+   * bound of `rateLimitMs` on fire latency from the first publish, plus a
+   * maximum rate of one fire per `rateLimitMs` per `dedupeKey`. Appropriate
+   * when you want a predictable "at most once per N" cadence even under a
+   * constant flow of publishes (e.g. annotation-driven alignment refresh).
+   *
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`.
+   */
+  readonly rateLimitMs?: number
 }
 
 export interface QueuePublisherShape {

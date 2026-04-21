@@ -90,11 +90,18 @@ export const ISSUE_DETAILS_GENERATION_MODEL = {
 export const ISSUE_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
-// Issue refresh debounce
+// Issue refresh rate-limit
 // ---------------------------------------------------------------------------
 
-/** Debounce window for issue name/description regeneration (8 hours in milliseconds). */
-export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
+/**
+ * Rate-limit window for issue name/description regeneration (8 hours in
+ * milliseconds). Used as `rateLimitMs` on the `issues:refresh` queue task:
+ * the first `ScoreAssignedToIssue` schedules the refresh for `now + 8h`, and
+ * subsequent assignments within that window are dropped by BullMQ. Guarantees
+ * an upper bound of 8h on refresh latency and at most one refresh per issue
+ * per 8h, even under a constant annotation stream.
+ */
+export const ISSUE_REFRESH_RATE_LIMIT_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Denoising / visibility

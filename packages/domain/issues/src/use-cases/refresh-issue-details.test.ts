@@ -1,7 +1,7 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
-  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+  ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
   defaultEvaluationTrigger,
   type Evaluation,
   EvaluationRepository,
@@ -232,7 +232,7 @@ describe("refreshIssueDetailsUseCase", () => {
           },
           options: {
             dedupeKey: "evaluations:refreshAlignment:eeeeeeeeeeeeeeeeeeeeeeee",
-            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+            rateLimitMs: ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
           },
         },
         {
@@ -246,7 +246,7 @@ describe("refreshIssueDetailsUseCase", () => {
           },
           options: {
             dedupeKey: "evaluations:refreshAlignment:ffffffffffffffffffffffff",
-            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+            rateLimitMs: ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
           },
         },
       ]),
@@ -324,7 +324,7 @@ describe("refreshIssueDetailsUseCase", () => {
         },
         options: {
           dedupeKey: "evaluations:refreshAlignment:gggggggggggggggggggggggg",
-          debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+          rateLimitMs: ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
         },
       },
     ])
@@ -454,7 +454,7 @@ describe("refreshIssueDetailsUseCase", () => {
       },
       options: {
         dedupeKey: "evaluations:refreshAlignment:bbbbbbbbbbbbbbbbbbbbbbbb",
-        debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+        rateLimitMs: ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
       },
     })
   })

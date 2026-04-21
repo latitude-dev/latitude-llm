@@ -1,4 +1,4 @@
-import { ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
+import { ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import { IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
@@ -39,12 +39,15 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
       options: { lifecycle: "active" },
     })
 
-    // Publish the debounced 1h metric-refresh task per active linked evaluation.
-    // BullMQ owns the timing via `dedupeKey` + `debounceMs`; the consumer
-    // starts `refreshEvaluationAlignmentWorkflow` when the debounce window
-    // elapses. If the incremental evaluator escalates to a full re-optimization
-    // the workflow itself publishes `evaluations:automaticOptimization` with
-    // the 8h debounce — this use case never schedules optimization directly.
+    // Publish the rate-limited 1h metric-refresh task per active linked
+    // evaluation. BullMQ owns the timing via `dedupeKey` + `rateLimitMs`: the
+    // first publish schedules the workflow for `now + 1h`, and subsequent
+    // publishes within that hour are dropped so a constant annotation stream
+    // cannot starve the refresh. The consumer starts
+    // `refreshEvaluationAlignmentWorkflow` when the window elapses. If the
+    // incremental evaluator escalates to a full re-optimization the workflow
+    // itself publishes `evaluations:automaticOptimization` with the 8h
+    // rate-limit — this use case never schedules optimization directly.
     yield* Effect.forEach(
       evaluations.items.filter(isActiveEvaluation),
       (evaluation) =>
@@ -59,7 +62,7 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
           },
           {
             dedupeKey: `evaluations:refreshAlignment:${evaluation.id}`,
-            debounceMs: ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+            rateLimitMs: ALIGNMENT_METRIC_RECOMPUTE_RATE_LIMIT_MS,
           },
         ),
       { concurrency: "unbounded" },

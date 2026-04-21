@@ -75,6 +75,21 @@ describe("createFakeQueuePublisher", () => {
     expect(listDeduped()).toHaveLength(2)
   })
 
+  it("records rateLimitMs on the published message alongside dedupeKey", async () => {
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish(
+        "evaluations",
+        "automaticRefreshAlignment",
+        { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "e" },
+        { dedupeKey: "k", rateLimitMs: 3600000 },
+      ),
+    )
+
+    expect(published[0]?.options).toEqual({ dedupeKey: "k", rateLimitMs: 3600000 })
+  })
+
   it("ignores publishes without a dedupeKey in the deduped view", async () => {
     const { publisher, published, listDeduped } = createFakeQueuePublisher()
 
