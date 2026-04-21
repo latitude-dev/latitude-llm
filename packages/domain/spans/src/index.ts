@@ -97,11 +97,6 @@ export type {
   BuildTracesExportResult,
 } from "./use-cases/build-traces-export.ts"
 export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
-export type {
-  EvaluateTraceResourceOutliersError,
-  EvaluateTraceResourceOutliersInput,
-} from "./use-cases/evaluate-trace-resource-outliers.ts"
-export { evaluateTraceResourceOutliersUseCase } from "./use-cases/evaluate-trace-resource-outliers.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
