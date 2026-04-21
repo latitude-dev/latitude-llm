@@ -4,10 +4,7 @@ import { z } from "zod"
 /**
  * Export kinds supported by the shared export rail.
  */
-export const EXPORT_KINDS = ["dataset", "traces", "issues"] as const
-export type ExportKind = (typeof EXPORT_KINDS)[number]
-
-export const exportKindSchema = z.enum(EXPORT_KINDS)
+export type ExportKind = "dataset" | "traces" | "issues"
 
 /**
  * Row selection modes for dataset exports.
@@ -76,54 +73,3 @@ export interface IssuesExportPayload extends BaseExportPayload {
  * Discriminated union of all export job payloads.
  */
 export type ExportPayload = DatasetExportPayload | TracesExportPayload | IssuesExportPayload
-
-/**
- * Zod schemas for export payloads.
- */
-const baseExportPayloadSchema = z.object({
-  organizationId: z.string(),
-  projectId: z.string(),
-  recipientEmail: z.email(),
-})
-
-export const datasetExportPayloadSchema = baseExportPayloadSchema.extend({
-  kind: z.literal("dataset"),
-  datasetId: z.string(),
-  selection: exportSelectionSchema,
-})
-
-const filterConditionSchema = z.object({
-  op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in", "notIn", "contains", "notContains"]),
-  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
-})
-
-export const tracesExportPayloadSchema = baseExportPayloadSchema.extend({
-  kind: z.literal("traces"),
-  filters: z.record(z.string(), z.array(filterConditionSchema)).optional(),
-  selection: exportSelectionSchema.optional(),
-})
-
-export const issuesExportPayloadSchema = baseExportPayloadSchema.extend({
-  kind: z.literal("issues"),
-  selection: exportSelectionSchema.optional(),
-  lifecycleGroup: z.enum(["active", "archived"]).optional(),
-  searchQuery: z.string().optional(),
-  timeRange: z
-    .object({
-      fromIso: z.iso.datetime().optional(),
-      toIso: z.iso.datetime().optional(),
-    })
-    .optional(),
-  sort: z
-    .object({
-      field: z.enum(["lastSeen", "occurrences"]),
-      direction: z.enum(["asc", "desc"]),
-    })
-    .optional(),
-})
-
-export const exportPayloadSchema = z.discriminatedUnion("kind", [
-  datasetExportPayloadSchema,
-  tracesExportPayloadSchema,
-  issuesExportPayloadSchema,
-]) as z.ZodType<ExportPayload>

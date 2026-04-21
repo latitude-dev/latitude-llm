@@ -3,7 +3,7 @@ import type { ExportKind } from "./entities.ts"
 /**
  * Sanitizes a name for use in a filename (alphanumeric, spaces to underscores).
  */
-export function sanitizeExportFilename(name: string): string {
+function sanitizeExportFilename(name: string): string {
   return name.replace(/[^\w\s.-]/g, "").replace(/\s+/g, "_") || "export"
 }
 
@@ -18,7 +18,7 @@ function formatExportTimestamp(value: Date): string {
  * Builds a filename for an export artifact.
  * All exports are compressed as `.csv.gz`.
  */
-export function buildExportFilename(kind: ExportKind, name: string, at = new Date()): string {
+function buildExportFilename(kind: ExportKind, name: string, at = new Date()): string {
   const safeName = sanitizeExportFilename(name)
   return `${safeName}_${kind}_export_${formatExportTimestamp(at)}.csv.gz`
 }
