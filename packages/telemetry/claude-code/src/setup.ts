@@ -40,7 +40,7 @@ interface EnvironmentConfig {
 const PRODUCTION_ENV: EnvironmentConfig = {
   name: "production",
   label: "production",
-  app: "https://app.latitude.so",
+  app: "https://console.latitude.so",
   ingest: "https://ingest.latitude.so",
 }
 const STAGING_ENV: EnvironmentConfig = {

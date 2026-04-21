@@ -15,7 +15,7 @@ Then fully quit and relaunch claude for the preload to attach:
 - **Terminal** — open a new terminal window.
 - **Claude Desktop** — ⌘Q to quit, then relaunch from Dock or Finder.
 
-That's it. Trace runs show up at `https://app.latitude.so/projects/<your-slug>`.
+That's it. Trace runs show up at `https://console.latitude.so/projects/<your-slug>`.
 
 ### Install flags
 
