@@ -64,24 +64,27 @@ export const EvaluationRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-    const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: EvaluationListOptions | undefined }) => {
-      const limit = input.options?.limit ?? 50
-      const offset = input.options?.offset ?? 0
-      const lifecycleWhere = applyLifecycleFilter(input.options)
-      const whereClause = and(input.baseWhere, lifecycleWhere) ?? input.baseWhere
+    const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: EvaluationListOptions | undefined }) =>
+      sqlClient
+        .query((db, organizationId) => {
+          const limit = input.options?.limit ?? 50
+          const offset = input.options?.offset ?? 0
+          const lifecycleWhere = applyLifecycleFilter(input.options)
+          const whereClause =
+            and(eq(evaluations.organizationId, organizationId), input.baseWhere, lifecycleWhere) ??
+            and(eq(evaluations.organizationId, organizationId), input.baseWhere)
 
-      return sqlClient
-        .query((db) =>
-          db
+          return db
             .select()
             .from(evaluations)
             .where(whereClause)
             .orderBy(desc(evaluations.createdAt), desc(evaluations.id))
             .limit(limit + 1)
-            .offset(offset),
-        )
+            .offset(offset)
+        })
         .pipe(
           Effect.map((rows) => {
+            const limit = input.options?.limit ?? 50
             const hasMore = rows.length > limit
             const items = rows.slice(0, limit).map(toDomainEvaluation)
 
@@ -89,16 +92,21 @@ export const EvaluationRepositoryLive = Layer.effect(
               items,
               hasMore,
               limit,
-              offset,
+              offset: input.options?.offset ?? 0,
             }
           }),
         )
-    }
 
     return {
       findById: (id: string) =>
         sqlClient
-          .query((db) => db.select().from(evaluations).where(eq(evaluations.id, id)).limit(1))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(evaluations)
+              .where(and(eq(evaluations.organizationId, organizationId), eq(evaluations.id, id)))
+              .limit(1),
+          )
           .pipe(
             Effect.flatMap((rows) => {
               const row = rows[0]
@@ -192,42 +200,61 @@ export const EvaluationRepositoryLive = Layer.effect(
 
       archive: (id: EvaluationId) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .update(evaluations)
               .set({ archivedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(evaluations.id, id), isNull(evaluations.deletedAt))),
+              .where(
+                and(
+                  eq(evaluations.organizationId, organizationId),
+                  eq(evaluations.id, id),
+                  isNull(evaluations.deletedAt),
+                ),
+              ),
           )
           .pipe(Effect.asVoid),
 
       unarchive: (id: EvaluationId) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .update(evaluations)
               .set({ archivedAt: null, updatedAt: new Date() })
-              .where(and(eq(evaluations.id, id), isNull(evaluations.deletedAt))),
+              .where(
+                and(
+                  eq(evaluations.organizationId, organizationId),
+                  eq(evaluations.id, id),
+                  isNull(evaluations.deletedAt),
+                ),
+              ),
           )
           .pipe(Effect.asVoid),
 
       softDelete: (id: EvaluationId) =>
         sqlClient
-          .query((db) =>
-            db
-              .update(evaluations)
-              .set({ deletedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(evaluations.id, id), isNull(evaluations.deletedAt))),
-          )
-          .pipe(Effect.asVoid),
-
-      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
-        sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .update(evaluations)
               .set({ deletedAt: new Date(), updatedAt: new Date() })
               .where(
                 and(
+                  eq(evaluations.organizationId, organizationId),
+                  eq(evaluations.id, id),
+                  isNull(evaluations.deletedAt),
+                ),
+              ),
+          )
+          .pipe(Effect.asVoid),
+
+      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .update(evaluations)
+              .set({ deletedAt: new Date(), updatedAt: new Date() })
+              .where(
+                and(
+                  eq(evaluations.organizationId, organizationId),
                   eq(evaluations.projectId, projectId),
                   eq(evaluations.issueId, issueId),
                   isNull(evaluations.deletedAt),

@@ -47,20 +47,27 @@ export const ProjectRepositoryLive = Layer.effect(
 
     const list = () =>
       sqlClient
-        .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(projects)
+            .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt))),
+        )
         .pipe(Effect.map((results) => results.map(toDomainProject)))
 
     const listIncludingDeleted = () =>
-      sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject)))
+      sqlClient
+        .query((db, organizationId) => db.select().from(projects).where(eq(projects.organizationId, organizationId)))
+        .pipe(Effect.map((results) => results.map(toDomainProject)))
 
     return {
       findById: (id: ProjectIdType) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select()
               .from(projects)
-              .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
+              .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)))
               .limit(1),
           )
           .pipe(
@@ -75,11 +82,13 @@ export const ProjectRepositoryLive = Layer.effect(
 
       findBySlug: (slug: string) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select()
               .from(projects)
-              .where(and(eq(projects.slug, slug), isNull(projects.deletedAt)))
+              .where(
+                and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
+              )
               .limit(1),
           )
           .pipe(
@@ -120,11 +129,11 @@ export const ProjectRepositoryLive = Layer.effect(
 
       softDelete: (id: ProjectIdType) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .update(projects)
               .set({ deletedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
+              .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)))
               .returning({ id: projects.id }),
           )
           .pipe(
@@ -136,26 +145,33 @@ export const ProjectRepositoryLive = Layer.effect(
             }),
           ),
 
-      hardDelete: (id: ProjectIdType) => sqlClient.query((db) => db.delete(projects).where(eq(projects.id, id))),
+      hardDelete: (id: ProjectIdType) =>
+        sqlClient.query((db, organizationId) =>
+          db.delete(projects).where(and(eq(projects.organizationId, organizationId), eq(projects.id, id))),
+        ),
 
       existsByName: (name: string) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select({ id: projects.id })
               .from(projects)
-              .where(and(eq(projects.name, name), isNull(projects.deletedAt)))
+              .where(
+                and(eq(projects.organizationId, organizationId), eq(projects.name, name), isNull(projects.deletedAt)),
+              )
               .limit(1),
           )
           .pipe(Effect.map((results) => results[0] !== undefined)),
 
       existsBySlug: (slug: string) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select({ id: projects.id })
               .from(projects)
-              .where(and(eq(projects.slug, slug), isNull(projects.deletedAt)))
+              .where(
+                and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
+              )
               .limit(1),
           )
           .pipe(Effect.map((results) => results[0] !== undefined)),

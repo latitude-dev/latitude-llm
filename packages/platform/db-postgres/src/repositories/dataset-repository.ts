@@ -114,7 +114,13 @@ export const DatasetRepositoryLive = Layer.effect(
                 datasetVersions,
                 and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
               )
-              .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .limit(1),
           )
 
@@ -192,7 +198,13 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .update(datasets)
               .set({ name: args.name })
-              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, args.id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .returning(),
           )
 
@@ -209,7 +221,13 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .update(datasets)
               .set({ name: args.name, description: args.description })
-              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, args.id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .returning(),
           )
 
@@ -226,7 +244,13 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .update(datasets)
               .set({ fileKey: args.fileKey })
-              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, args.id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .returning(),
           )
 
@@ -246,7 +270,13 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .update(datasets)
               .set({ deletedAt: new Date() })
-              .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .returning({ id: datasets.id }),
           )
 
@@ -296,7 +326,16 @@ export const DatasetRepositoryLive = Layer.effect(
 
       decrementVersion: (args) =>
         Effect.gen(function* () {
-          yield* sqlClient.query((db) => db.delete(datasetVersions).where(eq(datasetVersions.id, args.versionId)))
+          yield* sqlClient.query((db) =>
+            db
+              .delete(datasetVersions)
+              .where(
+                and(
+                  eq(datasetVersions.organizationId, sqlClient.organizationId),
+                  eq(datasetVersions.id, args.versionId),
+                ),
+              ),
+          )
 
           const [updated] = yield* sqlClient.query((db) =>
             db
@@ -304,7 +343,13 @@ export const DatasetRepositoryLive = Layer.effect(
               .set({
                 currentVersion: sql`GREATEST(${datasets.currentVersion} - 1, 0)`,
               })
-              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, args.id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
               .returning({ id: datasets.id }),
           )
 
@@ -322,7 +367,13 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .select({ version: datasetVersions.version })
               .from(datasetVersions)
-              .where(and(eq(datasetVersions.id, args.versionId), eq(datasetVersions.datasetId, args.datasetId)))
+              .where(
+                and(
+                  eq(datasetVersions.organizationId, sqlClient.organizationId),
+                  eq(datasetVersions.id, args.versionId),
+                  eq(datasetVersions.datasetId, args.datasetId),
+                ),
+              )
               .limit(1),
           )
 

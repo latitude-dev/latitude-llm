@@ -343,10 +343,10 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
 
     const deleteScore = (id: ScoreId) =>
       chSqlClient
-        .query(async (client) => {
+        .query(async (client, organizationId) => {
           await client.command({
-            query: "DELETE FROM scores WHERE id = {id:FixedString(24)}",
-            query_params: { id },
+            query: "DELETE FROM scores WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)}",
+            query_params: { organizationId, id },
           })
         })
         .pipe(Effect.asVoid)
@@ -355,10 +355,11 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
       // -- existsById --------------------------------------------------------
       existsById: (id: ScoreId) =>
         chSqlClient
-          .query(async (client) => {
+          .query(async (client, organizationId) => {
             const result = await client.query({
-              query: "SELECT id FROM scores WHERE id = {id:FixedString(24)} LIMIT 1",
-              query_params: { id },
+              query:
+                "SELECT id FROM scores WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)} LIMIT 1",
+              query_params: { organizationId, id },
               format: "JSONEachRow",
             })
             return result.json<{ id: string }>()

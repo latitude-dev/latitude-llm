@@ -11,6 +11,8 @@ export const InvitationRepositoryLive = Layer.effect(
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
     return {
+      // Public lookup for invitation acceptance page - cross-org by design since the invitee
+      // hasn't authenticated yet and needs to preview invitation details before accepting.
       findPublicPendingPreviewById: (invitationId: string) => {
         const now = new Date()
         return sqlClient

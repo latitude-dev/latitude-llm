@@ -63,7 +63,13 @@ export const MembershipRepositoryLive = Layer.effect(
     return {
       findById: (id: MembershipId) =>
         sqlClient
-          .query((db) => db.select().from(members).where(eq(members.id, id)).limit(1))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(members)
+              .where(and(eq(members.organizationId, organizationId), eq(members.id, id)))
+              .limit(1),
+          )
           .pipe(
             Effect.flatMap((results) => {
               const [result] = results
@@ -145,7 +151,10 @@ export const MembershipRepositoryLive = Layer.effect(
             }),
         ),
 
-      delete: (id: MembershipId) => sqlClient.query((db) => db.delete(members).where(eq(members.id, id))),
+      delete: (id: MembershipId) =>
+        sqlClient.query((db, organizationId) =>
+          db.delete(members).where(and(eq(members.organizationId, organizationId), eq(members.id, id))),
+        ),
     }
   }),
 )
