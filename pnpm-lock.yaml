@@ -316,9 +316,6 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
-      '@domain/email':
-        specifier: workspace:*
-        version: link:../../packages/domain/email
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations

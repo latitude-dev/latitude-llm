@@ -2,9 +2,7 @@ export { appendToDisk } from "@domain/shared"
 export {
   type BaseExportPayload,
   type DatasetExportPayload,
-  type DatasetExportSelection,
   datasetExportPayloadSchema,
-  datasetExportSelectionSchema,
   EXPORT_KINDS,
   type ExportKind,
   type ExportPayload,

@@ -8,7 +8,7 @@ import {
   rowsToCsvFragment,
 } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
-import { buildExportFilename, type DatasetExportSelection, type ExportPayload } from "@domain/exports"
+import { buildExportFilename, type ExportPayload, type ExportSelection } from "@domain/exports"
 import { IssueRepository } from "@domain/issues"
 import type { QueueConsumer } from "@domain/queue"
 import {
@@ -67,7 +67,7 @@ function generateDatasetExport(
   organizationId: OrganizationIdType,
   _projectId: ProjectIdType,
   datasetId: DatasetId,
-  selection: DatasetExportSelection,
+  selection: ExportSelection,
 ) {
   return Effect.gen(function* () {
     const datasetRepo = yield* DatasetRepository

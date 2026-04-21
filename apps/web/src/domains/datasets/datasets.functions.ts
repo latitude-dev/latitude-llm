@@ -326,7 +326,7 @@ export const deleteDatasetFunction = createServerFn({ method: "POST" })
     )
   })
 
-export type DatasetExportSelection =
+export type ExportSelection =
   | { mode: "selected"; rowIds: string[] }
   | { mode: "all" }
   | { mode: "allExcept"; rowIds: string[] }

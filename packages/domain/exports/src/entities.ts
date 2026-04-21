@@ -12,20 +12,16 @@ export const exportKindSchema = z.enum(EXPORT_KINDS)
 /**
  * Row selection modes for dataset exports.
  */
-export type DatasetExportSelection =
+export type ExportSelection =
   | { readonly mode: "selected"; readonly rowIds: readonly string[] }
   | { readonly mode: "all" }
   | { readonly mode: "allExcept"; readonly rowIds: readonly string[] }
 
-export const datasetExportSelectionSchema: z.ZodType<DatasetExportSelection> = z.discriminatedUnion("mode", [
+export const exportSelectionSchema: z.ZodType<ExportSelection> = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("selected"), rowIds: z.array(z.string()).min(1) }),
   z.object({ mode: z.literal("all") }),
   z.object({ mode: z.literal("allExcept"), rowIds: z.array(z.string()) }),
 ])
-
-export type ExportSelection = DatasetExportSelection
-
-export const exportSelectionSchema = datasetExportSelectionSchema
 
 /**
  * Base export job payload shared across all export kinds.
@@ -42,7 +38,7 @@ export interface BaseExportPayload {
 export interface DatasetExportPayload extends BaseExportPayload {
   readonly kind: "dataset"
   readonly datasetId: string
-  readonly selection: DatasetExportSelection
+  readonly selection: ExportSelection
 }
 
 /**
@@ -87,13 +83,13 @@ export type ExportPayload = DatasetExportPayload | TracesExportPayload | IssuesE
 export const baseExportPayloadSchema = z.object({
   organizationId: z.string(),
   projectId: z.string(),
-  recipientEmail: z.string().email(),
+  recipientEmail: z.email(),
 })
 
 export const datasetExportPayloadSchema = baseExportPayloadSchema.extend({
   kind: z.literal("dataset"),
   datasetId: z.string(),
-  selection: datasetExportSelectionSchema,
+  selection: exportSelectionSchema,
 })
 
 const filterConditionSchema = z.object({
