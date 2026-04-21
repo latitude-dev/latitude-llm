@@ -12,6 +12,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "proj_456",
       queueSlug: "jailbreaking",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(true)
@@ -22,6 +23,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "proj_456",
       queueSlug: "jailbreaking",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -33,6 +35,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "proj_456",
       queueSlug: "jailbreaking",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -43,6 +46,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       organizationId: "org_123",
       queueSlug: "jailbreaking",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -54,6 +58,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "",
       queueSlug: "jailbreaking",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -64,6 +69,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       organizationId: "org_123",
       projectId: "proj_456",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -75,6 +81,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "proj_456",
       queueSlug: "",
       traceId: "trace_789",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -85,6 +92,7 @@ describe("systemQueueAnnotateInputSchema", () => {
       organizationId: "org_123",
       projectId: "proj_456",
       queueSlug: "jailbreaking",
+      scoreId: "score_abc",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
@@ -96,6 +104,30 @@ describe("systemQueueAnnotateInputSchema", () => {
       projectId: "proj_456",
       queueSlug: "jailbreaking",
       traceId: "",
+      scoreId: "score_abc",
+    }
+    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects missing scoreId", () => {
+    const input = {
+      organizationId: "org_123",
+      projectId: "proj_456",
+      queueSlug: "jailbreaking",
+      traceId: "trace_789",
+    }
+    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects empty scoreId", () => {
+    const input = {
+      organizationId: "org_123",
+      projectId: "proj_456",
+      queueSlug: "jailbreaking",
+      traceId: "trace_789",
+      scoreId: "",
     }
     const result = systemQueueAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)

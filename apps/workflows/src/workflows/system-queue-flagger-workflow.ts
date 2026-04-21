@@ -66,6 +66,7 @@ export const systemQueueFlaggerWorkflow = async (input: {
       queueId: draftResult.queueId,
       feedback: draftResult.feedback,
       traceCreatedAt: draftResult.traceCreatedAt,
+      scoreId: draftResult.scoreId,
     })
 
     log.info("System queue persist annotation completed", {

@@ -10,6 +10,7 @@ const { mockActivities } = vi.hoisted(() => {
       traceId: "trace-1",
       feedback: "Test feedback",
       traceCreatedAt: "2024-01-15T10:00:00.000Z",
+      scoreId: "score-default",
     })),
     persistAnnotation: vi.fn(async () => ({
       queueId: "queue-1",
@@ -69,6 +70,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-from-draft",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -109,6 +111,9 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueSlug: "refusal",
     })
     expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    // The scoreId emitted by draftAnnotate must flow verbatim into
+    // persistAnnotation so the LLM telemetry span and the persisted score row
+    // share the same id (see PRD: "Identity strategy").
     expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -117,6 +122,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-123",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-from-draft",
     })
   })
 
@@ -127,6 +133,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-existing",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -182,6 +189,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-persist-failure",
     })
     mockActivities.persistAnnotation.mockRejectedValueOnce(new Error("Persist failed"))
 
@@ -206,6 +214,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-tool",
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-tool",
@@ -241,6 +250,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-tool",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-tool",
     })
   })
 })
