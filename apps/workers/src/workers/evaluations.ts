@@ -9,18 +9,21 @@ interface EvaluationsDeps {
   workflowStarter: WorkflowStarterShape
 }
 
-// Temporal's `start` fails deterministically when a workflow with the same id
-// is already running (`workflowIdConflictPolicy: "FAIL"`). For the delayed
-// auto-alignment tasks that's a benign race: the same evaluation already has a
-// run in flight (e.g. a manual realignment a user just kicked off), so the
-// queued auto run can be safely dropped — the in-flight run will observe the
-// latest state when it finishes. Log and succeed.
-const swallowAlreadyStarted = (workflowId: string) =>
+// `workflowStarter.start` is built on `Effect.promise`, so every failure — the
+// expected `WorkflowExecutionAlreadyStartedError` and anything else (Temporal
+// unavailable, auth errors, etc.) — surfaces as an Effect *defect*, not a
+// typed error. `Effect.tapError` wouldn't observe any of them. We route all
+// defect handling through a single `Effect.catchDefect` so the benign race
+// is swallowed while genuinely unexpected failures get logged here before
+// propagating back out as a defect (BullMQ then records a failed job and
+// the job is retried by its own policy).
+const handleStartDefects = (context: { workflowId: string; description: string }) =>
   Effect.catchDefect((defect: unknown) => {
     if (defect instanceof Error && defect.name === "WorkflowExecutionAlreadyStartedError") {
-      logger.info("Skipping evaluation workflow start: already running", { workflowId })
+      logger.info("Skipping evaluation workflow start: already running", { workflowId: context.workflowId })
       return Effect.void
     }
+    logger.error(`${context.description} workflow start failed for ${context.workflowId}`, defect)
     return Effect.die(defect)
   })
 
@@ -50,15 +53,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
               }),
             ),
           ),
-          swallowAlreadyStarted(workflowId),
-          Effect.tapError((error) =>
-            Effect.sync(() =>
-              logger.error(
-                `Refresh-alignment workflow start failed for ${payload.projectId}/${payload.evaluationId}`,
-                error,
-              ),
-            ),
-          ),
+          handleStartDefects({ workflowId, description: "Refresh-alignment" }),
           Effect.asVoid,
           withTracing,
         )
@@ -88,15 +83,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
               }),
             ),
           ),
-          swallowAlreadyStarted(workflowId),
-          Effect.tapError((error) =>
-            Effect.sync(() =>
-              logger.error(
-                `Automatic-optimization workflow start failed for ${payload.projectId}/${payload.evaluationId}`,
-                error,
-              ),
-            ),
-          ),
+          handleStartDefects({ workflowId, description: "Automatic-optimization" }),
           Effect.asVoid,
           withTracing,
         )
