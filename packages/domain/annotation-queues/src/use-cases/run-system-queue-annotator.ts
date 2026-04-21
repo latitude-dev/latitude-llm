@@ -56,6 +56,8 @@ Your task is to review the full conversation below and provide structured feedba
 - Neutral and descriptive in tone
 - Focused on the underlying issue, not incidental details
 
+Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep the feedback only as long as it needs to be — no padding, no restatement, no meta-commentary. The original context and nuance must still come through; simpler wording is the goal, not less information.
+
 You do NOT need to decide whether the conversation matches the queue — that has already been determined. Your job is only to draft the annotation text that explains the match.
 
 Respond with structured data containing a single "feedback" field with your analysis.
