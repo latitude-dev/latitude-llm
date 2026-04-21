@@ -80,7 +80,7 @@ export type ExportPayload = DatasetExportPayload | TracesExportPayload | IssuesE
 /**
  * Zod schemas for export payloads.
  */
-export const baseExportPayloadSchema = z.object({
+const baseExportPayloadSchema = z.object({
   organizationId: z.string(),
   projectId: z.string(),
   recipientEmail: z.email(),
@@ -127,22 +127,3 @@ export const exportPayloadSchema = z.discriminatedUnion("kind", [
   tracesExportPayloadSchema,
   issuesExportPayloadSchema,
 ]) as z.ZodType<ExportPayload>
-
-/**
- * Progress tracking for resumable exports in workflow activities.
- */
-export interface ExportProgress {
-  readonly processedCount: number
-  readonly hasMore: boolean
-}
-
-/**
- * State for resumable export workflow.
- */
-export interface ExportWorkflowState {
-  readonly fileKey: string
-  readonly filename: string
-  readonly processedCount: number
-  readonly isComplete: boolean
-  readonly error?: string
-}

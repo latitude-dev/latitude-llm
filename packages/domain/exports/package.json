@@ -17,9 +17,5 @@
   "dependencies": {
     "@domain/shared": "workspace:*",
     "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@repo/vitest-config": "workspace:*",
-    "vitest": "catalog:"
   }
 }

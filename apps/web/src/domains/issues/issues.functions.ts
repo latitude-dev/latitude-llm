@@ -509,7 +509,7 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
     return toIssueLifecycleCommandRecord(result)
   })
 
-export interface EnqueuedExportResult {
+interface EnqueuedExportResult {
   readonly type: "enqueued"
 }
 

@@ -826,6 +826,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -921,13 +924,6 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
-    devDependencies:
-      '@repo/vitest-config':
-        specifier: workspace:*
-        version: link:../../vitest-config
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/domain/issues:
     dependencies:
@@ -940,6 +936,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -1083,6 +1082,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/models':
         specifier: workspace:*
         version: link:../models

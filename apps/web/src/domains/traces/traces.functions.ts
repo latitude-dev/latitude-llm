@@ -282,7 +282,7 @@ export const getTraceDetail = createServerFn({ method: "GET" })
 
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
-export interface EnqueuedExportResult {
+interface EnqueuedExportResult {
   readonly type: "enqueued"
 }
 

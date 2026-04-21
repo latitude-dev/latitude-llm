@@ -1,55 +1,19 @@
-import { gunzipSync } from "node:zlib"
 import { type EvaluationListPage, EvaluationRepository, type EvaluationRepositoryShape } from "@domain/evaluations"
-import { createIssueCentroid, type Issue, IssueProjectionRepository, IssueRepository } from "@domain/issues"
-import { createFakeIssueRepository } from "@domain/issues/testing"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { IssueId, OrganizationId, ProjectId, type TraceId } from "@domain/shared"
-import { type Trace, TraceRepository } from "@domain/spans"
-import { createFakeTraceRepository } from "@domain/spans/testing"
+import { IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { buildIssuesExportEffect, buildTracesExportEffect } from "./exports.ts"
+import type { Issue } from "../entities/issue.ts"
+import { createIssueCentroid } from "../helpers.ts"
+import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
+import { IssueRepository } from "../ports/issue-repository.ts"
+import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
+import { buildIssuesExportUseCase } from "./build-issues-export.ts"
 
 const encoder = new TextEncoder()
-const decoder = new TextDecoder()
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-
-const unzipCsv = (content: Uint8Array): string => decoder.decode(gunzipSync(Buffer.from(content)))
-
-const makeTrace = (traceId: string, overrides: Partial<Trace> = {}): Trace =>
-  ({
-    organizationId,
-    projectId,
-    traceId: traceId as TraceId,
-    spanCount: 1,
-    errorCount: 0,
-    startTime: new Date("2026-04-10T10:00:00.000Z"),
-    endTime: new Date("2026-04-10T10:00:01.000Z"),
-    durationNs: 1_000_000,
-    timeToFirstTokenNs: 500_000,
-    tokensInput: 10,
-    tokensOutput: 20,
-    tokensCacheRead: 0,
-    tokensCacheCreate: 0,
-    tokensReasoning: 0,
-    tokensTotal: 30,
-    costInputMicrocents: 1,
-    costOutputMicrocents: 2,
-    costTotalMicrocents: 3,
-    sessionId: "session-1" as Trace["sessionId"],
-    userId: "user-1" as Trace["userId"],
-    simulationId: "",
-    tags: [],
-    metadata: {},
-    models: [],
-    providers: [],
-    serviceNames: [],
-    rootSpanId: "span-1" as Trace["rootSpanId"],
-    rootSpanName: "root",
-    ...overrides,
-  }) satisfies Trace
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
   ({
@@ -88,34 +52,7 @@ const createEvaluationRepository = (): EvaluationRepositoryShape => ({
   softDeleteByIssueId: () => Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId"),
 })
 
-describe("buildTracesExportEffect", () => {
-  it("exports only the selected traces that still match the active filters", async () => {
-    const firstTrace = makeTrace("a".repeat(32), { rootSpanName: "alpha" })
-    const secondTrace = makeTrace("b".repeat(32), { rootSpanName: "beta" })
-    const { repository } = createFakeTraceRepository({
-      listByTraceIds: () =>
-        Effect.succeed([
-          { ...secondTrace, systemInstructions: [], inputMessages: [], outputMessages: [], allMessages: [] },
-          { ...firstTrace, systemInstructions: [], inputMessages: [], outputMessages: [], allMessages: [] },
-        ] as never),
-      matchesFiltersByTraceId: ({ traceId }) => Effect.succeed(traceId === firstTrace.traceId),
-    })
-
-    const result = await Effect.runPromise(
-      buildTracesExportEffect({
-        organizationId,
-        projectId,
-        filters: { tags: [{ op: "contains", value: "important" }] },
-        selection: { mode: "selected", rowIds: [firstTrace.traceId, secondTrace.traceId] },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
-    )
-
-    expect(unzipCsv(result.content)).toContain(`${firstTrace.traceId},1,0`)
-    expect(unzipCsv(result.content)).not.toContain(secondTrace.traceId)
-  })
-})
-
-describe("buildIssuesExportEffect", () => {
+describe("buildIssuesExportUseCase", () => {
   it("applies lifecycle filtering, selected rows, sort order, and time range", async () => {
     const activeIssue = makeIssue({
       id: IssueId("a".repeat(24)),
@@ -194,7 +131,7 @@ describe("buildIssuesExportEffect", () => {
     })
 
     const result = await Effect.runPromise(
-      buildIssuesExportEffect({
+      buildIssuesExportUseCase({
         organizationId,
         projectId,
         selection: { mode: "selected", rowIds: [activeIssue.id, secondArchivedIssue.id, archivedIssue.id] },
@@ -216,12 +153,11 @@ describe("buildIssuesExportEffect", () => {
       ),
     )
 
-    const csv = unzipCsv(result.content)
-    const lines = csv.split("\n")
+    const lines = result.csv.split("\n")
 
     expect(lines[1]).toContain(secondArchivedIssue.id)
     expect(lines[2]).toContain(archivedIssue.id)
-    expect(csv).not.toContain(activeIssue.id)
+    expect(result.csv).not.toContain(activeIssue.id)
     expect(timeRangeCalls).toEqual([
       {
         from: new Date("2026-04-01T00:00:00.000Z"),
@@ -283,7 +219,7 @@ describe("buildIssuesExportEffect", () => {
     })
 
     const result = await Effect.runPromise(
-      buildIssuesExportEffect({
+      buildIssuesExportUseCase({
         organizationId,
         projectId,
         search: {
@@ -310,9 +246,7 @@ describe("buildIssuesExportEffect", () => {
       ),
     )
 
-    const csv = unzipCsv(result.content)
-
-    expect(csv).toContain(secondIssue.id)
-    expect(csv).not.toContain(firstIssue.id)
+    expect(result.csv).toContain(secondIssue.id)
+    expect(result.csv).not.toContain(firstIssue.id)
   })
 })
