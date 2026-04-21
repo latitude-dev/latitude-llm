@@ -55,8 +55,9 @@ const { evaluateIncrementalEvaluationDraft } = proxyActivities<typeof activities
 // workflow owns the next script write. On `no-op`, exit.
 //
 // Scheduling is intentionally outside this workflow: the queue owns the 1h
-// debounce before this workflow starts, and the 8h debounce before the
-// optimization workflow starts.
+// rate-limit before this workflow starts, and the 8h rate-limit before the
+// optimization workflow starts. Both windows are first-publish-wins, so a
+// continuous annotation stream cannot push the fire time forward indefinitely.
 export const refreshEvaluationAlignmentWorkflow = async (
   input: RefreshEvaluationAlignmentWorkflowInput,
 ): Promise<RefreshEvaluationAlignmentWorkflowResult> => {
