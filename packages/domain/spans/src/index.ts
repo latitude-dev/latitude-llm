@@ -92,6 +92,11 @@ export type {
   BuildTraceCohortListingSpecInput,
 } from "./use-cases/build-trace-cohort-listing-spec.ts"
 export { buildTraceCohortListingSpecUseCase } from "./use-cases/build-trace-cohort-listing-spec.ts"
+export type {
+  BuildTracesExportInput,
+  BuildTracesExportResult,
+} from "./use-cases/build-traces-export.ts"
+export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"

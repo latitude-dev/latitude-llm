@@ -23,6 +23,7 @@
     "@domain/email": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/exports": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/queue": "workspace:*",

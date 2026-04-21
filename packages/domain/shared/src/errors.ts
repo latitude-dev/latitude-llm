@@ -138,6 +138,16 @@ export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   }
 }
 
+export class RateLimitError extends Data.TaggedError("RateLimitError")<{
+  readonly message: string
+  readonly retryAfterSeconds: number
+}> {
+  readonly httpStatus = 429
+  get httpMessage() {
+    return this.message
+  }
+}
+
 export class BadRequestError extends Data.TaggedError("BadRequestError")<{
   readonly message: string
 }> {
@@ -190,6 +200,21 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly cause: unknown
   readonly operation: string
 }> {
+  constructor(args: { readonly cause: unknown; readonly operation: string }) {
+    super(args)
+
+    const causeMessages = collectCauseMessages(args.cause)
+    this.message =
+      causeMessages.length > 0
+        ? `Storage ${args.operation} failed: ${causeMessages.join(" Caused by: ")}`
+        : `Storage ${args.operation} failed`
+
+    const causeStack = findCauseStack(args.cause)
+    if (causeStack) {
+      this.stack = causeStack
+    }
+  }
+
   readonly httpStatus = 500
   readonly httpMessage = "Storage operation failed"
 }

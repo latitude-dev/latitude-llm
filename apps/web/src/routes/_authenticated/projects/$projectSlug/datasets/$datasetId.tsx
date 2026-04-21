@@ -22,7 +22,7 @@ import {
   type DatasetRecord,
   type DatasetRowRecord,
   deleteDatasetRows,
-  getDatasetDownload,
+  enqueueDatasetExport,
   getDatasetQuery,
   getRowQuery,
   insertDatasetRow,
@@ -34,6 +34,7 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
 import { createDraftRowRecord, isDatasetDraftRowId } from "./-components/dataset-draft-row.ts"
@@ -274,6 +275,11 @@ function DatasetRowsView({
   const [deleting, setDeleting] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [pendingExport, setPendingExport] = useState<{
+    selection: BulkSelection<string>
+    selectedCount: number
+  } | null>(null)
   const [draftRow, setDraftRow] = useState<DatasetRowRecord | null>(null)
 
   const {
@@ -518,29 +524,17 @@ function DatasetRowsView({
     async (sel: BulkSelection<string>) => {
       setDownloading(true)
       try {
-        const result = await getDatasetDownload({
+        await enqueueDatasetExport({
           data: { datasetId, selection: sel },
         })
-        if (result.type === "enqueued") {
-          toast({
-            title: "Export started",
-            description: "You'll receive an email with a download link when your export is ready.",
-          })
-          return
-        }
-        const blob = new Blob([result.csv], {
-          type: "text/csv;charset=utf-8;",
+        toast({
+          title: "Export started",
+          description: "You'll receive an email with a download link when your export is ready.",
         })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = result.filename
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 0)
       } catch (e) {
         toast({
           variant: "destructive",
-          description: e instanceof Error ? e.message : "Download failed",
+          description: e instanceof Error ? e.message : "Export failed",
         })
       } finally {
         setDownloading(false)
@@ -549,15 +543,28 @@ function DatasetRowsView({
     [datasetId],
   )
 
+  const openExportModal = useCallback((next: { selection: BulkSelection<string>; selectedCount: number }) => {
+    setPendingExport(next)
+    setExportModalOpen(true)
+  }, [])
+
   const handleDownload = useCallback(() => {
     const { bulkSelection } = selection
     if (!bulkSelection) return
-    triggerDownload(bulkSelection)
-  }, [selection, triggerDownload])
+    openExportModal({ selection: bulkSelection, selectedCount: selection.selectedCount })
+  }, [openExportModal, selection])
 
   const handleDownloadAll = useCallback(() => {
-    triggerDownload({ mode: "all" })
-  }, [triggerDownload])
+    openExportModal({ selection: { mode: "all" }, selectedCount: totalRowCount })
+  }, [openExportModal, totalRowCount])
+
+  const confirmDownload = useCallback(async () => {
+    if (!pendingExport) return
+    await triggerDownload(pendingExport.selection)
+    setExportModalOpen(false)
+    setPendingExport(null)
+    selection.clearSelections()
+  }, [pendingExport, selection, triggerDownload])
 
   const getRowKey = useCallback((r: DatasetRowRecord) => r.rowId, [])
 
@@ -583,7 +590,7 @@ function DatasetRowsView({
                       isLoading={downloading}
                     >
                       <Download className="h-4 w-4" />
-                      Download
+                      Export Rows ({selection.selectedCount.toLocaleString()})
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)}>
                       <Trash2 className="h-4 w-4" />
@@ -667,6 +674,19 @@ function DatasetRowsView({
         onConfirm={handleDeleteRows}
         deleting={deleting}
       />
+      {pendingExport && (
+        <ExportConfirmationModal
+          open={exportModalOpen}
+          onOpenChange={(open) => {
+            setExportModalOpen(open)
+            if (!open) setPendingExport(null)
+          }}
+          itemLabel="row"
+          selectedCount={pendingExport.selectedCount}
+          onConfirm={() => void confirmDownload()}
+          exporting={downloading}
+        />
+      )}
     </>
   )
 }

@@ -32,6 +32,11 @@ export {
   createDatasetFromTraces,
   type TraceSelection,
 } from "./use-cases/add-traces-to-dataset.ts"
+export {
+  type BuildDatasetExportInput,
+  type BuildDatasetExportResult,
+  buildDatasetExportUseCase,
+} from "./use-cases/build-dataset-export.ts"
 export { countRows } from "./use-cases/count-rows.ts"
 export { createDataset } from "./use-cases/create-dataset.ts"
 export { deleteDataset } from "./use-cases/delete-dataset.ts"

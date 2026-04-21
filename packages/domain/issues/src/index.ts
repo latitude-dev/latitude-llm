@@ -76,6 +76,11 @@ export {
   type AssignScoreToIssueResult,
   assignScoreToIssueUseCase,
 } from "./use-cases/assign-score-to-issue.ts"
+export {
+  type BuildIssuesExportInput,
+  type BuildIssuesExportResult,
+  buildIssuesExportUseCase,
+} from "./use-cases/build-issues-export.ts"
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
 export {
   type CreateIssueFromScoreError,

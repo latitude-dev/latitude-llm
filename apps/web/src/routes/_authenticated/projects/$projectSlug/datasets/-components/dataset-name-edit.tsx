@@ -104,7 +104,7 @@ export function DatasetNameEdit({
               ...(onDownload
                 ? [
                     {
-                      label: "Download as .csv",
+                      label: "Export rows",
                       onClick: onDownload,
                     },
                   ]

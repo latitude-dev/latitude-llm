@@ -319,6 +319,9 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../../packages/domain/exports
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -506,6 +509,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../../packages/domain/exports
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -820,6 +826,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -907,6 +916,15 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
 
+  packages/domain/exports:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/issues:
     dependencies:
       '@domain/ai':
@@ -918,6 +936,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -1061,6 +1082,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
       '@domain/models':
         specifier: workspace:*
         version: link:../models

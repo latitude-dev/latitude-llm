@@ -65,6 +65,7 @@ export const createBullMqQueuePublisher = (
     const connection = createBullMqRedisConnection(config.redis)
 
     const queues = new Map<string, Queue>()
+    const readyQueues = new Map<string, Promise<Queue>>()
 
     const getQueue = (name: QueueName): Queue => {
       let queue = queues.get(name)
@@ -73,6 +74,22 @@ export const createBullMqQueuePublisher = (
         queues.set(name, queue)
       }
       return queue
+    }
+
+    const getReadyQueue = (name: QueueName): Promise<Queue> => {
+      const existing = readyQueues.get(name)
+      if (existing) {
+        return existing
+      }
+
+      const queue = getQueue(name)
+      const readyQueue = queue.waitUntilReady().then(() => queue)
+      readyQueues.set(name, readyQueue)
+
+      return readyQueue.catch((error) => {
+        readyQueues.delete(name)
+        throw error
+      })
     }
 
     return {
@@ -99,7 +116,8 @@ export const createBullMqQueuePublisher = (
                 }
               }
             }
-            await getQueue(queue).add(task, { payload } satisfies BullMqJobData, bullmqOptions)
+            const readyQueue = await getReadyQueue(queue)
+            await readyQueue.add(task, { payload } satisfies BullMqJobData, bullmqOptions)
           },
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
         }),

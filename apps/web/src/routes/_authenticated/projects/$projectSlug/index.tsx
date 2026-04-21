@@ -1,18 +1,20 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip } from "@repo/ui"
+import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { DatabaseIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
+import { DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { useTraceCohortSummary, useTracesCount } from "../../../../domains/traces/traces.collection.ts"
+import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
+import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
@@ -143,6 +145,8 @@ function ProjectPage() {
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [addToQueueOpen, setAddToQueueOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const { totalCount: totalTraceCount } = useTracesCount({
     projectId: currentProject.id,
@@ -214,6 +218,34 @@ function ProjectPage() {
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
+
+  const handleExportTraces = useCallback(async () => {
+    if (!bulkSelection) return
+
+    setExporting(true)
+    try {
+      await enqueueTracesExport({
+        data: {
+          projectId: currentProject.id,
+          selection: bulkSelection,
+          ...(hasActiveFilters ? { filters } : {}),
+        },
+      })
+      toast({
+        title: "Export started",
+        description: "You'll receive an email with a download link when your export is ready.",
+      })
+      clearSelections()
+      setExportModalOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error instanceof Error ? error.message : "Export failed",
+      })
+    } finally {
+      setExporting(false)
+    }
+  }, [bulkSelection, clearSelections, currentProject.id, filters, hasActiveFilters])
 
   // Compute next/prev trace callbacks from the loaded list
   const navigateTrace = useCallback(
@@ -347,6 +379,10 @@ function ProjectPage() {
 
       {selectedCount > 0 && (
         <div className="flex items-center gap-2 px-6">
+          <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+            <Icon icon={DownloadIcon} size="sm" />
+            Export Traces ({selectedCount.toLocaleString()})
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
             <Icon icon={DatabaseIcon} size="sm" />
             Add to Dataset ({selectedCount})
@@ -388,6 +424,14 @@ function ProjectPage() {
 
       {bulkSelection && (
         <>
+          <ExportConfirmationModal
+            open={exportModalOpen}
+            onOpenChange={setExportModalOpen}
+            itemLabel="trace"
+            selectedCount={selectedCount}
+            onConfirm={() => void handleExportTraces()}
+            exporting={exporting}
+          />
           <AddToDatasetModal
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}

@@ -53,7 +53,7 @@ export function csvExportHeader(): string {
 export function rowsToCsvFragment(rows: readonly DatasetRow[]): string {
   if (rows.length === 0) return ""
   const csvData = rowsToCsvData(rows)
-  return Papa.unparse(csvData, { columns: [...CSV_EXPORT_COLUMNS], header: true })
+  return Papa.unparse(csvData, { columns: [...CSV_EXPORT_COLUMNS], header: false })
 }
 
 /**

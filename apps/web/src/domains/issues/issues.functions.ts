@@ -1,4 +1,5 @@
 import { EvaluationRepository } from "@domain/evaluations"
+import { exportSelectionSchema } from "@domain/exports"
 import {
   type ApplyIssueLifecycleCommandResult,
   applyIssueLifecycleCommandUseCase,
@@ -28,8 +29,16 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../../server/clients.ts"
+import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
+import { ensureSession } from "../../domains/sessions/session.functions.ts"
+import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getWeaviateClient,
+} from "../../server/clients.ts"
 import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
@@ -498,4 +507,71 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
     )
 
     return toIssueLifecycleCommandRecord(result)
+  })
+
+interface EnqueuedExportResult {
+  readonly type: "enqueued"
+}
+
+export const enqueueIssuesExport = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      selection: exportSelectionSchema.optional(),
+      lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+      sort: z
+        .object({
+          field: issuesSortFieldSchema,
+          direction: issuesSortDirectionSchema,
+        })
+        .optional(),
+      searchQuery: z.string().max(500).optional(),
+      timeRange: z
+        .object({
+          fromIso: z.iso.datetime().optional(),
+          toIso: z.iso.datetime().optional(),
+        })
+        .optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<EnqueuedExportResult> => {
+    const session = await ensureSession()
+    const email = session?.user?.email
+    const organizationId = getSessionOrganizationId(session)
+
+    if (!organizationId || !email) {
+      throw new Error("Unauthorized")
+    }
+
+    await enforceExportRequestRateLimit({
+      redis: getRedisClient(),
+      organizationId,
+      projectId: data.projectId,
+      recipientEmail: email,
+    })
+
+    const publisher = await getQueuePublisher()
+    const exportTimeRange =
+      data.timeRange?.fromIso || data.timeRange?.toIso
+        ? {
+            ...(data.timeRange?.fromIso ? { fromIso: data.timeRange.fromIso } : {}),
+            ...(data.timeRange?.toIso ? { toIso: data.timeRange.toIso } : {}),
+          }
+        : undefined
+
+    await Effect.runPromise(
+      publisher.publish("exports", "generate", {
+        kind: "issues",
+        organizationId,
+        projectId: data.projectId,
+        recipientEmail: email,
+        ...(data.selection ? { selection: data.selection } : {}),
+        ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+        ...(data.sort ? { sort: data.sort } : {}),
+        ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        ...(exportTimeRange ? { timeRange: exportTimeRange } : {}),
+      }),
+    )
+
+    return { type: "enqueued" }
   })

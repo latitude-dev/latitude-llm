@@ -22,6 +22,7 @@
   "dependencies": {
     "@repo/utils": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/exports": "workspace:*",
     "@domain/models": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

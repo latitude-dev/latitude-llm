@@ -28,12 +28,12 @@ import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowSt
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
-import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
+import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
@@ -149,7 +149,7 @@ const bootstrap = async () => {
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
-    createDatasetExportWorker(ctx)
+    createExportsWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
