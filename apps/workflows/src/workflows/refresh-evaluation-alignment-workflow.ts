@@ -24,14 +24,27 @@ export type RefreshEvaluationAlignmentWorkflowResult =
       readonly newExampleCount: number
     }
 
-const {
-  collectEvaluationAlignmentExamples,
-  evaluateIncrementalEvaluationDraft,
-  loadEvaluationAlignmentStateOrInactive,
-  persistEvaluationAlignmentResult,
-  scheduleEvaluationOptimization,
-} = proxyActivities<typeof activities>({
-  startToCloseTimeout: "5 minutes",
+// Activities are grouped by expected duration so a stuck fast-path activity
+// surfaces as a failure quickly while a legitimate long-running LLM pass is
+// not clipped mid-run. No activity heartbeats (grep confirms none exist), so
+// Temporal can only detect a hang when the full `startToCloseTimeout` elapses.
+const { loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult, scheduleEvaluationOptimization } =
+  proxyActivities<typeof activities>({
+    // Postgres reads/writes and a single queue publish.
+    startToCloseTimeout: "1 minute",
+    retry: defaultActivityRetryPolicy,
+  })
+
+const { collectEvaluationAlignmentExamples } = proxyActivities<typeof activities>({
+  // Postgres + ClickHouse reads plus trace hydration for up to 100 examples.
+  startToCloseTimeout: "10 minutes",
+  retry: defaultActivityRetryPolicy,
+})
+
+const { evaluateIncrementalEvaluationDraft } = proxyActivities<typeof activities>({
+  // Runs the evaluation script plus an LLM judge per newly annotated example;
+  // bounded by annotations since the last alignment but can still be heavy.
+  startToCloseTimeout: "2 hours",
   retry: defaultActivityRetryPolicy,
 })
 

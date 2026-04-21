@@ -19,16 +19,32 @@ export type OptimizeEvaluationWorkflowResult =
       readonly negativeExampleCount: number
     }
 
-const {
-  collectEvaluationAlignmentExamples,
-  evaluateBaselineEvaluationDraft,
-  generateBaselineEvaluationDraft,
-  generateEvaluationDetails,
-  loadEvaluationAlignmentStateOrInactive,
-  optimizeEvaluationDraft,
-  persistEvaluationAlignmentResult,
-} = proxyActivities<typeof activities>({
-  startToCloseTimeout: "5 minutes",
+// Activities are grouped by expected duration so a stuck fast-path activity
+// surfaces as a failure quickly while the GEPA optimization and full-dataset
+// evaluation passes are not clipped mid-run. No activity heartbeats (grep
+// confirms none exist), so Temporal can only detect a hang when the full
+// `startToCloseTimeout` elapses.
+const { loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult } = proxyActivities<typeof activities>(
+  {
+    // Postgres reads/writes only.
+    startToCloseTimeout: "1 minute",
+    retry: defaultActivityRetryPolicy,
+  },
+)
+
+const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft, generateEvaluationDetails } =
+  proxyActivities<typeof activities>({
+    // Example collection plus single-shot LLM calls for baseline script
+    // and name/description generation.
+    startToCloseTimeout: "10 minutes",
+    retry: defaultActivityRetryPolicy,
+  })
+
+const { optimizeEvaluationDraft, evaluateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
+  // GEPA optimization does many LLM round-trips and the baseline evaluator
+  // runs the script plus an LLM judge across the full curated dataset (up to
+  // 100 examples). P99 can legitimately reach an hour or more.
+  startToCloseTimeout: "2 hours",
   retry: defaultActivityRetryPolicy,
 })
 
