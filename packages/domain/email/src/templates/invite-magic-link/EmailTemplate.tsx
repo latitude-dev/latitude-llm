@@ -42,5 +42,3 @@ InviteMagicLinkEmail.PreviewProps = {
   organizationName: "Acme",
   magicLinkUrl: "https://app.latitude.so/invite/accept?token=invite-preview",
 } satisfies InviteMagicLinkEmailProps
-
-export default InviteMagicLinkEmail
