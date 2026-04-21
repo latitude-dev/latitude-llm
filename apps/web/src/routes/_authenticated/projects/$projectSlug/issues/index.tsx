@@ -14,6 +14,7 @@ import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { IssueDetailDrawer } from "./-components/issue-detail-drawer.tsx"
 import { IssuesAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
+import { IssuesEmptyState } from "./-components/issues-empty-state.tsx"
 import {
   ISSUES_COLUMN_OPTIONS,
   type IssuesColumnId,
@@ -145,6 +146,24 @@ function IssuesPage() {
       setExporting(false)
     }
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+
+  const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
+  const hasNoIssues = issues.length === 0 && !hasActiveFilters
+  const showEmptyState = !isLoading && hasNoIssues
+
+  if (isLoading && hasNoIssues) {
+    return null
+  }
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <IssuesEmptyState projectSlug={projectSlug} />
+        </Layout.Content>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

@@ -25,6 +25,7 @@ import { useMemberByUserIdMap } from "../../../../../domains/members/members.col
 import { pickUsersFromMembersMap } from "../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
+import { AnnotationQueuesEmptyState } from "./-components/annotation-queues-empty-state.tsx"
 import { AqListBreadcrumb } from "./-components/aq-list-breadcrumb.tsx"
 import { DeleteQueueModal } from "./-components/delete-queue-modal.tsx"
 import { QueueBadge } from "./-components/queue-badge.tsx"
@@ -187,6 +188,31 @@ function AnnotationQueuesPage() {
     setEditQueue(null)
     setDeleteQueue(null)
   }, [])
+
+  const hasNoQueues = queues.length === 0
+  const showEmptyState = !isLoading && hasNoQueues
+
+  if (isLoading && hasNoQueues) {
+    return null
+  }
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <AnnotationQueuesEmptyState onCreate={() => setCreateModalOpen(true)} />
+        </Layout.Content>
+        {createModalOpen && (
+          <QueueModal
+            open={createModalOpen}
+            onOpenChange={setCreateModalOpen}
+            projectId={projectId}
+            onSuccess={handleModalSuccess}
+          />
+        )}
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

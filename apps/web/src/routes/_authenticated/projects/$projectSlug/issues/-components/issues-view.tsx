@@ -246,7 +246,7 @@ export function IssuesView({
               direction: nextSorting.direction as IssuesTableSorting["direction"],
             })
           }
-          blankSlate="There are no issues yet."
+          blankSlate="No issues match the current filters"
         />
       </Layout.List>
     </Layout.Body>
