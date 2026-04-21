@@ -3,10 +3,10 @@ import {
   type Evaluation,
   EvaluationNotFoundError,
   EvaluationRepository,
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
   isActiveEvaluation,
   softDeleteEvaluation,
 } from "@domain/evaluations"
-import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/evaluations/alignment/workflow"
 import { IssueRepository } from "@domain/issues"
 import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { EvaluationRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"

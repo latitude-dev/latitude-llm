@@ -10,11 +10,7 @@
       "browser": "./src/browser.ts",
       "default": "./src/index.ts"
     },
-    "./constants": "./src/constants.ts",
-    "./alignment/workflow": {
-      "browser": "./src/alignment/workflow.ts",
-      "default": "./src/alignment/workflow.ts"
-    }
+    "./constants": "./src/constants.ts"
   },
   "scripts": {
     "check": "biome check src",
