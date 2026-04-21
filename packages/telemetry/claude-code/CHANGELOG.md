@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-04-21
+
+### Fixed
+
+- **Fixed URL domain** from `app.latitude.so` to `console.latitude.so`.
+
 ## [0.0.5] - 2026-04-20
 
 ### Changed
