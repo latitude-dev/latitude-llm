@@ -1,11 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { LayersIcon, LayersPlusIcon } from "lucide-react"
 
-export function AnnotationQueuesEmptyState({
-  onCreate,
-}: {
-  readonly onCreate: () => void
-}) {
+export function AnnotationQueuesEmptyState({ onCreate }: { readonly onCreate: () => void }) {
   return (
     <div className="h-full w-full flex items-center justify-center p-8">
       <div className="max-w-lg flex flex-col items-center gap-6 text-center">
