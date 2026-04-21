@@ -780,19 +780,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
-      mustache:
-        specifier: ^4.2.0
-        version: 4.2.0
-      obscenity:
-        specifier: ^0.4.3
-        version: 0.4.6
       zod:
         specifier: 'catalog:'
         version: 4.3.6
-    devDependencies:
-      '@types/mustache':
-        specifier: ^4.2.6
-        version: 4.2.6
 
   packages/domain/annotations:
     dependencies:
@@ -7178,9 +7168,6 @@ packages:
   '@types/mssql@9.1.11':
     resolution: {integrity: sha512-vcujgrDbDezCxNDO4KY6gjwduLYOKfrexpRUwhoysRvcXZ3+IgZ/PMYFDgh8c3cQIxZ6skAwYo+H6ibMrBWPjQ==}
 
-  '@types/mustache@4.2.6':
-    resolution: {integrity: sha512-t+8/QWTAhOFlrF1IVZqKnMRJi84EgkIK5Kh0p2JV4OLywUvCwJPFxbJAl7XAow7DVIHsF+xW9f1MVzg0L6Szjw==}
-
   '@types/mysql@2.15.27':
     resolution: {integrity: sha512-YfWiV16IY0OeBfBCk8+hXKmdTKrKlwKN1MNKAPBu5JYxLwBEZl7QzeEpGnlZb3VMGJrrGmB84gXiH+ofs/TezA==}
 
@@ -9934,10 +9921,6 @@ packages:
   object-hash@3.0.0:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
-
-  obscenity@0.4.6:
-    resolution: {integrity: sha512-pHk7kNN7j3L3zGhhGnwxjvXIGsPpLrcZl2r58fqWh/V/rH6b/dafscj2sMmAY+A/9/wPsocLmimgGk2DKeKsFQ==}
-    engines: {node: '>=18.0.0'}
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
@@ -17857,8 +17840,6 @@ snapshots:
       - '@azure/core-client'
       - supports-color
 
-  '@types/mustache@4.2.6': {}
-
   '@types/mysql@2.15.27':
     dependencies:
       '@types/node': 22.19.17
@@ -20900,8 +20881,6 @@ snapshots:
   object-assign@4.1.1: {}
 
   object-hash@3.0.0: {}
-
-  obscenity@0.4.6: {}
 
   obug@2.1.1: {}
 
