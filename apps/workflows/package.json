@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "dev": "tsx watch src/server.ts",
     "triggerWorkflowTest": "tsx src/trigger-test.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -43,6 +43,6 @@
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
-    "tsup": "^8.0.0"
+    "tsdown": "catalog:"
   }
 }

@@ -35,19 +35,20 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "check": "echo 'SDK source is Fern-generated — skipping lint (see fern/README.md)'",
-    "format": "echo 'SDK source is Fern-generated — formatter controlled by the generator'",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsdown",
+    "check": "echo 'SDK source is Fern-generated \u2014 skipping lint (see fern/README.md)'",
+    "format": "echo 'SDK source is Fern-generated \u2014 formatter controlled by the generator'",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsup": "^8.0.0",
+    "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5.5.4"
+    "typescript": "^6.0.3"
   }
 }

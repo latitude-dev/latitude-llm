@@ -21,7 +21,7 @@ The generator writes a full TypeScript source tree **directly into**
 `packages/sdk/typescript/src/` — `Client.ts`, `index.ts`, `environments.ts`,
 `api/`, `core/`, `errors/`. There is no nested `src/generated/`; Fern owns
 everything under `src/` and overwrites it on every regen. The package shell
-(`package.json`, `tsconfig.json`, `tsup.config.ts`, `.gitignore`) sits one
+(`package.json`, `tsconfig.json`, `tsdown.config.ts`, `.gitignore`) sits one
 level up at `packages/sdk/typescript/` and is hand-written. Consumers import
 from `@latitude-data/sdk` and resolve through the built `dist/` output — they
 never touch `src/` directly.
@@ -86,7 +86,7 @@ pnpm generate:sdk    # 3. Composite: emit + check + `./fern/invoke.sh generate -
 Fern writes generated TypeScript sources into
 `packages/sdk/typescript/src/` (`Client.ts`, `index.ts`, `environments.ts`,
 `api/`, `core/`, `errors/`). The surrounding package shell —
-`package.json`, `tsconfig.json`, `tsup.config.ts`, and any re-exports —
+`package.json`, `tsconfig.json`, `tsdown.config.ts`, and any re-exports —
 is hand-written at `packages/sdk/typescript/`. Fern owns the contents of
 `src/` and overwrites them on every regen; don't edit anything under
 `src/` directly.

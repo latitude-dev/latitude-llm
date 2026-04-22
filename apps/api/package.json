@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
     "openapi:emit": "tsx scripts/emit-openapi.ts"
   },
@@ -43,6 +43,6 @@
     "@domain/evaluations": "workspace:*",
     "@domain/issues": "workspace:*",
     "@platform/testkit": "workspace:*",
-    "tsup": "^8.0.0"
+    "tsdown": "catalog:"
   }
 }

@@ -22,12 +22,12 @@
     "auth:generate-schema-reference": "better-auth generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@better-auth/core": "^1.5.6",
-    "@better-auth/stripe": "^1.5.6",
+    "@better-auth/core": "1.5.6",
+    "@better-auth/stripe": "1.5.6",
     "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/evaluations": "workspace:*",
