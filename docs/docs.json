@@ -39,6 +39,20 @@
     }
   },
   "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/latitude-dev/latitude-llm"
+        },
+        {
+          "anchor": "YouTube",
+          "icon": "youtube",
+          "href": "https://www.youtube.com/@trylatitude"
+        }
+      ]
+    },
     "groups": [
       {
         "group": "Getting Started",
