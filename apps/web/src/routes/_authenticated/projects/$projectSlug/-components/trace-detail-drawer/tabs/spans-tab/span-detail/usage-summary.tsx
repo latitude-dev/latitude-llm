@@ -16,16 +16,16 @@ export interface UsageData {
 }
 
 const TOKEN_COLORS = {
+  cacheRead: "#d8b4fe",
+  cacheCreate: "#a855f7",
   prompt: "#3b82f6",
-  cached: "#93c5fd",
-  completion: "#22c55e",
-  reasoning: "#86efac",
-  cacheCreate: "#fbbf24",
+  reasoning: "#16a34a",
+  completion: "#4ade80",
 } as const
 
 const COST_COLORS = {
   input: "#3b82f6",
-  output: "#22c55e",
+  output: "#4ade80",
 } as const
 
 export function hasAnyUsage(data: UsageData): boolean {
@@ -39,18 +39,18 @@ export function hasAnyUsage(data: UsageData): boolean {
 }
 
 function buildTokenSegments(data: UsageData): SegmentBarItem[] {
-  const prompt = Math.max(0, data.tokensInput - data.tokensCacheRead)
-  const cached = data.tokensCacheRead
-  const completion = Math.max(0, data.tokensOutput - data.tokensReasoning - data.tokensCacheCreate)
-  const reasoning = data.tokensReasoning
+  const prompt = data.tokensInput
+  const cacheRead = data.tokensCacheRead
   const cacheCreate = data.tokensCacheCreate
+  const completion = data.tokensOutput
+  const reasoning = data.tokensReasoning
 
   const segments: SegmentBarItem[] = []
-  if (prompt > 0) segments.push({ label: "Prompt", value: prompt, color: TOKEN_COLORS.prompt })
-  if (cached > 0) segments.push({ label: "Cached", value: cached, color: TOKEN_COLORS.cached })
-  if (completion > 0) segments.push({ label: "Completion", value: completion, color: TOKEN_COLORS.completion })
-  if (reasoning > 0) segments.push({ label: "Reasoning", value: reasoning, color: TOKEN_COLORS.reasoning })
+  if (cacheRead > 0) segments.push({ label: "Cache Read", value: cacheRead, color: TOKEN_COLORS.cacheRead })
   if (cacheCreate > 0) segments.push({ label: "Cache Write", value: cacheCreate, color: TOKEN_COLORS.cacheCreate })
+  if (prompt > 0) segments.push({ label: "Prompt", value: prompt, color: TOKEN_COLORS.prompt })
+  if (reasoning > 0) segments.push({ label: "Reasoning", value: reasoning, color: TOKEN_COLORS.reasoning })
+  if (completion > 0) segments.push({ label: "Completion", value: completion, color: TOKEN_COLORS.completion })
   return segments
 }
 
@@ -138,10 +138,10 @@ function UsageRow({
       </Tooltip>
 
       <div className="flex items-center gap-2 self-center">
-        {badges}
         <Text.H5 color="foreground" noWrap>
           {formattedTotal}
         </Text.H5>
+        {badges}
       </div>
     </div>
   )
@@ -161,7 +161,8 @@ export function UsageSummary({
   const tokenSegments = useMemo(() => buildTokenSegments(data), [data])
   const costSegments = useMemo(() => buildCostSegments(data), [data])
 
-  const totalTokens = data.tokensInput + data.tokensOutput
+  const totalTokens =
+    data.tokensInput + data.tokensCacheRead + data.tokensCacheCreate + data.tokensOutput + data.tokensReasoning
   const hasCost = data.costTotalMicrocents > 0
   const hasTokens = hasAnyUsage(data)
 
