@@ -31,6 +31,39 @@ export {
   annotationQueueItemSchema,
 } from "./entities/annotation-queue-items.ts"
 export { TooManyTracesSelectedError } from "./errors.ts"
+// Re-export strategy registry, strategies, types, and shared utilities from flagger-strategies
+export {
+  // Types
+  type ConversationStage,
+  type DetectionResult,
+  // Shared utilities
+  extractConversationStages,
+  extractUserTextMessages,
+  extractWorkSignals,
+  // Strategies
+  forgettingStrategy,
+  frustrationStrategy,
+  // Registry functions
+  getQueueStrategy,
+  getStageWorkSignals,
+  hasQueueStrategy,
+  jailbreakingStrategy,
+  lazinessStrategy,
+  listQueueStrategySlugs,
+  MAX_EXCERPT_LENGTH,
+  MAX_SNIPPET_EXCERPT_LENGTH,
+  MAX_STAGES_PER_PROMPT,
+  MAX_SUSPICIOUS_SNIPPETS,
+  nsfwStrategy,
+  type QueueStrategy,
+  rankStagesByRefusalLikelihood,
+  refusalStrategy,
+  type SuspiciousSnippet,
+  scoreRefusalLikelihood,
+  trashingStrategy,
+  truncateExcerpt,
+  type WorkSignals,
+} from "./flagger-strategies/index.ts"
 export type { TraceSelection } from "./helpers/bulk-create-from-traces-helpers.ts"
 export {
   annotationQueueItemStatus,

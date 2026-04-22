@@ -50,6 +50,7 @@ Rules for \`enrichedFeedback\`:
 - Remove references to specific entities, dates, or details that are incidental to the failure pattern
 - Keep the language neutral and descriptive
 - The output must be useful for grouping similar failures together
+- Keep it short and use simple, plain words — avoid jargon, filler, and long phrasing
 
 Examples (only \`enrichedFeedback\` — you still supply reasoning in your output):
 - Raw: "this is wrong, the model hallucinated the date" → "Hallucinations of temporal information in the response"
