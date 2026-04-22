@@ -22,6 +22,7 @@
     "@effect/opentelemetry": "catalog:",
     "@latitude-data/telemetry": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^2.6.0",
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
     "@opentelemetry/sdk-node": "^0.213.0",

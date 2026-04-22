@@ -1164,6 +1164,9 @@ importers:
       '@opentelemetry/auto-instrumentations-node':
         specifier: ^0.71.0
         version: 0.71.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.0(@opentelemetry/api@1.9.1))
+      '@opentelemetry/context-async-hooks':
+        specifier: ^2.6.0
+        version: 2.6.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.1)
