@@ -63,7 +63,6 @@ import {
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
   generateBaselineEvaluationDraft,
-  generateEvaluationDetails,
   loadEvaluationAlignmentState,
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
@@ -298,69 +297,6 @@ describe("evaluation-alignment activities", () => {
       sampling: 10,
     })
     expect(mockAi.generate).not.toHaveBeenCalled()
-  })
-
-  it("generates evaluation name and description from issue context and script via AI", async () => {
-    mockAi.generate.mockImplementation(() =>
-      Effect.succeed({
-        object: {
-          name: "Fabricated refund guarantees",
-          description:
-            "Checks whether the assistant invents refund or cancellation guarantees. Passes when the conversation is free of fabricated guarantees; fails when the assistant makes up refund promises.",
-        },
-        tokens: 30,
-        duration: 100,
-      }),
-    )
-
-    const script = wrapPromptAsEvaluationScript(
-      `Check the conversation for fabricated guarantees.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
-    )
-
-    const result = await generateEvaluationDetails({
-      ...alignmentActivityScope,
-      evaluationHash: "eh-details-1",
-      issueName: "Fabricated refund guarantees in support answers",
-      issueDescription: "The agent invents refund or cancellation guarantees not confirmed in the conversation.",
-      script,
-    })
-
-    expect(result.name).toBe("Fabricated refund guarantees")
-    expect(result.description).toContain("Passes when")
-    expect(result.description).toContain("fails when")
-    expect(result.description).not.toContain("Phase 12")
-    expect(result.description).not.toContain("scaffolded")
-
-    expect(mockAi.generate).toHaveBeenCalledTimes(1)
-    const call = mockAi.generate.mock.calls[0]?.[0]
-    expect(call.prompt).toContain("Fabricated refund guarantees in support answers")
-    expect(call.prompt).toContain("Final evaluation script:")
-    expect(call.prompt).toContain(script)
-  })
-
-  it("truncates long evaluation names from the AI layer", async () => {
-    const longName = "A".repeat(200)
-    mockAi.generate.mockImplementation(() =>
-      Effect.succeed({
-        object: {
-          name: longName,
-          description: "Some description.",
-        },
-        tokens: 10,
-        duration: 50,
-      }),
-    )
-
-    const result = await generateEvaluationDetails({
-      ...alignmentActivityScope,
-      evaluationHash: "eh-details-2",
-      issueName: "Test issue",
-      issueDescription: "Test description",
-      script: wrapPromptAsEvaluationScript("Test prompt"),
-    })
-
-    expect(result.name.length).toBeLessThanOrEqual(128)
-    expect(result.name).toBe(longName.slice(0, 128).trimEnd())
   })
 
   it("evaluates the generated baseline against curated examples and derives a confusion matrix", async () => {
@@ -788,7 +724,9 @@ describe("evaluation-alignment activities", () => {
     expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
   })
 
-  it("persists the evaluated confusion matrix on the saved evaluation row", async () => {
+  it("persists the evaluated confusion matrix and inherits name/description from the issue", async () => {
+    await insertIssue()
+
     const result = await persistEvaluationAlignmentResult({
       organizationId,
       projectId,
@@ -810,13 +748,13 @@ describe("evaluation-alignment activities", () => {
         debounce: 0,
         sampling: 10,
       },
-      name: "Tool output leakage monitor",
-      description: "Generated from curated examples.",
     })
 
     const saved = await pg.db.select().from(evaluationsTable)
     const evaluation = saved.find((row) => row.id === result.evaluationId)
 
+    expect(evaluation?.name).toBe("Tool output leakage")
+    expect(evaluation?.description).toBe("Secrets are exposed in assistant tool output.")
     expect(evaluation?.alignment).toEqual({
       evaluationHash: "hash-activity-test",
       confusionMatrix: {
@@ -826,5 +764,41 @@ describe("evaluation-alignment activities", () => {
         trueNegatives: 4,
       },
     })
+  })
+
+  it("overwrites an existing evaluation's name/description with the linked issue's current values", async () => {
+    await insertIssue()
+    const evaluationId = await insertEvaluation({})
+
+    const result = await persistEvaluationAlignmentResult({
+      organizationId,
+      projectId,
+      issueId,
+      evaluationId,
+      script: wrapPromptAsEvaluationScript(
+        `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+      ),
+      evaluationHash: "hash-overwrite-test",
+      confusionMatrix: {
+        truePositives: 5,
+        falsePositives: 0,
+        falseNegatives: 0,
+        trueNegatives: 5,
+      },
+      trigger: {
+        filter: {},
+        turn: "every",
+        debounce: 0,
+        sampling: 10,
+      },
+    })
+
+    const saved = await pg.db.select().from(evaluationsTable)
+    const evaluation = saved.find((row) => row.id === result.evaluationId)
+
+    expect(evaluation?.name).toBe("Tool output leakage")
+    expect(evaluation?.description).toBe("Secrets are exposed in assistant tool output.")
+    expect(evaluation?.name).not.toBe("Existing evaluation")
+    expect(evaluation?.description).not.toBe("Existing evaluation description")
   })
 })

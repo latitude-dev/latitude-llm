@@ -81,25 +81,6 @@ export const buildEvaluationJudgeLiveTelemetryCapture = (input: {
   ),
 })
 
-export const buildEvaluationGepaSummaryTelemetryCapture = (
-  scope: EvaluationAlignmentJudgeTelemetryScope & { readonly evaluationHash: string },
-): GenerateTelemetryCapture => {
-  const { organizationId, projectId, issueId, evaluationId, jobId, evaluationHash } = scope
-  return {
-    spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationSummaryOptimization,
-    tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationSummaryOptimization],
-    metadata: buildProjectScopedAiMetadata(
-      { organizationId, projectId },
-      {
-        issueId,
-        evaluationId,
-        evaluationHash,
-        ...optionalJobIdMetadata(jobId),
-      },
-    ),
-  }
-}
-
 export const buildEvaluationGepaProposeTelemetryCapture = (
   scope: EvaluationAlignmentJudgeTelemetryScope & {
     readonly evaluationHash: string

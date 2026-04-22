@@ -3,7 +3,6 @@ export type {
   BaselineEvaluationExampleResult,
   BaselineEvaluationResult,
   CollectedEvaluationAlignmentExamples,
-  GeneratedEvaluationDetails,
   GeneratedEvaluationDraft,
   HydratedEvaluationAlignmentExample,
   IncrementalEvaluationRefreshResult,
@@ -76,7 +75,6 @@ export {
   softDeleteEvaluation,
   toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
-  truncateEvaluationName,
   unarchiveEvaluation,
 } from "./helpers.ts"
 export {
@@ -114,7 +112,6 @@ export {
 export {
   buildEvaluationAlignmentJudgeTelemetryCapture,
   buildEvaluationGepaProposeTelemetryCapture,
-  buildEvaluationGepaSummaryTelemetryCapture,
   buildEvaluationJudgeLiveTelemetryCapture,
   buildEvaluationOptimizationJudgeTelemetryCapture,
   type EvaluationAlignmentJudgeTelemetryScope,

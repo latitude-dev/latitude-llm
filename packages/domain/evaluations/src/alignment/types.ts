@@ -51,11 +51,6 @@ export interface IncrementalEvaluationRefreshResult extends BaselineEvaluationRe
   readonly matthewsCorrelationCoefficientDrop: number
 }
 
-export interface GeneratedEvaluationDetails {
-  readonly name: string
-  readonly description: string
-}
-
 export interface PersistEvaluationAlignmentResult {
   readonly evaluationId: string
 }

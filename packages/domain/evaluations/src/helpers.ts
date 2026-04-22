@@ -1,5 +1,5 @@
 import { deterministicSampling, type ResolvedSettings } from "@domain/shared"
-import { ALIGNMENT_MCC_TOLERANCE, EVALUATION_NAME_MAX_LENGTH } from "./constants.ts"
+import { ALIGNMENT_MCC_TOLERANCE } from "./constants.ts"
 import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
 import { isPausedEvaluation } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
@@ -443,5 +443,3 @@ export const decideAlignmentRefreshStrategy = (input: {
     matthewsCorrelationCoefficientDrop,
   }
 }
-
-export const truncateEvaluationName = (value: string): string => value.slice(0, EVALUATION_NAME_MAX_LENGTH).trimEnd()

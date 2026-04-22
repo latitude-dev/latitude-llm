@@ -32,13 +32,11 @@ const { loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult
   },
 )
 
-const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft, generateEvaluationDetails } =
-  proxyActivities<typeof activities>({
-    // Example collection plus single-shot LLM calls for baseline script
-    // and name/description generation.
-    startToCloseTimeout: "10 minutes",
-    retry: defaultActivityRetryPolicy,
-  })
+const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
+  // Example collection plus a single-shot LLM call for the baseline script.
+  startToCloseTimeout: "10 minutes",
+  retry: defaultActivityRetryPolicy,
+})
 
 const { optimizeEvaluationDraft, evaluateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
   // GEPA optimization does many LLM round-trips and the baseline evaluator
@@ -55,26 +53,24 @@ const { optimizeEvaluationDraft, evaluateBaselineEvaluationDraft } = proxyActivi
 //   - automatic re-optimization triggered by the throttled
 //     `evaluations:automaticOptimization` queue task (8h, first-publish-wins)
 //
-// For existing evaluations we skip the name/description generation pass and
-// reuse the persisted values, so an auto-run does not silently rename a
-// user-visible evaluation.
+// The evaluation's name/description are inherited from the linked Issue at
+// persist time, so every run (create, manual realign, auto re-optimize) writes
+// the current Issue values onto the evaluation row.
 export const optimizeEvaluationWorkflow = async (
   input: OptimizeEvaluationWorkflowInput,
 ): Promise<OptimizeEvaluationWorkflowResult> => {
-  const existing = input.evaluationId
-    ? await loadEvaluationAlignmentStateOrInactive({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        issueId: input.issueId,
-        evaluationId: input.evaluationId,
-      })
-    : null
+  if (input.evaluationId) {
+    const existing = await loadEvaluationAlignmentStateOrInactive({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId,
+    })
 
-  if (existing?.status === "inactive") {
-    return { status: "inactive" }
+    if (existing.status === "inactive") {
+      return { status: "inactive" }
+    }
   }
-
-  const existingState = existing?.status === "active" ? existing.state : null
 
   const collected = await collectEvaluationAlignmentExamples({
     organizationId: input.organizationId,
@@ -116,23 +112,6 @@ export const optimizeEvaluationWorkflow = async (
     negativeExamples: collected.negativeExamples,
   })
 
-  const details = existingState
-    ? {
-        name: existingState.name,
-        description: existingState.description,
-      }
-    : await generateEvaluationDetails({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        issueId: input.issueId,
-        evaluationId: input.evaluationId ?? null,
-        jobId: input.jobId,
-        evaluationHash: optimizedDraft.evaluationHash,
-        issueName: collected.issueName,
-        issueDescription: collected.issueDescription,
-        script: optimizedDraft.script,
-      })
-
   const persisted = await persistEvaluationAlignmentResult({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -142,8 +121,6 @@ export const optimizeEvaluationWorkflow = async (
     evaluationHash: optimizedDraft.evaluationHash,
     confusionMatrix: baselineEvaluation.confusionMatrix,
     trigger: optimizedDraft.trigger,
-    name: details.name,
-    description: details.description,
   })
 
   return {

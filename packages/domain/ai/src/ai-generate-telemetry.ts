@@ -12,7 +12,6 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   evaluationJudgeLive: ["eval:execute", "live"],
   evaluationJudgeAlignment: ["eval:execute", "alignment"],
   evaluationJudgeOptimization: ["eval:execute", "optimization"],
-  evaluationSummaryOptimization: ["gepa:summary"],
   evaluationProposeOptimization: ["gepa:propose"],
 } as const satisfies Record<string, readonly string[]>
 
@@ -24,7 +23,6 @@ export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   evaluationJudgeLive: "evaluation.judge.live",
   evaluationJudgeAlignment: "evaluation.judge.alignment",
   evaluationJudgeOptimization: "evaluation.judge.optimization",
-  evaluationSummaryOptimization: "evaluation.summary.optimization",
   evaluationProposeOptimization: "evaluation.propose.optimization",
 } as const satisfies Record<string, string>
 

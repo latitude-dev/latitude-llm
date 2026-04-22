@@ -21,9 +21,3 @@ export const GEPA_PROPOSER_MODEL = {
   model: "anthropic.claude-opus-4-7",
   reasoning: "xhigh",
 } as const
-
-export const GEPA_DETAILS_GENERATOR_MODEL = {
-  provider: "amazon-bedrock",
-  model: "minimax.minimax-m2.5",
-  reasoning: "low",
-} as const
