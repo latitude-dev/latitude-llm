@@ -101,18 +101,35 @@ export const createBullMqQueuePublisher = (
       ) =>
         Effect.tryPromise({
           try: async () => {
+            if (options?.debounceMs !== undefined && options?.throttleMs !== undefined) {
+              throw new Error(`publish(${queue}, ${String(task)}): debounceMs and throttleMs are mutually exclusive`)
+            }
+            if (options?.throttleMs !== undefined && !options.dedupeKey) {
+              throw new Error(`publish(${queue}, ${String(task)}): throttleMs requires a dedupeKey`)
+            }
+
             const bullmqOptions: Record<string, unknown> = {}
             if (options?.dedupeKey) {
               bullmqOptions.jobId = options.dedupeKey
             }
-            if (options?.debounceMs) {
-              bullmqOptions.delay = options.debounceMs
-              if (options.dedupeKey) {
+            // `debounceMs` and `throttleMs` both map to BullMQ's `delay` + `deduplication`,
+            // but the dedup flags differ:
+            //   - debounce: `extend: true, replace: true` — each publish within the TTL
+            //     pushes the fire time forward and overwrites the payload. Fires after
+            //     `debounceMs` of quiet.
+            //   - throttle: `extend: false, replace: false` — the first publish wins.
+            //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
+            //     exactly `throttleMs` after the first publish.
+            const delayMs = options?.debounceMs ?? options?.throttleMs
+            if (delayMs !== undefined) {
+              bullmqOptions.delay = delayMs
+              if (options?.dedupeKey) {
+                const isThrottle = options.throttleMs !== undefined
                 bullmqOptions.deduplication = {
                   id: options.dedupeKey,
-                  ttl: options.debounceMs,
-                  extend: true,
-                  replace: true,
+                  ttl: delayMs,
+                  extend: !isThrottle,
+                  replace: !isThrottle,
                 }
               }
             }

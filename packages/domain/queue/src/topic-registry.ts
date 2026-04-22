@@ -110,7 +110,13 @@ const _registry = {
   }>(),
 
   evaluations: payloads<{
-    align: {
+    automaticRefreshAlignment: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly evaluationId: string
+    }
+    automaticOptimization: {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string

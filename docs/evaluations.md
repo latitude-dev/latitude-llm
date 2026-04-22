@@ -111,7 +111,7 @@ Rules:
 - workers and workflow activities re-fetch current evaluation/example state before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream tasks or starts workflows and never runs synchronous business logic inline
 - user-triggered issue generation starts the same aligner pipeline through the `evaluation-alignment` workflow rather than running alignment in the request itself
-- debounced/manual alignment refresh uses workflow timers inside `evaluation-alignment`, not implicit BullMQ delayed/repeat jobs or persisted due-work scans
+- annotation-driven automatic realignment flows through two throttled BullMQ tasks: `evaluations:automaticRefreshAlignment` (1h throttle) starts `refresh-evaluation-alignment`, and on an incremental MCC drop that workflow publishes `evaluations:automaticOptimization` (8h throttle) which starts `optimize-evaluation`. Workflows never sleep — the queue owns both windows. Throttle (not debounce) semantics: the first publish schedules the fire time; subsequent publishes within the window are dropped by BullMQ, so a constant annotation stream cannot starve the refresh. Worst-case latency is bounded (1h for refresh, 8h for optimize) and fires are capped at once per window per evaluation
 
 User-triggered background generation contract:
 
@@ -136,7 +136,7 @@ Evaluations generated from issues (by user demand) are the mainline flow:
 - issue discovery and issue creation do not automatically create evaluations
 - the issue list and issue details modal/page expose `Generate evaluation`
 - issues may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
-- after creation, debounced automatic realignment still runs as new annotations arrive for each linked evaluation
+- after creation, throttled automatic realignment still runs as new annotations arrive for each linked evaluation
 - alignment reads published, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse score analytics
 
 1. collect annotation-derived truth with at least `1` positive example and any available negatives
@@ -152,12 +152,12 @@ Alignment rules from the proposal:
 - MCC (Matthews Correlation Coefficient), accuracy, F1, and other alignment metrics are derived from that confusion matrix on read
 - drafts and errored scores are excluded from alignment entirely
 - user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `evaluation-alignment` workflow
-- debounced metric recomputation every hour at most
-- debounced full realignment every eight hours at most
-- manual realignment is available and rate-limited
+- throttled incremental metric recomputation at most once per hour per evaluation; fires at most 1h after the first annotation
+- throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first MCC-drop escalation
+- manual realignment is available and throttled
 - unchanged scripts may refresh alignment incrementally instead of fully re-optimizing
 - when the script hash is unchanged, new examples are evaluated and added into the existing confusion-matrix counters
-- debounced and manual background refreshes should reuse the `evaluation-alignment` workflow path
+- throttled automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-throttled `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-throttled `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh reuses the `evaluation-alignment` workflow path until it is migrated onto `optimize-evaluation` in a follow-up change
 
 These cadence and tuning values, including the default sampling percentage for newly created issue-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.
 
@@ -172,7 +172,7 @@ Negative examples, after filtering out drafts and errored scores, in priority or
 2. conversations with no failed scores
 3. conversations with scores, either passed or failed, but unrelated to the issue being aligned, as long as those scores are also non-draft and non-errored
 
-There is no minimum negative-example count for initial issue-linked generation. A monitor may be created from a single positive occurrence with zero negatives, and its alignment may be weak at first. As users add more annotations, the debounced realignment flow should improve that monitor over time.
+There is no minimum negative-example count for initial issue-linked generation. A monitor may be created from a single positive occurrence with zero negatives, and its alignment may be weak at first. As users add more annotations, the throttled realignment flow should improve that monitor over time.
 
 ## Optimizer
 

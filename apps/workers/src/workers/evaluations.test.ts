@@ -1,62 +1,102 @@
-import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/evaluations"
 import type { WorkflowStarterShape } from "@domain/queue"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createEvaluationsWorker } from "./evaluations.ts"
 
-describe("createEvaluationsWorker", () => {
-  it("signals the refresh-loop workflow for evaluation alignment", async () => {
-    const consumer = new TestQueueConsumer()
-    const signaledWorkflows: Array<{
-      readonly workflow: string
-      readonly input: unknown
-      readonly options: {
-        readonly workflowId: string
-        readonly signal: string
-        readonly signalArgs?: readonly unknown[]
-      }
-    }> = []
-    const workflowStarter: WorkflowStarterShape = {
-      start: () => Effect.die("start should not be called by evaluations:align"),
-      signalWithStart: (workflow, input, options) =>
+type StartedWorkflow = {
+  readonly workflow: string
+  readonly input: unknown
+  readonly options: { readonly workflowId: string }
+}
+
+const makeRecordingStarter = (overrides?: {
+  readonly start?: WorkflowStarterShape["start"]
+}): { starter: WorkflowStarterShape; started: StartedWorkflow[] } => {
+  const started: StartedWorkflow[] = []
+  const starter: WorkflowStarterShape = {
+    start:
+      overrides?.start ??
+      ((workflow, input, options) =>
         Effect.sync(() => {
-          signaledWorkflows.push({ workflow, input, options })
-        }),
-    }
+          started.push({ workflow, input, options })
+        })),
+    signalWithStart: () => Effect.die("signalWithStart should not be called by evaluations worker"),
+  }
+  return { starter, started }
+}
 
-    createEvaluationsWorker({ consumer, workflowStarter })
+describe("createEvaluationsWorker", () => {
+  it("starts refreshEvaluationAlignmentWorkflow on automaticRefreshAlignment with a deterministic workflowId", async () => {
+    const consumer = new TestQueueConsumer()
+    const { starter, started } = makeRecordingStarter()
+    createEvaluationsWorker({ consumer, workflowStarter: starter })
 
-    await consumer.dispatchTask("evaluations", "align", {
+    await consumer.dispatchTask("evaluations", "automaticRefreshAlignment", {
       organizationId: "org-1",
       projectId: "proj-1",
       issueId: "issue-1",
       evaluationId: "evaluation-1",
     })
 
-    expect(signaledWorkflows).toEqual([
+    expect(started).toEqual([
       {
-        workflow: "evaluationAlignmentWorkflow",
+        workflow: "refreshEvaluationAlignmentWorkflow",
         input: {
           organizationId: "org-1",
           projectId: "proj-1",
           issueId: "issue-1",
           evaluationId: "evaluation-1",
-          jobId: "auto-refresh:evaluation-1",
-          refreshLoop: true,
-          reason: "debounced-metric-refresh",
         },
-        options: {
-          workflowId: `evaluations:alignment:evaluation-1`,
-          signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-          signalArgs: [
-            {
-              reason: "debounced-metric-refresh",
-              jobId: "auto-refresh:evaluation-1",
-            },
-          ],
-        },
+        options: { workflowId: "evaluations:refreshAlignment:evaluation-1" },
       },
     ])
+  })
+
+  it("starts optimizeEvaluationWorkflow on automaticOptimization with a deterministic workflowId", async () => {
+    const consumer = new TestQueueConsumer()
+    const { starter, started } = makeRecordingStarter()
+    createEvaluationsWorker({ consumer, workflowStarter: starter })
+
+    await consumer.dispatchTask("evaluations", "automaticOptimization", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      issueId: "issue-1",
+      evaluationId: "evaluation-1",
+    })
+
+    expect(started).toEqual([
+      {
+        workflow: "optimizeEvaluationWorkflow",
+        input: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          issueId: "issue-1",
+          evaluationId: "evaluation-1",
+          jobId: "auto-optimize:evaluation-1",
+        },
+        options: { workflowId: "evaluations:optimize:evaluation-1" },
+      },
+    ])
+  })
+
+  it("swallows WorkflowExecutionAlreadyStartedError so a duplicate delayed job does not re-queue", async () => {
+    const consumer = new TestQueueConsumer()
+    const alreadyStarted = Object.assign(new Error("already started"), {
+      name: "WorkflowExecutionAlreadyStartedError",
+    })
+    const { starter } = makeRecordingStarter({
+      start: () => Effect.die(alreadyStarted),
+    })
+    createEvaluationsWorker({ consumer, workflowStarter: starter })
+
+    await expect(
+      consumer.dispatchTask("evaluations", "automaticRefreshAlignment", {
+        organizationId: "org-1",
+        projectId: "proj-1",
+        issueId: "issue-1",
+        evaluationId: "evaluation-1",
+      }),
+    ).resolves.toBeUndefined()
   })
 })

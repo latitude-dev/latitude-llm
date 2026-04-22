@@ -16,6 +16,19 @@ const _registry = {
       | "debounced-metric-refresh"
       | "debounced-full-realignment"
   }>(),
+  refreshEvaluationAlignmentWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly evaluationId: string
+  }>(),
+  optimizeEvaluationWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly evaluationId: string | null
+    readonly jobId: string
+  }>(),
   issueDiscoveryWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

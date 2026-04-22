@@ -21,11 +21,26 @@ export const EVALUATION_TURNS = ["first", "every", "last"] as const
 // Alignment cadence
 // ---------------------------------------------------------------------------
 
-/** Debounce window for metric recomputation after new annotations (1 hour in milliseconds). */
-export const ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS = 1 * 60 * 60 * 1000
+/**
+ * Throttle window for incremental metric recomputation after new annotations
+ * (1 hour in milliseconds). Used as `throttleMs` on the
+ * `evaluations:automaticRefreshAlignment` queue task: the first annotation that
+ * flows through `issues:refresh` schedules the workflow for `now + 1h`, and
+ * subsequent annotations within that hour are dropped by BullMQ. Guarantees an
+ * upper bound of 1h on fire latency and at most one refresh per evaluation
+ * per hour, even under a constant annotation stream.
+ */
+export const ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS = 1 * 60 * 60 * 1000
 
-/** Debounce window for full re-optimization after new annotations (8 hours in milliseconds). */
-export const ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS = 8 * 60 * 60 * 1000
+/**
+ * Throttle window for full re-optimization after an incremental MCC drop
+ * (8 hours in milliseconds). Used as `throttleMs` on the
+ * `evaluations:automaticOptimization` queue task: the first escalation from
+ * `refreshEvaluationAlignmentWorkflow` schedules the optimize workflow for
+ * `now + 8h`, and subsequent escalations within that window are dropped.
+ * Guarantees at most one GEPA pass per evaluation per 8h.
+ */
+export const ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Alignment tolerances

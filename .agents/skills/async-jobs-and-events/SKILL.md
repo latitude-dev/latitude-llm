@@ -67,11 +67,50 @@ ScoreCreated: (event) =>
 - Domain-event consumers should act as **dispatchers**: publish downstream topic tasks or start workflows, but do not run synchronous business logic inline inside the event handler.
 - Extend the repo’s existing async rails instead of inventing new ones: BullMQ-backed queue workers live in `apps/workers`, and durable multi-step workflows live in the Temporal-backed `apps/workflows` app.
 - Queue topics may own several related **lower-kebab-case** task names; one worker module owns the topic and dispatches by task name.
-- Queue publication should expose logical **dedupe/debounce** keyed by the relevant entity identity when the transport supports it.
+- Queue publication should expose logical **dedupe/debounce** or **throttle** keyed by the relevant entity identity when the transport supports it.
 - Use **queue topics** for single-step tasks and the **workflow abstraction** for long-running or multi-step orchestration.
 - For reliability async contracts, include both `organizationId` and `projectId` in domain-event payloads, topic/task payloads, and workflow inputs by default. Exceptions: `MagicLinkEmailRequested`, `InvitationEmailRequested`, `UserDeletionRequested`, the `domain-events` topic payload, the `magic-link-email` topic payload, the `invitation-email` topic payload, and the `user-deletion` topic payload.
-- When BullMQ delay is the chosen debounce mechanism, key the delayed job by the logical entity identity so newer writes replace or reschedule the pending job.
+- When BullMQ delay is the chosen coalescing mechanism, key the delayed job by the logical entity identity so newer writes can replace, extend, or be dropped against the pending job — see the debounce-vs-throttle guidance below for which semantic to pick.
 - When a delayed queue topic semantically marks a lifecycle edge, let the delayed task publish a domain event through the appropriate rail after the delay elapses: use `OutboxEventWriter` / `OutboxEventWriterShape` for transactional boundaries and direct `EventsPublisher` publication for non-transactional or high-volume worker flows. Downstream side effects should run from the domain-event consumers rather than inline in the delayed task.
+
+## Choosing between `debounceMs` and `throttleMs`
+
+`PublishOptions` exposes two mutually exclusive delay fields. Both accept a window in ms and coalesce repeated publishes against `dedupeKey`, but they answer different questions.
+
+**`debounceMs`** — fires after `N` ms of quiet on the dedupe key. Each publish within the window pushes the fire time forward and replaces the pending payload (BullMQ `extend: true, replace: true`). Use when the task should **wait for a stream of events to settle**.
+
+*Example:* `trace-end:run` after `SpanIngested`. Every new span for a trace resets the clock; end-of-trace work fires once the trace is actually idle. If spans keep arriving every few seconds, that means the trace is still active — not firing is correct.
+
+**`throttleMs`** — fires **at most once per `N` ms per dedupe key**. The first publish schedules the fire time; subsequent publishes within the window are dropped (BullMQ `extend: false, replace: false`). Requires `dedupeKey`. Use when you need a **hard upper bound** on fire latency and a cap on frequency, and where starvation under a continuous publish stream would be a product bug.
+
+*Example:* annotation-driven alignment refresh (`evaluations:automaticRefreshAlignment`, 1h) and its escalation (`evaluations:automaticOptimization`, 8h). We want at most one refresh per evaluation per hour, firing at most 1h after the first new annotation, even if annotations keep arriving every 30 min.
+
+### Decision heuristic
+
+Ask: if a publisher fires every 30 min forever on the same `dedupeKey`, what should happen?
+
+- **"Fire after they stop"** → `debounceMs`. Classic debounce. Fire time keeps sliding forward; fires only during quiet periods.
+- **"Fire every `N` min regardless"** → `throttleMs`. Bounded latency, bounded frequency; never starves.
+
+### Anti-pattern
+
+Reaching for `debounceMs` when the intent is "run at most once per hour". With a continuous publish stream every publish extends the TTL and the task never fires — silent starvation. If the wording in the spec or PR is "at most once per X" or "every X at most", that is throttle semantics; use `throttleMs`.
+
+```ts
+// Debounce — wait for events to settle
+pub.publish("trace-end", "run", payload, {
+  dedupeKey: `trace-end:run:${traceId}`,
+  debounceMs: TRACE_END_DEBOUNCE_MS,
+})
+
+// Throttle — at most once per window, bounded latency
+pub.publish("issues", "refresh", payload, {
+  dedupeKey: `issues:refresh:${issueId}`,
+  throttleMs: ISSUE_REFRESH_THROTTLE_MS,
+})
+```
+
+Name the constant to match the semantic: `*_DEBOUNCE_MS` vs. `*_THROTTLE_MS`. A constant named for one semantic that is passed as the other is a lie readers will trip over.
 
 ## New infrastructure dependencies
 

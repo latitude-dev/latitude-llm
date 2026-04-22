@@ -14,9 +14,9 @@ export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
   ALIGNMENT_DEFAULT_SEED,
-  ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
+  ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS,
   ALIGNMENT_MCC_TOLERANCE,
-  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+  ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS,
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
   DEFAULT_EVALUATION_SAMPLING,
@@ -154,6 +154,10 @@ export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evalu
 export { evaluateIncrementalDraftUseCase } from "./use-cases/alignment/evaluate-incremental-draft.ts"
 export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-baseline-draft.ts"
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
+export {
+  type LoadAlignmentStateOrInactiveResult,
+  loadAlignmentStateOrInactiveUseCase,
+} from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
   buildLiveTraceEndEvaluationSelectionKey,

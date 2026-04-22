@@ -9,6 +9,7 @@ export {
   generateBaselineEvaluationDraft,
   generateEvaluationDetails,
   loadEvaluationAlignmentState,
+  loadEvaluationAlignmentStateOrInactive,
   persistEvaluationAlignmentResult,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
@@ -24,3 +25,4 @@ export {
   syncIssueProjections,
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"
+export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"

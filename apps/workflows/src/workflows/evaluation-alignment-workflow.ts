@@ -5,8 +5,8 @@
 // which is forbidden in the workflow sandbox. The `./constants` subpath is a
 // leaf module with no runtime dependencies, so it is safe to bundle here.
 import {
-  ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
-  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+  ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS,
+  ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS,
   EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
   EVALUATION_ALIGNMENT_STATE_QUERY,
   type EvaluationAlignmentWorkflowState,
@@ -232,18 +232,18 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
         return
       case "debounced-full-realignment":
         if (pendingFullRealignmentAtMs === null) {
-          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS
           scheduleRevision += 1
         }
         return
       case "debounced-metric-refresh":
         if (pendingMetricRefreshAtMs === null) {
-          pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS
+          pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS
           scheduleRevision += 1
         }
 
         if (pendingFullRealignmentAtMs === null) {
-          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS
           scheduleRevision += 1
         }
         return
@@ -303,7 +303,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
           reason: "debounced-full-realignment",
         })
       } catch {
-        pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+        pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS
       }
       continue
     }
@@ -324,7 +324,7 @@ export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWork
           pendingFullRealignmentAtMs = Date.now()
         }
       } catch {
-        pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS
+        pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS
       }
       continue
     }

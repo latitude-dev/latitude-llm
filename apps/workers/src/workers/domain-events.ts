@@ -1,6 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
+import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -97,10 +97,13 @@ export const createDomainEventsWorker = ({
 
     ScoreCreated: (event) => publishScoreCreatedFanOut(event.payload),
 
+    // Throttled: the first assignment schedules the refresh for `now + 8h`,
+    // and subsequent assignments within the window are dropped so a constant
+    // annotation stream cannot starve the refresh.
     ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
         dedupeKey: `issues:refresh:${event.payload.issueId}`,
-        debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+        throttleMs: ISSUE_REFRESH_THROTTLE_MS,
       }),
 
     AnnotationDeleted: (event) => {

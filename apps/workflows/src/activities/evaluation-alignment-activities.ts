@@ -11,7 +11,9 @@ import {
   generateBaselineDraftUseCase,
   type HydratedEvaluationAlignmentExample,
   type IncrementalEvaluationRefreshResult,
+  type LoadAlignmentStateOrInactiveResult,
   type LoadedEvaluationAlignmentState,
+  loadAlignmentStateOrInactiveUseCase,
   loadAlignmentStateUseCase,
   type PersistEvaluationAlignmentResult,
   persistAlignmentResultUseCase,
@@ -62,6 +64,23 @@ export const loadEvaluationAlignmentState = (input: {
 }): Promise<LoadedEvaluationAlignmentState> =>
   Effect.runPromise(
     loadAlignmentStateUseCase(input).pipe(
+      withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
+    ),
+  )
+
+// Like `loadEvaluationAlignmentState`, but returns `{ status: "inactive" }`
+// instead of failing when the evaluation is missing/archived/deleted/mismatched.
+// Used by the throttled auto-alignment workflows so a delayed BullMQ job
+// that fires after an evaluation has been archived exits cleanly.
+export const loadEvaluationAlignmentStateOrInactive = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string
+}): Promise<LoadAlignmentStateOrInactiveResult> =>
+  Effect.runPromise(
+    loadAlignmentStateOrInactiveUseCase(input).pipe(
       withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withTracing,
     ),
