@@ -41,6 +41,7 @@ export {
   extractUserTextMessages,
   extractWorkSignals,
   // Strategies
+  forgettingStrategy,
   frustrationStrategy,
   // Registry functions
   getQueueStrategy,
@@ -59,6 +60,7 @@ export {
   refusalStrategy,
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
+  trashingStrategy,
   truncateExcerpt,
   type WorkSignals,
 } from "./flagger-strategies/index.ts"

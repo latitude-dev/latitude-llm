@@ -95,7 +95,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
-      maxTokens: 256,
+      maxTokens: 512,
       telemetry: {
         spanName: "queue.system.classify",
         tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
@@ -109,7 +109,8 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
     // New queue-specific prompt format per system-queue-flagger redesign
     expect(calls.generate[0].system).toContain("Jailbreaking")
-    expect(calls.generate[0].system).toContain("prompt injection")
+    expect(calls.generate[0].system).toContain("INDIRECT PROMPT INJECTION")
+    expect(calls.generate[0].system).toContain("manipulation")
     expect(calls.generate[0].prompt).toContain("SUSPICIOUS SNIPPETS")
     expect(calls.generate[0].prompt).toContain("Ignore previous instructions")
     expect(calls.generate[0].prompt).toContain("Source: user")
@@ -247,8 +248,8 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     expect(result).toEqual({ matched: true })
     expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0].system).toContain("user's own wording")
-    expect(calls.generate[0].system).toContain("Judge only the user-authored messages provided")
+    expect(calls.generate[0].system).toContain("USER'S OWN WORDING")
+    expect(calls.generate[0].system).toContain("Judge only the user-authored messages")
     expect(calls.generate[0].prompt).toContain("USER MESSAGES")
     expect(calls.generate[0].prompt).toContain("This still isn't working")
     expect(calls.generate[0].prompt).toContain("You're not listening")
@@ -478,7 +479,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].system).toContain("Laziness")
-    expect(calls.generate[0].system).toContain("avoiding work")
+    expect(calls.generate[0].system).toContain("AVOIDS doing the work")
     // Laziness prompt includes work signals
     expect(calls.generate[0].prompt).toContain("OVERALL WORK SIGNALS")
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")

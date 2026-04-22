@@ -43,7 +43,7 @@ export const SYSTEM_QUEUE_FLAGGER_MODEL = {
   temperature: 0,
 } as const
 
-export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 256
+export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 512
 
 export const SYSTEM_QUEUE_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",

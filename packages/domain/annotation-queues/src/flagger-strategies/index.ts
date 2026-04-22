@@ -1,9 +1,10 @@
-import { createDefaultStrategy, DEFAULT_QUEUE_DEFINITIONS } from "./default-strategy.ts"
+import { forgettingStrategy } from "./forgetting.ts"
 import { frustrationStrategy } from "./frustration.ts"
 import { jailbreakingStrategy } from "./jailbreaking.ts"
 import { lazinessStrategy } from "./laziness.ts"
 import { nsfwStrategy } from "./nsfw.ts"
 import { refusalStrategy } from "./refusal.ts"
+import { trashingStrategy } from "./trashing.ts"
 import type { QueueStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
@@ -16,8 +17,8 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
   refusal: refusalStrategy,
   laziness: lazinessStrategy,
   jailbreaking: jailbreakingStrategy,
-  forgetting: createDefaultStrategy("forgetting", DEFAULT_QUEUE_DEFINITIONS.forgetting),
-  trashing: createDefaultStrategy("trashing", DEFAULT_QUEUE_DEFINITIONS.trashing),
+  forgetting: forgettingStrategy,
+  trashing: trashingStrategy,
 }
 
 /**
@@ -43,7 +44,15 @@ export function listQueueStrategySlugs(): readonly string[] {
 }
 
 // Export strategies for testing
-export { frustrationStrategy, nsfwStrategy, refusalStrategy, lazinessStrategy, jailbreakingStrategy }
+export {
+  forgettingStrategy,
+  frustrationStrategy,
+  jailbreakingStrategy,
+  lazinessStrategy,
+  nsfwStrategy,
+  refusalStrategy,
+  trashingStrategy,
+}
 
 // Re-export laziness-specific ranking (collocated with laziness strategy)
 export { extractWorkSignals, getStageWorkSignals, type WorkSignals } from "./laziness.ts"
