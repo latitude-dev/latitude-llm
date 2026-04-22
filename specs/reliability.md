@@ -190,10 +190,10 @@ The dispatcher is a `switch` on `event.name` with full TypeScript narrowing — 
 
 ### Dedupe and debounce
 
-`publish()` accepts optional `dedupeKey`, `debounceMs`, and `rateLimitMs`. `debounceMs` and `rateLimitMs` are mutually exclusive; callers pick one based on the semantic the task needs:
+`publish()` accepts optional `dedupeKey`, `debounceMs`, and `throttleMs`. `debounceMs` and `throttleMs` are mutually exclusive; callers pick one based on the semantic the task needs:
 
 - **`debounceMs`** (sliding window, `extend: true, replace: true` in BullMQ): each publish pushes the fire time forward and replaces the pending payload. Appropriate when you want to wait for a stream of events to settle, as with `trace-end:run` after `SpanIngested`.
-- **`rateLimitMs`** (first-publish-wins, `extend: false, replace: false` in BullMQ): the first publish schedules the fire time and subsequent publishes within the window are dropped. Requires `dedupeKey`. Bounds worst-case latency at `rateLimitMs` and caps fires at once per window per key, even under a continuous publish stream. Appropriate for annotation-driven refreshes where starvation under continuous input would be a product bug.
+- **`throttleMs`** (first-publish-wins, `extend: false, replace: false` in BullMQ): the first publish schedules the fire time and subsequent publishes within the window are dropped. Requires `dedupeKey`. Bounds worst-case latency at `throttleMs` and caps fires at once per window per key, even under a continuous publish stream. Appropriate for annotation-driven refreshes where starvation under continuous input would be a product bug.
 
 ```typescript
 // Sliding window (debounce) — used by trace-end:run
@@ -202,10 +202,10 @@ pub.publish("trace-end", "run", payload, {
   debounceMs: TRACE_END_DEBOUNCE_MS,
 })
 
-// First-publish-wins (rate-limit) — used by issues:refresh and the evaluation alignment chain
+// First-publish-wins (throttle) — used by issues:refresh and the evaluation alignment chain
 pub.publish("issues", "refresh", payload, {
   dedupeKey: `issues:refresh:${issueId}`,
-  rateLimitMs: ISSUE_REFRESH_RATE_LIMIT_MS,
+  throttleMs: ISSUE_REFRESH_THROTTLE_MS,
 })
 ```
 
@@ -227,7 +227,7 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to debounce and publish `trace-end:run`
 - `ScoreCreated`: written transactionally after every canonical score write, including drafts; the payload carries the canonical `scoreId` plus an optional selected `issueId`, and the `domain-events` dispatcher consumes it by publishing the deduped `issues:discovery` task and the debounced `annotation-scores:publishHumanAnnotation` task
-- `ScoreAssignedToIssue`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be rate-limited; consumed by the `domain-events` dispatcher to publish `issues:refresh`
+- `ScoreAssignedToIssue`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be throttled; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
@@ -239,7 +239,7 @@ Initial reliability topic/task contracts:
 
 - `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
-- `issues` / `refresh`: rate-limited asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue (first-publish-wins, 8h window per issue)
+- `issues` / `refresh`: throttled asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue (first-publish-wins, 8h window per issue)
 - `trace-end` / `run`: implemented as `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`; loads one ended trace, runs the shared sample-first selection pass across live evaluations, live queues, and system queues via `@domain/spans` / `@domain/evaluations` / `@domain/annotation-queues` orchestrators, then applies downstream work (execute publishes, live-queue membership writes, system-queue workflow starts)
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 
@@ -247,8 +247,8 @@ Initial reliability workflows:
 
 - `issue-discovery`: multi-activity workflow for create-or-match similarity discovery after the centralized `issues:discovery` gate decides the score still needs retrieval/rerank work, plus a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
 - `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
-- `refresh-evaluation-alignment`: linear workflow invoked by the rate-limited `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins); runs the incremental metric refresh and either persists the new confusion matrix (strategy `metric-only`) or publishes `evaluations:automaticOptimization` for full re-optimization (strategy `full-reoptimization`); it never sleeps — the 1h window is owned by the queue
-- `optimize-evaluation`: linear workflow invoked either directly (initial generation from an issue, manual realignment) or by the rate-limited `evaluations:automaticOptimization` queue task (8h, first-publish-wins) after an MCC drop; runs example collection, GEPA optimization, baseline evaluation, and persistence; the 8h re-optimization rate-limit is owned by the queue, not by the workflow
+- `refresh-evaluation-alignment`: linear workflow invoked by the throttled `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins); runs the incremental metric refresh and either persists the new confusion matrix (strategy `metric-only`) or publishes `evaluations:automaticOptimization` for full re-optimization (strategy `full-reoptimization`); it never sleeps — the 1h window is owned by the queue
+- `optimize-evaluation`: linear workflow invoked either directly (initial generation from an issue, manual realignment) or by the throttled `evaluations:automaticOptimization` queue task (8h, first-publish-wins) after an MCC drop; runs example collection, GEPA optimization, baseline evaluation, and persistence; the 8h re-optimization throttle is owned by the queue, not by the workflow
 
 Issue handling now has two queue-backed steps before/after the workflow boundary: `issues:discovery` is a single-step gate for centralized direct-routing decisions, while `issues:refresh` is a single-step debounced task for subsequent detail regeneration of existing issues. The initial name/description for a brand-new issue must still be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. Only the branch that still needs similarity retrieval starts the Temporal `issue-discovery` workflow.
 
@@ -555,7 +555,7 @@ Alignment scheduling must follow the proposal exactly:
 - asynchronous debounced recomputation after new human annotations arrive
 - metric recomputation debounced to at most once per hour
 - full re-optimization debounced to at most once every eight hours
-- manual realignment must be available and rate-limited
+- manual realignment must be available and throttled
 - the evaluation UI must show alignment status and last aligned timestamp
 
 When a user creates a new issue-linked evaluation, it must initialize `trigger.sampling` from a named constant in `packages/domain/evaluations`. The starting default for that constant is `10`, meaning new issue-linked evaluations sample `10%` of eligible traffic until a user changes the sampling value.
@@ -2698,8 +2698,8 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
 - [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, a deterministic per-resource workflow id so the workflow is the queryable resource (no `jobId` leaked to callers), and a polling server function that asks Temporal directly via `workflow.describe()` and workflow queries for frontend status — Temporal is the single source of truth, no Redis-backed job-status mirror.
 - [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
-- [x] Implement annotation-driven rate-limited refresh with the one-hour / eight-hour cadence from the proposal through delayed BullMQ queue tasks that kick off single-purpose Temporal workflows: `evaluations:automaticRefreshAlignment` (1h rate-limit, keyed per evaluation) starts `refresh-evaluation-alignment`, which publishes `evaluations:automaticOptimization` (8h rate-limit, keyed per evaluation) to start `optimize-evaluation` when the incremental pass reports `full-reoptimization`; workflows themselves do not sleep or manage timers — rate-limit semantics (first-publish-wins, subsequent drops) live in `dedupeKey + rateLimitMs` on the queue, so a continuous annotation stream cannot starve the refresh and fire latency is bounded at the configured window.
-- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same deterministic per-resource workflow id contract where a user-triggered run needs polling feedback — the polling server function asks Temporal directly (via `workflow.describe()` and workflow query handlers) rather than reading any Redis-backed job-status mirror.
+- [x] Implement annotation-driven throttled refresh with the one-hour / eight-hour cadence from the proposal through delayed BullMQ queue tasks that kick off single-purpose Temporal workflows: `evaluations:automaticRefreshAlignment` (1h throttle, keyed per evaluation) starts `refresh-evaluation-alignment`, which publishes `evaluations:automaticOptimization` (8h throttle, keyed per evaluation) to start `optimize-evaluation` when the incremental pass reports `full-reoptimization`; workflows themselves do not sleep or manage timers — throttle semantics (first-publish-wins, subsequent drops) live in `dedupeKey + throttleMs` on the queue, so a continuous annotation stream cannot starve the refresh and fire latency is bounded at the configured window.
+- [x] Implement manual throttled realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same deterministic per-resource workflow id contract where a user-triggered run needs polling feedback — the polling server function asks Temporal directly (via `workflow.describe()` and workflow query handlers) rather than reading any Redis-backed job-status mirror.
 - [x] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
 - [x] Implement curated example sizing plus deterministic balanced train/validation splitting for alignment runs using the configured bounds and defaults from this spec.
 - [x] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.

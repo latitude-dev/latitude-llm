@@ -75,7 +75,7 @@ describe("createFakeQueuePublisher", () => {
     expect(listDeduped()).toHaveLength(2)
   })
 
-  it("preserves the first payload for repeated publishes with the same dedupeKey + rateLimitMs", async () => {
+  it("preserves the first payload for repeated publishes with the same dedupeKey + throttleMs", async () => {
     const { publisher, getPublishedByDedupeKey, listDeduped } = createFakeQueuePublisher()
 
     await Effect.runPromise(
@@ -83,7 +83,7 @@ describe("createFakeQueuePublisher", () => {
         "evaluations",
         "automaticRefreshAlignment",
         { organizationId: "o", projectId: "p", issueId: "i-first", evaluationId: "e" },
-        { dedupeKey: "rl", rateLimitMs: 1000 },
+        { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
     await Effect.runPromise(
@@ -91,7 +91,7 @@ describe("createFakeQueuePublisher", () => {
         "evaluations",
         "automaticRefreshAlignment",
         { organizationId: "o", projectId: "p", issueId: "i-second", evaluationId: "e" },
-        { dedupeKey: "rl", rateLimitMs: 1000 },
+        { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
     await Effect.runPromise(
@@ -99,7 +99,7 @@ describe("createFakeQueuePublisher", () => {
         "evaluations",
         "automaticRefreshAlignment",
         { organizationId: "o", projectId: "p", issueId: "i-third", evaluationId: "e" },
-        { dedupeKey: "rl", rateLimitMs: 1000 },
+        { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
 
@@ -109,7 +109,7 @@ describe("createFakeQueuePublisher", () => {
     expect(listDeduped()).toHaveLength(1)
   })
 
-  it("records rateLimitMs on the published message alongside dedupeKey", async () => {
+  it("records throttleMs on the published message alongside dedupeKey", async () => {
     const { publisher, published } = createFakeQueuePublisher()
 
     await Effect.runPromise(
@@ -117,11 +117,11 @@ describe("createFakeQueuePublisher", () => {
         "evaluations",
         "automaticRefreshAlignment",
         { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "e" },
-        { dedupeKey: "k", rateLimitMs: 3600000 },
+        { dedupeKey: "k", throttleMs: 3600000 },
       ),
     )
 
-    expect(published[0]?.options).toEqual({ dedupeKey: "k", rateLimitMs: 3600000 })
+    expect(published[0]?.options).toEqual({ dedupeKey: "k", throttleMs: 3600000 })
   })
 
   it("ignores publishes without a dedupeKey in the deduped view", async () => {

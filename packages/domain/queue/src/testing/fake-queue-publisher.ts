@@ -20,7 +20,7 @@ export interface FakeQueuePublisherHandle {
    *
    * - `debounceMs` (sliding window, `extend: true, replace: true` in BullMQ)
    *   → the **latest** payload wins.
-   * - `rateLimitMs` (first-publish-wins, `extend: false, replace: false` in
+   * - `throttleMs` (first-publish-wins, `extend: false, replace: false` in
    *   BullMQ) → the **first** payload wins and later publishes are dropped.
    *
    * Plain `dedupeKey` with no window defaults to debounce-style overwrite
@@ -52,12 +52,12 @@ export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape
       published.push(message)
       if (options?.dedupeKey) {
         const key = dedupeMapKey(queue, options.dedupeKey)
-        // Rate-limit semantics: first publish wins. Mirrors BullMQ's
+        // Throttle semantics: first publish wins. Mirrors BullMQ's
         // `extend: false, replace: false` — subsequent publishes within the
         // window are dropped and the pending payload is not touched.
         // Debounce semantics (and plain `dedupeKey` with no window) fall
         // through to the overwrite path — `extend: true, replace: true`.
-        if (options.rateLimitMs !== undefined) {
+        if (options.throttleMs !== undefined) {
           if (!deduped.has(key)) {
             deduped.set(key, message)
           }

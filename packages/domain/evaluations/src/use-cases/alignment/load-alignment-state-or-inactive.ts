@@ -11,7 +11,7 @@ export type LoadAlignmentStateOrInactiveResult =
 
 // Like `loadAlignmentStateUseCase`, but returns a discriminated result instead
 // of failing when the evaluation is missing, archived, deleted, or does not
-// match the requested issue/project. Used by the rate-limited auto-alignment
+// match the requested issue/project. Used by the throttled auto-alignment
 // workflows so they can exit cleanly when a delayed job fires for an evaluation
 // that has since become inactive (BullMQ has no cancellation primitive).
 export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAlignmentStateOrInactive")(

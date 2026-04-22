@@ -52,7 +52,7 @@ const { optimizeEvaluationDraft, evaluateBaselineEvaluationDraft } = proxyActivi
 // body:
 //   - initial generation from an issue (`evaluationId === null`)
 //   - manual realignment of an existing evaluation
-//   - automatic re-optimization triggered by the rate-limited
+//   - automatic re-optimization triggered by the throttled
 //     `evaluations:automaticOptimization` queue task (8h, first-publish-wins)
 //
 // For existing evaluations we skip the name/description generation pass and

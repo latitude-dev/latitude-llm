@@ -71,7 +71,7 @@ export const loadEvaluationAlignmentState = (input: {
 
 // Like `loadEvaluationAlignmentState`, but returns `{ status: "inactive" }`
 // instead of failing when the evaluation is missing/archived/deleted/mismatched.
-// Used by the rate-limited auto-alignment workflows so a delayed BullMQ job
+// Used by the throttled auto-alignment workflows so a delayed BullMQ job
 // that fires after an evaluation has been archived exits cleanly.
 export const loadEvaluationAlignmentStateOrInactive = (input: {
   readonly organizationId: string

@@ -101,35 +101,35 @@ export const createBullMqQueuePublisher = (
       ) =>
         Effect.tryPromise({
           try: async () => {
-            if (options?.debounceMs !== undefined && options?.rateLimitMs !== undefined) {
-              throw new Error(`publish(${queue}, ${String(task)}): debounceMs and rateLimitMs are mutually exclusive`)
+            if (options?.debounceMs !== undefined && options?.throttleMs !== undefined) {
+              throw new Error(`publish(${queue}, ${String(task)}): debounceMs and throttleMs are mutually exclusive`)
             }
-            if (options?.rateLimitMs !== undefined && !options.dedupeKey) {
-              throw new Error(`publish(${queue}, ${String(task)}): rateLimitMs requires a dedupeKey`)
+            if (options?.throttleMs !== undefined && !options.dedupeKey) {
+              throw new Error(`publish(${queue}, ${String(task)}): throttleMs requires a dedupeKey`)
             }
 
             const bullmqOptions: Record<string, unknown> = {}
             if (options?.dedupeKey) {
               bullmqOptions.jobId = options.dedupeKey
             }
-            // `debounceMs` and `rateLimitMs` both map to BullMQ's `delay` + `deduplication`,
+            // `debounceMs` and `throttleMs` both map to BullMQ's `delay` + `deduplication`,
             // but the dedup flags differ:
             //   - debounce: `extend: true, replace: true` — each publish within the TTL
             //     pushes the fire time forward and overwrites the payload. Fires after
             //     `debounceMs` of quiet.
-            //   - rate-limit: `extend: false, replace: false` — the first publish wins.
+            //   - throttle: `extend: false, replace: false` — the first publish wins.
             //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
-            //     exactly `rateLimitMs` after the first publish.
-            const delayMs = options?.debounceMs ?? options?.rateLimitMs
+            //     exactly `throttleMs` after the first publish.
+            const delayMs = options?.debounceMs ?? options?.throttleMs
             if (delayMs !== undefined) {
               bullmqOptions.delay = delayMs
               if (options?.dedupeKey) {
-                const isRateLimit = options.rateLimitMs !== undefined
+                const isThrottle = options.throttleMs !== undefined
                 bullmqOptions.deduplication = {
                   id: options.dedupeKey,
                   ttl: delayMs,
-                  extend: !isRateLimit,
-                  replace: !isRateLimit,
+                  extend: !isThrottle,
+                  replace: !isThrottle,
                 }
               }
             }

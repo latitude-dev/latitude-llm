@@ -1,4 +1,4 @@
-import { ALIGNMENT_FULL_REOPTIMIZE_RATE_LIMIT_MS } from "@domain/evaluations"
+import { ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS } from "@domain/evaluations"
 import { withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getQueuePublisher } from "../clients.ts"
@@ -14,9 +14,9 @@ class ScheduleEvaluationOptimizationError extends Data.TaggedError("ScheduleEval
 
 export const buildOptimizationDedupeKey = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
 
-// Publishes a rate-limited `evaluations:automaticOptimization` task so a full
+// Publishes a throttled `evaluations:automaticOptimization` task so a full
 // GEPA re-optimization kicks off at most once per 8h per evaluation. Uses
-// `rateLimitMs` rather than `debounceMs` so repeated escalations do not push
+// `throttleMs` rather than `debounceMs` so repeated escalations do not push
 // the fire time forward indefinitely — first escalation wins, subsequent ones
 // within the window are dropped.
 //
@@ -45,7 +45,7 @@ export const scheduleEvaluationOptimization = async (input: {
         },
         {
           dedupeKey: buildOptimizationDedupeKey(input.evaluationId),
-          rateLimitMs: ALIGNMENT_FULL_REOPTIMIZE_RATE_LIMIT_MS,
+          throttleMs: ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS,
         },
       )
       .pipe(

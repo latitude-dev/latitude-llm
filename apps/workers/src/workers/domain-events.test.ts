@@ -1,6 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
-import { ISSUE_REFRESH_RATE_LIMIT_MS } from "@domain/issues"
+import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -197,7 +197,7 @@ describe("domain-events dispatcher", () => {
       issueId: "issue-42",
     })
     expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[0]?.options?.rateLimitMs).toBe(ISSUE_REFRESH_RATE_LIMIT_MS)
+    expect(published[0]?.options?.throttleMs).toBe(ISSUE_REFRESH_THROTTLE_MS)
     expect(published[0]?.options?.debounceMs).toBeUndefined()
   })
 
