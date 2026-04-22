@@ -127,8 +127,6 @@ export const refreshEvaluationAlignmentWorkflow = async (
       evaluationHash: loaded.currentScriptHash,
       confusionMatrix: baseline.confusionMatrix,
       trigger: state.draft.trigger,
-      name: state.name,
-      description: state.description,
     })
     return {
       status: "full-metric-rebuild",
