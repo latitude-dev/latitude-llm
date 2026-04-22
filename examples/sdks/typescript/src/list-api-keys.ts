@@ -21,7 +21,7 @@ const client = new LatitudeApiClient({
   token: requireEnv("LATITUDE_API_KEY"),
 })
 
-const { apiKeys } = await client.apiKeys.list(requireEnv("LATITUDE_ORGANIZATION_ID"))
+const { apiKeys } = await client.apiKeys.list()
 
 console.log(`Found ${apiKeys.length} API key(s):`)
 console.log(JSON.stringify(apiKeys, null, 2))

@@ -37,6 +37,7 @@ import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
+import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
@@ -159,6 +160,7 @@ const bootstrap = async () => {
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
+    createProductFeedbackWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))

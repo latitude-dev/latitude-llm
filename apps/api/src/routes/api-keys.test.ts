@@ -31,10 +31,7 @@ const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: st
 describe("API Keys Routes Integration", () => {
   setupTestApi()
 
-  it<ApiTestContext>("GET /v1/organizations/:organizationId/api-keys isolates organization API keys", async ({
-    app,
-    database,
-  }) => {
+  it<ApiTestContext>("GET /v1/api-keys returns only the caller's org's keys", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
 
@@ -42,7 +39,7 @@ describe("API Keys Routes Integration", () => {
     const tenantBKey = await createApiKeyRecord(database, tenantB.organizationId, "tenant-b-key")
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/api-keys`, {
+      new Request(`http://localhost/v1/api-keys`, {
         headers: createApiKeyAuthHeaders(tenantA.apiKeyToken),
       }),
     )
@@ -57,14 +54,11 @@ describe("API Keys Routes Integration", () => {
     expect(ids).not.toContain(tenantBKey.id)
   })
 
-  it<ApiTestContext>("POST /v1/organizations/:organizationId/api-keys creates an API key", async ({
-    app,
-    database,
-  }) => {
+  it<ApiTestContext>("POST /v1/api-keys creates an API key in the caller's org", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/api-keys`, {
+      new Request(`http://localhost/v1/api-keys`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -81,16 +75,17 @@ describe("API Keys Routes Integration", () => {
     expect(body.token.length).toBeGreaterThan(0)
   })
 
-  it<ApiTestContext>("DELETE /v1/organizations/:organizationId/api-keys/:id cannot revoke cross-tenant keys", async ({
-    app,
-    database,
-  }) => {
+  it<ApiTestContext>("DELETE /v1/api-keys/:id cannot revoke cross-tenant keys", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
     const tenantBKey = await createApiKeyRecord(database, tenantB.organizationId, "tenant-b-key")
 
+    // Tenant A's key targeting tenant B's key id: without the `:organizationId`
+    // path param, cross-tenant isolation comes entirely from the API key's
+    // resolved org scoping the repo lookup. The key belongs to tenant B's org,
+    // so tenant A's repo query does not find it.
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/api-keys/${tenantBKey.id}`, {
+      new Request(`http://localhost/v1/api-keys/${tenantBKey.id}`, {
         method: "DELETE",
         headers: createApiKeyAuthHeaders(tenantA.apiKeyToken),
       }),

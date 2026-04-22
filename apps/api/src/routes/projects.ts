@@ -13,11 +13,10 @@ import {
   errorResponse,
   jsonBody,
   jsonResponse,
-  OrgAndProjectParamsSchema,
-  OrgParamsSchema,
   openApiNoContentResponses,
   openApiResponses,
   PROTECTED_SECURITY,
+  ProjectParamsSchema,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -66,7 +65,6 @@ const createProjectRoute = createRoute({
   description: "Creates a new project within the organization.",
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgParamsSchema,
     body: jsonBody(CreateRequestSchema),
   },
   responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Project created successfully" }),
@@ -80,7 +78,6 @@ const listProjectsRoute = createRoute({
   summary: "List projects",
   description: "Returns all projects in the organization.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgParamsSchema },
   responses: {
     200: jsonResponse(ListResponseSchema, "List of projects"),
     401: errorResponse("Unauthorized"),
@@ -95,7 +92,7 @@ const getProjectRoute = createRoute({
   summary: "Get project",
   description: "Returns a single project by slug.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgAndProjectParamsSchema },
+  request: { params: ProjectParamsSchema },
   responses: {
     200: jsonResponse(ResponseSchema, "Project details"),
     401: errorResponse("Unauthorized"),
@@ -112,7 +109,7 @@ const updateProjectRoute = createRoute({
   description: "Updates a project's name and/or description.",
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgAndProjectParamsSchema,
+    params: ProjectParamsSchema,
     body: jsonBody(UpdateRequestSchema),
   },
   responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
@@ -126,7 +123,7 @@ const deleteProjectRoute = createRoute({
   summary: "Delete project",
   description: "Soft-deletes a project by slug.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgAndProjectParamsSchema },
+  request: { params: ProjectParamsSchema },
   responses: openApiNoContentResponses({ description: "Project deleted successfully" }),
 })
 

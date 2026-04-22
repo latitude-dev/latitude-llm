@@ -1,3 +1,4 @@
+import type { ProductFeedbackClientShape } from "@domain/product-feedback"
 import type { WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import { createPostHogClient, loadPostHogConfig, type PostHogClientShape } from "@platform/analytics-posthog"
@@ -6,6 +7,7 @@ import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } 
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { createWeaviateClient, type WeaviateClient, type WeaviateConfig } from "@platform/db-weaviate"
 import { parseEnv } from "@platform/env"
+import { createLatitudeApiClient, loadLatitudeApiConfig } from "@platform/latitude-api"
 import { createStorageDisk } from "@platform/storage-object"
 import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
 import { Effect } from "effect"
@@ -18,6 +20,7 @@ let storageDiskInstance: StorageDiskPort | undefined
 let redisInstance: RedisClient | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let posthogClientInstance: PostHogClientShape | undefined
+let productFeedbackClientInstance: ProductFeedbackClientShape | undefined
 
 export const getPostgresClient = (maxConnections?: number): PostgresClient => {
   if (!pgClientInstance) {
@@ -78,6 +81,22 @@ export const getPostHogClient = (): PostHogClientShape => {
   }
 
   return posthogClientInstance
+}
+
+export const getProductFeedbackClient = (): ProductFeedbackClientShape => {
+  if (!productFeedbackClientInstance) {
+    const config = Effect.runSync(loadLatitudeApiConfig)
+    // Disable the SDK's built-in retry loop for the worker caller. In this
+    // process BullMQ is the single owner of the retry schedule, so keeping
+    // Fern's default (2) would retry 2× inside one writeAnnotation call
+    // before the worker sees the failure — multiplying the effective retry
+    // budget and making the BullMQ backoff math meaningless. Non-queued
+    // callers (e.g. a future web-side use) should omit this override and
+    // inherit the SDK default.
+    productFeedbackClientInstance = createLatitudeApiClient(config, { maxRetries: 0 })
+  }
+
+  return productFeedbackClientInstance
 }
 
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {

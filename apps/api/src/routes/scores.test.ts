@@ -59,7 +59,7 @@ describe("Scores Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -133,7 +133,7 @@ describe("Scores Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -232,7 +232,7 @@ describe("Scores Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -293,7 +293,7 @@ describe("Scores Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -369,7 +369,7 @@ describe("Scores Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -428,7 +428,7 @@ describe("Scores Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -484,7 +484,7 @@ describe("Scores Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/scores`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),

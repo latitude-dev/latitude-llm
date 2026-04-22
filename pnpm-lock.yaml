@@ -518,6 +518,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/product-feedback':
+        specifier: workspace:*
+        version: link:../../packages/domain/product-feedback
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
@@ -569,6 +572,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/latitude-api':
+        specifier: workspace:*
+        version: link:../../packages/platform/latitude-api
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
@@ -1023,6 +1029,19 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+
+  packages/domain/product-feedback:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.4
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/domain/projects:
     dependencies:
@@ -1531,6 +1550,28 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
+
+  packages/platform/latitude-api:
+    dependencies:
+      '@domain/product-feedback':
+        specifier: workspace:*
+        version: link:../../domain/product-feedback
+      '@latitude-data/sdk':
+        specifier: workspace:*
+        version: link:../../sdk/typescript
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.4
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/platform/op-gepa:
     dependencies:

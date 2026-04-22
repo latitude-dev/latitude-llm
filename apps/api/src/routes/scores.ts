@@ -14,7 +14,7 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const ApiScoreBodyCommonSchema = z.object({
@@ -82,7 +82,7 @@ const route = createRoute({
   description: "Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.",
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgAndProjectParamsSchema,
+    params: ProjectParamsSchema,
     body: jsonBody(RequestSchema),
   },
   responses: openApiResponses({

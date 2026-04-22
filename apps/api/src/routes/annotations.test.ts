@@ -121,7 +121,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -168,7 +168,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -216,7 +216,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -245,7 +245,7 @@ describe("Annotations Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -296,7 +296,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -340,7 +340,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -375,7 +375,7 @@ describe("Annotations Routes Integration", () => {
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectSlug}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -409,22 +409,19 @@ describe("Annotations Routes Integration", () => {
     const fakeProjectSlug = "nonexistent-project-slug"
 
     const response = await app.fetch(
-      new Request(
-        `http://localhost/v1/organizations/${tenant.organizationId}/projects/${fakeProjectSlug}/annotations`,
-        {
-          method: "POST",
-          headers: {
-            ...createApiKeyAuthHeaders(tenant.apiKeyToken),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            value: 0.5,
-            passed: true,
-            feedback: "Good response",
-            trace: { by: "id", id: "55555555555555555555555555555555" },
-          }),
+      new Request(`http://localhost/v1/projects/${fakeProjectSlug}/annotations`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
         },
-      ),
+        body: JSON.stringify({
+          value: 0.5,
+          passed: true,
+          feedback: "Good response",
+          trace: { by: "id", id: "55555555555555555555555555555555" },
+        }),
+      }),
     )
 
     expect(response.status).toBe(404)

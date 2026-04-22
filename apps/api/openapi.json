@@ -1250,7 +1250,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/projects": {
+    "/v1/projects": {
       "post": {
         "operationId": "projects.create",
         "tags": [
@@ -1261,18 +1261,6 @@
         "security": [
           {
             "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
           }
         ],
         "requestBody": {
@@ -1340,18 +1328,6 @@
             "ApiKeyAuth": []
           }
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          }
-        ],
         "responses": {
           "200": {
             "description": "List of projects",
@@ -1376,7 +1352,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/projects/{projectSlug}": {
+    "/v1/projects/{projectSlug}": {
       "get": {
         "operationId": "projects.get",
         "tags": [
@@ -1390,16 +1366,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",
@@ -1457,16 +1423,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",
@@ -1547,16 +1503,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Project slug (human-readable identifier)"
             },
             "required": true,
@@ -1592,7 +1538,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/projects/{projectSlug}/scores": {
+    "/v1/projects/{projectSlug}/scores": {
       "post": {
         "operationId": "scores.create",
         "tags": [
@@ -1606,16 +1552,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",
@@ -1681,7 +1617,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/projects/{projectSlug}/annotations": {
+    "/v1/projects/{projectSlug}/annotations": {
       "post": {
         "operationId": "annotations.create",
         "tags": [
@@ -1695,16 +1631,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",
@@ -1770,7 +1696,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/api-keys": {
+    "/v1/api-keys": {
       "post": {
         "operationId": "apiKeys.create",
         "tags": [
@@ -1783,18 +1709,6 @@
         "security": [
           {
             "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
           }
         ],
         "requestBody": {
@@ -1864,18 +1778,6 @@
             "ApiKeyAuth": []
           }
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          }
-        ],
         "responses": {
           "200": {
             "description": "List of API keys",
@@ -1900,7 +1802,7 @@
         }
       }
     },
-    "/v1/organizations/{organizationId}/api-keys/{id}": {
+    "/v1/api-keys/{id}": {
       "delete": {
         "operationId": "apiKeys.revoke",
         "tags": [
@@ -1916,16 +1818,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "organizationId",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",

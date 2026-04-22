@@ -25,7 +25,6 @@ export class AnnotationsClient {
     /**
      * Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateAnnotationBody} request
      * @param {AnnotationsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -35,7 +34,7 @@ export class AnnotationsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.annotations.create("organizationId", "projectSlug", {
+     *     await client.annotations.create("projectSlug", {
      *         value: 1,
      *         passed: true,
      *         feedback: "Approved - the system annotator correctly flagged this as a refusal.",
@@ -51,18 +50,14 @@ export class AnnotationsClient {
      *     })
      */
     public create(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.AnnotationScoreResponse> {
-        return core.HttpResponsePromise.fromPromise(
-            this.__create(organizationId, projectSlug, request, requestOptions),
-        );
+        return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
     private async __create(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
@@ -78,7 +73,7 @@ export class AnnotationsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects/${core.url.encodePathParam(projectSlug)}/annotations`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/annotations`,
             ),
             method: "POST",
             headers: _headers,
@@ -126,7 +121,7 @@ export class AnnotationsClient {
             _response.error,
             _response.rawResponse,
             "POST",
-            "/v1/organizations/{organizationId}/projects/{projectSlug}/annotations",
+            "/v1/projects/{projectSlug}/annotations",
         );
     }
 }

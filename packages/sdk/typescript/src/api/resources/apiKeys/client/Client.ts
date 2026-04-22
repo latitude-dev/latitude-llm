@@ -25,23 +25,18 @@ export class ApiKeysClient {
     /**
      * Returns all API keys for the organization. Tokens are not included in the list response.
      *
-     * @param {string} organizationId - Organization ID
      * @param {ApiKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link LatitudeApi.UnauthorizedError}
      *
      * @example
-     *     await client.apiKeys.list("organizationId")
+     *     await client.apiKeys.list()
      */
-    public list(
-        organizationId: string,
-        requestOptions?: ApiKeysClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ApiKeyList> {
-        return core.HttpResponsePromise.fromPromise(this.__list(organizationId, requestOptions));
+    public list(requestOptions?: ApiKeysClient.RequestOptions): core.HttpResponsePromise<LatitudeApi.ApiKeyList> {
+        return core.HttpResponsePromise.fromPromise(this.__list(requestOptions));
     }
 
     private async __list(
-        organizationId: string,
         requestOptions?: ApiKeysClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.ApiKeyList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -55,7 +50,7 @@ export class ApiKeysClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/api-keys`,
+                "v1/api-keys",
             ),
             method: "GET",
             headers: _headers,
@@ -86,18 +81,12 @@ export class ApiKeysClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/organizations/{organizationId}/api-keys",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/api-keys");
     }
 
     /**
      * Generates a new API key for the organization. The token is only returned once — store it securely.
      *
-     * @param {string} organizationId - Organization ID
      * @param {LatitudeApi.CreateApiKeyBody} request
      * @param {ApiKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -106,20 +95,18 @@ export class ApiKeysClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.apiKeys.create("organizationId", {
+     *     await client.apiKeys.create({
      *         name: "name"
      *     })
      */
     public create(
-        organizationId: string,
         request: LatitudeApi.CreateApiKeyBody,
         requestOptions?: ApiKeysClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.ApiKey> {
-        return core.HttpResponsePromise.fromPromise(this.__create(organizationId, request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__create(request, requestOptions));
     }
 
     private async __create(
-        organizationId: string,
         request: LatitudeApi.CreateApiKeyBody,
         requestOptions?: ApiKeysClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.ApiKey>> {
@@ -134,7 +121,7 @@ export class ApiKeysClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/api-keys`,
+                "v1/api-keys",
             ),
             method: "POST",
             headers: _headers,
@@ -178,18 +165,12 @@ export class ApiKeysClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/organizations/{organizationId}/api-keys",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/v1/api-keys");
     }
 
     /**
      * Soft-deletes an API key, immediately invalidating it.
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} id - Resource ID
      * @param {ApiKeysClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -197,18 +178,13 @@ export class ApiKeysClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.apiKeys.revoke("organizationId", "id")
+     *     await client.apiKeys.revoke("id")
      */
-    public revoke(
-        organizationId: string,
-        id: string,
-        requestOptions?: ApiKeysClient.RequestOptions,
-    ): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(this.__revoke(organizationId, id, requestOptions));
+    public revoke(id: string, requestOptions?: ApiKeysClient.RequestOptions): core.HttpResponsePromise<void> {
+        return core.HttpResponsePromise.fromPromise(this.__revoke(id, requestOptions));
     }
 
     private async __revoke(
-        organizationId: string,
         id: string,
         requestOptions?: ApiKeysClient.RequestOptions,
     ): Promise<core.WithRawResponse<void>> {
@@ -223,7 +199,7 @@ export class ApiKeysClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/api-keys/${core.url.encodePathParam(id)}`,
+                `v1/api-keys/${core.url.encodePathParam(id)}`,
             ),
             method: "DELETE",
             headers: _headers,
@@ -259,11 +235,6 @@ export class ApiKeysClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "DELETE",
-            "/v1/organizations/{organizationId}/api-keys/{id}",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "DELETE", "/v1/api-keys/{id}");
     }
 }

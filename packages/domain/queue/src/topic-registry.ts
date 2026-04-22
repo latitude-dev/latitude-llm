@@ -206,6 +206,25 @@ const _registry = {
       readonly occurredAt: string
     }
   }>(),
+
+  // Writes annotations into the Latitude-owned dogfood project via
+  // @platform/latitude-api. The worker is fire-and-forget from the reviewer's
+  // perspective — the web route 202s immediately on enqueue, and BullMQ's
+  // retry policy drives redelivery on transient failures.
+  "product-feedback": payloads<{
+    submitSystemAnnotatorReview: {
+      readonly upstreamScoreId: string
+      // Discriminated at the type level: reject requires a comment, approve does
+      // not. Mirrors the Phase 5 UI's disabled-submit behaviour on reject.
+      readonly review:
+        | { readonly decision: "approve"; readonly comment?: string }
+        | { readonly decision: "reject"; readonly comment: string }
+    }
+    submitEnrichmentReview: {
+      readonly upstreamScoreId: string
+      readonly review: { readonly decision: "good" } | { readonly decision: "bad"; readonly comment: string }
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry
