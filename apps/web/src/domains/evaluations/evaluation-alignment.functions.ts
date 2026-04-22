@@ -47,6 +47,24 @@ const buildGenerateWorkflowId = (issueId: string) => `evaluations:generate:${iss
 const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
 const buildRefreshAlignmentWorkflowId = (evaluationId: string) => `evaluations:refreshAlignment:${evaluationId}`
 
+// `workflowStarter.start` is built on `Effect.promise`, so a concurrent caller
+// racing between our `describe()` pre-check and this `start()` surfaces as an
+// Effect *defect*, not a typed error. Translate that specific defect into the
+// same `BadRequestError` the pre-check uses so the UI sees a friendly 400
+// instead of a generic unhandled-error response.
+const translateAlreadyStartedToBadRequest = <R>(
+  effect: Effect.Effect<void, never, R>,
+  message: string,
+): Effect.Effect<void, BadRequestError, R> =>
+  effect.pipe(
+    Effect.catchDefect((defect) => {
+      if (defect instanceof Error && defect.name === "WorkflowExecutionAlreadyStartedError") {
+        return Effect.fail(new BadRequestError({ message }))
+      }
+      return Effect.die(defect)
+    }),
+  )
+
 export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   id: evaluation.id,
   issueId: evaluation.issueId,
@@ -108,8 +126,8 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
     }
 
     await Effect.runPromise(
-      workflowStarter
-        .start(
+      translateAlreadyStartedToBadRequest(
+        workflowStarter.start(
           "optimizeEvaluationWorkflow",
           {
             organizationId,
@@ -119,8 +137,9 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
             jobId,
           },
           { workflowId },
-        )
-        .pipe(withTracing),
+        ),
+        "An evaluation is already being generated for this issue",
+      ).pipe(withTracing),
     )
 
     const outboxWriter = getOutboxWriter()
@@ -188,8 +207,8 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     }
 
     await Effect.runPromise(
-      workflowStarter
-        .start(
+      translateAlreadyStartedToBadRequest(
+        workflowStarter.start(
           "optimizeEvaluationWorkflow",
           {
             organizationId,
@@ -199,8 +218,9 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
             jobId,
           },
           { workflowId },
-        )
-        .pipe(withTracing),
+        ),
+        "This evaluation is already being realigned",
+      ).pipe(withTracing),
     )
   })
 
