@@ -46,6 +46,7 @@ export const DETERMINISTIC_SYSTEM_MATCHERS: readonly DeterministicMatcherEntry[]
 export const runDeterministicSystemMatchersUseCase = Effect.fn("annotationQueues.runDeterministicSystemMatchers")(
   function* (input: RunDeterministicSystemMatchersInput) {
     const { trace } = input
+    yield* Effect.annotateCurrentSpan("organizationId", trace.organizationId)
     yield* Effect.annotateCurrentSpan("projectId", trace.projectId)
     yield* Effect.annotateCurrentSpan("traceId", trace.traceId)
 

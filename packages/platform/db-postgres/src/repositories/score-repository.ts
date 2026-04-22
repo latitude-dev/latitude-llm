@@ -11,10 +11,27 @@ import {
   type SqlClientShape,
   type TraceId,
 } from "@domain/shared"
-import { and, desc, eq, isNotNull, isNull, type SQL } from "drizzle-orm"
+import { createLogger } from "@repo/observability"
+import { and, desc, eq, isNotNull, isNull, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
+
+const logger = createLogger("db-postgres/score-repository")
+
+type RlsOrganizationQueryResult = {
+  readonly rows?: ReadonlyArray<{
+    readonly organization_id?: string | null
+  }>
+}
+
+const loadCurrentRlsOrganizationId = async (db: Operator): Promise<string | null> => {
+  const result = (await db.execute(
+    sql`select get_current_organization_id() as organization_id`,
+  )) as RlsOrganizationQueryResult
+  const organizationId = result.rows?.[0]?.organization_id
+  return typeof organizationId === "string" ? organizationId : null
+}
 
 const toDomainScore = (row: typeof scores.$inferSelect): Score =>
   scoreSchema.parse({
@@ -165,33 +182,70 @@ export const ScoreRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const row = toInsertRow(score)
 
-          yield* sqlClient.query((db) =>
-            db
-              .insert(scores)
-              .values(row)
-              .onConflictDoUpdate({
-                target: scores.id,
-                set: {
-                  sessionId: row.sessionId,
+          yield* sqlClient.query(async (db, organizationId) => {
+            const sessionOrganizationId = await loadCurrentRlsOrganizationId(db)
+
+            if (row.organizationId !== organizationId || sessionOrganizationId !== organizationId) {
+              logger.error("Score save organization context mismatch", {
+                scoreId: row.id,
+                projectId: row.projectId,
+                traceId: row.traceId,
+                source: row.source,
+                sourceId: row.sourceId,
+                rowOrganizationId: row.organizationId,
+                sqlClientOrganizationId: organizationId,
+                sessionOrganizationId,
+              })
+
+              throw new Error(
+                `Score save organization context mismatch: row=${row.organizationId} sqlClient=${organizationId} session=${sessionOrganizationId ?? "null"} scoreId=${row.id}`,
+              )
+            }
+
+            try {
+              await db
+                .insert(scores)
+                .values(row)
+                .onConflictDoUpdate({
+                  target: scores.id,
+                  set: {
+                    sessionId: row.sessionId,
+                    traceId: row.traceId,
+                    spanId: row.spanId,
+                    simulationId: row.simulationId,
+                    issueId: row.issueId,
+                    value: row.value,
+                    passed: row.passed,
+                    feedback: row.feedback,
+                    metadata: row.metadata,
+                    error: row.error,
+                    errored: row.errored,
+                    duration: row.duration,
+                    tokens: row.tokens,
+                    cost: row.cost,
+                    draftedAt: row.draftedAt,
+                    annotatorId: row.annotatorId,
+                    updatedAt: row.updatedAt,
+                  },
+                })
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("row-level security policy")) {
+                logger.error("Score save hit RLS policy", {
+                  scoreId: row.id,
+                  projectId: row.projectId,
                   traceId: row.traceId,
-                  spanId: row.spanId,
-                  simulationId: row.simulationId,
-                  issueId: row.issueId,
-                  value: row.value,
-                  passed: row.passed,
-                  feedback: row.feedback,
-                  metadata: row.metadata,
-                  error: row.error,
-                  errored: row.errored,
-                  duration: row.duration,
-                  tokens: row.tokens,
-                  cost: row.cost,
-                  draftedAt: row.draftedAt,
-                  annotatorId: row.annotatorId,
-                  updatedAt: row.updatedAt,
-                },
-              }),
-          )
+                  source: row.source,
+                  sourceId: row.sourceId,
+                  rowOrganizationId: row.organizationId,
+                  sqlClientOrganizationId: organizationId,
+                  sessionOrganizationId,
+                  error: error.message,
+                })
+              }
+
+              throw error
+            }
+          })
         }),
 
       assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
