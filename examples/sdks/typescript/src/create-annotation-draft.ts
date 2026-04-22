@@ -20,20 +20,16 @@ const client = new LatitudeApiClient({
   token: requireEnv("LATITUDE_API_KEY"),
 })
 
-const annotation = await client.annotations.create(
-  requireEnv("LATITUDE_ORGANIZATION_ID"),
-  requireEnv("LATITUDE_PROJECT_SLUG"),
-  {
-    value: 0.2,
-    passed: false,
-    feedback: "Draft from the SDK example — will stay editable until published",
-    draft: true,
-    trace: {
-      by: "id",
-      id: requireEnv("LATITUDE_TRACE_ID"),
-    },
+const annotation = await client.annotations.create(requireEnv("LATITUDE_PROJECT_SLUG"), {
+  value: 0.2,
+  passed: false,
+  feedback: "Draft from the SDK example — will stay editable until published",
+  draft: true,
+  trace: {
+    by: "id",
+    id: requireEnv("LATITUDE_TRACE_ID"),
   },
-)
+})
 
 console.log("Created draft annotation (draftedAt should be non-null):")
 console.log(JSON.stringify(annotation, null, 2))

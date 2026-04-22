@@ -13,7 +13,7 @@ import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, with
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 // Filter sub-schemas are redefined locally (with the same semantics as
@@ -98,7 +98,7 @@ const route = createRoute({
     'Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).',
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgAndProjectParamsSchema,
+    params: ProjectParamsSchema,
     body: jsonBody(RequestSchema),
   },
   responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Annotation created successfully" }),

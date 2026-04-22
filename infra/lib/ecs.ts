@@ -415,6 +415,7 @@ function createTaskDefinition(
           { name: "LAT_API_URL", value: apiUrl },
           { name: "LAT_INGEST_URL", value: ingestUrl },
           { name: "LAT_LATITUDE_TELEMETRY_INGEST_URL", value: ingestUrl },
+          { name: "LAT_LATITUDE_API_URL", value: apiUrl },
           { name: "LAT_BETTER_AUTH_URL", value: apiUrl },
           { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },

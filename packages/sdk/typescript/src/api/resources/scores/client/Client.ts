@@ -25,7 +25,6 @@ export class ScoresClient {
     /**
      * Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateScoreBody} request
      * @param {ScoresClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -35,7 +34,7 @@ export class ScoresClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.scores.create("organizationId", "projectSlug", {
+     *     await client.scores.create("projectSlug", {
      *         value: 1.1,
      *         passed: true,
      *         feedback: "feedback",
@@ -43,18 +42,14 @@ export class ScoresClient {
      *     })
      */
     public create(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.CreateScoreBody,
         requestOptions?: ScoresClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.ScoreResponse> {
-        return core.HttpResponsePromise.fromPromise(
-            this.__create(organizationId, projectSlug, request, requestOptions),
-        );
+        return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
     private async __create(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.CreateScoreBody,
         requestOptions?: ScoresClient.RequestOptions,
@@ -70,7 +65,7 @@ export class ScoresClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects/${core.url.encodePathParam(projectSlug)}/scores`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/scores`,
             ),
             method: "POST",
             headers: _headers,
@@ -118,7 +113,7 @@ export class ScoresClient {
             _response.error,
             _response.rawResponse,
             "POST",
-            "/v1/organizations/{organizationId}/projects/{projectSlug}/scores",
+            "/v1/projects/{projectSlug}/scores",
         );
     }
 }

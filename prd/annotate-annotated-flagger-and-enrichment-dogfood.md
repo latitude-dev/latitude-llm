@@ -33,7 +33,7 @@ The UI surface (approve/reject buttons, enrichment thumbs-up/down) is visible to
 
 - **System Annotator approve/reject buttons** already render on draft annotations with `provenance === "agent"` via `AnnotationApprovalButtons` in `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/annotations/annotation-card.tsx:39`. They call `useApproveSystemAnnotation` / `useRejectSystemAnnotation` from `apps/web/src/domains/annotations/annotations.collection.ts:93`. **Today they do not emit a dogfood score and are single-click with no comment capture.**
 - **Enrichment popover** already exists in `annotation-card.tsx:239`: a Sparkles button that opens a Popover showing `rawFeedback` when enriched feedback differs from raw. It has **no good/bad control yet**.
-- **Public annotations endpoint** exists at `POST /v1/organizations/:organizationId/projects/:projectId/annotations` (`apps/api/src/routes/annotations.ts:1`). It forces `sourceId = "API"` and **always writes a draft** via `writeDraftAnnotationUseCase`. No `draft` flag, no trace-filter lookup.
+- **Public annotations endpoint** exists at `POST /v1/projects/:projectSlug/annotations` (`apps/api/src/routes/annotations.ts:1`). It forces `sourceId = "API"` and **always writes a draft** via `writeDraftAnnotationUseCase`. No `draft` flag, no trace-filter lookup. *(Phase 4 dropped `:organizationId` from the path; the org is resolved from the API key server-side.)*
 - **OpenAPI spec** is served live at `GET /openapi.json` via `@hono/zod-openapi` (`apps/api/src/server.ts:59`). **Not emitted to disk.**
 - **No SDK package** exists. There is a `@latitude-data/telemetry` pattern at `packages/telemetry/typescript` with a `publish-typescript-telemetry.yml` workflow we can mirror.
 - **Existing env vars** already in use: `LATITUDE_API_KEY`, `LATITUDE_PROJECT_SLUG`. Product feedback reuses them — no new env vars.
@@ -92,11 +92,12 @@ apps/web  ──►  apps/api route  ──enqueue──►  BullMQ: product-fee
 Owns the business rules for Latitude scoring its own AI feature outputs.
 
 - Use cases:
-  - `recordSystemAnnotatorReviewUseCase({ upstreamScoreId, decision: "approve" | "reject", comment?: string, queueSlug })`
-  - `recordEnrichmentReviewUseCase({ upstreamScoreId, decision: "good" | "bad", comment?: string, rawFeedback, enrichedFeedback })`
+  - `recordSystemAnnotatorReviewUseCase({ upstreamScoreId, decision: "approve" | "reject", comment?: string })`
+  - `recordEnrichmentReviewUseCase({ upstreamScoreId, decision: "good" | "bad", comment?: string })`
 - In both cases the `upstreamScoreId` is the id of the score row in our own database — used as the telemetry-trace-lookup filter on the Latitude side.
-- Port: `ProductFeedbackClient` with `writeAnnotation(input: ProductFeedbackAnnotationInput): Promise<Result<void, ProductFeedbackError>>`.
+- Port: `ProductFeedbackClient` with `writeAnnotation(input: ProductFeedbackAnnotationInput): Effect.Effect<void, ProductFeedbackError>` (matches the Effect-based port convention used across `@domain/*`).
 - No enabled/disabled gating — always on.
+- **No outbound `metadata` bag.** Every structural field the earlier draft of this PRD wanted to stamp onto the annotation (`kind`, `queueSlug`, `rawFeedback`, `enrichedFeedback`, `rejectedDraftFeedback`) is already on the target LLM telemetry span the annotation attaches to — `kind` via the span name (`queue.system.draft` vs `annotation.enrich.publication`), `queueSlug` via the span's `metadata.queueSlug` (stamped in `runSystemQueueAnnotatorUseCase`), and the raw/enriched/rejected text via the trace's own input/output. The dogfood project joins through the trace instead of duplicating. This keeps Phase 4 out of `@domain/scores` / `@domain/annotations` / SDK regen and matches the current `submitApiAnnotationInputSchema` (which does not accept `metadata`).
 
 Naming rationale: "product-feedback" is domain-shaped (matches `@domain/annotations`, `@domain/evaluations`, `@domain/issues`), covers the dogfood use case today, and leaves room for future internal-feedback sources (NPS prompts, in-product surveys) without a rename.
 
@@ -141,13 +142,14 @@ Thin generated client targeting our OpenAPI spec, published to npm as the next m
 
 ## Annotations API changes (full detail)
 
-This section consolidates every change to `POST /v1/organizations/:organizationId/projects/:projectId/annotations`. Rationale included for each; we accept breaking changes because the endpoint has no known external consumers today.
+This section consolidates every change to `POST /v1/projects/:projectSlug/annotations`. Rationale included for each; we accept breaking changes because the endpoint has no known external consumers today.
 
 ### Motivation
 
 1. **Publish by default.** Customers today call this endpoint expecting to record a reviewer's judgement; silently putting it in draft mode creates a 5-minute invisibility window that surprises users and makes the endpoint behave like a delayed write. Draft mode is a *power-user feature* (for human-editable review flows), not a sensible default.
 2. **Trace lookup by filter.** The public-API caller usually does not have the raw 128-bit OpenTelemetry trace id at hand. They do have business identifiers embedded in span attributes (`metadata.userId`, `metadata.requestId`, etc.). Requiring them to surface the raw OTel traceId is a footgun. Allowing `FilterSet` lookup mirrors the filtering the rest of our platform already supports.
 3. **Single public use case.** The ingestion path must branch on `draft` and resolve the trace uniformly. One use case, one Zod schema, one error surface.
+4. **Drop `:organizationId` from the URL.** The API key is already scoped to one organization server-side — the auth middleware resolves it on every request and cross-org calls with a single key are rejected. Keeping the org id in the path was vestigial: it duplicated information the key already carries and invited false-confidence cross-org probing. All protected routes (`/projects`, `/projects/:projectSlug/scores`, `/projects/:projectSlug/annotations`, `/api-keys`) mount directly under `/v1` and read the org from `c.var.auth.organizationId`.
 
 ### Request schema
 
@@ -284,9 +286,10 @@ In both flows, the BullMQ worker calls `POST /v1/.../annotations` on the Latitud
   },
   draft: false,
   passed, value, feedback,
-  metadata: { kind: "system-annotator-review" | "enrichment-review", ... }
 }
 ```
+
+No `metadata` on the annotation payload — see the note under `@domain/product-feedback` above. Everything an analyst would want to slice on (flow kind, queue slug, raw/enriched/rejected text) is already on the target trace and reachable through normal trace filtering in the dogfood project. The annotation carries only the reviewer's signal (`passed`/`value`/`feedback`).
 
 This makes the enrichment dogfood flow the first in-house caller of the new trace-filter resolution path, which is good — we exercise it immediately on our own traffic.
 
@@ -309,15 +312,15 @@ The only regression that would silently break the identity lookup would be someo
 
 Mapping UI action → outbound annotation payload. All writes use `draft: false` and `sourceId = "API"` (we do **not** extend the existing `source` enum).
 
-| Action | `passed` | `value` | `feedback` | `metadata` |
-| --- | --- | --- | --- | --- |
-| System Annotator approve (no comment) | `true` | `1` | `"Approved"` | `{ kind: "system-annotator-review", queueSlug }` |
-| System Annotator approve (with comment) | `true` | `1` | comment | `{ kind: "system-annotator-review", queueSlug }` |
-| System Annotator reject | `false` | `0` | reason (required) | `{ kind: "system-annotator-review", queueSlug, rejectedDraftFeedback }` |
-| Enrichment 👍 | `true` | `1` | `"Good enrichment"` | `{ kind: "enrichment-review", rawFeedback, enrichedFeedback }` |
-| Enrichment 👎 | `false` | `0` | reason (required) | `{ kind: "enrichment-review", rawFeedback, enrichedFeedback }` |
+| Action | `passed` | `value` | `feedback` |
+| --- | --- | --- | --- |
+| System Annotator approve (no comment) | `true` | `1` | `"Approved"` |
+| System Annotator approve (with comment) | `true` | `1` | comment |
+| System Annotator reject | `false` | `0` | reason (required) |
+| Enrichment 👍 | `true` | `1` | `"Good enrichment"` |
+| Enrichment 👎 | `false` | `0` | reason (required) |
 
-`trace` is always resolved via `{ by: "filters", filters: { "metadata.scoreId": [{ op: "eq", value: upstreamScoreId }] } }` — see **Identity strategy**. The upstream score id is not duplicated in `metadata` because it is already the trace-lookup key.
+`trace` is always resolved via `{ by: "filters", filters: { "metadata.scoreId": [{ op: "eq", value: upstreamScoreId }] } }` — see **Identity strategy**. No outbound `metadata` on the annotation (see `@domain/product-feedback` above); the target trace already carries flow kind (via span name), queue slug, raw/enriched/rejected text, so duplicating them on the annotation would just be denormalisation with no analytics lift.
 
 ## Testing
 
@@ -339,7 +342,7 @@ Scope:
 
 - [x] Add `writePublishedAnnotationUseCase` in `@domain/annotations` as the publish-now primitive (writes with `draftedAt = null`, emits `ScoreCreated` in the same transaction).
 - [x] Add `submitApiAnnotationUseCase` in `packages/domain/annotations/src/use-cases/submit-api-annotation.ts` with trace resolution (id/filters) and draft/published branching, delegating to `writeDraftAnnotationUseCase` or `writePublishedAnnotationUseCase`.
-- [x] Update `POST /v1/organizations/:organizationId/projects/:projectId/annotations` schema (discriminated `trace` union, `draft?: boolean` default `false`) in `packages/domain/annotations/src/helpers/annotation-public-api-schema.ts`.
+- [x] Update `POST /v1/projects/:projectSlug/annotations` schema (discriminated `trace` union, `draft?: boolean` default `false`) in `packages/domain/annotations/src/helpers/annotation-public-api-schema.ts`.
 - [x] Update `apps/api/src/routes/annotations.ts` to call `submitApiAnnotationUseCase` and surface `trace_not_found` / `trace_filter_ambiguous` error codes.
 - [x] Contract tests (Vitest + PGlite) for all resolution paths and draft/published branching.
 
@@ -401,27 +404,42 @@ Checkpoint:
 
 Scope:
 
-- [ ] New package `@domain/product-feedback` with port `ProductFeedbackClient.writeAnnotation(...)`.
-- [ ] Use case `recordSystemAnnotatorReviewUseCase` with unit tests.
-- [ ] Use case `recordEnrichmentReviewUseCase` with unit tests.
-- [ ] Contracts and tagged errors for `@domain/product-feedback`.
-- [ ] New package `@platform/latitude-api` with `createLatitudeApiClient({ apiKey, projectSlug, baseUrl? })` setup-client pattern matching other platform adapters.
-- [ ] `ProductFeedbackClient` adapter wrapping `@latitude-data/sdk` with retry/logging defaults.
-- [ ] Adapter tests using Fern's custom-fetcher option to assert request shape.
-- [ ] New BullMQ `product-feedback` queue in `apps/workers`.
-- [ ] Worker consuming `product-feedback:submit-system-annotator-review` delegating to domain use case.
-- [ ] Worker consuming `product-feedback:submit-enrichment-review` delegating to domain use case.
-- [ ] Worker tests for both job types.
+- [x] New package `@domain/product-feedback` with port `ProductFeedbackClient.writeAnnotation(...)`. Port is Effect-based (`Effect.Effect<void, ProductFeedbackError>` via `ServiceMap.Service`) to match the rest of `@domain/*`, not the literal `Promise<Result<...>>` the earlier PRD draft spelled.
+- [x] Use case `recordSystemAnnotatorReviewUseCase` with unit tests. Input is a discriminated union on `decision` so a reject without a comment is a compile-time error.
+- [x] Use case `recordEnrichmentReviewUseCase` with unit tests. Same discriminated-union pattern (good = no comment, bad = comment required).
+- [x] Contracts and tagged errors for `@domain/product-feedback`: split by retriability — `ProductFeedbackTransportError` (5xx / network / timeout, BullMQ retries) vs `ProductFeedbackRequestError` (4xx, worker swallows with warn).
+- [x] New package `@platform/latitude-api` with `createLatitudeApiClient({ apiKey, projectSlug, baseUrl })`. Returns a no-op client when the config is undefined (mirrors `@platform/analytics-posthog`) so local dev / CI skip dogfood cleanly. *(No `organizationId` field — the API key is already org-scoped server-side and the public API routes no longer take `:organizationId` in the path after Phase 4 stripped it.)*
+- [x] `ProductFeedbackClient` adapter wrapping `@latitude-data/sdk`. **Design deviation**: no inner retry layer. BullMQ is the single owner of the retry schedule; inner retries would multiply the real retry budget and make backoff math meaningless. SDK errors are classified by `statusCode` and surfaced as the matching tagged error; BullMQ retries on `ProductFeedbackTransportError` and the worker swallows `ProductFeedbackRequestError`.
+- [x] Adapter tests using Fern's custom-fetcher option to assert request shape (URL, `Authorization: Bearer …`, `content-type: application/json`, JSON body with the `trace.by = "filters"` on `metadata.scoreId`).
+- [x] New BullMQ `product-feedback` queue in `apps/workers`. Topic registered in `packages/domain/queue/src/topic-registry.ts` with discriminated-union payloads that mirror the domain use-case inputs — Phase 5 callers cannot construct an invalid job.
+- [x] Worker consuming `product-feedback:submitSystemAnnotatorReview` delegating to domain use case. *(Task name camelCase — matches the topic-registry convention used by `submitSystemAnnotatorReview`, not the `submit-system-annotator-review` dash form from the earlier PRD draft.)*
+- [x] Worker consuming `product-feedback:submitEnrichmentReview` delegating to domain use case.
+- [x] Worker tests for both job types. Reuses the canonical `TestQueueConsumer` in `apps/workers/src/testing/test-queue-consumer.ts` rather than a local fake.
+
+**Also in this phase (non-scope adjustments uncovered while implementing):**
+
+- [x] Dropped the outbound `metadata` payload from the product-feedback annotation. The earlier PRD draft stamped `{ kind, queueSlug, rejectedDraftFeedback, rawFeedback, enrichedFeedback }` but the public-API submission schema (`submitApiAnnotationInputSchema`) doesn't accept `metadata` and `annotationScoreMetadataSchema` is strict (`rawFeedback` + anchor fields only) — Phase 1 left the `metadata: z.record(z.unknown())` extension on the cutting-room floor and the generated SDK's `CreateAnnotationBody` has no `metadata` field as a result. Audited what the metadata would carry and every field is already reachable from the target LLM telemetry span: `kind` via the span name (`queue.system.draft` vs `annotation.enrich.publication`), `queueSlug` via the span's `metadata.queueSlug` (stamped in `runSystemQueueAnnotatorUseCase`), raw/enriched/rejected text via the trace's own input/output. Dogfood analysts join through the trace instead of duplicating on the annotation. See the updated §Annotation score shape and §Identity strategy → Product-feedback payload above.
+- [x] Env wiring committed into `.env.example`. Reuses `LAT_LATITUDE_TELEMETRY_API_KEY` / `LAT_LATITUDE_TELEMETRY_PROJECT_SLUG` from the telemetry pipeline so product-feedback writes land in the same Latitude tenant the LLM spans were exported to (prerequisite for the `metadata.scoreId` trace-filter lookup). Adds `LAT_LATITUDE_ORGANIZATION_ID` (required by the URL path param; the API key cross-validates it) and `LAT_LATITUDE_API_URL` (default `https://api.latitude.so`; kept separate from `LAT_API_URL` which is self-pointing and rotates per environment, mirroring the `LAT_INGEST_URL` vs `LAT_LATITUDE_TELEMETRY_INGEST_URL` split that already exists for the telemetry pipeline).
 
 Checkpoint:
 
-- [ ] `pnpm --filter @domain/product-feedback test` green.
-- [ ] `pnpm --filter @platform/latitude-api test` green.
-- [ ] `pnpm --filter @apps/workers test` green.
-- [ ] Workers boot cleanly locally.
+- [x] `pnpm --filter @domain/product-feedback test` → 9/9 green.
+- [x] `pnpm --filter @platform/latitude-api test` → 5/5 green.
+- [x] `pnpm --filter @app/workers test` → 36/36 green. *(Package name is `@app/workers` — `@apps/workers` in the original PRD was a typo, same as the Phase 3 `@apps/api` → `@app/api` one.)*
+- [x] Workspace-level `pnpm typecheck` (55/55), `pnpm check` (Biome), and `pnpm knip` all clean.
+- [ ] Workers boot cleanly locally *(not exercised in this PR — no runtime change on startup when the four Latitude envs are unset, which is the default for local dev; boot surface gets exercised when Phase 5 starts submitting jobs end-to-end).*
+
+Note (pre-existing repo bug, not fixed in this phase): `"test": "vitest run --passWithNoTests --dir src"` in every `@domain/*` package silently runs zero tests (vitest finds no files with the compounded `--dir` + `include`, and `--passWithNoTests` exits 0). The two new Phase 4 packages use plain `vitest run --passWithNoTests` so their tests actually execute — fixing the rest is a cross-cutting change that doesn't belong in this PR.
 
 ### Phase 5 — API route and web UI
 
+CONCERNS:
+Doing `apps/api` is not necessary. We have `*.functions.ts`  in `apps/web` and
+this phase is purely about the UI. Can you investigate how appreve/reject is
+done now. And for enrichment we need to generate new functions. In terms of UI
+for enrichment i envision
+
+@"apps/web/routes/_authenticated/projects/$projectSlug/-components/annotations/annotation-card.tsx :L252:C27" a text in a new line in this popover with :+1: and :-1: buttons. When the reviewer clicks either button, we show a textarea for feedback (optional for :+1:, required for :-1:). The submit button is disabled until the textarea is filled if it's a :-1: or enabled immediately if it's a :+1:. On submit, we call the new enrichment function that enqueues the enrichment job with the feedback and close the popover.
 Scope:
 
 - [ ] Add internal (session-auth) `POST /annotations/:annotationId/product-feedback/system-annotator` route in `apps/api`. Validates, enqueues the BullMQ job, returns `202 Accepted`.

@@ -16,9 +16,10 @@ From this directory:
 
 ```bash
 cp .env.example .env
-# then fill in LATITUDE_API_BASE_URL, LATITUDE_API_KEY, LATITUDE_ORGANIZATION_ID,
-# LATITUDE_PROJECT_SLUG, LATITUDE_TRACE_ID (and LATITUDE_SESSION_ID for the
-# filter variant).
+# then fill in LATITUDE_API_BASE_URL, LATITUDE_API_KEY, LATITUDE_PROJECT_SLUG,
+# LATITUDE_TRACE_ID (and LATITUDE_SESSION_ID for the filter variant). The API
+# key is already organization-scoped server-side — the SDK no longer takes
+# an organization id anywhere.
 ```
 
 ### Running against local dev
@@ -40,7 +41,7 @@ Generate a dev API key (from the root, one-liner via `curl`):
 ```bash
 # Assuming you already have a dev user + organization seeded. If not, run
 # `pnpm db:reset && pnpm seed` first.
-curl -X POST http://localhost:3001/v1/organizations/${LATITUDE_ORGANIZATION_ID}/api-keys \
+curl -X POST http://localhost:3001/v1/api-keys \
   -H "Authorization: Bearer <existing-session-or-dev-key>" \
   -H "Content-Type: application/json" \
   -d '{"name": "sdk-example"}'
@@ -126,10 +127,10 @@ changes to this example are type-checked in CI.
 
 ## Troubleshooting
 
-- **`Unauthorized` (401)**: `LATITUDE_API_KEY` is wrong, revoked, or from a
-  different organization than `LATITUDE_ORGANIZATION_ID`.
+- **`Unauthorized` (401)**: `LATITUDE_API_KEY` is wrong or revoked.
 - **`Trace not found` (404)** on the by-id flow: the trace doesn't belong to
-  the project — the API now verifies org+project ownership before writing.
+  the project the API key's org owns — the API verifies ownership before
+  writing.
 - **`Multiple traces match the provided filters` (400)** on the by-filter
   flow: narrow the filter set. The API requires exactly one match.
 - **Cannot find module `@latitude-data/sdk`**: run `pnpm install` from the

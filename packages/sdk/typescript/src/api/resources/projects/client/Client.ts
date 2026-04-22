@@ -25,23 +25,18 @@ export class ProjectsClient {
     /**
      * Returns all projects in the organization.
      *
-     * @param {string} organizationId - Organization ID
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link LatitudeApi.UnauthorizedError}
      *
      * @example
-     *     await client.projects.list("organizationId")
+     *     await client.projects.list()
      */
-    public list(
-        organizationId: string,
-        requestOptions?: ProjectsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ProjectList> {
-        return core.HttpResponsePromise.fromPromise(this.__list(organizationId, requestOptions));
+    public list(requestOptions?: ProjectsClient.RequestOptions): core.HttpResponsePromise<LatitudeApi.ProjectList> {
+        return core.HttpResponsePromise.fromPromise(this.__list(requestOptions));
     }
 
     private async __list(
-        organizationId: string,
         requestOptions?: ProjectsClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.ProjectList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -55,7 +50,7 @@ export class ProjectsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects`,
+                "v1/projects",
             ),
             method: "GET",
             headers: _headers,
@@ -86,18 +81,12 @@ export class ProjectsClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/organizations/{organizationId}/projects",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/projects");
     }
 
     /**
      * Creates a new project within the organization.
      *
-     * @param {string} organizationId - Organization ID
      * @param {LatitudeApi.CreateProjectBody} request
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -106,20 +95,18 @@ export class ProjectsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.projects.create("organizationId", {
+     *     await client.projects.create({
      *         name: "name"
      *     })
      */
     public create(
-        organizationId: string,
         request: LatitudeApi.CreateProjectBody,
         requestOptions?: ProjectsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.Project> {
-        return core.HttpResponsePromise.fromPromise(this.__create(organizationId, request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__create(request, requestOptions));
     }
 
     private async __create(
-        organizationId: string,
         request: LatitudeApi.CreateProjectBody,
         requestOptions?: ProjectsClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.Project>> {
@@ -134,7 +121,7 @@ export class ProjectsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects`,
+                "v1/projects",
             ),
             method: "POST",
             headers: _headers,
@@ -178,18 +165,12 @@ export class ProjectsClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/organizations/{organizationId}/projects",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/v1/projects");
     }
 
     /**
      * Returns a single project by slug.
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -197,18 +178,16 @@ export class ProjectsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.projects.get("organizationId", "projectSlug")
+     *     await client.projects.get("projectSlug")
      */
     public get(
-        organizationId: string,
         projectSlug: string,
         requestOptions?: ProjectsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.Project> {
-        return core.HttpResponsePromise.fromPromise(this.__get(organizationId, projectSlug, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, requestOptions));
     }
 
     private async __get(
-        organizationId: string,
         projectSlug: string,
         requestOptions?: ProjectsClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.Project>> {
@@ -223,7 +202,7 @@ export class ProjectsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects/${core.url.encodePathParam(projectSlug)}`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}`,
             ),
             method: "GET",
             headers: _headers,
@@ -259,18 +238,12 @@ export class ProjectsClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/organizations/{organizationId}/projects/{projectSlug}",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/projects/{projectSlug}");
     }
 
     /**
      * Soft-deletes a project by slug.
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -278,18 +251,13 @@ export class ProjectsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.projects.delete("organizationId", "projectSlug")
+     *     await client.projects.delete("projectSlug")
      */
-    public delete(
-        organizationId: string,
-        projectSlug: string,
-        requestOptions?: ProjectsClient.RequestOptions,
-    ): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(this.__delete(organizationId, projectSlug, requestOptions));
+    public delete(projectSlug: string, requestOptions?: ProjectsClient.RequestOptions): core.HttpResponsePromise<void> {
+        return core.HttpResponsePromise.fromPromise(this.__delete(projectSlug, requestOptions));
     }
 
     private async __delete(
-        organizationId: string,
         projectSlug: string,
         requestOptions?: ProjectsClient.RequestOptions,
     ): Promise<core.WithRawResponse<void>> {
@@ -304,7 +272,7 @@ export class ProjectsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects/${core.url.encodePathParam(projectSlug)}`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}`,
             ),
             method: "DELETE",
             headers: _headers,
@@ -340,18 +308,12 @@ export class ProjectsClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "DELETE",
-            "/v1/organizations/{organizationId}/projects/{projectSlug}",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "DELETE", "/v1/projects/{projectSlug}");
     }
 
     /**
      * Updates a project's name and/or description.
      *
-     * @param {string} organizationId - Organization ID
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.UpdateProjectBody} request
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -361,21 +323,17 @@ export class ProjectsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.projects.update("organizationId", "projectSlug")
+     *     await client.projects.update("projectSlug")
      */
     public update(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.UpdateProjectBody = {},
         requestOptions?: ProjectsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.Project> {
-        return core.HttpResponsePromise.fromPromise(
-            this.__update(organizationId, projectSlug, request, requestOptions),
-        );
+        return core.HttpResponsePromise.fromPromise(this.__update(projectSlug, request, requestOptions));
     }
 
     private async __update(
-        organizationId: string,
         projectSlug: string,
         request: LatitudeApi.UpdateProjectBody = {},
         requestOptions?: ProjectsClient.RequestOptions,
@@ -391,7 +349,7 @@ export class ProjectsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/organizations/${core.url.encodePathParam(organizationId)}/projects/${core.url.encodePathParam(projectSlug)}`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}`,
             ),
             method: "PATCH",
             headers: _headers,
@@ -435,11 +393,6 @@ export class ProjectsClient {
             }
         }
 
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "PATCH",
-            "/v1/organizations/{organizationId}/projects/{projectSlug}",
-        );
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "PATCH", "/v1/projects/{projectSlug}");
     }
 }

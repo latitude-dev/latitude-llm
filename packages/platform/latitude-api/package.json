@@ -1,0 +1,24 @@
+{
+  "name": "@platform/latitude-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@domain/product-feedback": "workspace:*",
+    "@latitude-data/sdk": "workspace:*",
+    "@platform/env": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
+  }
+}

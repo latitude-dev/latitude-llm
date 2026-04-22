@@ -13,10 +13,9 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import {
   errorResponse,
+  IdParamsSchema,
   jsonBody,
   jsonResponse,
-  OrgAndIdParamsSchema,
-  OrgParamsSchema,
   openApiNoContentResponses,
   openApiResponses,
   PROTECTED_SECURITY,
@@ -109,7 +108,6 @@ const generateRoute = createRoute({
   description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
   security: PROTECTED_SECURITY,
   request: {
-    params: OrgParamsSchema,
     body: jsonBody(RequestSchema),
   },
   responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
@@ -124,7 +122,6 @@ const listRoute = createRoute({
   summary: "List API keys",
   description: "Returns all API keys for the organization. Tokens are not included in the list response.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgParamsSchema },
   responses: {
     200: jsonResponse(ListResponseSchema, "List of API keys"),
     401: errorResponse("Unauthorized"),
@@ -140,7 +137,7 @@ const revokeRoute = createRoute({
   summary: "Revoke API key",
   description: "Soft-deletes an API key, immediately invalidating it.",
   security: PROTECTED_SECURITY,
-  request: { params: OrgAndIdParamsSchema },
+  request: { params: IdParamsSchema },
   responses: openApiNoContentResponses({ description: "API key revoked" }),
 })
 

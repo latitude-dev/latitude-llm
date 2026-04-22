@@ -21,21 +21,17 @@ const client = new LatitudeApiClient({
   token: requireEnv("LATITUDE_API_KEY"),
 })
 
-const annotation = await client.annotations.create(
-  requireEnv("LATITUDE_ORGANIZATION_ID"),
-  requireEnv("LATITUDE_PROJECT_SLUG"),
-  {
-    value: 1,
-    passed: true,
-    feedback: "Annotation resolved via session-id filter",
-    trace: {
-      by: "filters",
-      filters: {
-        sessionId: [{ op: "eq", value: requireEnv("LATITUDE_SESSION_ID") }],
-      },
+const annotation = await client.annotations.create(requireEnv("LATITUDE_PROJECT_SLUG"), {
+  value: 1,
+  passed: true,
+  feedback: "Annotation resolved via session-id filter",
+  trace: {
+    by: "filters",
+    filters: {
+      sessionId: [{ op: "eq", value: requireEnv("LATITUDE_SESSION_ID") }],
     },
   },
-)
+})
 
 console.log("Created annotation via filter:")
 console.log(JSON.stringify(annotation, null, 2))
