@@ -168,7 +168,7 @@ Initial reliability async contracts:
 
 - domain events: `SpanIngested`, `ScoreCreated`, `ScoreAssignedToIssue`
 - topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`, `evaluations:automaticRefreshAlignment`, `evaluations:automaticOptimization`
-- workflows: `issue-discovery`, `evaluation-alignment`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
+- workflows: `issue-discovery`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -241,7 +241,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - annotation-derived ground truth is split into positive and negative examples
 - drafts and errored scores are excluded from evaluation alignment entirely
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
-- issue-generated evaluation creation starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id and returns immediately; the frontend polls a status endpoint that asks Temporal directly (`workflow.describe()` plus a workflow query for in-flight manual-realignment), with no Redis-backed status mirror
+- issue-generated evaluation creation starts the `optimize-evaluation` Temporal workflow under a deterministic `evaluations:generate:${issueId}` id (initial generation) or `evaluations:optimize:${evaluationId}` id (manual realignment) and returns immediately; the frontend polls a status endpoint that asks Temporal directly via `workflow.describe()` on the three relevant workflow ids (generate + optimize + refreshAlignment), with no Redis-backed status mirror
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
 - live evaluation triggering is incremental on debounced `SpanIngested`; the `domain-events` dispatcher publishes `trace-end:run`, that runtime checks active evaluations project-wide, applies deterministic sampling first, batches the remaining shared `FilterSet` checks together with live queues, then applies evaluation turn/debounce rules and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
@@ -251,7 +251,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - GEPA is the first optimizer, but the optimizer interface must stay replaceable
 - the optimizer objective is the scalar trajectory score derived from whether `predictedPositive` equals `expectedPositive`
 - only the confusion matrix is persisted; MCC, accuracy, F1, and other metrics are derived from it
-- unchanged scripts can refresh alignment incrementally before a full re-optimization run; annotation-driven automatic refresh flows through the throttled `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins) into `refresh-evaluation-alignment`, which on a `full-reoptimization` outcome publishes `evaluations:automaticOptimization` (8h, first-publish-wins) to start `optimize-evaluation`; the throttle (not debounce) semantics bound worst-case latency at 1h / 8h and cap fires at once per window per evaluation even under a constant annotation stream; manual refresh still runs through the `evaluation-alignment` workflow until it is migrated onto `optimize-evaluation` in a follow-up change
+- unchanged scripts can refresh alignment incrementally before a full re-optimization run; annotation-driven automatic refresh flows through the throttled `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins) into `refresh-evaluation-alignment`, which on a `full-reoptimization` outcome publishes `evaluations:automaticOptimization` (8h, first-publish-wins) to start `optimize-evaluation`; the throttle (not debounce) semantics bound worst-case latency at 1h / 8h and cap fires at once per window per evaluation even under a constant annotation stream. Initial generation and manual realignment also run through `optimize-evaluation` directly under `evaluations:generate:${issueId}` / `evaluations:optimize:${evaluationId}` ids, so a manual run and a pending automatic optimize collapse into one in-flight run via Temporal's workflow-id dedupe
 - v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, Node workers remain the primary runtime, and Python can remain just the search engine behind a stdio JSON-RPC boundary packaged into the workers image
 
 ### Simulations

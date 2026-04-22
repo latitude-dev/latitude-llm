@@ -3,19 +3,6 @@ function input<T extends Record<string, unknown>>(): T {
 }
 
 const _registry = {
-  evaluationAlignmentWorkflow: input<{
-    readonly organizationId: string
-    readonly projectId: string
-    readonly issueId: string
-    readonly jobId: string
-    readonly evaluationId?: string | null
-    readonly refreshLoop?: boolean
-    readonly reason:
-      | "initial-generation"
-      | "manual-realignment"
-      | "debounced-metric-refresh"
-      | "debounced-full-realignment"
-  }>(),
   refreshEvaluationAlignmentWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
