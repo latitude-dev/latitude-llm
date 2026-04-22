@@ -12,7 +12,7 @@
   "scripts": {
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "devDependencies": {

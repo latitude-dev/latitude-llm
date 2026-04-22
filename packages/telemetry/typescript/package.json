@@ -36,10 +36,10 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsup",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -74,12 +74,11 @@
     "langchain": "^1.2.39",
     "llamaindex": "^0.12.1",
     "openai": "^6.33.0",
-    "tsdown": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "tsup": "^8.0.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^5.5.4"
   }
 }

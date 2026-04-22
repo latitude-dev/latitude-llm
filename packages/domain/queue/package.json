@@ -12,7 +12,7 @@
   "scripts": {
     "check": "biome check .",
     "format": "biome format --write . && biome check --fix .",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@domain/events": "workspace:*",
@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "^6.0.3"
+    "typescript": "^5.9.3"
   }
 }

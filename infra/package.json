@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsgo",
+    "build": "tsc",
     "preview": "pulumi preview",
     "up": "pulumi up",
     "destroy": "pulumi destroy",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pulumi/aws": "^7.23.0",
@@ -18,7 +18,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "^6.0.3"
+    "typescript": "^5.9.3"
   }
 }

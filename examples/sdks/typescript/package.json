@@ -9,7 +9,7 @@
     "annotate:draft": "tsx --env-file=.env src/create-annotation-draft.ts",
     "annotate:byFilter": "tsx --env-file=.env src/create-annotation-by-filter.ts",
     "apiKeys:list": "tsx --env-file=.env src/list-api-keys.ts",
-    "typecheck": "tsgo -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@latitude-data/sdk": "workspace:*"
@@ -17,7 +17,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"
   }
 }

@@ -13,8 +13,6 @@ description: Installing dependencies, running dev/build/test/lint, filtering pac
 - **Package manager**: `package.json` `packageManager` field (e.g. pnpm). Install deps: `pnpm install`
 - **Task runner**: `turbo` via root scripts
 - **Lint/format**: Biome (`@biomejs/biome` 1.9.x)
-- **TypeScript**: 6.0.x + **TypeScript 7 beta (`@typescript/native-preview`)** for typechecking. `pnpm typecheck` runs `tsgo` (the native preview binary) — never invoke `tsc` directly in scripts or docs.
-- **Bundler**: `tsdown` (replaces the deprecated `tsup`). App builds and library DTS emission run under `tsdown`.
 - **Tests**: Vitest 3.x
 - **Core logic**: Effect TS primitives
 - **Postgres ORM**: Drizzle

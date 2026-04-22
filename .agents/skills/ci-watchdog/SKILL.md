@@ -72,7 +72,7 @@ LOOP:
 
 ### Type Errors / Lint Errors
 
-**Detection:** `typecheck`, `lint`, `check`, `pyright`, `tsgo` failures
+**Detection:** `typecheck`, `lint`, `check`, `pyright`, `tsc` failures
 
 **Common fixes:**
 - Read the specific file and line from error output

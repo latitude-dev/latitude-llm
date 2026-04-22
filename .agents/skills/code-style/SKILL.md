@@ -30,7 +30,7 @@ Biome config (`biome.json`) is the source of truth:
 
 ## TypeScript
 
-Base config: `tsconfig.base.json`. Typechecking runs under **`tsgo`** (TypeScript 7 beta, via `@typescript/native-preview`) — use `tsgo -p tsconfig.json --noEmit` in `typecheck` scripts, never `tsc`.
+Base config: `tsconfig.base.json`
 
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)

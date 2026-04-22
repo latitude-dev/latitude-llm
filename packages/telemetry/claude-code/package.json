@@ -33,10 +33,10 @@
     "./intercept": "./dist/intercept.js"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsup",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -46,12 +46,11 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "tsdown": "catalog:",
-    "@typescript/native-preview": "catalog:",
+    "tsup": "^8.0.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^5.5.4"
   }
 }

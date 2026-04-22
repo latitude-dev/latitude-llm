@@ -10,7 +10,7 @@ groups:
         output:
           # Fern writes generated TypeScript source files here (Client.ts,
           # index.ts, api/, core/, errors/, environments.ts). The surrounding
-          # package shell (`package.json`, `tsconfig.json`, `tsdown.config.ts`,
+          # package shell (`package.json`, `tsconfig.json`, `tsup.config.ts`,
           # `src/index.ts` re-export) is hand-written one level up at
           # `packages/sdk/typescript/`. Fern owns everything inside `src/`;
           # running `pnpm generate:sdk` overwrites the contents.

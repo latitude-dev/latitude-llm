@@ -1,4 +1,4 @@
-import { defineConfig } from "tsdown"
+import { defineConfig } from "tsup"
 
 export default defineConfig({
   entry: ["src/index.ts"],
@@ -7,5 +7,4 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   target: "node18",
-  fixedExtension: false,
 })
