@@ -6,6 +6,7 @@ import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import { createOrganization, listOrganizations } from "../../domains/organizations/organizations.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { updateUser } from "../../domains/users/user.functions.ts"
+import { TRACKING_PARAM_KEYS } from "../../lib/analytics/gtm.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
@@ -27,9 +28,20 @@ interface Organization {
   slug?: string
 }
 
+type WelcomeSearch = Partial<Record<(typeof TRACKING_PARAM_KEYS)[number] | "signup", string>>
+
 export const Route = createFileRoute("/welcome/")({
   component: WelcomePage,
-  loader: async () => {
+  validateSearch: (raw: Record<string, unknown>): WelcomeSearch => {
+    const out: WelcomeSearch = {}
+    if (typeof raw.signup === "string") out.signup = raw.signup
+    for (const key of TRACKING_PARAM_KEYS) {
+      const value = raw[key]
+      if (typeof value === "string") out[key] = value
+    }
+    return out
+  },
+  loader: async ({ location }) => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -41,7 +53,9 @@ export const Route = createFileRoute("/welcome/")({
       // NOTE: for some reason we cannot use better auth client here so we have
       // this serverfn indirection
       await setActiveOrganization({ data: { organizationId: org.id, organizationSlug: org.slug } })
-      throw redirect({ to: "/" })
+      // Preserve signup + tracking params so SignupCompleteWatcher fires on the dashboard.
+      const search = location.search as WelcomeSearch
+      throw redirect({ to: "/", search })
     }
 
     return { organizations: (orgs ?? []) as Organization[] }
