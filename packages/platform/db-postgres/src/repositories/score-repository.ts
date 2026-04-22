@@ -27,7 +27,7 @@ type RlsOrganizationQueryResult = {
 
 const loadCurrentRlsOrganizationId = async (db: Operator): Promise<string | null> => {
   const result = (await db.execute(
-    sql`select get_current_organization_id() as organization_id`,
+    sql`select nullif(current_setting('app.current_organization_id', true), '') as organization_id`,
   )) as RlsOrganizationQueryResult
   const organizationId = result.rows?.[0]?.organization_id
   return typeof organizationId === "string" ? organizationId : null
