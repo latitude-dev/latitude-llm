@@ -23,6 +23,10 @@ export type RefreshEvaluationAlignmentWorkflowResult =
       readonly status: "escalated-to-optimization"
       readonly newExampleCount: number
     }
+  | {
+      readonly status: "full-metric-rebuild"
+      readonly totalExampleCount: number
+    }
 
 // Activities are grouped by expected duration so a stuck fast-path activity
 // surfaces as a failure quickly while a legitimate long-running LLM pass is
@@ -41,18 +45,29 @@ const { collectEvaluationAlignmentExamples } = proxyActivities<typeof activities
   retry: defaultActivityRetryPolicy,
 })
 
-const { evaluateIncrementalEvaluationDraft } = proxyActivities<typeof activities>({
-  // Runs the evaluation script plus an LLM judge per newly annotated example;
-  // bounded by annotations since the last alignment but can still be heavy.
+const { evaluateBaselineEvaluationDraft, evaluateIncrementalEvaluationDraft } = proxyActivities<typeof activities>({
+  // Runs the evaluation script plus an LLM judge per example. Incremental runs
+  // are bounded by annotations since the last alignment; full rebuilds are
+  // bounded by the curated dataset size (up to 100). Either can be heavy.
   startToCloseTimeout: "2 hours",
   retry: defaultActivityRetryPolicy,
 })
 
-// Linear: load state (exit on inactive) → collect new examples → run the
-// incremental evaluator. On `metric-only`, persist the refreshed confusion
-// matrix. On `full-reoptimization`, publish `evaluations:automaticOptimization`
-// via the schedule activity and exit without persisting — the optimization
-// workflow owns the next script write. On `no-op`, exit.
+// Linear: load state (exit on inactive) → branch on hash.
+//
+// When `sha1(evaluation.script) === evaluation.alignment.evaluationHash`, the
+// stored confusion matrix was produced by the script that is live now, so we
+// only need to judge the new examples and merge their results in. From there
+// `metric-only` persists the refreshed matrix, `full-reoptimization` escalates
+// onto the 8h-throttled optimize workflow, and `no-op` exits.
+//
+// When the hashes diverge, `evaluation.script` was updated without going
+// through `persistAlignmentResultUseCase`, so the persisted matrix reflects a
+// different script and incremental merging would mix judgments from two
+// scripts. Rebuild the matrix from scratch against every curated example,
+// then persist with the freshly computed hash so future refreshes are back
+// in the incremental-eligible path. This rebuild does not trigger GEPA —
+// that only runs on MCC drop, which we can evaluate again on the next pass.
 //
 // Scheduling is intentionally outside this workflow: the queue owns the 1h
 // throttle before this workflow starts, and the 8h throttle before the
@@ -73,6 +88,44 @@ export const refreshEvaluationAlignmentWorkflow = async (
   }
 
   const state = loaded.state
+
+  if (!loaded.incrementalEligible) {
+    const collected = await collectEvaluationAlignmentExamples({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+    })
+    const baseline = await evaluateBaselineEvaluationDraft({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: state.evaluationId,
+      jobId: `refresh-rebuild:${state.evaluationId}`,
+      issueName: state.issueName,
+      issueDescription: state.issueDescription,
+      draft: state.draft,
+      positiveExamples: collected.positiveExamples,
+      negativeExamples: collected.negativeExamples,
+    })
+    await persistEvaluationAlignmentResult({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: state.evaluationId,
+      script: state.draft.script,
+      // Use the freshly computed hash so the persisted row is back in sync —
+      // script, hash, and matrix once again describe the same evaluation.
+      evaluationHash: loaded.currentScriptHash,
+      confusionMatrix: baseline.confusionMatrix,
+      trigger: state.draft.trigger,
+      name: state.name,
+      description: state.description,
+    })
+    return {
+      status: "full-metric-rebuild",
+      totalExampleCount: collected.positiveExamples.length + collected.negativeExamples.length,
+    }
+  }
 
   const collected = await collectEvaluationAlignmentExamples({
     organizationId: input.organizationId,
