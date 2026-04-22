@@ -10,7 +10,7 @@ import type {
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
+import { serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 
@@ -220,7 +220,10 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                       await Effect.runPromiseWith(services)(handler(payload))
                       span.setStatus({ code: SpanStatusCode.OK })
                     } catch (error) {
-                      const err = recordSpanExceptionForDatadog(span, error)
+                      // Inner Effect spans already record the exception with the
+                      // richer Effect-rendered stack. Keep the root job span in
+                      // error state without duplicating a lower-fidelity event.
+                      const err = toError(error)
                       span.setStatus({
                         code: SpanStatusCode.ERROR,
                         message: err.message,
