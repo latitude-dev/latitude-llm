@@ -1,3 +1,4 @@
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { EvaluationId, IssueId, NotFoundError, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -71,6 +72,44 @@ describe("loadAlignmentStateOrInactiveUseCase", () => {
     expect(result.status).toBe("active")
     if (result.status === "active") {
       expect(result.state.evaluationId).toBe(evaluationId)
+    }
+  })
+
+  it("marks incrementalEligible=true and exposes the computed hash when script matches the persisted hash", async () => {
+    const script = "return { passed: true, feedback: 'ok' }"
+    const hash = await hashOptimizationCandidateText(script)
+    const result = await run(
+      makeRepositoryReturning(
+        makeEvaluation({
+          script,
+          alignment: emptyEvaluationAlignment(hash),
+        }),
+      ),
+    )
+
+    expect(result.status).toBe("active")
+    if (result.status === "active") {
+      expect(result.incrementalEligible).toBe(true)
+      expect(result.currentScriptHash).toBe(hash)
+    }
+  })
+
+  it("marks incrementalEligible=false when sha1(script) diverges from the persisted hash", async () => {
+    const script = "return { passed: true }"
+    const result = await run(
+      makeRepositoryReturning(
+        makeEvaluation({
+          script,
+          alignment: emptyEvaluationAlignment("stale-hash-from-a-previous-script"),
+        }),
+      ),
+    )
+
+    expect(result.status).toBe("active")
+    if (result.status === "active") {
+      expect(result.incrementalEligible).toBe(false)
+      expect(result.currentScriptHash).toBe(await hashOptimizationCandidateText(script))
+      expect(result.currentScriptHash).not.toBe("stale-hash-from-a-previous-script")
     }
   })
 

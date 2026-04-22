@@ -156,7 +156,7 @@ Alignment rules from the proposal:
 - throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first MCC-drop escalation
 - manual realignment is available and throttled
 - unchanged scripts may refresh alignment incrementally instead of fully re-optimizing
-- when the script hash is unchanged, new examples are evaluated and added into the existing confusion-matrix counters
+- the refresh workflow compares `sha1(evaluation.script)` to `evaluation.alignment.evaluationHash` on every run: when they match, new examples are evaluated and added into the existing confusion-matrix counters; when they diverge (the script was updated outside the atomic alignment write path), the workflow rebuilds the matrix from scratch against all curated examples and persists the freshly computed hash so future refreshes are back on the incremental path
 - throttled automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-throttled `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-throttled `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh also starts `optimize-evaluation` directly with the same `evaluations:optimize:${evaluationId}` workflow id, so a manual run and a pending automatic optimize collapse into a single in-flight run via Temporal's workflow-id dedupe
 
 These cadence and tuning values, including the default sampling percentage for newly created issue-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.

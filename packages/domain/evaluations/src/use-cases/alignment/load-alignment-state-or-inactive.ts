@@ -1,3 +1,4 @@
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { EvaluationId, IssueId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
@@ -6,7 +7,29 @@ import { EvaluationIssueRepository } from "../../ports/evaluation-issue-reposito
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 export type LoadAlignmentStateOrInactiveResult =
-  | { readonly status: "active"; readonly state: LoadedEvaluationAlignmentState }
+  | {
+      readonly status: "active"
+      readonly state: LoadedEvaluationAlignmentState
+      /**
+       * `true` when `sha1(state.draft.script) === state.draft.evaluationHash`, i.e.
+       * the persisted confusion matrix was produced by the script that is live
+       * right now. In that case the refresh workflow can safely evaluate only
+       * the new examples and merge their results into the existing matrix. If
+       * `false`, the script has drifted from the hash that produced the matrix
+       * (someone updated `evaluation.script` without going through
+       * `persistAlignmentResultUseCase`), so incremental merging would mix
+       * judgments from two different scripts and the workflow must rebuild the
+       * matrix from scratch against the full example set.
+       */
+      readonly incrementalEligible: boolean
+      /**
+       * SHA-1 of the script that is live right now on the evaluation row.
+       * Workflows use this as the `evaluationHash` when they rebuild the
+       * matrix from scratch, so the persisted hash ends up matching the
+       * script that actually produced the new matrix.
+       */
+      readonly currentScriptHash: string
+    }
   | { readonly status: "inactive" }
 
 // Like `loadAlignmentStateUseCase`, but returns a discriminated result instead
@@ -14,6 +37,11 @@ export type LoadAlignmentStateOrInactiveResult =
 // match the requested issue/project. Used by the throttled auto-alignment
 // workflows so they can exit cleanly when a delayed job fires for an evaluation
 // that has since become inactive (BullMQ has no cancellation primitive).
+//
+// Also computes `sha1(evaluation.script)` and exposes `incrementalEligible` +
+// `currentScriptHash` so the refresh workflow can decide between an
+// incremental merge and a full metric rebuild without having to re-load the
+// evaluation.
 export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAlignmentStateOrInactive")(
   function* (input: {
     readonly organizationId: string
@@ -44,6 +72,7 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
     }
 
     const issue = yield* issueRepository.findById(IssueId(input.issueId))
+    const currentScriptHash = yield* Effect.tryPromise(() => hashOptimizationCandidateText(evaluation.script))
 
     return {
       status: "active",
@@ -62,6 +91,8 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
         },
         confusionMatrix: evaluation.alignment.confusionMatrix,
       },
+      incrementalEligible: currentScriptHash === evaluation.alignment.evaluationHash,
+      currentScriptHash,
     } satisfies LoadAlignmentStateOrInactiveResult
   },
 )

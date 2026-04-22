@@ -45,7 +45,14 @@
     },
     "packages/sdk/typescript": {
       "entry": [],
-      "project": []
+      "project": [],
+      "ignoreBinaries": ["tsup"]
+    },
+    "examples/sdks/typescript": {
+      "entry": ["src/**/*.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreBinaries": ["tsx"],
+      "ignoreDependencies": ["tsx"]
     },
     "packages/ui": {
       "project": ["src/**/*.ts", "src/**/*.tsx"]

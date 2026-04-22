@@ -1,24 +1,40 @@
 ---
 name: review-pr-comments
 description: >-
-  Uses only gh pr to load and respond on a PR, then walks feedback in order (read,
-  judge, implement, commit/push, reply). Groups comments that repeat the same request
-  into one fix and points later threads at that commit. Use when triaging PR review
-  comments sequentially, resolving reviewer feedback without gh api, or babysit PR
-  comments with scoped commits.
+  Triages a PR with GitHub CLI: loads issue-level and inline review feedback (gh pr
+  view, gh api REST, gh api graphql as appropriate), walks items in order, replies in
+  the correct thread, optional resolve. Groups duplicate comments into one fix. Use when
+  addressing PR review comments, Copilot inline threads, or babysitting PR feedback.
 ---
 
 # PR comments: sequential review workflow
 
 Walk the **current** PR’s feedback in **order**, one **topic** at a time. Treat each **comment** as something to read and answer; treat each **underlying issue** as something to fix **once**. If several comments say the same thing (or the first fix already covers a later remark), **do not** redo the same code work—use **one commit** for that shared fix and **reply on each** later comment pointing at that commit (e.g. “Addressed in `<sha>` — same fix as …”).
 
-**CLI rule:** Use **only** `gh pr …` subcommands (`gh pr view`, `gh pr comment`, `gh pr review`, `gh pr diff`, etc.). Do **not** use `gh api`, `gh api graphql`, or **browser / `--web`** to read or act on the PR.
-
 ## Prerequisites
 
 - `gh` authenticated (`gh auth status`).
 - A PR for the checked-out branch (`gh pr view` without a number targets it).
 - Follow repo rules for **git write**: do not commit or push unless authorized for this session.
+
+## Pick the best `gh` command per step
+
+`gh pr …`, **`gh api`** (REST), and **`gh api graphql`** hit **different** GitHub APIs—same intent, **not** interchangeable. There is **no** blanket rule favoring one surface; choose whatever is **correct and clearest** for that action.
+
+| Step | Typically strongest option | Why |
+| --- | --- | --- |
+| Quick PR metadata | `gh pr view --json number,url,title,…` | Native fields, branch defaults |
+| Readable timeline + review summaries | `gh pr view --comments` | Human-readable; good scan |
+| Structured issue comments / review objects | `gh pr view --json comments,reviews,latestReviews` | Easy JSON for sorting |
+| Inline comments **plus** threads, resolve state | `gh api graphql` (`reviewThreads`) | Threads + `isResolved` + `thread.id` for mutations |
+| Flat list of inline comments only | `gh api repos/{owner}/{repo}/pulls/<n>/comments --paginate` | Simple; reply ids (`id`) for REST replies |
+| Post a **conversation** comment | `gh pr comment` | Correct for timeline |
+| Reply **under a line comment** | `gh api -X POST …/pulls/comments/<id>/replies` | `gh pr comment` does not thread on the diff |
+| Resolve a review thread | `gh api graphql` (`resolveReviewThread`) | Only API that exposes it |
+| Inspect the patch | `gh pr diff` | First-class diff |
+| Need UI context (complex thread) | `gh pr view --web` | When it helps—no ban |
+
+Facts that drive the choice (not preferences): **`gh pr view` does not return inline `PullRequestReviewComment` payloads in JSON** (see §2.1)—load those with **REST or GraphQL** or you will miss most line-level review and Copilot feedback.
 
 ## 1. Resolve the PR
 
@@ -30,35 +46,100 @@ gh pr view --json number,url,title,headRefName,baseRefName
 
 If no PR exists for the branch, stop and tell the user.
 
-## 2. Load all review artifacts (gh pr only)
+## 2. Load **all** review artifacts (do not skip inline)
 
-Build an ordered work list before changing code.
+Build a full work list before changing code. **Most reviewer and Copilot feedback is on `PullRequestReviewComment` (inline on the diff), not in issue comments.** If you only run `gh pr view`, you will miss that feedback.
 
-**Rendered conversation (primary):** full thread as `gh` prints it—timeline and review context in one pass, no browser:
+### 2.1 What `gh pr view` **does** and **does not** include
+
+| Source | What you get |
+| --- | --- |
+| `gh pr view --comments` | Renders **issue-level** conversation comments and **review submission summaries** (the body of each review). It does **not** list individual **inline** line comments. A review that says “Copilot generated 1 comment” only references that inline comment—the **inline text is not in this output**. |
+| `gh pr view --json comments` | **Issue / timeline** comments on the PR only. Often **empty** when all feedback is inline. |
+| `gh pr view --json reviews,latestReviews` | **Submitted review metadata and review bodies** (summary text), **not** the per-line `PullRequestReviewComment` payloads. |
+
+`gh pr view --help` lists JSON fields such as `comments`, `reviews`, `latestReviews`, `reviewRequests`—there is **no** field for inline review comments or `reviewThreads`. **No `gh pr` subcommand exposes `GET /repos/.../pulls/{pr}/comments`.**
+
+**Conclusion:** after only `gh pr view`, you are **still blind** to inline comments until you also load **`PullRequestReviewComment`** data (REST or GraphQL below).
+
+### 2.2 Inline review comments (required — pick the best fetch)
+
+You **must** load inline comments every time; **`gh pr` alone cannot.** Choose one or combine:
+
+**A — GraphQL:** best when you want **threads** (`id`, `isResolved`), **grouping**, inline bodies **path / line / author**, and **`thread.id`** for resolve—in one shaped query.
+
+Resolve `owner` and `repo` once (examples):
+
+```bash
+gh repo view --json owner,name -q '"\(.owner.login)/\(.name)"'
+# or: OWNER=$(gh repo view --json owner -q .owner.login); NAME=$(gh repo view --json name -q .name)
+```
+
+Example query (raise `first` / paginate if the PR is huge):
+
+```bash
+gh api graphql -f query='
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          comments(first: 50) {
+            nodes {
+              databaseId
+              body
+              path
+              line
+              createdAt
+              author { login }
+            }
+          }
+        }
+      }
+    }
+  }
+}' -f owner='OWNER' -f name='REPO' -F number=PR_NUMBER
+```
+
+If `pageInfo.hasNextPage` is true, follow with additional requests using `after:` cursors on `reviewThreads` (same pattern as standard GraphQL pagination).
+
+Use **`thread.id`** (Node id) for **§3.7 resolve**. Use each comment’s **`databaseId`** as the REST **`id`** when posting **`.../pulls/comments/{id}/replies`** (they are the same numeric id GitHub uses in the REST API).
+
+**B — REST:** flat list of every inline comment—minimal mental overhead; each node has `id` for **`.../replies`**.
+
+```bash
+gh api "repos/{owner}/{repo}/pulls/PR_NUMBER/comments" --paginate
+```
+
+Each item includes `id`, `body`, `path`, `line`, `in_reply_to_id`, `created_at`, `html_url`, etc. **No thread grouping or `isResolved`**—prefer **A** when you need those.
+
+### 2.3 Issue-level and summary context
+
+Use **`gh pr`** where it is strongest (readable + structured issue/review summaries):
 
 ```bash
 gh pr view [<PR_NUMBER>] --comments
-```
-
-**Structured fields (supplement):** ids, authors, timestamps, review metadata:
-
-```bash
 gh pr view [<PR_NUMBER>] --json comments,reviews,latestReviews
+gh pr diff [<PR_NUMBER>]
 ```
 
-Merge these into one picture: who said what, when, and on which files (use **`gh pr diff [<PR_NUMBER>]`** if you need the patch for context). Prefer **`--comments`** when something is unclear from JSON alone.
+### 2.4 Merge into one ordered work list
 
-Sort work **chronologically** (oldest first) unless the user specifies otherwise.
+Combine **issue/timeline comments** (from JSON or `--comments`) with **every inline comment** (from **§2.2**). Normalize timestamps and sort **chronologically** (oldest first) unless the user specifies otherwise. When using GraphQL threads, flatten `reviewThreads → comments` for ordering, but keep **`thread.id`** handy for resolve and for understanding **which replies belong together**.
 
-**Duplication:** While ordering by time, **cluster** comments that ask for the same change (same file/behavior, or explicitly the same nit). You will **implement once** and **reply to each** comment in that cluster.
+**Duplication:** **cluster** items that ask for the same change; **implement once** and **reply to each** comment in that cluster.
 
 ## 3. Process comments in order (one pass, dedupe fixes)
 
-For **each** comment in chronological order:
+For **each** item in chronological order:
 
 ### 3.1 Read
 
-Use only output from **`gh pr view`** (with `--comments` and/or `--json`) and **`gh pr diff`** as needed. Do not open the PR in a web browser.
+Combine whatever helps: **`gh pr view`** output, **`gh api`** / **GraphQL** payloads, **`gh pr diff`**, and **`gh pr view --web`** if the UI makes thread context obvious. Goal is **complete understanding**, not a specific subcommand.
 
 ### 3.2 Interpret
 
@@ -70,62 +151,71 @@ Decide if it is right, unclear, or you disagree. Skip or discuss without code wh
 
 ### 3.4 Implement (when needed)
 
-If this comment’s **underlying issue** is **already fixed** by a commit you made for an **earlier** comment in this run, **do not edit the code again**—go to **3.6** and reply that it is covered (see below).
+If this comment’s **underlying issue** is **already fixed** by a commit you made for an **earlier** comment in this run, **do not edit the code again**—go to **3.6** and reply that it is covered.
 
-Otherwise, if code or config should change, apply **only** that scoped fix. If multiple **concurrent** comments in the same cluster all require the **same** edit, make **one** edit and **one** commit for that cluster.
+Otherwise, apply **only** that scoped fix. Same cluster → **one** commit for that cluster.
 
 ### 3.5 Commit and push
 
-- **Single distinct issue** (possibly mentioned by several comments): **one commit** that fixes it; push when you are ready to expose that fix.
-- **Separate issues:** separate commits—do not mix unrelated changes into one commit.
-- Reference the PR or review in the message if the repo uses that convention.
+- **Single distinct issue** (possibly mentioned by several comments): **one commit**; push when ready.
+- **Separate issues:** separate commits.
 
-After pushing, capture the **commit SHA** (e.g. `git rev-parse HEAD`) to cite in replies.
+After pushing, capture **commit SHA** (e.g. `git rev-parse HEAD`) for replies.
 
-### 3.6 Reply on the PR (gh pr only)
+### 3.6 Reply in the right place
 
-Every comment that expects a response should get one.
-
-**Conversation / general reply** (including “this was already fixed by commit …”):
+**Timeline / issue comment** — `gh pr comment` is the right surface:
 
 ```bash
 gh pr comment [<PR_NUMBER>] --body '...'
 ```
 
-**Optional formal review line** (e.g. short summary when finishing a batch of responses):
+**Inline thread** — REST reply endpoint (only reliable way to nest under the line):
+
+```bash
+gh api -X POST "repos/{owner}/{repo}/pulls/comments/<COMMENT_ID>/replies" -f body='...'
+```
+
+`<COMMENT_ID>` is the REST **`id`** / GraphQL **`databaseId`** of the comment you answer (from **§2.2**).
+
+**Formal review summary** when it fits the workflow:
 
 ```bash
 gh pr review [<PR_NUMBER>] --comment -b '...'
 ```
 
-There is **no** `gh pr …` subcommand that posts a threaded reply attached to a specific inline review comment ID. If the discussion started on a line comment, reply with **`gh pr comment`** and **quote the file, line, or reviewer** so the link to the original feedback is obvious (e.g. “Re `src/foo.ts` L42: fixed in `<short-sha>` …”).
+Duplicate-addressed items: short replies (“Same fix as … in `<sha>`.”).
 
-For **follow-up** comments that duplicate an already-addressed point, a short reply is enough, for example:
+### 3.7 Resolve review threads (optional)
 
-- “Same as above — fixed in `<sha>` (`<first line of message>`).”
-- “Covered by the change in `<sha>` for the earlier note on `<file>`.”
+When appropriate (fixed, declined with closure, etc.—not open questions): **GraphQL** is the API that supports resolve. Use **`thread.id`** from **§2.2 A**:
 
-### 3.7 Resolved / closed from your side
+```bash
+gh api graphql -f query='
+mutation($id: ID!) {
+  resolveReviewThread(input: { threadId: $id }) {
+    thread { isResolved }
+  }
+}' -f id=<THREAD_ID>
+```
 
-GitHub **review thread resolve** is **not** exposed as a `gh pr` command today. Do not use `gh api` or GraphQL from this workflow.
-
-When the substance is done (fixed, or clearly declined with no further action expected on that point), say so in **`gh pr comment`** so reviewers can **mark threads resolved in the UI** if they agree. Do not treat “resolve” as something you must automate—treat it as **communicated + optional human action in the GitHub UI**.
-
-**Do not** pretend a thread is “done” in your reply when it is only a **question** that might get follow-up, or a **declined suggestion** where the reviewer may still want to discuss.
+If you only used REST **B**, fetch thread ids via a **GraphQL** query once, or resolve in the **browser**—either is fine if it matches team practice.
 
 ## 4. Tracking progress
 
-Keep a lightweight map for yourself:
-
-- Comments answered vs still open.
-- Which commit SHA fixed which cluster of comments.
+- Comments answered vs open.
+- Which **commit SHA** fixed which cluster.
 
 ## Anti-patterns
 
-- Mixing **unrelated** fixes into a single commit to move faster.
-- Silent pushes with no **`gh pr comment`** (or `--comment`) response on the relevant notes.
-- Resolving every thread in text when the conversation is **not** actually closed (questions, ongoing debate).
-- Ignoring **`gh pr view --comments`** / **`--json`** and only skimming part of the review.
+- **Treating `gh pr view` as sufficient** for “all PR comments”—you still need **inline** data from **REST or GraphQL** (§2.1–2.2).
+- Mixing **unrelated** fixes into one commit.
+- Silent pushes with no reply (**timeline** and/or **`.../replies`**).
+- Using **`gh pr comment`** where a **REST threaded reply** was needed (feedback belongs on the diff line).
+- Resolving threads that are still active debate.
 
-**Not** an anti-pattern: **one commit** that fixes **several comments** when they all target the **same** issue; use per-comment replies that point at that commit.
+**Not** an anti-pattern: **one commit** for several comments that share the **same** issue; reply on each item with pointers to that commit.
 
+## Related
+
+- Creating issues from gaps: [gh-issue](../gh-issue/SKILL.md).
