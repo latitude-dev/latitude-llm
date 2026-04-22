@@ -1,5 +1,5 @@
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { createLogger, recordSpanExceptionForDatadog } from "@repo/observability"
+import { createLogger } from "@repo/observability"
 import { Context as ActivityContext } from "@temporalio/activity"
 import type {
   ActivityExecuteInput,
@@ -11,6 +11,7 @@ import { NativeConnection, Worker } from "@temporalio/worker"
 import type { TemporalConfig } from "./config.ts"
 
 const tracer = trace.getTracer("temporal-worker")
+const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
 
 const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityContext) => ({
   inbound: {
@@ -39,7 +40,9 @@ const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityC
             span.setStatus({ code: SpanStatusCode.OK })
             return result
           } catch (error) {
-            const err = recordSpanExceptionForDatadog(span, error)
+            // Activity-internal Effect spans already capture the exception with
+            // the richer Effect stack; avoid duplicating it on the root span.
+            const err = toError(error)
             span.setStatus({ code: SpanStatusCode.ERROR, message: err.message })
             throw err
           } finally {
