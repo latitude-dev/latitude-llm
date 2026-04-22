@@ -336,6 +336,143 @@ describe("SqlClientLive", () => {
     })
   })
 
+  describe("RepositoryError call-site capture", () => {
+    const drizzleLikeError = () => {
+      const err = new Error("Failed query: insert into scores ...")
+      err.stack = [
+        "Error: Failed query: insert into scores ...",
+        "    at drizzle-orm/src/pg-core/async/session.ts:70:11",
+      ].join("\n")
+      return err
+    }
+
+    async function captureQueryFailureFromNamedCaller(
+      client: PostgresClient,
+      orgId: OrganizationId,
+    ): Promise<{ _tag: string; stack?: string; message: string }> {
+      try {
+        await runWithSqlClient(client, orgId, (sql) =>
+          sql.query(async () => {
+            throw drizzleLikeError()
+          }),
+        )
+      } catch (err) {
+        return err as { _tag: string; stack?: string; message: string }
+      }
+      throw new Error("expected query to reject")
+    }
+
+    it("wraps a failed query() in RepositoryError with a composed stack", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-query")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err._tag).toBe("RepositoryError")
+      expect(err.message).toBe("Repository query failed: Failed query: insert into scores ...")
+      expect(err.stack).toBeDefined()
+    })
+
+    it("puts the RepositoryError header on the first line of the stack", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-header")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err.stack?.split("\n")[0]).toBe(
+        "RepositoryError: Repository query failed: Failed query: insert into scores ...",
+      )
+    })
+
+    it("includes the SqlClient method frame from sql-client.ts in the stack", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-sqlclient-frame")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err.stack).toContain("sql-client.ts")
+    })
+
+    it("includes a frame from the calling test file", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-caller-frame")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err.stack).toContain("sql-client.test.ts")
+    })
+
+    it("appends the underlying driver error as a Caused by: block", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-causedby")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err.stack).toContain("Caused by: Error: Failed query: insert into scores ...")
+      expect(err.stack).toContain("drizzle-orm/src/pg-core/async/session.ts:70:11")
+    })
+
+    it("does not leak the captureCallSite helper frame", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-helper-stripped")
+
+      const err = await captureQueryFailureFromNamedCaller(client, orgId)
+
+      expect(err.stack).not.toContain("at captureCallSite")
+    })
+
+    it("includes the generator frame from a domain-style repository method", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-generator")
+
+      // Mimic a domain repository: export a function that returns an Effect
+      // built with Effect.gen and yields sql.query(...). This is the shape
+      // real repositories (e.g. ScoreRepository.save) use to run queries.
+      const fakeScoreRepositorySave = (sql: import("@domain/shared").SqlClientShape<Operator>) =>
+        Effect.gen(function* fakeScoreRepositorySave() {
+          return yield* sql.query(async () => {
+            throw drizzleLikeError()
+          })
+        })
+
+      let caught: { _tag: string; stack?: string } | undefined
+      try {
+        await runWithSqlClient(client, orgId, (sql) => fakeScoreRepositorySave(sql))
+      } catch (err) {
+        caught = err as { _tag: string; stack?: string }
+      }
+
+      expect(caught?._tag).toBe("RepositoryError")
+      // The generator function name shows up in V8's stack frames for
+      // generator invocations — this is the real "domain frame" a production
+      // RepositoryError would surface.
+      expect(caught?.stack).toContain("fakeScoreRepositorySave")
+      expect(caught?.stack).toContain("Caused by: Error: Failed query: insert into scores ...")
+    })
+
+    it("threads the call site through query() when executed inside an open transaction", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-callsite-in-tx")
+
+      let caught: { _tag: string; stack?: string } | undefined
+      try {
+        await runWithSqlClient(client, orgId, (sql) =>
+          sql.transaction(
+            sql.query(async () => {
+              throw drizzleLikeError()
+            }),
+          ),
+        )
+      } catch (err) {
+        caught = err as { _tag: string; stack?: string }
+      }
+
+      expect(caught?._tag).toBe("RepositoryError")
+      expect(caught?.stack).toContain("sql-client.test.ts")
+      expect(caught?.stack).toContain("Caused by: Error: Failed query: insert into scores ...")
+    })
+  })
+
   describe("failure and rollback", () => {
     it("propagates failure from inner effect and does not commit", async () => {
       const client = createMockPostgresClient(state)

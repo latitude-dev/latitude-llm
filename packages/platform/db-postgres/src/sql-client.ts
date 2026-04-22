@@ -1,5 +1,6 @@
 import {
   ConcurrentSqlTransactionError,
+  captureCallSite,
   OrganizationId,
   SqlClient,
   type SqlClientShape,
@@ -54,6 +55,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
           }
 
           txOpening = true
+          const callSite = captureCallSite("SqlClient.transaction")
 
           return Effect.gen(function* () {
             let resolveTxReady!: (tx: Operator) => void
@@ -78,7 +80,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
               try: () => txReady,
               catch: (e) => {
                 txOpening = false
-                return toRepositoryError(e, "transaction")
+                return toRepositoryError(e, "transaction", callSite)
               },
             })
 
@@ -94,7 +96,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
               resolveEffectDone({ ok: true, value: exit.value })
               yield* Effect.tryPromise({
                 try: () => txPromise,
-                catch: (e) => toRepositoryError(e, "transaction"),
+                catch: (e) => toRepositoryError(e, "transaction", callSite),
               })
               return exit.value
             }
@@ -115,19 +117,20 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
                     )
                   }
                 }),
-              catch: (e) => toRepositoryError(e, "transaction"),
+              catch: (e) => toRepositoryError(e, "transaction", callSite),
             })
             return yield* exit
           })
         },
 
-        query: <T>(fn: (tx: Operator, organizationId: OrganizationId) => Promise<T>) =>
-          Effect.gen(function* () {
+        query: <T>(fn: (tx: Operator, organizationId: OrganizationId) => Promise<T>) => {
+          const callSite = captureCallSite("SqlClient.query")
+          return Effect.gen(function* () {
             const currentTx = activeTx
             if (currentTx) {
               return yield* Effect.tryPromise({
                 try: () => fn(currentTx, organizationId),
-                catch: (error) => toRepositoryError(error, "query"),
+                catch: (error) => toRepositoryError(error, "query", callSite),
               })
             }
 
@@ -137,9 +140,10 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
                   await setRlsContext(tx as Operator, organizationId)
                   return fn(tx as Operator, organizationId)
                 }),
-              catch: (error) => toRepositoryError(error, "query"),
+              catch: (error) => toRepositoryError(error, "query", callSite),
             })
-          }),
+          })
+        },
       } satisfies SqlClientShape<Operator>
     }),
   )

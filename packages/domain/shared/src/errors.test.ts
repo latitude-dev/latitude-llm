@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   BadRequestError,
   ConflictError,
+  captureCallSite,
   NotFoundError,
   PermissionError,
   RepositoryError,
@@ -32,6 +33,24 @@ describe("static httpStatus and httpMessage", () => {
     const err = new RepositoryError({ cause, operation: "findById" })
 
     expect(err.stack).toBe(cause.stack)
+  })
+
+  it("composes stack with call-site frames and a Caused by block", () => {
+    const cause = new Error("Failed query: insert into scores ...")
+    cause.stack = ["Error: Failed query: insert into scores ...", "    at drizzle (session.ts:70:11)"].join("\n")
+
+    const issueUpsert = () => captureCallSite("SqlClient.query")
+    const callSite = issueUpsert()
+
+    const err = new RepositoryError({ cause, operation: "query", callSite })
+
+    expect(err.stack?.split("\n")[0]).toBe(
+      "RepositoryError: Repository query failed: Failed query: insert into scores ...",
+    )
+    expect(err.stack).toContain("at issueUpsert")
+    expect(err.stack).toContain("Caused by: Error: Failed query: insert into scores ...")
+    expect(err.stack).toContain("at drizzle (session.ts:70:11)")
+    expect(err.stack).not.toContain("at captureCallSite")
   })
 
   it("includes nested cause messages for wrapped database errors", () => {

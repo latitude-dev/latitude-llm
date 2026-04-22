@@ -61,11 +61,29 @@ const findCauseStack = (cause: unknown): string | undefined => {
   return undefined
 }
 
+/**
+ * Capture a synchronous stack trace at the call site of a `SqlClient.query` /
+ * `SqlClient.transaction` invocation. The underlying database error (from
+ * drizzle / node-postgres) is created several microtasks later, past
+ * `processTicksAndRejections`, so V8's async stack traces do not reach back to
+ * the repository or use-case that issued the query. Capturing here preserves
+ * that context so `RepositoryError.stack` shows *where in our code* the
+ * failing query originated.
+ */
+export const captureCallSite = (label: string): Error => {
+  const error = new Error(label)
+  if (typeof Error.captureStackTrace === "function") {
+    Error.captureStackTrace(error, captureCallSite)
+  }
+  return error
+}
+
 export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly cause: unknown
   readonly operation: string
+  readonly callSite?: Error
 }> {
-  constructor(args: { readonly cause: unknown; readonly operation: string }) {
+  constructor(args: { readonly cause: unknown; readonly operation: string; readonly callSite?: Error }) {
     super(args)
 
     const causeMessages = collectCauseMessages(args.cause)
@@ -75,13 +93,25 @@ export class RepositoryError extends Data.TaggedError("RepositoryError")<{
         : `Repository ${args.operation} failed`
 
     const causeStack = findCauseStack(args.cause)
-    if (causeStack) {
+    const callSiteFrames = extractStackFrames(args.callSite)
+
+    if (callSiteFrames) {
+      const causedBy = causeStack ? `\nCaused by: ${causeStack}` : ""
+      this.stack = `RepositoryError: ${this.message}\n${callSiteFrames}${causedBy}`
+    } else if (causeStack) {
       this.stack = causeStack
     }
   }
 
   readonly httpStatus = 500
   readonly httpMessage = "Internal server error"
+}
+
+const extractStackFrames = (error: Error | undefined): string => {
+  const stack = error?.stack
+  if (!stack) return ""
+  const newlineIdx = stack.indexOf("\n")
+  return newlineIdx === -1 ? "" : stack.slice(newlineIdx + 1)
 }
 
 /**
@@ -177,8 +207,8 @@ export type DomainError =
   | BadRequestError
   | PermissionError
 
-export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
-  new RepositoryError({ cause, operation })
+export const toRepositoryError = (cause: unknown, operation: string, callSite?: Error): RepositoryError =>
+  new RepositoryError(callSite ? { cause, operation, callSite } : { cause, operation })
 
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
