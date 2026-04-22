@@ -105,8 +105,6 @@ export const refreshEvaluationAlignmentWorkflow = async (
       evaluationHash: state.draft.evaluationHash,
       confusionMatrix: refresh.nextConfusionMatrix,
       trigger: state.draft.trigger,
-      name: state.name,
-      description: state.description,
     })
     return { status: "metric-only", newExampleCount: refresh.newExampleCount }
   }

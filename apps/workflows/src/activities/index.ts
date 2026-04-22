@@ -7,7 +7,6 @@ export {
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
   generateBaselineEvaluationDraft,
-  generateEvaluationDetails,
   loadEvaluationAlignmentState,
   loadEvaluationAlignmentStateOrInactive,
   persistEvaluationAlignmentResult,

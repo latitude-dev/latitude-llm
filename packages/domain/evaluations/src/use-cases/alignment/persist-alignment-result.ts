@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import type { PersistEvaluationAlignmentResult } from "../../alignment/types.ts"
 import { type ConfusionMatrix, type EvaluationTrigger, evaluationSchema } from "../../entities/evaluation.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
+import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlignmentResult")(function* (input: {
@@ -14,8 +15,6 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
   readonly evaluationHash: string
   readonly confusionMatrix: ConfusionMatrix
   readonly trigger: EvaluationTrigger
-  readonly name: string
-  readonly description: string
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
@@ -24,6 +23,7 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
   }
 
   const evaluationRepository = yield* EvaluationRepository
+  const issueRepository = yield* EvaluationIssueRepository
   const projectId = ProjectId(input.projectId)
   const issueId = IssueId(input.issueId)
   const existingEvaluation = input.evaluationId
@@ -50,14 +50,24 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
     })
   }
 
+  const issue = yield* issueRepository.findById(issueId).pipe(
+    Effect.catchTag("NotFoundError", () =>
+      Effect.fail(
+        new BadRequestError({
+          message: `Issue ${input.issueId} was not found for alignment`,
+        }),
+      ),
+    ),
+  )
+
   const now = new Date()
   const evaluation = evaluationSchema.parse({
     id: existingEvaluation?.id ?? input.evaluationId ?? generateId(),
     organizationId: input.organizationId,
     projectId: input.projectId,
     issueId: input.issueId,
-    name: existingEvaluation?.name ?? input.name,
-    description: existingEvaluation?.description ?? input.description,
+    name: issue.name,
+    description: issue.description,
     script: input.script,
     trigger: input.trigger,
     alignment: {

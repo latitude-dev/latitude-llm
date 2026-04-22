@@ -143,14 +143,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         exampleResults: [],
       }
     }),
-    generateEvaluationDetails: vi.fn(async () => {
-      callOrder.push("generateEvaluationDetails")
-      return {
-        name: "Tool output leakage",
-        description: "Checks whether the assistant leaks secrets.",
-      }
-    }),
-    persistEvaluationAlignmentResult: vi.fn(async () => {
+    persistEvaluationAlignmentResult: vi.fn(async (_input: Record<string, unknown>) => {
       callOrder.push("persistEvaluationAlignmentResult")
       return { evaluationId: "eval-1" }
     }),
@@ -171,7 +164,7 @@ describe("optimizeEvaluationWorkflow", () => {
     vi.clearAllMocks()
   })
 
-  it("runs the full pipeline including generateEvaluationDetails for initial generation", async () => {
+  it("runs the full pipeline for initial generation without passing name/description", async () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -191,13 +184,15 @@ describe("optimizeEvaluationWorkflow", () => {
       "generateBaselineEvaluationDraft",
       "optimizeEvaluationDraft",
       "evaluateBaselineEvaluationDraft",
-      "generateEvaluationDetails",
       "persistEvaluationAlignmentResult",
     ])
     expect(mockActivities.loadEvaluationAlignmentStateOrInactive).not.toHaveBeenCalled()
+    const persistArgs = mockActivities.persistEvaluationAlignmentResult.mock.calls[0]?.[0]
+    expect(persistArgs).not.toHaveProperty("name")
+    expect(persistArgs).not.toHaveProperty("description")
   })
 
-  it("skips generateEvaluationDetails when re-optimizing an existing evaluation", async () => {
+  it("re-optimizes an existing evaluation without passing name/description", async () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -215,7 +210,9 @@ describe("optimizeEvaluationWorkflow", () => {
       "evaluateBaselineEvaluationDraft",
       "persistEvaluationAlignmentResult",
     ])
-    expect(mockActivities.generateEvaluationDetails).not.toHaveBeenCalled()
+    const persistArgs = mockActivities.persistEvaluationAlignmentResult.mock.calls[0]?.[0]
+    expect(persistArgs).not.toHaveProperty("name")
+    expect(persistArgs).not.toHaveProperty("description")
   })
 
   it("short-circuits on an inactive evaluation before running any downstream activity", async () => {

@@ -159,26 +159,6 @@ Tag constants: `packages/domain/ai/src/ai-generate-telemetry.ts`. Evaluation-spe
 
 ## GEPA / optimization
 
-> **Optimization Summary**  
-> Produces the evaluation display name and description from the optimized script and issue context.  
-> **Tags:** `gepa:summary`  
-> **Metadata:**
->
-> ```json
-> {
->   "organizationId": "",
->   "projectId": "",
->   "issueId": "",
->   "evaluationId": null, // optional; null during initial generation
->   "evaluationHash": "",
->   "jobId": "job-1" // optional; omitted when empty
-> }
-> ```
->
-> **Called from:**
->
-> - `apps/workflows/src/activities/evaluation-alignment-activities.ts` (`generateEvaluationDetails`)
-
 > **Optimization Proposal**  
 > Proposes the next candidate evaluation script from trajectories during GEPA search.  
 > **Tags:** `gepa:propose`  
