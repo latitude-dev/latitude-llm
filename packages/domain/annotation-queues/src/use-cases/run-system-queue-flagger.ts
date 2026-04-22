@@ -3,7 +3,7 @@ import {
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
   type AICredentialError,
-  type AIError,
+  AIError,
   buildProjectScopedAiMetadata,
   formatGenAIConversation,
   formatGenAIMessage,
@@ -65,6 +65,13 @@ Rules:
 - If uncertain, return matched=false.
 - Base your decision only on the provided trace summary.
 - Return no explanation outside the structured output.
+
+Output format:
+Return a JSON object with exactly one boolean field named "matched". No other fields, no prose, no markdown, no code fences.
+
+Examples of valid responses:
+{"matched": true}
+{"matched": false}
 `.trim()
 
 const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
@@ -194,6 +201,17 @@ const buildFlaggerPrompt = (trace: TraceDetail): string => {
   ].join("\n\n")
 }
 
+// The Vercel AI SDK raises a `NoObjectGeneratedError` (name `AI_NoObjectGeneratedError`)
+// when the model returns output that does not match the requested schema. The flagger
+// treats this as a "no match" signal instead of propagating the failure — the model
+// effectively failed to classify, which for a triage flagger is indistinguishable
+// from matched=false.
+const isSchemaMismatchCause = (cause: unknown): boolean => {
+  if (!(cause instanceof Error)) return false
+  if (cause.name === "AI_NoObjectGeneratedError") return true
+  return typeof cause.message === "string" && cause.message.includes("response did not match schema")
+}
+
 const runLlmFlagger = (
   input: RunSystemQueueFlaggerInput & { readonly queueSlug: LlmSystemQueueSlug },
   trace: TraceDetail,
@@ -238,7 +256,16 @@ export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSyste
     return { matched: false }
   }
 
-  const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
+  const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace).pipe(
+    Effect.catchIf(
+      (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+      () =>
+        Effect.gen(function* () {
+          yield* Effect.annotateCurrentSpan("queue.flaggerSchemaMismatch", true)
+          return { matched: false }
+        }),
+    ),
+  )
 
   return {
     matched: decisions.matched,
