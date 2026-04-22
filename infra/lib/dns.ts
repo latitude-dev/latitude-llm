@@ -235,6 +235,16 @@ export function createDnsRecords(
       ttl: 300,
       allowOverwrite: true,
     })
+
+    // CNAME for go.latitude.so -> customers.withbaker.com
+    records.goCname = new aws.route53.Record(`${name}-go-cname`, {
+      zoneId: hostedZoneId,
+      name: "go.latitude.so",
+      type: "CNAME",
+      records: ["customers.withbaker.com"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
   }
 
   return {
