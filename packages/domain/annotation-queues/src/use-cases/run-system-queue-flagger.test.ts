@@ -244,6 +244,77 @@ describe("runSystemQueueFlaggerUseCase", () => {
     }
   })
 
+  it("recovers to matched=false when the AI returns output that fails schema validation", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+          ]),
+        ),
+    })
+
+    // Simulates Vercel AI SDK's NoObjectGeneratedError, which is surfaced by
+    // @platform/ai-vercel as AIError with the original SDK error on `cause`.
+    const sdkError = new Error("No object generated: response did not match schema.")
+    sdkError.name = "AI_NoObjectGeneratedError"
+
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message:
+              "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): No object generated: response did not match schema.",
+            cause: sdkError,
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("recovers to matched=false when the SDK cause has no AI_NoObjectGeneratedError name but the message indicates a schema mismatch", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+          ]),
+        ),
+    })
+
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message:
+              "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): No object generated: response did not match schema.",
+            cause: new Error("No object generated: response did not match schema."),
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
   it("schema: empty object {} is parsed as matched=false via Zod default", () => {
     // Verify that the schema correctly applies the default(false) for missing matched field
     const parsed = systemQueueFlaggerOutputSchema.parse({})
