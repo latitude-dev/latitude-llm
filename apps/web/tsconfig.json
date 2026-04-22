@@ -3,7 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }
