@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/Effect-TS/language-service/refs/heads/main/schema.json",
   "compilerOptions": {
     "moduleDetection": "force",
+    "ignoreDeprecations": "6.0",
     "incremental": true,
     "composite": true,
     "target": "ES2022",

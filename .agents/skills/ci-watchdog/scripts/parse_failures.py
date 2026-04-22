@@ -14,7 +14,7 @@ def categorize_failure(check_name: str, output: str | None) -> str:
     check_lower = check_name.lower()
     
     # Type/lint checks
-    if any(kw in check_lower for kw in ['typecheck', 'type-check', 'pyright', 'mypy', 'tsc']):
+    if any(kw in check_lower for kw in ['typecheck', 'type-check', 'pyright', 'mypy', 'tsgo']):
         return 'type_error'
     if any(kw in check_lower for kw in ['lint', 'check', 'biome', 'eslint', 'ruff']):
         return 'lint_error'
