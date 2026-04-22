@@ -437,12 +437,15 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     // Rebuild does not escalate to GEPA; MCC drop is evaluated again on the
     // next incremental pass (now in the eligible path again).
     expect(mockActivities.scheduleEvaluationOptimization).not.toHaveBeenCalled()
-    // Example collection is unscoped (no `createdAfter`) — we want every
-    // curated example, not just the new ones.
+    // Example collection is unscoped (no `createdAfter`) and disables the
+    // positive-examples requirement — a rebuild that lands with zero
+    // positives is still a legitimate outcome (hash is refreshed, matrix
+    // becomes empty) and must not be rejected as a BadRequest.
     expect(mockActivities.collectEvaluationAlignmentExamples).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       issueId: "issue-1",
+      requirePositiveExamples: false,
     })
     // The freshly computed hash replaces the stale one so subsequent refreshes
     // are back on the incremental-eligible path.

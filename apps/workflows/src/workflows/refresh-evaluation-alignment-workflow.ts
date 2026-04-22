@@ -94,6 +94,15 @@ export const refreshEvaluationAlignmentWorkflow = async (
       organizationId: input.organizationId,
       projectId: input.projectId,
       issueId: input.issueId,
+      // `collectAlignmentExamplesUseCase` throws when there are no positive
+      // examples unless this flag is explicitly false. A rebuild triggered
+      // purely by hash drift (say, every positive annotation was deleted
+      // since the last alignment) is a legitimate reason to land with zero
+      // examples: the baseline evaluator against an empty dataset yields
+      // an empty matrix, which we still want to persist so the refreshed
+      // hash lands on the row and the next refresh is back on the
+      // incremental-eligible path.
+      requirePositiveExamples: false,
     })
     const baseline = await evaluateBaselineEvaluationDraft({
       organizationId: input.organizationId,
