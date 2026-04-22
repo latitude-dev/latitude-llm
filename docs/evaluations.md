@@ -100,8 +100,8 @@ Evaluation background work uses queue tasks in `@domain/queue`, `@platform/queue
 The main contracts are:
 
 - domain events: `SpanIngested`
-- topic tasks: `trace-end:run`, `live-evaluations:execute`
-- workflows: `evaluation-alignment`
+- topic tasks: `trace-end:run`, `live-evaluations:execute`, `evaluations:automaticRefreshAlignment`, `evaluations:automaticOptimization`
+- workflows: `refresh-evaluation-alignment`, `optimize-evaluation`
 
 Rules:
 
@@ -110,14 +110,14 @@ Rules:
 - payloads carry ids plus minimal trigger/alignment context, not full evaluation rows or full traces
 - workers and workflow activities re-fetch current evaluation/example state before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream tasks or starts workflows and never runs synchronous business logic inline
-- user-triggered issue generation starts the same aligner pipeline through the `evaluation-alignment` workflow rather than running alignment in the request itself
+- user-triggered issue generation starts the same aligner pipeline by directly starting the `optimize-evaluation` workflow rather than running alignment in the request itself
 - annotation-driven automatic realignment flows through two throttled BullMQ tasks: `evaluations:automaticRefreshAlignment` (1h throttle) starts `refresh-evaluation-alignment`, and on an incremental MCC drop that workflow publishes `evaluations:automaticOptimization` (8h throttle) which starts `optimize-evaluation`. Workflows never sleep — the queue owns both windows. Throttle (not debounce) semantics: the first publish schedules the fire time; subsequent publishes within the window are dropped by BullMQ, so a constant annotation stream cannot starve the refresh. Worst-case latency is bounded (1h for refresh, 8h for optimize) and fires are capped at once per window per evaluation
 
 User-triggered background generation contract:
 
-- when a user clicks `Generate evaluation`, the server starts the `evaluation-alignment` workflow with a stable, deterministic workflow id derived from the issue or evaluation id (one workflow per resource) and returns immediately — no `jobId` leaks back to the frontend
+- when a user clicks `Generate evaluation`, the server starts the `optimize-evaluation` workflow with a deterministic `evaluations:generate:${issueId}` workflow id and returns immediately — no `jobId` leaks back to the frontend. "Realign now" uses the same workflow with an `evaluations:optimize:${evaluationId}` id so a user-triggered run and the 8h automatic optimize share the same workflow id (any in-flight run blocks the other via Temporal's `workflowIdConflictPolicy: "FAIL"`, which the worker swallows)
 - progress is tracked by Temporal itself; Temporal is the single source of truth for workflow state, and no Redis-backed status mirror exists
-- the frontend polls `getIssueAlignmentState`, which asks Temporal directly via `workflow.describe()` for the initial run and a workflow query handler for in-flight manual-realignment state
+- the frontend polls `getIssueAlignmentState`, which asks Temporal directly via `workflow.describe()` on three deterministic ids: `evaluations:generate:${issueId}` for the initial-generation run, plus `evaluations:refreshAlignment:${evaluationId}` and `evaluations:optimize:${evaluationId}` per active linked evaluation. A running workflow at any of those ids unambiguously means "actively running" — the new workflows are linear and exit when activities finish, so there is no more "alive-but-napping" window
 - the response collapses to a minimal UI contract (`idle` / `generating` / `realigning` with `evaluationId`), intentionally omitting internal identifiers like `runId` or `currentJobId`
 - when the workflow terminates, its final status and any error are available through Temporal's own history — the UI infers "just finished" by observing the transition from `generating`/`realigning` back to `idle` across polls
 
@@ -151,13 +151,13 @@ Alignment rules from the proposal:
 - only persisted alignment primitive: confusion matrix
 - MCC (Matthews Correlation Coefficient), accuracy, F1, and other alignment metrics are derived from that confusion matrix on read
 - drafts and errored scores are excluded from alignment entirely
-- user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `evaluation-alignment` workflow
+- user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `optimize-evaluation` workflow under an `evaluations:generate:${issueId}` workflow id
 - throttled incremental metric recomputation at most once per hour per evaluation; fires at most 1h after the first annotation
 - throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first MCC-drop escalation
 - manual realignment is available and throttled
 - unchanged scripts may refresh alignment incrementally instead of fully re-optimizing
 - when the script hash is unchanged, new examples are evaluated and added into the existing confusion-matrix counters
-- throttled automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-throttled `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-throttled `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh reuses the `evaluation-alignment` workflow path until it is migrated onto `optimize-evaluation` in a follow-up change
+- throttled automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-throttled `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-throttled `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh also starts `optimize-evaluation` directly with the same `evaluations:optimize:${evaluationId}` workflow id, so a manual run and a pending automatic optimize collapse into a single in-flight run via Temporal's workflow-id dedupe
 
 These cadence and tuning values, including the default sampling percentage for newly created issue-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.
 
