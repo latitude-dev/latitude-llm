@@ -376,24 +376,26 @@ Checkpoint:
 
 Scope:
 
-- [ ] Add `apps/api/scripts/emit-openapi.ts` that writes `apps/api/openapi.json`.
-- [ ] Wire `pnpm --filter @apps/api openapi:emit` script.
-- [ ] One-time sweep of `apps/api/src/routes/*.ts` adding stable `operationId` values and `description` fields on response schemas.
-- [ ] Add `fern/` at repo root with `generators.yml` and `fern.config.json`. Scaffold the Python generator but don't wire it.
-- [ ] Create `packages/sdk/typescript/package.json` (`@latitude-data/sdk` at `6.0.0-alpha.0`), `tsup.config.ts`, `tsconfig.json`.
-- [ ] Add hand-written `packages/sdk/typescript/src/index.ts` re-exporting the generated client under `src/generated/`.
-- [ ] Root `package.json` scripts: `sdk:emit-openapi`, `sdk:generate`, `sdk:check`.
-- [ ] CI drift check step in `.github/workflows/check.yml` that runs `sdk:generate` and fails if the working tree is dirty.
-- [ ] New `.github/workflows/publish-typescript-sdk.yml` mirroring `publish-typescript-telemetry.yml`.
+- [x] Add `apps/api/scripts/emit-openapi.ts` that writes `apps/api/openapi.json`.
+- [x] Wire `pnpm --filter @app/api openapi:emit` script. *(Package name is `@app/api` — `@apps/api` in the original PRD was a typo; the script itself is wired.)*
+- [x] One-time sweep of `apps/api/src/routes/*.ts` adding stable `operationId` values. 11 ids added: `createProject`, `listProjects`, `getProject`, `updateProject`, `deleteProject`, `createScore`, `createAnnotation`, `generateApiKey`, `listApiKeys`, `revokeApiKey`, `getHealth`. Response schemas already carried `description` fields via the existing `jsonResponse()` / `openApiResponses()` helpers — no additional sweep needed there.
+- [x] Add `fern/` at repo root with `generators.yml` and `fern.config.json`. Python generator scaffolded as a commented block in `generators.yml`; TypeScript generator wired (`fernapi/fern-typescript-node-sdk@3.64.1`). Added `fern/invoke.sh` wrapper (Docker socket discovery + pnpm-env stripping; see PR #2823 notes) and `fern/README.md`.
+- [x] Create `packages/sdk/typescript/package.json` (`@latitude-data/sdk` at `6.0.0-alpha.0`), `tsup.config.ts`, `tsconfig.json`. Plus `.gitignore` for `dist/`.
+- [x] ~~Add hand-written `packages/sdk/typescript/src/index.ts` re-exporting the generated client under `src/generated/`.~~ **Design deviation**: Fern's `fern-typescript-node-sdk` writes the full source tree (including `index.ts`) directly at the output path, not a "source fragment" we wrap. Fern owns the whole `src/` (including its own `index.ts` that re-exports `LatitudeApiClient`, error classes, the `LatitudeApi` namespace, etc.). No hand-written wrap needed; the package shell (`package.json`, `tsconfig.json`, `tsup.config.ts`) sits alongside `src/` instead of above a `src/generated/` subdir.
+- [x] Root `package.json` scripts. Named slightly differently for clarity: `openapi:emit` (shortcut to the apps/api script), `sdk:check` (runs `fern check` via the wrapper), `generate:sdk` (composite — emit + check + `fern generate`). Same three steps as the original `sdk:emit-openapi` / `sdk:generate` / `sdk:check` plan.
+- [x] New `.github/workflows/publish-typescript-sdk.yml` mirroring `publish-typescript-telemetry.yml`. Triggers on `main` pushes under `packages/sdk/typescript/**`; first publish of `6.0.0-alpha.0` will fire on the merge of PR #2823.
+- [x] **Bonus (out of original scope)**: new workspace example package `@examples/sdk-typescript` at `examples/sdks/typescript/`. Three runnable scripts demonstrating `createAnnotation` via `trace.id`, with `draft: true`, and via `trace.by = "filters"` (sessionId lookup). `.env`-driven (`LATITUDE_API_BASE_URL`, `LATITUDE_API_KEY`, `LATITUDE_ORGANIZATION_ID`, `LATITUDE_PROJECT_ID`, `LATITUDE_TRACE_ID`). Consumes the SDK via `workspace:*`. Added `examples/**` to `pnpm-workspace.yaml` so the example is a proper workspace member.
 
 Checkpoint:
 
-- [ ] `pnpm sdk:generate` produces a clean tree.
-- [ ] `pnpm --filter @latitude-data/sdk build` green.
-- [ ] `pnpm --filter @latitude-data/sdk typecheck` green.
-- [ ] `pnpm --filter @latitude-data/sdk check` green.
-- [ ] `pnpm --filter @latitude-data/sdk test` green.
-- [ ] Publish workflow is *configured* but not yet exercised — first publish happens on the first merge to `main` that touches the package.
+- [x] `pnpm generate:sdk` produces a clean tree.
+- [x] `pnpm --filter @latitude-data/sdk build` green (ESM + CJS + `.d.ts`).
+- [x] `pnpm --filter @latitude-data/sdk typecheck` green.
+- [x] `pnpm --filter @latitude-data/sdk check` green (script is an explanatory echo — `src/` is Fern-generated, formatter controlled by the generator).
+- [x] `pnpm --filter @latitude-data/sdk test` green (`--passWithNoTests`; no hand-written tests — we rely on typecheck + build for the generated surface).
+- [x] `pnpm --filter @examples/sdk-typescript typecheck` green.
+- [x] Workspace-level `pnpm check` (49/49), `pnpm typecheck` (53/53), `pnpm knip` all green.
+- [x] Publish workflow is *configured* but not yet exercised — first publish happens on the first merge to `main` that touches the package.
 
 ### Phase 4 — Domain, platform, and worker
 

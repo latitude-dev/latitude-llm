@@ -8,7 +8,7 @@ import {
   type WriteScoreInput,
   writeScoreUseCase,
 } from "@domain/scores"
-import { cuidSchema, ProjectId } from "@domain/shared"
+import { cuidSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -76,6 +76,7 @@ type ApiScore = CustomScore | EvaluationScore
 const route = createRoute({
   method: "post",
   path: "/",
+  operationId: "scores.create",
   tags: ["Scores"],
   summary: "Create project score",
   description: "Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.",
@@ -136,14 +137,14 @@ export const createScoresRoutes = () => {
 
   app.openapi(route, async (c) => {
     const body = c.req.valid("json")
-    const { projectId: projectIdParam } = c.req.valid("param")
-    const projectId = ProjectId(projectIdParam)
+    const { projectSlug } = c.req.valid("param")
     const organizationId = c.var.organization.id
 
     const score = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepository = yield* ProjectRepository
-        yield* projectRepository.findById(projectId)
+        const project = yield* projectRepository.findBySlug(projectSlug)
+        const projectId = project.id
 
         const sharedWriteInput = {
           projectId,

@@ -20,12 +20,16 @@
     "migrate": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate",
     "reset": "pnpm clean && pnpm install && pnpm build && pnpm db:reset",
     "catchup": "pnpm clean && pnpm install && pnpm build && pnpm db:up",
+    "openapi:emit": "pnpm --filter @app/api openapi:emit",
+    "sdk:check": "./fern/invoke.sh check",
+    "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local --local --force",
     "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@effect/language-service": "^0.84.2",
     "@types/node": "catalog:",
+    "fern-api": "4.80.1",
     "knip": "^6.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:",

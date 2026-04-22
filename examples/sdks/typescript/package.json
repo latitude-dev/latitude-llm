@@ -1,0 +1,22 @@
+{
+  "name": "@examples/sdk-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal example: create an annotation through @latitude-data/sdk.",
+  "scripts": {
+    "annotate:byTraceId": "tsx --env-file=.env src/create-annotation.ts",
+    "annotate:draft": "tsx --env-file=.env src/create-annotation-draft.ts",
+    "annotate:byFilter": "tsx --env-file=.env src/create-annotation-by-filter.ts",
+    "apiKeys:list": "tsx --env-file=.env src/list-api-keys.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@latitude-data/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

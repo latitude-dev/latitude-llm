@@ -137,6 +137,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.14.1
+      fern-api:
+        specifier: 4.80.1
+        version: 4.80.1
       knip:
         specifier: ^6.1.0
         version: 6.4.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)
@@ -691,6 +694,22 @@ importers:
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.26)(jiti@2.6.1)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
+
+  examples/sdks/typescript:
+    dependencies:
+      '@latitude-data/sdk':
+        specifier: workspace:*
+        version: link:../../../packages/sdk/typescript
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.14.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   infra:
     dependencies:
@@ -1660,6 +1679,21 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/sdk/typescript:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.14.1
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@swc/core@1.15.26)(jiti@2.6.1)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.14.1)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.10.0)(@types/node@22.14.1)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/telemetry/claude-code:
     dependencies:
@@ -2798,6 +2832,63 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@boundaryml/baml-darwin-arm64@0.219.0':
+    resolution: {integrity: sha512-jhPN83UM+9Y99aCbzIS/3OpC7N8dOukPZO2piueIbzsmpaJrzTW+srKxYtVDE26Q9riFypOmizSs5SBFst04Fw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@boundaryml/baml-darwin-x64@0.219.0':
+    resolution: {integrity: sha512-t7pnbVT3KEE3+stOrW7nATdipCWK8OK1gTV8qiD4pN8lZwGMtJpzrVvgWeycroWCaeJ8tNsQA/V2FyFU9pqjkg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@boundaryml/baml-linux-arm64-gnu@0.219.0':
+    resolution: {integrity: sha512-a3ikRhlOdX+Lb08TaZU4k1Qb55mAHMuwArxpM1No/ltc0ylvo9EbJ4Nv0ZKemEHdngM6udagwdDxohpNzR1QTg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@boundaryml/baml-linux-arm64-musl@0.219.0':
+    resolution: {integrity: sha512-KjwJL5aXf4XvwpX3RwMau19XcHDcffhbiTX+tk41kGC4LZl7UXB4FgnOBtSOMvWtHj2f4cIN81+yCZBRsMxdNg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@boundaryml/baml-linux-x64-gnu@0.219.0':
+    resolution: {integrity: sha512-JWMhzx1LDfCPwDbOUQbFaPgNb7TUvLCb4+1TjRAJR+Z2Nl08RqNWUUfFctMEzsN6HrcHVOZ0xSl/hJRxN8OcTA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@boundaryml/baml-linux-x64-musl@0.219.0':
+    resolution: {integrity: sha512-lPosn6eJqI+8EjMI71AUEb3B9uk4dUfQgerbDyu6FvNMWx+HZDPB4UWl66+OlEeMA2Gb6DUp3LLE/Jl9/KDKSg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@boundaryml/baml-win32-arm64-msvc@0.219.0':
+    resolution: {integrity: sha512-djy9pn8s1Ogr3ovTDxDcOiM1YOhkBwNsBnlZDQzrIdR/LgSh/GGmrwW5Ks3gfa2NvvNOIFPccdUp0nDZZNsjfQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@boundaryml/baml-win32-x64-msvc@0.219.0':
+    resolution: {integrity: sha512-BJkgq/qyn3BcBZt3iyfYWirZyZrKiqa1J0OTWd45P8OQ8dJhRnU6JGcpXPTXNmkryXQFY+O4HA+lQBKA5SZ7kg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@boundaryml/baml@0.219.0':
+    resolution: {integrity: sha512-hE6t6G/1Td9yYN/T6E13igF06ZHD0J9dr5FH3tjCCZQplqTLBiVn4wyVoboK7ypjdHdGkg6O0vAcXrcbdwM6pA==}
+    engines: {node: '>= 10'}
+    hasBin: true
 
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
@@ -6116,6 +6207,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@scarf/scarf@1.4.0':
+    resolution: {integrity: sha512-xxeapPiUXdZAE3che6f3xogoJPeZgig6omHEy1rIY5WVsB3H2BHNnZH+gHG6x91SCWyQCzWGsuL2Hh3ClO5/qQ==}
+
   '@selderee/plugin-htmlparser2@0.11.0':
     resolution: {integrity: sha512-P33hHGdldxGabLFjPPpaTxVolMrzrcegejx+0GxjrIb9Zv48D8yAIA/QTDR2dFl7Uz7urX8aX6+5bCZslr+gWQ==}
 
@@ -8475,6 +8569,10 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fern-api@4.80.1:
+    resolution: {integrity: sha512-tPPrijFd5ZyZhS/uiDe7K0An5IlktJd6gvvVBRP0RxHaca7Fhk5JiOgRly6HfvwC1eARg0MbwR/8Dlk4fZx4YA==}
+    hasBin: true
 
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
@@ -13283,6 +13381,43 @@ snapshots:
   '@biomejs/cli-win32-x64@2.4.6':
     optional: true
 
+  '@boundaryml/baml-darwin-arm64@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-darwin-x64@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-linux-arm64-gnu@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-linux-arm64-musl@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-linux-x64-gnu@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-linux-x64-musl@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-win32-arm64-msvc@0.219.0':
+    optional: true
+
+  '@boundaryml/baml-win32-x64-msvc@0.219.0':
+    optional: true
+
+  '@boundaryml/baml@0.219.0':
+    dependencies:
+      '@scarf/scarf': 1.4.0
+    optionalDependencies:
+      '@boundaryml/baml-darwin-arm64': 0.219.0
+      '@boundaryml/baml-darwin-x64': 0.219.0
+      '@boundaryml/baml-linux-arm64-gnu': 0.219.0
+      '@boundaryml/baml-linux-arm64-musl': 0.219.0
+      '@boundaryml/baml-linux-x64-gnu': 0.219.0
+      '@boundaryml/baml-linux-x64-musl': 0.219.0
+      '@boundaryml/baml-win32-arm64-msvc': 0.219.0
+      '@boundaryml/baml-win32-x64-msvc': 0.219.0
+
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
@@ -16372,6 +16507,8 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.1':
     optional: true
 
+  '@scarf/scarf@1.4.0': {}
+
   '@selderee/plugin-htmlparser2@0.11.0':
     dependencies:
       domhandler: 5.0.3
@@ -19083,6 +19220,10 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
       picomatch: 4.0.4
+
+  fern-api@4.80.1:
+    dependencies:
+      '@boundaryml/baml': 0.219.0
 
   fetch-blob@3.2.0:
     dependencies:
