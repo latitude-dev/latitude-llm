@@ -51,4 +51,29 @@ describe("recordEnrichmentReviewUseCase", () => {
 
     expect(writes[0]?.feedback).toBe("Changed the meaning.")
   })
+
+  it("good uses the trimmed comment as feedback when provided", async () => {
+    const writes = await run({
+      upstreamScoreId: UPSTREAM_SCORE_ID,
+      decision: "good",
+      comment: "  Nailed the summary.  ",
+    })
+
+    expect(writes[0]).toEqual({
+      upstreamScoreId: UPSTREAM_SCORE_ID,
+      passed: true,
+      value: 1,
+      feedback: "Nailed the summary.",
+    })
+  })
+
+  it("good falls back to the default feedback when the comment is whitespace-only", async () => {
+    const writes = await run({
+      upstreamScoreId: UPSTREAM_SCORE_ID,
+      decision: "good",
+      comment: "   \n   ",
+    })
+
+    expect(writes[0]?.feedback).toBe("Good enrichment")
+  })
 })

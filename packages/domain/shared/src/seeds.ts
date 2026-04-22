@@ -308,3 +308,12 @@ export const SEED_ADMIN_EMAIL = "admin@acme.com"
 export const SEED_PROJECT_NAME = "Default Project"
 export const SEED_PROJECT_SLUG = "default-project"
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
+
+// Dogfood project — receives LLM telemetry spans emitted by Latitude's own
+// system annotator + enrichment LLM calls, and the product-feedback
+// annotations written by `@platform/latitude-api`. Kept in the same org so the
+// shared API key token works for both. Matches the default
+// `LAT_LATITUDE_TELEMETRY_PROJECT_SLUG` value in `.env.example`.
+export const SEED_LATITUDE_TELEMETRY_PROJECT_ID = ProjectId("rvknrpb3afjbcb7gzw3wlbvf")
+export const SEED_LATITUDE_TELEMETRY_PROJECT_NAME = "Latitude Telemetry"
+export const SEED_LATITUDE_TELEMETRY_PROJECT_SLUG = "latitude-telemetry"

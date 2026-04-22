@@ -36,7 +36,6 @@ export const toolCallErrorFixture: LiveSeedFixtureDefinition = {
   description: "Low-cost non-support trace that should deterministically match the Tool Call Errors system queue.",
   sampling: {
     systemQueueSamples: {
-      "tool-call-errors": true,
       frustration: false,
     },
   },

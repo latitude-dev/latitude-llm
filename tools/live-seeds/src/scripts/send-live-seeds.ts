@@ -11,6 +11,10 @@ Usage: pnpm seed:live-seeds [options]
 Options:
   --fixtures <a,b,c>             Comma-separated fixture keys to send
   --ingest-url <url>             Base URL for the ingest service
+  --project-slug <slug>          Target project slug (default: seeded default-project). When
+                                 overridden, the tool finds (or creates) the project by slug in
+                                 the Acme seed org and auto-restricts fixtures to system-queue-only.
+  --api-key-token <token>        Ingest API key (default: seed token lat_seed_default_api_key_token)
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
   --count-per-fixture <n>        Generate this many cases per selected fixture (default: 5)
   --parallel-cases <n>           Number of cases to dispatch concurrently (default: 4)
@@ -60,6 +64,8 @@ const { values, positionals } = parseArgs({
   options: {
     fixtures: { type: "string" },
     "ingest-url": { type: "string" },
+    "project-slug": { type: "string" },
+    "api-key-token": { type: "string" },
     "time-scale": { type: "string", default: "1" },
     "count-per-fixture": { type: "string", default: "5" },
     "parallel-cases": { type: "string" },
@@ -113,6 +119,8 @@ const options = {
   provisionSystemQueues,
   verboseSpans,
   ...(values.seed ? { seed: values.seed } : {}),
+  ...(values["project-slug"] ? { projectSlug: values["project-slug"] } : {}),
+  ...(values["api-key-token"] ? { apiKeyToken: values["api-key-token"] } : {}),
 }
 
 void sendLiveSeedData(options).catch((error: unknown) => {

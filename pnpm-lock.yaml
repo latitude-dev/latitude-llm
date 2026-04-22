@@ -2064,6 +2064,9 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../../packages/domain/projects
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
