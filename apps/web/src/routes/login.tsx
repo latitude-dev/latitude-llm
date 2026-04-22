@@ -6,7 +6,8 @@ import z from "zod"
 import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
-import { appendTrackingParams, pickTrackingParams } from "../lib/analytics/gtm.ts"
+import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
+import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
 
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/login")({
       throw redirect({ to: "/" })
     }
   },
+  head: () => ({ scripts: gtmHeadScripts() }),
   component: LoginPage,
 })
 
@@ -103,6 +105,8 @@ function LoginPage() {
   if (isSent) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <GtmNoScript />
+        <SignupCompleteWatcher />
         <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
           <LatitudeLogo />
 
@@ -135,6 +139,8 @@ function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <GtmNoScript />
+      <SignupCompleteWatcher />
       <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />

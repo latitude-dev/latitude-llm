@@ -1,12 +1,13 @@
 import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import { createOrganization, listOrganizations } from "../../domains/organizations/organizations.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { updateUser } from "../../domains/users/user.functions.ts"
-import { TRACKING_PARAM_KEYS } from "../../lib/analytics/gtm.ts"
+import { gtmHeadScripts, TRACKING_PARAM_KEYS } from "../../lib/analytics/gtm.ts"
+import { GtmNoScript, SignupCompleteWatcher } from "../../lib/analytics/signup-complete-watcher.tsx"
 import { authClient } from "../../lib/auth-client.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/welcome/")({
     }
     return out
   },
+  head: () => ({ scripts: gtmHeadScripts() }),
   loader: async ({ location }) => {
     const session = await getSession()
     if (!session) {
@@ -48,14 +50,13 @@ export const Route = createFileRoute("/welcome/")({
     }
 
     const orgs = await listOrganizations()
-    if (orgs && orgs.length === 1) {
+    const search = location.search as WelcomeSearch
+    if (orgs && orgs.length === 1 && !search.signup) {
       const org = orgs[0]
       // NOTE: for some reason we cannot use better auth client here so we have
       // this serverfn indirection
       await setActiveOrganization({ data: { organizationId: org.id, organizationSlug: org.slug } })
-      // Preserve signup + tracking params so SignupCompleteWatcher fires on the dashboard.
-      const search = location.search as WelcomeSearch
-      throw redirect({ to: "/", search })
+      throw redirect({ to: "/" })
     }
 
     return { organizations: (orgs ?? []) as Organization[] }
@@ -67,6 +68,18 @@ function WelcomePage() {
   const [error, setError] = useState<string>()
   const { organizations } = Route.useLoaderData()
   const router = useRouter()
+
+  // When the user was invited (single pre-existing org), auto-activate it and
+  // move on. This runs client-side so SignupCompleteWatcher has a chance to
+  // push the GTM conversion event from /welcome before we navigate.
+  useEffect(() => {
+    if (organizations.length !== 1) return
+    const org = organizations[0]
+    void (async () => {
+      await authClient.organization.setActive({ organizationId: org.id })
+      await router.navigate({ to: "/" })
+    })()
+  }, [organizations, router])
 
   const handleSelectOrg = async (orgId: string) => {
     setIsSubmitting(true)
@@ -110,9 +123,24 @@ function WelcomePage() {
     }
   }
 
+  if (organizations.length === 1) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <GtmNoScript />
+        <SignupCompleteWatcher />
+        <div className="flex flex-col items-center justify-center gap-y-6">
+          <LatitudeLogo />
+          <Text.H5 color="foregroundMuted">Setting up your workspace…</Text.H5>
+        </div>
+      </div>
+    )
+  }
+
   if (organizations.length > 1) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <GtmNoScript />
+        <SignupCompleteWatcher />
         <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
           <div className="flex flex-col items-center justify-center gap-y-6">
             <LatitudeLogo />
@@ -159,6 +187,8 @@ function WelcomePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <GtmNoScript />
+      <SignupCompleteWatcher />
       <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />

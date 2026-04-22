@@ -5,8 +5,6 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { getThemePreference } from "../domains/theme/theme.functions.ts"
-import { GTM_CONTAINER_ID } from "../lib/analytics/gtm.ts"
-import { SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
@@ -31,13 +29,6 @@ export const Route = createRootRoute({
     return { theme }
   },
   head: () => ({
-    scripts: GTM_CONTAINER_ID
-      ? [
-          {
-            children: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM_CONTAINER_ID}');`,
-          },
-        ]
-      : [],
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -82,19 +73,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
-        {GTM_CONTAINER_ID ? (
-          <noscript>
-            <iframe
-              title="Google Tag Manager"
-              src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
-              height="0"
-              width="0"
-              style={{ display: "none", visibility: "hidden" }}
-            />
-          </noscript>
-        ) : null}
         <PostHogProvider />
-        <SignupCompleteWatcher />
         <AppQueryProvider>
           <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />

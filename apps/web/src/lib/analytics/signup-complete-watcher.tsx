@@ -1,7 +1,22 @@
 import { useRouterState } from "@tanstack/react-router"
 import { useEffect, useRef } from "react"
 import { getSession } from "../../domains/sessions/session.functions.ts"
-import { pushSignupComplete, type SignupMethod, TRACKING_PARAM_KEYS } from "./gtm.ts"
+import { GTM_CONTAINER_ID, pushSignupComplete, type SignupMethod, TRACKING_PARAM_KEYS } from "./gtm.ts"
+
+export function GtmNoScript() {
+  if (!GTM_CONTAINER_ID) return null
+  return (
+    <noscript>
+      <iframe
+        title="Google Tag Manager"
+        src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+        height="0"
+        width="0"
+        style={{ display: "none", visibility: "hidden" }}
+      />
+    </noscript>
+  )
+}
 
 const SUPPORTED_METHODS: ReadonlySet<string> = new Set(["email", "google", "github"])
 
