@@ -38,7 +38,11 @@ export function hasAnyUsage(data: UsageData): boolean {
   )
 }
 
-function buildTokenSegments(data: UsageData): SegmentBarItem[] {
+export function computeTotalTokens(data: UsageData): number {
+  return data.tokensInput + data.tokensCacheRead + data.tokensCacheCreate + data.tokensOutput + data.tokensReasoning
+}
+
+export function buildTokenSegments(data: UsageData): SegmentBarItem[] {
   const prompt = data.tokensInput
   const cacheRead = data.tokensCacheRead
   const cacheCreate = data.tokensCacheCreate
@@ -54,7 +58,7 @@ function buildTokenSegments(data: UsageData): SegmentBarItem[] {
   return segments
 }
 
-function buildCostSegments(data: UsageData): SegmentBarItem[] {
+export function buildCostSegments(data: UsageData): SegmentBarItem[] {
   const input = data.costInputMicrocents
   const output = data.costOutputMicrocents
 
@@ -161,8 +165,7 @@ export function UsageSummary({
   const tokenSegments = useMemo(() => buildTokenSegments(data), [data])
   const costSegments = useMemo(() => buildCostSegments(data), [data])
 
-  const totalTokens =
-    data.tokensInput + data.tokensCacheRead + data.tokensCacheCreate + data.tokensOutput + data.tokensReasoning
+  const totalTokens = computeTotalTokens(data)
   const hasCost = data.costTotalMicrocents > 0
   const hasTokens = hasAnyUsage(data)
 
