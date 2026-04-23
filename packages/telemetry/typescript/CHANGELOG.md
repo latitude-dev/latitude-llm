@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.6] - 2026-04-23
+
+### Changed
+
+- **Lazy-load Traceloop instrumentations** — `@traceloop/instrumentation-*` packages are now `await import()`ed inside `registerLatitudeInstrumentations()` only for the instrumentation types the caller requests, instead of being statically imported when `@latitude-data/telemetry` is loaded. Importing the SDK no longer pulls every provider instrumentation (and its transitive AI SDK graph — e.g. `@langchain/core`, `langchain`) into the consumer's bundle. When a requested instrumentation's package is missing, a clear warning is logged and that instrumentation is skipped.
+
 ## [3.0.0-alpha.5] - 2026-04-17
 
 ### Fixed

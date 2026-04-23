@@ -1,13 +1,5 @@
 import type { TracerProvider } from "@opentelemetry/api"
 import { type Instrumentation, registerInstrumentations } from "@opentelemetry/instrumentation"
-import { AnthropicInstrumentation } from "@traceloop/instrumentation-anthropic"
-import { BedrockInstrumentation } from "@traceloop/instrumentation-bedrock"
-import { CohereInstrumentation } from "@traceloop/instrumentation-cohere"
-import { LangChainInstrumentation } from "@traceloop/instrumentation-langchain"
-import { LlamaIndexInstrumentation } from "@traceloop/instrumentation-llamaindex"
-import { OpenAIInstrumentation } from "@traceloop/instrumentation-openai"
-import { TogetherInstrumentation } from "@traceloop/instrumentation-together"
-import { AIPlatformInstrumentation, VertexAIInstrumentation } from "@traceloop/instrumentation-vertexai"
 
 /**
  * Supported LLM instrumentation types.
@@ -51,22 +43,63 @@ interface CreateInstrumentationsOptions {
   enrichTokens?: Partial<Record<InstrumentationType, boolean>>
 }
 
+type InstrumentationCtor = new (config?: Record<string, unknown>) => LlmInstrumentation
+
 interface InstrumentationConfig {
-  ctor: new (config?: Record<string, unknown>) => LlmInstrumentation
+  loadCtor: () => Promise<InstrumentationCtor>
+  packageName: string
   moduleName: string
   defaultEnrichTokens?: boolean
 }
 
 const INSTRUMENTATION_MAP: Record<InstrumentationType, InstrumentationConfig> = {
-  openai: { ctor: OpenAIInstrumentation, moduleName: "openai", defaultEnrichTokens: true },
-  anthropic: { ctor: AnthropicInstrumentation, moduleName: "@anthropic-ai/sdk" },
-  bedrock: { ctor: BedrockInstrumentation, moduleName: "@aws-sdk/client-bedrock-runtime" },
-  cohere: { ctor: CohereInstrumentation, moduleName: "cohere-ai" },
-  langchain: { ctor: LangChainInstrumentation, moduleName: "langchain" },
-  llamaindex: { ctor: LlamaIndexInstrumentation, moduleName: "llamaindex" },
-  togetherai: { ctor: TogetherInstrumentation, moduleName: "together-ai", defaultEnrichTokens: false },
-  vertexai: { ctor: VertexAIInstrumentation, moduleName: "@google-cloud/vertexai" },
-  aiplatform: { ctor: AIPlatformInstrumentation, moduleName: "@google-cloud/aiplatform" },
+  openai: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-openai")).OpenAIInstrumentation,
+    packageName: "@traceloop/instrumentation-openai",
+    moduleName: "openai",
+    defaultEnrichTokens: true,
+  },
+  anthropic: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-anthropic")).AnthropicInstrumentation,
+    packageName: "@traceloop/instrumentation-anthropic",
+    moduleName: "@anthropic-ai/sdk",
+  },
+  bedrock: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-bedrock")).BedrockInstrumentation,
+    packageName: "@traceloop/instrumentation-bedrock",
+    moduleName: "@aws-sdk/client-bedrock-runtime",
+  },
+  cohere: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-cohere")).CohereInstrumentation,
+    packageName: "@traceloop/instrumentation-cohere",
+    moduleName: "cohere-ai",
+  },
+  langchain: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-langchain")).LangChainInstrumentation,
+    packageName: "@traceloop/instrumentation-langchain",
+    moduleName: "langchain",
+  },
+  llamaindex: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-llamaindex")).LlamaIndexInstrumentation,
+    packageName: "@traceloop/instrumentation-llamaindex",
+    moduleName: "llamaindex",
+  },
+  togetherai: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-together")).TogetherInstrumentation,
+    packageName: "@traceloop/instrumentation-together",
+    moduleName: "together-ai",
+    defaultEnrichTokens: false,
+  },
+  vertexai: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-vertexai")).VertexAIInstrumentation,
+    packageName: "@traceloop/instrumentation-vertexai",
+    moduleName: "@google-cloud/vertexai",
+  },
+  aiplatform: {
+    loadCtor: async () => (await import("@traceloop/instrumentation-vertexai")).AIPlatformInstrumentation,
+    packageName: "@traceloop/instrumentation-vertexai",
+    moduleName: "@google-cloud/aiplatform",
+  },
 }
 
 /**
@@ -83,8 +116,18 @@ async function createLatitudeInstrumentations(options: CreateInstrumentationsOpt
       continue
     }
 
+    let Ctor: InstrumentationCtor
+    try {
+      Ctor = await config.loadCtor()
+    } catch {
+      console.warn(
+        `[Latitude] Instrumentation package not installed for ${type}: ${config.packageName}. Add it as a dependency to enable this instrumentation.`,
+      )
+      continue
+    }
+
     const enrichTokens = options.enrichTokens?.[type] ?? config.defaultEnrichTokens
-    const inst = new config.ctor(enrichTokens !== undefined ? { enrichTokens } : undefined)
+    const inst = new Ctor(enrichTokens !== undefined ? { enrichTokens } : undefined)
 
     // Get module from explicit options or try to auto-require
     const moduleRef = options.modules?.[type] ?? (await tryRequire(config.moduleName))

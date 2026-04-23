@@ -8,7 +8,7 @@ export default defineConfig({
   platform: "node",
   deps: {
     alwaysBundle: [/@(platform|domain|repo)\/.*/],
-    neverBundle: ["@temporalio/worker"],
+    neverBundle: ["@temporalio/worker", /^@traceloop\//, /^@langchain\//, /^langchain($|\/)/],
   },
   sourcemap: true,
   shims: true,
