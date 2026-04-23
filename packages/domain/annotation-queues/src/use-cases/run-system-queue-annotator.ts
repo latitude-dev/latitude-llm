@@ -8,7 +8,7 @@ import {
   formatGenAIMessage,
 } from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
+import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import {
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
@@ -40,6 +40,21 @@ export interface RunSystemQueueAnnotatorResult {
 }
 
 export type RunSystemQueueAnnotatorError = RepositoryError | AIError | AICredentialError
+
+/**
+ * Input for the pure annotator (no repository dependency).
+ *
+ * Callers that already hold a `TraceDetail` use this shape with
+ * {@link annotateTraceForQueueUseCase}.
+ */
+export interface AnnotateTraceForQueueInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly queueSlug: string
+  readonly traceId: string
+  readonly scoreId: string
+  readonly trace: TraceDetail
+}
 
 const ANNOTATOR_SYSTEM_PROMPT_TEMPLATE = `
 You are an annotation assistant reviewing LLM conversations for a specific quality queue.
@@ -101,23 +116,24 @@ const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
     })
   })
 
-export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
-  input: RunSystemQueueAnnotatorInput,
+/**
+ * Draft annotation feedback from an already-loaded trace.
+ *
+ * Pure annotator — no repository dependency, no data loading. Callers that
+ * already hold a `TraceDetail` (eval harnesses, experiment runners) use this
+ * directly; production paths use {@link runSystemQueueAnnotatorUseCase}, which
+ * fetches the trace and delegates here.
+ */
+export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotateTraceForQueue")(function* (
+  input: AnnotateTraceForQueueInput,
 ) {
-  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
-
   const ai = yield* AI
-
-  const trace = yield* loadTraceDetail(input)
 
   const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
 
   const conversationText =
-    trace.allMessages.length > 0
-      ? formatConversationForAnnotator(trace.allMessages)
+    input.trace.allMessages.length > 0
+      ? formatConversationForAnnotator(input.trace.allMessages)
       : "<no conversation messages available>"
 
   const prompt = `Full conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
@@ -140,6 +156,24 @@ export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSys
 
   return {
     feedback: result.object.feedback,
-    traceCreatedAt: trace.startTime.toISOString(),
+    traceCreatedAt: input.trace.startTime.toISOString(),
   }
+})
+
+/**
+ * Load the trace via the repository, then draft its annotation.
+ *
+ * Production entry point — used by the Temporal activity in
+ * `systemQueueFlaggerWorkflow` after a match.
+ */
+export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
+  input: RunSystemQueueAnnotatorInput,
+) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+
+  const trace = yield* loadTraceDetail(input)
+  return yield* annotateTraceForQueueUseCase({ ...input, trace })
 })
