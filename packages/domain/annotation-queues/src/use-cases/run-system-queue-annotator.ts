@@ -127,11 +127,6 @@ const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
 export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotateTraceForQueue")(function* (
   input: AnnotateTraceForQueueInput,
 ) {
-  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
-
   const ai = yield* AI
 
   const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
@@ -174,6 +169,11 @@ export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotate
 export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
   input: RunSystemQueueAnnotatorInput,
 ) {
+  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+
   const trace = yield* loadTraceDetail(input)
   return yield* annotateTraceForQueueUseCase({ ...input, trace })
 })

@@ -124,11 +124,6 @@ function runDeterministicDetection(queueSlug: string, trace: TraceDetail): Detec
 export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classifyTraceForQueue")(function* (
   input: ClassifyTraceForQueueInput,
 ) {
-  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
-
   if (!hasQueueStrategy(input.queueSlug)) {
     return { matched: false }
   }
