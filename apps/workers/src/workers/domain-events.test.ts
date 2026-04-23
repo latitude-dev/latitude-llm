@@ -40,7 +40,6 @@ describe("domain-events dispatcher", () => {
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      emailFlow: null,
       organizationId: "org-1",
     })
 
@@ -52,7 +51,6 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.payload).toEqual({
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      emailFlow: null,
       organizationId: "org-1",
     })
     expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)

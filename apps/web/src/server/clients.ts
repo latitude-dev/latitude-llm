@@ -30,23 +30,6 @@ let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
 
-const getEmailFlowFromMagicLinkUrl = ({
-  magicLinkUrl,
-  webUrl,
-}: {
-  magicLinkUrl: string
-  webUrl: string
-}): "signin" | "signup" | null => {
-  const parsedMagicLinkUrl = new URL(magicLinkUrl)
-  const callbackUrl = parsedMagicLinkUrl.searchParams.get("callbackURL")
-
-  if (!callbackUrl) return null
-
-  const parsedCallbackUrl = new URL(callbackUrl, webUrl)
-  const emailFlowRaw = parsedCallbackUrl.searchParams.get("emailFlow")
-  return emailFlowRaw === "signin" || emailFlowRaw === "signup" ? emailFlowRaw : null
-}
-
 /**
  * Postgres client using the admin (superuser) connection.
  * Use this only for cross-org operations that must bypass RLS:
@@ -208,8 +191,6 @@ export const getBetterAuth = () => {
         )
       },
       sendMagicLink: async ({ email, url }) => {
-        const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })
-
         await Effect.runPromise(
           outboxWriter
             .write({
@@ -221,7 +202,6 @@ export const getBetterAuth = () => {
                 email,
                 magicLinkUrl: url,
                 organizationId: "system",
-                emailFlow,
               },
             })
             .pipe(withTracing),

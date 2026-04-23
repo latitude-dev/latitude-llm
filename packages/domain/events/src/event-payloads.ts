@@ -10,7 +10,6 @@ export interface EventPayloads {
   MagicLinkEmailRequested: {
     readonly email: string
     readonly magicLinkUrl: string
-    readonly emailFlow: string | null
     readonly organizationId: string
   }
   InvitationEmailRequested: {

@@ -53,10 +53,7 @@ function LoginPage() {
     setIsLoading(true)
     setError(undefined)
 
-    const callbackPath = redirectPath ?? "/"
-    const emailFlow = redirectPath ? "signin" : undefined
-    const separator = callbackPath.includes("?") ? "&" : "?"
-    const callbackURL = emailFlow ? `${callbackPath}${separator}emailFlow=${emailFlow}` : callbackPath
+    const callbackURL = redirectPath ?? "/"
     const tracking = pickTrackingParams(window.location.search)
     const newUserCallbackURL = appendTrackingParams(redirectPath ?? "/welcome", { ...tracking, signup: "email" })
 
