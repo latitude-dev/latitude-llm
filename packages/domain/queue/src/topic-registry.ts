@@ -22,7 +22,6 @@ const _registry = {
     send: {
       readonly email: string
       readonly magicLinkUrl: string
-      readonly emailFlow: string | null
       readonly organizationId: string
     }
   }>(),
