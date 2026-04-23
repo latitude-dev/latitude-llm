@@ -234,7 +234,7 @@ export function TraceOutlierBadge({
     )
 
   return (
-    <Tooltip asChild={onThresholdClick !== undefined} trigger={trigger}>
+    <Tooltip asChild trigger={trigger}>
       <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} value={value} />
     </Tooltip>
   )
