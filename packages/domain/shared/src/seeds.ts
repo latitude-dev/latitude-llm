@@ -237,6 +237,12 @@ export const SEED_ALIGNMENT_FIXTURE_SPAN_IDS: readonly string[] = Array.from({ l
   fixedSpanHex("bf", 100 + i),
 )
 
+/** 4 demo trace IDs for JSON-formatted assistant responses (compact + prettified). */
+export const SEED_JSON_RESPONSE_TRACE_IDS: readonly string[] = Array.from({ length: 4 }, (_, i) =>
+  fixedTraceHex("1f", i),
+)
+export const SEED_JSON_RESPONSE_SPAN_IDS: readonly string[] = Array.from({ length: 4 }, (_, i) => fixedSpanHex("1f", i))
+
 /** 5 lifecycle score trace IDs */
 export const SEED_LIFECYCLE_TRACE_IDS: readonly string[] = [
   "11111111111111111111111111111111",

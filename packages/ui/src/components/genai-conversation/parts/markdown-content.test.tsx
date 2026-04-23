@@ -65,9 +65,10 @@ describe("MarkdownContent", () => {
     expect(markup).toContain('data-content-type="json"')
     expect(markup).toContain("data-source-start")
     expect(markup).toContain("data-source-end")
-    // Concatenated text content must equal the original source verbatim —
-    // this is the invariant annotation offsets depend on.
-    expect(textContentOf(markup)).toBe(json)
+    // Compact JSON is pretty-printed with 2-space indent, and the DOM text
+    // matches the prettified string verbatim (the invariant that annotation
+    // offsets depend on holds against that string).
+    expect(textContentOf(markup)).toBe(JSON.stringify(JSON.parse(json), null, 2))
     // Must NOT go through Markdown: no <p>, no <strong>.
     expect(markup).not.toContain("<p>")
   })
@@ -77,18 +78,27 @@ describe("MarkdownContent", () => {
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
 
     expect(markup).toContain('data-content-type="json"')
-    expect(textContentOf(markup)).toBe(json)
+    expect(textContentOf(markup)).toBe(JSON.stringify(JSON.parse(json), null, 2))
   })
 
-  it("renders verbatim: JSON offsets index into the original content", () => {
-    const json = '{ "a": 1 }'
+  it("keeps already-multiline JSON verbatim so producer formatting is preserved", () => {
+    const json = '{\n  "a": 1\n}'
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
 
-    // Offsets start at 0 and the final segment reaches the full content length
-    // (with syntax highlighting the content is split into tokens, but together
-    // they cover the whole range).
+    expect(markup).toContain('data-content-type="json"')
+    expect(textContentOf(markup)).toBe(json)
     expect(markup).toContain(`data-source-start="0"`)
     expect(markup).toContain(`data-source-end="${json.length}"`)
+  })
+
+  it("pretty-prints compact JSON so offsets index into the reformatted content", () => {
+    const json = '{ "a": 1 }'
+    const pretty = JSON.stringify(JSON.parse(json), null, 2)
+    const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
+
+    // Offsets start at 0 and the final segment reaches the prettified length.
+    expect(markup).toContain(`data-source-start="0"`)
+    expect(markup).toContain(`data-source-end="${pretty.length}"`)
   })
 
   it("applies JSON syntax highlighting to JsonContent", () => {
@@ -105,14 +115,15 @@ describe("MarkdownContent", () => {
 
   it("preserves source-offset coverage through the full JSON after tokenization", () => {
     const json = '{"key":"value"}'
+    const pretty = JSON.stringify(JSON.parse(json), null, 2)
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
 
-    // All source offsets together should cover the full content: first starts
-    // at 0 and the last one ends at content.length.
+    // All source offsets together should cover the full prettified content:
+    // first starts at 0 and the last one ends at pretty.length.
     const starts = [...markup.matchAll(/data-source-start="(\d+)"/g)].map((m) => Number(m[1]))
     const ends = [...markup.matchAll(/data-source-end="(\d+)"/g)].map((m) => Number(m[1]))
     expect(Math.min(...starts)).toBe(0)
-    expect(Math.max(...ends)).toBe(json.length)
+    expect(Math.max(...ends)).toBe(pretty.length)
   })
 
   it("applies syntax highlighting to Markdown code fences", () => {
