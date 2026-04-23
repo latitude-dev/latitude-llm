@@ -8,7 +8,7 @@
     "dev": "email dev -d ./src/templates -p 3001",
     "check": "biome check .",
     "format": "biome format --write . && biome check --fix .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@react-email/components": "^1.0.9",
@@ -20,7 +20,8 @@
     "@biomejs/biome": "catalog:",
     "@react-email/preview-server": "5.2.9",
     "@types/react": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "react-email": "5.2.9",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
