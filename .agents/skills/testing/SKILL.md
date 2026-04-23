@@ -24,7 +24,7 @@ Test utilities (fakes, in-memory DB helpers, fixtures) must **not** be exported 
 ```
 
 - Consumers: `import { Fake } from "@platform/my-package/testing"`
-- Biome `noRestrictedImports` blocks test paths in production source; tsup fails the build if test code is resolved from prod entry points
+- Biome `noRestrictedImports` blocks test paths in production source; tsdown fails the build if test code is resolved from prod entry points
 
 ## Conventions
 

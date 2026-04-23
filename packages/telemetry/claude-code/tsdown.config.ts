@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup"
+import { defineConfig } from "tsdown"
 
 export default defineConfig([
   {
@@ -8,6 +8,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     target: "node20",
+    fixedExtension: false,
     banner: { js: "#!/usr/bin/env node" },
   },
   {
@@ -19,5 +20,6 @@ export default defineConfig([
     sourcemap: true,
     clean: false,
     target: "node20",
+    fixedExtension: false,
   },
 ])

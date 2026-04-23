@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.0.0-alpha.5",
+  "version": "3.0.0-alpha.6",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -36,10 +36,10 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -74,11 +74,12 @@
     "langchain": "^1.2.39",
     "llamaindex": "^0.12.1",
     "openai": "^6.33.0",
-    "tsup": "^8.0.0",
+    "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5.5.4"
+    "typescript": "^6.0.3"
   }
 }
