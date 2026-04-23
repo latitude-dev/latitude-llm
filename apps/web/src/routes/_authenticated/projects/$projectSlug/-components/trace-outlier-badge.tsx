@@ -134,7 +134,6 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMe
     <div className="relative h-1.5 rounded-full bg-muted">
       <div className="absolute inset-0 flex overflow-hidden rounded-full">
         {rendered.map((z, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: zones are positional and never reorder within one render
           <div key={i} className={z.className} style={{ flexBasis: `${z.width}%` }} />
         ))}
       </div>
@@ -169,7 +168,7 @@ function OutlierTooltip({
     <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
-          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with
+          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with{" "}
           {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
         </Text.H6>
         {tags.length > 0 && <TagBadgeList tags={tags} />}
