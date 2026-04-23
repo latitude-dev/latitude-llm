@@ -1,4 +1,5 @@
 import type {
+  ChSqlClient,
   FilterSet,
   IssueId,
   OrganizationId,
@@ -119,18 +120,18 @@ export interface ScoreAnalyticsOptions {
 }
 
 export interface ScoreAnalyticsRepositoryShape {
-  existsById(id: ScoreId): Effect.Effect<boolean, RepositoryError>
+  existsById(id: ScoreId): Effect.Effect<boolean, RepositoryError, ChSqlClient>
   // TODO(repositories): rename insert -> save to keep repository write verbs
   // consistent across append-only and upsert-backed stores.
-  insert(score: Score): Effect.Effect<void, RepositoryError>
-  delete(id: ScoreId): Effect.Effect<void, RepositoryError>
+  insert(score: Score): Effect.Effect<void, RepositoryError, ChSqlClient>
+  delete(id: ScoreId): Effect.Effect<void, RepositoryError, ChSqlClient>
 
   // -- Project-wide aggregates -----------------------------------------------
   aggregateByProject(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<ScoreAggregate, RepositoryError>
+  }): Effect.Effect<ScoreAggregate, RepositoryError, ChSqlClient>
 
   // -- Source-scoped aggregates ----------------------------------------------
   aggregateBySource(input: {
@@ -139,7 +140,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly source: ScoreSource
     readonly sourceId: string
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<ScoreAggregate, RepositoryError>
+  }): Effect.Effect<ScoreAggregate, RepositoryError, ChSqlClient>
 
   // -- Source trend (time-series) --------------------------------------------
   trendBySource(input: {
@@ -149,7 +150,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly sourceId: string
     readonly days?: number // default 14
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly ScoreTrendBucket[], RepositoryError>
+  }): Effect.Effect<readonly ScoreTrendBucket[], RepositoryError, ChSqlClient>
 
   // -- Project-wide trend ---------------------------------------------------
   trendByProject(input: {
@@ -157,7 +158,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly projectId: ProjectId
     readonly days?: number // default 14
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly ScoreTrendBucket[], RepositoryError>
+  }): Effect.Effect<readonly ScoreTrendBucket[], RepositoryError, ChSqlClient>
 
   // -- Trace-level rollups for score-aware filtering -------------------------
   rollupByTraceIds(input: {
@@ -165,7 +166,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly TraceScoreRollup[], RepositoryError>
+  }): Effect.Effect<readonly TraceScoreRollup[], RepositoryError, ChSqlClient>
 
   // -- Session-level rollups for score-aware filtering -----------------------
   rollupBySessionIds(input: {
@@ -173,7 +174,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly projectId: ProjectId
     readonly sessionIds: readonly SessionId[]
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly SessionScoreRollup[], RepositoryError>
+  }): Effect.Effect<readonly SessionScoreRollup[], RepositoryError, ChSqlClient>
 
   // -- Issue occurrence aggregates for lifecycle -----------------------------
   aggregateByIssues(input: {
@@ -181,7 +182,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly projectId: ProjectId
     readonly issueIds: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError>
+  }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
 
   // -- Issue occurrence time-series ------------------------------------------
   trendByIssue(input: {
@@ -190,7 +191,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueId: IssueId
     readonly days?: number // default 30
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError>
+  }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError, ChSqlClient>
   listIssueWindowMetrics(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -198,7 +199,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly timeRange?: ScoreAnalyticsTimeRange
     readonly issueIds?: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly IssueWindowMetric[], RepositoryError>
+  }): Effect.Effect<readonly IssueWindowMetric[], RepositoryError, ChSqlClient>
   histogramByIssues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -206,7 +207,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly filters?: FilterSet
     readonly timeRange: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError>
+  }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError, ChSqlClient>
   trendByIssues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -214,13 +215,13 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly filters?: FilterSet
     readonly timeRange: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<readonly IssueTrendSeries[], RepositoryError>
+  }): Effect.Effect<readonly IssueTrendSeries[], RepositoryError, ChSqlClient>
   countDistinctTracesByTimeRange(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly timeRange?: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<number, RepositoryError>
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
   listTracesByIssue(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -228,7 +229,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly limit?: number
     readonly offset?: number
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<IssueTracePage, RepositoryError>
+  }): Effect.Effect<IssueTracePage, RepositoryError, ChSqlClient>
 }
 
 export class ScoreAnalyticsRepository extends ServiceMap.Service<

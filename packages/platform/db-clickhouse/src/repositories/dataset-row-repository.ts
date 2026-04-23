@@ -131,11 +131,13 @@ const INSERT_BATCH_SIZE = 500
 export const DatasetRowRepositoryLive = Layer.effect(
   DatasetRowRepository,
   Effect.gen(function* () {
-    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    yield* ChSqlClient
 
     return {
       findExistingTraceIds: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           if (args.traceIds.length === 0) return new Set<TraceId>()
 
           const result = await client
@@ -161,12 +163,15 @@ export const DatasetRowRepositoryLive = Layer.effect(
             .then((r) => r.json<{ trace_id: string }>())
 
           return new Set(result.map((r) => TraceId(r.trace_id)))
+        })
         }),
 
       // TODO(repositories): rename insertBatch -> saveBatch so repository write
       // verbs converge on save/saveBatch instead of insert/insertBatch.
       insertBatch: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           const values = args.rows.map((row) => ({
             organization_id: organizationId,
             dataset_id: args.datasetId,
@@ -187,10 +192,13 @@ export const DatasetRowRepositoryLive = Layer.effect(
           }
 
           return args.rows.map((r) => r.id)
+        })
         }),
 
       list: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           const limit = args.limit ?? 50
           const sortDirection: RowSortDirection = args.sortDirection ?? "desc"
           const versionClause = buildVersionClause(args.version)
@@ -275,10 +283,13 @@ export const DatasetRowRepositoryLive = Layer.effect(
               : undefined
 
           return nextCursor ? { rows, total: totalCount, nextCursor } : { rows, total: totalCount }
+        })
         }),
 
       count: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           const params: Record<string, unknown> = {
             organizationId,
             datasetId: args.datasetId,
@@ -300,10 +311,13 @@ export const DatasetRowRepositoryLive = Layer.effect(
             .then((r) => r.json<{ total: string }>())
 
           return Number(countResult[0]?.total ?? 0)
+        })
         }),
 
       listPage: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           const params: Record<string, unknown> = {
             organizationId,
             datasetId: args.datasetId,
@@ -327,10 +341,12 @@ export const DatasetRowRepositoryLive = Layer.effect(
             .then((r) => r.json<DatasetRowCH>())
 
           return dataResult.map((row) => toDomainRow(row, args.datasetId))
+        })
         }),
 
       findById: (args) =>
         Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const result = yield* chSqlClient.query(async (client, organizationId) => {
             const params: Record<string, unknown> = {
               organizationId,
@@ -374,7 +390,9 @@ export const DatasetRowRepositoryLive = Layer.effect(
           return result
         }),
       updateRow: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           await client.insert({
             table: "dataset_rows",
             values: [
@@ -390,9 +408,12 @@ export const DatasetRowRepositoryLive = Layer.effect(
             ],
             format: "JSONEachRow",
           })
+        })
         }),
       deleteBatch: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           if (args.rowIds.length === 0) return
 
           const values = args.rowIds.map((rowId) => ({
@@ -414,9 +435,12 @@ export const DatasetRowRepositoryLive = Layer.effect(
               format: "JSONEachRow",
             })
           }
+        })
         }),
       deleteAll: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
           const excluded = args.excludedRowIds ?? []
           const excludeClause = excluded.length > 0 ? "AND row_id NOT IN ({excludedRowIds:Array(String)})" : ""
 
@@ -467,6 +491,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
           }
 
           return activeRows.length
+        })
         }),
     }
   }),

@@ -11,6 +11,7 @@ import {
   IssueRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  SqlClientLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -150,7 +151,7 @@ export const deleteProject = createServerFn({ method: "POST" })
             projectId: data.id,
           },
         })
-        .pipe(withTracing),
+        .pipe(Effect.provide(SqlClientLive(client, organizationId)), withTracing),
     )
   })
 

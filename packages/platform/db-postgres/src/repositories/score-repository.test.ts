@@ -7,7 +7,17 @@ import {
   writeScoreUseCase,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  IssueId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SessionId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -33,6 +43,10 @@ const createWriteProvider = (database: InMemoryPostgres, organizationId: string)
         OrganizationId(organizationId),
       ),
       Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Effect.provideService(
+        ChSqlClient,
+        createFakeChSqlClient({ organizationId: OrganizationId(organizationId) }),
+      ),
     )
 }
 

@@ -1,4 +1,5 @@
-import { deterministicSampling } from "@domain/shared"
+import { ChSqlClient, deterministicSampling, OrganizationId } from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
@@ -30,7 +31,10 @@ describe("selectTraceEndItemsUseCase", () => {
             },
           },
         },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+      ),
     )
 
     expect(result).toEqual({
@@ -66,7 +70,10 @@ describe("selectTraceEndItemsUseCase", () => {
             sampling: 100,
           },
         },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+      ),
     )
 
     expect(result).toEqual({
@@ -121,7 +128,10 @@ describe("selectTraceEndItemsUseCase", () => {
             sampleKey: "eval-2",
           },
         },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+      ),
     )
 
     expect(listMatchingFilterIdsByTraceId).toHaveBeenCalledTimes(1)
@@ -160,7 +170,10 @@ describe("selectTraceEndItemsUseCase", () => {
             sampleKey,
           },
         },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+      ),
     )
 
     expect(result[itemKey]).toEqual(

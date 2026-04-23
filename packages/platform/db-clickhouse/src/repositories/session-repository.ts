@@ -203,28 +203,30 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const SessionRepositoryLive = Layer.effect(
   SessionRepository,
   Effect.gen(function* () {
-    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    yield* ChSqlClient
 
-    const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
-      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-      const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-      const cmp = orderDir === "DESC" ? "<" : ">"
-      const limit = options.limit ?? 50
+    const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+        const cmp = orderDir === "DESC" ? "<" : ">"
+        const limit = options.limit ?? 50
 
-      const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
-      const havingParts: string[] = [...havingClauses]
-      if (options.cursor) {
-        havingParts.push(
-          `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
-              OR (${sort.expr} = {cursorSortValue:${sort.chType}}
-                  AND session_id ${cmp} {cursorSessionId:String}))`,
-        )
-      }
-      const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        const havingParts: string[] = [...havingClauses]
+        if (options.cursor) {
+          havingParts.push(
+            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+                OR (${sort.expr} = {cursorSortValue:${sort.chType}}
+                    AND session_id ${cmp} {cursorSessionId:String}))`,
+          )
+        }
+        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-      return chSqlClient
+        return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
             query: `SELECT ${LIST_SELECT}
@@ -267,17 +269,19 @@ export const SessionRepositoryLive = Layer.effect(
           }),
           Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
         )
-    }
+      })
 
     return {
       listByProjectId,
 
-      countByProjectId: ({ organizationId, projectId, filters }) => {
-        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+      countByProjectId: ({ organizationId, projectId, filters }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
+          return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT count() AS total
@@ -303,14 +307,16 @@ export const SessionRepositoryLive = Layer.effect(
             Effect.map((rows) => Number(rows[0]?.total ?? 0)),
             Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
           )
-      },
+        }),
 
-      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
-        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
+          return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT
@@ -352,21 +358,23 @@ export const SessionRepositoryLive = Layer.effect(
             Effect.map((rows) => toSessionMetrics(rows[0])),
             Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
           )
-      },
+        }),
 
-      distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) => {
-        const COLUMN_EXPRS: Record<string, string> = {
-          tags: "arrayJoin(groupUniqArrayArray(tags))",
-          models: "arrayJoin(groupUniqArrayIfMerge(models))",
-          providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
-          serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
-        }
-        const expr = COLUMN_EXPRS[column]
-        if (!expr) return Effect.succeed([])
+      distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const COLUMN_EXPRS: Record<string, string> = {
+            tags: "arrayJoin(groupUniqArrayArray(tags))",
+            models: "arrayJoin(groupUniqArrayIfMerge(models))",
+            providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
+            serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
+          }
+          const expr = COLUMN_EXPRS[column]
+          if (!expr) return []
 
-        const searchClause = search ? " AND val ILIKE {search:String}" : ""
+          const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-        return chSqlClient
+          return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT DISTINCT val FROM (
@@ -393,7 +401,7 @@ export const SessionRepositoryLive = Layer.effect(
             Effect.map((rows) => rows.map((r) => r.val)),
             Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
           )
-      },
+        }),
     }
   }),
 )

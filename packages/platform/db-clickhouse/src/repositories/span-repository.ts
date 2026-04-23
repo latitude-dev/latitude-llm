@@ -306,10 +306,12 @@ const toInsertRow = (span: SpanDetail) => ({
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
-    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    yield* ChSqlClient
 
     const listByTraceId: SpanRepositoryShape["listByTraceId"] = ({ organizationId, traceId }) =>
-      chSqlClient
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
             query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
@@ -325,9 +327,12 @@ export const SpanRepositoryLive = Layer.effect(
           Effect.map((rows) => rows.map(toDomainSpan)),
           Effect.mapError((error) => toRepositoryError(error, "listByTraceId")),
         )
+      })
 
     const listByProjectId: SpanRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
-      chSqlClient
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
             query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
@@ -356,12 +361,15 @@ export const SpanRepositoryLive = Layer.effect(
           Effect.map((rows) => rows.map(toDomainSpan)),
           Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
         )
+      })
 
     return {
       // TODO(repositories): rename insert -> save to keep repository write
       // verbs consistent across append-only and upsert-backed stores.
       insert: (spans: readonly SpanDetail[]) =>
-        chSqlClient
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
           .query(async (client) => {
             if (spans.length === 0) return
             await client.insert({
@@ -375,14 +383,17 @@ export const SpanRepositoryLive = Layer.effect(
               },
             })
           })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert"))),
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert")))
+        }),
 
       listByTraceId,
 
       listByProjectId,
 
       findBySpanId: ({ organizationId, traceId, spanId }) =>
-        chSqlClient
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT * FROM spans FINAL
@@ -408,10 +419,13 @@ export const SpanRepositoryLive = Layer.effect(
               return Effect.succeed(toDomainSpanDetail(first))
             }),
             Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findBySpanId"))),
-          ),
+          )
+        }),
 
       findMessagesForTrace: ({ organizationId, traceId }) =>
-        chSqlClient
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
@@ -428,7 +442,8 @@ export const SpanRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => rows.map(toDomainSpanMessages)),
             Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
-          ),
+          )
+        }),
     }
   }),
 )

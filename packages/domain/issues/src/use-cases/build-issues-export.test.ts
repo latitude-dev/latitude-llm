@@ -1,8 +1,8 @@
 import { type EvaluationListPage, EvaluationRepository, type EvaluationRepositoryShape } from "@domain/evaluations"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { ChSqlClient, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Issue } from "../entities/issue.ts"
@@ -152,6 +152,7 @@ describe("buildIssuesExportUseCase", () => {
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
       ),
     )
 
@@ -246,6 +247,7 @@ describe("buildIssuesExportUseCase", () => {
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
       ),
     )
 

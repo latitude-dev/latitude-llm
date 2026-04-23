@@ -147,7 +147,9 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     expect(result.version).toBe(1)
     expect(result.rowIds.length).toBe(1)
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: DATASET_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
     expect(rows.length).toBe(1)
     expect(rows[0].input).toBeDefined()
     expect(rows[0].output).toBeDefined()
@@ -176,7 +178,9 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     )
     expect(dataset.name).toBe("from-traces-dataset")
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: result.datasetId }))
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: result.datasetId }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
     expect(rows.length).toBe(traceIds.length)
     for (const row of rows) {
       expect(row.input).toBeDefined()

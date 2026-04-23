@@ -1,6 +1,16 @@
 import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
@@ -84,7 +94,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(INPUT).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -131,7 +147,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(INPUT).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -161,7 +183,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     const exit = await Effect.runPromise(
       Effect.exit(
         runSystemQueueAnnotatorUseCase(INPUT).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(TraceRepository, traceRepo),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+              aiLayer,
+            ),
+          ),
         ),
       ),
     )
@@ -203,7 +231,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(unknownQueueInput).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -243,7 +277,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(refusalInput).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 

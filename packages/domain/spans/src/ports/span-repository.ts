@@ -1,4 +1,12 @@
-import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
+import type {
+  ChSqlClient,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
@@ -21,29 +29,29 @@ export interface SpanMessagesData {
 export interface SpanRepositoryShape {
   // TODO(repositories): rename insert -> save to keep repository write verbs
   // consistent across append-only and upsert-backed stores.
-  insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
+  insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError, ChSqlClient>
 
   listByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
-  }): Effect.Effect<readonly Span[], RepositoryError>
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: SpanListOptions
-  }): Effect.Effect<readonly Span[], RepositoryError>
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
   findBySpanId(input: {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
     readonly spanId: SpanId
-  }): Effect.Effect<SpanDetail, NotFoundError | RepositoryError>
+  }): Effect.Effect<SpanDetail, NotFoundError | RepositoryError, ChSqlClient>
 
   findMessagesForTrace(input: {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
-  }): Effect.Effect<readonly SpanMessagesData[], RepositoryError>
+  }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
 }
 
 export interface SpanListOptions {

@@ -1,3 +1,4 @@
+import type { ChSqlClient } from "@domain/shared"
 import {
   OrganizationId,
   ProjectId,
@@ -11,6 +12,7 @@ import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { scoreSeeders } from "../seeds/scores/index.ts"
 import { fixedTraceSeeders } from "../seeds/spans/fixed-traces.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
@@ -110,6 +112,9 @@ if (firstScoreSeeder === undefined) {
 
 const ch = setupTestClickHouse()
 
+const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
+
 describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
 
@@ -128,7 +133,7 @@ describe("TraceRepository", () => {
 
   describe("matchesFiltersByTraceId", () => {
     it("returns true when the trace matches the canonical filter semantics", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -143,7 +148,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns false when the trace does not match the filters", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -158,7 +163,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns false for a missing trace id", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -189,7 +194,7 @@ describe("TraceRepository", () => {
 
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
 
-      const baseline = await Effect.runPromise(
+      const baseline = await runCh(
         repo.getCohortBaselineByProjectId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -213,7 +218,7 @@ describe("TraceRepository", () => {
 
   describe("findByTraceId", () => {
     it("prepends system instructions as first message in allMessages", async () => {
-      const detail = await Effect.runPromise(
+      const detail = await runCh(
         repo.findByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -228,7 +233,7 @@ describe("TraceRepository", () => {
     })
 
     it("allMessages starts with system message when systemInstructions present", async () => {
-      const detail = await Effect.runPromise(
+      const detail = await runCh(
         repo.findByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -251,7 +256,7 @@ describe("TraceRepository", () => {
 
   describe("listMatchingFilterIdsByTraceId", () => {
     it("returns the filter ids that match one trace", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -278,7 +283,7 @@ describe("TraceRepository", () => {
     })
 
     it("supports independent score-backed filters in the same batch", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -312,7 +317,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns an empty list when the trace does not exist", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,

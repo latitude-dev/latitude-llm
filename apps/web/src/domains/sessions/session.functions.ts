@@ -1,10 +1,11 @@
 import { generateId, UnauthorizedError } from "@domain/shared"
+import { SqlClientLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 
 /** Throws {@link UnauthorizedError} when there is no authenticated session (for use inside server handlers). */
 export function assertAuthenticatedSession<T>(session: T | null | undefined): asserts session is NonNullable<T> {
@@ -72,7 +73,7 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
         },
         occurredAt: new Date(),
       })
-      .pipe(withTracing),
+      .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
   )
 
   // Revoke the session so the user is logged out

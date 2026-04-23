@@ -1,4 +1,5 @@
 import {
+  ChSqlClient,
   ExternalUserId,
   IssueId,
   OrganizationId,
@@ -10,7 +11,7 @@ import {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -122,6 +123,7 @@ function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShap
           Layer.succeed(EvaluationAlignmentExamplesRepository, exampleRepository),
           Layer.succeed(TraceRepository, traceRepository),
           Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+          Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: ORGANIZATION_ID })),
         ),
       ),
     ),

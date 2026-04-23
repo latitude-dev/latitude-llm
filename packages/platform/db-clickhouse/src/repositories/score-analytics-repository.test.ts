@@ -1,9 +1,10 @@
 import type { ScoreAnalyticsOptions, ScoreAnalyticsRepositoryShape } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import { IssueId, OrganizationId, ProjectId, type ScoreId, SessionId, TraceId } from "@domain/shared"
+import { type ChSqlClient, IssueId, OrganizationId, ProjectId, type ScoreId, SessionId, TraceId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { ScoreAnalyticsRepositoryLive } from "./score-analytics-repository.ts"
 
@@ -11,6 +12,9 @@ const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
 const PROJECT_ID = ProjectId("pppppppppppppppppppppppp")
 
 const ch = setupTestClickHouse()
+
+const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
 // Helper to create a score analytics row for insertion
 function makeScoreRow(overrides: Partial<Record<string, unknown>> = {}) {
@@ -72,14 +76,14 @@ describe("ScoreAnalyticsRepository", () => {
 
   describe("existsById / insert", () => {
     it("returns false for non-existent score", async () => {
-      const exists = await Effect.runPromise(repo.existsById("zzzzzzzzzzzzzzzzzzzzzzzz" as ScoreId))
+      const exists = await runCh(repo.existsById("zzzzzzzzzzzzzzzzzzzzzzzz" as ScoreId))
       expect(exists).toBe(false)
     })
 
     it("returns true after insert", async () => {
       const id = "aaaaaaaaaaaaaaaaaaaaaaaa"
       await insertScores([makeScoreRow({ id })])
-      const exists = await Effect.runPromise(repo.existsById(id as ScoreId))
+      const exists = await runCh(repo.existsById(id as ScoreId))
       expect(exists).toBe(true)
     })
   })
@@ -93,18 +97,18 @@ describe("ScoreAnalyticsRepository", () => {
       const id = "dddddddddddddddddddddddd"
       await insertScores([makeScoreRow({ id, value: 0.99, passed: true, cost: 999, tokens: 10, duration: 1 })])
 
-      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(true)
+      expect(await runCh(repo.existsById(id as ScoreId))).toBe(true)
 
-      const beforeAgg = await Effect.runPromise(
+      const beforeAgg = await runCh(
         repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
       )
       const countBefore = beforeAgg.totalScores
 
-      await Effect.runPromise(repo.delete(id as ScoreId))
+      await runCh(repo.delete(id as ScoreId))
 
-      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(false)
+      expect(await runCh(repo.existsById(id as ScoreId))).toBe(false)
 
-      const afterAgg = await Effect.runPromise(
+      const afterAgg = await runCh(
         repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
       )
       expect(afterAgg.totalScores).toBe(countBefore - 1)
@@ -125,7 +129,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns correct project-wide aggregates", async () => {
-      const agg = await Effect.runPromise(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
+      const agg = await runCh(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
       expect(agg.totalScores).toBe(3)
       expect(agg.passedCount).toBe(1)
       expect(agg.failedCount).toBe(1)
@@ -136,7 +140,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns empty aggregate for non-existent project", async () => {
-      const agg = await Effect.runPromise(
+      const agg = await runCh(
         repo.aggregateByProject({
           organizationId: ORG_ID,
           projectId: ProjectId("xxxxxxxxxxxxxxxxxxxxxxxx"),
@@ -163,7 +167,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("scopes aggregate to the requested source", async () => {
-      const agg = await Effect.runPromise(
+      const agg = await runCh(
         repo.aggregateBySource({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -177,7 +181,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns zero for unmatched source", async () => {
-      const agg = await Effect.runPromise(
+      const agg = await runCh(
         repo.aggregateBySource({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -223,7 +227,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns daily trend buckets", async () => {
-      const trend = await Effect.runPromise(
+      const trend = await runCh(
         repo.trendBySource({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -253,7 +257,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns daily project-wide trend", async () => {
-      const trend = await Effect.runPromise(
+      const trend = await runCh(
         repo.trendByProject({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -288,7 +292,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns per-trace rollups", async () => {
-      const rollups = await Effect.runPromise(
+      const rollups = await runCh(
         repo.rollupByTraceIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -314,7 +318,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns empty for no trace ids", async () => {
-      const rollups = await Effect.runPromise(
+      const rollups = await runCh(
         repo.rollupByTraceIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -340,7 +344,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns per-session rollups", async () => {
-      const rollups = await Effect.runPromise(
+      const rollups = await runCh(
         repo.rollupBySessionIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -371,7 +375,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns per-issue occurrence aggregates", async () => {
-      const aggs = await Effect.runPromise(
+      const aggs = await runCh(
         repo.aggregateByIssues({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -388,7 +392,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns empty for no issue ids", async () => {
-      const aggs = await Effect.runPromise(
+      const aggs = await runCh(
         repo.aggregateByIssues({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -415,7 +419,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns daily occurrence buckets", async () => {
-      const trend = await Effect.runPromise(
+      const trend = await runCh(
         repo.trendByIssue({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -476,7 +480,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("lists issue window metrics within the selected range and score filters", async () => {
-      const metrics = await Effect.runPromise(
+      const metrics = await runCh(
         repo.listIssueWindowMetrics({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -498,7 +502,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("builds grouped histogram and per-issue trends for the requested issue ids", async () => {
-      const histogram = await Effect.runPromise(
+      const histogram = await runCh(
         repo.histogramByIssues({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -506,7 +510,7 @@ describe("ScoreAnalyticsRepository", () => {
           timeRange: { from, to },
         }),
       )
-      const trend = await Effect.runPromise(
+      const trend = await runCh(
         repo.trendByIssues({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -536,7 +540,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("counts distinct traces inside the selected issue window", async () => {
-      const total = await Effect.runPromise(
+      const total = await runCh(
         repo.countDistinctTracesByTimeRange({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -548,7 +552,7 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("lists distinct traces for one issue newest-first with pagination", async () => {
-      const page = await Effect.runPromise(
+      const page = await runCh(
         repo.listTracesByIssue({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -585,14 +589,14 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("includes simulations by default", async () => {
-      const agg = await Effect.runPromise(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
+      const agg = await runCh(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
       expect(agg.totalScores).toBe(2)
       expect(agg.totalCost).toBe(300)
     })
 
     it("excludes simulations when requested", async () => {
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
-      const agg = await Effect.runPromise(
+      const agg = await runCh(
         repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, options }),
       )
       expect(agg.totalScores).toBe(1)
@@ -606,7 +610,7 @@ describe("ScoreAnalyticsRepository", () => {
         makeScoreRow({ simulation_id: "", value: 0.9, passed: true, created_at: recentDate }),
       ])
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
-      const trend = await Effect.runPromise(
+      const trend = await runCh(
         repo.trendByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, days: 30, options }),
       )
       const totalScores = trend.reduce((sum, b) => sum + b.totalScores, 0)
@@ -621,7 +625,7 @@ describe("ScoreAnalyticsRepository", () => {
       ])
 
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
-      const rollups = await Effect.runPromise(
+      const rollups = await runCh(
         repo.rollupByTraceIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,

@@ -3,6 +3,7 @@ import { createFakeAI } from "@domain/ai/testing"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
+  ChSqlClient,
   ExternalUserId,
   NotFoundError,
   OrganizationId,
@@ -14,7 +15,7 @@ import {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
 import { SpanRepository, TraceRepository } from "@domain/spans"
 import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } from "@domain/spans/testing"
@@ -152,6 +153,7 @@ function createEnrichLayers(initialScore?: Score, generateOverride?: AIGenerate,
       Layer.succeed(TraceRepository, traceRepository),
       Layer.succeed(SpanRepository, spanRepository),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(cuid) })),
     ),
   }
 }

@@ -7,7 +7,14 @@ import {
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
 } from "@domain/scores"
-import { cuidSchema, OrganizationId, ProjectId, type RepositoryError, type SqlClient } from "@domain/shared"
+import {
+  type ChSqlClient,
+  cuidSchema,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  type SqlClient,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { type Issue, IssueState } from "../entities/issue.ts"
@@ -307,7 +314,12 @@ export const listIssuesUseCase = (
 ): Effect.Effect<
   ListIssuesResult,
   ListIssuesError,
-  EvaluationRepository | IssueProjectionRepository | IssueRepository | ScoreAnalyticsRepository | SqlClient
+  | ChSqlClient
+  | EvaluationRepository
+  | IssueProjectionRepository
+  | IssueRepository
+  | ScoreAnalyticsRepository
+  | SqlClient
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
