@@ -8,9 +8,9 @@ export {
   searchEntityTypeSchema,
   type UnifiedSearchResult,
   type UserMembership,
-  userMembershipSchema,
   type UserSearchResult,
   unifiedSearchResultSchema,
+  userMembershipSchema,
   userSearchResultSchema,
 } from "./entities/search-result.ts"
 export { AdminSearchRepository } from "./ports/admin-search-repository.ts"
