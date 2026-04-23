@@ -1,8 +1,8 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
 import { ArrowLeft, Search, ShieldAlertIcon } from "lucide-react"
-import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 
 // Extract to a named helper so both `beforeLoad` (the parent gate) and the
