@@ -84,6 +84,65 @@ function CohortBaseline({
   )
 }
 
+function TraceValueRow({ value, metric, p50 }: { value: number; metric: TraceCohortMetric; p50: number }) {
+  const ratio = p50 > 0 ? value / p50 : null
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <Text.H6 color="foregroundMuted">This trace</Text.H6>
+      <div className="flex items-baseline gap-2">
+        <Text.H5 weight="medium">{formatValue({ value, metric })}</Text.H5>
+        {ratio !== null && ratio >= 1.05 && <Text.H6 color="foregroundMuted">{ratio.toFixed(1)}× median</Text.H6>}
+      </div>
+    </div>
+  )
+}
+
+function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMetric]; value: number }) {
+  const p50 = baseline.p50
+  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
+  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
+  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
+
+  if (p50 <= 0) return null
+
+  const zones: { upperBound: number; className: string }[] = [{ upperBound: p50, className: "bg-muted-foreground/25" }]
+  if (p90 !== null) zones.push({ upperBound: p90, className: "bg-sky-400/60" })
+  if (p95 !== null) zones.push({ upperBound: p95, className: "bg-amber-400/70" })
+  if (p99 !== null) zones.push({ upperBound: p99, className: "bg-red-400/70" })
+
+  // Extend the last zone to enclose the trace's value so the marker always lands
+  // inside a colored region that matches its badge level.
+  const last = zones[zones.length - 1]
+  if (!last) return null
+  if (value > last.upperBound) last.upperBound = value
+
+  const max = last.upperBound * 1.05
+  const pct = (v: number) => (v / max) * 100
+
+  let cursor = 0
+  const rendered = zones.map((z) => {
+    const width = pct(z.upperBound - cursor)
+    cursor = z.upperBound
+    return { className: z.className, width }
+  })
+
+  return (
+    <div className="relative h-1.5 rounded-full bg-muted">
+      <div className="absolute inset-0 flex overflow-hidden rounded-full">
+        {rendered.map((z, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: zones are positional and never reorder within one render
+          <div key={i} className={z.className} style={{ flexBasis: `${z.width}%` }} />
+        ))}
+      </div>
+      <div
+        aria-hidden
+        className="absolute -top-1 -bottom-1 w-0.5 bg-foreground rounded-sm"
+        style={{ left: `${pct(value)}%`, transform: "translateX(-50%)" }}
+      />
+    </div>
+  )
+}
+
 /**
  * A tooltip that explains that the outlier is only scoped to the subset of traces that match the given tags.
  * And then displays the baseline values for the given metric.
@@ -93,20 +152,27 @@ function OutlierTooltip({
   cohorts,
   metric,
   level,
+  value,
 }: {
   tags: ReadonlyArray<string>
   cohorts: TraceCohortSummary
   metric: TraceCohortMetric
   level: TraceOutlierLevel
+  value: number
 }) {
+  const baseline = cohorts.baselines[metric]
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
           This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with
           {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
         </Text.H6>
         {tags.length > 0 && <TagBadgeList tags={tags} />}
+      </div>
+      <div className="flex flex-col gap-2">
+        <TraceValueRow value={value} metric={metric} p50={baseline.p50} />
+        <QuantileStrip baseline={baseline} value={value} />
       </div>
       <div className="flex flex-col gap-1">
         {/* p50 */}
@@ -165,7 +231,7 @@ export function TraceOutlierBadge({
 
   return (
     <Tooltip asChild trigger={trigger}>
-      <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} />
+      <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} value={value} />
     </Tooltip>
   )
 }
