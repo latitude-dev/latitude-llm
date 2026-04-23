@@ -67,10 +67,9 @@ function buildLexicalSearchSubquery(searchQuery: string): { subquery: string; pa
   // Normalize the search query for token matching
   const normalizedQuery = searchQuery.trim().toLowerCase()
 
-  // CAST(trace_id AS String): FixedString(32) can't represent SQL NULL, so a
-  // FULL OUTER JOIN miss would zero-fill the FixedString instead of producing
-  // NULL. coalesce(l.trace_id, s.trace_id) then picks the zero bytes and the
-  // downstream inner join finds nothing. String cast preserves NULL semantics.
+  // CAST(trace_id AS String): both UNION ALL branches must produce the same
+  // trace_id type, and the semantic branch returns String (post-cast) so the
+  // lexical branch matches.
   return {
     subquery: `SELECT CAST(trace_id AS String) AS trace_id, 1.0 AS lexical_score FROM trace_search_documents
               WHERE organization_id = {organizationId:String}
@@ -648,7 +647,6 @@ export const TraceRepositoryLive = Layer.effect(
     }
 
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
-      const hasSearch = hasActiveSearchQuery(options.searchQuery)
       const limit = options.limit ?? 50
 
       const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
@@ -659,8 +657,8 @@ export const TraceRepositoryLive = Layer.effect(
       // paginable like any other filter column — no external rerank call, no
       // candidate-pool cap. The precision filter is the HAVING clause inside
       // `buildHybridSearchSubquery` using `TRACE_SEARCH_MIN_RELEVANCE_SCORE`.
-      if (hasSearch) {
-        const searchQuery = options.searchQuery as string
+      if (hasActiveSearchQuery(options.searchQuery)) {
+        const searchQuery = options.searchQuery
         return Effect.gen(function* () {
           const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
           const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
