@@ -9,6 +9,7 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import { getTraceCohortSummaryByTagsUseCase, mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -197,7 +198,11 @@ export const getTraceCohortSummaryByTags = createServerFn({ method: "GET" })
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
         tags: data.tags,
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
     )
   })
 
