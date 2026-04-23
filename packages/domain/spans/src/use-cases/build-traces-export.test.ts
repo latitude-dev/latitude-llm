@@ -64,10 +64,7 @@ describe("buildTracesExportUseCase", () => {
         selection: { mode: "selected", rowIds: [firstTrace.traceId, secondTrace.traceId] },
       }).pipe(
         Effect.provideService(TraceRepository, repository),
-        Effect.provideService(
-          ChSqlClient,
-          createFakeChSqlClient({ organizationId: OrganizationId(organizationId) }),
-        ),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 

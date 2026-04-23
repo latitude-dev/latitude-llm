@@ -312,30 +312,30 @@ export const SpanRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
                     WHERE organization_id = {organizationId:String}
                       AND trace_id = {traceId:FixedString(32)}
                     ORDER BY start_time ASC`,
-            query_params: { organizationId: organizationId as string, traceId },
-            format: "JSONEachRow",
+              query_params: { organizationId: organizationId as string, traceId },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanListRow>()
           })
-          return result.json<SpanListRow>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map(toDomainSpan)),
-          Effect.mapError((error) => toRepositoryError(error, "listByTraceId")),
-        )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listByTraceId")),
+          )
       })
 
     const listByProjectId: SpanRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
                       AND ({hasStartFrom:Bool} = false OR start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
@@ -343,24 +343,24 @@ export const SpanRepositoryLive = Layer.effect(
                     ORDER BY start_time DESC
                     LIMIT {limit:UInt32}
                     OFFSET {offset:UInt32}`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              hasStartFrom: options.startTimeFrom !== undefined,
-              startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-              hasStartTo: options.startTimeTo !== undefined,
-              startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
-              limit: options.limit ?? 50,
-              offset: options.offset ?? 0,
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                hasStartFrom: options.startTimeFrom !== undefined,
+                startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
+                hasStartTo: options.startTimeTo !== undefined,
+                startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                limit: options.limit ?? 50,
+                offset: options.offset ?? 0,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanListRow>()
           })
-          return result.json<SpanListRow>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map(toDomainSpan)),
-          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-        )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+          )
       })
 
     return {
@@ -370,20 +370,20 @@ export const SpanRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            if (spans.length === 0) return
-            await client.insert({
-              table: "spans",
-              values: spans.map(toInsertRow),
-              format: "JSONEachRow",
-              // Let CH buffer concurrent inserts into larger blocks to reduce part creation and merge pressure
-              clickhouse_settings: {
-                async_insert: 1,
-                wait_for_async_insert: 1,
-              },
+            .query(async (client) => {
+              if (spans.length === 0) return
+              await client.insert({
+                table: "spans",
+                values: spans.map(toInsertRow),
+                format: "JSONEachRow",
+                // Let CH buffer concurrent inserts into larger blocks to reduce part creation and merge pressure
+                clickhouse_settings: {
+                  async_insert: 1,
+                  wait_for_async_insert: 1,
+                },
+              })
             })
-          })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert")))
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "insert")))
         }),
 
       listByTraceId,
@@ -394,55 +394,55 @@ export const SpanRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT * FROM spans FINAL
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT * FROM spans FINAL
                       WHERE organization_id = {organizationId:String}
                         AND trace_id = {traceId:FixedString(32)}
                         AND span_id = {spanId:FixedString(16)}
                       LIMIT 1`,
-              query_params: {
-                organizationId: organizationId as string,
-                traceId,
-                spanId,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  traceId,
+                  spanId,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SpanDetailRow>()
             })
-            return result.json<SpanDetailRow>()
-          })
-          .pipe(
-            Effect.flatMap((rows) => {
-              const first = rows[0]
-              if (!first) {
-                return Effect.fail(new NotFoundError({ entity: "Span", id: spanId as string }))
-              }
-              return Effect.succeed(toDomainSpanDetail(first))
-            }),
-            Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findBySpanId"))),
-          )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const first = rows[0]
+                if (!first) {
+                  return Effect.fail(new NotFoundError({ entity: "Span", id: spanId as string }))
+                }
+                return Effect.succeed(toDomainSpanDetail(first))
+              }),
+              Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findBySpanId"))),
+            )
         }),
 
       findMessagesForTrace: ({ organizationId, traceId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
                       FROM spans FINAL
                       WHERE organization_id = {organizationId:String}
                         AND trace_id = {traceId:FixedString(32)}
                         AND operation IN ('chat', 'text_completion', 'execute_tool')
                       ORDER BY start_time ASC`,
-              query_params: { organizationId: organizationId as string, traceId },
-              format: "JSONEachRow",
+                query_params: { organizationId: organizationId as string, traceId },
+                format: "JSONEachRow",
+              })
+              return result.json<SpanMessagesRow>()
             })
-            return result.json<SpanMessagesRow>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map(toDomainSpanMessages)),
-            Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
-          )
+            .pipe(
+              Effect.map((rows) => rows.map(toDomainSpanMessages)),
+              Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
+            )
         }),
     }
   }),

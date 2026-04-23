@@ -33,7 +33,10 @@ describe("selectTraceEndItemsUseCase", () => {
         },
       }).pipe(
         Effect.provideService(TraceRepository, repository),
-        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+        Effect.provideService(
+          ChSqlClient,
+          createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+        ),
       ),
     )
 
@@ -72,7 +75,10 @@ describe("selectTraceEndItemsUseCase", () => {
         },
       }).pipe(
         Effect.provideService(TraceRepository, repository),
-        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+        Effect.provideService(
+          ChSqlClient,
+          createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+        ),
       ),
     )
 
@@ -130,7 +136,10 @@ describe("selectTraceEndItemsUseCase", () => {
         },
       }).pipe(
         Effect.provideService(TraceRepository, repository),
-        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+        Effect.provideService(
+          ChSqlClient,
+          createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+        ),
       ),
     )
 
@@ -172,7 +181,10 @@ describe("selectTraceEndItemsUseCase", () => {
         },
       }).pipe(
         Effect.provideService(TraceRepository, repository),
-        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+        Effect.provideService(
+          ChSqlClient,
+          createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+        ),
       ),
     )
 

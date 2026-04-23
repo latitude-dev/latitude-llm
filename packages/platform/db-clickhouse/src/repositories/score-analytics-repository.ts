@@ -360,16 +360,16 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client, organizationId) => {
-            const result = await client.query({
-              query:
-                "SELECT id FROM scores WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)} LIMIT 1",
-              query_params: { organizationId, id },
-              format: "JSONEachRow",
+            .query(async (client, organizationId) => {
+              const result = await client.query({
+                query:
+                  "SELECT id FROM scores WHERE organization_id = {organizationId:String} AND id = {id:FixedString(24)} LIMIT 1",
+                query_params: { organizationId, id },
+                format: "JSONEachRow",
+              })
+              return result.json<{ id: string }>()
             })
-            return result.json<{ id: string }>()
-          })
-          .pipe(Effect.map((rows) => rows.length > 0))
+            .pipe(Effect.map((rows) => rows.length > 0))
         }),
 
       // TODO(repositories): rename insert -> save to keep repository write
@@ -378,12 +378,12 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient.query(async (client) => {
-          await client.insert({
-            table: "scores",
-            values: [toAnalyticsRow(score)],
-            format: "JSONEachRow",
+            await client.insert({
+              table: "scores",
+              values: [toAnalyticsRow(score)],
+              format: "JSONEachRow",
+            })
           })
-        })
         }),
 
       // -- aggregateByProject ------------------------------------------------
@@ -391,17 +391,17 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${AGGREGATE_SELECT}
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${AGGREGATE_SELECT}
                       FROM scores
                       WHERE ${scopeClause(options)}`,
-              query_params: scopeParams(organizationId, projectId),
-              format: "JSONEachRow",
+                query_params: scopeParams(organizationId, projectId),
+                format: "JSONEachRow",
+              })
+              return result.json<AggregateRow>()
             })
-            return result.json<AggregateRow>()
-          })
-          .pipe(Effect.map((rows) => toAggregate(rows[0])))
+            .pipe(Effect.map((rows) => toAggregate(rows[0])))
         }),
 
       // -- aggregateBySource -------------------------------------------------
@@ -409,23 +409,23 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${AGGREGATE_SELECT}
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${AGGREGATE_SELECT}
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND source = {source:FixedString(32)}
                         AND source_id = {sourceId:FixedString(128)}`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                source: source as string,
-                sourceId,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  source: source as string,
+                  sourceId,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<AggregateRow>()
             })
-            return result.json<AggregateRow>()
-          })
-          .pipe(Effect.map((rows) => toAggregate(rows[0])))
+            .pipe(Effect.map((rows) => toAggregate(rows[0])))
         }),
 
       // -- trendBySource -----------------------------------------------------
@@ -434,9 +434,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const lookback = days ?? 14
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${TREND_SELECT}
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${TREND_SELECT}
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND source = {source:FixedString(32)}
@@ -444,17 +444,17 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         AND created_at >= now() - INTERVAL {days:UInt32} DAY
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                source: source as string,
-                sourceId,
-                days: lookback,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  source: source as string,
+                  sourceId,
+                  days: lookback,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TrendRow>()
             })
-            return result.json<TrendRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toTrendBucket)))
+            .pipe(Effect.map((rows) => rows.map(toTrendBucket)))
         }),
 
       // -- trendByProject ----------------------------------------------------
@@ -463,23 +463,23 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const lookback = days ?? 14
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${TREND_SELECT}
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${TREND_SELECT}
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND created_at >= now() - INTERVAL {days:UInt32} DAY
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                days: lookback,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  days: lookback,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TrendRow>()
             })
-            return result.json<TrendRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toTrendBucket)))
+            .pipe(Effect.map((rows) => rows.map(toTrendBucket)))
         }),
 
       // -- rollupByTraceIds --------------------------------------------------
@@ -488,9 +488,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (traceIds.length === 0) return []
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         trace_id,
                         count()                                              AS total_scores,
                         countIf(passed = true AND errored = false)           AS passed_count,
@@ -503,15 +503,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       WHERE ${scopeClause(options)}
                         AND trace_id IN ({traceIds:Array(String)})
                       GROUP BY trace_id`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                traceIds: Array.from(traceIds) as string[],
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  traceIds: Array.from(traceIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceRollupRow>()
             })
-            return result.json<TraceRollupRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toTraceRollup)))
+            .pipe(Effect.map((rows) => rows.map(toTraceRollup)))
         }),
 
       // -- rollupBySessionIds ------------------------------------------------
@@ -520,9 +520,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (sessionIds.length === 0) return []
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         session_id,
                         count()                                              AS total_scores,
                         countIf(passed = true AND errored = false)           AS passed_count,
@@ -535,15 +535,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       WHERE ${scopeClause(options)}
                         AND session_id IN ({sessionIds:Array(String)})
                       GROUP BY session_id`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                sessionIds: Array.from(sessionIds) as string[],
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  sessionIds: Array.from(sessionIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionRollupRow>()
             })
-            return result.json<SessionRollupRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toSessionRollup)))
+            .pipe(Effect.map((rows) => rows.map(toSessionRollup)))
         }),
 
       // -- aggregateByIssues -------------------------------------------------
@@ -552,9 +552,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (issueIds.length === 0) return []
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         issue_id,
                         count()                                                AS total_occurrences,
                         countIf(created_at >= now() - INTERVAL 1 DAY)          AS recent_occurrences,
@@ -569,15 +569,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       WHERE ${scopeClause(options)}
                         AND issue_id IN ({issueIds:Array(String)})
                       GROUP BY issue_id`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                issueIds: Array.from(issueIds) as string[],
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueIds: Array.from(issueIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueOccurrenceRow>()
             })
-            return result.json<IssueOccurrenceRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+            .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
         }),
 
       // -- trendByIssue ------------------------------------------------------
@@ -586,9 +586,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const lookback = days ?? 30
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         toDate(created_at) AS bucket,
                         count()            AS count
                       FROM scores
@@ -597,16 +597,16 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         AND created_at >= now() - INTERVAL {days:UInt32} DAY
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                issueId: issueId as string,
-                days: lookback,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueId: issueId as string,
+                  days: lookback,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueOccurrenceBucketRow>()
             })
-            return result.json<IssueOccurrenceBucketRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+            .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
         }),
       listIssueWindowMetrics: ({ organizationId, projectId, filters, timeRange, issueIds, options }) =>
         Effect.gen(function* () {
@@ -624,9 +624,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         issue_id,
                         count()         AS occurrences,
                         min(created_at) AS first_seen_at,
@@ -634,15 +634,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
                       GROUP BY issue_id`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                ...params,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  ...params,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueWindowMetricRow>()
             })
-            return result.json<IssueWindowMetricRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toIssueWindowMetric)))
+            .pipe(Effect.map((rows) => rows.map(toIssueWindowMetric)))
         }),
       histogramByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) =>
         Effect.gen(function* () {
@@ -660,24 +660,24 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         toDate(created_at) AS bucket,
                         count()            AS count
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                ...params,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  ...params,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueOccurrenceBucketRow>()
             })
-            return result.json<IssueOccurrenceBucketRow>()
-          })
-          .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+            .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
         }),
       trendByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) =>
         Effect.gen(function* () {
@@ -695,9 +695,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         issue_id,
                         toDate(created_at) AS bucket,
                         count()            AS count
@@ -705,15 +705,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       WHERE ${scopeClause(options)}${extraWhere}
                       GROUP BY issue_id, bucket
                       ORDER BY issue_id ASC, bucket ASC`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                ...params,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  ...params,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueTrendSeriesRow>()
             })
-            return result.json<IssueTrendSeriesRow>()
-          })
-          .pipe(Effect.map(toIssueTrendSeries))
+            .pipe(Effect.map(toIssueTrendSeries))
         }),
       countDistinctTracesByTimeRange: ({ organizationId, projectId, timeRange, options }) =>
         Effect.gen(function* () {
@@ -722,21 +722,21 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT uniqExact(trace_id) AS total
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT uniqExact(trace_id) AS total
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND trace_id != ''${extraWhere}`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                ...params,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  ...params,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<CountRow>()
             })
-            return result.json<CountRow>()
-          })
-          .pipe(Effect.map((rows) => Number(rows[0]?.total ?? 0)))
+            .pipe(Effect.map((rows) => Number(rows[0]?.total ?? 0)))
         }),
       listTracesByIssue: ({ organizationId, projectId, issueId, limit, offset, options }) =>
         Effect.gen(function* () {
@@ -745,9 +745,9 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const pageOffset = offset ?? 0
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         trace_id,
                         max(created_at) AS last_seen_at
                       FROM scores
@@ -758,28 +758,28 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       ORDER BY last_seen_at DESC, trace_id DESC
                       LIMIT {limit:UInt32}
                       OFFSET {offset:UInt32}`,
-              query_params: {
-                ...scopeParams(organizationId, projectId),
-                issueId: issueId as string,
-                limit: pageLimit + 1,
-                offset: pageOffset,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueId: issueId as string,
+                  limit: pageLimit + 1,
+                  offset: pageOffset,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueTraceSummaryRow>()
             })
-            return result.json<IssueTraceSummaryRow>()
-          })
-          .pipe(
-            Effect.map((rows): IssueTracePage => {
-              const items = rows.slice(0, pageLimit).map(toIssueTraceSummary)
-              return {
-                items,
-                hasMore: rows.length > pageLimit,
-                limit: pageLimit,
-                offset: pageOffset,
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "listTracesByIssue")),
-          )
+            .pipe(
+              Effect.map((rows): IssueTracePage => {
+                const items = rows.slice(0, pageLimit).map(toIssueTraceSummary)
+                return {
+                  items,
+                  hasMore: rows.length > pageLimit,
+                  limit: pageLimit,
+                  offset: pageOffset,
+                }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "listTracesByIssue")),
+            )
         }),
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.
       delete: deleteScore,

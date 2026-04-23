@@ -43,10 +43,7 @@ const createWriteProvider = (database: InMemoryPostgres, organizationId: string)
         OrganizationId(organizationId),
       ),
       Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-      Effect.provideService(
-        ChSqlClient,
-        createFakeChSqlClient({ organizationId: OrganizationId(organizationId) }),
-      ),
+      Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
     )
 }
 

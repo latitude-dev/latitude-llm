@@ -211,9 +211,7 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const deleted = await runCh(
-        repo.deleteAll({ datasetId: DATASET_ID, version: 2, excludedRowIds: [keep] }),
-      )
+      const deleted = await runCh(repo.deleteAll({ datasetId: DATASET_ID, version: 2, excludedRowIds: [keep] }))
 
       expect(deleted).toBe(2)
 
@@ -290,9 +288,7 @@ describe("DatasetRowClickHouseRepository", () => {
 
   describe("findById", () => {
     it("returns RowNotFoundError for non-existent row", async () => {
-      const result = await runChExit(
-        repo.findById({ datasetId: DATASET_ID, rowId: DatasetRowId("nonexistent") }),
-      )
+      const result = await runChExit(repo.findById({ datasetId: DATASET_ID, rowId: DatasetRowId("nonexistent") }))
 
       expect(result._tag).toBe("Failure")
     })
@@ -310,9 +306,7 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const { rows, nextCursor } = await runCh(
-        repo.list({ datasetId: DATASET_ID, limit: 2, sortDirection: "desc" }),
-      )
+      const { rows, nextCursor } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 2, sortDirection: "desc" }))
 
       expect(rows.length).toBe(2)
       expect(nextCursor).toBeDefined()
@@ -331,9 +325,7 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const { rows, nextCursor } = await runCh(
-        repo.list({ datasetId: DATASET_ID, limit: 5, sortDirection: "desc" }),
-      )
+      const { rows, nextCursor } = await runCh(repo.list({ datasetId: DATASET_ID, limit: 5, sortDirection: "desc" }))
 
       expect(rows.length).toBeGreaterThanOrEqual(2)
       expect(nextCursor).toBeUndefined()
@@ -464,13 +456,9 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const v1Result = await runCh(
-        repo.list({ datasetId: DATASET_ID, version: 1, limit: 10, sortDirection: "desc" }),
-      )
+      const v1Result = await runCh(repo.list({ datasetId: DATASET_ID, version: 1, limit: 10, sortDirection: "desc" }))
 
-      const v3Result = await runCh(
-        repo.list({ datasetId: DATASET_ID, version: 3, limit: 10, sortDirection: "desc" }),
-      )
+      const v3Result = await runCh(repo.list({ datasetId: DATASET_ID, version: 3, limit: 10, sortDirection: "desc" }))
 
       const v1Row = v1Result.rows.find((r) => r.rowId === rowId)
       const v3Row = v3Result.rows.find((r) => r.rowId === rowId)

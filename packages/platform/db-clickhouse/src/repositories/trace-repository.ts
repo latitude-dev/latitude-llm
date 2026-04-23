@@ -347,9 +347,9 @@ export const TraceRepositoryLive = Layer.effect(
         const excludeClause = excludeTraceId ? `AND trace_id != {excludeTraceId:FixedString(32)}` : ""
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
                       count() AS trace_count,
                       countIf(duration_ns > 0) AS duration_ns_samples,
                       quantileTDigestIf(0.5)(duration_ns, duration_ns > 0) AS duration_ns_p50,
@@ -381,107 +381,107 @@ export const TraceRepositoryLive = Layer.effect(
                       GROUP BY organization_id, project_id, trace_id
                       ${havingClause}
                     )`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              ...filterParams,
-              ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                ...filterParams,
+                ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{
+              trace_count: string
+              duration_ns_samples: string
+              duration_ns_p50: string
+              duration_ns_p90: string
+              duration_ns_p95: string
+              duration_ns_p99: string
+              cost_total_microcents_samples: string
+              cost_total_microcents_p50: string
+              cost_total_microcents_p90: string
+              cost_total_microcents_p95: string
+              cost_total_microcents_p99: string
+              tokens_total_samples: string
+              tokens_total_p50: string
+              tokens_total_p90: string
+              tokens_total_p95: string
+              tokens_total_p99: string
+              time_to_first_token_ns_samples: string
+              time_to_first_token_ns_p50: string
+              time_to_first_token_ns_p90: string
+              time_to_first_token_ns_p95: string
+              time_to_first_token_ns_p99: string
+            }>()
           })
-          return result.json<{
-            trace_count: string
-            duration_ns_samples: string
-            duration_ns_p50: string
-            duration_ns_p90: string
-            duration_ns_p95: string
-            duration_ns_p99: string
-            cost_total_microcents_samples: string
-            cost_total_microcents_p50: string
-            cost_total_microcents_p90: string
-            cost_total_microcents_p95: string
-            cost_total_microcents_p99: string
-            tokens_total_samples: string
-            tokens_total_p50: string
-            tokens_total_p90: string
-            tokens_total_p95: string
-            tokens_total_p99: string
-            time_to_first_token_ns_samples: string
-            time_to_first_token_ns_p50: string
-            time_to_first_token_ns_p90: string
-            time_to_first_token_ns_p95: string
-            time_to_first_token_ns_p99: string
-          }>()
-        })
-        .pipe(
-          Effect.map((rows): TraceCohortBaselineData => {
-            const row = rows[0]
-            if (!row || Number(row.trace_count) === 0) {
+          .pipe(
+            Effect.map((rows): TraceCohortBaselineData => {
+              const row = rows[0]
+              if (!row || Number(row.trace_count) === 0) {
+                return {
+                  traceCount: 0,
+                  metrics: {
+                    durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  },
+                }
+              }
+
+              const traceCount = Number(row.trace_count)
+              const toMetricPercentiles = (
+                samples: string,
+                p50: string,
+                p90: string,
+                p95: string,
+                p99: string,
+              ): TraceMetricPercentiles => {
+                const sampleCount = Number(samples)
+                return {
+                  sampleCount,
+                  p50: Number(p50),
+                  p90: Number(p90),
+                  p95: sampleCount >= 100 ? Number(p95) : null,
+                  p99: sampleCount >= 1000 ? Number(p99) : null,
+                }
+              }
+
               return {
-                traceCount: 0,
+                traceCount,
                 metrics: {
-                  durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  durationNs: toMetricPercentiles(
+                    row.duration_ns_samples,
+                    row.duration_ns_p50,
+                    row.duration_ns_p90,
+                    row.duration_ns_p95,
+                    row.duration_ns_p99,
+                  ),
+                  costTotalMicrocents: toMetricPercentiles(
+                    row.cost_total_microcents_samples,
+                    row.cost_total_microcents_p50,
+                    row.cost_total_microcents_p90,
+                    row.cost_total_microcents_p95,
+                    row.cost_total_microcents_p99,
+                  ),
+                  tokensTotal: toMetricPercentiles(
+                    row.tokens_total_samples,
+                    row.tokens_total_p50,
+                    row.tokens_total_p90,
+                    row.tokens_total_p95,
+                    row.tokens_total_p99,
+                  ),
+                  timeToFirstTokenNs: toMetricPercentiles(
+                    row.time_to_first_token_ns_samples,
+                    row.time_to_first_token_ns_p50,
+                    row.time_to_first_token_ns_p90,
+                    row.time_to_first_token_ns_p95,
+                    row.time_to_first_token_ns_p99,
+                  ),
                 },
               }
-            }
-
-            const traceCount = Number(row.trace_count)
-            const toMetricPercentiles = (
-              samples: string,
-              p50: string,
-              p90: string,
-              p95: string,
-              p99: string,
-            ): TraceMetricPercentiles => {
-              const sampleCount = Number(samples)
-              return {
-                sampleCount,
-                p50: Number(p50),
-                p90: Number(p90),
-                p95: sampleCount >= 100 ? Number(p95) : null,
-                p99: sampleCount >= 1000 ? Number(p99) : null,
-              }
-            }
-
-            return {
-              traceCount,
-              metrics: {
-                durationNs: toMetricPercentiles(
-                  row.duration_ns_samples,
-                  row.duration_ns_p50,
-                  row.duration_ns_p90,
-                  row.duration_ns_p95,
-                  row.duration_ns_p99,
-                ),
-                costTotalMicrocents: toMetricPercentiles(
-                  row.cost_total_microcents_samples,
-                  row.cost_total_microcents_p50,
-                  row.cost_total_microcents_p90,
-                  row.cost_total_microcents_p95,
-                  row.cost_total_microcents_p99,
-                ),
-                tokensTotal: toMetricPercentiles(
-                  row.tokens_total_samples,
-                  row.tokens_total_p50,
-                  row.tokens_total_p90,
-                  row.tokens_total_p95,
-                  row.tokens_total_p99,
-                ),
-                timeToFirstTokenNs: toMetricPercentiles(
-                  row.time_to_first_token_ns_samples,
-                  row.time_to_first_token_ns_p50,
-                  row.time_to_first_token_ns_p90,
-                  row.time_to_first_token_ns_p95,
-                  row.time_to_first_token_ns_p99,
-                ),
-              },
-            }
-          }),
-          Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
-        )
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
+          )
       })
 
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
@@ -506,9 +506,9 @@ export const TraceRepositoryLive = Layer.effect(
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${LIST_SELECT}
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -517,37 +517,37 @@ export const TraceRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              limit: limit + 1,
-              ...filterParams,
-              ...(options.cursor
-                ? {
-                    cursorSortValue: options.cursor.sortValue,
-                    cursorTraceId: options.cursor.traceId,
-                  }
-                : {}),
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                limit: limit + 1,
+                ...filterParams,
+                ...(options.cursor
+                  ? {
+                      cursorSortValue: options.cursor.sortValue,
+                      cursorTraceId: options.cursor.traceId,
+                    }
+                  : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceListRow>()
           })
-          return result.json<TraceListRow>()
-        })
-        .pipe(
-          Effect.map((rows): TraceListPage => {
-            const hasMore = rows.length > limit
-            const pageRows = hasMore ? rows.slice(0, limit) : rows
-            const items = pageRows.map(toBaseFields)
-            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-            if (!last) return { items, hasMore }
-            return {
-              items,
-              hasMore,
-              nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
-            }
-          }),
-          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-        )
+          .pipe(
+            Effect.map((rows): TraceListPage => {
+              const hasMore = rows.length > limit
+              const pageRows = hasMore ? rows.slice(0, limit) : rows
+              const items = pageRows.map(toBaseFields)
+              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+              if (!last) return { items, hasMore }
+              return {
+                items,
+                hasMore,
+                nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+          )
       })
 
     const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) =>
@@ -556,27 +556,27 @@ export const TraceRepositoryLive = Layer.effect(
         if (traceIds.length === 0) return []
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${DETAIL_SELECT}
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${DETAIL_SELECT}
                     FROM traces
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
                       AND trace_id IN ({traceIds:Array(String)})
                     GROUP BY organization_id, project_id, trace_id`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              traceIds: Array.from(traceIds) as string[],
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceDetailRow>()
           })
-          return result.json<TraceDetailRow>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map(toDomainTraceDetail)),
-          Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
-        )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainTraceDetail)),
+            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+          )
       })
 
     const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
@@ -592,9 +592,9 @@ export const TraceRepositoryLive = Layer.effect(
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT count() AS total
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT count() AS total
                     FROM (
                       SELECT ${LIST_SELECT}
                       FROM traces
@@ -606,20 +606,20 @@ export const TraceRepositoryLive = Layer.effect(
                       ${havingClause}
                       LIMIT 1
                     )`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              traceId,
-              ...filterParams,
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceId,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{ total: string }>()
           })
-          return result.json<{ total: string }>()
-        })
-        .pipe(
-          Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
-          Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
-        )
+          .pipe(
+            Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
+            Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
+          )
       })
 
     const listMatchingFilterIdsByTraceId: TraceRepositoryShape["listMatchingFilterIdsByTraceId"] = ({
@@ -650,9 +650,9 @@ export const TraceRepositoryLive = Layer.effect(
         })
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT matched_filter_id
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT matched_filter_id
                     FROM (
                       SELECT arrayJoin([
                         ${matchExpressions.join(",\n                        ")}
@@ -668,15 +668,15 @@ export const TraceRepositoryLive = Layer.effect(
                       )
                     )
                     WHERE matched_filter_id != ''`,
-            query_params: queryParams,
-            format: "JSONEachRow",
+              query_params: queryParams,
+              format: "JSONEachRow",
+            })
+            return result.json<{ matched_filter_id: string }>()
           })
-          return result.json<{ matched_filter_id: string }>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map((row) => row.matched_filter_id)),
-          Effect.mapError((error) => toRepositoryError(error, "listMatchingFilterIdsByTraceId")),
-        )
+          .pipe(
+            Effect.map((rows) => rows.map((row) => row.matched_filter_id)),
+            Effect.mapError((error) => toRepositoryError(error, "listMatchingFilterIdsByTraceId")),
+          )
       })
 
     return {
@@ -691,9 +691,9 @@ export const TraceRepositoryLive = Layer.effect(
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT count() AS total
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT count() AS total
                       FROM (
                         SELECT ${LIST_SELECT}
                         FROM traces
@@ -703,19 +703,19 @@ export const TraceRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ total: string }>()
             })
-            return result.json<{ total: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => Number(rows[0]?.total ?? 0)),
-            Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
-          )
+            .pipe(
+              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+            )
         }),
 
       aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
@@ -726,9 +726,9 @@ export const TraceRepositoryLive = Layer.effect(
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         count() AS row_count,
                         min(duration_ns) AS duration_min,
                         max(duration_ns) AS duration_max,
@@ -764,19 +764,19 @@ export const TraceRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceMetricsRow>()
             })
-            return result.json<TraceMetricsRow>()
-          })
-          .pipe(
-            Effect.map((rows) => toTraceMetrics(rows[0])),
-            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
-          )
+            .pipe(
+              Effect.map((rows) => toTraceMetrics(rows[0])),
+              Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+            )
         }),
 
       histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) =>
@@ -788,9 +788,9 @@ export const TraceRepositoryLive = Layer.effect(
           const bs = Math.floor(bucketSeconds)
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         toDateTime(
                           intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                           'UTC'
@@ -807,59 +807,59 @@ export const TraceRepositoryLive = Layer.effect(
                       )
                       GROUP BY bucket_start
                       ORDER BY bucket_start ASC`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                bucketSeconds: bs,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  bucketSeconds: bs,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ bucket_start: string; trace_count: string }>()
             })
-            return result.json<{ bucket_start: string; trace_count: string }>()
-          })
-          .pipe(
-            Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
-              rows.map((row) => ({
-                bucketStart: parseCHDate(row.bucket_start).toISOString(),
-                traceCount: Number(row.trace_count),
-              })),
-            ),
-            Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
-          )
+            .pipe(
+              Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
+                rows.map((row) => ({
+                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                  traceCount: Number(row.trace_count),
+                })),
+              ),
+              Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
+            )
         }),
 
       findByTraceId: ({ organizationId, projectId, traceId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${DETAIL_SELECT}
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${DETAIL_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         AND trace_id = {traceId:FixedString(32)}
                       GROUP BY organization_id, project_id, trace_id
                       LIMIT 1`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                traceId,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceDetailRow>()
             })
-            return result.json<TraceDetailRow>()
-          })
-          .pipe(
-            Effect.flatMap((rows) => {
-              const first = rows[0]
-              if (!first) {
-                return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
-              }
-              return Effect.succeed(toDomainTraceDetail(first))
-            }),
-            Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
-          )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const first = rows[0]
+                if (!first) {
+                  return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
+                }
+                return Effect.succeed(toDomainTraceDetail(first))
+              }),
+              Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
+            )
         }),
 
       matchesFiltersByTraceId,
@@ -883,9 +883,9 @@ export const TraceRepositoryLive = Layer.effect(
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT DISTINCT val FROM (
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT DISTINCT val FROM (
                         SELECT ${expr} AS val
                         FROM traces
                         WHERE organization_id = {organizationId:String}
@@ -895,20 +895,20 @@ export const TraceRepositoryLive = Layer.effect(
                       WHERE val != ''${searchClause}
                       ORDER BY val
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: maxValues ?? 50,
-                ...(search ? { search: `%${search}%` } : {}),
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: maxValues ?? 50,
+                  ...(search ? { search: `%${search}%` } : {}),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ val: string }>()
             })
-            return result.json<{ val: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map((r) => r.val)),
-            Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
-          )
+            .pipe(
+              Effect.map((rows) => rows.map((r) => r.val)),
+              Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
+            )
         }),
     }
   }),

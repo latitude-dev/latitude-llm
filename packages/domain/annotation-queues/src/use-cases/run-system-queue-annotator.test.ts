@@ -186,7 +186,10 @@ describe("runSystemQueueAnnotatorUseCase", () => {
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(TraceRepository, traceRepo),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+              Layer.succeed(
+                ChSqlClient,
+                createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+              ),
               aiLayer,
             ),
           ),

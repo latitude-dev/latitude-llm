@@ -5,7 +5,7 @@ import {
   deleteRows,
   RowNotFoundError,
 } from "@domain/datasets"
-import { ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { type ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
@@ -64,19 +64,19 @@ describe("deleteRows", () => {
     )
 
     await Effect.runPromise(
-      rowRepo.insertBatch({
-        datasetId: DATASET_ID,
-        version: version.version,
-        rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
-      }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+      rowRepo
+        .insertBatch({
+          datasetId: DATASET_ID,
+          version: version.version,
+          rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
+        })
+        .pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
     )
 
     return version
   }
 
-  const run = <A, E>(
-    effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient | ChSqlClient>,
-  ) =>
+  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient | ChSqlClient>) =>
     Effect.runPromise(
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),

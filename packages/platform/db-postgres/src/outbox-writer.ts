@@ -32,7 +32,9 @@ export const OutboxEventWriterLive = Layer.effect(
       write: (event) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          yield* sqlClient.query((db) => db.insert(outboxEvents).values(toOutboxInsertValues(event))).pipe(Effect.asVoid)
+          yield* sqlClient
+            .query((db) => db.insert(outboxEvents).values(toOutboxInsertValues(event)))
+            .pipe(Effect.asVoid)
         }),
     }
   }),

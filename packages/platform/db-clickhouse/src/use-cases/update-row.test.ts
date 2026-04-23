@@ -5,7 +5,7 @@ import {
   RowNotFoundError,
   updateRow,
 } from "@domain/datasets"
-import { ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { type ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
@@ -50,9 +50,7 @@ describe("updateRow", () => {
     })
   })
 
-  const run = <A, E>(
-    effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient | ChSqlClient>,
-  ) =>
+  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient | ChSqlClient>) =>
     Effect.runPromise(
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),
@@ -115,7 +113,9 @@ describe("updateRow", () => {
     expect(result.version).toBeGreaterThan(1)
 
     const row = await Effect.runPromise(
-      rowRepo.findById({ datasetId: DATASET_ID, rowId: ROW_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+      rowRepo
+        .findById({ datasetId: DATASET_ID, rowId: ROW_ID })
+        .pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
     )
     expect(row.input).toEqual({ prompt: "updated" })
     expect(row.output).toEqual({ text: "v2" })

@@ -227,9 +227,9 @@ export const SessionRepositoryLive = Layer.effect(
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return yield* chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${LIST_SELECT}
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_SELECT}
                       FROM sessions
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -238,37 +238,37 @@ export const SessionRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              limit: limit + 1,
-              ...filterParams,
-              ...(options.cursor
-                ? {
-                    cursorSortValue: options.cursor.sortValue,
-                    cursorSessionId: options.cursor.sessionId,
-                  }
-                : {}),
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                limit: limit + 1,
+                ...filterParams,
+                ...(options.cursor
+                  ? {
+                      cursorSortValue: options.cursor.sortValue,
+                      cursorSessionId: options.cursor.sessionId,
+                    }
+                  : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SessionListRow>()
           })
-          return result.json<SessionListRow>()
-        })
-        .pipe(
-          Effect.map((rows): SessionListPage => {
-            const hasMore = rows.length > limit
-            const pageRows = hasMore ? rows.slice(0, limit) : rows
-            const items = pageRows.map(toDomainSession)
-            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-            if (!last) return { items, hasMore }
-            return {
-              items,
-              hasMore,
-              nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-            }
-          }),
-          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-        )
+          .pipe(
+            Effect.map((rows): SessionListPage => {
+              const hasMore = rows.length > limit
+              const pageRows = hasMore ? rows.slice(0, limit) : rows
+              const items = pageRows.map(toDomainSession)
+              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+              if (!last) return { items, hasMore }
+              return {
+                items,
+                hasMore,
+                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+          )
       })
 
     return {
@@ -282,9 +282,9 @@ export const SessionRepositoryLive = Layer.effect(
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT count() AS total
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT count() AS total
                       FROM (
                         SELECT session_id, ${LIST_SELECT}
                         FROM sessions
@@ -294,19 +294,19 @@ export const SessionRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, session_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ total: string }>()
             })
-            return result.json<{ total: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => Number(rows[0]?.total ?? 0)),
-            Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
-          )
+            .pipe(
+              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+            )
         }),
 
       aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
@@ -317,9 +317,9 @@ export const SessionRepositoryLive = Layer.effect(
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         count() AS row_count,
                         min(duration_ns) AS duration_min,
                         max(duration_ns) AS duration_max,
@@ -345,19 +345,19 @@ export const SessionRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, session_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionMetricsRow>()
             })
-            return result.json<SessionMetricsRow>()
-          })
-          .pipe(
-            Effect.map((rows) => toSessionMetrics(rows[0])),
-            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
-          )
+            .pipe(
+              Effect.map((rows) => toSessionMetrics(rows[0])),
+              Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+            )
         }),
 
       distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) =>
@@ -375,9 +375,9 @@ export const SessionRepositoryLive = Layer.effect(
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
           return yield* chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT DISTINCT val FROM (
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT DISTINCT val FROM (
                         SELECT ${expr} AS val
                         FROM sessions
                         WHERE organization_id = {organizationId:String}
@@ -387,20 +387,20 @@ export const SessionRepositoryLive = Layer.effect(
                       WHERE val != ''${searchClause}
                       ORDER BY val
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: maxValues ?? 50,
-                ...(search ? { search: `%${search}%` } : {}),
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: maxValues ?? 50,
+                  ...(search ? { search: `%${search}%` } : {}),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ val: string }>()
             })
-            return result.json<{ val: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map((r) => r.val)),
-            Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
-          )
+            .pipe(
+              Effect.map((rows) => rows.map((r) => r.val)),
+              Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
+            )
         }),
     }
   }),

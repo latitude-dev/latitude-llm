@@ -99,18 +99,14 @@ describe("ScoreAnalyticsRepository", () => {
 
       expect(await runCh(repo.existsById(id as ScoreId))).toBe(true)
 
-      const beforeAgg = await runCh(
-        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
-      )
+      const beforeAgg = await runCh(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
       const countBefore = beforeAgg.totalScores
 
       await runCh(repo.delete(id as ScoreId))
 
       expect(await runCh(repo.existsById(id as ScoreId))).toBe(false)
 
-      const afterAgg = await runCh(
-        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
-      )
+      const afterAgg = await runCh(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }))
       expect(afterAgg.totalScores).toBe(countBefore - 1)
     })
   })
@@ -596,9 +592,7 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("excludes simulations when requested", async () => {
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
-      const agg = await runCh(
-        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, options }),
-      )
+      const agg = await runCh(repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, options }))
       expect(agg.totalScores).toBe(1)
       expect(agg.totalCost).toBe(200)
     })

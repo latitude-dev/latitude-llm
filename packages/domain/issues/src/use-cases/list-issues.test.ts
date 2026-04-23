@@ -626,7 +626,7 @@ describe("listIssuesUseCase", () => {
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
             ),
           ),
         ),

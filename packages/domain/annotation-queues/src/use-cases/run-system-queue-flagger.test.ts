@@ -411,7 +411,10 @@ describe("runSystemQueueFlaggerUseCase", () => {
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(TraceRepository, repository),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+              Layer.succeed(
+                ChSqlClient,
+                createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+              ),
               aiLayer,
             ),
           ),
