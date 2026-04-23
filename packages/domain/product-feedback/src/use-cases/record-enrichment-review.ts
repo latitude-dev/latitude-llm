@@ -4,12 +4,11 @@ import { ProductFeedbackClient } from "../ports/product-feedback-client.ts"
 /**
  * Input for the Enrichment review flow.
  *
- * 👍 is a single click with no textarea — hence no comment field. 👎 requires
- * a reason and the type enforces it.
+ * 👍 accepts an optional note; 👎 requires a reason and the type enforces it.
  */
 export type RecordEnrichmentReviewInput = {
   readonly upstreamScoreId: string
-} & ({ readonly decision: "good" } | { readonly decision: "bad"; readonly comment: string })
+} & ({ readonly decision: "good"; readonly comment?: string } | { readonly decision: "bad"; readonly comment: string })
 
 const GOOD_FEEDBACK = "Good enrichment"
 
@@ -22,21 +21,23 @@ export const recordEnrichmentReviewUseCase = Effect.fn("productFeedback.recordEn
 
   const client = yield* ProductFeedbackClient
 
+  // See the sibling use case: trim at the domain boundary so whitespace-only
+  // comments never reach the outbound payload.
+  const trimmedComment = input.comment?.trim() ?? ""
+
   if (input.decision === "good") {
     return yield* client.writeAnnotation({
       upstreamScoreId: input.upstreamScoreId,
       passed: true,
       value: 1,
-      feedback: GOOD_FEEDBACK,
+      feedback: trimmedComment.length > 0 ? trimmedComment : GOOD_FEEDBACK,
     })
   }
 
-  // See the sibling use case: trim at the domain boundary so whitespace-only
-  // comments never reach the outbound payload.
   return yield* client.writeAnnotation({
     upstreamScoreId: input.upstreamScoreId,
     passed: false,
     value: 0,
-    feedback: input.comment.trim(),
+    feedback: trimmedComment,
   })
 })

@@ -1,99 +1,17 @@
 import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotations"
-import {
-  Avatar,
-  Badge,
-  Button,
-  DropdownMenu,
-  Icon,
-  LatitudeLogo,
-  type MenuOption,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Text,
-  Tooltip,
-} from "@repo/ui"
+import { Avatar, Badge, Button, DropdownMenu, Icon, LatitudeLogo, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useNavigate, useParams } from "@tanstack/react-router"
-import {
-  EllipsisIcon,
-  GlobeIcon,
-  InfoIcon,
-  ShieldAlertIcon,
-  SparklesIcon,
-  ThumbsDownIcon,
-  ThumbsUpIcon,
-} from "lucide-react"
-import { type MouseEvent, useMemo, useState } from "react"
-import {
-  useApproveSystemAnnotation,
-  useDeleteAnnotation,
-  useRejectSystemAnnotation,
-} from "../../../../../../domains/annotations/annotations.collection.ts"
+import { EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
+import { useMemo, useState } from "react"
+import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
+import { AnnotationApprovalPopover } from "./annotation-approval-popover.tsx"
 import { AnnotationInput } from "./annotation-input.tsx"
-
-interface AnnotationApprovalButtonsProps {
-  readonly annotationId: string
-  readonly onAction?: (() => void) | undefined
-}
-
-function AnnotationApprovalButtons({ annotationId, onAction }: AnnotationApprovalButtonsProps) {
-  const approveMutation = useApproveSystemAnnotation()
-  const rejectMutation = useRejectSystemAnnotation()
-  const isDisabled = approveMutation.isPending || rejectMutation.isPending
-
-  function handleApprove(event: MouseEvent) {
-    event.stopPropagation()
-    event.preventDefault()
-    approveMutation.mutate(annotationId, onAction ? { onSuccess: onAction } : undefined)
-  }
-
-  function handleReject(event: MouseEvent) {
-    event.stopPropagation()
-    event.preventDefault()
-    rejectMutation.mutate(annotationId, onAction ? { onSuccess: onAction } : undefined)
-  }
-
-  return (
-    <div className="flex items-center gap-2" data-no-navigate data-annotation-approval-buttons={annotationId}>
-      <Tooltip
-        asChild
-        trigger={
-          <span className="inline-flex items-center text-muted-foreground">
-            <Icon icon={InfoIcon} size="xs" color="foregroundMuted" />
-          </span>
-        }
-      >
-        <span className="flex items-center gap-1">
-          <Icon icon={SparklesIcon} size="sm" className="shrink-0 stroke-[1.5]" />
-          Automatically generated with AI
-        </span>
-      </Tooltip>
-      <Button
-        variant="destructive-soft"
-        size="sm"
-        onClick={handleReject}
-        disabled={isDisabled}
-        isLoading={rejectMutation.isPending}
-      >
-        Reject
-      </Button>
-      <Button
-        variant="default-soft"
-        size="sm"
-        onClick={handleApprove}
-        disabled={isDisabled}
-        isLoading={approveMutation.isPending}
-      >
-        Approve
-      </Button>
-    </div>
-  )
-}
+import { EnrichmentPopover } from "./enrichment-popover.tsx"
 
 interface AnnotationCardProps {
   readonly annotation: AnnotationRecord
@@ -236,26 +154,7 @@ export function AnnotationCard({
               Applies to the entire conversation
             </Tooltip>
           )}
-          {showRawFeedback && (
-            <div data-no-navigate>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Icon icon={SparklesIcon} size="xs" color="foregroundMuted" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="bottom" align="end" className="max-w-md">
-                  <div className="flex flex-col gap-1">
-                    <Text.H5 className="whitespace-pre-wrap">{rawFeedback}</Text.H5>
-                    <span className="flex items-center gap-1">
-                      <Icon icon={SparklesIcon} size="xs" color="foregroundMuted" className="shrink-0" />
-                      <Text.H6 color="foregroundMuted">This feedback has been enriched with AI</Text.H6>
-                    </span>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
+          {showRawFeedback && <EnrichmentPopover annotationId={annotation.id} rawFeedback={rawFeedback} />}
           <div className="flex h-8 w-8 items-center justify-center">
             <Icon
               icon={annotation.passed ? ThumbsUpIcon : ThumbsDownIcon}
@@ -320,7 +219,7 @@ export function AnnotationCard({
             })()}
           {isAgentDraft && (
             <div className="ml-auto">
-              <AnnotationApprovalButtons annotationId={annotation.id} onAction={onDelete} />
+              <AnnotationApprovalPopover annotationId={annotation.id} onAction={onDelete} />
             </div>
           )}
         </div>

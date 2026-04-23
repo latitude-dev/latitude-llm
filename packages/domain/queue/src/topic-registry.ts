@@ -221,7 +221,9 @@ const _registry = {
     }
     submitEnrichmentReview: {
       readonly upstreamScoreId: string
-      readonly review: { readonly decision: "good" } | { readonly decision: "bad"; readonly comment: string }
+      readonly review:
+        | { readonly decision: "good"; readonly comment?: string }
+        | { readonly decision: "bad"; readonly comment: string }
     }
   }>(),
 }

@@ -2,8 +2,12 @@ import type { AnnotationQueue } from "@domain/annotation-queues"
 import type { Evaluation } from "@domain/evaluations"
 import {
   SEED_ACCESS_EVALUATION_ID,
+  SEED_API_KEY_TOKEN,
   SEED_COMBINATION_EVALUATION_ID,
   SEED_EVALUATION_ID,
+  SEED_ORG_ID,
+  SEED_PROJECT_ID,
+  SEED_PROJECT_SLUG,
   SEED_RETURNS_EVALUATION_ID,
 } from "@domain/shared/seeding"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -14,7 +18,21 @@ import {
   type SeedSpanDefinition,
   userTextMessage,
 } from "./otlp.ts"
-import { buildLiveSeedRunPlan, dispatchResolvedCases, type ResolvedLiveSeedCase, type SeedTargets } from "./runtime.ts"
+import {
+  buildLiveSeedRunPlan,
+  dispatchResolvedCases,
+  type ResolvedLiveSeedCase,
+  type SeedRunContext,
+  type SeedTargets,
+} from "./runtime.ts"
+
+const defaultRunContext: SeedRunContext = {
+  organizationId: SEED_ORG_ID,
+  projectId: SEED_PROJECT_ID,
+  projectSlug: SEED_PROJECT_SLUG,
+  apiKeyToken: SEED_API_KEY_TOKEN,
+  systemQueuesOnly: false,
+}
 
 function createSeedTargets(): SeedTargets {
   return {
@@ -149,6 +167,7 @@ describe("buildLiveSeedRunPlan", () => {
       timeScale: 1,
       seed: "repeatable-seed",
       targets,
+      ctx: defaultRunContext,
     })
     const planB = await buildLiveSeedRunPlan({
       fixtureKeys: ["warranty-eval-in", "tool-call-error"],
@@ -156,6 +175,7 @@ describe("buildLiveSeedRunPlan", () => {
       timeScale: 1,
       seed: "repeatable-seed",
       targets,
+      ctx: defaultRunContext,
     })
 
     const summarize = (plan: Awaited<ReturnType<typeof buildLiveSeedRunPlan>>) =>

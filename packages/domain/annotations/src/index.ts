@@ -50,6 +50,11 @@ export {
   type PublishAnnotationResult,
   publishHumanAnnotationUseCase,
 } from "./use-cases/publish-annotation.ts"
+export {
+  type RejectSystemAnnotationError,
+  type RejectSystemAnnotationInput,
+  rejectSystemAnnotationUseCase,
+} from "./use-cases/reject-system-annotation.ts"
 export { submitApiAnnotationUseCase } from "./use-cases/submit-api-annotation.ts"
 export {
   type PersistDraftAnnotationError,

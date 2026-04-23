@@ -1,13 +1,14 @@
-import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { type QueuePublishError, QueuePublisher, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { ScoreRepository } from "@domain/scores"
 import { BadRequestError, isValidId, type RepositoryError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 
 export interface ApproveSystemAnnotationInput {
   readonly scoreId: ScoreId
+  readonly comment?: string
 }
 
-export type ApproveSystemAnnotationError = RepositoryError | BadRequestError
+export type ApproveSystemAnnotationError = RepositoryError | BadRequestError | QueuePublishError
 
 export type ApproveSystemAnnotationResult =
   | { readonly action: "already-published" }
@@ -40,6 +41,7 @@ export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSyst
 ) {
   yield* Effect.annotateCurrentSpan("annotation.scoreId", input.scoreId)
   const workflowStarter = yield* WorkflowStarter
+  const queuePublisher = yield* QueuePublisher
   const scoreRepository = yield* ScoreRepository
   const score = yield* scoreRepository
     .findById(input.scoreId)
@@ -77,6 +79,17 @@ export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSyst
     scoreId: score.id,
     preEnrichedFeedback: score.feedback,
   })
+
+  const trimmedComment = input.comment?.trim() ?? ""
+  yield* queuePublisher.publish(
+    "product-feedback",
+    "submitSystemAnnotatorReview",
+    {
+      upstreamScoreId: score.id,
+      review: trimmedComment.length > 0 ? { decision: "approve", comment: trimmedComment } : { decision: "approve" },
+    },
+    { dedupeKey: `submitSystemAnnotatorReview:${score.id}:approve` },
+  )
 
   return { action: "approved", scoreId: score.id } satisfies ApproveSystemAnnotationResult
 })

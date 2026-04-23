@@ -90,12 +90,20 @@ export function useDeleteAnnotation() {
 
 type AnnotationsPage = Awaited<ReturnType<typeof listAnnotationsByTrace>>
 
+interface ApproveSystemAnnotationInput {
+  readonly scoreId: string
+  readonly comment?: string
+}
+
 export function useApproveSystemAnnotation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (scoreId: string) => approveSystemAnnotation({ data: { scoreId } }),
-    onMutate: async (scoreId) => {
+    mutationFn: (input: ApproveSystemAnnotationInput) =>
+      approveSystemAnnotation({
+        data: { scoreId: input.scoreId, ...(input.comment !== undefined ? { comment: input.comment } : {}) },
+      }),
+    onMutate: async ({ scoreId }) => {
       await queryClient.cancelQueries({ queryKey: ["annotations"] })
 
       const previousData = queryClient.getQueriesData<AnnotationsPage>({ queryKey: ["annotations"] })
@@ -112,7 +120,7 @@ export function useApproveSystemAnnotation() {
 
       return { previousData }
     },
-    onError: (_err, _scoreId, context) => {
+    onError: (_err, _input, context) => {
       if (context?.previousData) {
         for (const [queryKey, data] of context.previousData) {
           queryClient.setQueryData(queryKey, data)
@@ -122,12 +130,18 @@ export function useApproveSystemAnnotation() {
   })
 }
 
+interface RejectSystemAnnotationInput {
+  readonly scoreId: string
+  readonly comment: string
+}
+
 export function useRejectSystemAnnotation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (scoreId: string) => rejectSystemAnnotation({ data: { scoreId } }),
-    onMutate: async (scoreId) => {
+    mutationFn: (input: RejectSystemAnnotationInput) =>
+      rejectSystemAnnotation({ data: { scoreId: input.scoreId, comment: input.comment } }),
+    onMutate: async ({ scoreId }) => {
       await queryClient.cancelQueries({ queryKey: ["annotations"] })
 
       const previousData = queryClient.getQueriesData<AnnotationsPage>({ queryKey: ["annotations"] })
@@ -142,7 +156,7 @@ export function useRejectSystemAnnotation() {
 
       return { previousData }
     },
-    onError: (_err, _scoreId, context) => {
+    onError: (_err, _input, context) => {
       if (context?.previousData) {
         for (const [queryKey, data] of context.previousData) {
           queryClient.setQueryData(queryKey, data)

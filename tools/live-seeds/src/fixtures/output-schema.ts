@@ -25,7 +25,6 @@ export const outputSchemaFixture: LiveSeedFixtureDefinition = {
     "Low-cost non-support trace that should deterministically match the Output Schema Validation system queue.",
   sampling: {
     systemQueueSamples: {
-      "output-schema-validation": true,
       frustration: false,
     },
   },
