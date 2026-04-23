@@ -36,9 +36,9 @@ export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIn
       exampleResults: [],
       newExampleCount,
       previousMetrics,
-      previousMatthewsCorrelationCoefficient: previousMetrics.matthewsCorrelationCoefficient,
-      nextMatthewsCorrelationCoefficient: previousMetrics.matthewsCorrelationCoefficient,
-      matthewsCorrelationCoefficientDrop: 0,
+      previousAlignmentMetric: previousMetrics.alignmentMetric,
+      nextAlignmentMetric: previousMetrics.alignmentMetric,
+      alignmentMetricDrop: 0,
       confusionMatrix: emptyConfusionMatrix(),
     } satisfies IncrementalEvaluationRefreshResult
   }
@@ -66,9 +66,9 @@ export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIn
     exampleResults: incremental.exampleResults,
     newExampleCount,
     previousMetrics,
-    previousMatthewsCorrelationCoefficient: decision.previousMatthewsCorrelationCoefficient,
-    nextMatthewsCorrelationCoefficient: decision.nextMatthewsCorrelationCoefficient,
-    matthewsCorrelationCoefficientDrop: decision.matthewsCorrelationCoefficientDrop,
+    previousAlignmentMetric: decision.previousAlignmentMetric,
+    nextAlignmentMetric: decision.nextAlignmentMetric,
+    alignmentMetricDrop: decision.alignmentMetricDrop,
     confusionMatrix: incremental.confusionMatrix,
   } satisfies IncrementalEvaluationRefreshResult
 })

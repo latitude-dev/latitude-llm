@@ -464,7 +464,7 @@ describe("evaluation-alignment activities", () => {
     expect(mockAi.generate).not.toHaveBeenCalled()
   })
 
-  it("keeps incremental refreshes metric-only when new examples stay within the MCC tolerance", async () => {
+  it("keeps incremental refreshes metric-only when new examples stay within the alignment metric tolerance", async () => {
     mockAi.generate.mockImplementation((input: { readonly prompt: string }) => {
       const hasLeakage = input.prompt.includes("sk-live-123")
       return Effect.succeed({
@@ -533,7 +533,7 @@ describe("evaluation-alignment activities", () => {
     })
   })
 
-  it("escalates incremental refreshes to full re-optimization when MCC drops past tolerance", async () => {
+  it("escalates incremental refreshes to full re-optimization when the alignment metric drops past tolerance", async () => {
     mockAi.generate.mockImplementation(() =>
       Effect.succeed({
         object: {
@@ -585,7 +585,7 @@ describe("evaluation-alignment activities", () => {
     })
 
     expect(result.strategy).toBe("full-reoptimization")
-    expect(result.matthewsCorrelationCoefficientDrop).toBeGreaterThan(0.05)
+    expect(result.alignmentMetricDrop).toBeGreaterThan(0.05)
   })
 
   it("runs the workflow optimization seam through the optimizer port", async () => {

@@ -9,18 +9,21 @@ import {
   buildLiveEvaluationExecuteScopeDedupeKey,
   buildLiveEvaluationExecuteTraceDedupeKey,
   calculateAccuracy,
+  calculateAlignmentMetric,
+  calculateAlignmentMetricDrop,
+  calculateBalancedAccuracy,
   calculateF1,
   calculateMatthewsCorrelationCoefficient,
-  calculateMatthewsCorrelationCoefficientDrop,
   calculatePrecision,
   calculateRecall,
+  calculateSpecificity,
   decideAlignmentRefreshStrategy,
   deriveConfusionMatrix,
   deriveEvaluationAlignmentMetrics,
   emptyConfusionMatrix,
   getLiveEvaluationEligibility,
   getLiveEvaluationTurnScope,
-  hasMatthewsCorrelationCoefficientDropExceededTolerance,
+  hasAlignmentMetricDropExceededTolerance,
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
@@ -334,14 +337,20 @@ describe("confusion-matrix metric helpers", () => {
     expect(calculateAccuracy(confusionMatrix)).toBeCloseTo(0.94)
     expect(calculatePrecision(confusionMatrix)).toBeCloseTo(12 / 14)
     expect(calculateRecall(confusionMatrix)).toBeCloseTo(12 / 13)
+    expect(calculateSpecificity(confusionMatrix)).toBeCloseTo(35 / 37)
     expect(calculateF1(confusionMatrix)).toBeCloseTo(24 / 27)
+    expect(calculateBalancedAccuracy(confusionMatrix)).toBeCloseTo((12 / 13 + 35 / 37) / 2)
+    expect(calculateAlignmentMetric(confusionMatrix)).toBe(calculateBalancedAccuracy(confusionMatrix))
     expect(calculateMatthewsCorrelationCoefficient(confusionMatrix)).toBeCloseTo(0.8488746876)
 
     expect(deriveEvaluationAlignmentMetrics(confusionMatrix)).toEqual({
+      alignmentMetric: calculateAlignmentMetric(confusionMatrix),
       accuracy: calculateAccuracy(confusionMatrix),
       precision: calculatePrecision(confusionMatrix),
       recall: calculateRecall(confusionMatrix),
+      specificity: calculateSpecificity(confusionMatrix),
       f1: calculateF1(confusionMatrix),
+      balancedAccuracy: calculateBalancedAccuracy(confusionMatrix),
       matthewsCorrelationCoefficient: calculateMatthewsCorrelationCoefficient(confusionMatrix),
     })
   })
@@ -358,7 +367,10 @@ describe("confusion-matrix metric helpers", () => {
     expect(calculateAccuracy(empty)).toBe(0)
     expect(calculatePrecision(empty)).toBe(0)
     expect(calculateRecall(empty)).toBe(0)
+    expect(calculateSpecificity(empty)).toBe(0)
     expect(calculateF1(empty)).toBe(0)
+    expect(calculateBalancedAccuracy(empty)).toBe(0)
+    expect(calculateAlignmentMetric(empty)).toBe(0)
     expect(calculateMatthewsCorrelationCoefficient(empty)).toBe(0)
   })
 
@@ -417,7 +429,7 @@ describe("confusion-matrix metric helpers", () => {
     })
   })
 
-  it("keeps metric-only refreshes when MCC stays within tolerance", () => {
+  it("keeps metric-only refreshes when the alignment metric stays within tolerance", () => {
     const decision = decideAlignmentRefreshStrategy({
       previousConfusionMatrix: {
         truePositives: 12,
@@ -440,9 +452,9 @@ describe("confusion-matrix metric helpers", () => {
       falseNegatives: 1,
       trueNegatives: 38,
     })
-    expect(decision.matthewsCorrelationCoefficientDrop).toBeLessThanOrEqual(0.05)
+    expect(decision.alignmentMetricDrop).toBeLessThanOrEqual(0.05)
     expect(
-      hasMatthewsCorrelationCoefficientDropExceededTolerance({
+      hasAlignmentMetricDropExceededTolerance({
         previousConfusionMatrix: {
           truePositives: 12,
           falsePositives: 2,
@@ -454,7 +466,7 @@ describe("confusion-matrix metric helpers", () => {
     ).toBe(false)
   })
 
-  it("escalates to full re-optimization when MCC drops past tolerance", () => {
+  it("escalates to full re-optimization when the alignment metric drops past tolerance", () => {
     const previousConfusionMatrix = {
       truePositives: 12,
       falsePositives: 2,
@@ -473,13 +485,13 @@ describe("confusion-matrix metric helpers", () => {
 
     expect(decision.strategy).toBe("full-reoptimization")
     expect(
-      calculateMatthewsCorrelationCoefficientDrop({
+      calculateAlignmentMetricDrop({
         previousConfusionMatrix,
         nextConfusionMatrix: decision.nextConfusionMatrix,
       }),
-    ).toBeCloseTo(decision.matthewsCorrelationCoefficientDrop)
+    ).toBeCloseTo(decision.alignmentMetricDrop)
     expect(
-      hasMatthewsCorrelationCoefficientDropExceededTolerance({
+      hasAlignmentMetricDropExceededTolerance({
         previousConfusionMatrix,
         nextConfusionMatrix: decision.nextConfusionMatrix,
       }),

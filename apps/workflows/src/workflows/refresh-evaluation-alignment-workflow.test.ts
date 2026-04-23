@@ -14,6 +14,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     readonly precision: number
     readonly recall: number
     readonly f1: number
+    readonly specificity: number
+    readonly balancedAccuracy: number
+    readonly alignmentMetric: number
     readonly matthewsCorrelationCoefficient: number
   }
   type IncrementalResult = {
@@ -26,9 +29,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     readonly exampleResults: readonly unknown[]
     readonly newExampleCount: number
     readonly previousMetrics: Metrics
-    readonly previousMatthewsCorrelationCoefficient: number
-    readonly nextMatthewsCorrelationCoefficient: number
-    readonly matthewsCorrelationCoefficientDrop: number
+    readonly previousAlignmentMetric: number
+    readonly nextAlignmentMetric: number
+    readonly alignmentMetricDrop: number
   }
   type LoadResult =
     | { readonly status: "inactive" }
@@ -133,24 +136,30 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           trueNegatives: 0,
         },
         metrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
         exampleResults: [],
         newExampleCount: 1,
         previousMetrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
-        previousMatthewsCorrelationCoefficient: 1,
-        nextMatthewsCorrelationCoefficient: 1,
-        matthewsCorrelationCoefficientDrop: 0,
+        previousAlignmentMetric: 1,
+        nextAlignmentMetric: 1,
+        alignmentMetricDrop: 0,
       }
     }),
     evaluateBaselineEvaluationDraft: vi.fn(async () => {
@@ -163,10 +172,13 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           trueNegatives: 2,
         },
         metrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
         exampleResults: [],
@@ -244,24 +256,30 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           trueNegatives: 0,
         },
         metrics: {
+          alignmentMetric: 0.4,
           accuracy: 0.7,
           precision: 0.6,
           recall: 0.75,
+          specificity: 0.5,
           f1: 0.66,
+          balancedAccuracy: 0.4,
           matthewsCorrelationCoefficient: 0.4,
         },
         exampleResults: [],
         newExampleCount: 3,
         previousMetrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
-        previousMatthewsCorrelationCoefficient: 1,
-        nextMatthewsCorrelationCoefficient: 0.4,
-        matthewsCorrelationCoefficientDrop: 0.6,
+        previousAlignmentMetric: 1,
+        nextAlignmentMetric: 0.4,
+        alignmentMetricDrop: 0.6,
       }
     })
 
@@ -339,24 +357,30 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           trueNegatives: 0,
         },
         metrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
         exampleResults: [],
         newExampleCount: 0,
         previousMetrics: {
+          alignmentMetric: 1,
           accuracy: 1,
           precision: 1,
           recall: 1,
+          specificity: 1,
           f1: 1,
+          balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
         },
-        previousMatthewsCorrelationCoefficient: 1,
-        nextMatthewsCorrelationCoefficient: 1,
-        matthewsCorrelationCoefficientDrop: 0,
+        previousAlignmentMetric: 1,
+        nextAlignmentMetric: 1,
+        alignmentMetricDrop: 0,
       }
     })
 
@@ -434,8 +458,8 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     // The rebuild skips the incremental evaluator entirely — it would merge
     // judgments from two different scripts into the same matrix.
     expect(mockActivities.evaluateIncrementalEvaluationDraft).not.toHaveBeenCalled()
-    // Rebuild does not escalate to GEPA; MCC drop is evaluated again on the
-    // next incremental pass (now in the eligible path again).
+    // Rebuild does not escalate to GEPA; alignment metric drop is evaluated
+    // again on the next incremental pass (now in the eligible path again).
     expect(mockActivities.scheduleEvaluationOptimization).not.toHaveBeenCalled()
     // Example collection is unscoped (no `createdAfter`) and disables the
     // positive-examples requirement — a rebuild that lands with zero

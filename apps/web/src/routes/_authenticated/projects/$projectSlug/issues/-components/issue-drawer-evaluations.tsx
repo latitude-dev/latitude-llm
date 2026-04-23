@@ -1,6 +1,6 @@
 import { Button, CloseTrigger, Icon, Modal, Skeleton, Status, Text, Tooltip, useMountEffect, useToast } from "@repo/ui"
 import { BellPlusIcon, RotateCwIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
   getIssueAlignmentState,
@@ -11,7 +11,8 @@ import {
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
-import { formatPercent } from "./issue-formatters.ts"
+import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
+import { formatPercent, getAlignmentVariant } from "./issue-formatters.ts"
 
 const POLL_INTERVAL_MS = 5000
 
@@ -26,24 +27,28 @@ function SummaryField({ label, value }: { readonly label: string; readonly value
   )
 }
 
-function getAlignmentVariant(score: number): NonNullable<ComponentProps<typeof Status>["variant"]> {
-  if (score < 0.5) {
-    return "destructive"
-  }
-
-  if (score < 0.75) {
-    return "warning"
-  }
-
-  return "success"
-}
-
-function AlignmentTooltipContent({ evaluation }: { readonly evaluation: EvaluationSummaryRecord }) {
+function AlignmentTooltipContent({
+  evaluation,
+  onOpenStats,
+}: {
+  readonly evaluation: EvaluationSummaryRecord
+  readonly onOpenStats: () => void
+}) {
   const confusionMatrix = evaluation.alignment.confusionMatrix
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col">
       <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      <Button
+        variant="link"
+        className="w-auto h-auto p-0"
+        onClick={(event) => {
+          event.stopPropagation()
+          onOpenStats()
+        }}
+      >
+        <Text.H6 color="accentForeground">Advanced statistics</Text.H6>
+      </Button>
       <div className="flex flex-col gap-1 pt-1">
         <div className="grid grid-cols-[auto_auto_auto]">
           <div aria-hidden className="border-b border-r border-border px-2 py-1" />
@@ -107,6 +112,7 @@ export function IssueDrawerEvaluations({
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
+  const [statsEvaluationId, setStatsEvaluationId] = useState<string | null>(null)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -324,15 +330,16 @@ export function IssueDrawerEvaluations({
                   trigger={
                     <span className="inline-flex">
                       <Status
-                        variant={getAlignmentVariant(
-                          primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient,
-                        )}
-                        label={formatPercent(primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient)}
+                        variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                        label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
                       />
                     </span>
                   }
                 >
-                  <AlignmentTooltipContent evaluation={primaryEvaluation} />
+                  <AlignmentTooltipContent
+                    evaluation={primaryEvaluation}
+                    onOpenStats={() => setStatsEvaluationId(primaryEvaluation.id)}
+                  />
                 </Tooltip>
               }
             />
@@ -424,6 +431,15 @@ export function IssueDrawerEvaluations({
           </Modal.Footer>
         </Modal.Content>
       </Modal.Root>
+
+      <AlignmentStatsModal
+        evaluation={
+          statsEvaluationId === null
+            ? null
+            : (visibleEvaluations.find((evaluation) => evaluation.id === statsEvaluationId) ?? null)
+        }
+        onClose={() => setStatsEvaluationId(null)}
+      />
     </>
   )
 }

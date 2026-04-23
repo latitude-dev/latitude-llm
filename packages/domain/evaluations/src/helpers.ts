@@ -1,15 +1,18 @@
 import { deterministicSampling, type ResolvedSettings } from "@domain/shared"
-import { ALIGNMENT_MCC_TOLERANCE } from "./constants.ts"
+import { ALIGNMENT_METRIC_TOLERANCE } from "./constants.ts"
 import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
 import { isPausedEvaluation } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import type { PublishLiveEvaluationExecuteInput } from "./ports/live-evaluation-queue-publisher.ts"
 
 export type EvaluationAlignmentMetrics = {
+  readonly alignmentMetric: number
   readonly accuracy: number
   readonly precision: number
   readonly recall: number
+  readonly specificity: number
   readonly f1: number
+  readonly balancedAccuracy: number
   readonly matthewsCorrelationCoefficient: number
 }
 
@@ -23,9 +26,9 @@ type AlignmentRefreshStrategy = "metric-only" | "full-reoptimization"
 type AlignmentRefreshDecision = {
   readonly strategy: AlignmentRefreshStrategy
   readonly nextConfusionMatrix: ConfusionMatrix
-  readonly previousMatthewsCorrelationCoefficient: number
-  readonly nextMatthewsCorrelationCoefficient: number
-  readonly matthewsCorrelationCoefficientDrop: number
+  readonly previousAlignmentMetric: number
+  readonly nextAlignmentMetric: number
+  readonly alignmentMetricDrop: number
 }
 
 type LiveEvaluationEligibility =
@@ -380,11 +383,17 @@ export const calculatePrecision = (confusionMatrix: ConfusionMatrix): number =>
 export const calculateRecall = (confusionMatrix: ConfusionMatrix): number =>
   safeDivide(confusionMatrix.truePositives, confusionMatrix.truePositives + confusionMatrix.falseNegatives)
 
+export const calculateSpecificity = (confusionMatrix: ConfusionMatrix): number =>
+  safeDivide(confusionMatrix.trueNegatives, confusionMatrix.trueNegatives + confusionMatrix.falsePositives)
+
 export const calculateF1 = (confusionMatrix: ConfusionMatrix): number =>
   safeDivide(
     2 * confusionMatrix.truePositives,
     2 * confusionMatrix.truePositives + confusionMatrix.falsePositives + confusionMatrix.falseNegatives,
   )
+
+export const calculateBalancedAccuracy = (confusionMatrix: ConfusionMatrix): number =>
+  (calculateRecall(confusionMatrix) + calculateSpecificity(confusionMatrix)) / 2
 
 export const calculateMatthewsCorrelationCoefficient = (confusionMatrix: ConfusionMatrix): number => {
   const numerator =
@@ -401,26 +410,36 @@ export const calculateMatthewsCorrelationCoefficient = (confusionMatrix: Confusi
   return safeDivide(numerator, denominator)
 }
 
+// The alignment metric is the single headline score used to judge whether an
+// evaluation is well aligned with human annotations. It is intentionally
+// decoupled from the concrete formula so the rest of the codebase never hard
+// codes "MCC" or "balanced accuracy" — swapping the formula only requires
+// editing this function body.
+export const calculateAlignmentMetric = (confusionMatrix: ConfusionMatrix): number =>
+  calculateBalancedAccuracy(confusionMatrix)
+
 export const deriveEvaluationAlignmentMetrics = (confusionMatrix: ConfusionMatrix): EvaluationAlignmentMetrics => ({
+  alignmentMetric: calculateAlignmentMetric(confusionMatrix),
   accuracy: calculateAccuracy(confusionMatrix),
   precision: calculatePrecision(confusionMatrix),
   recall: calculateRecall(confusionMatrix),
+  specificity: calculateSpecificity(confusionMatrix),
   f1: calculateF1(confusionMatrix),
+  balancedAccuracy: calculateBalancedAccuracy(confusionMatrix),
   matthewsCorrelationCoefficient: calculateMatthewsCorrelationCoefficient(confusionMatrix),
 })
 
-export const calculateMatthewsCorrelationCoefficientDrop = (input: {
+export const calculateAlignmentMetricDrop = (input: {
   readonly previousConfusionMatrix: ConfusionMatrix
   readonly nextConfusionMatrix: ConfusionMatrix
 }): number =>
-  calculateMatthewsCorrelationCoefficient(input.previousConfusionMatrix) -
-  calculateMatthewsCorrelationCoefficient(input.nextConfusionMatrix)
+  calculateAlignmentMetric(input.previousConfusionMatrix) - calculateAlignmentMetric(input.nextConfusionMatrix)
 
-export const hasMatthewsCorrelationCoefficientDropExceededTolerance = (input: {
+export const hasAlignmentMetricDropExceededTolerance = (input: {
   readonly previousConfusionMatrix: ConfusionMatrix
   readonly nextConfusionMatrix: ConfusionMatrix
   readonly tolerance?: number
-}): boolean => calculateMatthewsCorrelationCoefficientDrop(input) > (input.tolerance ?? ALIGNMENT_MCC_TOLERANCE)
+}): boolean => calculateAlignmentMetricDrop(input) > (input.tolerance ?? ALIGNMENT_METRIC_TOLERANCE)
 
 export const decideAlignmentRefreshStrategy = (input: {
   readonly previousConfusionMatrix: ConfusionMatrix
@@ -428,18 +447,16 @@ export const decideAlignmentRefreshStrategy = (input: {
   readonly tolerance?: number
 }): AlignmentRefreshDecision => {
   const nextConfusionMatrix = mergeConfusionMatrices(input.previousConfusionMatrix, input.incrementalConfusionMatrix)
-  const previousMatthewsCorrelationCoefficient = calculateMatthewsCorrelationCoefficient(input.previousConfusionMatrix)
-  const nextMatthewsCorrelationCoefficient = calculateMatthewsCorrelationCoefficient(nextConfusionMatrix)
-  const matthewsCorrelationCoefficientDrop = previousMatthewsCorrelationCoefficient - nextMatthewsCorrelationCoefficient
+  const previousAlignmentMetric = calculateAlignmentMetric(input.previousConfusionMatrix)
+  const nextAlignmentMetric = calculateAlignmentMetric(nextConfusionMatrix)
+  const alignmentMetricDrop = previousAlignmentMetric - nextAlignmentMetric
 
   return {
     strategy:
-      matthewsCorrelationCoefficientDrop > (input.tolerance ?? ALIGNMENT_MCC_TOLERANCE)
-        ? "full-reoptimization"
-        : "metric-only",
+      alignmentMetricDrop > (input.tolerance ?? ALIGNMENT_METRIC_TOLERANCE) ? "full-reoptimization" : "metric-only",
     nextConfusionMatrix,
-    previousMatthewsCorrelationCoefficient,
-    nextMatthewsCorrelationCoefficient,
-    matthewsCorrelationCoefficientDrop,
+    previousAlignmentMetric,
+    nextAlignmentMetric,
+    alignmentMetricDrop,
   }
 }

@@ -71,7 +71,7 @@ type EvaluationAlignment = {
     falsePositives: number;
     falseNegatives: number;
     trueNegatives: number;
-  }; // stored counts from which MCC and other metrics can be derived
+  }; // stored counts from which the alignment metric and other metrics are derived on read
 };
 ```
 
@@ -111,7 +111,7 @@ Rules:
 - workers and workflow activities re-fetch current evaluation/example state before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream tasks or starts workflows and never runs synchronous business logic inline
 - user-triggered issue generation starts the same aligner pipeline by directly starting the `optimize-evaluation` workflow rather than running alignment in the request itself
-- annotation-driven automatic realignment flows through two throttled BullMQ tasks: `evaluations:automaticRefreshAlignment` (1h throttle) starts `refresh-evaluation-alignment`, and on an incremental MCC drop that workflow publishes `evaluations:automaticOptimization` (8h throttle) which starts `optimize-evaluation`. Workflows never sleep — the queue owns both windows. Throttle (not debounce) semantics: the first publish schedules the fire time; subsequent publishes within the window are dropped by BullMQ, so a constant annotation stream cannot starve the refresh. Worst-case latency is bounded (1h for refresh, 8h for optimize) and fires are capped at once per window per evaluation
+- annotation-driven automatic realignment flows through two throttled BullMQ tasks: `evaluations:automaticRefreshAlignment` (1h throttle) starts `refresh-evaluation-alignment`, and on an incremental alignment-metric drop that workflow publishes `evaluations:automaticOptimization` (8h throttle) which starts `optimize-evaluation`. Workflows never sleep — the queue owns both windows. Throttle (not debounce) semantics: the first publish schedules the fire time; subsequent publishes within the window are dropped by BullMQ, so a constant annotation stream cannot starve the refresh. Worst-case latency is bounded (1h for refresh, 8h for optimize) and fires are capped at once per window per evaluation
 
 User-triggered background generation contract:
 
@@ -149,11 +149,11 @@ Evaluations generated from issues (by user demand) are the mainline flow:
 Alignment rules from the proposal:
 
 - only persisted alignment primitive: confusion matrix
-- MCC (Matthews Correlation Coefficient), accuracy, F1, and other alignment metrics are derived from that confusion matrix on read
+- the headline alignment metric (currently balanced accuracy), along with recall, specificity, precision, F1, MCC, and accuracy, are all derived from that confusion matrix on read. The decision logic and UI refer to the headline value as the "alignment metric" and never hardcode the underlying formula, so it can be swapped without touching callers
 - drafts and errored scores are excluded from alignment entirely
 - user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `optimize-evaluation` workflow under an `evaluations:generate:${issueId}` workflow id
 - throttled incremental metric recomputation at most once per hour per evaluation; fires at most 1h after the first annotation
-- throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first MCC-drop escalation
+- throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first alignment-metric-drop escalation
 - manual realignment is available and throttled
 - unchanged scripts may refresh alignment incrementally instead of fully re-optimizing
 - the refresh workflow compares `sha1(evaluation.script)` to `evaluation.alignment.evaluationHash` on every run: when they match, new examples are evaluated and added into the existing confusion-matrix counters; when they diverge (the script was updated outside the atomic alignment write path), the workflow rebuilds the matrix from scratch against all curated examples and persists the freshly computed hash so future refreshes are back on the incremental path
@@ -182,11 +182,11 @@ That abstraction should live in `@domain/optimizations`, with the first concrete
 
 The abstraction must support Pareto-driven multi-objective optimization with this priority order:
 
-1. maximize alignment (MCC) against human judgment
+1. maximize the alignment metric against human judgment
 2. minimize cost in dollars, derived from stored microcent values
 3. minimize duration in seconds, derived from stored nanosecond values
 
-The optimizer-facing alignment objective is the derived MCC from the ground-truth evaluation run. The only persisted alignment primitive remains the confusion matrix, from which MCC, accuracy, F1, and other metrics can be computed.
+The optimizer-facing alignment objective is the derived alignment metric from the ground-truth evaluation run. The only persisted alignment primitive remains the confusion matrix, from which the alignment metric, accuracy, recall, specificity, F1, MCC, and other metrics are computed.
 
 Persisted reliability cost stays in a field named `cost` and is stored in microcents. UI/reporting and optimizer-facing cost displays convert that stored value into dollars at read time.
 

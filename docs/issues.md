@@ -294,7 +294,7 @@ Issue-linked evaluation creation is explicit:
 - issues may have several linked evaluations
 - the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
 - each trigger starts the `optimize-evaluation` Temporal workflow with a deterministic `evaluations:generate:${issueId}` workflow id for initial generation (or `evaluations:optimize:${evaluationId}` for manual realignment); the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal via `workflow.describe()` until the workflow terminates and the resulting evaluation appears via normal data-fetching
-- once created, automatic throttled realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToIssue`, which the `domain-events` dispatcher routes to `issues:refresh` (throttled at 8h), which in turn publishes `evaluations:automaticRefreshAlignment` (throttled at 1h, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (throttled at 8h) when the incremental MCC drop exceeds tolerance. All windows are first-publish-wins so a continuous annotation stream cannot push the fire time forward indefinitely
+- once created, automatic throttled realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToIssue`, which the `domain-events` dispatcher routes to `issues:refresh` (throttled at 8h), which in turn publishes `evaluations:automaticRefreshAlignment` (throttled at 1h, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (throttled at 8h) when the incremental alignment-metric drop exceeds tolerance. All windows are first-publish-wins so a continuous annotation stream cannot push the fire time forward indefinitely
 
 Once an issue-linked evaluation exists:
 
@@ -446,7 +446,7 @@ Issues table behavior:
 - `Seen at` combines recency and age, for example `11d ago / 3y old`
 - `Occurrences` uses the selected time range and its column header also shows the sum across all matched issues
 - `Affected traces` is the occurrences count divided by the total number of traces in the selected time window, capped at `100%`
-- `Evaluations` shows linked evaluation tags with truncated names plus alignment MCC percentage, or `-` when none are linked
+- `Evaluations` shows linked evaluation tags with truncated names plus the alignment metric percentage, or `-` when none are linked
 
 Issue details drawer behavior:
 
@@ -454,6 +454,6 @@ Issue details drawer behavior:
 - the header uses the same close and previous/next navigation pattern as the `Traces` details drawer
 - the header actions are ignore/unignore and resolve/unresolve
 - the body includes issue name/description, a summary row, a collapsible 14-day trend histogram ending today, a collapsible linked-evaluations section, and a collapsible infinitely paginated mini traces table
-- linked evaluations show name, last alignment date, MCC, manual realign, and per-evaluation archive actions
+- linked evaluations show name, last alignment date, alignment metric, manual realign, and per-evaluation archive actions; the alignment badge tooltip surfaces the confusion matrix plus a "Advanced statistics" link button that opens a modal with every metric derivable from it (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - while a realignment is in flight, the UI shows `Aligning...`
 - when an issue has no linked evaluations, the drawer shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button

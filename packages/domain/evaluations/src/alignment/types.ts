@@ -46,9 +46,9 @@ export interface IncrementalEvaluationRefreshResult extends BaselineEvaluationRe
   readonly nextConfusionMatrix: ConfusionMatrix
   readonly newExampleCount: number
   readonly previousMetrics: EvaluationAlignmentMetrics
-  readonly previousMatthewsCorrelationCoefficient: number
-  readonly nextMatthewsCorrelationCoefficient: number
-  readonly matthewsCorrelationCoefficientDrop: number
+  readonly previousAlignmentMetric: number
+  readonly nextAlignmentMetric: number
+  readonly alignmentMetricDrop: number
 }
 
 export interface PersistEvaluationAlignmentResult {
