@@ -139,6 +139,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,

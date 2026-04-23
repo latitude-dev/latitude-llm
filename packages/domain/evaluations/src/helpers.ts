@@ -11,6 +11,7 @@ export type EvaluationAlignmentMetrics = {
   readonly precision: number
   readonly recall: number
   readonly specificity: number
+  readonly trueness: number
   readonly f1: number
   readonly balancedAccuracy: number
   readonly matthewsCorrelationCoefficient: number
@@ -47,6 +48,19 @@ const LIVE_EVALUATION_EXECUTE_KEY_PREFIX = "evaluations:live:execute"
 const safeDivide = (numerator: number, denominator: number): number => {
   if (denominator === 0) {
     return 0
+  }
+
+  return numerator / denominator
+}
+
+// For class-of-interest ratios (accuracy / precision / recall / specificity),
+// an empty denominator means the dataset contained no examples of that class.
+// Returning 0 misrepresents a flawless run on an unbalanced dataset (e.g. 3 TP
+// with 0 actual negatives would show specificity = 0%). Treat the undefined
+// ratio as vacuously correct (1) instead.
+const vacuousRatio = (numerator: number, denominator: number): number => {
+  if (denominator === 0) {
+    return 1
   }
 
   return numerator / denominator
@@ -372,22 +386,25 @@ export const totalConfusionMatrixObservations = (confusionMatrix: ConfusionMatri
   confusionMatrix.trueNegatives
 
 export const calculateAccuracy = (confusionMatrix: ConfusionMatrix): number =>
-  safeDivide(
+  vacuousRatio(
     confusionMatrix.truePositives + confusionMatrix.trueNegatives,
     totalConfusionMatrixObservations(confusionMatrix),
   )
 
 export const calculatePrecision = (confusionMatrix: ConfusionMatrix): number =>
-  safeDivide(confusionMatrix.truePositives, confusionMatrix.truePositives + confusionMatrix.falsePositives)
+  vacuousRatio(confusionMatrix.truePositives, confusionMatrix.truePositives + confusionMatrix.falsePositives)
 
 export const calculateRecall = (confusionMatrix: ConfusionMatrix): number =>
-  safeDivide(confusionMatrix.truePositives, confusionMatrix.truePositives + confusionMatrix.falseNegatives)
+  vacuousRatio(confusionMatrix.truePositives, confusionMatrix.truePositives + confusionMatrix.falseNegatives)
 
 export const calculateSpecificity = (confusionMatrix: ConfusionMatrix): number =>
-  safeDivide(confusionMatrix.trueNegatives, confusionMatrix.trueNegatives + confusionMatrix.falsePositives)
+  vacuousRatio(confusionMatrix.trueNegatives, confusionMatrix.trueNegatives + confusionMatrix.falsePositives)
+
+export const calculateTrueness = (confusionMatrix: ConfusionMatrix): number =>
+  vacuousRatio(confusionMatrix.trueNegatives, confusionMatrix.trueNegatives + confusionMatrix.falseNegatives)
 
 export const calculateF1 = (confusionMatrix: ConfusionMatrix): number =>
-  safeDivide(
+  vacuousRatio(
     2 * confusionMatrix.truePositives,
     2 * confusionMatrix.truePositives + confusionMatrix.falsePositives + confusionMatrix.falseNegatives,
   )
@@ -424,6 +441,7 @@ export const deriveEvaluationAlignmentMetrics = (confusionMatrix: ConfusionMatri
   precision: calculatePrecision(confusionMatrix),
   recall: calculateRecall(confusionMatrix),
   specificity: calculateSpecificity(confusionMatrix),
+  trueness: calculateTrueness(confusionMatrix),
   f1: calculateF1(confusionMatrix),
   balancedAccuracy: calculateBalancedAccuracy(confusionMatrix),
   matthewsCorrelationCoefficient: calculateMatthewsCorrelationCoefficient(confusionMatrix),

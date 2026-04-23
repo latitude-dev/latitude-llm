@@ -63,6 +63,7 @@ export {
   calculatePrecision,
   calculateRecall,
   calculateSpecificity,
+  calculateTrueness,
   decideAlignmentRefreshStrategy,
   deriveConfusionMatrix,
   deriveEvaluationAlignmentMetrics,

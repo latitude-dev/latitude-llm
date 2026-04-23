@@ -17,6 +17,7 @@ import {
   calculatePrecision,
   calculateRecall,
   calculateSpecificity,
+  calculateTrueness,
   decideAlignmentRefreshStrategy,
   deriveConfusionMatrix,
   deriveEvaluationAlignmentMetrics,
@@ -338,6 +339,7 @@ describe("confusion-matrix metric helpers", () => {
     expect(calculatePrecision(confusionMatrix)).toBeCloseTo(12 / 14)
     expect(calculateRecall(confusionMatrix)).toBeCloseTo(12 / 13)
     expect(calculateSpecificity(confusionMatrix)).toBeCloseTo(35 / 37)
+    expect(calculateTrueness(confusionMatrix)).toBeCloseTo(35 / 36)
     expect(calculateF1(confusionMatrix)).toBeCloseTo(24 / 27)
     expect(calculateBalancedAccuracy(confusionMatrix)).toBeCloseTo((12 / 13 + 35 / 37) / 2)
     expect(calculateAlignmentMetric(confusionMatrix)).toBe(calculateBalancedAccuracy(confusionMatrix))
@@ -349,13 +351,14 @@ describe("confusion-matrix metric helpers", () => {
       precision: calculatePrecision(confusionMatrix),
       recall: calculateRecall(confusionMatrix),
       specificity: calculateSpecificity(confusionMatrix),
+      trueness: calculateTrueness(confusionMatrix),
       f1: calculateF1(confusionMatrix),
       balancedAccuracy: calculateBalancedAccuracy(confusionMatrix),
       matthewsCorrelationCoefficient: calculateMatthewsCorrelationCoefficient(confusionMatrix),
     })
   })
 
-  it("returns zero when a metric denominator is empty", () => {
+  it("treats empty class denominators on simple ratios as vacuously correct", () => {
     const empty: ConfusionMatrix = {
       truePositives: 0,
       falsePositives: 0,
@@ -364,14 +367,53 @@ describe("confusion-matrix metric helpers", () => {
     }
 
     expect(totalConfusionMatrixObservations(empty)).toBe(0)
-    expect(calculateAccuracy(empty)).toBe(0)
-    expect(calculatePrecision(empty)).toBe(0)
-    expect(calculateRecall(empty)).toBe(0)
-    expect(calculateSpecificity(empty)).toBe(0)
-    expect(calculateF1(empty)).toBe(0)
-    expect(calculateBalancedAccuracy(empty)).toBe(0)
-    expect(calculateAlignmentMetric(empty)).toBe(0)
+    expect(calculateAccuracy(empty)).toBe(1)
+    expect(calculatePrecision(empty)).toBe(1)
+    expect(calculateRecall(empty)).toBe(1)
+    expect(calculateSpecificity(empty)).toBe(1)
+    expect(calculateTrueness(empty)).toBe(1)
+    expect(calculateF1(empty)).toBe(1)
+    expect(calculateBalancedAccuracy(empty)).toBe(1)
+    expect(calculateAlignmentMetric(empty)).toBe(1)
     expect(calculateMatthewsCorrelationCoefficient(empty)).toBe(0)
+  })
+
+  it("reports a perfect positives-only run without penalising the missing negative class", () => {
+    const positivesOnly: ConfusionMatrix = {
+      truePositives: 3,
+      falsePositives: 0,
+      falseNegatives: 0,
+      trueNegatives: 0,
+    }
+
+    expect(calculateAccuracy(positivesOnly)).toBe(1)
+    expect(calculatePrecision(positivesOnly)).toBe(1)
+    expect(calculateRecall(positivesOnly)).toBe(1)
+    expect(calculateSpecificity(positivesOnly)).toBe(1)
+    expect(calculateTrueness(positivesOnly)).toBe(1)
+    expect(calculateBalancedAccuracy(positivesOnly)).toBe(1)
+    expect(calculateAlignmentMetric(positivesOnly)).toBe(1)
+    expect(calculateF1(positivesOnly)).toBe(1)
+    expect(calculateMatthewsCorrelationCoefficient(positivesOnly)).toBe(0)
+  })
+
+  it("reports a perfect negatives-only run without penalising the missing positive class", () => {
+    const negativesOnly: ConfusionMatrix = {
+      truePositives: 0,
+      falsePositives: 0,
+      falseNegatives: 0,
+      trueNegatives: 3,
+    }
+
+    expect(calculateAccuracy(negativesOnly)).toBe(1)
+    expect(calculatePrecision(negativesOnly)).toBe(1)
+    expect(calculateRecall(negativesOnly)).toBe(1)
+    expect(calculateSpecificity(negativesOnly)).toBe(1)
+    expect(calculateTrueness(negativesOnly)).toBe(1)
+    expect(calculateF1(negativesOnly)).toBe(1)
+    expect(calculateBalancedAccuracy(negativesOnly)).toBe(1)
+    expect(calculateAlignmentMetric(negativesOnly)).toBe(1)
+    expect(calculateMatthewsCorrelationCoefficient(negativesOnly)).toBe(0)
   })
 
   it("derives confusion-matrix counters from labeled observations", () => {
