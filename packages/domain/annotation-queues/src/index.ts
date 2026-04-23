@@ -184,12 +184,16 @@ export {
   runDeterministicSystemMatchersUseCase,
 } from "./use-cases/run-deterministic-system-matchers.ts"
 export {
+  type AnnotateTraceForQueueInput,
+  annotateTraceForQueueUseCase,
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,
   type RunSystemQueueAnnotatorResult,
   runSystemQueueAnnotatorUseCase,
 } from "./use-cases/run-system-queue-annotator.ts"
 export {
+  type ClassifyTraceForQueueInput,
+  classifyTraceForQueueUseCase,
   type RunSystemQueueFlaggerError,
   type RunSystemQueueFlaggerInput,
   type RunSystemQueueFlaggerResult,
