@@ -9,7 +9,7 @@ import type {
 } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
-import type { TraceCohortBaselineData, TraceCohortListingSpec } from "../trace-cohorts.ts"
+import type { TraceCohortBaselineData } from "../trace-cohorts.ts"
 
 /**
  * Repository port for traces (ClickHouse materialized view).
@@ -18,10 +18,16 @@ import type { TraceCohortBaselineData, TraceCohortListingSpec } from "../trace-c
  * by a materialized view on each insert into spans.
  */
 export interface TraceRepositoryShape {
-  getCohortBaselineByProjectId(input: {
+  /**
+   * Baseline percentiles scoped to the exact tag combination. Empty `tags` array
+   * matches only untagged traces. Tag match is order-independent set equality.
+   * Intentionally ignores user filters — the goal is a stable "what's normal for
+   * this kind of trace" reference.
+   */
+  getCohortBaselineByTags(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly filters?: FilterSet
+    readonly tags: ReadonlyArray<string>
     readonly excludeTraceId?: TraceId
   }): Effect.Effect<TraceCohortBaselineData, RepositoryError, ChSqlClient>
 
@@ -50,7 +56,6 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-    readonly cohort?: TraceCohortListingSpec
     readonly bucketSeconds: number
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
@@ -107,7 +112,6 @@ export interface TraceListOptions {
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
-  readonly cohort?: TraceCohortListingSpec
 }
 
 export interface TraceListPage {

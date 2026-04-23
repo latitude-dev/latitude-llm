@@ -7,7 +7,7 @@ import { DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, MessagesSquareIcon,
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
-import { useTraceCohortSummary, useTracesCount } from "../../../../domains/traces/traces.collection.ts"
+import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
@@ -154,23 +154,6 @@ function ProjectPage() {
     ...(hasActiveFilters ? { filters } : {}),
   })
 
-  // Cohort baselines use a fixed 2-week window for stability (not affected by user time filters)
-  const twoWeekBaselinesFilter = useMemo((): FilterSet => {
-    const now = new Date()
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-    return {
-      startTime: [
-        { op: "gte", value: twoWeeksAgo.toISOString() },
-        { op: "lte", value: now.toISOString() },
-      ],
-    }
-  }, [])
-
-  const { data: cohortSummary } = useTraceCohortSummary({
-    projectId: currentProject.id,
-    filters: twoWeekBaselinesFilter,
-  })
-
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
 
@@ -300,7 +283,6 @@ function ProjectPage() {
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
     activeDrawerTab: traceDetailTab,
-    baselines: cohortSummary?.baselines,
     sorting,
     onSortingChange,
     selectionState,
@@ -426,7 +408,6 @@ function ProjectPage() {
             key={activeTraceId}
             traceId={activeTraceId}
             projectId={currentProject.id}
-            baselines={cohortSummary?.baselines}
             filters={filters}
             onFiltersChange={onFiltersChange}
             onClose={closeTraceDrawer}

@@ -183,6 +183,7 @@ function AnnotationQueueItemDetailPage() {
           </div>
           <TraceTab
             traceId={traceId}
+            projectId={projectId}
             traceRecord={traceDetail ?? undefined}
             traceDetail={traceDetail}
             isRecordLoading={isRecordLoading}

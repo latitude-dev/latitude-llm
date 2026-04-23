@@ -1,32 +1,29 @@
-import type { FilterSet, OrganizationId, ProjectId } from "@domain/shared"
+import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { TraceRepository } from "../ports/trace-repository.ts"
 import { buildTraceMetricBaselines, type TraceCohortSummary } from "../trace-cohorts.ts"
 
-export interface GetTraceCohortSummaryInput {
+export interface GetTraceCohortSummaryByTagsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly filters?: FilterSet
-  readonly effectiveRangeStartIso: string
-  readonly effectiveRangeEndIso: string
+  readonly tags: ReadonlyArray<string>
 }
 
-export const getTraceCohortSummaryUseCase = Effect.fn("spans.getTraceCohortSummary")(function* (
-  input: GetTraceCohortSummaryInput,
+export const getTraceCohortSummaryByTagsUseCase = Effect.fn("spans.getTraceCohortSummaryByTags")(function* (
+  input: GetTraceCohortSummaryByTagsInput,
 ) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("tagsLength", input.tags.length)
 
   const traceRepository = yield* TraceRepository
-  const baselineData = yield* traceRepository.getCohortBaselineByProjectId({
+  const baselineData = yield* traceRepository.getCohortBaselineByTags({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    ...(input.filters ? { filters: input.filters } : {}),
+    tags: input.tags,
   })
   const baselines = buildTraceMetricBaselines(baselineData)
 
   return {
-    effectiveRangeStartIso: input.effectiveRangeStartIso,
-    effectiveRangeEndIso: input.effectiveRangeEndIso,
     traceCount: baselineData.traceCount,
     baselines,
   } satisfies TraceCohortSummary

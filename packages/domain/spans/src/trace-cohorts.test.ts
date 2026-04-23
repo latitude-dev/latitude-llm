@@ -1,11 +1,11 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import {
-  buildTraceCohortListingSpec,
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaselines,
   evaluateTraceResourceOutliers,
   getTraceMetricPercentileThreshold,
+  isTraceCohortKeyAvailable,
   isTraceMetricPercentileAvailable,
   TRACE_COHORT_P90_MIN_SAMPLES,
   type Trace,
@@ -85,8 +85,9 @@ describe("trace cohorts", () => {
       },
     })
 
-    const spec = buildTraceCohortListingSpec("latency-and-cost-p95-plus", baselines)
-    expect(spec.unavailableReason).toBe("mixed-mode-suppressed")
+    const availability = isTraceCohortKeyAvailable("latency-and-cost-p95-plus", baselines)
+    expect(availability.available).toBe(false)
+    expect(availability.unavailableReason).toBe("mixed-mode-suppressed")
   })
 
   it("hides p90 thresholds until the baseline has enough samples", () => {

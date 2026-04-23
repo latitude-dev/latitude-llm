@@ -10,7 +10,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
-  getTraceCohortSummaryByProject,
+  getTraceCohortSummaryByTags,
   getTraceDetail,
   getTraceDistinctValues,
   getTraceMetricsByProject,
@@ -100,20 +100,24 @@ export function useTraceMetrics({ projectId, filters }: { readonly projectId: st
   })
 }
 
-export function useTraceCohortSummary({
+export function useTraceCohortSummaryByTags({
   projectId,
-  filters,
+  tags,
 }: {
   readonly projectId: string
-  readonly filters?: FilterSet
+  readonly tags: ReadonlyArray<string>
 }) {
+  // Canonicalize the tag combination for a stable cache key: dedupe + sort so that
+  // ["a","b"] and ["b","a"] share a single query. Tag comparison is case-sensitive
+  // on the backend (ClickHouse String equality), so do NOT lowercase.
+  const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
   return useQuery<TraceCohortSummary>({
-    queryKey: ["traces-cohort-summary", projectId, filters],
+    queryKey: ["traces-cohort-summary-by-tags", projectId, sortedTags],
     queryFn: () =>
-      getTraceCohortSummaryByProject({
+      getTraceCohortSummaryByTags({
         data: {
           projectId,
-          ...(filters ? { filters } : {}),
+          tags: sortedTags,
         },
       }),
     staleTime: 30_000,

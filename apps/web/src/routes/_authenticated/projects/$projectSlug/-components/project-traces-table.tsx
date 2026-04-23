@@ -1,4 +1,4 @@
-import { getTraceMetricPercentileThreshold, type TraceCohortSummary, type TraceMetrics } from "@domain/spans"
+import type { TraceMetrics } from "@domain/spans"
 import {
   InfiniteTable,
   type InfiniteTableColumn,
@@ -6,8 +6,6 @@ import {
   type InfiniteTableSelection,
   type InfiniteTableSorting,
   ProviderIcon,
-  Status,
-  type StatusProps,
   TagList,
   Tooltip,
 } from "@repo/ui"
@@ -16,6 +14,7 @@ import { Link } from "@tanstack/react-router"
 import { type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
+import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
 
 export const DEFAULT_TRACE_TABLE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
@@ -33,38 +32,9 @@ export const TRACE_COLUMN_OPTIONS = [
 ] as const
 
 export type TraceColumnId = (typeof TRACE_COLUMN_OPTIONS)[number]["id"]
-type Baselines = TraceCohortSummary["baselines"]
-
-function getPercentileLevel(
-  value: number,
-  baseline: Baselines[keyof Baselines] | undefined,
-): "p99" | "p95" | "p90" | undefined {
-  if (!baseline) return undefined
-
-  const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
-  if (p99 !== null && value >= p99) return "p99"
-
-  const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
-  if (p95 !== null && value >= p95) return "p95"
-
-  const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
-  if (p90 !== null && value >= p90) return "p90"
-
-  return undefined
-}
-
-function getPercentileStatusVariant(level: "p99" | "p95" | "p90"): NonNullable<StatusProps["variant"]> {
-  switch (level) {
-    case "p99":
-      return "destructive"
-    case "p95":
-      return "warning"
-    case "p90":
-      return "info"
-  }
-}
 
 interface ProjectTracesTableProps {
+  readonly projectId: string
   readonly data: readonly TraceRecord[]
   readonly isLoading?: boolean | undefined
   readonly visibleColumnIds: readonly TraceColumnId[]
@@ -83,12 +53,12 @@ interface ProjectTracesTableProps {
   readonly getTraceHref?: (trace: TraceRecord) => string
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
-  readonly baselines?: Baselines | undefined
   readonly scrollAreaLayout?: "fill" | "intrinsic"
   readonly scrollContainerClassName?: string
 }
 
 export function ProjectTracesTable({
+  projectId,
   data,
   isLoading,
   visibleColumnIds,
@@ -106,7 +76,6 @@ export function ProjectTracesTable({
   getTraceHref,
   traceMetrics,
   metricsLoading,
-  baselines,
   scrollAreaLayout,
   scrollContainerClassName,
 }: ProjectTracesTableProps) {
@@ -157,16 +126,12 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "duration",
         width: 140,
-        render: (trace) => {
-          const hasDuration = trace.durationNs > 0
-          const level = hasDuration ? getPercentileLevel(trace.durationNs, baselines?.durationNs) : undefined
-          return (
-            <span className="flex items-center justify-end gap-1">
-              {level ? <Status variant={getPercentileStatusVariant(level)} label={level} /> : null}
-              {hasDuration ? formatDuration(trace.durationNs) : "-"}
-            </span>
-          )
-        },
+        render: (trace) => (
+          <span className="flex items-center justify-end gap-1">
+            <TraceOutlierBadge projectId={projectId} tags={trace.tags} value={trace.durationNs} metric="durationNs" />
+            {trace.durationNs > 0 ? formatDuration(trace.durationNs) : "-"}
+          </span>
+        ),
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -185,18 +150,17 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "ttft",
         width: 176,
-        render: (trace) => {
-          const level =
-            trace.timeToFirstTokenNs > 0
-              ? getPercentileLevel(trace.timeToFirstTokenNs, baselines?.timeToFirstTokenNs)
-              : undefined
-          return (
-            <span className="flex items-center justify-end gap-1">
-              {level ? <Status variant={getPercentileStatusVariant(level)} label={level} /> : null}
-              {trace.timeToFirstTokenNs > 0 ? formatDuration(trace.timeToFirstTokenNs) : "-"}
-            </span>
-          )
-        },
+        render: (trace) => (
+          <span className="flex items-center justify-end gap-1">
+            <TraceOutlierBadge
+              projectId={projectId}
+              tags={trace.tags}
+              value={trace.timeToFirstTokenNs}
+              metric="timeToFirstTokenNs"
+            />
+            {trace.timeToFirstTokenNs > 0 ? formatDuration(trace.timeToFirstTokenNs) : "-"}
+          </span>
+        ),
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -219,18 +183,17 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "cost",
         width: 146,
-        render: (trace) => {
-          const hasCost = trace.costTotalMicrocents > 0
-          const level = hasCost
-            ? getPercentileLevel(trace.costTotalMicrocents, baselines?.costTotalMicrocents)
-            : undefined
-          return (
-            <span className="flex items-center justify-end gap-1">
-              {level ? <Status variant={getPercentileStatusVariant(level)} label={level} /> : null}
-              {hasCost ? formatPrice(trace.costTotalMicrocents / 100_000_000) : "-"}
-            </span>
-          )
-        },
+        render: (trace) => (
+          <span className="flex items-center justify-end gap-1">
+            <TraceOutlierBadge
+              projectId={projectId}
+              tags={trace.tags}
+              value={trace.costTotalMicrocents}
+              metric="costTotalMicrocents"
+            />
+            {trace.costTotalMicrocents > 0 ? formatPrice(trace.costTotalMicrocents / 100_000_000) : "-"}
+          </span>
+        ),
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -307,7 +270,7 @@ export function ProjectTracesTable({
           : {}),
       },
     ]
-  }, [showMetricSubheaders, traceMetrics, metricsLoading, baselines, getTraceHref])
+  }, [showMetricSubheaders, traceMetrics, metricsLoading, projectId, getTraceHref])
 
   const columns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
