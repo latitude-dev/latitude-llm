@@ -98,31 +98,35 @@ function TraceValueRow({ value, metric, p50 }: { value: number; metric: TraceCoh
 }
 
 function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMetric]; value: number }) {
-  const p50 = baseline.p50
   const p90 = getTraceMetricPercentileThreshold(baseline, "p90")
   const p95 = getTraceMetricPercentileThreshold(baseline, "p95")
   const p99 = getTraceMetricPercentileThreshold(baseline, "p99")
 
-  if (p50 <= 0) return null
+  // The badge only renders when at least p90 is available; mirror that here.
+  if (p90 === null) return null
 
-  const zones: { upperBound: number; className: string }[] = [{ upperBound: p50, className: "bg-muted-foreground/25" }]
-  if (p90 !== null) zones.push({ upperBound: p90, className: "bg-sky-400/60" })
-  if (p95 !== null) zones.push({ upperBound: p95, className: "bg-amber-400/70" })
-  if (p99 !== null) zones.push({ upperBound: p99, className: "bg-red-400/70" })
+  // Strip's right edge: past the highest known percentile (or the trace's value
+  // if it outran p99) so the marker never clips the end.
+  const highestPercentile = p99 ?? p95 ?? p90
+  const stripMax = Math.max(value, highestPercentile) * 1.05
 
-  // Extend the last zone to enclose the trace's value so the marker always lands
-  // inside a colored region that matches its badge level.
-  const last = zones[zones.length - 1]
-  if (!last) return null
-  if (value > last.upperBound) last.upperBound = value
+  // Zones are *badge tiers*, not distribution buckets — the marker's color must
+  // match the badge the trace earns. Tiers: normal [0,p90), p90 [p90,p95),
+  // p95 [p95,p99), p99 [p99,max). When higher percentiles are null the current
+  // tier absorbs the rest of the strip (no empty trailing space).
+  const zones: { upper: number; className: string }[] = [
+    { upper: p90, className: "bg-muted-foreground/25" },
+    { upper: p95 ?? stripMax, className: "bg-sky-400/60" },
+  ]
+  if (p95 !== null) zones.push({ upper: p99 ?? stripMax, className: "bg-amber-400/70" })
+  if (p99 !== null) zones.push({ upper: stripMax, className: "bg-red-400/70" })
 
-  const max = last.upperBound * 1.05
-  const pct = (v: number) => (v / max) * 100
+  const pct = (v: number) => (v / stripMax) * 100
 
   let cursor = 0
   const rendered = zones.map((z) => {
-    const width = pct(z.upperBound - cursor)
-    cursor = z.upperBound
+    const width = pct(z.upper - cursor)
+    cursor = z.upper
     return { className: z.className, width }
   })
 
@@ -230,7 +234,7 @@ export function TraceOutlierBadge({
     )
 
   return (
-    <Tooltip asChild trigger={trigger}>
+    <Tooltip asChild={onThresholdClick !== undefined} trigger={trigger}>
       <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} value={value} />
     </Tooltip>
   )
