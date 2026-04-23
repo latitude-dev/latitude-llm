@@ -15,6 +15,8 @@ import {
   SEED_COMBINATION_SIMULATION_SPAN_IDS,
   SEED_COMBINATION_SIMULATION_TRACE_IDS,
   SEED_ISSUE_FIXTURES_BY_ID,
+  SEED_JSON_RESPONSE_SPAN_IDS,
+  SEED_JSON_RESPONSE_TRACE_IDS,
   SEED_LIFECYCLE_SPAN_IDS,
   SEED_LIFECYCLE_TRACE_IDS,
   SEED_ORG_ID,
@@ -205,6 +207,62 @@ function buildIssueOccurrenceTraceSpans(): SpanRow[] {
   })
 }
 
+function buildJsonResponseSpans(): SpanRow[] {
+  const prettyOrderDetails = JSON.stringify(
+    {
+      orderId: "ACM-98731",
+      status: "delivered",
+      customer: { id: "cust_2041", name: "Wile E. Coyote" },
+      items: [
+        { sku: "RKT-SKT-01", name: "Rocket Skates Pro", quantity: 1, priceCents: 29_900 },
+        { sku: "SFT-GEAR-02", name: "Deluxe Safety Gear Bundle", quantity: 1, priceCents: 7_999 },
+      ],
+      shipping: { carrier: "FastShip", trackingNumber: "FS654321987", deliveredAt: "2026-04-22T16:04:11Z" },
+      totalCents: 37_899,
+    },
+    null,
+    2,
+  )
+
+  const specs = [
+    {
+      userPrompt: "Give me the latest metrics snapshot in JSON.",
+      assistantResponse:
+        '{"period":"last_24h","requests":18432,"errors":47,"p50_ms":112,"p95_ms":418,"p99_ms":1024,"topEndpoints":[{"path":"/v1/traces","share":0.61},{"path":"/v1/projects","share":0.22},{"path":"/v1/issues","share":0.11}]}',
+    },
+    {
+      userPrompt: "Return the warranty policy as a structured JSON object.",
+      assistantResponse:
+        '{"policy":"Acme Standard Warranty","durationDays":90,"covers":["manufacturing_defects","normal_wear_and_tear"],"excludes":["roadrunner_incidents","cliff_falls","physics_violations"],"extension":{"name":"Protection Plus","priceCents":4999,"extraDays":640}}',
+    },
+    {
+      userPrompt: "List three upcoming releases as a JSON array.",
+      assistantResponse:
+        '[{"id":"rel-2026-17","title":"Faster semantic search","ship":"2026-04-30"},{"id":"rel-2026-18","title":"Trace comparison view","ship":"2026-05-07"},{"id":"rel-2026-19","title":"Issue auto-triage","ship":"2026-05-14"}]',
+    },
+    {
+      userPrompt: "Show me the order details for ACM-98731.",
+      assistantResponse: prettyOrderDetails,
+    },
+  ] as const
+
+  return specs.map((spec, i) => {
+    const time = generateTime(0, 10 + i, 30)
+    return createFixedSpan({
+      traceId: requiredAt(SEED_JSON_RESPONSE_TRACE_IDS, i),
+      spanId: requiredAt(SEED_JSON_RESPONSE_SPAN_IDS, i),
+      startTime: time.start,
+      endTime: time.end,
+      userPrompt: spec.userPrompt,
+      assistantResponse: spec.assistantResponse,
+      systemInstruction: SUPPORT_AGENT_SYSTEM_PROMPT,
+      serviceName: "acme-support-agent",
+      tags: ["support", "json-response"],
+      metadata: { story: "json-assistant-response-demo" },
+    })
+  })
+}
+
 function buildLifecycleSpans(): SpanRow[] {
   const specs = [
     {
@@ -284,6 +342,7 @@ const allFixedSpans = [
   ...buildAnnotationTraceSpans(),
   ...buildAlignmentFixtureSpans(),
   ...buildIssueOccurrenceTraceSpans(),
+  ...buildJsonResponseSpans(),
   ...buildLifecycleSpans(),
   ...buildSimulationTraceSpans({
     rows: WARRANTY_DATASET_ROWS,

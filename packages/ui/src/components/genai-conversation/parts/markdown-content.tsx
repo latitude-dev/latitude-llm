@@ -52,6 +52,18 @@ export function isJsonBlock(content: string): boolean {
   }
 }
 
+// Reformat compact (single-line) JSON so nested structures render with
+// indentation. Already-multiline JSON is kept verbatim so any producer-side
+// formatting (and annotation offsets saved against it) is preserved.
+function prettifyCompactJson(content: string): string {
+  if (content.includes("\n")) return content
+  try {
+    return JSON.stringify(JSON.parse(content), null, 2)
+  } catch {
+    return content
+  }
+}
+
 export function MarkdownContent({
   content,
   messageIndex,
@@ -97,7 +109,7 @@ export function MarkdownContent({
   }
 
   if (isJson) {
-    return <JsonContent content={content} messageIndex={messageIndex} partIndex={partIndex} />
+    return <JsonContent content={prettifyCompactJson(content)} messageIndex={messageIndex} partIndex={partIndex} />
   }
 
   return (
