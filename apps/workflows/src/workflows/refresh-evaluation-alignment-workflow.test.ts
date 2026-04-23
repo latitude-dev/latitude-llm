@@ -15,6 +15,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     readonly recall: number
     readonly f1: number
     readonly specificity: number
+    readonly trueness: number
     readonly balancedAccuracy: number
     readonly alignmentMetric: number
     readonly matthewsCorrelationCoefficient: number
@@ -141,6 +142,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
@@ -153,6 +155,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
@@ -177,6 +180,7 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
@@ -261,6 +265,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           precision: 0.6,
           recall: 0.75,
           specificity: 0.5,
+          trueness: 0.5,
           f1: 0.66,
           balancedAccuracy: 0.4,
           matthewsCorrelationCoefficient: 0.4,
@@ -273,6 +278,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
@@ -362,6 +368,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,
@@ -374,6 +381,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
           precision: 1,
           recall: 1,
           specificity: 1,
+          trueness: 1,
           f1: 1,
           balancedAccuracy: 1,
           matthewsCorrelationCoefficient: 1,

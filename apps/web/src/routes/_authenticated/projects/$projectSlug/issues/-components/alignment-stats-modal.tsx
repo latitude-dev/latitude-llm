@@ -35,13 +35,19 @@ const buildStats = (evaluation: EvaluationSummaryRecord): readonly AlignmentStat
       name: "Specificity",
       value: metrics.specificity,
       description:
-        "Of all the traces humans marked as clean, how many the evaluation correctly left alone. High specificity means few false alarms. This is the issue absence detection success rate.",
+        "Of all the traces humans marked as not containing the issue, how many the evaluation skipped. High specificity means few false alarms. This is the issue absence detection success rate.",
     },
     {
       name: "Precision",
       value: metrics.precision,
       description:
         "Of all the traces the evaluation flagged as containing the issue, how many humans agreed with. High precision means few false alarms among flagged traces.",
+    },
+    {
+      name: "Trueness",
+      value: metrics.trueness,
+      description:
+        "Of all the traces the evaluation did not flag, how many humans also marked as not containing the issue. High trueness means few missed issues among traces the evaluation did not flag.",
     },
     {
       name: "F1",
@@ -123,28 +129,25 @@ export function AlignmentStatsModal({
   readonly evaluation: EvaluationSummaryRecord | null
   readonly onClose: () => void
 }) {
-  const stats = evaluation === null ? [] : buildStats(evaluation)
-
   return (
-    <Modal.Root open={evaluation !== null} onOpenChange={(open) => (!open ? onClose() : undefined)}>
-      <Modal.Content dismissible size="medium">
-        <Modal.Header
-          title="Alignment stats"
-          description="All metrics derivable from the stored confusion matrix. Balanced accuracy is the main alignment metric used in the system, the rest are exposed here for reference."
-        />
-        {evaluation !== null ? (
-          <Modal.Body>
-            <div className="flex flex-col gap-6">
-              <ConfusionMatrixBlock evaluation={evaluation} />
-              <div className="flex flex-col">
-                {stats.map((stat) => (
-                  <StatRow key={stat.name} stat={stat} />
-                ))}
-              </div>
-            </div>
-          </Modal.Body>
-        ) : null}
-      </Modal.Content>
-    </Modal.Root>
+    <Modal
+      open={evaluation !== null}
+      onOpenChange={(open) => (!open ? onClose() : undefined)}
+      dismissible
+      size="medium"
+      title="Alignment stats"
+      description="All metrics derivable from the stored confusion matrix. Balanced accuracy is the main alignment metric used in the system, the rest are exposed here for reference."
+    >
+      {evaluation !== null ? (
+        <div className="flex flex-col gap-6">
+          <ConfusionMatrixBlock evaluation={evaluation} />
+          <div className="flex flex-col">
+            {buildStats(evaluation).map((stat) => (
+              <StatRow key={stat.name} stat={stat} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </Modal>
   )
 }
