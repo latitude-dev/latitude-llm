@@ -7,6 +7,7 @@ import {
   type DatasetRowRepositoryShape,
 } from "@domain/datasets"
 import { OutboxEventWriter } from "@domain/events"
+import { SqlClient } from "@domain/shared"
 import {
   type ChSqlClient,
   DatasetId,
@@ -20,7 +21,6 @@ import {
   SpanId,
   TraceId,
 } from "@domain/shared/seeding"
-import { SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"

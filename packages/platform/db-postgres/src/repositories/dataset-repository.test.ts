@@ -1,5 +1,5 @@
 import { DatasetRepository } from "@domain/datasets"
-import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { datasets } from "../schema/datasets.ts"

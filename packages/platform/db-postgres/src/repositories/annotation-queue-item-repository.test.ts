@@ -3,7 +3,7 @@ import {
   AnnotationQueueRepository,
   annotationQueueItemStatusRankFromTimestamps,
 } from "@domain/annotation-queues"
-import { OrganizationId, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, RepositoryError, type SqlClient, TraceId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { annotationQueueItems, annotationQueues } from "../schema/annotation-queues.ts"

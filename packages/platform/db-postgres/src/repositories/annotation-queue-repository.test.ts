@@ -1,5 +1,5 @@
 import { AnnotationQueueRepository } from "@domain/annotation-queues"
-import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError, type SqlClient } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
