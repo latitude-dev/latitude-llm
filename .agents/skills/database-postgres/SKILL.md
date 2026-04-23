@@ -93,21 +93,27 @@ const handleSignup = (intent, session) =>
 
 **Usage in repositories (single operations):**
 
+Repository methods must resolve `SqlClient` inside each call — never capture it at layer build. See the "Never capture scope-bound services at layer build" rule in the **Effect and errors** skill.
+
 ```typescript
 // packages/platform/db-postgres/src/repositories/project-repository.ts
 export const ProjectRepositoryLive = Layer.effect(
   ProjectRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* SqlClient // build-time dependency assertion only; do NOT capture
 
     return {
       findById: (id) =>
-        sqlClient
-          .query((db) => db.select().from(projects).where(eq(projects.id, id)))
-          .pipe(Effect.flatMap(...)),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) => db.select().from(projects).where(eq(projects.id, id)))
+            .pipe(Effect.flatMap(...))
+        }),
 
       save: (project) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
             db.insert(projects).values(row).onConflictDoUpdate({...})
           )
@@ -116,6 +122,18 @@ export const ProjectRepositoryLive = Layer.effect(
   })
 )
 ```
+
+The repository port's method signatures must list `SqlClient` in their `R` channel:
+
+```typescript
+// packages/domain/projects/src/ports/project-repository.ts
+export interface ProjectRepositoryShape {
+  findById(id: ProjectId): Effect.Effect<Project, NotFoundError | RepositoryError, SqlClient>
+  save(project: Project): Effect.Effect<void, RepositoryError, SqlClient>
+}
+```
+
+`SqlClient` is marked `@effect-leakable-service` in `@domain/shared`, so the Effect linter accepts this intentional leak. Callers already have `SqlClient` in their `R` (via `withPostgres(...)` at the boundary), so the leak is invisible to them.
 
 ## Postgres management
 

@@ -144,9 +144,10 @@ const buildScore = ({
 
 export const writeScoreUseCase = Effect.fn("scores.writeScore")(function* (input: WriteScoreInput) {
   const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
+  const sqlClient = yield* SqlClient
+
   yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
   yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
-  const sqlClient = yield* SqlClient
   yield* Effect.annotateCurrentSpan("score.sqlClientOrganizationId", sqlClient.organizationId)
 
   const score = yield* sqlClient.transaction(

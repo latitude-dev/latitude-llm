@@ -1,7 +1,8 @@
+import type { SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { SeedContext, Seeder } from "./types.ts"
 
-export const runSeeders = (seeders: readonly Seeder[], ctx: SeedContext): Effect.Effect<void, unknown> =>
+export const runSeeders = (seeders: readonly Seeder[], ctx: SeedContext): Effect.Effect<void, unknown, SqlClient> =>
   Effect.gen(function* () {
     const total = seeders.length
 

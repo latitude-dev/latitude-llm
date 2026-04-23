@@ -1,4 +1,4 @@
-import type { ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 
@@ -63,27 +63,31 @@ export interface IncrementCompletedItemsInput {
 export type SaveQueueInput = Omit<AnnotationQueue, "id"> & { id?: string }
 
 export interface AnnotationQueueRepositoryShape {
-  listByProject(input: ListAnnotationQueuesInput): Effect.Effect<AnnotationQueueListPage, RepositoryError>
+  listByProject(input: ListAnnotationQueuesInput): Effect.Effect<AnnotationQueueListPage, RepositoryError, SqlClient>
   findByIdInProject(input: {
     projectId: ProjectId
     queueId: string
-  }): Effect.Effect<AnnotationQueue | null, RepositoryError>
-  findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError>
-  listSystemQueuesByProject(input: ListSystemQueuesInput): Effect.Effect<readonly AnnotationQueue[], RepositoryError>
+  }): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
+  findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
+  listSystemQueuesByProject(
+    input: ListSystemQueuesInput,
+  ): Effect.Effect<readonly AnnotationQueue[], RepositoryError, SqlClient>
   /**
    * List all non-deleted live queues (queues with `settings.filter` present) for a project.
    */
-  listLiveQueuesByProject(input: ListLiveQueuesInput): Effect.Effect<readonly AnnotationQueue[], RepositoryError>
+  listLiveQueuesByProject(
+    input: ListLiveQueuesInput,
+  ): Effect.Effect<readonly AnnotationQueue[], RepositoryError, SqlClient>
   findSystemQueueBySlugInProject(
     input: FindSystemQueueBySlugInput,
-  ): Effect.Effect<AnnotationQueue | null, RepositoryError>
-  save(queue: SaveQueueInput): Effect.Effect<AnnotationQueue, RepositoryError>
+  ): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
+  save(queue: SaveQueueInput): Effect.Effect<AnnotationQueue, RepositoryError, SqlClient>
   /**
    * Insert a queue if no queue with the same (organizationId, projectId, slug, deletedAt)
    * exists. Returns true if inserted, false if a conflict was encountered.
    * This is idempotent and safe for concurrent use.
    */
-  insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError>
+  insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
    * Atomically increment the totalItems counter for a queue by the given delta (defaults to 1).
    */
@@ -91,7 +95,7 @@ export interface AnnotationQueueRepositoryShape {
     projectId: ProjectId
     queueId: string
     delta?: number
-  }): Effect.Effect<AnnotationQueue, RepositoryError>
+  }): Effect.Effect<AnnotationQueue, RepositoryError, SqlClient>
   /**
    * Atomically increment the totalItems counter for multiple queues by 1 each.
    * Uses a single UPDATE statement with WHERE id = ANY(...).
@@ -99,12 +103,12 @@ export interface AnnotationQueueRepositoryShape {
   incrementTotalItemsMany(input: {
     projectId: ProjectId
     queueIds: readonly string[]
-  }): Effect.Effect<void, RepositoryError>
+  }): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Adjust the completedItems counter by delta (positive to increment, negative to decrement).
    * The counter is clamped to prevent going below zero.
    */
-  incrementCompletedItems(input: IncrementCompletedItemsInput): Effect.Effect<void, RepositoryError>
+  incrementCompletedItems(input: IncrementCompletedItemsInput): Effect.Effect<void, RepositoryError, SqlClient>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<

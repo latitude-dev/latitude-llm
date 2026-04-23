@@ -1,5 +1,6 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { EvaluationId, IssueId, NotFoundError, ProjectId } from "@domain/shared"
+import { EvaluationId, IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Evaluation } from "../../entities/evaluation.ts"
@@ -62,6 +63,7 @@ const run = (repository: EvaluationRepositoryShape) =>
     }).pipe(
       Effect.provideService(EvaluationRepository, repository),
       Effect.provideService(EvaluationIssueRepository, issueRepository),
+      Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
     ),
   )
 

@@ -98,34 +98,37 @@ const hasPassedAnnotation = (rows: readonly AlignmentScoreRow[]): boolean =>
 export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
   EvaluationAlignmentExamplesRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* SqlClient
 
     const loadProjectRows = (input: ListEvaluationAlignmentExamplesInput) =>
-      sqlClient.query((db, organizationId) =>
-        db
-          .select({
-            id: scores.id,
-            traceId: scores.traceId,
-            sessionId: scores.sessionId,
-            issueId: scores.issueId,
-            source: scores.source,
-            passed: scores.passed,
-            feedback: scores.feedback,
-            createdAt: scores.createdAt,
-          })
-          .from(scores)
-          .where(
-            and(
-              eq(scores.organizationId, organizationId),
-              eq(scores.projectId, input.projectId),
-              isNull(scores.draftedAt),
-              eq(scores.errored, false),
-              isNotNull(scores.traceId),
-              input.createdAfter ? gt(scores.createdAt, input.createdAfter) : undefined,
-            ),
-          )
-          .orderBy(asc(scores.createdAt), asc(scores.id)),
-      )
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient.query((db, organizationId) =>
+          db
+            .select({
+              id: scores.id,
+              traceId: scores.traceId,
+              sessionId: scores.sessionId,
+              issueId: scores.issueId,
+              source: scores.source,
+              passed: scores.passed,
+              feedback: scores.feedback,
+              createdAt: scores.createdAt,
+            })
+            .from(scores)
+            .where(
+              and(
+                eq(scores.organizationId, organizationId),
+                eq(scores.projectId, input.projectId),
+                isNull(scores.draftedAt),
+                eq(scores.errored, false),
+                isNotNull(scores.traceId),
+                input.createdAfter ? gt(scores.createdAt, input.createdAfter) : undefined,
+              ),
+            )
+            .orderBy(asc(scores.createdAt), asc(scores.id)),
+        )
+      })
 
     return {
       listPositiveExamples: (input: ListEvaluationAlignmentExamplesInput) =>

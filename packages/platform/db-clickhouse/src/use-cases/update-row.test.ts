@@ -5,7 +5,8 @@ import {
   RowNotFoundError,
   updateRow,
 } from "@domain/datasets"
-import { DatasetId, DatasetRowId, OrganizationId, ProjectId } from "@domain/shared"
+import { DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
@@ -48,21 +49,24 @@ describe("updateRow", () => {
     })
   })
 
-  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository>) =>
+  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient>) =>
     Effect.runPromise(
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),
         Effect.provideService(DatasetRowRepository, rowRepo),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
       ),
     )
 
   const seedRow = async () => {
     await Effect.runPromise(
-      datasetRepo.incrementVersion({
-        id: DATASET_ID,
-        rowsInserted: 1,
-        source: "web",
-      }),
+      datasetRepo
+        .incrementVersion({
+          id: DATASET_ID,
+          rowsInserted: 1,
+          source: "web",
+        })
+        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))),
     )
 
     await Effect.runPromise(

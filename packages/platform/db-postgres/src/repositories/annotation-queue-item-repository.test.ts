@@ -3,7 +3,7 @@ import {
   AnnotationQueueRepository,
   annotationQueueItemStatusRankFromTimestamps,
 } from "@domain/annotation-queues"
-import { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { annotationQueueItems, annotationQueues } from "../schema/annotation-queues.ts"
@@ -31,11 +31,11 @@ function makeTrace(suffix: string): string {
 
 const pg = setupTestPostgres()
 
-const runWithLive = <A, E>(effect: Effect.Effect<A, E, AnnotationQueueItemRepository>) =>
+const runWithLive = <A, E>(effect: Effect.Effect<A, E, AnnotationQueueItemRepository | SqlClient>) =>
   Effect.runPromise(effect.pipe(withPostgres(AnnotationQueueItemRepositoryLive, pg.adminPostgresClient, ORG_ID)))
 
 const runWithBothLive = <A, E>(
-  effect: Effect.Effect<A, E, AnnotationQueueItemRepository | AnnotationQueueRepository>,
+  effect: Effect.Effect<A, E, AnnotationQueueItemRepository | AnnotationQueueRepository | SqlClient>,
 ) =>
   Effect.runPromise(
     effect.pipe(

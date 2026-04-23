@@ -41,5 +41,12 @@ export interface SqlClientShape<X = unknown> {
 /**
  * SqlClient service - provides database access and transaction management.
  * Defaults to unknown for the transaction type, which platforms will narrow.
+ *
+ * @effect-leakable-service
+ * SqlClient is a per-request/per-job scope dependency (analogous to
+ * HttpServerRequest). Repository services resolve it per-method so the
+ * organization/transaction context reflects the caller's scope, rather
+ * than being captured once at Layer build time. Leaking this requirement
+ * through service interfaces is intentional.
  */
 export class SqlClient extends ServiceMap.Service<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}

@@ -1,4 +1,4 @@
-import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError } from "@domain/shared"
+import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Dataset, DatasetVersion } from "../entities/dataset.ts"
 import type { DatasetNotFoundError } from "../errors.ts"
@@ -33,38 +33,38 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly name: string
       readonly description?: string
       readonly fileKey?: string
-    }): Effect.Effect<Dataset, RepositoryError>
+    }): Effect.Effect<Dataset, RepositoryError, SqlClient>
 
-    findById(id: DatasetId): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+    findById(id: DatasetId): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
     listByProject(args: {
       readonly projectId: ProjectId
       readonly options?: DatasetListOptions
-    }): Effect.Effect<DatasetListPage, RepositoryError>
+    }): Effect.Effect<DatasetListPage, RepositoryError, SqlClient>
 
     existsByNameInProject(args: {
       readonly projectId: ProjectId
       readonly name: string
       readonly excludeDatasetId?: DatasetId
-    }): Effect.Effect<boolean, RepositoryError>
+    }): Effect.Effect<boolean, RepositoryError, SqlClient>
 
     updateName(args: {
       readonly id: DatasetId
       readonly name: string
-    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
     updateDetails(args: {
       readonly id: DatasetId
       readonly name: string
       readonly description: string | null
-    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
     updateFileKey(args: {
       readonly id: DatasetId
       readonly fileKey: string
-    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
-    softDelete(id: DatasetId): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
+    softDelete(id: DatasetId): Effect.Effect<void, DatasetNotFoundError | RepositoryError, SqlClient>
 
     incrementVersion(args: {
       readonly id: DatasetId
@@ -73,16 +73,16 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly rowsDeleted?: number
       readonly source?: string
       readonly actorId?: string
-    }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError, SqlClient>
 
     decrementVersion(args: {
       readonly id: DatasetId
       readonly versionId: DatasetVersionId
-    }): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<void, DatasetNotFoundError | RepositoryError, SqlClient>
 
     resolveVersion(args: {
       readonly datasetId: DatasetId
       readonly versionId: DatasetVersionId
-    }): Effect.Effect<number, DatasetNotFoundError | RepositoryError>
+    }): Effect.Effect<number, DatasetNotFoundError | RepositoryError, SqlClient>
   }
 >()("@domain/datasets/DatasetRepository") {}

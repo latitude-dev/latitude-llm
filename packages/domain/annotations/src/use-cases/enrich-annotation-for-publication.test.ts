@@ -11,8 +11,10 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
 import { SpanRepository, TraceRepository } from "@domain/spans"
 import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } from "@domain/spans/testing"
@@ -149,6 +151,7 @@ function createEnrichLayers(initialScore?: Score, generateOverride?: AIGenerate,
       aiLayer,
       Layer.succeed(TraceRepository, traceRepository),
       Layer.succeed(SpanRepository, spanRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
     ),
   }
 }

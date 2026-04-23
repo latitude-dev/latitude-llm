@@ -1,7 +1,8 @@
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { NotFoundError, ScoreId, UserId } from "@domain/shared"
+import { NotFoundError, OrganizationId, ScoreId, SqlClient, UserId } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { publishHumanAnnotationUseCase } from "./publish-annotation.ts"
@@ -70,6 +71,7 @@ describe("publishAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
           ),
         ),
       ),
@@ -107,6 +109,7 @@ describe("publishAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
           ),
         ),
       ),
@@ -129,6 +132,7 @@ describe("publishAnnotationUseCase", () => {
             Layer.mergeAll(
               Layer.succeed(ScoreRepository, scoreRepository),
               Layer.succeed(WorkflowStarter, workflowStarter),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
             ),
           ),
         ),
@@ -157,6 +161,7 @@ describe("publishAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
           ),
         ),
       ),
@@ -186,6 +191,7 @@ describe("publishAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
           ),
         ),
       ),

@@ -1,4 +1,5 @@
-import { IssueId } from "@domain/shared"
+import { IssueId, OrganizationId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -65,6 +66,7 @@ describe("syncIssueProjectionsUseCase", () => {
       }).pipe(
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 
@@ -98,6 +100,7 @@ describe("syncIssueProjectionsUseCase", () => {
       }).pipe(
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 

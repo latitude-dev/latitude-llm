@@ -82,11 +82,12 @@ const DEFAULT_SORT: DatasetSortColumn = SORT_COLUMNS.updatedAt
 export const DatasetRepositoryLive = Layer.effect(
   DatasetRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* SqlClient
 
     return {
       create: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db) =>
             db
               .insert(datasets)
@@ -105,6 +106,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       findById: (id) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const datasetCols = getColumns(datasets)
           const [row] = yield* sqlClient.query((db) =>
             db
@@ -133,6 +135,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       listByProject: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const options = args.options ?? {}
           const limit = options.limit ?? 50
           const cursor = options.cursor
@@ -179,6 +182,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       existsByNameInProject: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = and(
             eq(datasets.organizationId, sqlClient.organizationId),
             eq(datasets.projectId, args.projectId),
@@ -194,6 +198,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       updateName: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
@@ -217,6 +222,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       updateDetails: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
@@ -240,6 +246,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       updateFileKey: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
@@ -266,6 +273,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       softDelete: (id) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
@@ -290,6 +298,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       incrementVersion: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
@@ -326,6 +335,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       decrementVersion: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
             db
               .delete(datasetVersions)
@@ -363,6 +373,7 @@ export const DatasetRepositoryLive = Layer.effect(
 
       resolveVersion: (args) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [row] = yield* sqlClient.query((db) =>
             db
               .select({ version: datasetVersions.version })

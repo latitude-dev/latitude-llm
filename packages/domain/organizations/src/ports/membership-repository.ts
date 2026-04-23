@@ -1,4 +1,4 @@
-import type { MembershipId, NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
+import type { MembershipId, NotFoundError, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Membership } from "../entities/membership.ts"
 
@@ -17,17 +17,17 @@ export interface MemberWithUser {
 export class MembershipRepository extends ServiceMap.Service<
   MembershipRepository,
   {
-    findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError>
-    listByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError>
-    listByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError>
+    findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError, SqlClient>
+    listByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError, SqlClient>
+    listByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError, SqlClient>
     findByOrganizationAndUser: (
       organizationId: OrganizationId,
       userId: string,
-    ) => Effect.Effect<Membership, NotFoundError | RepositoryError>
-    listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError>
-    isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
-    isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
-    save: (membership: Membership) => Effect.Effect<void, RepositoryError>
-    delete: (id: MembershipId) => Effect.Effect<void, RepositoryError>
+    ) => Effect.Effect<Membership, NotFoundError | RepositoryError, SqlClient>
+    listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError, SqlClient>
+    isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
+    isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
+    save: (membership: Membership) => Effect.Effect<void, RepositoryError, SqlClient>
+    delete: (id: MembershipId) => Effect.Effect<void, RepositoryError, SqlClient>
   }
 >()("@domain/organizations/MembershipRepository") {}

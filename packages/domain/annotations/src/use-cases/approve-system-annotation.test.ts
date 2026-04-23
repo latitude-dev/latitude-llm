@@ -2,7 +2,8 @@ import { QueuePublisher, WorkflowStarter, type WorkflowStarterShape } from "@dom
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { ScoreId, UserId } from "@domain/shared"
+import { OrganizationId, ScoreId, SqlClient, UserId } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { approveSystemAnnotationUseCase } from "./approve-system-annotation.ts"
@@ -68,6 +69,7 @@ describe("approveSystemAnnotationUseCase", () => {
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
             Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
           ),
         ),
       ),
@@ -113,6 +115,7 @@ describe("approveSystemAnnotationUseCase", () => {
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
             Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
           ),
         ),
       ),
@@ -139,6 +142,7 @@ describe("approveSystemAnnotationUseCase", () => {
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
             Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
           ),
         ),
       ),
@@ -164,6 +168,7 @@ describe("approveSystemAnnotationUseCase", () => {
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
             Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
           ),
         ),
       ),
@@ -188,6 +193,7 @@ describe("approveSystemAnnotationUseCase", () => {
             Layer.succeed(ScoreRepository, scoreRepository),
             Layer.succeed(WorkflowStarter, workflowStarter),
             Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
           ),
         ),
       ),

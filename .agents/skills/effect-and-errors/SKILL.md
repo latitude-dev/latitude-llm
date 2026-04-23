@@ -33,6 +33,44 @@ details when the documentation isn't enough.
 - Use `Effect.repeat` with `Schedule` for polling/recurring tasks
 - Use `Fiber` for lifecycle management of long-running effects
 
+## Never capture scope-bound services at layer build
+
+Inside `Layer.effect(Tag, Effect.gen(...))`, do **not** store a service read via `yield*` in a closure that methods use later. Resolve the service again inside each method.
+
+Services bound to request/job scope (anything provided at a boundary per invocation — `SqlClient`, `ChSqlClient`, `HttpServerRequest`, session-scoped auth context) must be resolved per call. If the layer-build closure captures such a service, concurrent callers with different scopes share the first-built reference and silently operate on the wrong context.
+
+```typescript
+// ❌ WRONG — captures the service at layer build; every method uses the stale closure
+export const FooRepositoryLive = Layer.effect(
+  FooRepository,
+  Effect.gen(function* () {
+    const sqlClient = yield* SqlClient
+    return {
+      save: (x) => sqlClient.query(...),
+    }
+  }),
+)
+
+// ✅ RIGHT — layer build only asserts the dependency; each method resolves fresh
+export const FooRepositoryLive = Layer.effect(
+  FooRepository,
+  Effect.gen(function* () {
+    yield* SqlClient
+    return {
+      save: (x) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* SqlClient
+          yield* sqlClient.query(...)
+        }),
+    }
+  }),
+)
+```
+
+Port method signatures must include scope-bound services in their `R` channel (e.g. `Effect.Effect<A, E, SqlClient>`). Mark the service class with `@effect-leakable-service` to tell the Effect linter this leak is intentional.
+
+Process-singleton services (crypto keys, static config, a queue publisher) can be captured at build. When unsure, resolve per-call.
+
 ## Tracing and observability
 
 Effect programs are instrumented with Effect's native OpenTelemetry support via `@effect/opentelemetry`. This bridges Effect spans into the existing OTel pipeline (Datadog, etc.) so business logic is visible alongside HTTP request spans.

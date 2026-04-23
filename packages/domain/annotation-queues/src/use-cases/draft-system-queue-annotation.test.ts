@@ -8,8 +8,10 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -103,6 +105,7 @@ describe("draftSystemQueueAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
             Layer.succeed(AnnotationQueueRepository, queueRepo),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             aiLayer,
           ),
         ),
@@ -152,6 +155,7 @@ describe("draftSystemQueueAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
             Layer.succeed(AnnotationQueueRepository, queueRepo),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             aiLayer,
           ),
         ),

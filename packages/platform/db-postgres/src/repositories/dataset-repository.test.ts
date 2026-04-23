@@ -1,5 +1,5 @@
 import { DatasetRepository } from "@domain/datasets"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { datasets } from "../schema/datasets.ts"
@@ -18,7 +18,7 @@ function makeId(prefix: string): string {
 
 const pg = setupTestPostgres()
 
-const runWithLive = <A, E>(effect: Effect.Effect<A, E, DatasetRepository>) =>
+const runWithLive = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | SqlClient>) =>
   Effect.runPromise(effect.pipe(withPostgres(DatasetRepositoryLive, pg.adminPostgresClient, ORG_ID)))
 
 describe("DatasetRepositoryLive listByProject", () => {

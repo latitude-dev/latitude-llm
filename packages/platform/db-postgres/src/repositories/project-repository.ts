@@ -43,63 +43,77 @@ const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
 export const ProjectRepositoryLive = Layer.effect(
   ProjectRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* SqlClient
 
     const list = () =>
-      sqlClient
-        .query((db, organizationId) =>
-          db
-            .select()
-            .from(projects)
-            .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt))),
-        )
-        .pipe(Effect.map((results) => results.map(toDomainProject)))
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(projects)
+              .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt))),
+          )
+          .pipe(Effect.map((results) => results.map(toDomainProject)))
+      })
 
     const listIncludingDeleted = () =>
-      sqlClient
-        .query((db, organizationId) => db.select().from(projects).where(eq(projects.organizationId, organizationId)))
-        .pipe(Effect.map((results) => results.map(toDomainProject)))
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db, organizationId) => db.select().from(projects).where(eq(projects.organizationId, organizationId)))
+          .pipe(Effect.map((results) => results.map(toDomainProject)))
+      })
 
     return {
       findById: (id: ProjectIdType) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(projects)
-              .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)))
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "Project", id }))
-              }
-              return Effect.succeed(toDomainProject(result))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(projects)
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "Project", id }))
+                }
+                return Effect.succeed(toDomainProject(result))
+              }),
+            )
+        }),
 
       findBySlug: (slug: string) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(projects)
-              .where(
-                and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
-              )
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
-              }
-              return Effect.succeed(toDomainProject(result))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(projects)
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
+                }
+                return Effect.succeed(toDomainProject(result))
+              }),
+            )
+        }),
 
       list,
 
@@ -107,6 +121,7 @@ export const ProjectRepositoryLive = Layer.effect(
 
       save: (project: Project) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const row = toInsertRow(project)
 
           yield* sqlClient.query((db) =>
@@ -128,53 +143,67 @@ export const ProjectRepositoryLive = Layer.effect(
         }),
 
       softDelete: (id: ProjectIdType) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(projects)
-              .set({ deletedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)))
-              .returning({ id: projects.id }),
-          )
-          .pipe(
-            Effect.flatMap((results) => {
-              if (results.length === 0) {
-                return Effect.fail(new NotFoundError({ entity: "Project", id }))
-              }
-              return Effect.void
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(projects)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)),
+                )
+                .returning({ id: projects.id }),
+            )
+            .pipe(
+              Effect.flatMap((results) => {
+                if (results.length === 0) {
+                  return Effect.fail(new NotFoundError({ entity: "Project", id }))
+                }
+                return Effect.void
+              }),
+            )
+        }),
 
       hardDelete: (id: ProjectIdType) =>
-        sqlClient.query((db, organizationId) =>
-          db.delete(projects).where(and(eq(projects.organizationId, organizationId), eq(projects.id, id))),
-        ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db.delete(projects).where(and(eq(projects.organizationId, organizationId), eq(projects.id, id))),
+          )
+        }),
 
       existsByName: (name: string) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select({ id: projects.id })
-              .from(projects)
-              .where(
-                and(eq(projects.organizationId, organizationId), eq(projects.name, name), isNull(projects.deletedAt)),
-              )
-              .limit(1),
-          )
-          .pipe(Effect.map((results) => results[0] !== undefined)),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: projects.id })
+                .from(projects)
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.name, name), isNull(projects.deletedAt)),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((results) => results[0] !== undefined))
+        }),
 
       existsBySlug: (slug: string) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select({ id: projects.id })
-              .from(projects)
-              .where(
-                and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
-              )
-              .limit(1),
-          )
-          .pipe(Effect.map((results) => results[0] !== undefined)),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: projects.id })
+                .from(projects)
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((results) => results[0] !== undefined))
+        }),
     }
   }),
 )

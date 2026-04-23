@@ -1,4 +1,5 @@
-import { AnnotationQueueId, OrganizationId, ProjectId } from "@domain/shared"
+import { AnnotationQueueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
@@ -40,7 +41,10 @@ function createTestLayer(existingQueue?: AnnotationQueue) {
   const seed = existingQueue ? [existingQueue] : []
   const { repository, getLastSavedQueue } = createFakeAnnotationQueueRepository(seed)
   return {
-    layer: Layer.succeed(AnnotationQueueRepository, repository),
+    layer: Layer.mergeAll(
+      Layer.succeed(AnnotationQueueRepository, repository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("o".repeat(24)) })),
+    ),
     getLastSavedQueue,
   }
 }
