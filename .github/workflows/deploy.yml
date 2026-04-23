@@ -377,6 +377,7 @@ jobs:
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
+          VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |
@@ -744,6 +745,7 @@ jobs:
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
+          VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |

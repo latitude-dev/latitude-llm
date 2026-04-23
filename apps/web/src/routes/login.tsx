@@ -6,7 +6,8 @@ import z from "zod"
 import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
-import { authClient } from "../lib/auth-client.ts"
+import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
+import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
 
@@ -14,8 +15,6 @@ const loginSearchParams = z.object({
   redirect: z.string().optional(),
   email: z.string().optional(),
 })
-
-const LOGIN_URL = `${WEB_BASE_URL}/login`
 
 export const Route = createFileRoute("/login")({
   validateSearch: loginSearchParams,
@@ -25,6 +24,7 @@ export const Route = createFileRoute("/login")({
       throw redirect({ to: "/" })
     }
   },
+  head: () => ({ scripts: gtmHeadScripts() }),
   component: LoginPage,
 })
 
@@ -57,13 +57,15 @@ function LoginPage() {
     const emailFlow = redirectPath ? "signin" : undefined
     const separator = callbackPath.includes("?") ? "&" : "?"
     const callbackURL = emailFlow ? `${callbackPath}${separator}emailFlow=${emailFlow}` : callbackPath
+    const tracking = pickTrackingParams(window.location.search)
+    const newUserCallbackURL = appendTrackingParams(redirectPath ?? "/welcome", { ...tracking, signup: "email" })
 
     try {
       await sendMagicLink({
         data: {
           email: emailValue,
           callbackURL,
-          newUserCallbackURL: redirectPath ?? "/welcome",
+          newUserCallbackURL,
           captchaToken: captchaTokenRef.current,
         },
       })
@@ -76,29 +78,20 @@ function LoginPage() {
     }
   }
 
-  const submitSocialSignIn = async (provider: "google" | "github") => {
+  const submitSocialSignIn = (provider: "google" | "github") => {
     if (isLoading) return
 
     setIsLoading(true)
     setError(undefined)
 
-    const callbackURL = redirectPath ? `${WEB_BASE_URL}${redirectPath}` : `${WEB_BASE_URL}/`
-    const newUserCallbackURL = redirectPath ? `${WEB_BASE_URL}${redirectPath}` : `${WEB_BASE_URL}/welcome`
-
     try {
-      const { error: signInError } = await authClient.signIn.social({
-        provider,
-        callbackURL,
-        newUserCallbackURL,
-        errorCallbackURL: LOGIN_URL,
-        fetchOptions: captchaTokenRef.current
-          ? { headers: { "x-captcha-response": captchaTokenRef.current } }
-          : undefined,
-      })
-
-      if (signInError) {
-        throw new Error(signInError.message ?? "Failed to sign in with OAuth provider")
-      }
+      const tracking = pickTrackingParams(window.location.search)
+      const startParams = new URLSearchParams(tracking)
+      if (redirectPath) startParams.set("redirect", redirectPath)
+      const startUrl = `${WEB_BASE_URL}/api/auth/${provider}/start${
+        startParams.toString() ? `?${startParams.toString()}` : ""
+      }`
+      window.location.assign(startUrl)
     } catch (err) {
       setError(toUserMessage(err))
       setIsLoading(false)
@@ -112,6 +105,8 @@ function LoginPage() {
   if (isSent) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <GtmNoScript />
+        <SignupCompleteWatcher />
         <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
           <LatitudeLogo />
 
@@ -144,6 +139,8 @@ function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <GtmNoScript />
+      <SignupCompleteWatcher />
       <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />
