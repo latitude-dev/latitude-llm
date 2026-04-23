@@ -1,10 +1,24 @@
-import { getTraceMetricPercentileThreshold, type TraceCohortSummary } from "@domain/spans"
-import { Status, type StatusProps } from "@repo/ui"
+import { getTraceMetricPercentileThreshold, type TraceCohortMetric, type TraceCohortSummary } from "@domain/spans"
+import { Status, type StatusProps, TagBadgeList, Text, Tooltip } from "@repo/ui"
+import { formatCount, formatDuration, formatPrice } from "@repo/utils"
 import { useTraceCohortSummaryByTags } from "../../../../../domains/traces/traces.collection.ts"
 
 type Baselines = TraceCohortSummary["baselines"]
 export type TraceOutlierMetric = keyof Baselines
 export type TraceOutlierLevel = "p99" | "p95" | "p90"
+
+const LEVEL_LABELS: Record<TraceOutlierLevel, string> = {
+  p99: "99%",
+  p95: "95%",
+  p90: "90%",
+}
+
+const METRIC_LABELS: Record<TraceOutlierMetric, string> = {
+  durationNs: "duration",
+  timeToFirstTokenNs: "Time to First Token",
+  costTotalMicrocents: "cost",
+  tokensTotal: "tokens",
+}
 
 function computeLevel(
   value: number,
@@ -20,7 +34,7 @@ function computeLevel(
   return undefined
 }
 
-function levelVariant(level: TraceOutlierLevel): NonNullable<StatusProps["variant"]> {
+function levelVariant(level: TraceOutlierLevel | "p50"): NonNullable<StatusProps["variant"]> {
   switch (level) {
     case "p99":
       return "destructive"
@@ -28,7 +42,84 @@ function levelVariant(level: TraceOutlierLevel): NonNullable<StatusProps["varian
       return "warning"
     case "p90":
       return "info"
+    case "p50":
+      return "neutral"
   }
+}
+
+function formatValue({ value, metric }: { value: number; metric: TraceCohortMetric }): string {
+  switch (metric) {
+    case "durationNs":
+      return formatDuration(value)
+    case "costTotalMicrocents":
+      return formatPrice(value / 100_000_000)
+    case "tokensTotal":
+      return formatCount(value)
+    case "timeToFirstTokenNs":
+      return formatDuration(value)
+    default:
+      return String(value)
+  }
+}
+
+function CohortBaseline({
+  cohorts,
+  metric,
+  level,
+}: {
+  cohorts: TraceCohortSummary
+  metric: TraceCohortMetric
+  level: TraceOutlierLevel | "p50"
+}) {
+  const baseline = cohorts.baselines[metric]
+  // p50 has no sample-count gate — read it directly. p90/p95/p99 flow through
+  // `getTraceMetricPercentileThreshold` so they return null when the cohort
+  // is too small (matching `computeLevel`'s behavior).
+  const value = level === "p50" ? baseline.p50 : getTraceMetricPercentileThreshold(baseline, level)
+  return (
+    <div className="flex items-center gap-1">
+      <Status variant={levelVariant(level)} label={level} />
+      <span className="text-sm text-muted-foreground">{value !== null ? formatValue({ value, metric }) : "-"}</span>
+    </div>
+  )
+}
+
+/**
+ * A tooltip that explains that the outlier is only scoped to the subset of traces that match the given tags.
+ * And then displays the baseline values for the given metric.
+ */
+function OutlierTooltip({
+  tags,
+  cohorts,
+  metric,
+  level,
+}: {
+  tags: ReadonlyArray<string>
+  cohorts: TraceCohortSummary
+  metric: TraceCohortMetric
+  level: TraceOutlierLevel
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Text.H6>
+          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with
+          {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
+        </Text.H6>
+        {tags.length > 0 && <TagBadgeList tags={tags} />}
+      </div>
+      <div className="flex flex-col gap-1">
+        {/* p50 */}
+        <CohortBaseline cohorts={cohorts} metric={metric} level="p50" />
+        {/* p90 */}
+        <CohortBaseline cohorts={cohorts} metric={metric} level="p90" />
+        {/* p95 */}
+        <CohortBaseline cohorts={cohorts} metric={metric} level="p95" />
+        {/* p99 */}
+        <CohortBaseline cohorts={cohorts} metric={metric} level="p99" />
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -55,21 +146,26 @@ export function TraceOutlierBadge({
 }) {
   const { data } = useTraceCohortSummaryByTags({ projectId, tags })
   const level = computeLevel(value, data?.baselines[metric])
-  if (!level) return null
-
-  const status = <Status variant={levelVariant(level)} label={level} />
-  if (!onThresholdClick || !data) return status
+  if (!level || !data) return null
 
   const threshold = getTraceMetricPercentileThreshold(data.baselines[metric], level)
-  if (threshold === null) return status
+  const status = <Status variant={levelVariant(level)} label={level} />
+  const trigger =
+    onThresholdClick && threshold !== null ? (
+      <button
+        type="button"
+        onClick={() => onThresholdClick(threshold, level)}
+        className="cursor-pointer hover:opacity-80 transition-opacity"
+      >
+        {status}
+      </button>
+    ) : (
+      <span>{status}</span>
+    )
 
   return (
-    <button
-      type="button"
-      onClick={() => onThresholdClick(threshold, level)}
-      className="cursor-pointer hover:opacity-80 transition-opacity"
-    >
-      {status}
-    </button>
+    <Tooltip asChild trigger={trigger}>
+      <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} />
+    </Tooltip>
   )
 }
