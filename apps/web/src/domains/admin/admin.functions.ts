@@ -16,12 +16,20 @@ import { getAdminPostgresClient } from "../../server/clients.ts"
  * Serialisable DTOs for the backoffice search UI. Dates are stringified so
  * the payload can cross the TanStack Start RPC boundary as JSON.
  */
+export interface AdminUserMembershipDto {
+  organizationId: string
+  organizationName: string
+  organizationSlug: string
+}
+
 export interface AdminUserSearchDto {
   type: "user"
   id: string
   email: string
   name: string | null
+  image: string | null
   role: "user" | "admin"
+  memberships: AdminUserMembershipDto[]
   createdAt: string
 }
 
@@ -39,6 +47,8 @@ export interface AdminProjectSearchDto {
   name: string
   slug: string
   organizationId: string
+  organizationName: string
+  organizationSlug: string
   createdAt: string
 }
 

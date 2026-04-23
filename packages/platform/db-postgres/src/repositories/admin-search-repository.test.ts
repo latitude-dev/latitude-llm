@@ -1,7 +1,7 @@
 import { AdminSearchRepository } from "@domain/admin"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
-import { organizations, users } from "../schema/better-auth.ts"
+import { members, organizations, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -56,6 +56,12 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
       { id: ORG_B, name: "Beta Inc", slug: "beta-inc", createdAt: baseTime, updatedAt: baseTime },
     ])
 
+    await pg.db.insert(members).values([
+      { id: makeId("mem-alice-a"), userId: makeId("user-alice"), organizationId: ORG_A, createdAt: baseTime },
+      { id: makeId("mem-alice-b"), userId: makeId("user-alice"), organizationId: ORG_B, createdAt: baseTime },
+      { id: makeId("mem-bob-b"), userId: makeId("user-bob"), organizationId: ORG_B, createdAt: baseTime },
+    ])
+
     await pg.db.insert(projects).values([
       {
         id: makeId("proj-1"),
@@ -96,6 +102,7 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
     expect(result.users).toHaveLength(1)
     expect(result.users[0]?.email).toBe("alice@latitude.so")
     expect(result.users[0]?.role).toBe("admin")
+    expect(result.users[0]?.memberships.map((m) => m.organizationName).sort()).toEqual(["Alpha", "Beta Inc"])
   })
 
   it("includes users belonging to different organizations in a single query", async () => {
@@ -138,6 +145,8 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
 
     const names = result.projects.map((p) => p.name).sort()
     expect(names).toEqual(["alpha-prod"])
+    expect(result.projects[0]?.organizationName).toBe("Alpha")
+    expect(result.projects[0]?.organizationSlug).toBe("alpha")
   })
 
   it("returns entities matching the requested entityType only", async () => {

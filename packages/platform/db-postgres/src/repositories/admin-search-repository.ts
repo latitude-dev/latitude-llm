@@ -1,9 +1,9 @@
-import { AdminSearchRepository, type UnifiedSearchResult } from "@domain/admin"
+import { AdminSearchRepository, type UnifiedSearchResult, type UserMembership } from "@domain/admin"
 import { SqlClient, type SqlClientShape } from "@domain/shared"
-import { ilike, isNull, or, sql } from "drizzle-orm"
+import { eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { organizations, users } from "../schema/better-auth.ts"
+import { members, organizations, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 
 const MAX_RESULTS_PER_ENTITY = 10
@@ -40,6 +40,7 @@ export const AdminSearchRepositoryLive = Layer.effect(
                     id: users.id,
                     email: users.email,
                     name: users.name,
+                    image: users.image,
                     role: users.role,
                     createdAt: users.createdAt,
                   })
@@ -49,6 +50,37 @@ export const AdminSearchRepositoryLive = Layer.effect(
                   .limit(MAX_RESULTS_PER_ENTITY),
               )
             : []
+
+          const membershipsByUserId = new Map<string, UserMembership[]>()
+          if (userRows.length > 0) {
+            const membershipRows = yield* sqlClient.query((db) =>
+              db
+                .select({
+                  userId: members.userId,
+                  organizationId: organizations.id,
+                  organizationName: organizations.name,
+                  organizationSlug: organizations.slug,
+                })
+                .from(members)
+                .innerJoin(organizations, eq(members.organizationId, organizations.id))
+                .where(
+                  inArray(
+                    members.userId,
+                    userRows.map((r) => r.id),
+                  ),
+                )
+                .orderBy(organizations.name),
+            )
+            for (const row of membershipRows) {
+              const list = membershipsByUserId.get(row.userId) ?? []
+              list.push({
+                organizationId: row.organizationId,
+                organizationName: row.organizationName,
+                organizationSlug: row.organizationSlug,
+              })
+              membershipsByUserId.set(row.userId, list)
+            }
+          }
 
           const orgRows = wantOrgs
             ? yield* sqlClient.query((db) =>
@@ -80,9 +112,12 @@ export const AdminSearchRepositoryLive = Layer.effect(
                     name: projects.name,
                     slug: projects.slug,
                     organizationId: projects.organizationId,
+                    organizationName: organizations.name,
+                    organizationSlug: organizations.slug,
                     createdAt: projects.createdAt,
                   })
                   .from(projects)
+                  .innerJoin(organizations, eq(projects.organizationId, organizations.id))
                   .where(
                     sql`${isNull(projects.deletedAt)} AND (${ilike(projects.name, pattern)} OR ${ilike(projects.slug, pattern)} OR ${ilike(sql`CAST(${projects.id} AS TEXT)`, pattern)})`,
                   )
@@ -97,7 +132,9 @@ export const AdminSearchRepositoryLive = Layer.effect(
               id: r.id,
               email: r.email,
               name: r.name ?? null,
+              image: r.image ?? null,
               role: r.role,
+              memberships: membershipsByUserId.get(r.id) ?? [],
               createdAt: r.createdAt,
             })),
             organizations: orgRows.map((r) => ({
@@ -113,6 +150,8 @@ export const AdminSearchRepositoryLive = Layer.effect(
               name: r.name,
               slug: r.slug,
               organizationId: r.organizationId,
+              organizationName: r.organizationName,
+              organizationSlug: r.organizationSlug,
               createdAt: r.createdAt,
             })),
           }

@@ -6,12 +6,21 @@ import { z } from "zod"
  * out of the admin surface.
  */
 
+export const userMembershipSchema = z.object({
+  organizationId: z.string(),
+  organizationName: z.string(),
+  organizationSlug: z.string(),
+})
+export type UserMembership = z.infer<typeof userMembershipSchema>
+
 export const userSearchResultSchema = z.object({
   type: z.literal("user"),
   id: z.string(),
   email: z.string(),
   name: z.string().nullable(),
+  image: z.string().nullable(),
   role: z.enum(["user", "admin"]),
+  memberships: z.array(userMembershipSchema),
   createdAt: z.date(),
 })
 export type UserSearchResult = z.infer<typeof userSearchResultSchema>
@@ -31,6 +40,8 @@ export const projectSearchResultSchema = z.object({
   name: z.string(),
   slug: z.string(),
   organizationId: z.string(),
+  organizationName: z.string(),
+  organizationSlug: z.string(),
   createdAt: z.date(),
 })
 export type ProjectSearchResult = z.infer<typeof projectSearchResultSchema>

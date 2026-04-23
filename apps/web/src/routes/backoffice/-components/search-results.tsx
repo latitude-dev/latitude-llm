@@ -1,4 +1,5 @@
-import { Badge, Text } from "@repo/ui"
+import { Avatar, Badge, Text } from "@repo/ui"
+import { extractLeadingEmoji } from "@repo/utils"
 import type {
   AdminOrganizationSearchDto,
   AdminProjectSearchDto,
@@ -79,19 +80,41 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
+const MAX_MEMBERSHIP_CHIPS = 3
+
 function UserCard({ user }: { user: AdminUserSearchDto }) {
+  const displayName = user.name?.trim() ? user.name : user.email
+  const visibleMemberships = user.memberships.slice(0, MAX_MEMBERSHIP_CHIPS)
+  const overflowCount = user.memberships.length - visibleMemberships.length
+
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-4 py-3">
-      <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background px-4 py-3">
+      <Avatar name={displayName} imageSrc={user.image} size="lg" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex items-center gap-2 min-w-0">
           <Text.H5 weight="medium" ellipsis noWrap>
             {user.email}
           </Text.H5>
           {user.role === "admin" && <Badge variant="destructive">admin</Badge>}
         </div>
-        <Text.H6 color="foregroundMuted" ellipsis noWrap>
-          {user.name ?? "(no name)"} · {user.id}
-        </Text.H6>
+        <div className="flex items-center gap-2 min-w-0">
+          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+            {user.name ?? "(no name)"}
+          </Text.H6>
+          {user.memberships.length > 0 && (
+            <>
+              <Text.H6 color="foregroundMuted">·</Text.H6>
+              <div className="flex items-center gap-1 min-w-0">
+                {visibleMemberships.map((m) => (
+                  <Badge key={m.organizationId} variant="muted">
+                    {m.organizationName}
+                  </Badge>
+                ))}
+                {overflowCount > 0 && <Badge variant="muted">+{overflowCount}</Badge>}
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <Text.H6 color="foregroundMuted" noWrap>
         {formatDate(user.createdAt)}
@@ -102,13 +125,14 @@ function UserCard({ user }: { user: AdminUserSearchDto }) {
 
 function OrganizationCard({ organization }: { organization: AdminOrganizationSearchDto }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-4 py-3">
-      <div className="flex flex-col min-w-0">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background px-4 py-3">
+      <Avatar name={organization.name} size="lg" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Text.H5 weight="medium" ellipsis noWrap>
           {organization.name}
         </Text.H5>
         <Text.H6 color="foregroundMuted" ellipsis noWrap>
-          /{organization.slug} · {organization.id}
+          /{organization.slug}
         </Text.H6>
       </div>
       <Text.H6 color="foregroundMuted" noWrap>
@@ -118,16 +142,35 @@ function OrganizationCard({ organization }: { organization: AdminOrganizationSea
   )
 }
 
+function ProjectIcon({ name }: { name: string }) {
+  const [emoji, rest] = extractLeadingEmoji(name)
+  if (emoji) {
+    return (
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-white">
+        <span className="text-base leading-none">{emoji}</span>
+      </div>
+    )
+  }
+  return <Avatar name={rest || name} size="lg" />
+}
+
 function ProjectCard({ project }: { project: AdminProjectSearchDto }) {
+  const [, nameWithoutEmoji] = extractLeadingEmoji(project.name)
+  const displayName = nameWithoutEmoji || project.name
+
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-4 py-3">
-      <div className="flex flex-col min-w-0">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background px-4 py-3">
+      <ProjectIcon name={project.name} />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Text.H5 weight="medium" ellipsis noWrap>
-          {project.name}
+          {displayName}
         </Text.H5>
-        <Text.H6 color="foregroundMuted" ellipsis noWrap>
-          /{project.slug} · project {project.id} · org {project.organizationId}
-        </Text.H6>
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge variant="muted">{project.organizationName}</Badge>
+          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+            /{project.slug}
+          </Text.H6>
+        </div>
       </div>
       <Text.H6 color="foregroundMuted" noWrap>
         {formatDate(project.createdAt)}

@@ -7,6 +7,8 @@ export {
   type SearchEntityType,
   searchEntityTypeSchema,
   type UnifiedSearchResult,
+  type UserMembership,
+  userMembershipSchema,
   type UserSearchResult,
   unifiedSearchResultSchema,
   userSearchResultSchema,

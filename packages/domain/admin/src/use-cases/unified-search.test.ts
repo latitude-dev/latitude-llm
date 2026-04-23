@@ -14,7 +14,9 @@ const mkUser = (email: string, name: string | null = null, createdAt = new Date(
   id: email,
   email,
   name,
+  image: null,
   role: "user" as const,
+  memberships: [],
   createdAt,
 })
 
@@ -32,6 +34,8 @@ const mkProj = (name: string, id = name, slug = name) => ({
   name,
   slug,
   organizationId: "org-1",
+  organizationName: "Org 1",
+  organizationSlug: "org-1",
   createdAt: new Date("2024-01-01"),
 })
 
