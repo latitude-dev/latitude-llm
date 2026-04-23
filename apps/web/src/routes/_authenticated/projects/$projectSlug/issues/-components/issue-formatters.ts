@@ -44,6 +44,18 @@ export function formatIssueAgeAgoLabel(iso: string): string {
   return `${formatCompactElapsed(Math.max(0, now - t))} ago`
 }
 
+export function getAlignmentVariant(score: number): "destructive" | "warning" | "success" {
+  if (score < 0.5) {
+    return "destructive"
+  }
+
+  if (score < 0.75) {
+    return "warning"
+  }
+
+  return "success"
+}
+
 export function formatPercent(value: number): string {
   const percent = Math.max(0, value) * 100
 

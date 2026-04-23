@@ -67,7 +67,8 @@ const { evaluateBaselineEvaluationDraft, evaluateIncrementalEvaluationDraft } = 
 // scripts. Rebuild the matrix from scratch against every curated example,
 // then persist with the freshly computed hash so future refreshes are back
 // in the incremental-eligible path. This rebuild does not trigger GEPA —
-// that only runs on MCC drop, which we can evaluate again on the next pass.
+// that only runs on an alignment metric drop, which we can evaluate again on
+// the next pass.
 //
 // Scheduling is intentionally outside this workflow: the queue owns the 1h
 // throttle before this workflow starts, and the 8h throttle before the

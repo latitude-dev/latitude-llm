@@ -33,8 +33,8 @@ export const EVALUATION_TURNS = ["first", "every", "last"] as const
 export const ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS = 1 * 60 * 60 * 1000
 
 /**
- * Throttle window for full re-optimization after an incremental MCC drop
- * (8 hours in milliseconds). Used as `throttleMs` on the
+ * Throttle window for full re-optimization after an incremental alignment
+ * metric drop (8 hours in milliseconds). Used as `throttleMs` on the
  * `evaluations:automaticOptimization` queue task: the first escalation from
  * `refreshEvaluationAlignmentWorkflow` schedules the optimize workflow for
  * `now + 8h`, and subsequent escalations within that window are dropped.
@@ -47,11 +47,12 @@ export const ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS = 8 * 60 * 60 * 1000
 // ---------------------------------------------------------------------------
 
 /**
- * MCC tolerance band for incremental refresh.
- * If derived MCC drops by more than this amount after incremental evaluation,
- * the system triggers a full re-optimization instead of keeping the current script.
+ * Alignment metric tolerance band for incremental refresh.
+ * If the derived alignment metric drops by more than this amount after
+ * incremental evaluation, the system triggers a full re-optimization instead
+ * of keeping the current script.
  */
-export const ALIGNMENT_MCC_TOLERANCE = 0.05
+export const ALIGNMENT_METRIC_TOLERANCE = 0.05
 
 // ---------------------------------------------------------------------------
 // Deterministic example curation and splitting
