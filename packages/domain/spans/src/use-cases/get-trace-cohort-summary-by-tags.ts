@@ -41,9 +41,12 @@ export const getTraceCohortSummaryByTagsUseCase = Effect.fn("spans.getTraceCohor
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("tagsLength", input.tags.length)
 
-  // Sort tags for a stable, order-independent cache key (matches the CH repo's
-  // own sort so cache hits align with query-shape).
-  const sortedTags = [...input.tags].sort()
+  // Canonicalize as a sorted set: dedupe first (ClickHouse stores `tags` as
+  // `groupUniqArrayArray(tags)`, which is already deduped — passing duplicates
+  // through would break the `length(tags) = N` exact-set match and also split
+  // the cache key from the canonical cohort). Then sort for stable, order-
+  // independent cache keys and query params.
+  const sortedTags = [...new Set(input.tags)].sort()
   const cache = yield* CacheStore
   const cacheKey = buildCacheKey(input.organizationId, input.projectId, sortedTags)
 

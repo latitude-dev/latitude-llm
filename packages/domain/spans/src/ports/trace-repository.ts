@@ -41,14 +41,12 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-    readonly cohort?: TraceCohortListingSpec
   }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-    readonly cohort?: TraceCohortListingSpec
   }): Effect.Effect<TraceMetrics, RepositoryError, ChSqlClient>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
