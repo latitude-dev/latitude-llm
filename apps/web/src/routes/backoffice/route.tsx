@@ -1,9 +1,9 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ShieldAlertIcon } from "lucide-react"
+import { ArrowLeft, Search, ShieldAlertIcon } from "lucide-react"
+import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { getSession } from "../../domains/sessions/session.functions.ts"
-import { authClient } from "../../lib/auth-client.ts"
-import { resetPostHog } from "../../lib/posthog/posthog-client.ts"
+import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 
 // Extract to a named helper so both `beforeLoad` (the parent gate) and the
 // loader use identical logic — and so the intent is explicit.
@@ -28,49 +28,49 @@ export const Route = createFileRoute("/backoffice")({
     await assertAdminSession()
   },
   loader: async () => {
-    const session = await assertAdminSession()
-    return { user: session.user }
+    await assertAdminSession()
+    return null
   },
   component: BackofficeLayout,
 })
 
 function BackofficeLayout() {
-  const user = Route.useLoaderData({ select: (data) => data.user })
+  const pathname = usePathname()
   const router = useRouter()
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <header className="w-full bg-destructive text-destructive-foreground h-12 flex items-center px-4 shrink-0 gap-3">
-        <Link to="/backoffice">
-          <div className="flex items-center gap-2">
-            <LatitudeLogo className="h-5 w-5" />
-            <Text.H5 weight="semibold" color="white">
-              Backoffice
-            </Text.H5>
-          </div>
+      <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0 gap-3">
+        <Link to="/backoffice" className="flex items-center gap-2">
+          <LatitudeLogo className="h-5 w-5" />
+          <Text.H5 weight="semibold">Backoffice</Text.H5>
         </Link>
         <div className="flex items-center gap-1 ml-2">
-          <Icon icon={ShieldAlertIcon} size="xs" color="white" />
-          <Text.H6 color="white">Platform staff only</Text.H6>
+          <Icon icon={ShieldAlertIcon} size="xs" color="destructive" />
+          <Text.H6 color="destructive">Platform staff only</Text.H6>
         </div>
         <div className="flex-1" />
-        <Text.H6 color="white">{user.email}</Text.H6>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void authClient.signOut().then(async () => {
-              await resetPostHog()
-              void router.navigate({ to: "/login" })
-            })
-          }}
-        >
-          Log out
+        <Button variant="outline" size="sm" onClick={() => void router.navigate({ to: "/" })}>
+          <Icon icon={ArrowLeft} size="sm" />
+          Back to app
         </Button>
       </header>
-      <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
-        <Outlet />
-      </main>
+      <div className="flex min-h-0 flex-1">
+        <AppSidebar title="Backoffice">
+          {({ collapsed }) => (
+            <NavItem
+              icon={Search}
+              label="Search"
+              to="/backoffice/search"
+              active={pathname === "/backoffice/search" || pathname.startsWith("/backoffice/search/")}
+              collapsed={collapsed}
+            />
+          )}
+        </AppSidebar>
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
