@@ -63,7 +63,7 @@ function isTraceDetailTab(v: string): v is TabId {
   return v === "trace" || v === "conversation" || v === "spans" || v === "annotations"
 }
 
-const annotationTabCountPillClass =
+const tabCountPillClass =
   "inline-flex min-h-5 min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-muted px-1.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"
 
 function getAnnotationTabSuffix({
@@ -76,7 +76,7 @@ function getAnnotationTabSuffix({
   readonly annotationCount: number
 }): ReactNode {
   if (annotationsByTraceError) {
-    return <span className={annotationTabCountPillClass}>–</span>
+    return <span className={tabCountPillClass}>–</span>
   }
   if (annotationsByTraceLoading) {
     return null
@@ -84,7 +84,14 @@ function getAnnotationTabSuffix({
   if (annotationCount === 0) {
     return null
   }
-  return <span className={cn(annotationTabCountPillClass, "tabular-nums")}>{annotationCount}</span>
+  return <span className={cn(tabCountPillClass, "tabular-nums")}>{annotationCount}</span>
+}
+
+function getSpansTabSuffix(spanCount: number | undefined): ReactNode {
+  if (spanCount === undefined || spanCount === 0) {
+    return null
+  }
+  return <span className={cn(tabCountPillClass, "tabular-nums")}>{spanCount}</span>
 }
 
 export function TraceDetailDrawer({
@@ -135,12 +142,18 @@ export function TraceDetailDrawer({
       }),
     [annotationsByTraceError, annotationsByTraceLoading, annotationCount],
   )
-  const tabsWithAnnotationCount = useMemo<TabOption<TabId>[]>(
-    () => TABS.map((tab) => (tab.id === "annotations" ? { ...tab, suffix: annotationTabSuffix } : tab)),
-    [annotationTabSuffix],
-  )
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
+  const spansTabSuffix = useMemo(() => getSpansTabSuffix(traceRecord?.spanCount), [traceRecord?.spanCount])
+  const tabsWithCounts = useMemo<TabOption<TabId>[]>(
+    () =>
+      TABS.map((tab) => {
+        if (tab.id === "annotations") return { ...tab, suffix: annotationTabSuffix }
+        if (tab.id === "spans") return { ...tab, suffix: spansTabSuffix }
+        return tab
+      }),
+    [annotationTabSuffix, spansTabSuffix],
+  )
   const [activeTab, setActiveTab] = useParamState("traceDetailTab", "trace", {
     validate: isTraceDetailTab,
   })
@@ -292,7 +305,7 @@ export function TraceDetailDrawer({
             <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
           </div>
 
-          <Tabs options={tabsWithAnnotationCount} active={activeTab} onSelect={handleSetActiveTab} />
+          <Tabs options={tabsWithCounts} active={activeTab} onSelect={handleSetActiveTab} />
         </>
       }
     >
