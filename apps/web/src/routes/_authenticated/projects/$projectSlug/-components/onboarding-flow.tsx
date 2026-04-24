@@ -452,7 +452,6 @@ export function OnboardingFlow({
                   <Button
                     variant="outline"
                     size="icon"
-                    flat
                     onClick={() => setGalleryIndex((c) => (c === 0 ? WAITING_GALLERY.length - 1 : c - 1))}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -460,7 +459,6 @@ export function OnboardingFlow({
                   <Button
                     variant="outline"
                     size="icon"
-                    flat
                     onClick={() => setGalleryIndex((c) => (c + 1) % WAITING_GALLERY.length)}
                   >
                     <ChevronRight className="h-4 w-4" />
