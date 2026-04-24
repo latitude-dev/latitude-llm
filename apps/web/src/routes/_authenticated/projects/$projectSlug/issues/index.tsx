@@ -1,4 +1,4 @@
-import { Input, Tabs } from "@repo/ui"
+import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ActivityIcon, ArchiveIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
@@ -54,7 +54,7 @@ function IssuesPage() {
   const [timeFrom, setTimeFrom] = useParamState("issuesTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
-  const [searchInput, setSearchInput] = useState(searchQuery)
+  const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [sorting, setSorting] = useState<IssuesTableSorting>(DEFAULT_SORTING)
   const issueIdsRef = useRef<string[]>([])
 

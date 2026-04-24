@@ -11,17 +11,20 @@ const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62 // ~2 months
 
 const pad2 = (n: number): string => n.toString().padStart(2, "0")
 
+const buildBudgetKey = (orgId: OrganizationId, window: "daily" | "weekly" | "monthly", suffix: string): string =>
+  `org:${orgId}:trace-search:embed-budget:${window}:${suffix}`
+
 const dailyKey = (orgId: OrganizationId, now: Date): string => {
   const yyyy = now.getUTCFullYear()
   const mm = pad2(now.getUTCMonth() + 1)
   const dd = pad2(now.getUTCDate())
-  return `trace-search:embed-budget:daily:${orgId}:${yyyy}-${mm}-${dd}`
+  return buildBudgetKey(orgId, "daily", `${yyyy}-${mm}-${dd}`)
 }
 
 const monthlyKey = (orgId: OrganizationId, now: Date): string => {
   const yyyy = now.getUTCFullYear()
   const mm = pad2(now.getUTCMonth() + 1)
-  return `trace-search:embed-budget:monthly:${orgId}:${yyyy}-${mm}`
+  return buildBudgetKey(orgId, "monthly", `${yyyy}-${mm}`)
 }
 
 /**
@@ -34,7 +37,7 @@ const isoWeekKey = (orgId: OrganizationId, now: Date): string => {
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7))
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
   const weekNumber = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
-  return `trace-search:embed-budget:weekly:${orgId}:${date.getUTCFullYear()}-W${pad2(weekNumber)}`
+  return buildBudgetKey(orgId, "weekly", `${date.getUTCFullYear()}-W${pad2(weekNumber)}`)
 }
 
 /**

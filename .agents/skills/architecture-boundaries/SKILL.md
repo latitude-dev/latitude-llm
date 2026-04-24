@@ -138,6 +138,8 @@ For access patterns, schema, and migrations, see [database-postgres](../database
 - A user may belong to many organizations
 - Organization membership checks happen at boundaries before domain execution
 - All telemetry persistence and query paths include `organizationId`
+- Organization-scoped Redis or cache keys must start with `org:${organizationId}:...`; keep the org id first in the key
+
 
 ## Domain design (DDD)
 

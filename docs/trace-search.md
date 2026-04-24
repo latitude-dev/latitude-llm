@@ -2,8 +2,6 @@
 
 Full-text and semantic search over trace conversations, served alongside the existing trace list. Users type a natural-language query in the traces page and see the most relevant traces, ranked by a hybrid lexical + semantic score computed entirely in ClickHouse. Search behaves like any other filter column: single query, cursor-paginable, composable with `sortBy` and `FilterSet`.
 
-Original planning context and evolution history: [`docs/plans/trace-search.md`](./plans/trace-search.md).
-
 ## Scope
 
 - **Trace-only.** Not session-level, not span-level.
@@ -128,7 +126,7 @@ The embed result is cached in Redis via `withAICache` keyed on `(text, model, di
 
 ## Decisions & Tradeoffs
 
-This section records the choices that shaped the feature. Future contributors should understand the "why" — many of these choices were reached after experimentation (rerank was tried and removed; the per-project cap was shipped and later dropped). See [`docs/plans/trace-search.md#post-implementation-evolution`](./plans/trace-search.md#post-implementation-evolution) for the full history.
+This section records the durable choices that shaped the feature. Future contributors should understand the "why" — many of these choices were reached after experimentation (rerank was tried and removed; the per-project cap was shipped and later dropped).
 
 ### Why ClickHouse for semantic search
 

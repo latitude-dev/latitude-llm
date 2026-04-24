@@ -33,7 +33,7 @@ import {
   type TraceRepositoryShape,
 } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Option } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
@@ -473,7 +473,7 @@ export const TraceRepositoryLive = Layer.effect(
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
     // AI is optional - if not provided, search will gracefully degrade to lexical-only
     const aiOption = yield* Effect.serviceOption(AI)
-    const ai = aiOption._tag === "Some" ? aiOption.value : null
+    const ai = Option.isNone(aiOption) ? null : aiOption.value
 
     // Helper to generate query embedding only when AI is available.
     // Falls back to lexical-only on error (undefined embedding), but logs
@@ -495,7 +495,7 @@ export const TraceRepositoryLive = Layer.effect(
               Effect.map((result): readonly number[] | undefined => result.embedding),
               Effect.orElseSucceed(() => undefined),
             )
-        : Effect.succeed(undefined)
+        : (Effect.void as Effect.Effect<readonly number[] | undefined>)
 
     const getCohortBaselineByProjectId: TraceRepositoryShape["getCohortBaselineByProjectId"] = ({
       organizationId,

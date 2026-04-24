@@ -195,6 +195,8 @@ describe("TraceSearchBudgetLive.tryConsume", () => {
     const orgBKeys = Array.from(redis.store.keys()).filter((k) => k.includes(OTHER_ORG))
     expect(orgAKeys).toHaveLength(3)
     expect(orgBKeys).toHaveLength(3)
+    for (const k of orgAKeys) expect(k.startsWith(`org:${ORG_ID}:`)).toBe(true)
+    for (const k of orgBKeys) expect(k.startsWith(`org:${OTHER_ORG}:`)).toBe(true)
     for (const k of [...orgAKeys, ...orgBKeys]) expect(redis.store.get(k)).toBe(900)
   })
 
@@ -214,7 +216,8 @@ describe("TraceSearchBudgetLive.tryConsume", () => {
     expect(result).toBe(true)
     // Daily key should now be at the cap (1,000).
     const dailyKey = Array.from(redis.store.keys()).find((k) => k.includes(":daily:"))
-    expect(dailyKey).toBeDefined()
-    expect(redis.store.get(dailyKey!)).toBe(1000)
+    expect(dailyKey).toBeTruthy()
+    if (!dailyKey) throw new Error("expected a daily redis key")
+    expect(redis.store.get(dailyKey)).toBe(1000)
   })
 })

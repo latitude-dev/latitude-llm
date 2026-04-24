@@ -42,15 +42,10 @@ function formatGenAIPart(part: GenAIPart): string {
       return typeof part.uri === "string" ? `[URI:${part.uri}]` : "[URI]"
     case "tool_call":
       return `[TOOL CALL: ${part.name}]`
-    case "tool_call_response":
-      // Skip tool result content entirely. The tool output text (JSON, errors, etc.)
-      // is not searchable in any meaningful way and leaving a literal "[TOOL RESULT]"
-      // placeholder only added noise to embeddings without improving retrieval.
-      return ""
     default:
-      // Unknown part types are skipped rather than labeled. Emitting a
-      // `[<type>]` placeholder for parts we haven't modeled just feeds
-      // arbitrary tokens into embeddings and muddles retrieval signal.
+      // Skip unsearchable part types such as tool_call_response, and any
+      // unknown variants, rather than emitting placeholder tokens that only
+      // add embedding noise.
       return ""
   }
 }
@@ -109,10 +104,6 @@ function normalizeSearchText(text: string): string {
   return normalized
 }
 
-// SHA-256 hex digest (64 chars) from @repo/utils; matches the FixedString(64) column width.
-const computeContentHash = (traceId: string, searchText: string): Effect.Effect<string, CryptoError> =>
-  hash(`${traceId}\0${searchText}`)
-
 /**
  * Builds a canonical search document from trace data.
  *
@@ -140,7 +131,7 @@ export const buildTraceSearchDocument = (
     if (outputText) parts.push(outputText)
 
     const searchText = normalizeSearchText(parts.join("\n\n"))
-    const contentHash = yield* computeContentHash(input.traceId, searchText)
+    const contentHash = yield* hash(`${input.traceId}\0${searchText}`)
 
     return {
       traceId: input.traceId,
