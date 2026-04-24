@@ -76,7 +76,6 @@ const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
 export const ApiKeyRepositoryLive = Layer.effect(
   ApiKeyRepository,
   Effect.gen(function* () {
-    yield* SqlClient // assert dependency is available; do not capture
     const encryptionKey = yield* getEncryptionKey()
 
     const list = () =>

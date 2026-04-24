@@ -22,8 +22,6 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
 export const UserRepositoryLive = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
-    yield* SqlClient // assert dependency is available; do not capture
-
     return {
       findByEmail: (email: string) =>
         Effect.gen(function* () {

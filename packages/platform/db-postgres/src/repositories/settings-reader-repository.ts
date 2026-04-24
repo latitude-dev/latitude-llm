@@ -8,8 +8,6 @@ import { projects } from "../schema/projects.ts"
 export const SettingsReaderLive = Layer.effect(
   SettingsReader,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       getOrganizationSettings: () =>
         Effect.gen(function* () {

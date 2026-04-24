@@ -43,8 +43,6 @@ const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
 export const ProjectRepositoryLive = Layer.effect(
   ProjectRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     const list = () =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

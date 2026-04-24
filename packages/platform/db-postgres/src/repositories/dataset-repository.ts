@@ -82,8 +82,6 @@ const DEFAULT_SORT: DatasetSortColumn = SORT_COLUMNS.updatedAt
 export const DatasetRepositoryLive = Layer.effect(
   DatasetRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       create: (args) =>
         Effect.gen(function* () {

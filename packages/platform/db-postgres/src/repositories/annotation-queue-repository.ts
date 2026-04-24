@@ -148,8 +148,6 @@ const evictSystemQueueCache = (queue: Pick<AnnotationQueue, "organizationId" | "
 export const AnnotationQueueRepositoryLive = Layer.effect(
   AnnotationQueueRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       listByProject: ({ projectId, options }) =>
         Effect.gen(function* () {

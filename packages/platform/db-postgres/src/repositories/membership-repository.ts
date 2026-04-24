@@ -19,8 +19,6 @@ const toDomainMembership = (memberRow: typeof members.$inferSelect) => ({
 export const MembershipRepositoryLive = Layer.effect(
   MembershipRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     const listByOrganizationId = (organizationId: OrganizationId) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

@@ -47,8 +47,6 @@ const toOrganizationInsertRow = (org: {
 export const OrganizationRepositoryLive = Layer.effect(
   OrganizationRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     const listByUserId = (userId: UserIdType) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

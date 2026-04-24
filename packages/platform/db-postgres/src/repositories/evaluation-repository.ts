@@ -62,8 +62,6 @@ const applyLifecycleFilter = (options: EvaluationListOptions | undefined): SQL<u
 export const EvaluationRepositoryLive = Layer.effect(
   EvaluationRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: EvaluationListOptions | undefined }) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

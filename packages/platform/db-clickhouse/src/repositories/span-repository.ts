@@ -306,8 +306,6 @@ const toInsertRow = (span: SpanDetail) => ({
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
-    yield* ChSqlClient
-
     const listByTraceId: SpanRepositoryShape["listByTraceId"] = ({ organizationId, traceId }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

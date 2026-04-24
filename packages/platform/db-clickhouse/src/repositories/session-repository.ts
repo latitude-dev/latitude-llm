@@ -203,8 +203,6 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const SessionRepositoryLive = Layer.effect(
   SessionRepository,
   Effect.gen(function* () {
-    yield* ChSqlClient
-
     const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

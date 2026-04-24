@@ -101,14 +101,20 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
 export const ScoreRepositoryLive = Layer.effect(
   ScoreRepository,
   Effect.gen(function* () {
-    const capturedSqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    // TODO(score-repo-tripwire): remove once the per-method SqlClient resolution fix is validated in
+    // prod. `layerBuildSqlClient` is intentionally captured at layer-build time so `resolveSqlClient`
+    // can detect context drift between the build-time scope and the per-call scope — the exact
+    // mechanism that caused the org-mismatch RLS violations. Delete this block (and the
+    // `resolveSqlClient` helper) after we confirm no `ScoreRepository SqlClient context drift
+    // detected` logs over a sustained window with mixed-org worker traffic.
+    const layerBuildSqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
     const resolveSqlClient = () =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-        if (sqlClient.organizationId !== capturedSqlClient.organizationId) {
+        if (sqlClient.organizationId !== layerBuildSqlClient.organizationId) {
           logger.error("ScoreRepository SqlClient context drift detected", {
-            capturedOrganizationId: capturedSqlClient.organizationId,
+            capturedOrganizationId: layerBuildSqlClient.organizationId,
             currentOrganizationId: sqlClient.organizationId,
           })
         }

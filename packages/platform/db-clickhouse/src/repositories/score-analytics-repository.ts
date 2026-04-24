@@ -339,8 +339,6 @@ const buildIssueAnalyticsWhere = (input: {
 export const ScoreAnalyticsRepositoryLive = Layer.effect(
   ScoreAnalyticsRepository,
   Effect.gen(function* () {
-    yield* ChSqlClient
-
     const deleteScore = (id: ScoreId) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

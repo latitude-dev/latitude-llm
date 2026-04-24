@@ -51,11 +51,10 @@ export const FooRepositoryLive = Layer.effect(
   }),
 )
 
-// ✅ RIGHT — layer build only asserts the dependency; each method resolves fresh
+// ✅ RIGHT — layer build does not yield the service at all; each method resolves fresh
 export const FooRepositoryLive = Layer.effect(
   FooRepository,
   Effect.gen(function* () {
-    yield* SqlClient
     return {
       save: (x) =>
         Effect.gen(function* () {
@@ -66,6 +65,8 @@ export const FooRepositoryLive = Layer.effect(
   }),
 )
 ```
+
+Do **not** add a build-time `yield* SqlClient` as a "dependency assertion" — the dependency is already declared via each method's `R` channel, and a build-time yield is both redundant and an invitation to accidentally capture the service. The `R` on port signatures is the single source of truth.
 
 Port method signatures must include scope-bound services in their `R` channel (e.g. `Effect.Effect<A, E, SqlClient>`). Mark the service class with `@effect-leakable-service` to tell the Effect linter this leak is intentional.
 

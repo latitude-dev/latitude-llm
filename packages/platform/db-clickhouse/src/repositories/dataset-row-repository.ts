@@ -131,8 +131,6 @@ const INSERT_BATCH_SIZE = 500
 export const DatasetRowRepositoryLive = Layer.effect(
   DatasetRowRepository,
   Effect.gen(function* () {
-    yield* ChSqlClient
-
     return {
       findExistingTraceIds: (args) =>
         Effect.gen(function* () {

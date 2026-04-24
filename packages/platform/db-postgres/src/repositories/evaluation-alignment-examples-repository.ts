@@ -98,8 +98,6 @@ const hasPassedAnnotation = (rows: readonly AlignmentScoreRow[]): boolean =>
 export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
   EvaluationAlignmentExamplesRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     const loadProjectRows = (input: ListEvaluationAlignmentExamplesInput) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

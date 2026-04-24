@@ -8,8 +8,6 @@ import { invitations, organizations, users } from "../schema/better-auth.ts"
 export const InvitationRepositoryLive = Layer.effect(
   InvitationRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       // Public lookup for invitation acceptance page - cross-org by design since the invitee
       // hasn't authenticated yet and needs to preview invitation details before accepting.

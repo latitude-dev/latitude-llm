@@ -144,8 +144,6 @@ const cursorWhere = (
 export const AnnotationQueueItemRepositoryLive = Layer.effect(
   AnnotationQueueItemRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       findById: ({ projectId, queueId, itemId }) =>
         Effect.gen(function* () {

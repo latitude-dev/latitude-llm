@@ -43,8 +43,6 @@ const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
 const issueRepositoryCoreLive = Layer.effect(
   IssueRepository,
   Effect.gen(function* () {
-    yield* SqlClient
-
     return {
       list: ({ projectId, limit, offset }) =>
         Effect.gen(function* () {

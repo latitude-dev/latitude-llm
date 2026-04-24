@@ -100,8 +100,6 @@ Repository methods must resolve `SqlClient` inside each call — never capture i
 export const ProjectRepositoryLive = Layer.effect(
   ProjectRepository,
   Effect.gen(function* () {
-    yield* SqlClient // build-time dependency assertion only; do NOT capture
-
     return {
       findById: (id) =>
         Effect.gen(function* () {
@@ -122,6 +120,8 @@ export const ProjectRepositoryLive = Layer.effect(
   })
 )
 ```
+
+The layer-build effect doesn't `yield* SqlClient` at all — the dependency is declared via each method's `R` channel, and resolved per call. A build-time yield is redundant and (if captured) re-introduces the very bug this pattern avoids.
 
 The repository port's method signatures must list `SqlClient` in their `R` channel:
 
