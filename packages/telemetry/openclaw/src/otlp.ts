@@ -246,10 +246,20 @@ function buildInputMessages(call: LlmCallRecord): Message[] {
   return out
 }
 
+const ALLOWED_ROLES: ReadonlySet<Message["role"]> = new Set(["system", "user", "assistant", "tool"])
+
+function normalizeRole(raw: unknown): Message["role"] {
+  // Provider adapters occasionally emit roles outside the canonical set
+  // (e.g. OpenAI's "developer"). Coerce unknown roles to "user" so the
+  // downstream Latitude UI gets a payload it can render.
+  if (typeof raw !== "string") return "user"
+  return ALLOWED_ROLES.has(raw as Message["role"]) ? (raw as Message["role"]) : "user"
+}
+
 function normalizeHistoryMessage(raw: unknown): Message | undefined {
   if (!raw || typeof raw !== "object") return undefined
   const obj = raw as Record<string, unknown>
-  const role = typeof obj.role === "string" ? (obj.role as Message["role"]) : "user"
+  const role = normalizeRole(obj.role)
   const content = obj.content ?? obj.text ?? obj.message
   if (typeof content === "string") {
     return { role, parts: [{ type: "text", content }] }
