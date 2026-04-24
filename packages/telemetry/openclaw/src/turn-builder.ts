@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import type {
   LlmCallRecord,
   OpenClawAfterToolCallEvent,
@@ -70,7 +71,10 @@ export class TurnBuilder {
     const run = this.runs.get(evt.runId) ?? this.ensureRun(evt.runId, ctx)
 
     const tool: ToolCallRecord = {
-      toolCallId: evt.toolCallId ?? `${evt.toolName}:${run.llmCalls.length}:${Date.now()}`,
+      // Use a UUID when OpenClaw elides the id — name+timestamp can collide for
+      // multiple invocations of the same tool within the same millisecond,
+      // which would then cause `after_tool_call` to update the wrong record.
+      toolCallId: evt.toolCallId ?? `${evt.toolName}:${randomUUID()}`,
       toolName: evt.toolName,
       params: evt.params,
       result: undefined,
