@@ -1,5 +1,6 @@
 import { Avatar, Badge, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import type {
   AdminOrganizationSearchDto,
   AdminProjectSearchDto,
@@ -88,7 +89,11 @@ function UserCard({ user }: { user: AdminUserSearchDto }) {
   const overflowCount = user.memberships.length - visibleMemberships.length
 
   return (
-    <div className="flex items-center gap-4 rounded-md border border-border bg-background px-4 py-3">
+    <Link
+      to="/backoffice/users/$userId"
+      params={{ userId: user.id }}
+      className="flex items-center gap-4 rounded-md border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
+    >
       <Avatar name={displayName} imageSrc={user.image} size="lg" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2 min-w-0">
@@ -119,7 +124,7 @@ function UserCard({ user }: { user: AdminUserSearchDto }) {
       <Text.H6 color="foregroundMuted" noWrap>
         {formatDate(user.createdAt)}
       </Text.H6>
-    </div>
+    </Link>
   )
 }
 

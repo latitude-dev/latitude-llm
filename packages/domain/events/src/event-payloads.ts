@@ -115,4 +115,28 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
+  /**
+   * Emitted when a platform admin begins impersonating another user via
+   * the backoffice. The outbox envelope's `organizationId` is always
+   * `"system"` — impersonation is a platform-wide audit event with no
+   * tenant ownership. `targetOrganizationId` records the org whose data
+   * the admin is about to see (the target user's active org at the
+   * moment of impersonation), so queries like "who looked at tenant X?"
+   * have a join key.
+   */
+  AdminImpersonationStarted: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly targetOrganizationId: string | null
+  }
+  /**
+   * Emitted when impersonation ends — either from the "Stop impersonating"
+   * banner action or when the 1-hour impersonation-session TTL
+   * (`impersonationSessionDuration` on the Better Auth admin plugin)
+   * elapses.
+   */
+  AdminImpersonationStopped: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+  }
 }

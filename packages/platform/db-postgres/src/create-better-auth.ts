@@ -4,7 +4,7 @@ import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
+import { admin as adminPlugin, captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
 import { Effect } from "effect"
 import Stripe from "stripe"
 import type { PostgresClient } from "./client.ts"
@@ -111,18 +111,12 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
-    user: {
-      // Surface the app-extended `users.role` column on the session user.
-      // Required by the backoffice admin guard — without this, Better Auth
-      // fetches the column from the DB but does not expose it to callers of
-      // `auth.api.getSession()`, so `user.role` is undefined and every user
-      // (including admins) is treated as non-admin.
-      // `input: false` keeps the field read-only via the sign-up / update
-      // APIs so regular users can't self-promote to admin.
-      additionalFields: {
-        role: { type: "string", required: false, input: false },
-      },
-    },
+    // The `users.role` column is surfaced on the session user by the
+    // `admin` plugin installed below. The plugin declares it in its own
+    // schema (`{ type: "string", required: false, input: false }`), so
+    // we do NOT need a separate `user.additionalFields.role` entry —
+    // declaring both produces duplicate-field warnings. `input: false`
+    // still holds: the role is read-only through sign-up / update APIs.
     databaseHooks: {
       user: {
         create: {
@@ -202,6 +196,24 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         },
         expiresIn: 3600,
         allowedAttempts: 5,
+      }),
+      /**
+       * Backoffice impersonation.
+       *
+       * The plugin ships `impersonateUser` / `stopImpersonating` endpoints
+       * that store the admin's id in `sessions.impersonatedBy`, so the
+       * admin can return to their original session without logging out
+       * and back in.
+       *
+       * `adminRoles` matches the app-extended `users.role` column (see
+       * `better-auth.ts`). The plugin also requires the `users.banned /
+       * banReason / banExpires` columns — they exist for this reason, not
+       * because we expose any ban UI today.
+       */
+      adminPlugin({
+        defaultRole: "user",
+        adminRoles: ["admin"],
+        impersonationSessionDuration: 60 * 60,
       }),
       ...(config.captchaSecretKey
         ? [

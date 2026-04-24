@@ -33,6 +33,19 @@ export const users = latitudeSchema.table("users", {
   image: text("image"),
   /** App extension (not in BA reference). */
   role: varchar("role", { length: 50 }).notNull().default("user").$type<UserRole>(),
+  /**
+   * Required by the Better Auth `admin` plugin. Its unconditional
+   * `session.create.before` hook reads `user.banned` on every session
+   * creation, and the Drizzle adapter builds `SELECT`s from the plugin's
+   * declared schema — so the columns must physically exist in the DB.
+   *
+   * We install the plugin for its impersonation endpoints, not its ban
+   * feature. No ban UI is exposed today; leaving the columns in place
+   * means banning can be turned on later with zero schema work.
+   */
+  banned: boolean("banned").notNull().default(false),
+  banReason: text("ban_reason"),
+  banExpires: tzTimestamp("ban_expires"),
   stripeCustomerId: text("stripe_customer_id"),
   ...timestamps(),
 })
@@ -49,6 +62,14 @@ export const sessions = latitudeSchema.table(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     activeOrganizationId: text("active_organization_id"),
+    /**
+     * Set by the Better Auth `admin` plugin when an admin impersonates
+     * another user. Holds the admin's user id for the lifetime of the
+     * impersonation session, so `stopImpersonating` can restore the
+     * original session without requiring a re-login. Nullable in every
+     * other case.
+     */
+    impersonatedBy: text("impersonated_by"),
     ...timestamps(),
   },
   (t) => [

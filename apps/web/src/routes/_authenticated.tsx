@@ -1,6 +1,6 @@
 import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
-import { ChevronsUpDown, Moon, ShieldAlertIcon, Sun } from "lucide-react"
+import { ChevronsUpDown, HatGlassesIcon, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
@@ -8,6 +8,7 @@ import { resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -32,9 +33,15 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/welcome" })
     }
 
+    // Set by the Better Auth `admin` plugin when an admin is impersonating
+    // another user. The impersonation banner reads this to announce the
+    // active impersonation on every authenticated page.
+    const impersonatedBy = typeof sessionData.impersonatedBy === "string" ? sessionData.impersonatedBy : null
+
     return {
       user: session.user,
       organizationId,
+      impersonatedBy,
     }
   },
   component: AuthenticatedLayout,
@@ -64,6 +71,7 @@ function ThemeToggle() {
 function NavHeader() {
   const user = Route.useLoaderData({ select: (data) => data.user })
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
+  const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
@@ -156,7 +164,22 @@ function NavHeader() {
           ]}
           trigger={() => (
             <button type="button" className="cursor-pointer">
-              <Avatar name={user.name?.trim() ? user.name : user.email} size="sm" imageSrc={user.image ?? undefined} />
+              <span className="relative inline-flex">
+                <Avatar
+                  name={user.name?.trim() ? user.name : user.email}
+                  size="sm"
+                  imageSrc={user.image ?? undefined}
+                />
+                {impersonatedBy && (
+                  // Small hat glasses icon overlaid on the user's avatar whenever the session is an impersonation.
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1/2 -right-1/2 transform -translate-x-1/2 translate-y-1 items-center justify-center"
+                  >
+                    <Icon icon={HatGlassesIcon} size="md" />
+                  </span>
+                )}
+              </span>
             </button>
           )}
         />
@@ -168,6 +191,7 @@ function NavHeader() {
 function AuthenticatedLayout() {
   const user = Route.useLoaderData({ select: (data) => data.user })
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
+  const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
 
@@ -181,6 +205,7 @@ function AuthenticatedLayout() {
         organizationId={organizationId}
         organizationName={org?.name}
       />
+      {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
       <NavHeader />
       <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />
