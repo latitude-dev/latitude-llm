@@ -200,7 +200,13 @@ async function applyChanges({ apiKey, project, envConfig }: ApplyParams): Promis
   ensurePluginEntry(settings)
   setEnv(settings, "LATITUDE_API_KEY", apiKey)
   setEnv(settings, "LATITUDE_PROJECT", project)
-  if (envConfig.name !== "production") setEnv(settings, "LATITUDE_BASE_URL", envConfig.ingest)
+  if (envConfig.name !== "production") {
+    setEnv(settings, "LATITUDE_BASE_URL", envConfig.ingest)
+  } else {
+    // Clear any stale BASE_URL left over from a prior --staging/--dev install so
+    // re-running `install` without flags is idempotent back to production.
+    removeEnv(settings, ["LATITUDE_BASE_URL"])
+  }
   writeSettings(settings)
   s.stop(`Updated ${SETTINGS_PATH}`)
   if (existsSync(SETTINGS_BACKUP_PATH)) log.info(`Backup saved at ${pc.dim(SETTINGS_BACKUP_PATH)}`)
