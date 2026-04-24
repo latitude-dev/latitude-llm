@@ -5,12 +5,14 @@ import {
   deleteRows,
   RowNotFoundError,
 } from "@domain/datasets"
-import { DatasetId, DatasetRowId, OrganizationId, ProjectId } from "@domain/shared"
+import { type ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
+import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { DatasetRowRepositoryLive } from "../repositories/dataset-row-repository.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 
@@ -52,34 +54,42 @@ describe("deleteRows", () => {
 
   const seedRows = async (rowIds: DatasetRowId[]) => {
     const version = await Effect.runPromise(
-      datasetRepo.incrementVersion({
-        id: DATASET_ID,
-        rowsInserted: rowIds.length,
-        source: "web",
-      }),
+      datasetRepo
+        .incrementVersion({
+          id: DATASET_ID,
+          rowsInserted: rowIds.length,
+          source: "web",
+        })
+        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))),
     )
 
     await Effect.runPromise(
-      rowRepo.insertBatch({
-        datasetId: DATASET_ID,
-        version: version.version,
-        rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
-      }),
+      rowRepo
+        .insertBatch({
+          datasetId: DATASET_ID,
+          version: version.version,
+          rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
+        })
+        .pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
     )
 
     return version
   }
 
-  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository>) =>
+  const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository | SqlClient | ChSqlClient>) =>
     Effect.runPromise(
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),
         Effect.provideService(DatasetRowRepository, rowRepo),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+        Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
       ),
     )
 
   const activeRowIds = async () => {
-    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: DATASET_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
     return rows.map((r) => r.rowId)
   }
 

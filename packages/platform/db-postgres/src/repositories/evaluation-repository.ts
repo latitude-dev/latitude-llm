@@ -62,64 +62,69 @@ const applyLifecycleFilter = (options: EvaluationListOptions | undefined): SQL<u
 export const EvaluationRepositoryLive = Layer.effect(
   EvaluationRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-
     const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: EvaluationListOptions | undefined }) =>
-      sqlClient
-        .query((db, organizationId) => {
-          const limit = input.options?.limit ?? 50
-          const offset = input.options?.offset ?? 0
-          const lifecycleWhere = applyLifecycleFilter(input.options)
-          const whereClause =
-            and(eq(evaluations.organizationId, organizationId), input.baseWhere, lifecycleWhere) ??
-            and(eq(evaluations.organizationId, organizationId), input.baseWhere)
-
-          return db
-            .select()
-            .from(evaluations)
-            .where(whereClause)
-            .orderBy(desc(evaluations.createdAt), desc(evaluations.id))
-            .limit(limit + 1)
-            .offset(offset)
-        })
-        .pipe(
-          Effect.map((rows) => {
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db, organizationId) => {
             const limit = input.options?.limit ?? 50
-            const hasMore = rows.length > limit
-            const items = rows.slice(0, limit).map(toDomainEvaluation)
+            const offset = input.options?.offset ?? 0
+            const lifecycleWhere = applyLifecycleFilter(input.options)
+            const whereClause =
+              and(eq(evaluations.organizationId, organizationId), input.baseWhere, lifecycleWhere) ??
+              and(eq(evaluations.organizationId, organizationId), input.baseWhere)
 
-            return {
-              items,
-              hasMore,
-              limit,
-              offset: input.options?.offset ?? 0,
-            }
-          }),
-        )
+            return db
+              .select()
+              .from(evaluations)
+              .where(whereClause)
+              .orderBy(desc(evaluations.createdAt), desc(evaluations.id))
+              .limit(limit + 1)
+              .offset(offset)
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const limit = input.options?.limit ?? 50
+              const hasMore = rows.length > limit
+              const items = rows.slice(0, limit).map(toDomainEvaluation)
+
+              return {
+                items,
+                hasMore,
+                limit,
+                offset: input.options?.offset ?? 0,
+              }
+            }),
+          )
+      })
 
     return {
       findById: (id: string) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(evaluations)
-              .where(and(eq(evaluations.organizationId, organizationId), eq(evaluations.id, id)))
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (!row) {
-                return Effect.fail(new NotFoundError({ entity: "Evaluation", id }))
-              }
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(evaluations)
+                .where(and(eq(evaluations.organizationId, organizationId), eq(evaluations.id, id)))
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) {
+                  return Effect.fail(new NotFoundError({ entity: "Evaluation", id }))
+                }
 
-              return Effect.succeed(toDomainEvaluation(row))
-            }),
-          ),
+                return Effect.succeed(toDomainEvaluation(row))
+              }),
+            )
+        }),
 
       save: (evaluation: Evaluation) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const row = toInsertRow(evaluation)
 
           yield* sqlClient.query((db) =>
@@ -199,69 +204,81 @@ export const EvaluationRepositoryLive = Layer.effect(
       },
 
       archive: (id: EvaluationId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(evaluations)
-              .set({ archivedAt: new Date(), updatedAt: new Date() })
-              .where(
-                and(
-                  eq(evaluations.organizationId, organizationId),
-                  eq(evaluations.id, id),
-                  isNull(evaluations.deletedAt),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(evaluations)
+                .set({ archivedAt: new Date(), updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(evaluations.organizationId, organizationId),
+                    eq(evaluations.id, id),
+                    isNull(evaluations.deletedAt),
+                  ),
                 ),
-              ),
-          )
-          .pipe(Effect.asVoid),
+            )
+            .pipe(Effect.asVoid)
+        }),
 
       unarchive: (id: EvaluationId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(evaluations)
-              .set({ archivedAt: null, updatedAt: new Date() })
-              .where(
-                and(
-                  eq(evaluations.organizationId, organizationId),
-                  eq(evaluations.id, id),
-                  isNull(evaluations.deletedAt),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(evaluations)
+                .set({ archivedAt: null, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(evaluations.organizationId, organizationId),
+                    eq(evaluations.id, id),
+                    isNull(evaluations.deletedAt),
+                  ),
                 ),
-              ),
-          )
-          .pipe(Effect.asVoid),
+            )
+            .pipe(Effect.asVoid)
+        }),
 
       softDelete: (id: EvaluationId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(evaluations)
-              .set({ deletedAt: new Date(), updatedAt: new Date() })
-              .where(
-                and(
-                  eq(evaluations.organizationId, organizationId),
-                  eq(evaluations.id, id),
-                  isNull(evaluations.deletedAt),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(evaluations)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(evaluations.organizationId, organizationId),
+                    eq(evaluations.id, id),
+                    isNull(evaluations.deletedAt),
+                  ),
                 ),
-              ),
-          )
-          .pipe(Effect.asVoid),
+            )
+            .pipe(Effect.asVoid)
+        }),
 
       softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(evaluations)
-              .set({ deletedAt: new Date(), updatedAt: new Date() })
-              .where(
-                and(
-                  eq(evaluations.organizationId, organizationId),
-                  eq(evaluations.projectId, projectId),
-                  eq(evaluations.issueId, issueId),
-                  isNull(evaluations.deletedAt),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(evaluations)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(evaluations.organizationId, organizationId),
+                    eq(evaluations.projectId, projectId),
+                    eq(evaluations.issueId, issueId),
+                    isNull(evaluations.deletedAt),
+                  ),
                 ),
-              ),
-          )
-          .pipe(Effect.asVoid),
+            )
+            .pipe(Effect.asVoid)
+        }),
     }
   }),
 )

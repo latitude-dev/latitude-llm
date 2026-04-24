@@ -2,12 +2,14 @@ import { OutboxEventWriter } from "@domain/events"
 import {
   AnnotationQueueId,
   AnnotationQueueItemId,
+  ChSqlClient,
   OrganizationId,
   ProjectId,
   SqlClient,
   type SqlClientShape,
   TraceId,
 } from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
@@ -85,6 +87,7 @@ describe("completeQueueItemUseCase", () => {
         Effect.provideService(AnnotationQueueItemRepository, itemRepo),
         Effect.provideService(AnnotationQueueRepository, queueRepo),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: ORG_ID })),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
       ),
     )
@@ -110,6 +113,7 @@ describe("completeQueueItemUseCase", () => {
         Effect.provideService(AnnotationQueueItemRepository, itemRepo),
         Effect.provideService(AnnotationQueueRepository, queueRepo),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: ORG_ID })),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
       ),
     )

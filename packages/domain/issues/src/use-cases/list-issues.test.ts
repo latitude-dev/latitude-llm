@@ -13,7 +13,8 @@ import {
   ScoreAnalyticsRepository,
   type ScoreAnalyticsRepositoryShape,
 } from "@domain/scores"
-import { EvaluationId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { type Issue, IssueState } from "../entities/issue.ts"
@@ -300,6 +301,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -453,6 +456,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -620,6 +625,8 @@ describe("listIssuesUseCase", () => {
               Layer.succeed(EvaluationRepository, evaluationRepository),
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
             ),
           ),
         ),
@@ -708,6 +715,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -789,6 +798,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -853,6 +864,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),

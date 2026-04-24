@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import { type ChSqlClient, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 
 import type { TraceDetail } from "../entities/trace.ts"
@@ -21,7 +21,7 @@ export const loadTraceForTraceEndUseCase = (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-}): Effect.Effect<LoadTraceForTraceEndResult, RepositoryError, TraceRepository> =>
+}): Effect.Effect<LoadTraceForTraceEndResult, RepositoryError, ChSqlClient | TraceRepository> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("traceId", input.traceId)

@@ -2,6 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
+  ChSqlClient,
   ExternalUserId,
   OrganizationId,
   ProjectId,
@@ -11,7 +12,7 @@ import {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -36,6 +37,7 @@ function createTestLayers() {
         }),
     }),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+    Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: ORG_ID })),
   )
 
   return { store, events, layer }

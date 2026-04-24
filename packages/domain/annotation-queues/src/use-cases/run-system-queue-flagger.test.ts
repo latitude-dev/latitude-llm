@@ -1,6 +1,16 @@
 import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
@@ -87,7 +97,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -140,7 +156,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -159,7 +181,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -195,7 +223,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -242,7 +276,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -278,7 +318,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -298,7 +344,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "resource-outliers" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -316,7 +368,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "not-a-real-queue" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -350,7 +408,16 @@ describe("runSystemQueueFlaggerUseCase", () => {
     const exit = await Effect.runPromise(
       Effect.exit(
         runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(TraceRepository, repository),
+              Layer.succeed(
+                ChSqlClient,
+                createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+              ),
+              aiLayer,
+            ),
+          ),
         ),
       ),
     )
@@ -400,7 +467,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -437,7 +510,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -472,7 +551,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -515,7 +600,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "nsfw" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -551,7 +642,13 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "nsfw" }).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 

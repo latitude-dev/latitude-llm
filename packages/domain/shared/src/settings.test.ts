@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { ProjectId } from "./id.ts"
+import { OrganizationId, type ProjectId } from "./id.ts"
 import {
   type OrganizationSettings,
   type ProjectSettings,
@@ -8,6 +8,13 @@ import {
   resolveSettingsCascade,
   SettingsReader,
 } from "./settings.ts"
+import { SqlClient } from "./sql-client.ts"
+
+const fakeSqlClient = Layer.succeed(SqlClient, {
+  organizationId: OrganizationId("system"),
+  transaction: ((eff: never) => eff) as never,
+  query: (() => Effect.die("SqlClient.query not implemented in settings.test.ts")) as never,
+})
 
 function fakeSettingsReader(input: {
   organization: OrganizationSettings | null
@@ -57,13 +64,13 @@ describe("resolveSettingsCascade", () => {
 describe("resolveSettings", () => {
   it("returns system defaults when org has no settings", async () => {
     const layer = fakeSettingsReader({ organization: null })
-    const result = await Effect.runPromise(resolveSettings().pipe(Effect.provide(layer)))
+    const result = await Effect.runPromise(resolveSettings().pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))))
     expect(result).toEqual({ keepMonitoring: true })
   })
 
   it("returns org-level value when no project is provided", async () => {
     const layer = fakeSettingsReader({ organization: { keepMonitoring: false } })
-    const result = await Effect.runPromise(resolveSettings().pipe(Effect.provide(layer)))
+    const result = await Effect.runPromise(resolveSettings().pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))))
     expect(result).toEqual({ keepMonitoring: false })
   })
 
@@ -77,7 +84,7 @@ describe("resolveSettings", () => {
       },
     })
 
-    await Effect.runPromise(resolveSettings().pipe(Effect.provide(layer)))
+    await Effect.runPromise(resolveSettings().pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))))
     expect(projectFetched).toBe(false)
   })
 
@@ -88,7 +95,7 @@ describe("resolveSettings", () => {
     })
 
     const result = await Effect.runPromise(
-      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(layer)),
+      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))),
     )
     expect(result).toEqual({ keepMonitoring: false })
   })
@@ -100,7 +107,7 @@ describe("resolveSettings", () => {
     })
 
     const result = await Effect.runPromise(
-      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(layer)),
+      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))),
     )
     expect(result).toEqual({ keepMonitoring: false })
   })
@@ -112,7 +119,7 @@ describe("resolveSettings", () => {
     })
 
     const result = await Effect.runPromise(
-      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(layer)),
+      resolveSettings({ projectId: "proj1" as ProjectId }).pipe(Effect.provide(Layer.mergeAll(layer, fakeSqlClient))),
     )
     expect(result).toEqual({ keepMonitoring: true })
   })

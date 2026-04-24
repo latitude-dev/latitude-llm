@@ -1,5 +1,6 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
 import {
+  type ChSqlClient,
   getFromDisk,
   type OrganizationId,
   type ProjectId,
@@ -135,7 +136,7 @@ export const processIngestedSpansUseCase =
   ): Effect.Effect<
     void,
     SpanDecodingError | StorageError | RepositoryError | TPublishError,
-    SpanRepository | StorageDisk
+    ChSqlClient | SpanRepository | StorageDisk
   > =>
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)

@@ -1,7 +1,8 @@
 import type { Score } from "@domain/scores"
 import { ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { ProjectId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
@@ -82,10 +83,11 @@ function createTestLayers(options: {
   })
 
   const ItemRepositoryTest = Layer.succeed(AnnotationQueueItemRepository, itemRepo)
+  const SqlClientTest = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) }))
 
   return {
     items,
-    layer: Layer.mergeAll(ScoreRepositoryTest, ItemRepositoryTest),
+    layer: Layer.mergeAll(ScoreRepositoryTest, ItemRepositoryTest, SqlClientTest),
   }
 }
 

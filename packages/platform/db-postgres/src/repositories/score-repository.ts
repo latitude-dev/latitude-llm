@@ -101,85 +101,113 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
 export const ScoreRepositoryLive = Layer.effect(
   ScoreRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    // TODO(score-repo-tripwire): remove once the per-method SqlClient resolution fix is validated in
+    // prod. `layerBuildSqlClient` is intentionally captured at layer-build time so `resolveSqlClient`
+    // can detect context drift between the build-time scope and the per-call scope — the exact
+    // mechanism that caused the org-mismatch RLS violations. Delete this block (and the
+    // `resolveSqlClient` helper) after we confirm no `ScoreRepository SqlClient context drift
+    // detected` logs over a sustained window with mixed-org worker traffic.
+    const layerBuildSqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+
+    const resolveSqlClient = () =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        if (sqlClient.organizationId !== layerBuildSqlClient.organizationId) {
+          logger.error("ScoreRepository SqlClient context drift detected", {
+            capturedOrganizationId: layerBuildSqlClient.organizationId,
+            currentOrganizationId: sqlClient.organizationId,
+          })
+        }
+        return sqlClient
+      })
 
     const list = (input: { readonly baseWhere: SQL<unknown>; readonly options: ScoreListOptions | undefined }) =>
-      sqlClient
-        .query((db, organizationId) => {
-          const limit = input.options?.limit ?? 50
-          const offset = input.options?.offset ?? 0
-          const draftClause = applyDraftMode(input.options)
-          const whereClause = draftClause
-            ? and(eq(scores.organizationId, organizationId), input.baseWhere, draftClause)
-            : and(eq(scores.organizationId, organizationId), input.baseWhere)
-
-          return db
-            .select()
-            .from(scores)
-            .where(whereClause)
-            .orderBy(desc(scores.createdAt), desc(scores.id))
-            .limit(limit + 1)
-            .offset(offset)
-        })
-        .pipe(
-          Effect.map((rows) => {
+      Effect.gen(function* () {
+        const sqlClient = yield* resolveSqlClient()
+        return yield* sqlClient
+          .query((db, organizationId) => {
             const limit = input.options?.limit ?? 50
-            const hasMore = rows.length > limit
-            const items = rows.slice(0, limit).map(toDomainScore)
+            const offset = input.options?.offset ?? 0
+            const draftClause = applyDraftMode(input.options)
+            const whereClause = draftClause
+              ? and(eq(scores.organizationId, organizationId), input.baseWhere, draftClause)
+              : and(eq(scores.organizationId, organizationId), input.baseWhere)
 
-            return {
-              items,
-              hasMore,
-              limit,
-              offset: input.options?.offset ?? 0,
-            }
-          }),
-        )
+            return db
+              .select()
+              .from(scores)
+              .where(whereClause)
+              .orderBy(desc(scores.createdAt), desc(scores.id))
+              .limit(limit + 1)
+              .offset(offset)
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const limit = input.options?.limit ?? 50
+              const hasMore = rows.length > limit
+              const items = rows.slice(0, limit).map(toDomainScore)
+
+              return {
+                items,
+                hasMore,
+                limit,
+                offset: input.options?.offset ?? 0,
+              }
+            }),
+          )
+      })
 
     const existsCanonicalEvaluationScore = (input: {
       readonly projectId: ProjectId
       readonly evaluationId: string
       readonly whereClause: SQL<unknown>
     }) =>
-      sqlClient
-        .query((db, organizationId) =>
-          db
-            .select({ id: scores.id })
-            .from(scores)
-            .where(
-              and(
-                eq(scores.organizationId, organizationId),
-                eq(scores.projectId, input.projectId),
-                eq(scores.source, "evaluation"),
-                eq(scores.sourceId, input.evaluationId),
-                isNull(scores.draftedAt),
-                input.whereClause,
-              ),
-            )
-            .limit(1),
-        )
-        .pipe(Effect.map((rows) => rows[0] !== undefined))
+      Effect.gen(function* () {
+        const sqlClient = yield* resolveSqlClient()
+        return yield* sqlClient
+          .query((db, organizationId) =>
+            db
+              .select({ id: scores.id })
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.organizationId, organizationId),
+                  eq(scores.projectId, input.projectId),
+                  eq(scores.source, "evaluation"),
+                  eq(scores.sourceId, input.evaluationId),
+                  isNull(scores.draftedAt),
+                  input.whereClause,
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(Effect.map((rows) => rows[0] !== undefined))
+      })
 
     return {
       findById: (id: ScoreId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(scores)
-              .where(and(eq(scores.organizationId, organizationId), eq(scores.id, id)))
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (!row) return Effect.fail(new NotFoundError({ entity: "Score", id }))
-              return Effect.succeed(toDomainScore(row))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(scores)
+                .where(and(eq(scores.organizationId, organizationId), eq(scores.id, id)))
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Score", id }))
+                return Effect.succeed(toDomainScore(row))
+              }),
+            )
+        }),
 
       save: (score: Score) =>
         Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
           const row = toInsertRow(score)
 
           yield* sqlClient.query(async (db, organizationId) => {
@@ -249,23 +277,29 @@ export const ScoreRepositoryLive = Layer.effect(
         }),
 
       assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(scores)
-              .set({
-                issueId,
-                updatedAt,
-              })
-              .where(and(eq(scores.organizationId, organizationId), eq(scores.id, scoreId), isNull(scores.issueId)))
-              .returning({ id: scores.id }),
-          )
-          .pipe(Effect.map((rows) => rows.length > 0)),
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(scores)
+                .set({
+                  issueId,
+                  updatedAt,
+                })
+                .where(and(eq(scores.organizationId, organizationId), eq(scores.id, scoreId), isNull(scores.issueId)))
+                .returning({ id: scores.id }),
+            )
+            .pipe(Effect.map((rows) => rows.length > 0))
+        }),
 
       delete: (id: ScoreId) =>
-        sqlClient.query((db, organizationId) =>
-          db.delete(scores).where(and(eq(scores.organizationId, organizationId), eq(scores.id, id))),
-        ),
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          yield* sqlClient.query((db, organizationId) =>
+            db.delete(scores).where(and(eq(scores.organizationId, organizationId), eq(scores.id, id))),
+          )
+        }),
 
       existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) =>
         existsCanonicalEvaluationScore({
@@ -392,24 +426,27 @@ export const ScoreRepositoryLive = Layer.effect(
         readonly queueId: string
         readonly traceId: TraceId
       }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(scores)
-              .where(
-                and(
-                  eq(scores.organizationId, organizationId),
-                  eq(scores.projectId, projectId),
-                  eq(scores.source, "annotation"),
-                  eq(scores.sourceId, queueId),
-                  eq(scores.traceId, traceId as string),
-                  isNotNull(scores.draftedAt),
-                ),
-              )
-              .limit(1),
-          )
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.source, "annotation"),
+                    eq(scores.sourceId, queueId),
+                    eq(scores.traceId, traceId as string),
+                    isNotNull(scores.draftedAt),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
+        }),
     }
   }),
 )

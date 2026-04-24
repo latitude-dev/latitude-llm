@@ -954,6 +954,9 @@ importers:
 
   packages/domain/events:
     dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4

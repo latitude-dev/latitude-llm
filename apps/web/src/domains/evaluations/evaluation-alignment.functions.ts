@@ -8,7 +8,7 @@ import {
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
-import { EvaluationRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { EvaluationRepositoryLive, IssueRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -158,7 +158,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
             issueId: data.issueId,
           },
         })
-        .pipe(withTracing),
+        .pipe(Effect.provide(SqlClientLive(client, OrganizationId(organizationId))), withTracing),
     )
   })
 

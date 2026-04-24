@@ -1,6 +1,7 @@
 import type { ApiKeyRepository } from "@domain/api-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
+import type { SqlClient } from "@domain/shared"
 import type { UserRepository } from "@domain/users"
 import { Data, type Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -25,5 +26,5 @@ export class SeedError extends Data.TaggedError("SeedError")<{
 
 export interface Seeder {
   readonly name: string
-  readonly run: (ctx: SeedContext) => Effect.Effect<void, unknown>
+  readonly run: (ctx: SeedContext) => Effect.Effect<void, unknown, SqlClient>
 }

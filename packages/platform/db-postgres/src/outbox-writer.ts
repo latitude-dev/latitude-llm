@@ -26,11 +26,16 @@ export const createOutboxWriter = (client: PostgresClient): OutboxEventWriterSha
 export const OutboxEventWriterLive = Layer.effect(
   OutboxEventWriter,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* SqlClient
 
     return {
       write: (event) =>
-        sqlClient.query((db) => db.insert(outboxEvents).values(toOutboxInsertValues(event))).pipe(Effect.asVoid),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db) => db.insert(outboxEvents).values(toOutboxInsertValues(event)))
+            .pipe(Effect.asVoid)
+        }),
     }
   }),
 )

@@ -131,16 +131,16 @@ const INSERT_BATCH_SIZE = 500
 export const DatasetRowRepositoryLive = Layer.effect(
   DatasetRowRepository,
   Effect.gen(function* () {
-    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-
     return {
       findExistingTraceIds: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          if (args.traceIds.length === 0) return new Set<TraceId>()
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            if (args.traceIds.length === 0) return new Set<TraceId>()
 
-          const result = await client
-            .query({
-              query: `
+            const result = await client
+              .query({
+                query: `
                 SELECT DISTINCT JSONExtractString(
                   argMax(metadata, xact_id), 'traceId'
                 ) AS trace_id
@@ -151,74 +151,126 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 HAVING argMax(_object_delete, xact_id) = false
                   AND trace_id IN ({traceIds:Array(String)})
               `,
-              query_params: {
-                organizationId: organizationId as string,
-                datasetId: args.datasetId as string,
-                traceIds: Array.from(args.traceIds) as string[],
-              },
-              format: "JSONEachRow",
-            })
-            .then((r) => r.json<{ trace_id: string }>())
+                query_params: {
+                  organizationId: organizationId as string,
+                  datasetId: args.datasetId as string,
+                  traceIds: Array.from(args.traceIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              .then((r) => r.json<{ trace_id: string }>())
 
-          return new Set(result.map((r) => TraceId(r.trace_id)))
+            return new Set(result.map((r) => TraceId(r.trace_id)))
+          })
         }),
 
       // TODO(repositories): rename insertBatch -> saveBatch so repository write
       // verbs converge on save/saveBatch instead of insert/insertBatch.
       insertBatch: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          const values = args.rows.map((row) => ({
-            organization_id: organizationId,
-            dataset_id: args.datasetId,
-            row_id: row.id,
-            xact_id: args.version,
-            input: serializeField(row.input),
-            output: serializeField(row.output),
-            metadata: serializeField(row.metadata),
-          }))
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            const values = args.rows.map((row) => ({
+              organization_id: organizationId,
+              dataset_id: args.datasetId,
+              row_id: row.id,
+              xact_id: args.version,
+              input: serializeField(row.input),
+              output: serializeField(row.output),
+              metadata: serializeField(row.metadata),
+            }))
 
-          for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
-            const batch = values.slice(i, i + INSERT_BATCH_SIZE)
-            await client.insert({
-              table: "dataset_rows",
-              values: batch,
-              format: "JSONEachRow",
-            })
-          }
+            for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
+              const batch = values.slice(i, i + INSERT_BATCH_SIZE)
+              await client.insert({
+                table: "dataset_rows",
+                values: batch,
+                format: "JSONEachRow",
+              })
+            }
 
-          return args.rows.map((r) => r.id)
+            return args.rows.map((r) => r.id)
+          })
         }),
 
       list: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          const limit = args.limit ?? 50
-          const sortDirection: RowSortDirection = args.sortDirection ?? "desc"
-          const versionClause = buildVersionClause(args.version)
-          const searchClause = buildSearchClause(args.search)
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            const limit = args.limit ?? 50
+            const sortDirection: RowSortDirection = args.sortDirection ?? "desc"
+            const versionClause = buildVersionClause(args.version)
+            const searchClause = buildSearchClause(args.search)
 
-          if (args.cursor) {
+            if (args.cursor) {
+              const params: Record<string, unknown> = {
+                organizationId,
+                datasetId: args.datasetId,
+                limit: limit + 1,
+                cursorCreatedAt: args.cursor.createdAt,
+                cursorRowId: args.cursor.rowId,
+              }
+              if (args.version !== undefined) params.version = args.version
+              if (args.search) params.search = args.search
+
+              const dataQuery = buildListDataQueryKeyset(versionClause, searchClause, sortDirection)
+              const dataResult = await client
+                .query({
+                  query: dataQuery,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                .then((r) => r.json<DatasetRowCH>())
+
+              const hasMore = dataResult.length > limit
+              const sliced = hasMore ? dataResult.slice(0, limit) : dataResult
+              const rows = sliced.map((row) => toDomainRow(row, args.datasetId))
+              const lastCh = sliced[sliced.length - 1]
+              const nextCursor =
+                hasMore && lastCh
+                  ? ({
+                      createdAt: lastCh.created_at,
+                      rowId: DatasetRowId(lastCh.row_id),
+                    } as const)
+                  : undefined
+
+              return nextCursor ? { rows, nextCursor } : { rows }
+            }
+
+            const offset = args.offset ?? 0
             const params: Record<string, unknown> = {
               organizationId,
               datasetId: args.datasetId,
               limit: limit + 1,
-              cursorCreatedAt: args.cursor.createdAt,
-              cursorRowId: args.cursor.rowId,
+              offset,
             }
             if (args.version !== undefined) params.version = args.version
             if (args.search) params.search = args.search
 
-            const dataQuery = buildListDataQueryKeyset(versionClause, searchClause, sortDirection)
-            const dataResult = await client
-              .query({
-                query: dataQuery,
-                query_params: params,
-                format: "JSONEachRow",
-              })
-              .then((r) => r.json<DatasetRowCH>())
+            const dataQuery = buildListDataQueryOffset(versionClause, searchClause, sortDirection)
+            const countQuery = buildListCountQuery(versionClause, searchClause)
+
+            const [dataResult, countResult] = await Promise.all([
+              client
+                .query({
+                  query: dataQuery,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                .then((r) => r.json<DatasetRowCH>()),
+              client
+                .query({
+                  query: countQuery,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                .then((r) => r.json<{ total: string }>()),
+            ])
 
             const hasMore = dataResult.length > limit
             const sliced = hasMore ? dataResult.slice(0, limit) : dataResult
             const rows = sliced.map((row) => toDomainRow(row, args.datasetId))
+            const totalCount = Number(countResult[0]?.total ?? 0)
             const lastCh = sliced[sliced.length - 1]
             const nextCursor =
               hasMore && lastCh
@@ -228,109 +280,71 @@ export const DatasetRowRepositoryLive = Layer.effect(
                   } as const)
                 : undefined
 
-            return nextCursor ? { rows, nextCursor } : { rows }
-          }
+            return nextCursor ? { rows, total: totalCount, nextCursor } : { rows, total: totalCount }
+          })
+        }),
 
-          const offset = args.offset ?? 0
-          const params: Record<string, unknown> = {
-            organizationId,
-            datasetId: args.datasetId,
-            limit: limit + 1,
-            offset,
-          }
-          if (args.version !== undefined) params.version = args.version
-          if (args.search) params.search = args.search
+      count: (args) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            const params: Record<string, unknown> = {
+              organizationId,
+              datasetId: args.datasetId,
+            }
 
-          const dataQuery = buildListDataQueryOffset(versionClause, searchClause, sortDirection)
-          const countQuery = buildListCountQuery(versionClause, searchClause)
+            if (args.version !== undefined) params.version = args.version
+            if (args.search) params.search = args.search
 
-          const [dataResult, countResult] = await Promise.all([
-            client
-              .query({
-                query: dataQuery,
-                query_params: params,
-                format: "JSONEachRow",
-              })
-              .then((r) => r.json<DatasetRowCH>()),
-            client
+            const versionClause = buildVersionClause(args.version)
+            const searchClause = buildSearchClause(args.search)
+            const countQuery = buildListCountQuery(versionClause, searchClause)
+
+            const countResult = await client
               .query({
                 query: countQuery,
                 query_params: params,
                 format: "JSONEachRow",
               })
-              .then((r) => r.json<{ total: string }>()),
-          ])
+              .then((r) => r.json<{ total: string }>())
 
-          const hasMore = dataResult.length > limit
-          const sliced = hasMore ? dataResult.slice(0, limit) : dataResult
-          const rows = sliced.map((row) => toDomainRow(row, args.datasetId))
-          const totalCount = Number(countResult[0]?.total ?? 0)
-          const lastCh = sliced[sliced.length - 1]
-          const nextCursor =
-            hasMore && lastCh
-              ? ({
-                  createdAt: lastCh.created_at,
-                  rowId: DatasetRowId(lastCh.row_id),
-                } as const)
-              : undefined
-
-          return nextCursor ? { rows, total: totalCount, nextCursor } : { rows, total: totalCount }
-        }),
-
-      count: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          const params: Record<string, unknown> = {
-            organizationId,
-            datasetId: args.datasetId,
-          }
-
-          if (args.version !== undefined) params.version = args.version
-          if (args.search) params.search = args.search
-
-          const versionClause = buildVersionClause(args.version)
-          const searchClause = buildSearchClause(args.search)
-          const countQuery = buildListCountQuery(versionClause, searchClause)
-
-          const countResult = await client
-            .query({
-              query: countQuery,
-              query_params: params,
-              format: "JSONEachRow",
-            })
-            .then((r) => r.json<{ total: string }>())
-
-          return Number(countResult[0]?.total ?? 0)
+            return Number(countResult[0]?.total ?? 0)
+          })
         }),
 
       listPage: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          const params: Record<string, unknown> = {
-            organizationId,
-            datasetId: args.datasetId,
-            limit: args.limit,
-            offset: args.offset,
-          }
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            const params: Record<string, unknown> = {
+              organizationId,
+              datasetId: args.datasetId,
+              limit: args.limit,
+              offset: args.offset,
+            }
 
-          if (args.version !== undefined) params.version = args.version
-          if (args.search) params.search = args.search
+            if (args.version !== undefined) params.version = args.version
+            if (args.search) params.search = args.search
 
-          const versionClause = buildVersionClause(args.version)
-          const searchClause = buildSearchClause(args.search)
-          const dataQuery = buildListDataQueryOffset(versionClause, searchClause, "desc")
+            const versionClause = buildVersionClause(args.version)
+            const searchClause = buildSearchClause(args.search)
+            const dataQuery = buildListDataQueryOffset(versionClause, searchClause, "desc")
 
-          const dataResult = await client
-            .query({
-              query: dataQuery,
-              query_params: params,
-              format: "JSONEachRow",
-            })
-            .then((r) => r.json<DatasetRowCH>())
+            const dataResult = await client
+              .query({
+                query: dataQuery,
+                query_params: params,
+                format: "JSONEachRow",
+              })
+              .then((r) => r.json<DatasetRowCH>())
 
-          return dataResult.map((row) => toDomainRow(row, args.datasetId))
+            return dataResult.map((row) => toDomainRow(row, args.datasetId))
+          })
         }),
 
       findById: (args) =>
         Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const result = yield* chSqlClient.query(async (client, organizationId) => {
             const params: Record<string, unknown> = {
               organizationId,
@@ -374,63 +388,71 @@ export const DatasetRowRepositoryLive = Layer.effect(
           return result
         }),
       updateRow: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          await client.insert({
-            table: "dataset_rows",
-            values: [
-              {
-                organization_id: organizationId,
-                dataset_id: args.datasetId,
-                row_id: args.rowId,
-                xact_id: args.version,
-                input: serializeField(args.input),
-                output: serializeField(args.output),
-                metadata: serializeField(args.metadata),
-              },
-            ],
-            format: "JSONEachRow",
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            await client.insert({
+              table: "dataset_rows",
+              values: [
+                {
+                  organization_id: organizationId,
+                  dataset_id: args.datasetId,
+                  row_id: args.rowId,
+                  xact_id: args.version,
+                  input: serializeField(args.input),
+                  output: serializeField(args.output),
+                  metadata: serializeField(args.metadata),
+                },
+              ],
+              format: "JSONEachRow",
+            })
           })
         }),
       deleteBatch: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          if (args.rowIds.length === 0) return
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            if (args.rowIds.length === 0) return
 
-          const values = args.rowIds.map((rowId) => ({
-            organization_id: organizationId,
-            dataset_id: args.datasetId,
-            row_id: rowId,
-            xact_id: args.version,
-            input: "",
-            output: "",
-            metadata: "",
-            _object_delete: true,
-          }))
+            const values = args.rowIds.map((rowId) => ({
+              organization_id: organizationId,
+              dataset_id: args.datasetId,
+              row_id: rowId,
+              xact_id: args.version,
+              input: "",
+              output: "",
+              metadata: "",
+              _object_delete: true,
+            }))
 
-          for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
-            const batch = values.slice(i, i + INSERT_BATCH_SIZE)
-            await client.insert({
-              table: "dataset_rows",
-              values: batch,
-              format: "JSONEachRow",
-            })
-          }
+            for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
+              const batch = values.slice(i, i + INSERT_BATCH_SIZE)
+              await client.insert({
+                table: "dataset_rows",
+                values: batch,
+                format: "JSONEachRow",
+              })
+            }
+          })
         }),
       deleteAll: (args) =>
-        chSqlClient.query(async (client, organizationId) => {
-          const excluded = args.excludedRowIds ?? []
-          const excludeClause = excluded.length > 0 ? "AND row_id NOT IN ({excludedRowIds:Array(String)})" : ""
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient.query(async (client, organizationId) => {
+            const excluded = args.excludedRowIds ?? []
+            const excludeClause = excluded.length > 0 ? "AND row_id NOT IN ({excludedRowIds:Array(String)})" : ""
 
-          const params: Record<string, unknown> = {
-            organizationId: organizationId as string,
-            datasetId: args.datasetId as string,
-          }
-          if (excluded.length > 0) {
-            params.excludedRowIds = Array.from(excluded) as string[]
-          }
+            const params: Record<string, unknown> = {
+              organizationId: organizationId as string,
+              datasetId: args.datasetId as string,
+            }
+            if (excluded.length > 0) {
+              params.excludedRowIds = Array.from(excluded) as string[]
+            }
 
-          const activeRows = await client
-            .query({
-              query: `
+            const activeRows = await client
+              .query({
+                query: `
                 SELECT row_id
                 FROM dataset_rows
                 WHERE organization_id = {organizationId:String}
@@ -439,34 +461,35 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 HAVING argMax(_object_delete, xact_id) = false
                   ${excludeClause}
               `,
-              query_params: params,
-              format: "JSONEachRow",
-            })
-            .then((r) => r.json<{ row_id: string }>())
+                query_params: params,
+                format: "JSONEachRow",
+              })
+              .then((r) => r.json<{ row_id: string }>())
 
-          if (activeRows.length === 0) return 0
+            if (activeRows.length === 0) return 0
 
-          const tombstones = activeRows.map((row) => ({
-            organization_id: organizationId,
-            dataset_id: args.datasetId,
-            row_id: row.row_id,
-            xact_id: args.version,
-            input: "",
-            output: "",
-            metadata: "",
-            _object_delete: true,
-          }))
+            const tombstones = activeRows.map((row) => ({
+              organization_id: organizationId,
+              dataset_id: args.datasetId,
+              row_id: row.row_id,
+              xact_id: args.version,
+              input: "",
+              output: "",
+              metadata: "",
+              _object_delete: true,
+            }))
 
-          for (let i = 0; i < tombstones.length; i += INSERT_BATCH_SIZE) {
-            const batch = tombstones.slice(i, i + INSERT_BATCH_SIZE)
-            await client.insert({
-              table: "dataset_rows",
-              values: batch,
-              format: "JSONEachRow",
-            })
-          }
+            for (let i = 0; i < tombstones.length; i += INSERT_BATCH_SIZE) {
+              const batch = tombstones.slice(i, i + INSERT_BATCH_SIZE)
+              await client.insert({
+                table: "dataset_rows",
+                values: batch,
+                format: "JSONEachRow",
+              })
+            }
 
-          return activeRows.length
+            return activeRows.length
+          })
         }),
     }
   }),

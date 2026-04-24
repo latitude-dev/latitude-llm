@@ -3,6 +3,7 @@ import {
   type ProjectId,
   type RepositoryError,
   SessionId,
+  type SqlClient,
   scoreIdSchema,
   TraceId,
   type TraceId as TraceIdType,
@@ -53,10 +54,10 @@ export const DEFAULT_ALIGNMENT_EXAMPLE_LIMIT = ALIGNMENT_CURATED_DATASET_MAX_ROW
 export interface EvaluationAlignmentExamplesRepositoryShape {
   listPositiveExamples(
     input: ListEvaluationAlignmentExamplesInput,
-  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError, SqlClient>
   listNegativeExamples(
     input: ListNegativeEvaluationAlignmentExamplesInput,
-  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError, SqlClient>
 }
 
 export class EvaluationAlignmentExamplesRepository extends ServiceMap.Service<

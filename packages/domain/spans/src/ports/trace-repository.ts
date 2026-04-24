@@ -1,4 +1,12 @@
-import type { FilterSet, NotFoundError, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type {
+  ChSqlClient,
+  FilterSet,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 import type { TraceCohortBaselineData, TraceCohortListingSpec } from "../trace-cohorts.ts"
@@ -15,27 +23,27 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly excludeTraceId?: TraceId
-  }): Effect.Effect<TraceCohortBaselineData, RepositoryError>
+  }): Effect.Effect<TraceCohortBaselineData, RepositoryError, ChSqlClient>
 
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: TraceListOptions
-  }): Effect.Effect<TraceListPage, RepositoryError>
+  }): Effect.Effect<TraceListPage, RepositoryError, ChSqlClient>
 
   countByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
-  }): Effect.Effect<number, RepositoryError>
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
-  }): Effect.Effect<TraceMetrics, RepositoryError>
+  }): Effect.Effect<TraceMetrics, RepositoryError, ChSqlClient>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
   histogramByProjectId(input: {
@@ -44,33 +52,33 @@ export interface TraceRepositoryShape {
     readonly filters?: FilterSet
     readonly cohort?: TraceCohortListingSpec
     readonly bucketSeconds: number
-  }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError>
+  }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
   findByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceId: TraceId
-  }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError>
+  }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError, ChSqlClient>
 
   matchesFiltersByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceId: TraceId
     readonly filters?: FilterSet
-  }): Effect.Effect<boolean, RepositoryError>
+  }): Effect.Effect<boolean, RepositoryError, ChSqlClient>
 
   listMatchingFilterIdsByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceId: TraceId
     readonly filterSets: readonly TraceFilterSetMatchCandidate[]
-  }): Effect.Effect<readonly string[], RepositoryError>
+  }): Effect.Effect<readonly string[], RepositoryError, ChSqlClient>
 
   listByTraceIds(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
-  }): Effect.Effect<readonly TraceDetail[], RepositoryError>
+  }): Effect.Effect<readonly TraceDetail[], RepositoryError, ChSqlClient>
 
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
@@ -78,7 +86,7 @@ export interface TraceRepositoryShape {
     readonly column: TraceDistinctColumn
     readonly limit?: number
     readonly search?: string
-  }): Effect.Effect<readonly string[], RepositoryError>
+  }): Effect.Effect<readonly string[], RepositoryError, ChSqlClient>
 }
 
 export type TraceDistinctColumn = "tags" | "models" | "providers" | "serviceNames"

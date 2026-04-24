@@ -47,32 +47,36 @@ const toOrganizationInsertRow = (org: {
 export const OrganizationRepositoryLive = Layer.effect(
   OrganizationRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-
     const listByUserId = (userId: UserIdType) =>
-      sqlClient
-        .query((db) =>
-          db
-            .select({ organization: organizations })
-            .from(organizations)
-            .innerJoin(members, eq(members.organizationId, organizations.id))
-            .where(eq(members.userId, userId)),
-        )
-        .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org))))
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db) =>
+            db
+              .select({ organization: organizations })
+              .from(organizations)
+              .innerJoin(members, eq(members.organizationId, organizations.id))
+              .where(eq(members.userId, userId)),
+          )
+          .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org))))
+      })
 
     return {
       findById: (id: OrganizationIdType) =>
-        sqlClient
-          .query((db) => db.select().from(organizations).where(eq(organizations.id, id)).limit(1))
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "Organization", id }))
-              }
-              return Effect.succeed(toDomainOrganization(result))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) => db.select().from(organizations).where(eq(organizations.id, id)).limit(1))
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "Organization", id }))
+                }
+                return Effect.succeed(toDomainOrganization(result))
+              }),
+            )
+        }),
 
       listByUserId,
 
@@ -85,6 +89,7 @@ export const OrganizationRepositoryLive = Layer.effect(
         settings: OrganizationSettings | null
       }) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const row = toOrganizationInsertRow(org)
 
           yield* sqlClient.query((db) =>
@@ -106,14 +111,20 @@ export const OrganizationRepositoryLive = Layer.effect(
         }),
 
       delete: (id: OrganizationIdType) =>
-        sqlClient.query((db) => db.delete(organizations).where(eq(organizations.id, id))),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) => db.delete(organizations).where(eq(organizations.id, id)))
+        }),
 
       existsBySlug: (slug: string) =>
-        sqlClient
-          .query((db) =>
-            db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug)).limit(1),
-          )
-          .pipe(Effect.map((results) => results.length > 0)),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) =>
+              db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug)).limit(1),
+            )
+            .pipe(Effect.map((results) => results.length > 0))
+        }),
     }
   }),
 )

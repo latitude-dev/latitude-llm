@@ -18,4 +18,14 @@ export interface ChSqlClientShape<X = unknown> {
   ) => Effect.Effect<T, RepositoryError>
 }
 
+/**
+ * ChSqlClient service - provides ClickHouse database access.
+ *
+ * @effect-leakable-service
+ * ChSqlClient is a per-request/per-job scope dependency (analogous to
+ * HttpServerRequest). Repository services resolve it per-method so the
+ * organization context reflects the caller's scope, rather than being
+ * captured once at Layer build time. Leaking this requirement through
+ * service interfaces is intentional.
+ */
 export class ChSqlClient extends ServiceMap.Service<ChSqlClient, ChSqlClientShape>()("@domain/shared/ChSqlClient") {}

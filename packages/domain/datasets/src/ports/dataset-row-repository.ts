@@ -1,4 +1,4 @@
-import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
+import type { ChSqlClient, DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
 import type { RowNotFoundError } from "../errors.ts"
@@ -7,7 +7,7 @@ export interface DatasetRowRepositoryShape {
   findExistingTraceIds(args: {
     readonly datasetId: DatasetId
     readonly traceIds: readonly TraceId[]
-  }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError>
+  }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError, ChSqlClient>
   // TODO(repositories): rename insertBatch -> saveBatch so repository write
   // verbs converge on save/saveBatch instead of insert/insertBatch.
   insertBatch(args: {
@@ -19,7 +19,7 @@ export interface DatasetRowRepositoryShape {
       readonly output?: InsertRowFieldValue
       readonly metadata?: InsertRowFieldValue
     }[]
-  }): Effect.Effect<readonly DatasetRowId[], RepositoryError>
+  }): Effect.Effect<readonly DatasetRowId[], RepositoryError, ChSqlClient>
 
   /** Cursor for keyset pagination: (createdAt, rowId) of the last row from previous page. */
   list(args: {
@@ -36,7 +36,8 @@ export interface DatasetRowRepositoryShape {
       readonly total?: number
       readonly nextCursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
     },
-    RepositoryError
+    RepositoryError,
+    ChSqlClient
   >
 
   /**
@@ -47,7 +48,7 @@ export interface DatasetRowRepositoryShape {
     readonly datasetId: DatasetId
     readonly version?: number
     readonly search?: string
-  }): Effect.Effect<number, RepositoryError>
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
   /**
    * Returns one page of rows without a total count. Use for export/iteration to avoid
@@ -59,13 +60,13 @@ export interface DatasetRowRepositoryShape {
     readonly search?: string
     readonly limit: number
     readonly offset: number
-  }): Effect.Effect<readonly DatasetRow[], RepositoryError>
+  }): Effect.Effect<readonly DatasetRow[], RepositoryError, ChSqlClient>
 
   findById(args: {
     readonly datasetId: DatasetId
     readonly rowId: DatasetRowId
     readonly version?: number
-  }): Effect.Effect<DatasetRow, RowNotFoundError | RepositoryError>
+  }): Effect.Effect<DatasetRow, RowNotFoundError | RepositoryError, ChSqlClient>
 
   updateRow(args: {
     readonly datasetId: DatasetId
@@ -74,19 +75,19 @@ export interface DatasetRowRepositoryShape {
     readonly input: RowFieldValue
     readonly output: RowFieldValue
     readonly metadata: RowFieldValue
-  }): Effect.Effect<void, RepositoryError>
+  }): Effect.Effect<void, RepositoryError, ChSqlClient>
 
   deleteBatch(args: {
     readonly datasetId: DatasetId
     readonly rowIds: readonly DatasetRowId[]
     readonly version: number
-  }): Effect.Effect<void, RepositoryError>
+  }): Effect.Effect<void, RepositoryError, ChSqlClient>
 
   deleteAll(args: {
     readonly datasetId: DatasetId
     readonly version: number
     readonly excludedRowIds?: readonly DatasetRowId[]
-  }): Effect.Effect<number, RepositoryError>
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
 }
 
 export class DatasetRowRepository extends ServiceMap.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(

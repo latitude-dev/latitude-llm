@@ -2,7 +2,13 @@ import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } 
 import { generateId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createBetterAuth, createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import {
+  createBetterAuth,
+  createOutboxWriter,
+  createPostgresClient,
+  type PostgresClient,
+  SqlClientLive,
+} from "@platform/db-postgres"
 import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -170,7 +176,7 @@ export const getBetterAuth = () => {
               organizationId: "system",
               payload: { userId: user.id, email: user.email },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       onMemberCreated: async (member) => {
@@ -187,7 +193,7 @@ export const getBetterAuth = () => {
                 role: member.role,
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       sendMagicLink: async ({ email, url }) => {
@@ -204,7 +210,7 @@ export const getBetterAuth = () => {
                 organizationId: "system",
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       sendInvitationEmail: async (data) => {
@@ -228,7 +234,7 @@ export const getBetterAuth = () => {
               },
               occurredAt: new Date(),
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
         await Effect.runPromise(
           outboxWriter
@@ -244,7 +250,7 @@ export const getBetterAuth = () => {
                 role: data.role,
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
     })

@@ -331,23 +331,23 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,
   Effect.gen(function* () {
-    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-
     const getCohortBaselineByProjectId: TraceRepositoryShape["getCohortBaselineByProjectId"] = ({
       organizationId,
       projectId,
       filters,
       excludeTraceId,
-    }) => {
-      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-      const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
-      const excludeClause = excludeTraceId ? `AND trace_id != {excludeTraceId:FixedString(32)}` : ""
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        const excludeClause = excludeTraceId ? `AND trace_id != {excludeTraceId:FixedString(32)}` : ""
 
-      return chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
                       count() AS trace_count,
                       countIf(duration_ns > 0) AS duration_ns_samples,
                       quantileTDigestIf(0.5)(duration_ns, duration_ns > 0) AS duration_ns_p50,
@@ -379,132 +379,134 @@ export const TraceRepositoryLive = Layer.effect(
                       GROUP BY organization_id, project_id, trace_id
                       ${havingClause}
                     )`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              ...filterParams,
-              ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                ...filterParams,
+                ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{
+              trace_count: string
+              duration_ns_samples: string
+              duration_ns_p50: string
+              duration_ns_p90: string
+              duration_ns_p95: string
+              duration_ns_p99: string
+              cost_total_microcents_samples: string
+              cost_total_microcents_p50: string
+              cost_total_microcents_p90: string
+              cost_total_microcents_p95: string
+              cost_total_microcents_p99: string
+              tokens_total_samples: string
+              tokens_total_p50: string
+              tokens_total_p90: string
+              tokens_total_p95: string
+              tokens_total_p99: string
+              time_to_first_token_ns_samples: string
+              time_to_first_token_ns_p50: string
+              time_to_first_token_ns_p90: string
+              time_to_first_token_ns_p95: string
+              time_to_first_token_ns_p99: string
+            }>()
           })
-          return result.json<{
-            trace_count: string
-            duration_ns_samples: string
-            duration_ns_p50: string
-            duration_ns_p90: string
-            duration_ns_p95: string
-            duration_ns_p99: string
-            cost_total_microcents_samples: string
-            cost_total_microcents_p50: string
-            cost_total_microcents_p90: string
-            cost_total_microcents_p95: string
-            cost_total_microcents_p99: string
-            tokens_total_samples: string
-            tokens_total_p50: string
-            tokens_total_p90: string
-            tokens_total_p95: string
-            tokens_total_p99: string
-            time_to_first_token_ns_samples: string
-            time_to_first_token_ns_p50: string
-            time_to_first_token_ns_p90: string
-            time_to_first_token_ns_p95: string
-            time_to_first_token_ns_p99: string
-          }>()
-        })
-        .pipe(
-          Effect.map((rows): TraceCohortBaselineData => {
-            const row = rows[0]
-            if (!row || Number(row.trace_count) === 0) {
+          .pipe(
+            Effect.map((rows): TraceCohortBaselineData => {
+              const row = rows[0]
+              if (!row || Number(row.trace_count) === 0) {
+                return {
+                  traceCount: 0,
+                  metrics: {
+                    durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  },
+                }
+              }
+
+              const traceCount = Number(row.trace_count)
+              const toMetricPercentiles = (
+                samples: string,
+                p50: string,
+                p90: string,
+                p95: string,
+                p99: string,
+              ): TraceMetricPercentiles => {
+                const sampleCount = Number(samples)
+                return {
+                  sampleCount,
+                  p50: Number(p50),
+                  p90: Number(p90),
+                  p95: sampleCount >= 100 ? Number(p95) : null,
+                  p99: sampleCount >= 1000 ? Number(p99) : null,
+                }
+              }
+
               return {
-                traceCount: 0,
+                traceCount,
                 metrics: {
-                  durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
-                  timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  durationNs: toMetricPercentiles(
+                    row.duration_ns_samples,
+                    row.duration_ns_p50,
+                    row.duration_ns_p90,
+                    row.duration_ns_p95,
+                    row.duration_ns_p99,
+                  ),
+                  costTotalMicrocents: toMetricPercentiles(
+                    row.cost_total_microcents_samples,
+                    row.cost_total_microcents_p50,
+                    row.cost_total_microcents_p90,
+                    row.cost_total_microcents_p95,
+                    row.cost_total_microcents_p99,
+                  ),
+                  tokensTotal: toMetricPercentiles(
+                    row.tokens_total_samples,
+                    row.tokens_total_p50,
+                    row.tokens_total_p90,
+                    row.tokens_total_p95,
+                    row.tokens_total_p99,
+                  ),
+                  timeToFirstTokenNs: toMetricPercentiles(
+                    row.time_to_first_token_ns_samples,
+                    row.time_to_first_token_ns_p50,
+                    row.time_to_first_token_ns_p90,
+                    row.time_to_first_token_ns_p95,
+                    row.time_to_first_token_ns_p99,
+                  ),
                 },
               }
-            }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
+          )
+      })
 
-            const traceCount = Number(row.trace_count)
-            const toMetricPercentiles = (
-              samples: string,
-              p50: string,
-              p90: string,
-              p95: string,
-              p99: string,
-            ): TraceMetricPercentiles => {
-              const sampleCount = Number(samples)
-              return {
-                sampleCount,
-                p50: Number(p50),
-                p90: Number(p90),
-                p95: sampleCount >= 100 ? Number(p95) : null,
-                p99: sampleCount >= 1000 ? Number(p99) : null,
-              }
-            }
+    const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+        const cmp = orderDir === "DESC" ? "<" : ">"
+        const limit = options.limit ?? 50
 
-            return {
-              traceCount,
-              metrics: {
-                durationNs: toMetricPercentiles(
-                  row.duration_ns_samples,
-                  row.duration_ns_p50,
-                  row.duration_ns_p90,
-                  row.duration_ns_p95,
-                  row.duration_ns_p99,
-                ),
-                costTotalMicrocents: toMetricPercentiles(
-                  row.cost_total_microcents_samples,
-                  row.cost_total_microcents_p50,
-                  row.cost_total_microcents_p90,
-                  row.cost_total_microcents_p95,
-                  row.cost_total_microcents_p99,
-                ),
-                tokensTotal: toMetricPercentiles(
-                  row.tokens_total_samples,
-                  row.tokens_total_p50,
-                  row.tokens_total_p90,
-                  row.tokens_total_p95,
-                  row.tokens_total_p99,
-                ),
-                timeToFirstTokenNs: toMetricPercentiles(
-                  row.time_to_first_token_ns_samples,
-                  row.time_to_first_token_ns_p50,
-                  row.time_to_first_token_ns_p90,
-                  row.time_to_first_token_ns_p95,
-                  row.time_to_first_token_ns_p99,
-                ),
-              },
-            }
-          }),
-          Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
-        )
-    }
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
 
-    const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
-      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-      const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-      const cmp = orderDir === "DESC" ? "<" : ">"
-      const limit = options.limit ?? 50
+        const havingParts: string[] = [...havingClauses]
+        if (options.cursor) {
+          havingParts.push(
+            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+                OR (${sort.expr} = {cursorSortValue:${sort.chType}}
+                    AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`,
+          )
+        }
+        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
-
-      const havingParts: string[] = [...havingClauses]
-      if (options.cursor) {
-        havingParts.push(
-          `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
-              OR (${sort.expr} = {cursorSortValue:${sort.chType}}
-                  AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`,
-        )
-      }
-      const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
-
-      return chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${LIST_SELECT}
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -513,80 +515,84 @@ export const TraceRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              limit: limit + 1,
-              ...filterParams,
-              ...(options.cursor
-                ? {
-                    cursorSortValue: options.cursor.sortValue,
-                    cursorTraceId: options.cursor.traceId,
-                  }
-                : {}),
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                limit: limit + 1,
+                ...filterParams,
+                ...(options.cursor
+                  ? {
+                      cursorSortValue: options.cursor.sortValue,
+                      cursorTraceId: options.cursor.traceId,
+                    }
+                  : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceListRow>()
           })
-          return result.json<TraceListRow>()
-        })
-        .pipe(
-          Effect.map((rows): TraceListPage => {
-            const hasMore = rows.length > limit
-            const pageRows = hasMore ? rows.slice(0, limit) : rows
-            const items = pageRows.map(toBaseFields)
-            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-            if (!last) return { items, hasMore }
-            return {
-              items,
-              hasMore,
-              nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
-            }
-          }),
-          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-        )
-    }
+          .pipe(
+            Effect.map((rows): TraceListPage => {
+              const hasMore = rows.length > limit
+              const pageRows = hasMore ? rows.slice(0, limit) : rows
+              const items = pageRows.map(toBaseFields)
+              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+              if (!last) return { items, hasMore }
+              return {
+                items,
+                hasMore,
+                nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+          )
+      })
 
-    const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) => {
-      if (traceIds.length === 0) return Effect.succeed([])
+    const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (traceIds.length === 0) return []
 
-      return chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT ${DETAIL_SELECT}
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${DETAIL_SELECT}
                     FROM traces
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
                       AND trace_id IN ({traceIds:Array(String)})
                     GROUP BY organization_id, project_id, trace_id`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              traceIds: Array.from(traceIds) as string[],
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceDetailRow>()
           })
-          return result.json<TraceDetailRow>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map(toDomainTraceDetail)),
-          Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
-        )
-    }
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainTraceDetail)),
+            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+          )
+      })
 
     const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
       organizationId,
       projectId,
       traceId,
       filters,
-    }) => {
-      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-      const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-      return chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT count() AS total
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT count() AS total
                     FROM (
                       SELECT ${LIST_SELECT}
                       FROM traces
@@ -598,51 +604,53 @@ export const TraceRepositoryLive = Layer.effect(
                       ${havingClause}
                       LIMIT 1
                     )`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-              traceId,
-              ...filterParams,
-            },
-            format: "JSONEachRow",
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceId,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{ total: string }>()
           })
-          return result.json<{ total: string }>()
-        })
-        .pipe(
-          Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
-          Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
-        )
-    }
+          .pipe(
+            Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
+            Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
+          )
+      })
 
     const listMatchingFilterIdsByTraceId: TraceRepositoryShape["listMatchingFilterIdsByTraceId"] = ({
       organizationId,
       projectId,
       traceId,
       filterSets,
-    }) => {
-      if (filterSets.length === 0) {
-        return Effect.succeed([])
-      }
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (filterSets.length === 0) {
+          return []
+        }
 
-      const queryParams: Record<string, unknown> = {
-        organizationId: organizationId as string,
-        projectId: projectId as string,
-        traceId,
-      }
+        const queryParams: Record<string, unknown> = {
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          traceId,
+        }
 
-      const matchExpressions = filterSets.map(({ filterId, filters }, index) => {
-        const { condition, params } = buildTraceFilterCondition(filters, `batch_${index}`)
-        const filterIdParam = `filter_id_${index}`
+        const matchExpressions = filterSets.map(({ filterId, filters }, index) => {
+          const { condition, params } = buildTraceFilterCondition(filters, `batch_${index}`)
+          const filterIdParam = `filter_id_${index}`
 
-        Object.assign(queryParams, params, { [filterIdParam]: filterId })
+          Object.assign(queryParams, params, { [filterIdParam]: filterId })
 
-        return `if(${condition}, {${filterIdParam}:String}, '')`
-      })
+          return `if(${condition}, {${filterIdParam}:String}, '')`
+        })
 
-      return chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT matched_filter_id
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT matched_filter_id
                     FROM (
                       SELECT arrayJoin([
                         ${matchExpressions.join(",\n                        ")}
@@ -658,30 +666,32 @@ export const TraceRepositoryLive = Layer.effect(
                       )
                     )
                     WHERE matched_filter_id != ''`,
-            query_params: queryParams,
-            format: "JSONEachRow",
+              query_params: queryParams,
+              format: "JSONEachRow",
+            })
+            return result.json<{ matched_filter_id: string }>()
           })
-          return result.json<{ matched_filter_id: string }>()
-        })
-        .pipe(
-          Effect.map((rows) => rows.map((row) => row.matched_filter_id)),
-          Effect.mapError((error) => toRepositoryError(error, "listMatchingFilterIdsByTraceId")),
-        )
-    }
+          .pipe(
+            Effect.map((rows) => rows.map((row) => row.matched_filter_id)),
+            Effect.mapError((error) => toRepositoryError(error, "listMatchingFilterIdsByTraceId")),
+          )
+      })
 
     return {
       getCohortBaselineByProjectId,
       listByProjectId,
 
-      countByProjectId: ({ organizationId, projectId, filters }) => {
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+      countByProjectId: ({ organizationId, projectId, filters }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT count() AS total
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT count() AS total
                       FROM (
                         SELECT ${LIST_SELECT}
                         FROM traces
@@ -691,30 +701,32 @@ export const TraceRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ total: string }>()
             })
-            return result.json<{ total: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => Number(rows[0]?.total ?? 0)),
-            Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
-          )
-      },
+            .pipe(
+              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+            )
+        }),
 
-      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         count() AS row_count,
                         min(duration_ns) AS duration_min,
                         max(duration_ns) AS duration_max,
@@ -750,31 +762,33 @@ export const TraceRepositoryLive = Layer.effect(
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceMetricsRow>()
             })
-            return result.json<TraceMetricsRow>()
-          })
-          .pipe(
-            Effect.map((rows) => toTraceMetrics(rows[0])),
-            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
-          )
-      },
+            .pipe(
+              Effect.map((rows) => toTraceMetrics(rows[0])),
+              Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+            )
+        }),
 
-      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) => {
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
-        const bs = Math.floor(bucketSeconds)
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+          const bs = Math.floor(bucketSeconds)
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
                         toDateTime(
                           intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                           'UTC'
@@ -791,57 +805,60 @@ export const TraceRepositoryLive = Layer.effect(
                       )
                       GROUP BY bucket_start
                       ORDER BY bucket_start ASC`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                bucketSeconds: bs,
-                ...filterParams,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  bucketSeconds: bs,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ bucket_start: string; trace_count: string }>()
             })
-            return result.json<{ bucket_start: string; trace_count: string }>()
-          })
-          .pipe(
-            Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
-              rows.map((row) => ({
-                bucketStart: parseCHDate(row.bucket_start).toISOString(),
-                traceCount: Number(row.trace_count),
-              })),
-            ),
-            Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
-          )
-      },
+            .pipe(
+              Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
+                rows.map((row) => ({
+                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                  traceCount: Number(row.trace_count),
+                })),
+              ),
+              Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
+            )
+        }),
 
       findByTraceId: ({ organizationId, projectId, traceId }) =>
-        chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${DETAIL_SELECT}
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${DETAIL_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         AND trace_id = {traceId:FixedString(32)}
                       GROUP BY organization_id, project_id, trace_id
                       LIMIT 1`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                traceId,
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceDetailRow>()
             })
-            return result.json<TraceDetailRow>()
-          })
-          .pipe(
-            Effect.flatMap((rows) => {
-              const first = rows[0]
-              if (!first) {
-                return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
-              }
-              return Effect.succeed(toDomainTraceDetail(first))
-            }),
-            Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
-          ),
+            .pipe(
+              Effect.flatMap((rows) => {
+                const first = rows[0]
+                if (!first) {
+                  return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
+                }
+                return Effect.succeed(toDomainTraceDetail(first))
+              }),
+              Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
+            )
+        }),
 
       matchesFiltersByTraceId,
 
@@ -849,22 +866,24 @@ export const TraceRepositoryLive = Layer.effect(
 
       listByTraceIds,
 
-      distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) => {
-        const COLUMN_EXPRS: Record<string, string> = {
-          tags: "arrayJoin(groupUniqArrayArray(tags))",
-          models: "arrayJoin(groupUniqArrayIfMerge(models))",
-          providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
-          serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
-        }
-        const expr = COLUMN_EXPRS[column]
-        if (!expr) return Effect.succeed([])
+      distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const COLUMN_EXPRS: Record<string, string> = {
+            tags: "arrayJoin(groupUniqArrayArray(tags))",
+            models: "arrayJoin(groupUniqArrayIfMerge(models))",
+            providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
+            serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
+          }
+          const expr = COLUMN_EXPRS[column]
+          if (!expr) return []
 
-        const searchClause = search ? " AND val ILIKE {search:String}" : ""
+          const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT DISTINCT val FROM (
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT DISTINCT val FROM (
                         SELECT ${expr} AS val
                         FROM traces
                         WHERE organization_id = {organizationId:String}
@@ -874,21 +893,21 @@ export const TraceRepositoryLive = Layer.effect(
                       WHERE val != ''${searchClause}
                       ORDER BY val
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: maxValues ?? 50,
-                ...(search ? { search: `%${search}%` } : {}),
-              },
-              format: "JSONEachRow",
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: maxValues ?? 50,
+                  ...(search ? { search: `%${search}%` } : {}),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ val: string }>()
             })
-            return result.json<{ val: string }>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map((r) => r.val)),
-            Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
-          )
-      },
+            .pipe(
+              Effect.map((rows) => rows.map((r) => r.val)),
+              Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
+            )
+        }),
     }
   }),
 )

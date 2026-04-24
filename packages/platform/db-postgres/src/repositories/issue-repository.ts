@@ -43,126 +43,144 @@ const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
 const issueRepositoryCoreLive = Layer.effect(
   IssueRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-
     return {
       list: ({ projectId, limit, offset }) =>
-        sqlClient
-          .query((db, organizationId) => {
-            const hasAnnotationEvidence = sql<boolean>`exists (
-              select 1
-              from ${scores}
-              where ${scores.issueId} = ${issues.id}
-                and ${scores.draftedAt} is null
-                and ${scores.source} = 'annotation'
-            )`
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) => {
+              const hasAnnotationEvidence = sql<boolean>`exists (
+                select 1
+                from ${scores}
+                where ${scores.issueId} = ${issues.id}
+                  and ${scores.draftedAt} is null
+                  and ${scores.source} = 'annotation'
+              )`
 
-            const meetsVisibilityThreshold = sql<boolean>`(
-              select count(*)
-              from ${scores}
-              where ${scores.issueId} = ${issues.id}
-                and ${scores.draftedAt} is null
-            ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
+              const meetsVisibilityThreshold = sql<boolean>`(
+                select count(*)
+                from ${scores}
+                where ${scores.issueId} = ${issues.id}
+                  and ${scores.draftedAt} is null
+              ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
 
-            return db
-              .select()
-              .from(issues)
-              .where(
-                and(
-                  eq(issues.organizationId, organizationId),
-                  eq(issues.projectId, projectId),
-                  or(hasAnnotationEvidence, meetsVisibilityThreshold),
-                ),
-              )
-              .orderBy(desc(issues.createdAt))
-              .limit(limit + 1)
-              .offset(offset)
-          })
-          .pipe(
-            Effect.map((rows) => ({
-              items: rows.slice(0, limit).map(toDomainIssue),
-              hasMore: rows.length > limit,
-              limit,
-              offset,
-            })),
-          ),
+              return db
+                .select()
+                .from(issues)
+                .where(
+                  and(
+                    eq(issues.organizationId, organizationId),
+                    eq(issues.projectId, projectId),
+                    or(hasAnnotationEvidence, meetsVisibilityThreshold),
+                  ),
+                )
+                .orderBy(desc(issues.createdAt))
+                .limit(limit + 1)
+                .offset(offset)
+            })
+            .pipe(
+              Effect.map((rows) => ({
+                items: rows.slice(0, limit).map(toDomainIssue),
+                hasMore: rows.length > limit,
+                limit,
+                offset,
+              })),
+            )
+        }),
 
       findById: (id: IssueId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(issues)
-              .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
-              return Effect.succeed(toDomainIssue(row))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(issues)
+                .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
+                return Effect.succeed(toDomainIssue(row))
+              }),
+            )
+        }),
 
       findByIdForUpdate: (id: IssueId) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(issues)
-              .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
-              .limit(1)
-              .for("update"),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
-              return Effect.succeed(toDomainIssue(row))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(issues)
+                .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+                .limit(1)
+                .for("update"),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
+                return Effect.succeed(toDomainIssue(row))
+              }),
+            )
+        }),
 
       findByIds: ({ projectId, issueIds }: { readonly projectId: ProjectId; readonly issueIds: readonly IssueId[] }) =>
-        sqlClient
-          .query((db, organizationId) => {
-            if (issueIds.length === 0) {
-              return db.select().from(issues).where(sql`1 = 0`) // Return empty result
-            }
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) => {
+              if (issueIds.length === 0) {
+                return db.select().from(issues).where(sql`1 = 0`) // Return empty result
+              }
 
-            return db
-              .select()
-              .from(issues)
-              .where(
-                and(
-                  eq(issues.organizationId, organizationId),
-                  eq(issues.projectId, projectId),
-                  inArray(issues.id, issueIds),
-                ),
-              )
-          })
-          .pipe(Effect.map((rows) => rows.map(toDomainIssue))),
+              return db
+                .select()
+                .from(issues)
+                .where(
+                  and(
+                    eq(issues.organizationId, organizationId),
+                    eq(issues.projectId, projectId),
+                    inArray(issues.id, issueIds),
+                  ),
+                )
+            })
+            .pipe(Effect.map((rows) => rows.map(toDomainIssue)))
+        }),
 
       findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(issues)
-              .where(
-                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.uuid, uuid)),
-              )
-              .limit(1),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: uuid }))
-              return Effect.succeed(toDomainIssue(row))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(issues)
+                .where(
+                  and(
+                    eq(issues.organizationId, organizationId),
+                    eq(issues.projectId, projectId),
+                    eq(issues.uuid, uuid),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: uuid }))
+                return Effect.succeed(toDomainIssue(row))
+              }),
+            )
+        }),
 
       save: (issue: Issue) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const row = toInsertRow(issue)
 
           yield* sqlClient.query((db) =>

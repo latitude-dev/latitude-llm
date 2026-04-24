@@ -40,7 +40,7 @@ const main = async () => {
       OrganizationRepositoryLive,
       ProjectRepositoryLive,
       UserRepositoryLive,
-    ).pipe(Layer.provide(SqlClientLive(client)))
+    ).pipe(Layer.provideMerge(SqlClientLive(client)))
 
     // Create the seed context
     const buildContext = Effect.gen(function* () {

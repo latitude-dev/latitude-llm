@@ -1,4 +1,4 @@
-import type { RepositoryError } from "@domain/shared"
+import type { RepositoryError, SqlClient } from "@domain/shared"
 import type { Effect } from "effect"
 import { Effect as E } from "effect"
 import { MembershipRepository } from "../ports/membership-repository.ts"
@@ -10,7 +10,7 @@ export interface CleanupUserMembershipsInput {
 
 export const cleanupUserMembershipsUseCase = (
   input: CleanupUserMembershipsInput,
-): Effect.Effect<void, RepositoryError, MembershipRepository | OrganizationRepository> =>
+): Effect.Effect<void, RepositoryError, MembershipRepository | OrganizationRepository | SqlClient> =>
   E.gen(function* () {
     yield* E.annotateCurrentSpan("userId", input.userId)
 
