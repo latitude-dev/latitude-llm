@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { emptyUnifiedSearchResult, type UnifiedSearchResult } from "./search-result.ts"
 import { AdminSearchRepository } from "./search-repository.ts"
+import { emptyUnifiedSearchResult, type UnifiedSearchResult } from "./search-result.ts"
 import { unifiedSearchUseCase } from "./unified-search.ts"
 
 const fakeRepo = (result: UnifiedSearchResult) =>
