@@ -1,5 +1,6 @@
 import { CacheStore, type OrganizationId, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
+import { TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS } from "../constants.ts"
 import { TraceRepository } from "../ports/trace-repository.ts"
 import { buildTraceMetricBaselines, type TraceCohortSummary } from "../trace-cohorts.ts"
 
@@ -8,8 +9,6 @@ export interface GetTraceCohortSummaryByTagsInput {
   readonly projectId: ProjectId
   readonly tags: ReadonlyArray<string>
 }
-
-const TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS = 300
 
 const buildCacheKey = (organizationId: string, projectId: string, sortedTags: readonly string[]): string =>
   // JSON-encode the tags array so delimiters inside tag values can't collide with the key structure.
