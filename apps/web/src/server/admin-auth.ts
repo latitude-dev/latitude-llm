@@ -1,15 +1,12 @@
 import { NotFoundError, UserId } from "@domain/shared"
 import type { User } from "@platform/db-postgres"
-import { ensureSession } from "../domains/sessions/session.functions.ts"
+import { getFreshSession } from "../domains/sessions/session.functions.ts"
 
 /**
  * Better Auth's base `User` type does not include the app-extended
- * `users.role` column. The column is surfaced at runtime via
- * `user.additionalFields` in the Better Auth config, but TypeScript can't
- * see it through the exported `User` type — so we narrow locally.
- *
- * When the Better Auth admin plugin is installed (PR 2) it will declare
- * `role` in its schema and this workaround can be removed.
+ * `users.role` column. The column is surfaced at runtime by the Better
+ * Auth `admin` plugin, but TypeScript can't see it through the exported
+ * `User` type — so we narrow locally.
  */
 type UserWithRole = User & { readonly role: "user" | "admin" }
 
@@ -34,15 +31,29 @@ export function assertAdminUser(
 }
 
 /**
- * Admin gate for backoffice server functions.
+ * Admin gate for backoffice server functions and the backoffice route
+ * loader. MUST be the first IO of every admin-gated handler — TanStack
+ * Start exposes server functions at stable RPC URLs that any
+ * authenticated user can hit directly, so the route-level guard is not
+ * sufficient on its own.
  *
- * MUST be the first line of every admin `createServerFn` handler. Server
- * functions are exposed at stable RPC URLs that any authenticated user can
- * hit directly, so the route-level guard is not sufficient on its own.
+ * Uses {@link getFreshSession}, which asks Better Auth to skip the
+ * 5-minute session cookie cache (`session.cookieCache` in
+ * `create-better-auth.ts`) and re-read the session user from the DB.
+ * Without this, a role demotion (e.g. `UPDATE users SET role='user'`)
+ * stays invisible to admin guards for up to 5 minutes — long enough to
+ * matter if a staff credential is ever compromised.
+ *
+ * This file is intentionally free of `@repo/observability` /
+ * `@platform/db-postgres` imports: it gets pulled into the backoffice
+ * route's client graph, and direct imports there would leak Node-only
+ * symbols (`withTracing`, etc.) into the browser bundle. All Node-only
+ * work lives behind the `getFreshSession` server function, which the
+ * TanStack Start compiler strips on the client.
  */
 export const requireAdminSession = async (): Promise<AdminSession> => {
-  const session = await ensureSession()
-  const user = session.user as User & { role?: string | null }
+  const session = await getFreshSession()
+  const user = session?.user as (User & { role?: string | null }) | undefined
   assertAdminUser(user)
   return { userId: UserId(user.id), user }
 }
