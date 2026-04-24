@@ -370,32 +370,14 @@ function IssuesPage() {
           />
         )}
 
-        <Modal.Root open={bulkResolveModalOpen} onOpenChange={setBulkResolveModalOpen}>
-          <Modal.Content dismissible>
-            <Modal.Header
-              title="Resolve issues"
-              description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`}
-            />
-            <Modal.Body>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-row items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="bulk-keep-monitoring">Keep monitoring these issues</Label>
-                    <Text.H6 color="foregroundMuted">
-                      Evaluations monitoring these issues will stay active to detect further regressions
-                    </Text.H6>
-                  </div>
-                  <Switch
-                    id="bulk-keep-monitoring"
-                    checked={keepMonitoring}
-                    onCheckedChange={setKeepMonitoring}
-                    disabled={bulkActionLoading}
-                    aria-label="Keep monitoring these issues"
-                  />
-                </div>
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
+        <Modal
+          open={bulkResolveModalOpen}
+          onOpenChange={setBulkResolveModalOpen}
+          dismissible
+          title="Resolve issues"
+          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`}
+          footer={
+            <>
               <Button variant="outline" onClick={() => setBulkResolveModalOpen(false)} disabled={bulkActionLoading}>
                 Cancel
               </Button>
@@ -403,25 +385,44 @@ function IssuesPage() {
                 <Icon icon={CheckIcon} size="sm" />
                 Resolve {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
               </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Root>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="bulk-keep-monitoring">Keep monitoring these issues</Label>
+                <Text.H6 color="foregroundMuted">
+                  Evaluations monitoring these issues will stay active to detect further regressions
+                </Text.H6>
+              </div>
+              <Switch
+                id="bulk-keep-monitoring"
+                checked={keepMonitoring}
+                onCheckedChange={setKeepMonitoring}
+                disabled={bulkActionLoading}
+                aria-label="Keep monitoring these issues"
+              />
+            </div>
+          </div>
+        </Modal>
 
-        <Modal.Root open={bulkIgnoreModalOpen} onOpenChange={setBulkIgnoreModalOpen}>
-          <Modal.Content dismissible>
-            <Modal.Header
-              title="Ignore issues"
-              description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. We won't monitor or alert you about new occurrences of these issues anymore.`}
-            />
-            <Modal.Footer>
+        <Modal
+          open={bulkIgnoreModalOpen}
+          onOpenChange={setBulkIgnoreModalOpen}
+          dismissible
+          title="Ignore issues"
+          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. We won't monitor or alert you about new occurrences of these issues anymore.`}
+          footer={
+            <>
               <CloseTrigger />
               <Button variant="destructive" onClick={() => void handleBulkIgnore()} disabled={bulkActionLoading}>
                 <Icon icon={PauseIcon} size="sm" />
                 Ignore {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
               </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Root>
+            </>
+          }
+        />
       </Layout.Content>
       {activeIssueId ? (
         <Layout.Aside>
