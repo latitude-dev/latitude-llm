@@ -43,7 +43,15 @@ describe("MarkdownContent", () => {
     const jsonMarkup = renderToStaticMarkup(<MarkdownContent content={jsonContent} />)
     const fencedMarkup = renderToStaticMarkup(<MarkdownContent content={fencedContent} />)
 
-    for (const cls of ["not-prose", "bg-muted", "rounded-lg", "overflow-auto", "p-3", "text-xs"]) {
+    for (const cls of [
+      "not-prose",
+      "bg-muted",
+      "rounded-lg",
+      "overflow-hidden",
+      "whitespace-pre-wrap",
+      "p-3",
+      "text-xs",
+    ]) {
       expect(jsonMarkup).toContain(cls)
       expect(fencedMarkup).toContain(cls)
     }

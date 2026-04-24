@@ -209,7 +209,7 @@ export function Conversation({
               navItemRefs.current[i] = el
             }}
             data-message-index={index}
-            className={cn("group relative min-w-0 rounded-lg pl-4 pr-4", {
+            className={cn("group group/message relative min-w-0 rounded-lg pl-4 pr-4", {
               "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
             })}
           >

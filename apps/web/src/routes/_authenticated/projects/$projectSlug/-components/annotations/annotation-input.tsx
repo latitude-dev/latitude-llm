@@ -185,7 +185,7 @@ export function AnnotationInput({
           disabled={isLoading}
           autoFocus={autoFocus}
         />
-        {commentError && <Text.H6 color="destructiveMutedForeground">Add a comment to save</Text.H6>}
+        {commentError && <Text.H6 color="destructiveMutedForeground">Add some feedback first</Text.H6>}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-2 pb-2">
