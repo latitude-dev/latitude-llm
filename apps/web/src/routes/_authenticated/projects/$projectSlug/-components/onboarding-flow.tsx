@@ -365,8 +365,7 @@ export function OnboardingFlow({
                 <div className="flex flex-col gap-2">
                   <Text.H5M>Prompt</Text.H5M>
                   <Text.H5 color="foregroundMuted">
-                    Two-line prompt: v2 telemetry docs plus the project id and slug for ingest config.{" "}
-                    <span className="font-medium text-foreground">Manual</span> has copy-paste snippets by provider.
+                    Send this prompt to your coding agent of choice.
                   </Text.H5>
                   <CodeBlock value={codingAgentPrompt} copyable />
                 </div>
