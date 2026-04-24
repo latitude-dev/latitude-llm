@@ -5,7 +5,6 @@ import {
   type AICredentialError,
   type AIError,
   buildProjectScopedAiMetadata,
-  formatGenAIMessage,
 } from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
@@ -75,13 +74,19 @@ Format constraints:
 
 Grounding rules:
 - Use ONLY the provided inputs. Do not invent facts.
-- If a detail is missing or ambiguous, say so briefly.
-- Do not mention PromptL, system prompts, or internal implementation details.
+- The conversation is provided as a normalized transcript for annotation. Treat it as factual evidence about what happened, then describe the underlying behavior in natural language.
+- If evidence supports only a broad issue, name the issue plainly without speculating about hidden details.
+- Do not mention transcript formatting, redaction, omitted payloads, message labels, PromptL, system prompts, or other internal implementation details.
 
 Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep the feedback only as long as it needs to be — no padding, no restatement, no meta-commentary. The original context and nuance must still come through; simpler wording is the goal, not less information.
 
 Respond with structured data containing a single "feedback" field with your annotation text.
 `.trim()
+
+const SYSTEM_PROMPT_PREVIEW_MAX_LINES = 4
+const SYSTEM_PROMPT_PREVIEW_MAX_CHARS = 600
+const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
+const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
 const buildAnnotatorSystemPrompt = (queueSlug: string): string => {
   const queueDef = SYSTEM_QUEUE_DEFINITIONS.find((q) => q.slug === queueSlug)
@@ -97,17 +102,130 @@ const buildAnnotatorSystemPrompt = (queueSlug: string): string => {
     .replace("{queueInstructions}", queueDef.instructions)
 }
 
-const formatConversationForAnnotator = (messages: readonly { role: string; parts: unknown[] }[]): string => {
-  const blocks: string[] = []
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
 
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i]
-    const text = formatGenAIMessage(m as Parameters<typeof formatGenAIMessage>[0])
-    const body = text || "<no plain text in this message>"
-    blocks.push(`[message ${i}] role=${m.role}\n${body}`)
+function toNonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null
+}
+
+function cropSystemPromptPreview(text: string): string {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "")
+
+  if (lines.length === 0) return ""
+
+  const preview = lines.slice(0, SYSTEM_PROMPT_PREVIEW_MAX_LINES).join(" ")
+  const truncated =
+    preview.length > SYSTEM_PROMPT_PREVIEW_MAX_CHARS
+      ? preview.slice(0, SYSTEM_PROMPT_PREVIEW_MAX_CHARS).trimEnd()
+      : preview
+
+  return lines.length > SYSTEM_PROMPT_PREVIEW_MAX_LINES || truncated.length < preview.length
+    ? `${truncated}...`
+    : truncated
+}
+
+function responseIndicatesFailure(response: unknown): boolean {
+  if (typeof response === "string") {
+    const trimmed = response.trim()
+    if (trimmed === "") return false
+
+    try {
+      return responseIndicatesFailure(JSON.parse(trimmed))
+    } catch {
+      return TOOL_RESULT_ERROR_TEXT.test(trimmed)
+    }
   }
 
-  return blocks.join("\n\n---\n\n")
+  if (Array.isArray(response)) {
+    return response.some(responseIndicatesFailure)
+  }
+
+  if (!isRecord(response)) return false
+
+  if (response.isError === true || response.ok === false || response.success === false) {
+    return true
+  }
+
+  const status = toNonEmptyString(response.status)
+  if (status && TOOL_RESULT_ERROR_STATUSES.has(status.toLowerCase())) {
+    return true
+  }
+
+  if ("error" in response) {
+    const error = response.error
+    if (error !== null && error !== undefined && error !== false && error !== "") {
+      return true
+    }
+  }
+
+  if (Array.isArray(response.errors) && response.errors.length > 0) {
+    return true
+  }
+
+  return false
+}
+
+const formatConversationForAnnotator = (messages: readonly { role: string; parts: unknown[] }[]): string => {
+  const lines: string[] = []
+
+  for (const message of messages) {
+    if (message.role === "system") {
+      const systemText = message.parts
+        .flatMap((part) => {
+          if (!isRecord(part) || part.type !== "text") return []
+          const content = toNonEmptyString(part.content)
+          return content ? [content] : []
+        })
+        .join("\n")
+
+      const preview = cropSystemPromptPreview(systemText)
+      if (preview) lines.push(`[system]: ${preview}`)
+      continue
+    }
+
+    const textParts: string[] = []
+
+    const flushText = () => {
+      if (message.role !== "user" && message.role !== "assistant") return
+
+      const body = textParts.join("\n").trim()
+      if (body) lines.push(`[${message.role}]: ${body}`)
+      textParts.length = 0
+    }
+
+    for (const part of message.parts) {
+      if (!isRecord(part)) continue
+
+      if (part.type === "text") {
+        const content = toNonEmptyString(part.content)
+        if (content && (message.role === "user" || message.role === "assistant")) {
+          textParts.push(content)
+        }
+        continue
+      }
+
+      if (part.type === "tool_call" || part.type === "tool-call") {
+        flushText()
+        lines.push(`[toolcall]: ${toNonEmptyString(part.name) ?? toNonEmptyString(part.toolName) ?? "<unknown tool>"}`)
+        continue
+      }
+
+      if (part.type === "tool_call_response" || part.type === "tool-result") {
+        flushText()
+        const response = "response" in part ? part.response : part.result
+        lines.push(`[toolresult]: ${responseIndicatesFailure(response) ? "error" : "ok"}`)
+      }
+    }
+
+    flushText()
+  }
+
+  return lines.length > 0 ? lines.join("\n") : "<no conversation messages available>"
 }
 
 const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
@@ -149,9 +267,13 @@ Trace summary (telemetry aggregates; cite only when relevant):
 - Approximate duration: ${durationSeconds.toFixed(durationSeconds < 10 ? 2 : 1)}s
 - Span count: ${input.trace.spanCount}
 - Error count: ${input.trace.errorCount}
-- Conversation messages: ${input.trace.allMessages.length}
+- Trace messages (raw): ${input.trace.allMessages.length}
 
-Conversation:
+Conversation transcript for annotation:
+- This is a compact, normalized rendering of the trace.
+- [toolcall] lines name the tool that was invoked.
+- [toolresult] lines summarize only whether the tool succeeded or failed.
+- Write about the underlying issue in plain language, not about the transcript formatting or what was omitted.
 ${conversationText}
 
 Return structured data with a single "feedback" field per the system instructions.`
