@@ -10,8 +10,9 @@ vi.mock("ioredis", () => ({
 
 describe("createBullMqRedisConnection", () => {
   beforeEach(() => {
-    clusterConstructor.mockReset()
-    redisConstructor.mockReset()
+    vi.resetModules()
+    clusterConstructor.mockClear()
+    redisConstructor.mockClear()
 
     clusterConstructor.mockImplementation(function (
       this: { startupNodes?: unknown; options?: unknown },
