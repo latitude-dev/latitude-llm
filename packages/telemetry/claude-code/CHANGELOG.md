@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-04-24
+
+### Changed
+
+- **`fetch` intercept no longer does sync I/O on the response hot path.** Replaced `writeFileSync` with `fs/promises.writeFile` so writing the captured request file never blocks the event loop at `message_start`. The scan branch of the tee'd response now cancels itself right after writing the request file instead of draining the stream to EOF, removing any backpressure coupling between the scan branch and the caller's branch for the rest of the response. Request body extraction now runs concurrently with the outbound fetch rather than gating it. The wrapped `Response` also strips the upstream `content-length` header to avoid runtimes/proxies second-guessing the re-wrapped stream. Hygiene changes — no behavior change and none of these were shown to cause user-perceptible latency, but sync I/O inside a `fetch` interceptor is a footgun worth removing.
+
 ## [0.0.6] - 2026-04-21
 
 ### Fixed
