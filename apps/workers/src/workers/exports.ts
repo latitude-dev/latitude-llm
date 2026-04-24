@@ -84,7 +84,7 @@ type IssuesExportInput = {
     readonly to?: Date
   }
   readonly sort?: {
-    readonly field: "lastSeen" | "occurrences"
+    readonly field: "lastSeen" | "occurrences" | "state"
     readonly direction: "asc" | "desc"
   }
 }
@@ -144,7 +144,7 @@ function generateIssuesExport(
       readonly toIso?: string | undefined
     }
     readonly sort?: {
-      readonly field: "lastSeen" | "occurrences"
+      readonly field: "lastSeen" | "occurrences" | "state"
       readonly direction: "asc" | "desc"
     }
   },
