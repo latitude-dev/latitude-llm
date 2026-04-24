@@ -1,7 +1,7 @@
 import { CacheError, type OrganizationId } from "@domain/shared"
 import { EmbedBudgetResolver, TraceSearchBudget, type TraceSearchBudgetShape } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import type { Redis } from "ioredis"
+import type { RedisClient } from "./client.ts"
 
 // Key TTLs: long enough that the key survives a window's worth of time with
 // slack for clock skew, short enough that stale keys don't linger indefinitely.
@@ -49,7 +49,7 @@ const isoWeekKey = (orgId: OrganizationId, now: Date): string => {
  * same "pre" value and overshoot slightly, which is acceptable: the budget is
  * a cost ceiling, not a financial contract.
  */
-export const TraceSearchBudgetLive = (redis: Redis) =>
+export const TraceSearchBudgetLive = (redis: RedisClient) =>
   Layer.effect(
     TraceSearchBudget,
     Effect.gen(function* () {
