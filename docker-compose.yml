@@ -12,7 +12,7 @@ services:
     command: postgres -c wal_level=logical
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:25.12
     env_file:
       - .env.${NODE_ENV:-development}
     ports:
