@@ -1,17 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
-
-const clusterConstructor = vi.fn()
-const redisConstructor = vi.fn()
-
-vi.mock("ioredis", () => ({
-  Cluster: clusterConstructor,
-  Redis: redisConstructor,
-}))
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("createBullMqRedisConnection", () => {
+  const clusterConstructor = vi.fn()
+  const redisConstructor = vi.fn()
+
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.resetModules()
+    clusterConstructor.mockReset()
+    redisConstructor.mockReset()
 
     clusterConstructor.mockImplementation(function (
       this: { startupNodes?: unknown; options?: unknown },
@@ -24,6 +19,15 @@ describe("createBullMqRedisConnection", () => {
     redisConstructor.mockImplementation(function (this: { options?: unknown }, options) {
       this.options = options
     })
+
+    vi.doMock("ioredis", () => ({
+      Cluster: clusterConstructor,
+      Redis: redisConstructor,
+    }))
+  })
+
+  afterEach(() => {
+    vi.resetModules()
   })
 
   it("creates a single-node Redis connection by default", async () => {
