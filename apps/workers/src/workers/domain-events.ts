@@ -155,6 +155,13 @@ export const createDomainEventsWorker = ({
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: () => Effect.void,
     FirstTraceReceived: () => Effect.void,
+    // Impersonation events are audit-only — their value is being
+    // persisted in the outbox for support / compliance queries.
+    // No downstream worker consumes them, so these handlers are no-ops.
+    // Present here only because `EventHandlerMap` exhaustively covers
+    // every key in `EventPayloads` and would fail typecheck otherwise.
+    AdminImpersonationStarted: () => Effect.void,
+    AdminImpersonationStopped: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {
