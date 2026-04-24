@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
+    "@domain/ai": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/scores": "workspace:*",

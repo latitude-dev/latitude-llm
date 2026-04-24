@@ -1,13 +1,15 @@
 import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient } from "../../server/clients.ts"
+import { getClickhouseClient, getRedisClient } from "../../server/clients.ts"
 
 export interface SpanRecord {
   readonly organizationId: string
@@ -179,6 +181,7 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
           return buildConversationSpanMaps(traceDetail.allMessages, spans)
         }).pipe(
           withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
+          withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),
       )

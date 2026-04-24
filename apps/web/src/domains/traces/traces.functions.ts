@@ -13,6 +13,8 @@ import {
   resolveTraceCohortFilters,
   TraceRepository,
 } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -20,7 +22,7 @@ import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient } from "../../server/clients.ts"
+import { getClickhouseClient, getRedisClient } from "../../server/clients.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -141,7 +143,11 @@ export const listTracesByProject = createServerFn({ method: "GET" })
             ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           },
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
 
     if (!page.nextCursor) {
@@ -175,7 +181,11 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           ...(data.filters ? { filters: data.filters } : {}),
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -200,7 +210,11 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           ...(data.filters ? { filters: data.filters } : {}),
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -222,7 +236,11 @@ export const getTraceCohortSummaryByProject = createServerFn({ method: "GET" })
         filters: effectiveFilters,
         effectiveRangeStartIso,
         effectiveRangeEndIso,
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -263,7 +281,11 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
           bucketSeconds: data.bucketSeconds,
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -284,7 +306,11 @@ export const getTraceDetail = createServerFn({ method: "GET" })
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return detail ? serializeTraceDetail(detail) : null
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
 
     // rosetta-ai GenAI types use [x: string]: unknown index signatures, but
@@ -320,6 +346,10 @@ export const getTraceDistinctValues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.search ? { search: data.search } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })

@@ -469,6 +469,7 @@ export const listIssueTraces = createServerFn({ method: "GET" })
         })
       }).pipe(
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )

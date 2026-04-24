@@ -1,3 +1,4 @@
+import { AI, AIError, type AIShape } from "@domain/ai"
 import {
   addTracesToDataset,
   createDatasetFromTraces,
@@ -21,7 +22,7 @@ import {
   TraceId,
 } from "@domain/shared/seeding"
 import type { TraceDetail } from "@domain/spans"
-import { TraceRepository } from "@domain/spans"
+import { TRACE_SEARCH_EMBEDDING_DIMENSIONS, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
@@ -33,6 +34,13 @@ import { DatasetRowRepositoryLive } from "../repositories/dataset-row-repository
 import { TraceRepositoryLive } from "../repositories/trace-repository.ts"
 import { runSpansSeed } from "../seeds/spans/index.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
+
+/** Mock AI layer that provides a fake embedding service for testing. */
+const mockAILayer = Layer.succeed(AI, {
+  generate: () => Effect.fail(new AIError({ message: "Generate not implemented in mock" })),
+  embed: () => Effect.succeed({ embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1) }),
+  rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
+} as AIShape)
 
 const ORG_ID = OrganizationId("org-add-traces")
 const PROJECT_ID = ProjectId("proj-add-traces")
@@ -58,7 +66,7 @@ const runWithLive = <A, E>(
     effect.pipe(
       withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pg.adminPostgresClient, ORG_ID),
       withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID),
-      withClickHouse(TraceRepositoryLive, ch.client, ORG_ID),
+      withClickHouse(TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer)), ch.client, ORG_ID),
     ),
   )
 

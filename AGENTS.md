@@ -8,6 +8,10 @@ Multi-tenant LLM observability platform. The repo is a **pnpm** workspace orches
 
 At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use-cases); **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Weaviate**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
 
+## Repo-wide conventions
+
+- Organization-scoped Redis or cache keys must start with the organization prefix: `org:${organizationId}:...`. Put the org id first so tenancy is obvious and keyspaces stay consistently partitioned.
+
 ## How to use this guide
 
 1. Skim the **skill glossary** below and open the skill that matches your task.

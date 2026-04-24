@@ -32,6 +32,8 @@ import {
   TraceId,
   UnauthorizedError,
 } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -40,7 +42,13 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getStorageDisk,
+} from "../../server/clients.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -627,6 +635,7 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
         withClickHouse(TraceRepositoryLive, chClient, orgId),
+        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )
@@ -678,6 +687,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
+          withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),
       )

@@ -6,10 +6,6 @@ import { Effect, Layer } from "effect"
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
-interface CountRow {
-  doc_count: string
-}
-
 export const TraceSearchRepositoryLive = Layer.effect(
   TraceSearchRepository,
   Effect.gen(function* () {
@@ -87,34 +83,10 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "hasEmbeddingWithHash")))
 
-    const countDocumentsByProject: TraceSearchRepositoryShape["countDocumentsByProject"] = (
-      organizationId,
-      projectId,
-    ) =>
-      chSqlClient
-        .query(async (client) => {
-          const result = await client.query({
-            query: `SELECT toUInt64(count()) as doc_count
-                    FROM trace_search_documents
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}`,
-            query_params: {
-              organizationId: organizationId as string,
-              projectId: projectId as string,
-            },
-            format: "JSONEachRow",
-          })
-          const rows: CountRow[] = await result.json()
-          if (rows.length === 0) return 0
-          return parseInt(rows[0].doc_count, 10)
-        })
-        .pipe(Effect.mapError((error) => toRepositoryError(error, "countDocumentsByProject")))
-
     return {
       upsertDocument,
       upsertEmbedding,
       hasEmbeddingWithHash,
-      countDocumentsByProject,
     } satisfies TraceSearchRepositoryShape
   }),
 )
