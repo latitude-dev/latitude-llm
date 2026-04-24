@@ -4,7 +4,8 @@ import {
   type UnifiedSearchResult,
   unifiedSearchUseCase,
 } from "@domain/admin"
-import { AdminSearchRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withPostgres } from "@platform/db-postgres"
+import { AdminSearchRepositoryLive } from "@platform/db-postgres/admin-search"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
