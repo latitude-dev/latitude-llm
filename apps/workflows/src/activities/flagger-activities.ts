@@ -38,8 +38,7 @@ export const runFlagger = async (input: {
   Effect.runPromise(
     runSystemQueueFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
-      withAi(AIEmbedLive, getRedisClient()),
-      withAi(AIGenerateLive, getRedisClient()),
+      withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       withTracing,
       Effect.tap(() =>
         Effect.sync(() =>
@@ -77,8 +76,7 @@ export const draftAnnotate = async (input: {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
-      withAi(AIEmbedLive, getRedisClient()),
-      withAi(AIGenerateLive, getRedisClient()),
+      withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
