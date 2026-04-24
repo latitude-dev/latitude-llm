@@ -575,7 +575,7 @@ describe("TraceRepository", () => {
     it("ranks lexical+semantic, lexical-only, and semantic-only hits above the floor and drops antiparallel noise", async () => {
       await insertSearchRows()
 
-      const page = await Effect.runPromise(
+      const page = await runCh(
         repo.listByProjectId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -605,22 +605,22 @@ describe("TraceRepository", () => {
       await insertSearchRows()
 
       const [page, count, metrics, histogram] = await Promise.all([
-        Effect.runPromise(
+        runCh(
           repo.listByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
             options: { searchQuery: QUERY },
           }),
         ),
-        Effect.runPromise(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: QUERY })),
-        Effect.runPromise(
+        runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: QUERY })),
+        runCh(
           repo.aggregateMetricsByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
             searchQuery: QUERY,
           }),
         ),
-        Effect.runPromise(
+        runCh(
           repo.histogramByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
