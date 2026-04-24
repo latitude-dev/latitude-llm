@@ -1,7 +1,37 @@
 import type { TraceDetail } from "@domain/spans"
 import { type ConversationStage, extractConversationStages } from "./refusal.ts"
 import { MAX_STAGES_PER_PROMPT } from "./shared.ts"
-import type { QueueStrategy } from "./types.ts"
+import type { DetectionResult, QueueStrategy } from "./types.ts"
+
+/**
+ * Punting / deferral phrases the community and OpenAI devs have identified as
+ * "lazy" assistant behavior (HN threads, Semafor "has ChatGPT gotten lazy"
+ * article: GPT-4 telling users to "try X" and to "use this as a template").
+ *
+ * A hit only routes to `ambiguous` — these phrases appear in legitimate
+ * educational contexts too, so we let the LLM judge whether the request
+ * actually asked for completed work.
+ */
+const LAZINESS_DEFERRAL_PATTERNS: readonly RegExp[] = [
+  /\byou can (?:try|do|run|execute|write|implement|continue)\b/i,
+  /\byou (?:could|should) (?:try|do|run|execute|write|implement|continue)\b/i,
+  /\byou (?:may|might) (?:want to|consider) (?:trying|running|writing|implementing)\b/i,
+  /\bhere'?s (?:how|what) you (?:would|could|can|should)\b/i,
+  /\bhere'?s (?:a|an) (?:starting point|template|example|outline|skeleton|scaffold)\b/i,
+  /\bas a starting point\b/i,
+  /\buse (?:this|the following) as a (?:template|starting point|guide|reference)\b/i,
+  /\bi'?ll (?:leave|let you|let the)\b/i,
+  /\brefer to (?:the|your) (?:docs|documentation|api reference)\b/i,
+  /\bcheck (?:the|your) (?:docs|documentation)\b/i,
+  /\/\/ *(?:TODO|FIXME)[:\s]/i,
+  /\/\/ *(?:your code|rest of|implementation|fill in|complete)\b/i,
+  /#+ *(?:TODO|FIXME)[:\s]/i,
+  /\.{3}\s*(?:and so on|etc\.?|repeat)\b/i,
+]
+
+/** Check if any deferral pattern appears in the text. */
+const textContainsDeferralPattern = (text: string): boolean =>
+  LAZINESS_DEFERRAL_PATTERNS.some((pattern) => pattern.test(text))
 
 // ---------------------------------------------------------------------------
 // Laziness Strategy - Multi-stage classifier with work signals
@@ -221,6 +251,20 @@ export const lazinessStrategy: QueueStrategy = {
   hasRequiredContext(trace: TraceDetail): boolean {
     const stages = extractConversationStages(trace)
     return stages.length > 0
+  },
+
+  detectDeterministically(trace: TraceDetail): DetectionResult {
+    // Ambiguous-only: deferral phrases appear in legitimate educational
+    // contexts too (e.g. "here's a template for you to adapt" is fine when
+    // the user asked for guidance, lazy when they asked for finished work).
+    // LLM judges intent.
+    const stages = extractConversationStages(trace)
+    for (const stage of stages) {
+      if (stage.assistantMessage && textContainsDeferralPattern(stage.assistantMessage)) {
+        return { kind: "ambiguous" }
+      }
+    }
+    return { kind: "no-match" }
   },
 
   buildSystemPrompt(): string {

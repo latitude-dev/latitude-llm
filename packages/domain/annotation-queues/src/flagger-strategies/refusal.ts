@@ -1,6 +1,15 @@
 import type { TraceDetail } from "@domain/spans"
 import { MAX_STAGES_PER_PROMPT } from "./shared.ts"
-import type { QueueStrategy } from "./types.ts"
+import type { DetectionResult, QueueStrategy } from "./types.ts"
+
+/**
+ * Minimum `scoreRefusalLikelihood` value that promotes a trace from
+ * `no-match` to `ambiguous`. The scorer weights deflection language
+ * (`try`, `instead`) at 1 and the weakest actual-refusal pattern
+ * (`inappropriate`, `not permitted`) at 2, so `>= 2` filters out pure
+ * deflection noise while still catching every explicit refusal phrase.
+ */
+const REFUSAL_AMBIGUOUS_SCORE_THRESHOLD = 2
 
 // ---------------------------------------------------------------------------
 // Refusal Strategy - Multi-stage classifier
@@ -234,6 +243,20 @@ export const refusalStrategy: QueueStrategy = {
   hasRequiredContext(trace: TraceDetail): boolean {
     const stages = extractConversationStages(trace)
     return stages.length > 0
+  },
+
+  detectDeterministically(trace: TraceDetail): DetectionResult {
+    // Any stage whose assistant message contains explicit refusal language
+    // (GCG-style phrase list, via scoreRefusalLikelihood) is routed to LLM
+    // for a correctness call — sampling would miss most refusal issues since
+    // they're a minority of traffic, but they're the whole point of this queue.
+    const stages = extractConversationStages(trace)
+    for (const stage of stages) {
+      if (scoreRefusalLikelihood(stage) >= REFUSAL_AMBIGUOUS_SCORE_THRESHOLD) {
+        return { kind: "ambiguous" }
+      }
+    }
+    return { kind: "no-match" }
   },
 
   buildSystemPrompt(): string {

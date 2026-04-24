@@ -1,6 +1,6 @@
 import type { TraceDetail } from "@domain/spans"
 import { truncateExcerpt } from "./shared.ts"
-import type { QueueStrategy } from "./types.ts"
+import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
 // Trashing Strategy - tool-call sequence view
@@ -147,12 +147,75 @@ function summarizeToolUsage(entries: readonly ToolCallEntry[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Deterministic detection — LoopGuard-style signature counting
+// ---------------------------------------------------------------------------
+
+/**
+ * Threshold for the matched branch. Lifted from the LoopGuard pattern
+ * (agentpatterns.tech/failures/infinite-loop): three identical tool+args
+ * invocations is the canonical "hard loop" signal used across LangChain,
+ * browser-use, and similar agent frameworks.
+ */
+const MATCHED_IDENTICAL_CALL_THRESHOLD = 3
+
+/**
+ * Thresholds for the ambiguous branch. ≥5 total calls with one tool
+ * dominating ≥60% of them is a plausible cycle worth LLM verification,
+ * but isn't a hard match (could be legitimate narrowing-via-search etc.).
+ */
+const AMBIGUOUS_TOTAL_CALLS_THRESHOLD = 5
+const AMBIGUOUS_DOMINANT_SHARE_THRESHOLD = 0.6
+
+const countBy = <T, K>(items: readonly T[], key: (item: T) => K): Map<K, number> => {
+  const counts = new Map<K, number>()
+  for (const item of items) {
+    counts.set(key(item), (counts.get(key(item)) ?? 0) + 1)
+  }
+  return counts
+}
+
+const maxCount = (counts: Map<unknown, number>): number => {
+  let max = 0
+  for (const count of counts.values()) {
+    if (count > max) max = count
+  }
+  return max
+}
+
+// ---------------------------------------------------------------------------
 // Trashing Strategy implementation
 // ---------------------------------------------------------------------------
 
 export const trashingStrategy: QueueStrategy = {
   hasRequiredContext(trace: TraceDetail): boolean {
     return extractToolCallSequence(trace).length >= MIN_TOOL_CALLS_FOR_DETECTION
+  },
+
+  detectDeterministically(trace: TraceDetail): DetectionResult {
+    const entries = extractToolCallSequence(trace)
+    if (entries.length < MIN_TOOL_CALLS_FOR_DETECTION) {
+      return { kind: "no-match" }
+    }
+
+    const signatureCounts = countBy(entries, (entry) => `${entry.name} ${entry.argsPreview}`)
+    const maxSignatureCount = maxCount(signatureCounts)
+
+    if (maxSignatureCount >= MATCHED_IDENTICAL_CALL_THRESHOLD) {
+      return {
+        kind: "matched",
+        feedback: `Trashing: identical tool+args invocation repeated ${maxSignatureCount} times`,
+      }
+    }
+
+    if (entries.length >= AMBIGUOUS_TOTAL_CALLS_THRESHOLD) {
+      const toolNameCounts = countBy(entries, (entry) => entry.name)
+      const dominantShare = maxCount(toolNameCounts) / entries.length
+      if (dominantShare >= AMBIGUOUS_DOMINANT_SHARE_THRESHOLD) {
+        return { kind: "ambiguous" }
+      }
+    }
+
+    return { kind: "no-match" }
   },
 
   buildSystemPrompt(): string {
