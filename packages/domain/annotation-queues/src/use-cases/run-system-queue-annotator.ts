@@ -141,15 +141,15 @@ export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotate
       ? formatConversationForAnnotator(input.trace.allMessages)
       : "<no conversation messages available>"
 
-  const durationSeconds = trace.durationNs / 1_000_000_000
+  const durationSeconds = input.trace.durationNs / 1_000_000_000
 
   const prompt = `Provided inputs only — use these facts and the conversation below; do not invent details.
 
 Trace summary (telemetry aggregates; cite only when relevant):
 - Approximate duration: ${durationSeconds.toFixed(durationSeconds < 10 ? 2 : 1)}s
-- Span count: ${trace.spanCount}
-- Error count: ${trace.errorCount}
-- Conversation messages: ${trace.allMessages.length}
+- Span count: ${input.trace.spanCount}
+- Error count: ${input.trace.errorCount}
+- Conversation messages: ${input.trace.allMessages.length}
 
 Conversation:
 ${conversationText}
