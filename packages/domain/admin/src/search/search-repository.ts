@@ -1,6 +1,6 @@
 import type { RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { SearchEntityType, UnifiedSearchResult } from "../entities/search-result.ts"
+import type { SearchEntityType, UnifiedSearchResult } from "./search-result.ts"
 
 /**
  * Cross-organization search port for the backoffice.

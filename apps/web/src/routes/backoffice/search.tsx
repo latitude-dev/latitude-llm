@@ -3,7 +3,7 @@ import { Container, Input, type TabOption, Tabs, Text } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
-import { adminSearch } from "../../domains/admin/admin.functions.ts"
+import { adminSearch } from "../../domains/admin/search.functions.ts"
 import { SearchResults } from "./-components/search-results.tsx"
 
 const DEBOUNCE_MS = 300

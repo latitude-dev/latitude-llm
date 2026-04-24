@@ -1,6 +1,6 @@
 import { MAX_SEARCH_QUERY_LENGTH } from "@domain/admin"
 import { describe, expect, it } from "vitest"
-import { adminSearchInputSchema } from "./admin.functions.ts"
+import { adminSearchInputSchema } from "./search.functions.ts"
 
 describe("adminSearchInputSchema", () => {
   it("accepts a valid query with default entity type", () => {

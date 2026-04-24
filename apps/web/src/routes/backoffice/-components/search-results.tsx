@@ -5,7 +5,7 @@ import type {
   AdminProjectSearchDto,
   AdminSearchDto,
   AdminUserSearchDto,
-} from "../../../domains/admin/admin.functions.ts"
+} from "../../../domains/admin/search.functions.ts"
 
 interface SearchResultsProps {
   readonly data: AdminSearchDto | undefined

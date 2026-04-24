@@ -4,13 +4,9 @@ import {
   type UnifiedSearchResult,
   unifiedSearchUseCase,
 } from "@domain/admin"
-import { AdminSearchRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { withTracing } from "@repo/observability"
-import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { AdminSearchRepositoryLive } from "@platform/db-postgres"
 import { z } from "zod"
-import { requireAdminSession } from "../../server/admin-auth.ts"
-import { getAdminPostgresClient } from "../../server/clients.ts"
+import { createAdminServerFn } from "../../server/admin-server-fn.ts"
 
 /**
  * Serialisable DTOs for the backoffice search UI. Dates are stringified so
@@ -66,29 +62,18 @@ const toDto = (result: UnifiedSearchResult): AdminSearchDto => ({
 
 /**
  * Exported so tests can exercise input validation without spinning up the
- * server-function RPC runtime. The handler itself is guarded by
- * `requireAdminSession` (unit-tested separately in `admin-auth.test.ts`).
+ * server-function RPC runtime. The admin guard is covered by
+ * `createAdminServerFn` (tested separately in `admin-auth.test.ts`).
  */
 export const adminSearchInputSchema = z.object({
   q: z.string().max(MAX_SEARCH_QUERY_LENGTH),
   type: searchEntityTypeSchema.default("all"),
 })
 
-export const adminSearch = createServerFn({ method: "GET" })
-  .inputValidator(adminSearchInputSchema)
-  .handler(async ({ data }): Promise<AdminSearchDto> => {
-    // GUARD — must be first, before any IO. Non-admins get NotFoundError,
-    // which surfaces identically to hitting a non-existent server function.
-    await requireAdminSession()
-
-    const client = getAdminPostgresClient()
-
-    const result = await Effect.runPromise(
-      unifiedSearchUseCase({ query: data.q, entityType: data.type }).pipe(
-        withPostgres(AdminSearchRepositoryLive, client),
-        withTracing,
-      ),
-    )
-
-    return toDto(result)
-  })
+export const adminSearch = createAdminServerFn({
+  method: "GET",
+  input: adminSearchInputSchema,
+  layer: AdminSearchRepositoryLive,
+  run: (input) => unifiedSearchUseCase({ query: input.q, entityType: input.type }),
+  toDto,
+})
