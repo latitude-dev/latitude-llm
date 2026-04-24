@@ -9,11 +9,25 @@ export const Route = createFileRoute("/backoffice/users/$userId")({
     try {
       const user = await adminGetUser({ data: { userId: params.userId } })
       return { user }
-    } catch {
-      // Both "user not found" and "non-admin" throw NotFoundError from
-      // our server function. From the UI's point of view they are the
-      // same: render the standard 404.
-      throw notFound()
+    } catch (error) {
+      // Only collapse `NotFoundError` into `notFound()` — that covers
+      // the two backoffice cases we want indistinguishable from any
+      // unknown URL: "user does not exist" and "caller isn't an
+      // admin" (both surface as a tagged `NotFoundError` from our
+      // server function). Anything else — DB outage, connectivity,
+      // serialization bug — must bubble to the router's error
+      // boundary so ops can see it, instead of being silently masked
+      // as a 404.
+      //
+      // We match on the Effect-native `_tag` field instead of
+      // `instanceof NotFoundError` because loaders can run client-side
+      // on navigations, where the thrown error has been rehydrated
+      // from JSON and no longer carries the class prototype.
+      const tag = (error as { _tag?: string } | null | undefined)?._tag
+      if (tag === "NotFoundError") {
+        throw notFound()
+      }
+      throw error
     }
   },
   component: BackofficeUserDetailPage,
