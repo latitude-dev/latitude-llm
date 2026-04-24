@@ -13,7 +13,7 @@ import { ensureSession } from "../domains/sessions/session.functions.ts"
  */
 type UserWithRole = User & { readonly role: "user" | "admin" }
 
-export interface AdminSession {
+interface AdminSession {
   readonly userId: UserId
   readonly user: UserWithRole
 }

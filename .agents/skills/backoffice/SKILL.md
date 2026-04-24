@@ -19,13 +19,27 @@ Non-admin users — authenticated or not — **MUST NOT** be able to access, enu
 
 ### 2. Server-function guard (RPC layer)
 
-Never call `createServerFn` directly for admin endpoints. **Always go through `createAdminServerFn`** (`apps/web/src/server/admin-server-fn.ts`), which:
+Every backoffice `createServerFn` handler **MUST** call `requireAdminSession()` (`apps/web/src/server/admin-auth.ts`) as its first line, before any IO. It throws `NotFoundError` (**not** 401/403 — the error shape must not fingerprint the admin surface).
 
-- Calls `requireAdminSession()` **before any IO** (throws `NotFoundError`, not 401/403 — the error shape must not fingerprint the admin surface).
-- Provides the admin-scoped Postgres client automatically.
-- Pipes `withTracing`.
+Write handlers in the canonical TanStack Start shape:
 
-Structurally, a missing guard becomes a type error, not a reviewable omission.
+```ts
+export const adminThing = createServerFn({ method: "GET" })
+  .inputValidator(inputSchema)
+  .handler(async ({ data }): Promise<ThingDto> => {
+    await requireAdminSession()                     // GUARD, first line
+    const client = getAdminPostgresClient()
+    const result = await Effect.runPromise(
+      thingUseCase(data).pipe(
+        withPostgres(ThingRepositoryLive, client),  // org defaults to "system" → RLS off
+        withTracing,
+      ),
+    )
+    return toDto(result)
+  })
+```
+
+**Do not** wrap `createServerFn` in a factory. TanStack Start's Vite plugin detects and transforms the literal `createServerFn(...).handler(inlineFn)` chain — it replaces the handler body with a client RPC stub and strips the server-only imports from the browser bundle. A factory that hides `createServerFn` inside its own body defeats that detection, leaks Node-only imports (`withTracing`, `getAdminPostgresClient`, …) into the client bundle, and breaks `pnpm build` with `MISSING_EXPORT` errors against `@repo/observability/browser.ts`. Convention-based guard + mandatory code review is the correct discipline here; structural enforcement via a wrapper is not available at this layer.
 
 ### 3. Database access guard
 
@@ -51,7 +65,7 @@ Web-app per-feature split mirrors the package:
 
 ```
 apps/web/src/domains/admin/
-  <feature>.functions.ts         # createAdminServerFn handler(s) + DTOs
+  <feature>.functions.ts         # createServerFn handler(s) + DTOs (guard = first line)
   <feature>.functions.test.ts    # input-schema tests
 ```
 
