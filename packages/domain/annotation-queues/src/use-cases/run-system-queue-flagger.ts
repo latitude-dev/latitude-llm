@@ -11,7 +11,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { SYSTEM_QUEUE_FLAGGER_MAX_TOKENS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
-import { type DetectionResult, getQueueStrategy, hasQueueStrategy } from "../flagger-strategies/index.ts"
+import { getQueueStrategy, hasQueueStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -68,22 +68,32 @@ const isSchemaMismatchCause = (cause: unknown): boolean => {
 }
 
 /**
- * Run LLM flagger with the given strategy.
+ * LLM classification for an already-loaded trace.
+ *
+ * The deterministic phase runs earlier in the trace-end worker (not here). By the
+ * time this use-case is invoked — via the Temporal workflow started downstream —
+ * the trace was either sampled-in on `no-match` or rate-limited through on
+ * `ambiguous`. Either way, the job is pure LLM classification.
  */
-const runLlmFlagger = (input: ClassifyTraceForQueueInput) =>
-  Effect.gen(function* () {
-    const ai = yield* AI
-    const strategy = getQueueStrategy(input.queueSlug)
+export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classifyTraceForQueue")(function* (
+  input: ClassifyTraceForQueueInput,
+) {
+  const strategy = getQueueStrategy(input.queueSlug)
 
-    if (!strategy) {
-      return { matched: false }
-    }
+  if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.trace)) {
+    return { matched: false }
+  }
 
-    const result = yield* ai.generate({
+  const ai = yield* AI
+
+  const decisions = yield* ai
+    .generate({
       ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
-      system: strategy.buildSystemPrompt(input.trace),
-      prompt: strategy.buildPrompt(input.trace),
+      // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
+      system: strategy.buildSystemPrompt!(input.trace),
+      // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
+      prompt: strategy.buildPrompt!(input.trace),
       schema: systemQueueFlaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemClassify,
@@ -94,87 +104,27 @@ const runLlmFlagger = (input: ClassifyTraceForQueueInput) =>
         ),
       },
     })
+    .pipe(
+      Effect.map((result) => result.object),
+      Effect.catchIf(
+        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
+        () =>
+          Effect.gen(function* () {
+            yield* Effect.annotateCurrentSpan("queue.flaggerSchemaMismatch", true)
+            return { matched: false }
+          }),
+      ),
+    )
 
-    return result.object
-  })
-
-/**
- * Run deterministic detection phase for a queue strategy.
- * Returns the detection result or null if the strategy doesn't support deterministic detection.
- */
-function runDeterministicDetection(queueSlug: string, trace: TraceDetail): DetectionResult | null {
-  const strategy = getQueueStrategy(queueSlug)
-  if (!strategy?.detectDeterministically) {
-    return null
-  }
-
-  return strategy.detectDeterministically(trace)
-}
-
-/**
- * Classify an already-loaded trace for a system queue.
- *
- * This is the pure classifier layer: no data loading, no repository dependency.
- * The deterministic pre-filter runs first; only ambiguous cases fall through to
- * the LLM.
- *
- * Production callers that start from a traceId should use
- * {@link runSystemQueueFlaggerUseCase}, which fetches the trace and then delegates here.
- */
-export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classifyTraceForQueue")(function* (
-  input: ClassifyTraceForQueueInput,
-) {
-  if (!hasQueueStrategy(input.queueSlug)) {
-    return { matched: false }
-  }
-
-  const strategy = getQueueStrategy(input.queueSlug)
-  if (!strategy) {
-    return { matched: false }
-  }
-
-  if (!strategy.hasRequiredContext(input.trace)) {
-    return { matched: false }
-  }
-
-  // Phase 1: Try deterministic detection if available
-  const deterministicResult = runDeterministicDetection(input.queueSlug, input.trace)
-
-  if (deterministicResult) {
-    switch (deterministicResult.kind) {
-      case "matched":
-        return { matched: true }
-      case "no-match":
-        return { matched: false }
-      case "ambiguous":
-      // Ambiguous — fall through to LLM
-    }
-  }
-
-  // Phase 2: LLM fallback for ambiguous cases or strategies without deterministic detection
-  const decisions = yield* runLlmFlagger(input).pipe(
-    Effect.catchIf(
-      (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
-      () =>
-        Effect.gen(function* () {
-          yield* Effect.annotateCurrentSpan("queue.flaggerSchemaMismatch", true)
-          return { matched: false }
-        }),
-    ),
-  )
-
-  return {
-    matched: decisions.matched,
-  } satisfies RunSystemQueueFlaggerResult
+  return { matched: decisions.matched } satisfies RunSystemQueueFlaggerResult
 })
 
 /**
  * Load the trace via the repository, then classify it.
  *
- * This is the production entry point — the one called by the Temporal activity
- * in `systemQueueFlaggerWorkflow`. For unknown queue slugs it short-circuits
- * BEFORE hitting the repository, so legacy workflow activations for removed
- * queues don't cost a Clickhouse roundtrip.
+ * Production entry point for the Temporal activity. Short-circuits BEFORE
+ * hitting ClickHouse if the queue slug has no registered strategy, no LLM
+ * capability, or context is missing.
  */
 export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
   input: RunSystemQueueFlaggerInput,
@@ -185,6 +135,11 @@ export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSyste
   yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
 
   if (!hasQueueStrategy(input.queueSlug)) {
+    return { matched: false }
+  }
+
+  const strategy = getQueueStrategy(input.queueSlug)
+  if (!strategy || !isLlmCapableStrategy(strategy)) {
     return { matched: false }
   }
 

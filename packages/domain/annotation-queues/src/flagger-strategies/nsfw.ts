@@ -206,7 +206,10 @@ export const nsfwStrategy: QueueStrategy = {
       if (hasHighPrecisionNsfwPatterns(snippet.text)) {
         // Check if it's actually benign context
         if (!isBenignAnatomyOrHealth(snippet.text)) {
-          return { kind: "matched" }
+          return {
+            kind: "matched",
+            feedback: "NSFW content: matched a high-precision workplace-inappropriate pattern",
+          }
         }
       }
     }

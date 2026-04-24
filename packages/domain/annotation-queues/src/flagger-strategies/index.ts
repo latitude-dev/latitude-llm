@@ -1,17 +1,32 @@
+import { emptyResponseStrategy } from "./empty-response.ts"
 import { forgettingStrategy } from "./forgetting.ts"
 import { frustrationStrategy } from "./frustration.ts"
 import { jailbreakingStrategy } from "./jailbreaking.ts"
 import { lazinessStrategy } from "./laziness.ts"
 import { nsfwStrategy } from "./nsfw.ts"
+import { outputSchemaValidationStrategy } from "./output-schema-validation.ts"
 import { refusalStrategy } from "./refusal.ts"
+import { toolCallErrorsStrategy } from "./tool-call-errors.ts"
 import { trashingStrategy } from "./trashing.ts"
 import type { QueueStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
 // Strategy Registry
 // ---------------------------------------------------------------------------
+//
+// Two kinds of strategies live in the same registry:
+//   1. LLM-capable strategies — back a provisioned system queue (slug in
+//      `SYSTEM_QUEUE_DEFINITIONS`); have both `buildSystemPrompt` and
+//      `buildPrompt`. Deterministic `no-match`/`ambiguous` route to the
+//      LLM workflow.
+//   2. Deterministic-only strategies — no provisioned queue, no LLM prompts.
+//      Only their `matched` branch produces output (direct score write with
+//      `sourceId="SYSTEM"`). `no-match` is a no-op; they never return
+//      `ambiguous`.
+// ---------------------------------------------------------------------------
 
 const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
+  // LLM-capable
   frustration: frustrationStrategy,
   nsfw: nsfwStrategy,
   refusal: refusalStrategy,
@@ -19,6 +34,11 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
   jailbreaking: jailbreakingStrategy,
   forgetting: forgettingStrategy,
   trashing: trashingStrategy,
+
+  // Deterministic-only
+  "tool-call-errors": toolCallErrorsStrategy,
+  "output-schema-validation": outputSchemaValidationStrategy,
+  "empty-response": emptyResponseStrategy,
 }
 
 /**
@@ -43,14 +63,26 @@ export function listQueueStrategySlugs(): readonly string[] {
   return Object.keys(STRATEGY_REGISTRY)
 }
 
+/**
+ * True when the strategy can run the LLM classification path (has both
+ * `buildSystemPrompt` and `buildPrompt`). Deterministic-only strategies
+ * cannot route to the LLM workflow.
+ */
+export function isLlmCapableStrategy(strategy: QueueStrategy): boolean {
+  return typeof strategy.buildSystemPrompt === "function" && typeof strategy.buildPrompt === "function"
+}
+
 // Export strategies for testing
 export {
+  emptyResponseStrategy,
   forgettingStrategy,
   frustrationStrategy,
   jailbreakingStrategy,
   lazinessStrategy,
   nsfwStrategy,
+  outputSchemaValidationStrategy,
   refusalStrategy,
+  toolCallErrorsStrategy,
   trashingStrategy,
 }
 
