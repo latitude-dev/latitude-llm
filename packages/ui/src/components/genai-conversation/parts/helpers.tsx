@@ -1,3 +1,4 @@
+import { isJsonBlock } from "@repo/utils"
 import { FileIcon } from "lucide-react"
 import { Text } from "../../text/text.tsx"
 
@@ -7,8 +8,19 @@ export function getKnownField<T>(metadata: Record<string, unknown> | undefined, 
 }
 
 export function formatJson(value: unknown): string {
-  if (typeof value === "string") return value
   if (value === undefined || value === null) return ""
+
+  if (typeof value === "string") {
+    if (isJsonBlock(value)) {
+      try {
+        return JSON.stringify(JSON.parse(value), null, 2)
+      } catch {
+        return value
+      }
+    }
+    return value
+  }
+
   try {
     return JSON.stringify(value, null, 2)
   } catch {
