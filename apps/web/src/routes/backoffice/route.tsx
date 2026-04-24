@@ -9,14 +9,27 @@ import { requireAdminSession } from "../../server/admin-auth.ts"
 // surfaces share a single source of truth for the admin gate — including
 // the DB-fresh fetch that sidesteps Better Auth's 5-minute session cookie
 // cache (see the comment on `requireAdminSession`). The route-local
-// wrapper just converts the domain `NotFoundError` into TanStack Router's
+// wrapper converts the domain `NotFoundError` into TanStack Router's
 // `notFound()` so the response is indistinguishable from any unknown
 // URL — no redirect, no 403, no Location header leak.
+//
+// Match on the Effect-native `_tag` (survives the RPC JSON boundary)
+// rather than `instanceof NotFoundError` or a blanket catch. Only
+// `NotFoundError` — the tagged error `requireAdminSession()` throws
+// when the caller is not an admin or is unauthenticated — is
+// collapsed into a 404. Anything else (DB outage, connectivity,
+// serialization bug from the Better Auth fresh-session fetch) must
+// bubble to the router error boundary instead of being silently
+// masked as a 404. Same discipline as the `$userId.tsx` loader.
 const guardBackofficeRoute = async () => {
   try {
     await requireAdminSession()
-  } catch {
-    throw notFound()
+  } catch (error) {
+    const tag = (error as { _tag?: string } | null | undefined)?._tag
+    if (tag === "NotFoundError") {
+      throw notFound()
+    }
+    throw error
   }
 }
 
