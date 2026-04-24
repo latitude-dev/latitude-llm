@@ -78,7 +78,7 @@ const _registry = {
         readonly toIso?: string
       }
       readonly sort?: {
-        readonly field: "lastSeen" | "occurrences"
+        readonly field: "lastSeen" | "occurrences" | "state"
         readonly direction: "asc" | "desc"
       }
     }

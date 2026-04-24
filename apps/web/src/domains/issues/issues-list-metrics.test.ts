@@ -7,6 +7,7 @@ const makeListIssuesResult = (): ListIssuesResult => ({
     counts: {
       newIssues: 0,
       escalatingIssues: 0,
+      ongoingIssues: 0,
       regressedIssues: 0,
       resolvedIssues: 0,
       seenOccurrences: 0,

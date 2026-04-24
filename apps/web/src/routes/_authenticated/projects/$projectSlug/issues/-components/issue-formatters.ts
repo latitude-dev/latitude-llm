@@ -3,7 +3,7 @@ const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
-const lifecycleDisplayOrder = ["regressed", "escalating", "new", "resolved", "ignored"] as const
+const lifecycleDisplayOrder = ["regressed", "escalating", "new", "ongoing", "resolved", "ignored"] as const
 const lifecycleDisplayOrderSet = new Set<string>(lifecycleDisplayOrder)
 
 function formatCompactElapsed(elapsedMs: number): string {
@@ -99,6 +99,8 @@ export function formatLifecycleLabel(state: string): string {
       return "New"
     case "escalating":
       return "Escalating"
+    case "ongoing":
+      return "Ongoing"
     case "resolved":
       return "Resolved"
     case "regressed":

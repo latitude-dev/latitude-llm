@@ -13,6 +13,7 @@ export type IssueState = z.infer<typeof issueStateSchema>
 export const IssueState = {
   New: "new",
   Escalating: "escalating",
+  Ongoing: "ongoing",
   Resolved: "resolved",
   Regressed: "regressed",
   Ignored: "ignored",

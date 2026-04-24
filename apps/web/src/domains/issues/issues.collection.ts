@@ -20,6 +20,7 @@ const EMPTY_ISSUES_ANALYTICS: IssuesListResultRecord["analytics"] = {
   counts: {
     newIssues: 0,
     escalatingIssues: 0,
+    ongoingIssues: 0,
     regressedIssues: 0,
     resolvedIssues: 0,
     seenOccurrences: 0,
@@ -33,7 +34,7 @@ const DEFAULT_ISSUES_SORTING = {
 } as const satisfies IssuesSorting
 
 interface IssuesSorting {
-  readonly column: "lastSeen" | "occurrences"
+  readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
 }
 
