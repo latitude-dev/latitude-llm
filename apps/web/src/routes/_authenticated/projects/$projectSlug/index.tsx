@@ -265,11 +265,13 @@ function ProjectPage() {
   const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters
   const showEmptyState = !isTracesCountLoading && hasNoTraces
 
-  if (isTracesCountLoading && hasNoTraces) {
+  // Navigating in with a `traceId` (e.g. from the issue detail panel) must
+  // not fall through to the loading/empty shortcut — those skip the drawer.
+  if (isTracesCountLoading && hasNoTraces && !activeTraceId) {
     return null
   }
 
-  if (showEmptyState) {
+  if (showEmptyState && !activeTraceId) {
     return (
       <Layout>
         <TracesEmptyState />
