@@ -189,6 +189,30 @@ describe("annotationScoreSchema", () => {
 
     expect(result.success).toBe(false)
   })
+
+  it("accepts a 'pretty-json' textFormat on the anchor", () => {
+    const result = annotationAnchorSchema.safeParse({
+      messageIndex: 1,
+      partIndex: 0,
+      startOffset: 4,
+      endOffset: 12,
+      textFormat: "pretty-json",
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects an unknown textFormat value", () => {
+    const result = annotationAnchorSchema.safeParse({
+      messageIndex: 1,
+      partIndex: 0,
+      startOffset: 4,
+      endOffset: 12,
+      textFormat: "yaml",
+    })
+
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("customScoreSchema", () => {

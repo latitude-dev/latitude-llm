@@ -136,12 +136,14 @@ export function useAnnotationPopover({
               partIndex: openPopover.anchor.partIndex,
               startOffset: openPopover.anchor.startOffset,
               endOffset: openPopover.anchor.endOffset,
+              textFormat: openPopover.anchor.textFormat,
             }
           : {
               messageIndex: openPopover.annotation.metadata.messageIndex,
               partIndex: openPopover.annotation.metadata.partIndex,
               startOffset: openPopover.annotation.metadata.startOffset,
               endOffset: openPopover.annotation.metadata.endOffset,
+              textFormat: openPopover.annotation.metadata.textFormat,
             }
 
       const spanId = messageIndex !== undefined ? (getSpanIdForMessage?.(messageIndex) ?? null) : null

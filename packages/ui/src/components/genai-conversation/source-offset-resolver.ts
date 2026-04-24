@@ -1,3 +1,4 @@
+import { detectPartTextFormat, formatPartText } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 
 export interface TextSelectionAnchor {
@@ -6,6 +7,7 @@ export interface TextSelectionAnchor {
   startOffset: number
   endOffset: number
   selectedText: string
+  textFormat?: "pretty-json" | undefined
 }
 
 export function getPartText(
@@ -310,6 +312,12 @@ function calculateTextOffsets(
 /**
  * Phase 2: resolve a DOM Range to markdown source offsets.
  * Only called when the user commits an action (Copy / Annotate).
+ *
+ * When the part's displayed text was reformatted from its raw representation
+ * (currently: JSON parts are prettified for display), the DOM tokens carry
+ * offsets relative to the formatted text. This function clamps against the
+ * formatted text and emits `textFormat` on the returned anchor so downstream
+ * resolvers can re-apply the same transform before slicing.
  */
 export function resolveSourceOffsets(
   range: Range,
@@ -317,14 +325,17 @@ export function resolveSourceOffsets(
   messageIndex: number,
   partIndex: number,
 ): TextSelectionAnchor | null {
-  const fullText = getPartText(messages, messageIndex, partIndex)
-  if (!fullText) return null
+  const rawText = getPartText(messages, messageIndex, partIndex)
+  if (!rawText) return null
+
+  const textFormat = detectPartTextFormat(rawText)
+  const effectiveText = formatPartText(rawText, textFormat)
 
   const partRoot = findPartRoot(range.startContainer) ?? findPartRoot(range.endContainer)
   if (!partRoot) return null
 
   const textNodes = collectTextNodes(partRoot)
-  const offsets = calculateTextOffsets(textNodes, range, fullText)
+  const offsets = calculateTextOffsets(textNodes, range, effectiveText)
   if (!offsets) return null
 
   return {
@@ -333,5 +344,6 @@ export function resolveSourceOffsets(
     startOffset: offsets.textStart,
     endOffset: offsets.textEnd,
     selectedText: range.toString().trim(),
+    textFormat,
   }
 }
