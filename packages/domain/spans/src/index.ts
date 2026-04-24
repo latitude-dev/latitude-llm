@@ -106,15 +106,15 @@ export {
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
 export type {
-  BuildTracesExportInput,
-  BuildTracesExportResult,
-} from "./use-cases/build-traces-export.ts"
-export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
-export type {
   TraceSearchDocument,
   TraceSearchDocumentInput,
 } from "./use-cases/build-trace-search-document.ts"
 export { buildTraceSearchDocument } from "./use-cases/build-trace-search-document.ts"
+export type {
+  BuildTracesExportInput,
+  BuildTracesExportResult,
+} from "./use-cases/build-traces-export.ts"
+export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
 export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
