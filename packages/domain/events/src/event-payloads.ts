@@ -119,10 +119,19 @@ export interface EventPayloads {
    * Emitted when a platform admin begins impersonating another user via
    * the backoffice. The outbox envelope's `organizationId` is always
    * `"system"` — impersonation is a platform-wide audit event with no
-   * tenant ownership. `targetOrganizationId` records the org whose data
-   * the admin is about to see (the target user's active org at the
-   * moment of impersonation), so queries like "who looked at tenant X?"
-   * have a join key.
+   * tenant ownership.
+   *
+   * `targetOrganizationId` is a **best-effort** hint: it holds the
+   * target's first organisation membership (ordered by organisation
+   * name) at the moment of impersonation, as surfaced by
+   * `AdminUserRepository.findById`. It is NOT guaranteed to be the
+   * org the admin actually lands on — Better Auth may set a
+   * different `activeOrganizationId` on the new session, and the
+   * admin can switch orgs from the banner. Audit queries like "who
+   * looked at tenant X?" should treat it as an indicator, not a
+   * source of truth — join with the admin's subsequent request trail
+   * for definitive answers. `null` when the target has no
+   * memberships.
    */
   AdminImpersonationStarted: {
     readonly adminUserId: string
