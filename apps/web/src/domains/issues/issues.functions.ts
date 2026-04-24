@@ -509,6 +509,136 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
     return toIssueLifecycleCommandRecord(result)
   })
 
+const bulkIssueLifecycleActionInputSchema = z.object({
+  projectId: z.string(),
+  selection: exportSelectionSchema,
+  command: issueLifecycleCommandSchema,
+  keepMonitoring: z.boolean().optional(),
+  lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+  sort: z
+    .object({
+      field: issuesSortFieldSchema,
+      direction: issuesSortDirectionSchema,
+    })
+    .optional(),
+  searchQuery: z.string().max(500).optional(),
+  timeRange: z
+    .object({
+      fromIso: z.iso.datetime().optional(),
+      toIso: z.iso.datetime().optional(),
+    })
+    .optional(),
+})
+
+const BULK_ACTION_BATCH_SIZE = 100
+
+export const applyBulkIssueLifecycleAction = createServerFn({ method: "POST" })
+  .inputValidator(bulkIssueLifecycleActionInputSchema)
+  .handler(async ({ data }): Promise<IssueLifecycleCommandRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const chClient = getClickhouseClient()
+    const redisClient = getRedisClient()
+    const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+    const provideIssueProjection = trimmedSearchQuery
+      ? withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), orgId)
+      : withEmptyIssueProjection
+
+    const issueIds: string[] = []
+
+    if (data.selection.mode === "selected") {
+      issueIds.push(...data.selection.rowIds)
+    } else {
+      const selectionIds = data.selection.mode === "allExcept" ? new Set(data.selection.rowIds) : null
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const search = trimmedSearchQuery
+            ? yield* embedIssueSearchQueryUseCase({
+                organizationId,
+                projectId: data.projectId,
+                query: trimmedSearchQuery,
+              })
+            : undefined
+
+          const timeRange =
+            data.timeRange?.fromIso || data.timeRange?.toIso
+              ? {
+                  ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
+                  ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
+                }
+              : undefined
+
+          let offset = 0
+          while (true) {
+            const page = yield* listIssuesUseCase({
+              organizationId,
+              projectId: data.projectId,
+              limit: BULK_ACTION_BATCH_SIZE,
+              offset,
+              ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+              ...(data.sort ? { sort: data.sort } : {}),
+              ...(timeRange ? { timeRange } : {}),
+              ...(search
+                ? {
+                    search: {
+                      query: search.query,
+                      normalizedEmbedding: search.normalizedEmbedding,
+                    },
+                  }
+                : {}),
+            })
+
+            if (page.items.length === 0) break
+
+            for (const issue of page.items) {
+              if (data.selection.mode === "allExcept" && selectionIds?.has(issue.id)) {
+                continue
+              }
+              issueIds.push(issue.id)
+            }
+
+            if (!page.hasMore) break
+            offset += page.limit
+          }
+        }).pipe(
+          withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+          withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+          provideIssueProjection,
+          withAi(AIEmbedLive, redisClient),
+          withTracing,
+        ),
+      )
+    }
+
+    if (issueIds.length === 0) {
+      return {
+        command: data.command,
+        keepMonitoring: null,
+        items: [],
+      }
+    }
+
+    const result = await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId: data.projectId,
+        issueIds,
+        command: data.command,
+        keepMonitoring: data.keepMonitoring,
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+          pgClient,
+          orgId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return toIssueLifecycleCommandRecord(result)
+  })
+
 interface EnqueuedExportResult {
   readonly type: "enqueued"
 }

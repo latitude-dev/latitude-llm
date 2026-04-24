@@ -1,11 +1,12 @@
-import { Button, Icon, Input, Tabs, toast } from "@repo/ui"
+import { Button, CloseTrigger, Icon, Input, Label, Modal, Switch, Tabs, Text, toast } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { ActivityIcon, ArchiveIcon, DownloadIcon, SearchIcon } from "lucide-react"
+import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
-import { useIssues } from "../../../../../domains/issues/issues.collection.ts"
-import { enqueueIssuesExport } from "../../../../../domains/issues/issues.functions.ts"
+import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
+import { applyBulkIssueLifecycleAction, enqueueIssuesExport } from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
@@ -63,6 +64,10 @@ function IssuesPage() {
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [bulkResolveModalOpen, setBulkResolveModalOpen] = useState(false)
+  const [bulkIgnoreModalOpen, setBulkIgnoreModalOpen] = useState(false)
+  const [keepMonitoring, setKeepMonitoring] = useState(true)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const issueIdsRef = useRef<string[]>([])
 
   useDebounce(
@@ -147,6 +152,91 @@ function IssuesPage() {
     }
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
+  const handleBulkResolve = useCallback(async () => {
+    const bulkSelection = selection.bulkSelection
+    if (!bulkSelection) return
+
+    setBulkActionLoading(true)
+    try {
+      const result = await applyBulkIssueLifecycleAction({
+        data: {
+          projectId: project.id,
+          selection: bulkSelection,
+          command: "resolve",
+          keepMonitoring,
+          lifecycleGroup,
+          sort: {
+            field: sorting.column,
+            direction: sorting.direction,
+          },
+          ...(searchQuery ? { searchQuery } : {}),
+          ...(timeRange ? { timeRange } : {}),
+        },
+      })
+      const changedCount = result.items.filter((item) => item.changed).length
+      await invalidateIssueQueries(project.id)
+      toast({
+        description:
+          changedCount === 0
+            ? "No issues were resolved."
+            : changedCount === 1
+              ? "1 issue resolved."
+              : `${changedCount} issues resolved.`,
+      })
+      selection.clearSelections()
+      setBulkResolveModalOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [keepMonitoring, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+
+  const handleBulkIgnore = useCallback(async () => {
+    const bulkSelection = selection.bulkSelection
+    if (!bulkSelection) return
+
+    setBulkActionLoading(true)
+    try {
+      const result = await applyBulkIssueLifecycleAction({
+        data: {
+          projectId: project.id,
+          selection: bulkSelection,
+          command: "ignore",
+          lifecycleGroup,
+          sort: {
+            field: sorting.column,
+            direction: sorting.direction,
+          },
+          ...(searchQuery ? { searchQuery } : {}),
+          ...(timeRange ? { timeRange } : {}),
+        },
+      })
+      const changedCount = result.items.filter((item) => item.changed).length
+      await invalidateIssueQueries(project.id)
+      toast({
+        description:
+          changedCount === 0
+            ? "No issues were ignored."
+            : changedCount === 1
+              ? "1 issue ignored."
+              : `${changedCount} issues ignored.`,
+      })
+      selection.clearSelections()
+      setBulkIgnoreModalOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+
   const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
   const hasNoIssues = issues.length === 0 && !hasActiveFilters
   const showEmptyState = !isLoading && hasNoIssues
@@ -219,9 +309,30 @@ function IssuesPage() {
         </Layout.Actions>
         {selection.selectedCount > 0 && (
           <div className="flex items-center gap-2 px-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkIgnoreModalOpen(true)}
+              disabled={bulkActionLoading}
+            >
+              <Icon icon={PauseIcon} size="sm" />
+              Ignore ({selection.selectedCount.toLocaleString()})
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setKeepMonitoring(true)
+                setBulkResolveModalOpen(true)
+              }}
+              disabled={bulkActionLoading}
+            >
+              <Icon icon={CheckIcon} size="sm" />
+              Resolve ({selection.selectedCount.toLocaleString()})
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
               <Icon icon={DownloadIcon} size="sm" />
-              Export Issues ({selection.selectedCount.toLocaleString()})
+              Export ({selection.selectedCount.toLocaleString()})
             </Button>
           </div>
         )}
@@ -258,6 +369,60 @@ function IssuesPage() {
             exporting={exporting}
           />
         )}
+
+        <Modal
+          open={bulkResolveModalOpen}
+          onOpenChange={setBulkResolveModalOpen}
+          dismissible
+          title="Resolve issues"
+          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setBulkResolveModalOpen(false)} disabled={bulkActionLoading}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleBulkResolve()} disabled={bulkActionLoading}>
+                <Icon icon={CheckIcon} size="sm" />
+                Resolve {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="bulk-keep-monitoring">Keep monitoring these issues</Label>
+                <Text.H6 color="foregroundMuted">
+                  Evaluations monitoring these issues will stay active to detect further regressions
+                </Text.H6>
+              </div>
+              <Switch
+                id="bulk-keep-monitoring"
+                checked={keepMonitoring}
+                onCheckedChange={setKeepMonitoring}
+                disabled={bulkActionLoading}
+                aria-label="Keep monitoring these issues"
+              />
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          open={bulkIgnoreModalOpen}
+          onOpenChange={setBulkIgnoreModalOpen}
+          dismissible
+          title="Ignore issues"
+          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. We won't monitor or alert you about new occurrences of these issues anymore.`}
+          footer={
+            <>
+              <CloseTrigger />
+              <Button variant="destructive" onClick={() => void handleBulkIgnore()} disabled={bulkActionLoading}>
+                <Icon icon={PauseIcon} size="sm" />
+                Ignore {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+              </Button>
+            </>
+          }
+        />
       </Layout.Content>
       {activeIssueId ? (
         <Layout.Aside>

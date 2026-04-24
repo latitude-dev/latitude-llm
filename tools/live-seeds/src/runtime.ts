@@ -573,9 +573,10 @@ async function computeSamplePreview(
         await Promise.all(
           SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
             const evaluation = targets.evaluationsById[evaluationId]
-            // Type guard: without systemQueuesOnly, loadSeedTargets asserts
-            // this exists and throws if it doesn't — so the `!` is safe.
-            return [evaluationId, await sampleLiveEvaluation(ctx, evaluation!, traceId)] as const
+            if (!evaluation) {
+              throw new Error(`loadSeedTargets did not return evaluation ${evaluationId}`)
+            }
+            return [evaluationId, await sampleLiveEvaluation(ctx, evaluation, traceId)] as const
           }),
         ),
       )
