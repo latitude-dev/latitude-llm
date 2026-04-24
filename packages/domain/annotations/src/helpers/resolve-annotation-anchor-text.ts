@@ -1,4 +1,5 @@
 import type { AnnotationAnchor } from "@domain/scores"
+import { formatPartText } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 
 function joinTextParts(parts: GenAIMessage["parts"]): string {
@@ -14,6 +15,12 @@ function joinTextParts(parts: GenAIMessage["parts"]): string {
 /**
  * Resolves the exact substring the anchor refers to from the canonical GenAI messages
  * for a trace (same ordering as {@link TraceDetail.allMessages}).
+ *
+ * When `anchor.textFormat` is set, the part text is first transformed with
+ * {@link formatPartText} so offsets line up with the representation the user
+ * saw when the selection was captured. This is the single anchor-resolution
+ * helper used by both the backend (annotation enrichment) and the frontend
+ * (debug views); keep them in sync via this function.
  *
  * @returns `undefined` when the anchor does not select a message range, or indices are invalid.
  */
@@ -44,6 +51,8 @@ export function resolveAnnotationAnchorText(
   } else {
     text = joinTextParts(message.parts)
   }
+
+  text = formatPartText(text, anchor.textFormat)
 
   if (anchor.startOffset !== undefined && anchor.endOffset !== undefined) {
     if (anchor.startOffset > text.length || anchor.endOffset > text.length || anchor.startOffset > anchor.endOffset) {

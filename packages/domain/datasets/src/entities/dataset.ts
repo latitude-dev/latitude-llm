@@ -1,7 +1,7 @@
 import { datasetIdSchema, datasetVersionIdSchema, organizationIdSchema, projectIdSchema } from "@domain/shared"
 import { z } from "zod"
 
-export const datasetSchema = z.object({
+const datasetSchema = z.object({
   id: datasetIdSchema,
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
@@ -16,7 +16,7 @@ export const datasetSchema = z.object({
 
 export type Dataset = z.infer<typeof datasetSchema>
 
-export const datasetVersionSchema = z.object({
+const datasetVersionSchema = z.object({
   id: datasetVersionIdSchema,
   datasetId: datasetIdSchema,
   version: z.number().int().positive(),

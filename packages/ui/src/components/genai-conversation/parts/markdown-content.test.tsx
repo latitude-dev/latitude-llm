@@ -1,7 +1,8 @@
+import { LARGE_MARKDOWN_CONTENT_THRESHOLD } from "@repo/utils"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import { LARGE_MARKDOWN_CONTENT_THRESHOLD, MarkdownContent } from "./markdown-content.tsx"
+import { MarkdownContent } from "./markdown-content.tsx"
 
 /** Strip HTML tags and decode the handful of entities we actually produce. */
 function textContentOf(markup: string): string {

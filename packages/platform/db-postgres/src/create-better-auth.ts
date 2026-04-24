@@ -86,7 +86,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   const stripeClient =
     stripeSecretKey && stripeWebhookSecret
       ? new Stripe(stripeSecretKey, {
-          apiVersion: "2026-03-25.dahlia",
+          apiVersion: "2026-04-22.dahlia",
         })
       : null
 

@@ -15,6 +15,9 @@ export function anchorFromExistingAnnotationScore(score: AnnotationScore): Annot
     candidate.startOffset = m.startOffset
     candidate.endOffset = m.endOffset
   }
+  if (m.textFormat !== undefined) {
+    candidate.textFormat = m.textFormat
+  }
   const parsedAnchor = annotationAnchorSchema.safeParse(candidate)
   return parsedAnchor.success ? parsedAnchor.data : undefined
 }

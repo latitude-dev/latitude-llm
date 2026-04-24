@@ -54,4 +54,39 @@ describe("resolveAnnotationAnchorText", () => {
       }),
     ).toBeUndefined()
   })
+
+  it("slices against prettified JSON when textFormat is 'pretty-json'", () => {
+    const raw = '[{"id":"rel-2026-17"},{"id":"rel-2026-18"}]'
+    const prettified = JSON.stringify(JSON.parse(raw), null, 2)
+    const jsonMessages: GenAIMessage[] = [{ role: "assistant", parts: [{ type: "text", content: raw }] }]
+
+    // Offsets target `"id": "rel-2026-18"` inside the *prettified* text.
+    const needle = '"id": "rel-2026-18"'
+    const start = prettified.indexOf(needle)
+    const end = start + needle.length
+
+    expect(
+      resolveAnnotationAnchorText(jsonMessages, {
+        messageIndex: 0,
+        partIndex: 0,
+        startOffset: start,
+        endOffset: end,
+        textFormat: "pretty-json",
+      }),
+    ).toBe(needle)
+  })
+
+  it("leaves already-multiline JSON unchanged under 'pretty-json'", () => {
+    const raw = '{\n  "foo": "bar"\n}'
+    const jsonMessages: GenAIMessage[] = [{ role: "assistant", parts: [{ type: "text", content: raw }] }]
+    expect(
+      resolveAnnotationAnchorText(jsonMessages, {
+        messageIndex: 0,
+        partIndex: 0,
+        startOffset: 0,
+        endOffset: raw.length,
+        textFormat: "pretty-json",
+      }),
+    ).toBe(raw)
+  })
 })

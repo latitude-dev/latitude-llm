@@ -1,3 +1,4 @@
+import { formatPartText } from "@repo/utils"
 import { createContext, type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
@@ -87,7 +88,8 @@ export function TextSelectionProvider({
       )
       if (result) {
         const fullText = getPartText(messagesRef.current, result.messageIndex, result.partIndex)
-        const markdown = fullText?.slice(result.startOffset, result.endOffset) ?? detected.selectedText
+        const effective = fullText ? formatPartText(fullText, result.textFormat) : null
+        const markdown = effective?.slice(result.startOffset, result.endOffset) ?? detected.selectedText
         navigator.clipboard.writeText(markdown)
       } else {
         navigator.clipboard.writeText(detected.selectedText)
@@ -104,13 +106,15 @@ export function TextSelectionProvider({
           const result = resolveSourceOffsets(detected.range, msgs, i, detected.startPartIndex)
           if (result) {
             const fullText = getPartText(msgs, i, detected.startPartIndex)
-            parts.push(fullText?.slice(result.startOffset) ?? "")
+            const effective = fullText ? formatPartText(fullText, result.textFormat) : null
+            parts.push(effective?.slice(result.startOffset) ?? "")
           }
         } else if (i === endIdx) {
           const result = resolveSourceOffsets(detected.range, msgs, i, detected.endPartIndex)
           if (result) {
             const fullText = getPartText(msgs, i, detected.endPartIndex)
-            parts.push(fullText?.slice(0, result.endOffset) ?? "")
+            const effective = fullText ? formatPartText(fullText, result.textFormat) : null
+            parts.push(effective?.slice(0, result.endOffset) ?? "")
           }
         } else {
           const fullText = getPartText(msgs, i, 0)

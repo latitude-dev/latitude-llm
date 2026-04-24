@@ -12,6 +12,13 @@ export {
   safeStringifyJson,
 } from "./format.ts"
 export * from "./http-errors.ts"
+export {
+  detectPartTextFormat,
+  formatPartText,
+  isJsonBlock,
+  LARGE_MARKDOWN_CONTENT_THRESHOLD,
+  prettifyCompactJson,
+} from "./json-format.ts"
 export { mapByEntityId } from "./map-by-entity-id.ts"
 export { LatitudeObservabilityTestError } from "./observability-test.ts"
 export { relativeTime } from "./relativeTime.ts"
