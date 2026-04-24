@@ -337,6 +337,11 @@ export const runTraceEndJob =
         clickhouseClient,
         OrganizationId(payload.organizationId),
       ),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        clickhouseClient,
+        OrganizationId(payload.organizationId),
+      ),
       Effect.provide(RedisCacheStoreLive(redisClient)),
       withTracing,
     )

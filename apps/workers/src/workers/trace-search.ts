@@ -5,14 +5,15 @@ import {
   buildTraceSearchDocument,
   SpanRepository,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
   TRACE_SEARCH_EMBEDDING_MODEL,
-  TRACE_SEARCH_SEMANTIC_CAP,
+  TraceSearchBudget,
   TraceSearchRepository,
 } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import type { RedisClient } from "@platform/cache-redis"
-import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { EmbedBudgetResolverLive, RedisCacheStoreLive, TraceSearchBudgetLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger, withTracing } from "@repo/observability"
@@ -34,30 +35,6 @@ interface RefreshTracePayload {
   readonly startTime: string
   readonly rootSpanName: string
 }
-
-/**
- * Check if a trace is eligible for semantic indexing based on the per-project cap.
- * V1 uses a simple recent-trace cap - the latest N traces per project are eligible.
- */
-const isEligibleForSemanticIndexing = (
-  traceSearchRepo: typeof TraceSearchRepository.Service,
-  organizationId: string,
-  projectId: string,
-): Effect.Effect<boolean, never, never> =>
-  Effect.gen(function* () {
-    const currentCount = yield* traceSearchRepo.countDocumentsByProject(
-      OrganizationId(organizationId),
-      ProjectId(projectId),
-    )
-    // Eligible if we're under the cap
-    return currentCount < TRACE_SEARCH_SEMANTIC_CAP
-  }).pipe(
-    Effect.orElseSucceed(() => {
-      // Default to eligible on error
-      logger.warn("Failed to check semantic eligibility, defaulting to eligible")
-      return true
-    }),
-  )
 
 /**
  * Generate embedding for search text using the AI embedding service.
@@ -116,7 +93,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const inputMessages = spanMessages.flatMap((sm) => sm.inputMessages)
     const outputMessages = spanMessages.flatMap((sm) => sm.outputMessages)
 
-    const searchDocument = buildTraceSearchDocument({
+    const searchDocument = yield* buildTraceSearchDocument({
       traceId,
       startTime,
       rootSpanName: payload.rootSpanName,
@@ -137,15 +114,19 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
 
-    // 4. Check semantic eligibility
-    const eligible = yield* isEligibleForSemanticIndexing(traceSearchRepo, organizationId, projectId)
-
-    if (!eligible) {
-      logger.info(`Trace ${traceId} not eligible for semantic indexing (cap reached)`)
+    // 4. Skip semantic indexing for near-empty traces. Short documents embed
+    // into uninformative vectors that cluster at similar distances from every
+    // query, adding retrieval noise while still costing Voyage credits.
+    if (searchDocument.searchText.length < TRACE_SEARCH_EMBEDDING_MIN_LENGTH) {
+      logger.info(
+        `Trace ${traceId} below embedding min length (${searchDocument.searchText.length} < ${TRACE_SEARCH_EMBEDDING_MIN_LENGTH}), skipping semantic index`,
+      )
       return
     }
 
-    // 5. Check if embedding already exists with same hash
+    // 5. Dedupe against an existing identical embedding. Stale rows age out
+    // via the ClickHouse TTL on `trace_search_embeddings`; this worker always
+    // embeds eligible new traces (subject to budget check below).
     const hasExisting = yield* traceSearchRepo.hasEmbeddingWithHash(
       OrganizationId(organizationId),
       ProjectId(projectId),
@@ -158,7 +139,32 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       return
     }
 
-    // 6. Generate embedding and upsert
+    // 6. Gate on the per-org token budget *before* calling Voyage. If any of
+    // the daily / weekly / monthly windows would overflow, `tryConsume` leaves
+    // the counters untouched and returns false — we then skip the embed call
+    // entirely (trace stays lexical-only). Tracker errors (Redis down) fail
+    // open: we log and proceed so an infra blip doesn't silently disable
+    // semantic indexing.
+    const budget = yield* TraceSearchBudget
+    const estimatedTokens = Math.ceil(searchDocument.searchText.length / 4)
+    const budgetOk = yield* budget.tryConsume(OrganizationId(organizationId), estimatedTokens).pipe(
+      Effect.tapError((error) =>
+        Effect.sync(() => logger.warn(`Embed budget check failed for org ${organizationId}`, error)),
+      ),
+      Effect.orElseSucceed(() => true),
+    )
+
+    if (!budgetOk) {
+      logger.info(
+        `Org ${organizationId} over embed budget (est ${estimatedTokens} tokens); skipping semantic index for trace ${traceId}`,
+      )
+      return
+    }
+
+    // 7. Generate the embedding. Budget was already debited in step 6; a
+    // Voyage failure here means we paid tokens that never shipped, which is
+    // acceptable at our scales (the budget is a cost ceiling, not a financial
+    // contract) and keeps the enforcement path simple.
     const embedding = yield* generateEmbedding(searchDocument.searchText)
 
     if (embedding.length === 0) {
@@ -191,6 +197,11 @@ export const createTraceSearchWorker = ({ consumer, clickhouseClient, redisClien
   const chClient = clickhouseClient ?? getClickhouseClient()
   const rdClient = redisClient ?? getRedisClient()
 
+  // Budget tracker depends on the resolver; both are Redis-backed (tracker)
+  // and memory-backed (resolver, hardcoded defaults until subscription-plan
+  // tiers land and swap in a Postgres-backed impl).
+  const budgetLayer = Layer.provide(TraceSearchBudgetLive(rdClient), EmbedBudgetResolverLive)
+
   consumer.subscribe("trace-search", {
     refreshTrace: (payload) =>
       processRefreshTrace(payload as RefreshTracePayload).pipe(
@@ -200,7 +211,7 @@ export const createTraceSearchWorker = ({ consumer, clickhouseClient, redisClien
           OrganizationId(payload.organizationId),
         ),
         withAi(AIEmbedLive, rdClient),
-        Effect.provide(RedisCacheStoreLive(rdClient)),
+        Effect.provide(Layer.mergeAll(RedisCacheStoreLive(rdClient), budgetLayer)),
         withTracing,
         Effect.asVoid,
       ),

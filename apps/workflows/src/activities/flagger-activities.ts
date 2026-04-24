@@ -8,6 +8,7 @@ import {
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -37,6 +38,7 @@ export const runFlagger = async (input: {
   Effect.runPromise(
     runSystemQueueFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withAi(AIEmbedLive, getRedisClient()),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.tap(() =>
@@ -75,6 +77,7 @@ export const draftAnnotate = async (input: {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
+      withAi(AIEmbedLive, getRedisClient()),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.tapError((error) =>
@@ -118,6 +121,7 @@ export const persistAnnotation = async (input: {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
+      withAi(AIEmbedLive, getRedisClient()),
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {

@@ -1,4 +1,16 @@
-import { Button, CloseTrigger, Icon, Input, Label, Modal, Switch, Tabs, Text, toast } from "@repo/ui"
+import {
+  Button,
+  CloseTrigger,
+  Icon,
+  Input,
+  Label,
+  Modal,
+  Switch,
+  Tabs,
+  Text,
+  toast,
+  useValueWithDefault,
+} from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
@@ -59,7 +71,7 @@ function IssuesPage() {
   const [timeFrom, setTimeFrom] = useParamState("issuesTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
-  const [searchInput, setSearchInput] = useState(searchQuery)
+  const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [sorting, setSorting] = useState<IssuesTableSorting>(DEFAULT_SORTING)
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)

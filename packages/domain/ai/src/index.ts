@@ -83,6 +83,12 @@ export interface EmbedInput {
   readonly model: string
   readonly dimensions: number
   /**
+   * Voyage (and most asymmetric embedding models) produce different vectors
+   * for documents vs queries. Indexing callers should use `"document"`;
+   * search-time callers should use `"query"`. Defaults to `"document"`.
+   */
+  readonly inputType?: "document" | "query"
+  /**
    * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
    * Excluded from AI cache keys (see `withAICache`).
    */

@@ -1,11 +1,13 @@
 import { addTracesToQueue, type TraceSelection } from "@domain/annotation-queues"
 import type { QueueConsumer } from "@domain/queue"
 import { AnnotationQueueId, type FilterSet, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("annotation-queues")
 
@@ -43,6 +45,7 @@ interface AnnotationQueuesDeps {
 export const createAnnotationQueuesWorker = ({ consumer }: AnnotationQueuesDeps) => {
   const pgClient = getPostgresClient()
   const chClient = getClickhouseClient()
+  const rdClient = getRedisClient()
 
   consumer.subscribe("annotation-queues", {
     bulkImport: (payload: BulkImportPayload) => {
@@ -58,6 +61,7 @@ export const createAnnotationQueuesWorker = ({ consumer }: AnnotationQueuesDeps)
           organizationId,
         ),
         withClickHouse(TraceRepositoryLive, chClient, organizationId),
+        withAi(AIEmbedLive, rdClient),
         withTracing,
         Effect.tap((result) =>
           Effect.sync(() =>

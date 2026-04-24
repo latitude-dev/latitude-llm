@@ -3,6 +3,8 @@ import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
 import { cuidSchema, FILTER_OPERATORS, traceIdSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -158,6 +160,7 @@ export const createAnnotationsRoutes = () => {
           c.var.clickhouse,
           organizationId,
         ),
+        withAi(AIEmbedLive, c.var.redis),
         Effect.provide(QueuePublisherLive(c.var.queuePublisher)),
         withTracing,
       ),
