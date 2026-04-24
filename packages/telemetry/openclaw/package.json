@@ -1,0 +1,65 @@
+{
+  "name": "@latitude-data/openclaw-telemetry",
+  "version": "0.0.1",
+  "description": "OpenClaw plugin that streams LLM calls, tool executions, and agent runs to Latitude as OTLP traces",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "telemetry",
+    "otlp",
+    "opentelemetry",
+    "latitude",
+    "observability"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw"
+  },
+  "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw#readme",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "latitude-openclaw": "./dist/cli.js"
+  },
+  "main": "./dist/plugin.js",
+  "types": "./dist/plugin.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=forks --passWithNoTests --dir src"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.2.0",
+    "picocolors": "^1.1.1"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
