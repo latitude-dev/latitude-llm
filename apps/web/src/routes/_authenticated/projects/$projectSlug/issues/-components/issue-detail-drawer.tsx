@@ -426,6 +426,7 @@ export function IssueDetailDrawer({
             contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
             <ProjectTracesTable
+              projectId={projectId}
               data={traces}
               isLoading={tracesLoading}
               visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}

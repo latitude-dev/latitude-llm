@@ -8,12 +8,8 @@ import type {
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
-import {
-  getTraceCohortSummaryUseCase,
-  mergeTraceHistogramTimeFilters,
-  resolveTraceCohortFilters,
-  TraceRepository,
-} from "@domain/spans"
+import { getTraceCohortSummaryByTagsUseCase, mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -191,25 +187,22 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
     )
   })
 
-export const getTraceCohortSummaryByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+export const getTraceCohortSummaryByTags = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), tags: z.array(z.string()).readonly() }))
   .handler(async ({ data }): Promise<TraceCohortSummary> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    const { effectiveRangeStartIso, effectiveRangeEndIso, effectiveFilters } = resolveTraceCohortFilters(
-      data.filters,
-      Date.now(),
-    )
-
     return Effect.runPromise(
-      getTraceCohortSummaryUseCase({
+      getTraceCohortSummaryByTagsUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
-        filters: effectiveFilters,
-        effectiveRangeStartIso,
-        effectiveRangeEndIso,
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+        tags: data.tags,
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
     )
   })
 

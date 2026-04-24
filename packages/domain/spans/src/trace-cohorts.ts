@@ -66,8 +66,6 @@ export interface TraceCohortSummaryEntry {
 }
 
 export interface TraceCohortSummary {
-  readonly effectiveRangeStartIso: string
-  readonly effectiveRangeEndIso: string
   readonly traceCount: number
   readonly baselines: Readonly<Record<TraceCohortMetric, TraceMetricBaseline>>
 }
@@ -79,12 +77,6 @@ export interface TraceResourceOutlierReason {
   readonly values: Partial<Record<TraceCohortMetric, number>>
   readonly thresholds: Partial<Record<TraceCohortMetric, number>>
   readonly medians: Partial<Record<TraceCohortMetric, number>>
-}
-
-export interface TraceCohortListingSpec {
-  readonly cohort: TraceCohortKey
-  readonly baselines: Readonly<Record<TraceCohortMetric, TraceMetricBaseline>>
-  readonly unavailableReason?: TraceCohortUnavailableReason
 }
 
 /**
@@ -278,18 +270,6 @@ export function buildTraceCohortSummaryEntries(
       unavailableReason: availability.unavailableReason ?? "insufficient-baseline",
     }
   })
-}
-
-export function buildTraceCohortListingSpec(
-  cohort: TraceCohortKey,
-  baselines: Readonly<Record<TraceCohortMetric, TraceMetricBaseline>>,
-): TraceCohortListingSpec {
-  const availability = isTraceCohortKeyAvailable(cohort, baselines)
-  return {
-    cohort,
-    baselines,
-    ...(availability.available ? {} : { unavailableReason: availability.unavailableReason }),
-  }
 }
 
 function buildMetricReason(

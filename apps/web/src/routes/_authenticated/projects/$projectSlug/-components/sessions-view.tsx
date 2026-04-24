@@ -1,5 +1,4 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceCohortSummary } from "@domain/spans"
 import {
   type CheckedState,
   type ExpandedRows,
@@ -34,8 +33,6 @@ function field<K extends keyof SessionRecord & keyof TraceRecord>(row: SessionTa
 const EMPTY_CELL = <Text.H5 color="foregroundMuted">-</Text.H5>
 
 const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
-
-type Baselines = TraceCohortSummary["baselines"]
 
 const SESSION_TRACES_LIMIT = 25
 
@@ -169,7 +166,6 @@ interface SessionsViewProps {
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
   readonly activeDrawerTab: string
-  readonly baselines?: Baselines | undefined
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
@@ -185,7 +181,6 @@ export function SessionsView({
   filtersOpen,
   activeTraceId,
   activeDrawerTab: _activeDrawerTab,
-  baselines: _baselines,
   selectionState,
   onSelectionChange,
   totalTraceCount,

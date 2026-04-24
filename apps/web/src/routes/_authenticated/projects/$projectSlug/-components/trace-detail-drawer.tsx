@@ -1,5 +1,4 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceCohortSummary } from "@domain/spans"
 import {
   Button,
   CopyableText,
@@ -98,7 +97,6 @@ export function TraceDetailDrawer({
   traceId,
   trace,
   projectId,
-  baselines,
   filters,
   onFiltersChange,
   onClose,
@@ -110,7 +108,6 @@ export function TraceDetailDrawer({
   readonly traceId: string
   readonly trace?: TraceRecord | undefined
   readonly projectId: string
-  readonly baselines?: TraceCohortSummary["baselines"] | undefined
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: (filters: FilterSet) => void
   readonly onClose: () => void
@@ -313,11 +310,11 @@ export function TraceDetailDrawer({
         {visitedTabs.has("trace") && (
           <TraceTab
             traceId={traceId}
+            projectId={projectId}
             traceRecord={traceRecord}
             traceDetail={traceDetail}
             isRecordLoading={isRecordLoading}
             isDetailLoading={isDetailLoading}
-            baselines={baselines}
             filters={filters}
             onFiltersChange={onFiltersChange}
           />

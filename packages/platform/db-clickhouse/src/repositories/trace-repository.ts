@@ -331,18 +331,21 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,
   Effect.gen(function* () {
-    const getCohortBaselineByProjectId: TraceRepositoryShape["getCohortBaselineByProjectId"] = ({
+    const getCohortBaselineByTags: TraceRepositoryShape["getCohortBaselineByTags"] = ({
       organizationId,
       projectId,
-      filters,
+      tags,
       excludeTraceId,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
-        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
         const excludeClause = excludeTraceId ? `AND trace_id != {excludeTraceId:FixedString(32)}` : ""
+        // Canonicalize as a sorted set for stable param shape. ClickHouse stores `tags` as
+        // `groupUniqArrayArray(tags)` (already deduped), so pairing `length(tags) = N` with
+        // `hasAll(tags, X)` gives order-independent set equality only when the input is a set
+        // too — passing duplicates (e.g. ["a","a"]) would send `tagsLen=2` and match no traces.
+        // Empty `tags` degenerates to `length(tags) = 0` (hasAll is trivially true), isolating untagged traces.
+        const sortedTags = [...new Set(tags)].sort()
 
         return yield* chSqlClient
           .query(async (client) => {
@@ -374,15 +377,16 @@ export const TraceRepositoryLive = Layer.effect(
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        ${extraWhere}
                         ${excludeClause}
                       GROUP BY organization_id, project_id, trace_id
-                      ${havingClause}
+                      HAVING length(tags) = {tagsLen:UInt32}
+                        AND hasAll(tags, {tags:Array(String)})
                     )`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                ...filterParams,
+                tags: sortedTags,
+                tagsLen: sortedTags.length,
                 ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
               },
               format: "JSONEachRow",
@@ -478,7 +482,7 @@ export const TraceRepositoryLive = Layer.effect(
                 },
               }
             }),
-            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
+            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByTags")),
           )
       })
 
@@ -678,7 +682,7 @@ export const TraceRepositoryLive = Layer.effect(
       })
 
     return {
-      getCohortBaselineByProjectId,
+      getCohortBaselineByTags,
       listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) =>

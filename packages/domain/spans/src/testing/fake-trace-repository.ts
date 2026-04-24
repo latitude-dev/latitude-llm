@@ -4,7 +4,7 @@ import { emptyTraceMetrics, type TraceRepositoryShape } from "../ports/trace-rep
 
 export const createFakeTraceRepository = (overrides?: Partial<TraceRepositoryShape>) => {
   const repository: TraceRepositoryShape = {
-    getCohortBaselineByProjectId: () =>
+    getCohortBaselineByTags: () =>
       Effect.succeed({
         traceCount: 0,
         metrics: {
