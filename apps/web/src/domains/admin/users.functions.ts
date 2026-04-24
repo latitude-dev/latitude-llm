@@ -5,7 +5,7 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { requireAdminSession } from "../../server/admin-auth.ts"
+import { adminMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
 export interface AdminUserDetailsMembershipDto {
@@ -54,18 +54,17 @@ export const adminGetUserInputSchema = z.object({
 /**
  * Backoffice user-detail fetch.
  *
- * Defence-in-depth note — same discipline as every other admin RPC:
- * 1. `requireAdminSession()` is the first line (before any IO). Non-admins
- *    hitting this endpoint get `NotFoundError`, identical to hitting a
- *    non-existent server function.
- * 2. Queries go through `getAdminPostgresClient()` + `withPostgres` with
- *    the default `OrganizationId("system")` scope (the only sanctioned
- *    RLS-bypass signal).
+ * Guard: {@link adminMiddleware} runs before the input validator and
+ * rejects non-admins with `NotFoundError` (identical to hitting a
+ * non-existent server function). Queries use
+ * {@link getAdminPostgresClient} + `withPostgres` at the default
+ * `OrganizationId("system")` scope — the only sanctioned RLS-bypass
+ * signal.
  */
 export const adminGetUser = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .inputValidator(adminGetUserInputSchema)
   .handler(async ({ data }): Promise<AdminUserDetailsDto> => {
-    await requireAdminSession()
     const client = getAdminPostgresClient()
 
     const details = await Effect.runPromise(

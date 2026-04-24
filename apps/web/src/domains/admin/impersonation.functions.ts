@@ -1,14 +1,13 @@
 import { getUserDetailsUseCase } from "@domain/admin"
-import { generateId, NotFoundError, UserId } from "@domain/shared"
+import { generateId, UserId } from "@domain/shared"
 import { AdminUserRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import { z } from "zod"
-import { requireAdminSession } from "../../server/admin-auth.ts"
+import { adminMiddleware, impersonatingMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
-import { ensureSession } from "../sessions/session.functions.ts"
 
 /**
  * Exported for input-schema tests.
@@ -20,29 +19,28 @@ export const impersonateUserInputSchema = z.object({
 /**
  * Start impersonating another user.
  *
- * The flow:
- * 1. Guard: `requireAdminSession()` — rejects non-admins with
- *    `NotFoundError`, matching the three-guard discipline.
- * 2. Resolve the target's first organization membership via
- *    {@link AdminUserRepository}. This also verifies the target
- *    exists (Better Auth would otherwise create an impersonation
- *    session for a nonsense id). The first-org id is captured in the
- *    audit event as a best-effort hint of which tenant the admin was
- *    about to see.
- * 3. Write `AdminImpersonationStarted` to the outbox. Writing
- *    **before** the Better Auth swap means if the swap fails we still
- *    have a record that an attempt was made. The event's envelope
- *    `organizationId` is `"system"` — impersonation is platform-wide
- *    audit, not tenant-owned.
- * 4. Call Better Auth's `auth.api.impersonateUser`, which mints a new
- *    session cookie for the target user and stores the admin's id in
- *    `sessions.impersonatedBy`. The client redirects to `/` after
- *    this returns.
+ * Guard: {@link adminMiddleware} — the admin's id is injected as
+ * `context.adminUserId` so the audit event can reference it without a
+ * second session fetch.
+ *
+ * Flow:
+ * 1. Resolve the target's first organisation membership (if any) via
+ *    the admin user repository. This also verifies the target exists —
+ *    Better Auth would otherwise happily mint an impersonation session
+ *    for a nonsense id.
+ * 2. Write `AdminImpersonationStarted` to the outbox *before* the
+ *    Better Auth swap, so an attempt is recorded even if the swap
+ *    fails. Envelope `organizationId` is `"system"` (platform-wide
+ *    audit, no tenant ownership).
+ * 3. Call `auth.api.impersonateUser`, which rewrites the session
+ *    cookie to the target's session and stores the admin's id in
+ *    `sessions.impersonatedBy`. Client redirects to `/` on return.
  */
 export const impersonateUser = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
   .inputValidator(impersonateUserInputSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    const { userId: adminUserId } = await requireAdminSession()
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const adminUserId = context.adminUserId
 
     const target = await Effect.runPromise(
       getUserDetailsUseCase({ userId: UserId(data.userId) }).pipe(
@@ -82,50 +80,45 @@ export const impersonateUser = createServerFn({ method: "POST" })
 /**
  * Stop an active impersonation and restore the admin's original session.
  *
- * NOTE: this handler deliberately does NOT call `requireAdminSession()`.
+ * Guard: {@link impersonatingMiddleware} — not `adminMiddleware`.
  * During impersonation the current session user is the *target* (role
- * = `"user"`), so an admin-role check would reject the very call that
- * needs to succeed. The guard is instead "is `session.impersonatedBy`
- * set?" — which is only true inside an active impersonation.
+ * typically `"user"`), so an admin-role check would reject the call
+ * that's supposed to succeed. The middleware instead gates on
+ * `session.impersonatedBy` being set, and injects both
+ * `context.adminUserId` (recovered from `impersonatedBy` before
+ * Better Auth swaps it back) and `context.targetUserId` so the audit
+ * event can reference both sides.
  *
- * The admin's id is recovered from `session.impersonatedBy` *before*
- * calling Better Auth's `stopImpersonating` (which swaps the cookie
- * back and clears the field). The audit event is written before the
- * swap for the same "record the attempt even if the swap fails"
- * reason as on start.
+ * The audit event is written before `auth.api.stopImpersonating` for
+ * the same "record the attempt even if the swap fails" reason as
+ * `impersonateUser`.
  */
-export const stopImpersonating = createServerFn({ method: "POST" }).handler(async (): Promise<{ ok: true }> => {
-  const session = await ensureSession()
-  const adminUserId = (session.session as { impersonatedBy?: string | null }).impersonatedBy ?? null
-  if (!adminUserId) {
-    // Match the backoffice 404 discipline — never fingerprint admin
-    // surfaces with 401/403 shapes.
-    throw new NotFoundError({ entity: "Route", id: "backoffice" })
-  }
+export const stopImpersonating = createServerFn({ method: "POST" })
+  .middleware([impersonatingMiddleware])
+  .handler(async ({ context }): Promise<{ ok: true }> => {
+    const { adminUserId, targetUserId } = context
 
-  const targetUserId = session.user.id
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter
+        .write({
+          id: generateId(),
+          eventName: "AdminImpersonationStopped",
+          aggregateType: "user",
+          aggregateId: targetUserId,
+          organizationId: "system",
+          payload: {
+            adminUserId,
+            targetUserId,
+          },
+          occurredAt: new Date(),
+        })
+        .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
+    )
 
-  const outboxWriter = getOutboxWriter()
-  await Effect.runPromise(
-    outboxWriter
-      .write({
-        id: generateId(),
-        eventName: "AdminImpersonationStopped",
-        aggregateType: "user",
-        aggregateId: targetUserId,
-        organizationId: "system",
-        payload: {
-          adminUserId,
-          targetUserId,
-        },
-        occurredAt: new Date(),
-      })
-      .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
-  )
+    const headers = getRequestHeaders()
+    const auth = getBetterAuth()
+    await auth.api.stopImpersonating({ headers })
 
-  const headers = getRequestHeaders()
-  const auth = getBetterAuth()
-  await auth.api.stopImpersonating({ headers })
-
-  return { ok: true }
-})
+    return { ok: true }
+  })
