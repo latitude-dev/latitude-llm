@@ -156,7 +156,7 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
             <Alert
               variant="default"
               title="System queue"
-              description="Latitude manages this queue. You can pause automated sampling so traces are no longer evaluated for it."
+              description="Latitude manages this queue. You can disable it if you don't want new traces to be flagged."
             />
             <form.Field name="sampling">
               {(field) => {
@@ -168,8 +168,8 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
                 return (
                   <SwitchInput
                     id="system-queue-sampling-enabled"
-                    label="Automated sampling"
-                    description="When disabled, this queue does not receive new automatically flagged traces. Turn it back on to resume sampling at the default rate for this queue type."
+                    label="Enable this queue"
+                    description="When disabled, new traces will not be flagged for this queue."
                     checked={enabled}
                     onCheckedChange={(checked) => field.handleChange(checked ? restoreRate : 0)}
                   />
