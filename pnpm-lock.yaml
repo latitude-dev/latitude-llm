@@ -203,6 +203,12 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.2.4
         version: 1.3.0(hono@4.12.14)(zod@4.3.6)
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai
+      '@platform/ai-voyage':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai-voyage
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -251,7 +257,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/ingest:
     dependencies:
@@ -312,7 +318,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -503,6 +509,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.14)
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../packages/domain/ai
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
@@ -1374,6 +1383,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../../domain/spans
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -1389,6 +1401,9 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.18.2
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
@@ -17139,7 +17154,7 @@ snapshots:
 
   '@types/pg-pool@2.0.7':
     dependencies:
-      '@types/pg': 8.15.6
+      '@types/pg': 8.16.0
 
   '@types/pg@8.15.6':
     dependencies:
@@ -17622,7 +17637,7 @@ snapshots:
 
   better-call@1.1.8(zod@4.3.6):
     dependencies:
-      '@better-auth/utils': 0.3.0
+      '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       rou3: 0.7.12
       set-cookie-parser: 2.7.2

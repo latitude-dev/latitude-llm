@@ -1,5 +1,7 @@
 export { CacheStore, type CacheStoreShape } from "@domain/shared"
 export { RedisCacheStoreLive } from "./ai-cache.ts"
+export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
+export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
 
 import { ServiceMap } from "effect"
 

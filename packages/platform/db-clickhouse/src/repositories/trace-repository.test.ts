@@ -1,3 +1,4 @@
+import { AI, AIError, type AIShape } from "@domain/ai"
 import type { ChSqlClient } from "@domain/shared"
 import {
   OrganizationId,
@@ -8,9 +9,9 @@ import {
   SEED_PROJECT_ID,
   TraceId,
 } from "@domain/shared/seeding"
-import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
+import { TRACE_SEARCH_EMBEDDING_DIMENSIONS, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { scoreSeeders } from "../seeds/scores/index.ts"
@@ -19,6 +20,13 @@ import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { TraceRepositoryLive } from "./trace-repository.ts"
+
+/** Mock AI layer that provides a fake embedding service for testing. */
+const mockAILayer = Layer.succeed(AI, {
+  generate: () => Effect.fail(new AIError({ message: "Generate not implemented in mock" })),
+  embed: () => Effect.succeed({ embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1) }),
+  rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
+} as AIShape)
 
 const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
@@ -119,10 +127,11 @@ describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
 
   beforeAll(async () => {
+    const combinedLayer = TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer))
     repo = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* TraceRepository
-      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, ORG_ID)),
+      }).pipe(withClickHouse(combinedLayer, ch.client, ORG_ID)),
     )
   })
 
@@ -471,6 +480,163 @@ describe("TraceRepository", () => {
       )
 
       expect(filterIds).toEqual([])
+    })
+  })
+
+  describe("listByProjectId with searchQuery (hybrid path)", () => {
+    // These test traces are inserted fresh in each test (no shared seeder),
+    // so their IDs don't collide with the fixed/scored seeders above.
+    const HYBRID_TRACE = TraceId(`${"a".repeat(31)}0`) // lexical + semantic match
+    const LEX_ONLY_TRACE = TraceId(`${"b".repeat(31)}0`) // lexical match, no embedding
+    const SEM_ONLY_TRACE = TraceId(`${"c".repeat(31)}0`) // no lexical, aligned embedding
+    const NOISE_TRACE = TraceId(`${"d".repeat(31)}0`) // anti-parallel embedding → below floor
+    const DIMS = 2048
+    const QUERY = "needle"
+
+    // Mock AI returns [0.1, 0.1, ...]; cosineSimilarity against:
+    //   aligned  [0.1, 0.1, ...]   → 1.0
+    //   antiparallel [-0.1, -0.1, ...] → -1.0
+    const alignedEmbedding = new Array(DIMS).fill(0.1) as readonly number[]
+    const antiparallelEmbedding = new Array(DIMS).fill(-0.1) as readonly number[]
+
+    const insertSearchRows = async () => {
+      const startTime = new Date(Date.UTC(2026, 0, 1, 0, 0, 0))
+      const spans = [HYBRID_TRACE, LEX_ONLY_TRACE, SEM_ONLY_TRACE, NOISE_TRACE].map((traceId, i) =>
+        makeSpanRow({
+          traceId,
+          spanId: `${i.toString(16).padStart(2, "0")}${"e".repeat(14)}`,
+          startTime: new Date(startTime.getTime() + i * 1000),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+      )
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", spans))
+
+      const docs = [
+        { traceId: HYBRID_TRACE, text: `customer ${QUERY} in checkout` },
+        { traceId: LEX_ONLY_TRACE, text: `audit review mentions ${QUERY}` },
+        { traceId: SEM_ONLY_TRACE, text: "unrelated routine diagnostic" },
+        { traceId: NOISE_TRACE, text: "unrelated noise text" },
+      ]
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "trace_search_documents",
+          docs.map((d, i) => ({
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: d.traceId,
+            start_time: toClickHouseDateTime(new Date(startTime.getTime() + i * 1000)),
+            root_span_name: "root",
+            search_text: d.text,
+            content_hash: `${"f".repeat(63)}${i}`,
+            indexed_at: toClickHouseDateTime(startTime),
+          })),
+        ),
+      )
+
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "trace_search_embeddings", [
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: HYBRID_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}0`,
+            embedding_model: "voyage-4-large",
+            embedding: [...alignedEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: SEM_ONLY_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}2`,
+            embedding_model: "voyage-4-large",
+            embedding: [...alignedEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: NOISE_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}3`,
+            embedding_model: "voyage-4-large",
+            embedding: [...antiparallelEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+        ]),
+      )
+    }
+
+    it("ranks lexical+semantic, lexical-only, and semantic-only hits above the floor and drops antiparallel noise", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: QUERY },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+
+      // HYBRID_TRACE (score 1.0) and SEM_ONLY_TRACE (0.7) are semantic-ranked
+      // above LEX_ONLY_TRACE (0.3). NOISE_TRACE (-0.7) is cut by the HAVING
+      // floor. This is also the UNION-ALL/FULL-OUTER-JOIN regression test:
+      // SEM_ONLY_TRACE has no lexical row, and with FULL OUTER JOIN its
+      // FixedString(32) trace_id would coalesce to zero bytes and drop out
+      // of the downstream inner join against `traces`. UNION ALL preserves it.
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+
+      // HYBRID > SEM_ONLY > LEX_ONLY by relevance, regardless of trace_id tie-break.
+      expect(ids.indexOf(HYBRID_TRACE)).toBeLessThan(ids.indexOf(SEM_ONLY_TRACE))
+      expect(ids.indexOf(SEM_ONLY_TRACE)).toBeLessThan(ids.indexOf(LEX_ONLY_TRACE))
+    })
+
+    it("keeps count / metrics / histogram consistent with the list", async () => {
+      await insertSearchRows()
+
+      const [page, count, metrics, histogram] = await Promise.all([
+        runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: QUERY },
+          }),
+        ),
+        runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: QUERY })),
+        runCh(
+          repo.aggregateMetricsByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            searchQuery: QUERY,
+          }),
+        ),
+        runCh(
+          repo.histogramByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            bucketSeconds: 3600,
+            searchQuery: QUERY,
+          }),
+        ),
+      ])
+
+      // All four agree on the same 3-trace result set (hybrid, lexical-only,
+      // semantic-only — the antiparallel noise row is below the floor).
+      const histogramCount = histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)
+      expect(page.items).toHaveLength(3)
+      expect(count).toBe(3)
+      expect(metrics.spanCount.sum).toBe(3)
+      expect(histogramCount).toBe(3)
     })
   })
 })

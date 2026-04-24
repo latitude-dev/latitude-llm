@@ -9,6 +9,8 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import { getTraceCohortSummaryByTagsUseCase, mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
@@ -118,6 +120,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       sortBy: z.string().optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
       filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
     }),
   )
   .handler(async ({ data }): Promise<TraceListResult> => {
@@ -136,9 +139,14 @@ export const listTracesByProject = createServerFn({ method: "GET" })
             ...(data.sortBy ? { sortBy: data.sortBy } : {}),
             ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
             ...(data.filters ? { filters: data.filters } : {}),
+            ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           },
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
 
     if (!page.nextCursor) {
@@ -152,7 +160,13 @@ export const listTracesByProject = createServerFn({ method: "GET" })
   })
 
 export const countTracesByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -164,13 +178,24 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<TraceMetrics | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -182,8 +207,13 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -216,6 +246,7 @@ const traceHistogramInputSchema = z.object({
     .int()
     .positive()
     .max(90 * 24 * 60 * 60),
+  searchQuery: z.string().max(500).optional(),
 })
 
 export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
@@ -240,8 +271,13 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           filters: mergedFilters,
           bucketSeconds: data.bucketSeconds,
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
@@ -262,7 +298,11 @@ export const getTraceDetail = createServerFn({ method: "GET" })
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return detail ? serializeTraceDetail(detail) : null
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
 
     // rosetta-ai GenAI types use [x: string]: unknown index signatures, but
@@ -342,6 +382,10 @@ export const getTraceDistinctValues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.search ? { search: data.search } : {}),
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })

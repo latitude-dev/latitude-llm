@@ -41,12 +41,14 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly searchQuery?: string
   }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly searchQuery?: string
   }): Effect.Effect<TraceMetrics, RepositoryError, ChSqlClient>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
@@ -55,6 +57,7 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly bucketSeconds: number
+    readonly searchQuery?: string
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
   findByTraceId(input: {
@@ -110,6 +113,7 @@ export interface TraceListOptions {
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
+  readonly searchQuery?: string
 }
 
 export interface TraceListPage {

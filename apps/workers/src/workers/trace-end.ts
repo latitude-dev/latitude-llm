@@ -286,6 +286,15 @@ export const runTraceEndJob =
 
       const { matchedSlugs } = yield* runDeterministicSystemMatchersUseCase({ trace: traceDetail })
 
+      // Publish trace-search refresh task after successful trace-end completion
+      yield* publisher.publish("trace-search", "refreshTrace", {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        traceId: payload.traceId,
+        startTime: traceDetail.startTime.toISOString(),
+        rootSpanName: traceDetail.rootSpanName,
+      })
+
       return {
         action: "completed",
         summary: {
@@ -321,6 +330,11 @@ export const runTraceEndJob =
           ScoreRepositoryLive,
         ),
         postgresClient,
+        OrganizationId(payload.organizationId),
+      ),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        clickhouseClient,
         OrganizationId(payload.organizationId),
       ),
       withClickHouse(

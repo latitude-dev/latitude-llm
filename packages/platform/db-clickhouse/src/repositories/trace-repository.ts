@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { AI } from "@domain/ai"
 import {
   ChSqlClient,
   type ChSqlClientShape,
@@ -23,13 +24,151 @@ import type {
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
-import { emptyTraceMetrics, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
+import {
+  emptyTraceMetrics,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_MODEL,
+  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+  TraceRepository,
+  type TraceRepositoryShape,
+} from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Option } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Trace Search Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Configuration for hybrid search weights (lexical vs semantic). */
+const HYBRID_SEARCH_CONFIG = {
+  /** Weight for lexical relevance score (0-1). */
+  lexicalWeight: 0.3,
+  /** Weight for semantic relevance score (0-1). */
+  semanticWeight: 0.7,
+} as const
+
+/**
+ * Cap on the semantic-side candidate pool. Cosine scan is linear over the
+ * embeddings table; above ~10k per project latency becomes user-visible. The
+ * cap trades recall on the long tail for bounded query time — realistic
+ * projects stay well under this in a 30-day TTL window.
+ */
+const SEMANTIC_SCAN_LIMIT = 10_000
+
+/**
+ * Builds a subquery that returns matching trace_ids from trace_search_documents.
+ * Uses tokenbf_v1 and ngrambf_v1 indexes for efficient lexical search.
+ */
+function buildLexicalSearchSubquery(searchQuery: string): { subquery: string; params: Record<string, string> } {
+  // Normalize the search query for token matching
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+
+  // CAST(trace_id AS String): both UNION ALL branches must produce the same
+  // trace_id type, and the semantic branch returns String (post-cast) so the
+  // lexical branch matches.
+  return {
+    subquery: `SELECT CAST(trace_id AS String) AS trace_id, 1.0 AS lexical_score FROM trace_search_documents
+              WHERE organization_id = {organizationId:String}
+                AND project_id = {projectId:String}
+                AND search_text ILIKE {searchPattern:String}`,
+    params: {
+      searchPattern: `%${normalizedQuery}%`,
+    },
+  }
+}
+
+/**
+ * Builds a subquery for semantic search candidates using pre-computed query embedding.
+ * Cosine distance is converted to a similarity score: 1 - distance.
+ */
+function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  return {
+    subquery: `SELECT
+                CAST(trace_id AS String) AS trace_id,
+                (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+              FROM trace_search_embeddings
+              WHERE organization_id = {organizationId:String}
+                AND project_id = {projectId:String}
+              ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
+              LIMIT {semanticScanLimit:UInt32}`,
+    params: {
+      queryEmbedding: [...queryEmbedding],
+      semanticScanLimit: SEMANTIC_SCAN_LIMIT,
+    },
+  }
+}
+
+/**
+ * Builds a hybrid search subquery combining lexical and semantic candidates.
+ * Uses a weighted combination of lexical and semantic scores.
+ * Traces with only lexical matches still participate (semantic_score = 0).
+ * Traces with only semantic matches also participate (lexical_score = 0).
+ */
+function buildHybridSearchSubquery(
+  searchQuery: string,
+  queryEmbedding: readonly number[] | undefined,
+): { subquery: string; params: Record<string, unknown> } {
+  const lexicalResult = buildLexicalSearchSubquery(searchQuery)
+
+  // If no embedding available, fall back to lexical-only
+  if (!queryEmbedding || queryEmbedding.length === 0) {
+    return {
+      subquery: `SELECT trace_id, lexical_score AS relevance_score FROM (${lexicalResult.subquery})`,
+      params: lexicalResult.params,
+    }
+  }
+
+  const semanticResult = buildSemanticSearchSubquery(queryEmbedding)
+
+  // UNION ALL + GROUP BY rather than FULL OUTER JOIN. In ClickHouse a join
+  // miss yields the column's default value (zero bytes for FixedString, empty
+  // string for String), not SQL NULL, so coalesce/ifNull can't distinguish
+  // "no match" from a real row. UNION ALL avoids the issue entirely.
+  //
+  // HAVING filters at the precision floor. With no rerank, this is the sole
+  // quality gate — pure-lexical hits always pass (lexicalWeight), pure-
+  // semantic hits must clear the floor via cosine similarity.
+  const subquery = `SELECT
+                      trace_id,
+                      ({lexicalWeight:Float64} * max(lexical_score) +
+                       {semanticWeight:Float64} * max(semantic_score)) AS relevance_score
+                    FROM (
+                      SELECT trace_id, lexical_score, 0.0 AS semantic_score
+                      FROM (${lexicalResult.subquery})
+                      UNION ALL
+                      SELECT trace_id, 0.0 AS lexical_score, semantic_score
+                      FROM (${semanticResult.subquery})
+                    )
+                    GROUP BY trace_id
+                    HAVING relevance_score >= {minRelevanceScore:Float64}`
+
+  return {
+    subquery,
+    params: {
+      ...lexicalResult.params,
+      ...semanticResult.params,
+      lexicalWeight: HYBRID_SEARCH_CONFIG.lexicalWeight,
+      semanticWeight: HYBRID_SEARCH_CONFIG.semanticWeight,
+      minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+    },
+  }
+}
+
+/**
+ * Whether the request carries an active search query. Any non-empty,
+ * non-whitespace `searchQuery` flips the list and aggregate queries onto the
+ * hybrid search path.
+ */
+function hasActiveSearchQuery(searchQuery: string | undefined): searchQuery is string {
+  return !!searchQuery && searchQuery.trim().length > 0
+}
 
 const LIST_SELECT = `
   organization_id,
@@ -331,6 +470,28 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,
   Effect.gen(function* () {
+    const generateQueryEmbedding = (searchQuery: string): Effect.Effect<readonly number[] | undefined, never> =>
+      Effect.gen(function* () {
+        const aiOption = yield* Effect.serviceOption(AI)
+        if (Option.isNone(aiOption)) return undefined
+
+        const result = yield* aiOption.value
+          .embed({
+            text: searchQuery,
+            model: TRACE_SEARCH_EMBEDDING_MODEL,
+            dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+            inputType: "query",
+          })
+          .pipe(
+            Effect.tapError((error) =>
+              Effect.logWarning("trace-search: query-side embedding failed; falling back to lexical-only", error),
+            ),
+            Effect.orElseSucceed(() => undefined),
+          )
+
+        return result?.embedding
+      })
+
     const getCohortBaselineByTags: TraceRepositoryShape["getCohortBaselineByTags"] = ({
       organizationId,
       projectId,
@@ -489,13 +650,81 @@ export const TraceRepositoryLive = Layer.effect(
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-        const cmp = orderDir === "DESC" ? "<" : ">"
         const limit = options.limit ?? 50
 
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
+        if (hasActiveSearchQuery(options.searchQuery)) {
+          const searchQuery = options.searchQuery
+          const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+          const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+
+          const cursorClause = options.cursor
+            ? `AND (search_results.relevance_score, t.trace_id) <
+                 ({cursorSortValue:Float64}, {cursorTraceId:FixedString(32)})`
+            : ""
+
+          const finalHaving = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `WITH search_results AS (
+                          SELECT trace_id, relevance_score FROM (${searchResult.subquery})
+                        )
+                        SELECT ${LIST_SELECT},
+                               search_results.relevance_score
+                        FROM traces t
+                        INNER JOIN search_results ON t.trace_id = search_results.trace_id
+                        WHERE t.organization_id = {organizationId:String}
+                          AND t.project_id = {projectId:String}
+                          ${extraWhere}
+                          ${cursorClause}
+                        GROUP BY t.organization_id, t.project_id, t.trace_id, search_results.relevance_score
+                        ${finalHaving}
+                        ORDER BY search_results.relevance_score DESC, t.trace_id DESC
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit: limit + 1,
+                  ...filterParams,
+                  ...searchResult.params,
+                  ...(options.cursor
+                    ? {
+                        cursorSortValue: options.cursor.sortValue,
+                        cursorTraceId: options.cursor.traceId,
+                      }
+                    : {}),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceListRow & { relevance_score?: number }>()
+            })
+            .pipe(
+              Effect.map((rows): TraceListPage => {
+                const hasMore = rows.length > limit
+                const pageRows = hasMore ? rows.slice(0, limit) : rows
+                const items = pageRows.map(toBaseFields)
+                const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+                if (!last) return { items, hasMore }
+                return {
+                  items,
+                  hasMore,
+                  nextCursor: {
+                    sortValue: String(last.relevance_score ?? 0),
+                    traceId: last.trace_id,
+                  },
+                }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+            )
+        }
+
+        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+        const cmp = orderDir === "DESC" ? "<" : ">"
         const havingParts: string[] = [...havingClauses]
         if (options.cursor) {
           havingParts.push(
@@ -504,8 +733,7 @@ export const TraceRepositoryLive = Layer.effect(
                     AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`,
           )
         }
-        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        const finalHaving = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
 
         return yield* chSqlClient
           .query(async (client) => {
@@ -516,7 +744,7 @@ export const TraceRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         ${extraWhere}
                       GROUP BY organization_id, project_id, trace_id
-                      ${havingClause}
+                      ${finalHaving}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
                       LIMIT {limit:UInt32}`,
               query_params: {
@@ -685,12 +913,47 @@ export const TraceRepositoryLive = Layer.effect(
       getCohortBaselineByTags,
       listByProjectId,
 
-      countByProjectId: ({ organizationId, projectId, filters }) =>
+      countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+          if (hasActiveSearchQuery(searchQuery)) {
+            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+
+            return yield* chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT count() AS total
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                            ${searchCondition}
+                          GROUP BY organization_id, project_id, trace_id
+                          ${havingClause}
+                        )`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    ...filterParams,
+                    ...searchResult.params,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<{ total: string }>()
+              })
+              .pipe(
+                Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+                Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+              )
+          }
 
           return yield* chSqlClient
             .query(async (client) => {
@@ -720,12 +983,73 @@ export const TraceRepositoryLive = Layer.effect(
             )
         }),
 
-      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+          if (hasActiveSearchQuery(searchQuery)) {
+            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+
+            return yield* chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          count() AS row_count,
+                          min(duration_ns) AS duration_min,
+                          max(duration_ns) AS duration_max,
+                          avg(duration_ns) AS duration_avg,
+                          quantileTDigest(0.5)(duration_ns) AS duration_median,
+                          sum(duration_ns) AS duration_sum,
+                          min(cost_total_microcents) AS cost_min,
+                          max(cost_total_microcents) AS cost_max,
+                          avg(cost_total_microcents) AS cost_avg,
+                          quantileTDigest(0.5)(cost_total_microcents) AS cost_median,
+                          sum(cost_total_microcents) AS cost_sum,
+                          min(span_count) AS span_min,
+                          max(span_count) AS span_max,
+                          avg(span_count) AS span_avg,
+                          quantileTDigest(0.5)(span_count) AS span_median,
+                          sum(span_count) AS span_sum,
+                          min(tokens_total) AS tokens_min,
+                          max(tokens_total) AS tokens_max,
+                          avg(tokens_total) AS tokens_avg,
+                          quantileTDigest(0.5)(tokens_total) AS tokens_median,
+                          sum(tokens_total) AS tokens_sum,
+                          minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
+                          maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
+                          avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
+                          quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+                          sumIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_sum
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                            ${searchCondition}
+                          GROUP BY organization_id, project_id, trace_id
+                          ${havingClause}
+                        )`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    ...filterParams,
+                    ...searchResult.params,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<TraceMetricsRow>()
+              })
+              .pipe(
+                Effect.map((rows) => toTraceMetrics(rows[0])),
+                Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+              )
+          }
 
           return yield* chSqlClient
             .query(async (client) => {
@@ -781,13 +1105,61 @@ export const TraceRepositoryLive = Layer.effect(
             )
         }),
 
-      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) =>
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
           const bs = Math.floor(bucketSeconds)
+
+          if (hasActiveSearchQuery(searchQuery)) {
+            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+
+            return yield* chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          toDateTime(
+                            intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
+                            'UTC'
+                          ) AS bucket_start,
+                          count() AS trace_count
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                            ${searchCondition}
+                          GROUP BY organization_id, project_id, trace_id
+                          ${havingClause}
+                        )
+                        GROUP BY bucket_start
+                        ORDER BY bucket_start ASC`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    bucketSeconds: bs,
+                    ...filterParams,
+                    ...searchResult.params,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<{ bucket_start: string; trace_count: string }>()
+              })
+              .pipe(
+                Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
+                  rows.map((row) => ({
+                    bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                    traceCount: Number(row.trace_count),
+                  })),
+                ),
+                Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
+              )
+          }
 
           return yield* chSqlClient
             .query(async (client) => {

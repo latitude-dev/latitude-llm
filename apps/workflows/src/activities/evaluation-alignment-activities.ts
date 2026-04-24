@@ -18,6 +18,7 @@ import {
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationAlignmentExamplesRepositoryLive,
@@ -87,6 +88,7 @@ export const collectEvaluationAlignmentExamples = (input: {
     collectAlignmentExamplesUseCase(input).pipe(
       withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withAi(AIEmbedLive, getRedisClient()),
       withTracing,
     ),
   )

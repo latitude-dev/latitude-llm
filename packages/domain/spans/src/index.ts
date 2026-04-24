@@ -4,6 +4,16 @@ export {
   TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS,
+  TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS,
+  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
+  TRACE_SEARCH_EMBEDDING_MODEL,
+  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
 export type { Session } from "./entities/session.ts"
 export { sessionSchema } from "./entities/session.ts"
@@ -31,6 +41,8 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
+export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
   SessionDistinctColumn,
   SessionListCursor,
@@ -53,6 +65,14 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
+export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
+export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
+export type {
+  TraceSearchDocumentRow,
+  TraceSearchEmbeddingRow,
+  TraceSearchRepositoryShape,
+} from "./ports/trace-search-repository.ts"
+export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
 export {
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaseline,
@@ -85,6 +105,11 @@ export {
   traceCohortMetrics,
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
+export type {
+  TraceSearchDocument,
+  TraceSearchDocumentInput,
+} from "./use-cases/build-trace-search-document.ts"
+export { buildTraceSearchDocument } from "./use-cases/build-trace-search-document.ts"
 export type {
   BuildTracesExportInput,
   BuildTracesExportResult,

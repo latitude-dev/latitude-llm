@@ -17,9 +17,31 @@ import { issues } from "@platform/db-postgres/schema/issues"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
+
+// vi.hoisted runs before imports, so we can't reference a constant here;
+// the literal 2048 matches TRACE_SEARCH_EMBEDDING_DIMENSIONS (voyage-4-large).
+const { mockAi } = vi.hoisted(() => ({
+  mockAi: {
+    generate: vi.fn(),
+    embed: vi.fn().mockReturnValue({ embedding: new Array(2048).fill(0.1) }),
+    rerank: vi.fn(),
+  },
+}))
+
+vi.mock("@platform/ai", async () => {
+  const { AI } = (await vi.importActual("@domain/ai")) as typeof import("@domain/ai")
+  const { Effect: Eff, Layer } = (await vi.importActual("effect")) as typeof import("effect")
+
+  // Matches the real signature: returning `Effect.provide(...)` directly
+  // removes `AI` from the requirement channel, so call sites don't need casts.
+  return {
+    withAi: (_layer?: unknown, _redisClient?: unknown) => Eff.provide(Layer.succeed(AI, mockAi)),
+  }
+})
+
 import { createRunHandler, createTraceEndWorker, runTraceEndJob } from "./trace-end.ts"
 
 const pg = setupTestPostgres()
@@ -431,26 +453,28 @@ describe("runTraceEndJob", () => {
       },
     })
 
-    expect(published).toEqual([
-      {
-        queue: "live-evaluations",
-        task: "execute",
-        payload: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          evaluationId: "e".repeat(24),
-          traceId: TRACE_ID,
-        },
-        options: {
-          dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+    expect(published).toEqual(
+      expect.arrayContaining([
+        {
+          queue: "live-evaluations",
+          task: "execute",
+          payload: {
             organizationId: ORGANIZATION_ID,
             projectId: PROJECT_ID,
             evaluationId: "e".repeat(24),
             traceId: TRACE_ID,
-          }),
+          },
+          options: {
+            dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+              organizationId: ORGANIZATION_ID,
+              projectId: PROJECT_ID,
+              evaluationId: "e".repeat(24),
+              traceId: TRACE_ID,
+            }),
+          },
         },
-      },
-    ])
+      ]),
+    )
 
     expect(startedWorkflows).toEqual([
       {
@@ -477,6 +501,15 @@ describe("runTraceEndJob", () => {
     const missedQueue = persistedQueues.find((queue) => queue.id === "r".repeat(24))
     expect(selectedQueue?.totalItems).toBe(1)
     expect(missedQueue?.totalItems).toBe(0)
+
+    // Verify trace-search refresh task was published
+    const traceSearchPublish = published.find((p) => p.queue === "trace-search")
+    expect(traceSearchPublish?.task).toBe("refreshTrace")
+    expect(traceSearchPublish?.payload).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+    })
   })
 })
 
