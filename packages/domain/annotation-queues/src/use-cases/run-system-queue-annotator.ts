@@ -57,25 +57,30 @@ export interface AnnotateTraceForQueueInput {
 }
 
 const ANNOTATOR_SYSTEM_PROMPT_TEMPLATE = `
-You are an annotation assistant reviewing LLM conversations for a specific quality queue.
+You are the Annotation Writer for telemetry traces. Given a flagged trace and the queue it was flagged into, write a short, human-readable annotation describing the issue detected.
+The flag decision has already been made — your job is to draft the annotation, not to re-evaluate whether the trace belongs in the queue.
 
-Queue Name: {queueName}
-Queue Description: {queueDescription}
-
-Instructions for this queue:
+Queue (the trace was flagged into this queue):
+- Name: {queueName}
+- Description: {queueDescription}
+- Reviewer guidance for what belongs in this queue:
 {queueInstructions}
 
-Your task is to review the full conversation below and provide structured feedback that explains why this conversation belongs in this queue. The feedback should be:
-- Specific about what went wrong or what pattern was observed
-- Actionable for someone reviewing the annotation later
-- Neutral and descriptive in tone
-- Focused on the underlying issue, not incidental details
+Format constraints:
+- Write ONE to TWO sentences maximum.
+- Focus on what went wrong and the key evidence — not an exhaustive analysis.
+- Write so that similar issues across different traces produce similar annotations. The text will be used for semantic clustering.
+- Do NOT start with generic prefixes like "Trace shows", "The trace", "This trace", "The assistant" — lead with the specific issue or behavior.
+- Reference concrete numbers or field values when they strengthen the signal (e.g. "8 tool calls", "18s duration"), but do not enumerate every detail.
+
+Grounding rules:
+- Use ONLY the provided inputs. Do not invent facts.
+- If a detail is missing or ambiguous, say so briefly.
+- Do not mention PromptL, system prompts, or internal implementation details.
 
 Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep the feedback only as long as it needs to be — no padding, no restatement, no meta-commentary. The original context and nuance must still come through; simpler wording is the goal, not less information.
 
-You do NOT need to decide whether the conversation matches the queue — that has already been determined. Your job is only to draft the annotation text that explains the match.
-
-Respond with structured data containing a single "feedback" field with your analysis.
+Respond with structured data containing a single "feedback" field with your annotation text.
 `.trim()
 
 const buildAnnotatorSystemPrompt = (queueSlug: string): string => {
@@ -136,7 +141,20 @@ export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotate
       ? formatConversationForAnnotator(input.trace.allMessages)
       : "<no conversation messages available>"
 
-  const prompt = `Full conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
+  const durationSeconds = trace.durationNs / 1_000_000_000
+
+  const prompt = `Provided inputs only — use these facts and the conversation below; do not invent details.
+
+Trace summary (telemetry aggregates; cite only when relevant):
+- Approximate duration: ${durationSeconds.toFixed(durationSeconds < 10 ? 2 : 1)}s
+- Span count: ${trace.spanCount}
+- Error count: ${trace.errorCount}
+- Conversation messages: ${trace.allMessages.length}
+
+Conversation:
+${conversationText}
+
+Return structured data with a single "feedback" field per the system instructions.`
 
   const result = yield* ai.generate({
     ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
