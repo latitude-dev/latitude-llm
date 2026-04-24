@@ -1,6 +1,6 @@
 import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
-import { ChevronsUpDown, Moon, Sun } from "lucide-react"
+import { ChevronsUpDown, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
@@ -68,6 +68,7 @@ function NavHeader() {
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
+  const isAdmin = (user as { role?: string }).role === "admin"
 
   if (!org) return null
 
@@ -128,6 +129,17 @@ function NavHeader() {
           side="bottom"
           align="end"
           options={[
+            ...(isAdmin
+              ? [
+                  {
+                    label: "Backoffice",
+                    iconProps: { icon: ShieldAlertIcon, size: "sm" as const },
+                    onClick: () => {
+                      void router.navigate({ to: "/backoffice" })
+                    },
+                  },
+                ]
+              : []),
             {
               label: "Log out",
               type: "destructive",

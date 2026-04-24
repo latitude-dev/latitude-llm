@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as DesignSystemRouteRouteImport } from './routes/design-system/route'
+import { Route as BackofficeRouteRouteImport } from './routes/backoffice/route'
 import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
 import { Route as DesignSystemIndexRouteImport } from './routes/design-system/index'
+import { Route as BackofficeIndexRouteImport } from './routes/backoffice/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
+import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -56,6 +59,11 @@ const DesignSystemRouteRoute = DesignSystemRouteRouteImport.update({
   path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BackofficeRouteRoute = BackofficeRouteRouteImport.update({
+  id: '/backoffice',
+  path: '/backoffice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
   id: '/welcome/',
   path: '/welcome/',
@@ -65,6 +73,11 @@ const DesignSystemIndexRoute = DesignSystemIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const BackofficeIndexRoute = BackofficeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BackofficeRouteRoute,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
@@ -85,6 +98,11 @@ const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
   id: '/button',
   path: '/button',
   getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => BackofficeRouteRoute,
 } as any)
 const AuthInviteRoute = AuthInviteRouteImport.update({
   id: '/auth/invite',
@@ -227,15 +245,18 @@ const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute =
   )
 
 export interface FileRoutesByFullPath {
+  '/backoffice': typeof BackofficeRouteRouteWithChildren
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
+  '/backoffice/': typeof BackofficeIndexRoute
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
@@ -263,10 +284,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/': typeof AuthenticatedIndexRoute
+  '/backoffice': typeof BackofficeIndexRoute
   '/design-system': typeof DesignSystemIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -290,16 +313,19 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/backoffice': typeof BackofficeRouteRouteWithChildren
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/backoffice/': typeof BackofficeIndexRoute
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
@@ -326,15 +352,18 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/backoffice'
     | '/design-system'
     | '/'
     | '/login'
     | '/settings'
     | '/api/health'
     | '/auth/invite'
+    | '/backoffice/search'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
+    | '/backoffice/'
     | '/design-system/'
     | '/welcome/'
     | '/projects/$projectSlug'
@@ -362,10 +391,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/auth/invite'
+    | '/backoffice/search'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
     | '/'
+    | '/backoffice'
     | '/design-system'
     | '/welcome'
     | '/settings/account'
@@ -388,16 +419,19 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
   id:
     | '__root__'
+    | '/backoffice'
     | '/design-system'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/settings'
     | '/api/health'
     | '/auth/invite'
+    | '/backoffice/search'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
     | '/_authenticated/'
+    | '/backoffice/'
     | '/design-system/'
     | '/welcome/'
     | '/_authenticated/projects/$projectSlug'
@@ -423,6 +457,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  BackofficeRouteRoute: typeof BackofficeRouteRouteWithChildren
   DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -459,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignSystemRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/backoffice': {
+      id: '/backoffice'
+      path: '/backoffice'
+      fullPath: '/backoffice'
+      preLoaderRoute: typeof BackofficeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/welcome/': {
       id: '/welcome/'
       path: '/welcome'
@@ -472,6 +514,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/design-system/'
       preLoaderRoute: typeof DesignSystemIndexRouteImport
       parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/backoffice/': {
+      id: '/backoffice/'
+      path: '/'
+      fullPath: '/backoffice/'
+      preLoaderRoute: typeof BackofficeIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/_authenticated/': {
       id: '/_authenticated/'
@@ -500,6 +549,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/design-system/button'
       preLoaderRoute: typeof DesignSystemButtonRouteImport
       parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/backoffice/search': {
+      id: '/backoffice/search'
+      path: '/search'
+      fullPath: '/backoffice/search'
+      preLoaderRoute: typeof BackofficeSearchRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/auth/invite': {
       id: '/auth/invite'
@@ -665,6 +721,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface BackofficeRouteRouteChildren {
+  BackofficeSearchRoute: typeof BackofficeSearchRoute
+  BackofficeIndexRoute: typeof BackofficeIndexRoute
+}
+
+const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
+  BackofficeSearchRoute: BackofficeSearchRoute,
+  BackofficeIndexRoute: BackofficeIndexRoute,
+}
+
+const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
+  BackofficeRouteRouteChildren,
+)
+
 interface DesignSystemRouteRouteChildren {
   DesignSystemButtonRoute: typeof DesignSystemButtonRoute
   DesignSystemColorsRoute: typeof DesignSystemColorsRoute
@@ -773,6 +843,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  BackofficeRouteRoute: BackofficeRouteRouteWithChildren,
   DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,

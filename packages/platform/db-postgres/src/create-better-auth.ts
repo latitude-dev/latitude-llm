@@ -111,6 +111,18 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
+    user: {
+      // Surface the app-extended `users.role` column on the session user.
+      // Required by the backoffice admin guard — without this, Better Auth
+      // fetches the column from the DB but does not expose it to callers of
+      // `auth.api.getSession()`, so `user.role` is undefined and every user
+      // (including admins) is treated as non-admin.
+      // `input: false` keeps the field read-only via the sign-up / update
+      // APIs so regular users can't self-promote to admin.
+      additionalFields: {
+        role: { type: "string", required: false, input: false },
+      },
+    },
     databaseHooks: {
       user: {
         create: {
