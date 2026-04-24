@@ -51,6 +51,8 @@ interface ProjectTracesTableProps {
   readonly rowInteractionRole?: "button" | "link"
   /** When provided, renders the name column as a real link for accessibility (e.g., open in new tab). */
   readonly getTraceHref?: (trace: TraceRecord) => string
+  /** Target for the name-column link. Defaults to same-tab; use "_blank" to open in a new tab. */
+  readonly linkTarget?: "_self" | "_blank"
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
   readonly scrollAreaLayout?: "fill" | "intrinsic"
@@ -74,6 +76,7 @@ export function ProjectTracesTable({
   getTraceRowAriaLabel,
   rowInteractionRole,
   getTraceHref,
+  linkTarget,
   traceMetrics,
   metricsLoading,
   scrollAreaLayout,
@@ -106,6 +109,7 @@ export function ProjectTracesTable({
                 to={getTraceHref(trace)}
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 className="hover:underline"
+                {...(linkTarget === "_blank" ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
                 {displayName}
               </Link>
@@ -270,7 +274,7 @@ export function ProjectTracesTable({
           : {}),
       },
     ]
-  }, [showMetricSubheaders, traceMetrics, metricsLoading, projectId, getTraceHref])
+  }, [showMetricSubheaders, traceMetrics, metricsLoading, projectId, getTraceHref, linkTarget])
 
   const columns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
