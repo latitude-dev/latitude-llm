@@ -435,11 +435,7 @@ export function OnboardingFlow({
           {step === "role" ? (
             <div className="mx-auto flex h-fit w-full max-w-[591px] flex-col items-center justify-center gap-4">
               <div className="w-full overflow-hidden rounded-xl border-[6px] border-[#0b0f19] bg-[#0b0f19] shadow-xl">
-                <img
-                  src={ROLE_MOCKUPS[role]}
-                  alt={`${role} preview`}
-                  className="block h-auto w-full max-w-full"
-                />
+                <img src={ROLE_MOCKUPS[role]} alt={`${role} preview`} className="block h-auto w-full max-w-full" />
               </div>
               <Text.H5 color="foregroundMuted" align="center">
                 {ROLE_PANEL_TITLES[role]}
