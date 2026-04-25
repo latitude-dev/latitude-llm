@@ -270,6 +270,67 @@ describe("processDeterministicFlaggersUseCase", () => {
     expect(deps.enqueued.filter((e) => e.queueSlug === "tool-call-errors")).toEqual([])
   })
 
+  describe("dependency-graph suppression", () => {
+    it("suppresses refusal when jailbreaking matches deterministically", async () => {
+      // Jailbreaking deterministic match path uses the same DAN-mode message
+      // as the matched-issue test above.
+      const trace = makeTraceDetail([
+        jailbreakMessage,
+        { role: "assistant", parts: [{ type: "text", content: "I can't help with that request." }] },
+      ])
+
+      const { result } = await runUseCase(
+        trace,
+        [makeSystemQueue("jailbreaking", 0), makeSystemQueue("refusal", 0)],
+        deps,
+      )
+
+      expect(decisionFor(result.decisions, "jailbreaking")?.action).toBe("matched-issue")
+      expect(decisionFor(result.decisions, "refusal")).toEqual({
+        slug: "refusal",
+        action: "suppressed",
+        suppressedBy: "jailbreaking",
+      })
+      expect(deps.enqueued.find((e) => e.queueSlug === "refusal")).toBeUndefined()
+    })
+
+    it("does NOT suppress refusal/laziness/forgetting when empty-response matches", async () => {
+      // empty-response is not in any phase-2 strategy's suppressedBy list:
+      // an empty assistant message is itself a defect but doesn't make the other
+      // assistant-side judgments non-applicable.
+      const trace = makeTraceDetail([
+        { role: "user", parts: [{ type: "text", content: "Please help." }] },
+        { role: "assistant", parts: [{ type: "text", content: "" }] },
+      ])
+
+      const { result } = await runUseCase(
+        trace,
+        [makeSystemQueue("refusal", 100), makeSystemQueue("laziness", 100), makeSystemQueue("forgetting", 100)],
+        deps,
+      )
+
+      expect(decisionFor(result.decisions, "empty-response")?.action).toBe("matched-issue")
+      for (const slug of ["refusal", "laziness", "forgetting"] as const) {
+        expect(decisionFor(result.decisions, slug)?.action).not.toBe("suppressed")
+      }
+    })
+
+    it("runs phase-2 strategies normally when no suppressor matched", async () => {
+      // Plain assistant text, no jailbreak / nsfw match.
+      const trace = makeTraceDetail([
+        { role: "user", parts: [{ type: "text", content: "Tell me about AI." }] },
+        { role: "assistant", parts: [{ type: "text", content: "AI stands for artificial intelligence." }] },
+      ])
+
+      const { result } = await runUseCase(trace, [makeSystemQueue("refusal", 100)], deps)
+
+      const refusal = decisionFor(result.decisions, "refusal")
+      // Either enqueued (sampled / ambiguous) or dropped (sampled-out / no-match) —
+      // anything but suppressed.
+      expect(refusal?.action).not.toBe("suppressed")
+    })
+  })
+
   it("isolates per-strategy failures", async () => {
     // A trace with no messages triggers hasRequiredContext=false for most strategies.
     // The use case should return decisions for every slug without throwing.

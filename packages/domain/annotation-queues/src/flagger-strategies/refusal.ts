@@ -240,6 +240,9 @@ function formatStageForPrompt(stage: ConversationStage, index: number): string {
 // ---------------------------------------------------------------------------
 
 export const refusalStrategy: QueueStrategy = {
+  // jailbreaking / nsfw matched → assistant's refusal is justified, not a defect.
+  suppressedBy: ["jailbreaking", "nsfw"],
+
   hasRequiredContext(trace: TraceDetail): boolean {
     const stages = extractConversationStages(trace)
     return stages.length > 0

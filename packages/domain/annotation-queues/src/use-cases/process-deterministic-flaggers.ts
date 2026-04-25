@@ -57,6 +57,7 @@ export type StrategyDecision =
   | { readonly slug: string; readonly action: "matched-issue" }
   | { readonly slug: string; readonly action: "enqueued"; readonly reason: FlaggerEnqueueReason }
   | { readonly slug: string; readonly action: "dropped"; readonly reason: DroppedReason }
+  | { readonly slug: string; readonly action: "suppressed"; readonly suppressedBy: string }
   | { readonly slug: string; readonly action: "failed" }
 
 export type DroppedReason =
@@ -114,38 +115,59 @@ export const processDeterministicFlaggersUseCase = Effect.fn("annotationQueues.p
     const queueBySlug = new Map(systemQueues.map((queue) => [queue.queueSlug, queue]))
 
     const slugs = listQueueStrategySlugs()
+    const phase1Slugs: string[] = []
+    const phase2Slugs: string[] = []
+    for (const slug of slugs) {
+      const strategy = getQueueStrategy(slug)
+      if (strategy?.suppressedBy && strategy.suppressedBy.length > 0) {
+        phase2Slugs.push(slug)
+      } else {
+        phase1Slugs.push(slug)
+      }
+    }
 
-    const decisions = yield* Effect.forEach(
-      slugs,
-      (slug) =>
-        processOneStrategy({
-          slug,
-          trace,
-          systemQueue: queueBySlug.get(slug) ?? null,
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceId: input.traceId,
-          deps,
-        }).pipe(
-          Effect.catch((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logError("Deterministic flagger strategy failed", {
-                slug,
-                organizationId: input.organizationId,
-                projectId: input.projectId,
-                traceId: input.traceId,
-                error,
-              })
-              return { slug, action: "failed" } satisfies StrategyDecision
-            }),
-          ),
+    const runOne = (slug: string, suppressorMatchedSlugs: ReadonlySet<string>) =>
+      processOneStrategy({
+        slug,
+        trace,
+        systemQueue: queueBySlug.get(slug) ?? null,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        traceId: input.traceId,
+        deps,
+        suppressorMatchedSlugs,
+      }).pipe(
+        Effect.catch((error) =>
+          Effect.gen(function* () {
+            yield* Effect.logError("Deterministic flagger strategy failed", {
+              slug,
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              traceId: input.traceId,
+              error,
+            })
+            return { slug, action: "failed" } satisfies StrategyDecision
+          }),
         ),
-      { concurrency: "unbounded" },
-    )
+      )
 
-    return { decisions } satisfies ProcessDeterministicFlaggersResult
+    const phase1Decisions = yield* Effect.forEach(phase1Slugs, (slug) => runOne(slug, EMPTY_SET), {
+      concurrency: "unbounded",
+    })
+
+    const phase1MatchedSlugs = new Set(phase1Decisions.filter((d) => d.action === "matched-issue").map((d) => d.slug))
+
+    const phase2Decisions = yield* Effect.forEach(phase2Slugs, (slug) => runOne(slug, phase1MatchedSlugs), {
+      concurrency: "unbounded",
+    })
+
+    return {
+      decisions: [...phase1Decisions, ...phase2Decisions],
+    } satisfies ProcessDeterministicFlaggersResult
   },
 )
+
+const EMPTY_SET: ReadonlySet<string> = new Set()
 
 interface ProcessOneStrategyInput {
   readonly slug: string
@@ -155,6 +177,7 @@ interface ProcessOneStrategyInput {
   readonly projectId: string
   readonly traceId: string
   readonly deps: ProcessDeterministicFlaggersDeps
+  readonly suppressorMatchedSlugs: ReadonlySet<string>
 }
 
 const processOneStrategy = (input: ProcessOneStrategyInput) =>
@@ -162,6 +185,18 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
     const strategy = getQueueStrategy(input.slug)
     if (!strategy) {
       return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
+    }
+
+    if (strategy.suppressedBy) {
+      for (const suppressor of strategy.suppressedBy) {
+        if (input.suppressorMatchedSlugs.has(suppressor)) {
+          return {
+            slug: input.slug,
+            action: "suppressed",
+            suppressedBy: suppressor,
+          } satisfies StrategyDecision
+        }
+      }
     }
 
     if (!strategy.hasRequiredContext(input.trace)) {

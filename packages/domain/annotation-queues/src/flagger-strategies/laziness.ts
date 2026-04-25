@@ -248,6 +248,11 @@ export function getStageWorkSignals(stage: ConversationStage): WorkSignals {
 // ---------------------------------------------------------------------------
 
 export const lazinessStrategy: QueueStrategy = {
+  // empty-response matched → no assistant text to evaluate.
+  // trashing matched → assistant is stuck looping on identical tool calls,
+  // a different failure mode than deferring/punting work.
+  suppressedBy: ["trashing"],
+
   hasRequiredContext(trace: TraceDetail): boolean {
     const stages = extractConversationStages(trace)
     return stages.length > 0
