@@ -42,7 +42,7 @@ ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
 PRIMARY KEY (organization_id, project_id, trace_id)
 ORDER BY (organization_id, project_id, trace_id)
-TTL start_time + INTERVAL 90 DAY DELETE;
+TTL toDateTime(start_time) + INTERVAL 90 DAY DELETE;
 
 -- +goose Down
 DROP TABLE IF EXISTS trace_search_documents;
