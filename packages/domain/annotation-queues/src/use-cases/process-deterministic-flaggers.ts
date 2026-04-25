@@ -244,13 +244,14 @@ const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
 
 const handleNoMatch = (input: ProcessOneStrategyInput, strategy: QueueStrategy) =>
   Effect.gen(function* () {
-    if (!isLlmCapableStrategy(strategy) || !input.systemQueue) {
+    const systemQueue = input.systemQueue
+    if (!isLlmCapableStrategy(strategy) || !systemQueue) {
       return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
     }
 
     const sampled = yield* Effect.promise(() =>
       deterministicSampling({
-        sampling: input.systemQueue!.sampling,
+        sampling: systemQueue.sampling,
         keyParts: [input.organizationId, input.projectId, input.slug, input.traceId],
       }),
     )
