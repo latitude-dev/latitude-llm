@@ -89,7 +89,13 @@ const makeEnqueueWorkflowStart =
         },
       )
       .pipe(
-        Effect.catch((error) =>
+        // Log + propagate. `Effect.catch` here would silently turn a publish
+        // failure (e.g. BullMQ Redis unreachable) into a successful void, which
+        // would then read as `action: "enqueued"` in telemetry while the trace
+        // was never actually scheduled for LLM review. Letting the error
+        // propagate routes it to the per-strategy `runOne` catch, which emits
+        // `action: "failed"` and a strategy-scoped error log.
+        Effect.tapError((error) =>
           Effect.logError("Failed to enqueue start-flagger-workflow", {
             error,
             organizationId: args.organizationId,

@@ -8,6 +8,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
+import type { QueuePublishError } from "@domain/queue"
 import { Effect } from "effect"
 
 import {
@@ -29,6 +30,11 @@ export type FlaggerEnqueueReason = "sampled" | "ambiguous"
 /**
  * Callback for enqueueing an LLM-classification workflow-start job.
  * The worker wires this to the `start-flagger-workflow` publisher.
+ *
+ * Failures must propagate (not be swallowed by the wiring) so the per-strategy
+ * `runOne` catch can record `action: "failed"` for the affected slug. A
+ * silently-swallowed publish would otherwise produce a misleading
+ * `action: "enqueued"` decision for a trace that was never queued.
  */
 export type EnqueueFlaggerWorkflowStart = (args: {
   readonly organizationId: string
@@ -36,7 +42,7 @@ export type EnqueueFlaggerWorkflowStart = (args: {
   readonly traceId: string
   readonly queueSlug: string
   readonly reason: FlaggerEnqueueReason
-}) => Effect.Effect<void>
+}) => Effect.Effect<void, QueuePublishError>
 
 /**
  * Callback for checking per-{org,slug} rate limits on ambiguous enqueues.
