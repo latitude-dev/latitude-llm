@@ -41,6 +41,31 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
   "empty-response": emptyResponseStrategy,
 }
 
+// Validate the suppressedBy dependency graph at module load. The two-phase
+// fan-out in `processDeterministicFlaggersUseCase` requires every suppressor
+// to live in phase 1 (no `suppressedBy` of its own) and to point at a real
+// registered slug. A violation would cause silent miss-suppression at runtime,
+// so fail loudly here instead.
+;(() => {
+  for (const [slug, strategy] of Object.entries(STRATEGY_REGISTRY)) {
+    const suppressors = strategy.suppressedBy
+    if (!suppressors || suppressors.length === 0) continue
+    for (const suppressor of suppressors) {
+      const target = STRATEGY_REGISTRY[suppressor]
+      if (!target) {
+        throw new Error(
+          `Invalid flagger strategy registry: "${slug}" lists unknown suppressor "${suppressor}" in suppressedBy`,
+        )
+      }
+      if (target.suppressedBy && target.suppressedBy.length > 0) {
+        throw new Error(
+          `Invalid flagger strategy registry: "${slug}" is suppressed by "${suppressor}", but "${suppressor}" itself has suppressedBy — suppressors must run in phase 1 (no transitive suppression)`,
+        )
+      }
+    }
+  }
+})()
+
 /**
  * Get the strategy for a queue slug.
  * Returns null for unknown slugs.

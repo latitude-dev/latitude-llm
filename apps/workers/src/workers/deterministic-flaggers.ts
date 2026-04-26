@@ -55,7 +55,7 @@ const buildLogContext = (payload: RunPayload) => ({
 })
 
 const rateLimitKey = (organizationId: string, queueSlug: string) =>
-  `ratelimit:flagger-ambiguous:${organizationId}:${queueSlug}`
+  `org:${organizationId}:ratelimit:flagger-ambiguous:${queueSlug}`
 
 const makeRateLimitChecker =
   (redisClient: RedisClient): CheckAmbiguousRateLimit =>
