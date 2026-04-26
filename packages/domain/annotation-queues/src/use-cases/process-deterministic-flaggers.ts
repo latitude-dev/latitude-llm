@@ -1,3 +1,4 @@
+import type { QueuePublishError } from "@domain/queue"
 import { type ScoreDraftClosedError, type ScoreDraftUpdateConflictError, writeScoreUseCase } from "@domain/scores"
 import {
   type BadRequestError,
@@ -8,7 +9,6 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
-import type { QueuePublishError } from "@domain/queue"
 import { Effect } from "effect"
 
 import {

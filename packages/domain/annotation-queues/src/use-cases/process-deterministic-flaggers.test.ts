@@ -1,4 +1,5 @@
 import { OutboxEventWriter } from "@domain/events"
+import { QueuePublishError } from "@domain/queue"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
@@ -16,7 +17,6 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { QueuePublishError } from "@domain/queue"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
