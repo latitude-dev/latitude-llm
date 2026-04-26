@@ -133,6 +133,15 @@ export const createBullMqQueuePublisher = (
                 }
               }
             }
+            if (options?.attempts !== undefined && options.attempts > 0) {
+              bullmqOptions.attempts = options.attempts
+            }
+            if (options?.backoff) {
+              bullmqOptions.backoff = {
+                type: options.backoff.type,
+                delay: options.backoff.delayMs,
+              }
+            }
             const readyQueue = await getReadyQueue(queue)
             await readyQueue.add(task, { payload } satisfies BullMqJobData, bullmqOptions)
           },

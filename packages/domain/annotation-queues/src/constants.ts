@@ -15,6 +15,20 @@ export const LIVE_QUEUE_DEFAULT_SAMPLING = 10
 /** Default sampling percentage for system-created queues when provisioned. */
 export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 
+/**
+ * Default rate limit for enqueueing the LLM flagger workflow when a strategy
+ * reports `ambiguous`. The key is `{organizationId, queueSlug}` — a hot trace
+ * topic (e.g. a jailbreak pattern firing for every request) can otherwise
+ * stampede the workflow queue with thousands of LLM calls per minute.
+ *
+ * The limiter fails open on Redis errors so a cache outage cannot drop traffic
+ * silently; we prefer over-spending on LLM calls to under-detecting issues.
+ */
+export const AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT = {
+  maxRequests: 30,
+  windowSeconds: 60,
+} as const
+
 // ---------------------------------------------------------------------------
 // Context-window limits for the system-queue flagger LLM
 // ---------------------------------------------------------------------------

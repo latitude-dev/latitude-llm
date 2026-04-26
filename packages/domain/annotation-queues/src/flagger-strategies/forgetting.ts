@@ -88,6 +88,9 @@ function formatStageForPrompt(stage: ConversationStage, index: number): string {
 }
 
 export const forgettingStrategy: QueueStrategy = {
+  // empty-response matched → no assistant text to evaluate for context loss.
+  suppressedBy: [],
+
   hasRequiredContext(trace: TraceDetail): boolean {
     // Forgetting requires prior context to forget — need at least 2 stages
     return extractConversationStages(trace).length >= 2

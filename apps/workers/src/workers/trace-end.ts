@@ -1,18 +1,14 @@
 import {
   AnnotationQueueRepository,
   buildTraceEndLiveQueueSelectionInputs,
-  buildTraceEndSystemQueueSelectionInputs,
-  getProjectSystemQueuesUseCase,
   orchestrateTraceEndLiveQueueMaterializationUseCase,
-  orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
-  runDeterministicSystemMatchersUseCase,
 } from "@domain/annotation-queues"
 import {
   buildTraceEndEvaluationSelectionInputs,
   listAllActiveEvaluations,
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
   loadTraceForTraceEndUseCase,
@@ -40,12 +36,10 @@ import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
-import { createIterationProgress } from "../services/iteration-progress.ts"
 
 const logger = createLogger("trace-end")
 const TRACE_END_QUEUE = "trace-end" as const
 const TRACE_END_RUN_TASK = "run" as const
-const SYSTEM_QUEUE_PROGRESS_TTL_SECONDS = 24 * 60 * 60
 
 interface TraceEndPayload {
   readonly organizationId: string
@@ -58,7 +52,6 @@ type TraceEndLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
 interface TraceEndDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
-  workflowStarter: WorkflowStarterShape
   postgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
   redisClient?: RedisClient
@@ -67,7 +60,6 @@ interface TraceEndDeps {
 
 interface RunTraceEndDeps {
   readonly publisher: QueuePublisherShape
-  readonly workflowStarter: WorkflowStarterShape
   readonly postgresClient: PostgresClient
   readonly clickhouseClient: ClickHouseClient
   readonly redisClient: RedisClient
@@ -85,22 +77,12 @@ type LiveQueueSummary = TraceEndItemDecisionCounts & {
   readonly insertedItemCount: number
 }
 
-type SystemQueueSummary = TraceEndItemDecisionCounts & {
-  readonly systemQueuesScanned: number
-  readonly startedWorkflowCount: number
-}
-
-type DeterministicSystemMatchesSummary = {
-  readonly matchedSlugs: readonly string[]
-}
-
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
   readonly evaluations: EvaluationSummary
   readonly liveQueues: LiveQueueSummary
-  readonly systemQueues: SystemQueueSummary
-  readonly deterministicSystemMatches: DeterministicSystemMatchesSummary
+  readonly deterministicFlaggersEnqueued: boolean
 }
 
 type TraceEndRunResult =
@@ -122,54 +104,8 @@ const buildRunLogContext = (payload: TraceEndPayload) => ({
   traceId: payload.traceId,
 })
 
-const startWorkflowOnce = ({
-  redisClient,
-  workflowStarter,
-  organizationId,
-  projectId,
-  traceId,
-  queueSlug,
-}: {
-  readonly redisClient: RedisClient
-  readonly workflowStarter: WorkflowStarterShape
-  readonly organizationId: string
-  readonly projectId: string
-  readonly traceId: string
-  readonly queueSlug: string
-}) => {
-  const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
-  const jobId = `org:${organizationId}:projects:${projectId}:traces:${traceId}:system-queue-workflows-started`
-
-  const progress = createIterationProgress({
-    redisClient,
-    jobId,
-    ttlSeconds: SYSTEM_QUEUE_PROGRESS_TTL_SECONDS,
-  })
-
-  return Effect.gen(function* () {
-    const alreadyStarted = yield* progress.isComplete(workflowId)
-    if (alreadyStarted) return false
-
-    yield* workflowStarter.start(
-      "systemQueueFlaggerWorkflow",
-      {
-        organizationId,
-        projectId,
-        traceId,
-        queueSlug,
-      },
-      {
-        workflowId,
-      },
-    )
-
-    yield* progress.markComplete(workflowId)
-    return true
-  })
-}
-
 export const runTraceEndJob =
-  ({ publisher, workflowStarter, postgresClient, clickhouseClient, redisClient }: RunTraceEndDeps) =>
+  ({ publisher, postgresClient, clickhouseClient, redisClient }: RunTraceEndDeps) =>
   (payload: TraceEndPayload) =>
     Effect.gen(function* () {
       const loaded = yield* loadTraceForTraceEndUseCase(payload)
@@ -184,7 +120,7 @@ export const runTraceEndJob =
 
       const traceDetail = loaded.traceDetail
 
-      const [activeEvaluations, liveQueues, systemQueues] = yield* Effect.all(
+      const [activeEvaluations, liveQueues] = yield* Effect.all(
         [
           listAllActiveEvaluations({
             projectId: traceDetail.projectId,
@@ -195,22 +131,16 @@ export const runTraceEndJob =
               projectId: traceDetail.projectId,
             })
           }),
-          getProjectSystemQueuesUseCase({
-            organizationId: payload.organizationId,
-            projectId: traceDetail.projectId,
-          }),
         ],
         { concurrency: "unbounded" },
       )
 
       const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations)
       const liveBuilt = buildTraceEndLiveQueueSelectionInputs(liveQueues)
-      const sysBuilt = buildTraceEndSystemQueueSelectionInputs(systemQueues)
 
       const items = {
         ...evalBuilt.items,
         ...liveBuilt.items,
-        ...sysBuilt.items,
       }
 
       const decisions = yield* selectTraceEndItemsUseCase({
@@ -222,7 +152,6 @@ export const runTraceEndJob =
 
       const evaluationDecisionCounts = summarizeTraceEndItemDecisions([...evalBuilt.evaluationByKey.keys()], decisions)
       const liveQueueDecisionCounts = summarizeTraceEndItemDecisions([...liveBuilt.liveQueueIdByKey.keys()], decisions)
-      const systemQueueDecisionCounts = summarizeTraceEndItemDecisions([...sysBuilt.systemQueueByKey.keys()], decisions)
 
       const selectedEvaluations = [...evalBuilt.evaluationByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
@@ -230,9 +159,6 @@ export const runTraceEndJob =
       const selectedLiveQueueIds = [...liveBuilt.liveQueueIdByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, queueId]) => queueId)
-      const selectedSystemQueues = [...sysBuilt.systemQueueByKey.entries()]
-        .filter(([key]) => decisions[key]?.selected === true)
-        .map(([, queue]) => queue)
 
       const { skippedTurnCount, publishedExecuteCount } = yield* orchestrateTraceEndLiveEvaluationExecutesUseCase({
         publishExecute: (pubInput) =>
@@ -267,24 +193,34 @@ export const runTraceEndJob =
         selectedLiveQueueIds,
       })
 
-      const { startedWorkflowCount } = yield* orchestrateTraceEndSystemQueueWorkflowStartsUseCase({
-        startOnce: (args) =>
-          startWorkflowOnce({
-            redisClient,
-            workflowStarter,
-            organizationId: args.organizationId,
-            projectId: args.projectId,
-            traceId: args.traceId,
-            queueSlug: args.queueSlug,
-          }),
-      })({
-        organizationId: payload.organizationId,
-        projectId: payload.projectId,
-        traceId: payload.traceId,
-        selectedSystemQueues,
-      })
-
-      const { matchedSlugs } = yield* runDeterministicSystemMatchersUseCase({ trace: traceDetail })
+      // Hand the deterministic-flagger fan-out to its own worker. Per-strategy
+      // isolation (Effect.catch) lives there, so a broken detector can't
+      // fail the whole trace-end job.
+      const deterministicFlaggersEnqueued = yield* publisher
+        .publish(
+          "deterministic-flaggers",
+          "run",
+          {
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            traceId: payload.traceId,
+          },
+          {
+            dedupeKey: `deterministic-flaggers:${payload.traceId}`,
+          },
+        )
+        .pipe(
+          Effect.map(() => true),
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              yield* Effect.logError("Failed to enqueue deterministic-flaggers", {
+                ...buildRunLogContext(payload),
+                error,
+              })
+              return false
+            }),
+          ),
+        )
 
       // Publish trace-search refresh task after successful trace-end completion
       yield* publisher.publish("trace-search", "refreshTrace", {
@@ -312,12 +248,7 @@ export const runTraceEndJob =
             liveQueuesScanned: liveQueues.length,
             insertedItemCount,
           },
-          systemQueues: {
-            ...systemQueueDecisionCounts,
-            systemQueuesScanned: systemQueues.length,
-            startedWorkflowCount,
-          },
-          deterministicSystemMatches: { matchedSlugs },
+          deterministicFlaggersEnqueued,
         },
       } satisfies TraceEndRunResult
     }).pipe(
@@ -330,11 +261,6 @@ export const runTraceEndJob =
           ScoreRepositoryLive,
         ),
         postgresClient,
-        OrganizationId(payload.organizationId),
-      ),
-      withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
-        clickhouseClient,
         OrganizationId(payload.organizationId),
       ),
       withClickHouse(
@@ -367,8 +293,7 @@ export const createRunHandler =
             sessionId: result.summary.sessionId,
             evaluations: result.summary.evaluations,
             liveQueues: result.summary.liveQueues,
-            systemQueues: result.summary.systemQueues,
-            deterministicSystemMatches: result.summary.deterministicSystemMatches,
+            deterministicFlaggersEnqueued: result.summary.deterministicFlaggersEnqueued,
           })
         }),
       ),
@@ -387,7 +312,6 @@ export const createRunHandler =
 export const createTraceEndWorker = ({
   consumer,
   publisher,
-  workflowStarter,
   postgresClient,
   clickhouseClient,
   redisClient,
@@ -402,7 +326,6 @@ export const createTraceEndWorker = ({
     run: createRunHandler({
       log: traceEndLogger,
       publisher,
-      workflowStarter,
       postgresClient: pgClient,
       clickhouseClient: chClient,
       redisClient: rdClient,

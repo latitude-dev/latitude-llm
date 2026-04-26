@@ -160,6 +160,32 @@ const _registry = {
     }
   }>(),
 
+  // Runs the deterministic portion of every registered flagger strategy against
+  // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
+  // that return `no-match` are sampled and, if selected, routed to the LLM
+  // workflow; `ambiguous` strategies are rate-limited per {org, slug} and also
+  // routed to the LLM workflow. Per-strategy failures are isolated.
+  "deterministic-flaggers": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
+  }>(),
+
+  // Thin start-workflow job. Separates the Temporal `start()` call out of the
+  // deterministic-flaggers hot path so transient Temporal unavailability retries
+  // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
+  "start-flagger-workflow": payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly queueSlug: string
+      readonly reason: "sampled" | "ambiguous"
+    }
+  }>(),
+
   projects: payloads<{
     provision: {
       readonly organizationId: string

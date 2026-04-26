@@ -269,7 +269,11 @@ export const jailbreakingStrategy: QueueStrategy = {
   detectDeterministically(trace: TraceDetail): DetectionResult {
     // High-confidence deterministic match
     if (hasHighPrecisionJailbreakPatterns(trace)) {
-      return { kind: "matched" }
+      return {
+        kind: "matched",
+        feedback:
+          "Jailbreak attempt: matched a high-precision bypass pattern (prompt injection / instruction override)",
+      }
     }
 
     // Check for suspicious snippets

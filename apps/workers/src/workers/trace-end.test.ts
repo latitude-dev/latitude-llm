@@ -6,7 +6,6 @@ import {
   evaluationSchema,
 } from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
-import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import type { FilterSet } from "@domain/shared"
@@ -241,23 +240,6 @@ const insertTraceRows = async (rows: Array<Record<string, unknown>>) => {
   })
 }
 
-const createFakeWorkflowStarter = () => {
-  const startedWorkflows: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: { readonly workflowId: string }
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        startedWorkflows.push({ workflow, input, options })
-      }),
-    signalWithStart: () => Effect.die("signalWithStart should not be called by trace-end tests"),
-  }
-
-  return { workflowStarter, startedWorkflows }
-}
-
 const createFakeRedisClient = (): RedisClient => {
   const values = new Map<string, string>()
   const sets = new Map<string, Set<string>>()
@@ -305,13 +287,11 @@ describe("createTraceEndWorker", () => {
   it("registers the trace-end run task", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     createTraceEndWorker({
       consumer,
       publisher,
-      workflowStarter,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient,
@@ -324,13 +304,11 @@ describe("createTraceEndWorker", () => {
 describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, startedWorkflows } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -347,7 +325,6 @@ describe("runTraceEndJob", () => {
       traceId: TRACE_ID,
     })
     expect(published).toEqual([])
-    expect(startedWorkflows).toEqual([])
   })
 })
 
@@ -402,13 +379,11 @@ describe("runTraceEndJob", () => {
     await pg.db.insert(scores).values([makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })])
 
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, startedWorkflows } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -440,16 +415,7 @@ describe("runTraceEndJob", () => {
           filterMissCount: 1,
           insertedItemCount: 1,
         },
-        systemQueues: {
-          systemQueuesScanned: 2,
-          selectedCount: 1,
-          sampledOutCount: 1,
-          filterMissCount: 0,
-          startedWorkflowCount: 1,
-        },
-        deterministicSystemMatches: {
-          matchedSlugs: [],
-        },
+        deterministicFlaggersEnqueued: true,
       },
     })
 
@@ -473,23 +439,20 @@ describe("runTraceEndJob", () => {
             }),
           },
         },
+        {
+          queue: "deterministic-flaggers",
+          task: "run",
+          payload: {
+            organizationId: ORGANIZATION_ID,
+            projectId: PROJECT_ID,
+            traceId: TRACE_ID,
+          },
+          options: {
+            dedupeKey: `deterministic-flaggers:${TRACE_ID}`,
+          },
+        },
       ]),
     )
-
-    expect(startedWorkflows).toEqual([
-      {
-        workflow: "systemQueueFlaggerWorkflow",
-        input: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          traceId: TRACE_ID,
-          queueSlug: "system-selected",
-        },
-        options: {
-          workflowId: "system-queue-flagger:tttttttttttttttttttttttttttttttt:system-selected",
-        },
-      },
-    ])
 
     const queueItems = await pg.db.select().from(annotationQueueItems)
     expect(queueItems).toHaveLength(1)
@@ -561,7 +524,6 @@ describe("createRunHandler", () => {
     ])
 
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
     const log = createMockLogger()
 
@@ -569,7 +531,6 @@ describe("createRunHandler", () => {
       createRunHandler({
         log,
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -604,16 +565,7 @@ describe("createRunHandler", () => {
         filterMissCount: 0,
         insertedItemCount: 1,
       },
-      systemQueues: {
-        systemQueuesScanned: 1,
-        selectedCount: 1,
-        sampledOutCount: 0,
-        filterMissCount: 0,
-        startedWorkflowCount: 1,
-      },
-      deterministicSystemMatches: {
-        matchedSlugs: [],
-      },
+      deterministicFlaggersEnqueued: true,
     })
   })
 })

@@ -104,6 +104,21 @@ export interface PublishOptions {
    * Requires `dedupeKey`. Mutually exclusive with `debounceMs`.
    */
   readonly throttleMs?: number
+  /**
+   * Total attempts BullMQ should make before the job is considered failed
+   * (inclusive of the first try). Set alongside `backoff` to get bounded
+   * exponential retry for transient dependency failures (e.g. Temporal
+   * unavailability). Without a `backoff` set, retries fire immediately.
+   */
+  readonly attempts?: number
+  /**
+   * Exponential backoff between retry attempts, in milliseconds. Delay is
+   * `delayMs * 2^(attempt-1)`. Ignored when `attempts` is unset or ≤ 1.
+   */
+  readonly backoff?: {
+    readonly type: "exponential"
+    readonly delayMs: number
+  }
 }
 
 export interface QueuePublisherShape {
