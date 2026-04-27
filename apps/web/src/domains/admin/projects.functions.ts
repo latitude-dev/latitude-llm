@@ -8,13 +8,13 @@ import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
-export interface AdminProjectOrganizationDto {
+interface AdminProjectOrganizationDto {
   id: string
   name: string
   slug: string
 }
 
-export interface AdminProjectDetailsDto {
+interface AdminProjectDetailsDto {
   id: string
   name: string
   slug: string

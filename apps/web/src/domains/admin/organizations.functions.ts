@@ -27,7 +27,7 @@ export interface AdminOrganizationProjectDto {
   createdAt: string
 }
 
-export interface AdminOrganizationDetailsDto {
+interface AdminOrganizationDetailsDto {
   id: string
   name: string
   slug: string

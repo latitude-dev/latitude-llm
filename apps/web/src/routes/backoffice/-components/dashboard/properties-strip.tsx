@@ -1,4 +1,4 @@
-import { Icon, Text } from "@repo/ui"
+import { Icon } from "@repo/ui"
 import { ExternalLinkIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
@@ -63,8 +63,4 @@ export function StripeCustomerLink({ customerId }: { customerId: string }) {
       <span className="sr-only">Open in Stripe dashboard</span>
     </a>
   )
-}
-
-export function NoneText() {
-  return <Text.H6 color="foregroundMuted">(none)</Text.H6>
 }

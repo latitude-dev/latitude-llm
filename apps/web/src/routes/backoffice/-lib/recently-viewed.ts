@@ -37,7 +37,8 @@ import { useEffect, useMemo, useState } from "react"
  */
 
 export const STORAGE_KEY = "backoffice:recently-viewed"
-export const CHANGE_EVENT = "backoffice:recently-viewed-changed"
+/** Internal — fired by `recordRecentView` / `clearRecentViews` so other instances of `useRecentBackofficeViews` in the same tab refresh. The browser-built-in `storage` event only fires in OTHER tabs. */
+const CHANGE_EVENT = "backoffice:recently-viewed-changed"
 export const MAX_RECENT_ENTRIES = 20
 
 export type RecentBackofficeKind = "user" | "organization" | "project"
