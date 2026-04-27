@@ -16,6 +16,8 @@ jobs:
         with:
           days-before-stale: 30
           days-before-close: 7
+          operations-per-run: 500
+          ascending: true
           stale-issue-message: 'This issue has been automatically marked as stale due to inactivity.'
           close-issue-message: 'Closing this issue due to prolonged inactivity.'
           exempt-issue-labels: 'keep-open'
