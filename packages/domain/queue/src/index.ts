@@ -1,4 +1,4 @@
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
@@ -50,7 +50,7 @@ export interface WorkflowStarterShape {
   ) => Effect.Effect<void>
 }
 
-export class WorkflowStarter extends ServiceMap.Service<WorkflowStarter, WorkflowStarterShape>()(
+export class WorkflowStarter extends Context.Service<WorkflowStarter, WorkflowStarterShape>()(
   "@domain/queue/WorkflowStarter",
 ) {}
 
@@ -77,7 +77,7 @@ export interface WorkflowQuerierShape {
   readonly query: <T>(workflowId: string, queryName: string) => Effect.Effect<T | null>
 }
 
-export class WorkflowQuerier extends ServiceMap.Service<WorkflowQuerier, WorkflowQuerierShape>()(
+export class WorkflowQuerier extends Context.Service<WorkflowQuerier, WorkflowQuerierShape>()(
   "@domain/queue/WorkflowQuerier",
 ) {}
 
@@ -131,7 +131,7 @@ export interface QueuePublisherShape {
   readonly close: () => Effect.Effect<void>
 }
 
-export class QueuePublisher extends ServiceMap.Service<QueuePublisher, QueuePublisherShape>()(
+export class QueuePublisher extends Context.Service<QueuePublisher, QueuePublisherShape>()(
   "@domain/queue/QueuePublisher",
 ) {}
 

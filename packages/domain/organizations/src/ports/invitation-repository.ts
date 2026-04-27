@@ -1,8 +1,8 @@
 import type { NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { PublicInvitationPreview } from "../entities/public-invitation-preview.ts"
 
-export class InvitationRepository extends ServiceMap.Service<
+export class InvitationRepository extends Context.Service<
   InvitationRepository,
   {
     /**

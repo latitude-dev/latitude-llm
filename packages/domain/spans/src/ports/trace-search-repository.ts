@@ -1,5 +1,5 @@
 import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 
 export interface TraceSearchDocumentRow {
   readonly organizationId: OrganizationId
@@ -56,6 +56,6 @@ export interface TraceSearchRepositoryShape {
   ): Effect.Effect<boolean, RepositoryError>
 }
 
-export class TraceSearchRepository extends ServiceMap.Service<TraceSearchRepository, TraceSearchRepositoryShape>()(
+export class TraceSearchRepository extends Context.Service<TraceSearchRepository, TraceSearchRepositoryShape>()(
   "@domain/spans/TraceSearchRepository",
 ) {}

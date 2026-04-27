@@ -147,7 +147,7 @@ export const optimizeEvaluationDraft = (input: {
       yield* Effect.annotateCurrentSpan("alignment.negativeExampleCount", input.negativeExamples.length)
 
       const optimizer = yield* Optimizer
-      const services = yield* Effect.services<never>()
+      const services = yield* Effect.context<never>()
       const allExamples = [...input.positiveExamples, ...input.negativeExamples]
       const examplesById = new Map<string, HydratedEvaluationAlignmentExample>(
         allExamples.map((example) => [example.traceId as string, example]),

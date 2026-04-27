@@ -1,5 +1,5 @@
 import { type ApiKeyId, type NotFoundError, type RepositoryError, SqlClient } from "@domain/shared"
-import { Effect, ServiceMap } from "effect"
+import { Effect, Context } from "effect"
 import { revoke } from "../entities/api-key.ts"
 import type { ApiKeyNotFoundError } from "../errors.ts"
 import { ApiKeyAlreadyRevokedError } from "../errors.ts"
@@ -11,7 +11,7 @@ export interface RevokeApiKeyInput {
 
 export type RevokeApiKeyError = RepositoryError | NotFoundError | ApiKeyNotFoundError | ApiKeyAlreadyRevokedError
 
-export class ApiKeyCacheInvalidator extends ServiceMap.Service<
+export class ApiKeyCacheInvalidator extends Context.Service<
   ApiKeyCacheInvalidator,
   {
     delete(tokenHash: string): Effect.Effect<void, never>

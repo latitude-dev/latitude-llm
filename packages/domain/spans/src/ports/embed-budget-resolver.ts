@@ -1,5 +1,5 @@
 import type { OrganizationId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 
 /**
  * Per-window embed-token budgets for one organization. All three limits are
@@ -26,6 +26,6 @@ export interface EmbedBudgetResolverShape {
   resolveLimits(organizationId: OrganizationId): Effect.Effect<EmbedBudgetLimits, never>
 }
 
-export class EmbedBudgetResolver extends ServiceMap.Service<EmbedBudgetResolver, EmbedBudgetResolverShape>()(
+export class EmbedBudgetResolver extends Context.Service<EmbedBudgetResolver, EmbedBudgetResolverShape>()(
   "@domain/spans/EmbedBudgetResolver",
 ) {}

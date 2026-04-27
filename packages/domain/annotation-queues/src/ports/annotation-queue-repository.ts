@@ -1,5 +1,5 @@
 import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 
 /**
@@ -111,7 +111,7 @@ export interface AnnotationQueueRepositoryShape {
   incrementCompletedItems(input: IncrementCompletedItemsInput): Effect.Effect<void, RepositoryError, SqlClient>
 }
 
-export class AnnotationQueueRepository extends ServiceMap.Service<
+export class AnnotationQueueRepository extends Context.Service<
   AnnotationQueueRepository,
   AnnotationQueueRepositoryShape
 >()("@domain/annotation-queues/AnnotationQueueRepository") {}

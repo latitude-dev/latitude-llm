@@ -1,4 +1,4 @@
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { LiveEvaluationQueuePublishError } from "../errors.ts"
 
 export interface PublishLiveEvaluationExecuteInput {
@@ -16,7 +16,7 @@ export interface LiveEvaluationQueuePublisherShape {
   ) => Effect.Effect<void, LiveEvaluationQueuePublishError>
 }
 
-export class LiveEvaluationQueuePublisher extends ServiceMap.Service<
+export class LiveEvaluationQueuePublisher extends Context.Service<
   LiveEvaluationQueuePublisher,
   LiveEvaluationQueuePublisherShape
 >()("@domain/evaluations/LiveEvaluationQueuePublisher") {}
