@@ -102,12 +102,14 @@ export function IssueDrawerEvaluations({
   issueSource,
   evaluations,
   canMonitorIssue,
+  isIssueLoading,
 }: {
   readonly projectId: string
   readonly issueId: string
   readonly issueSource: "annotation" | "custom" | "flagger"
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly canMonitorIssue: boolean
+  readonly isIssueLoading: boolean
 }) {
   const { toast } = useToast()
   const [tracked, setTracked] = useState<TrackedWorkflow | null>(null)
@@ -247,7 +249,7 @@ export function IssueDrawerEvaluations({
   const isPrimaryEvaluationRealigning =
     primaryEvaluation !== null && tracked?.kind === "realign" && tracked.evaluationId === primaryEvaluation.id
 
-  if (!hasAlignmentStateSynced) {
+  if (!hasAlignmentStateSynced || isIssueLoading) {
     return visibleEvaluations.length === 0 ? (
       <Skeleton className="h-20 w-full rounded-xl" />
     ) : (
