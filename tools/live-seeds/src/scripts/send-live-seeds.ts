@@ -13,7 +13,7 @@ Options:
   --ingest-url <url>             Base URL for the ingest service
   --project-slug <slug>          Target project slug (default: seeded default-project). When
                                  overridden, the tool finds (or creates) the project by slug in
-                                 the Acme seed org and auto-restricts fixtures to system-queue-only.
+                                 the Acme seed org and auto-restricts fixtures to flagger-only.
   --api-key-token <token>        Ingest API key (default: seed token lat_seed_default_api_key_token)
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
   --count-per-fixture <n>        Generate this many cases per selected fixture (default: 5)
@@ -21,7 +21,7 @@ Options:
   --parallel-traces <n>          Alias for --parallel-cases
   --seed <value>                 Seed for reproducible trace generation
   --verbose-spans                Print one log line per span in addition to summary progress
-  --no-provision-system-queues   Skip provisioning the default system queues
+  --no-provision-flaggers   Skip provisioning the default flaggers
   --list-fixtures                Print the available fixture keys and exit
   --help                         Show this help
 `.trim()
@@ -72,7 +72,7 @@ const { values, positionals } = parseArgs({
     "parallel-traces": { type: "string", default: "4" },
     seed: { type: "string" },
     "verbose-spans": { type: "boolean", default: false },
-    "no-provision-system-queues": { type: "boolean", default: false },
+    "no-provision-flaggers": { type: "boolean", default: false },
     "list-fixtures": { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
@@ -107,7 +107,7 @@ const parallelCases = parsePositiveInteger(
   values["parallel-cases"] ?? values["parallel-traces"] ?? "4",
   values["parallel-cases"] ? "--parallel-cases" : "--parallel-traces",
 )
-const provisionSystemQueues = !values["no-provision-system-queues"]
+const provisionFlaggers = !values["no-provision-flaggers"]
 const verboseSpans = values["verbose-spans"] ?? false
 
 const options = {
@@ -116,7 +116,7 @@ const options = {
   timeScale,
   countPerFixture,
   parallelCases,
-  provisionSystemQueues,
+  provisionFlaggers,
   verboseSpans,
   ...(values.seed ? { seed: values.seed } : {}),
   ...(values["project-slug"] ? { projectSlug: values["project-slug"] } : {}),

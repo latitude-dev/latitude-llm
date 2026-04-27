@@ -8,13 +8,13 @@ const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
 const ERROR_SNIPPET_MAX_LENGTH = 160
 
-export type DeterministicSystemMatch =
+export type DeterministicFlaggerMatch =
   | { readonly matched: true; readonly feedback: string }
   | { readonly matched: false }
 
-const NO_MATCH: DeterministicSystemMatch = { matched: false }
+const NO_MATCH: DeterministicFlaggerMatch = { matched: false }
 
-const match = (feedback: string): DeterministicSystemMatch => ({ matched: true, feedback })
+const match = (feedback: string): DeterministicFlaggerMatch => ({ matched: true, feedback })
 
 function coalesceInstant(v: Date | string | null | undefined): Date | null {
   if (v == null) return null
@@ -23,7 +23,7 @@ function coalesceInstant(v: Date | string | null | undefined): Date | null {
 }
 
 /** Detects tool-call failures in the conversation and returns clusterable feedback on match. */
-export function detectToolCallErrorsSystemQueue(trace: TraceMessagesOnly): DeterministicSystemMatch {
+export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
   const toolNameById = new Map<string, string>()
 
   for (const message of trace.allMessages) {
@@ -150,7 +150,7 @@ function responseIndicatesFailure(response: unknown): boolean {
 }
 
 /** Detects malformed or truncated structured-output JSON in assistant text parts. */
-export function detectOutputSchemaValidationSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
+export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 
@@ -204,7 +204,7 @@ export function detectOutputSchemaValidationSystemQueue(trace: TraceDetail): Det
 }
 
 /** Detects empty or degenerate assistant responses, skipping intentional tool-call-only delegations. */
-export function detectEmptyResponseSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
+export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 

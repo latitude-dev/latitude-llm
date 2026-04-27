@@ -7,7 +7,7 @@ import {
 import { BadRequestError, ProjectId, type RepositoryError, ScoreId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { SYSTEM_QUEUE_DRAFT_DEFAULTS } from "../constants.ts"
+import { FLAGGER_DRAFT_DEFAULTS } from "../constants.ts"
 import {
   type FlaggerAnnotateInput,
   type FlaggerAnnotateOutput,
@@ -93,8 +93,8 @@ export const persistFlaggerAnnotationUseCase = Effect.fn("annotationQueues.persi
     simulationId: null,
     issueId: null,
     annotatorId: null,
-    value: SYSTEM_QUEUE_DRAFT_DEFAULTS.value,
-    passed: SYSTEM_QUEUE_DRAFT_DEFAULTS.passed,
+    value: FLAGGER_DRAFT_DEFAULTS.value,
+    passed: FLAGGER_DRAFT_DEFAULTS.passed,
     feedback: input.feedback,
     metadata: { rawFeedback: input.feedback },
     error: null,

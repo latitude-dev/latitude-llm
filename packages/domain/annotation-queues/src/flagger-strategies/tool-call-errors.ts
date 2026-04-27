@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { detectToolCallErrorsSystemQueue } from "../helpers.ts"
+import { detectToolCallErrorsFlagger } from "../helpers.ts"
 import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 /**
@@ -13,7 +13,7 @@ export const toolCallErrorsStrategy: QueueStrategy = {
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectToolCallErrorsSystemQueue(trace)
+    const result = detectToolCallErrorsFlagger(trace)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
   },
 }

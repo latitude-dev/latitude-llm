@@ -1,5 +1,5 @@
 import { AnnotationQueueRepository } from "@domain/annotation-queues"
-import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError, type SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, RepositoryError, type SqlClient } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -356,81 +356,6 @@ describe("AnnotationQueueRepositoryLive", () => {
         }),
       )
       expect(after?.completedItems).toBe(0)
-    })
-  })
-
-  describe("cache eviction", () => {
-    it("evicts the project system-queue cache after save", async () => {
-      const deletedKeys: string[] = []
-
-      await runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* AnnotationQueueRepository
-
-          yield* repo.save({
-            id: generateId<"AnnotationQueueId">(),
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            system: true,
-            name: "Saved system queue",
-            slug: "saved-system-queue",
-            description: "",
-            instructions: "",
-            settings: emptySettings,
-            assignees: [],
-            totalItems: 0,
-            completedItems: 0,
-            deletedAt: null,
-            createdAt: new Date("2025-01-04T12:00:00.000Z"),
-            updatedAt: new Date("2025-01-04T12:00:00.000Z"),
-          })
-        }).pipe(
-          Effect.provideService(CacheStore, {
-            get: () => Effect.succeed(null),
-            set: () => Effect.void,
-            delete: (key) => Effect.sync(() => deletedKeys.push(key)),
-          }),
-        ),
-      )
-
-      expect(deletedKeys).toEqual([`org:${ORG_ID}:projects:${PROJECT_ID}:system-queues`])
-    })
-
-    it("evicts the project system-queue cache when a system queue is inserted", async () => {
-      const deletedKeys: string[] = []
-
-      const wasInserted = await runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* AnnotationQueueRepository
-
-          return yield* repo.insertIfNotExists({
-            id: generateId<"AnnotationQueueId">(),
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            system: true,
-            name: "Inserted system queue",
-            slug: "inserted-system-queue",
-            description: "",
-            instructions: "",
-            settings: emptySettings,
-            assignees: [],
-            totalItems: 0,
-            completedItems: 0,
-            deletedAt: null,
-            createdAt: new Date("2025-01-05T12:00:00.000Z"),
-            updatedAt: new Date("2025-01-05T12:00:00.000Z"),
-          })
-        }).pipe(
-          Effect.provideService(CacheStore, {
-            get: () => Effect.succeed(null),
-            set: () => Effect.void,
-            delete: (key) => Effect.sync(() => deletedKeys.push(key)),
-          }),
-        ),
-      )
-
-      expect(wasInserted).toBe(true)
-      expect(deletedKeys).toEqual([`org:${ORG_ID}:projects:${PROJECT_ID}:system-queues`])
     })
   })
 

@@ -16,7 +16,7 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
+import { FLAGGER_MODEL } from "../constants.ts"
 import { type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
 
 const INPUT: RunFlaggerInput = {
@@ -27,7 +27,7 @@ const INPUT: RunFlaggerInput = {
 }
 
 // Schema from the implementation - for testing default behavior
-const systemQueueFlaggerOutputSchema = z.object({
+const flaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
 })
 
@@ -110,11 +110,11 @@ describe("runFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
-      ...SYSTEM_QUEUE_FLAGGER_MODEL,
+      ...FLAGGER_MODEL,
       maxTokens: 512,
       telemetry: {
-        spanName: "queue.system.classify",
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
+        spanName: "flagger.classify",
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
         metadata: {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,
@@ -123,7 +123,7 @@ describe("runFlaggerUseCase", () => {
         },
       },
     })
-    // New queue-specific prompt format per system-queue-flagger redesign
+    // New queue-specific prompt format per flagger redesign
     expect(calls.generate[0].system).toContain("Jailbreaking")
     expect(calls.generate[0].system).toContain("INDIRECT PROMPT INJECTION")
     expect(calls.generate[0].system).toContain("manipulation")
@@ -589,17 +589,17 @@ describe("runFlaggerUseCase", () => {
 
   it("schema: empty object {} is parsed as matched=false via Zod default", () => {
     // Verify that the schema correctly applies the default(false) for missing matched field
-    const parsed = systemQueueFlaggerOutputSchema.parse({})
+    const parsed = flaggerOutputSchema.parse({})
     expect(parsed).toEqual({ matched: false })
   })
 
   it("schema: explicit matched=true is preserved", () => {
-    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: true })
+    const parsed = flaggerOutputSchema.parse({ matched: true })
     expect(parsed).toEqual({ matched: true })
   })
 
   it("schema: explicit matched=false is preserved", () => {
-    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: false })
+    const parsed = flaggerOutputSchema.parse({ matched: false })
     expect(parsed).toEqual({ matched: false })
   })
 })

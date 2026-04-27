@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { detectEmptyResponseSystemQueue } from "../helpers.ts"
+import { detectEmptyResponseFlagger } from "../helpers.ts"
 import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 /**
@@ -13,7 +13,7 @@ export const emptyResponseStrategy: QueueStrategy = {
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectEmptyResponseSystemQueue(trace)
+    const result = detectEmptyResponseFlagger(trace)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
   },
 }

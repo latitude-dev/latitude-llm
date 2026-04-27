@@ -83,7 +83,7 @@ export interface TraceResourceOutlierReason {
  * Single-trace resource outlier evaluation.
  *
  * `reasons` includes every cohort rule that fires for this trace (including standalone single-metric p95 when baselines allow).
- * `matched` is the **system-queue** signal: true only for combined latency+cost at p95/p99, any single-metric p99, or median×3.
+ * `matched` is the **flagger** signal: true only for combined latency+cost at p95/p99, any single-metric p99, or median×3.
  * Standalone single-metric p95 hits appear in `reasons` but do not set `matched`.
  */
 export interface TraceResourceOutlierEvaluation {

@@ -10,7 +10,7 @@ import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, Tr
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
-import { SYSTEM_QUEUE_FLAGGER_MAX_TOKENS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
+import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
 import { getQueueStrategy, hasQueueStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 
 export interface RunFlaggerInput {
@@ -41,7 +41,7 @@ export interface ClassifyTraceForFlaggerInput {
   readonly trace: TraceDetail
 }
 
-const systemQueueFlaggerOutputSchema = z.object({
+const flaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
 })
 
@@ -88,16 +88,16 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("annotationQueues.classi
 
   const decisions = yield* ai
     .generate({
-      ...SYSTEM_QUEUE_FLAGGER_MODEL,
-      maxTokens: SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
+      ...FLAGGER_MODEL,
+      maxTokens: FLAGGER_MAX_TOKENS,
       // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
       system: strategy.buildSystemPrompt!(input.trace),
       // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
       prompt: strategy.buildPrompt!(input.trace),
-      schema: systemQueueFlaggerOutputSchema,
+      schema: flaggerOutputSchema,
       telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemClassify,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },
           { traceId: input.traceId, flaggerSlug: input.flaggerSlug },

@@ -256,36 +256,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             )
         }),
 
-      listSystemQueuesByProject: ({ projectId }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(annotationQueues)
-                .where(
-                  and(
-                    eq(annotationQueues.organizationId, organizationId),
-                    eq(annotationQueues.projectId, projectId),
-                    eq(annotationQueues.system, true),
-                    isNull(annotationQueues.deletedAt),
-                  ),
-                )
-                .orderBy(annotationQueues.createdAt),
-            )
-            .pipe(
-              Effect.map((rows) => rows.map(toDomainQueue)),
-              Effect.mapError(
-                (cause) =>
-                  new RepositoryError({
-                    operation: "listSystemQueuesByProject",
-                    cause,
-                  }),
-              ),
-            )
-        }),
-
       listLiveQueuesByProject: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -310,39 +280,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                 (cause) =>
                   new RepositoryError({
                     operation: "listLiveQueuesByProject",
-                    cause,
-                  }),
-              ),
-            )
-        }),
-
-      findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(annotationQueues)
-                .where(
-                  and(
-                    eq(annotationQueues.organizationId, organizationId),
-                    eq(annotationQueues.projectId, projectId),
-                    eq(annotationQueues.system, true),
-                    eq(annotationQueues.slug, queueSlug),
-                  ),
-                )
-                .limit(1),
-            )
-            .pipe(
-              Effect.map((rows) => {
-                const row = rows[0]
-                return row !== undefined ? toDomainQueue(row) : null
-              }),
-              Effect.mapError(
-                (cause) =>
-                  new RepositoryError({
-                    operation: "findSystemQueueBySlugInProject",
                     cause,
                   }),
               ),
