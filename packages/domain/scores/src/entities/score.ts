@@ -1,4 +1,11 @@
-import { cuidSchema, scoreIdSchema, sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/shared"
+import {
+  cuidSchema,
+  flaggerIdSchema,
+  scoreIdSchema,
+  sessionIdSchema,
+  spanIdSchema,
+  traceIdSchema,
+} from "@domain/shared"
 import { z } from "zod"
 import { ANNOTATION_SCORE_PARTIAL_SOURCE_IDS, SCORE_SOURCE_ID_MAX_LENGTH, SCORE_SOURCES } from "../constants.ts"
 
@@ -98,10 +105,16 @@ export type AnnotationScoreMetadata = z.infer<typeof annotationScoreMetadataSche
 export const customScoreMetadataSchema = z.record(z.string(), z.unknown()) // whatever the user wants to store in custom score metadata
 export type CustomScoreMetadata = z.infer<typeof customScoreMetadataSchema>
 
+export const flaggerScoreMetadataSchema = baseScoreMetadataSchema.extend({
+  rawFeedback: z.string(), // model-authored (LLM flaggers) or detector-authored (deterministic flaggers) feedback text used as the clusterable signal for issue discovery
+})
+export type FlaggerScoreMetadata = z.infer<typeof flaggerScoreMetadataSchema>
+
 export const scoreMetadataSchemas = {
   evaluation: evaluationScoreMetadataSchema,
   annotation: annotationScoreMetadataSchema,
   custom: customScoreMetadataSchema,
+  flagger: flaggerScoreMetadataSchema,
 } as const
 
 export const baseScoreSchema = z.object({
@@ -171,14 +184,21 @@ export const annotationScoreSchema = baseScoreSchema.extend({
 export type AnnotationScore = z.infer<typeof annotationScoreSchema>
 
 export const customScoreSchema = baseScoreSchema.extend({
-  source: z.literal("custom"), // "evaluation" | "annotation" | "custom"
+  source: z.literal("custom"), // "evaluation" | "annotation" | "custom" | "flagger"
   sourceId: scoreSourceIdSchema, // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
   metadata: customScoreMetadataSchema,
 })
 export type CustomScore = z.infer<typeof customScoreSchema>
 
+export const flaggerScoreSchema = baseScoreSchema.extend({
+  source: z.literal("flagger"), // "evaluation" | "annotation" | "custom" | "flagger"
+  sourceId: flaggerIdSchema, // FlaggerId — the per-project flagger row that authored this score
+  metadata: flaggerScoreMetadataSchema,
+})
+export type FlaggerScore = z.infer<typeof flaggerScoreSchema>
+
 export const scoreSchema = z
-  .discriminatedUnion("source", [evaluationScoreSchema, annotationScoreSchema, customScoreSchema])
+  .discriminatedUnion("source", [evaluationScoreSchema, annotationScoreSchema, customScoreSchema, flaggerScoreSchema])
   .superRefine(validateScoreLifecycle)
 export type Score = z.infer<typeof scoreSchema>
 
