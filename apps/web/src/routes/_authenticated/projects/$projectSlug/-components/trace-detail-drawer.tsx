@@ -6,11 +6,13 @@ import {
   DetailDrawer,
   ProviderIcon,
   Skeleton,
+  Status,
   type TabOption,
   Tabs,
   Text,
   Tooltip,
 } from "@repo/ui"
+import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
   ArrowDownIcon,
@@ -288,15 +290,11 @@ export function TraceDetailDrawer({
               {isRecordLoading ? (
                 <Skeleton className="h-6 w-12" />
               ) : traceRecord && traceRecord.errorCount > 0 ? (
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5",
-                    "text-xs leading-4 font-medium",
-                    "bg-red-500 text-white",
-                  )}
-                >
-                  {traceRecord.errorCount} {traceRecord.errorCount === 1 ? "error" : "errors"}
-                </span>
+                <Status
+                  variant="destructive"
+                  indicator={false}
+                  label={`${formatCount(traceRecord.errorCount)} ${traceRecord.errorCount === 1 ? "error" : "errors"}`}
+                />
               ) : null}
             </div>
             <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
