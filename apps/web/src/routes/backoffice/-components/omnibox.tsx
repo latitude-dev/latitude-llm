@@ -75,9 +75,11 @@ export function Omnibox({ value, onChange, entityType, onEntityTypeChange, resul
     }
   }
 
-  // Capture-phase keydown on the results container so we can intercept
-  // arrow / escape on whichever row currently has focus, without
-  // forcing every row component to wire up its own handler.
+  // Bubble-phase keydown listener on the results container so we can
+  // intercept arrow / escape on whichever row currently has focus,
+  // without forcing every row component to wire up its own handler.
+  // Capture-phase isn't necessary — rows are anchors and don't have
+  // their own keydown handlers, so there's nothing for us to outrun.
   useEffect(() => {
     const container = resultsContainerRef.current
     if (!container) return
@@ -131,6 +133,10 @@ export function Omnibox({ value, onChange, entityType, onEntityTypeChange, resul
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleInputKeyDown}
           placeholder="Search users, organizations, or projects…"
+          // The placeholder reads as the input's purpose to sighted
+          // users; `aria-label` mirrors it for assistive tech, since
+          // there's no visible `<label>` to associate with.
+          aria-label="Search backoffice"
           maxLength={100}
           // Suppress browser autocomplete / autocorrect / capitalisation —
           // staff are typing emails, slugs, ids; the browser's guesses are
