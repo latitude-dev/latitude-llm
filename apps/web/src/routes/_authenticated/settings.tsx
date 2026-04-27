@@ -2,8 +2,12 @@ import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { Building2, Key, UserRound, Users } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
+import { ProjectBreadcrumbSegment } from "./-components/project-breadcrumb-segment.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings")({
+  staticData: {
+    breadcrumb: ProjectBreadcrumbSegment,
+  },
   component: SettingsLayout,
 })
 
