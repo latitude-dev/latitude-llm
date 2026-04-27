@@ -19,8 +19,8 @@ catalogs:
       specifier: 1.18.3
       version: 1.18.3
     '@effect/opentelemetry':
-      specifier: 4.0.0-beta.4
-      version: 4.0.0-beta.4
+      specifier: 4.0.0-beta.57
+      version: 4.0.0-beta.57
     '@hono/node-server':
       specifier: 1.19.13
       version: 1.19.13
@@ -1289,7 +1289,7 @@ importers:
     dependencies:
       '@effect/opentelemetry':
         specifier: 'catalog:'
-        version: 4.0.0-beta.4(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)
+        version: 4.0.0-beta.57(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)
       '@latitude-data/telemetry':
         specifier: workspace:*
         version: link:../telemetry/typescript
@@ -3251,8 +3251,8 @@ packages:
     resolution: {integrity: sha512-zpxi6rLCwst/cBQd7ElwDvt36Y6Jvz8v6bCLnNiOL6OXvdLmqjOFWyzWZdMh92vvBQA/aVKhfIAAOP3o4wKt0A==}
     hasBin: true
 
-  '@effect/opentelemetry@4.0.0-beta.4':
-    resolution: {integrity: sha512-G+u2cB4Vge/18cbsh0Cd9iuvm+RwGoerhaxlWiWGTFkpNYhEKRGhQaprJZ/g/F6gq34y7kMap6MnM5fnxCh07Q==}
+  '@effect/opentelemetry@4.0.0-beta.57':
+    resolution: {integrity: sha512-gdjZPEP0QQg4qmI1vd+443kheeQZKytrjJIzCJncy6ZEpyk/SfrqeStLqLXdTRcms3IB0ls0vOV7KNq7YmBRVA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@opentelemetry/api': 1.9.1
@@ -3263,7 +3263,7 @@ packages:
       '@opentelemetry/sdk-trace-node': ^2.0.0
       '@opentelemetry/sdk-trace-web': ^2.0.0
       '@opentelemetry/semantic-conventions': ^1.33.0
-      effect: ^4.0.0-beta.4
+      effect: ^4.0.0-beta.57
     peerDependenciesMeta:
       '@opentelemetry/api':
         optional: true
@@ -13287,7 +13287,7 @@ snapshots:
 
   '@effect/language-service@0.84.3': {}
 
-  '@effect/opentelemetry@4.0.0-beta.4(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)':
+  '@effect/opentelemetry@4.0.0-beta.57(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)':
     dependencies:
       '@opentelemetry/semantic-conventions': 1.40.0
       effect: 4.0.0-beta.4
