@@ -1,5 +1,3 @@
-import { promisify } from "node:util"
-import { gzip } from "node:zlib"
 import { buildDatasetExportUseCase } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import type { ExportPayload } from "@domain/exports"
@@ -37,9 +35,8 @@ import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
+import { strToU8, zip } from "fflate"
 import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
-
-const gzipAsync = promisify(gzip)
 
 class ExportError extends Data.TaggedError("ExportError")<{
   readonly cause: unknown
@@ -65,9 +62,17 @@ interface ExportsWorkerDeps {
   emailSender?: EmailSender
 }
 
-async function compressCsv(csv: string): Promise<Uint8Array> {
-  const compressed = await gzipAsync(csv)
-  return new Uint8Array(compressed.buffer, compressed.byteOffset, compressed.byteLength)
+function zipCsv(csv: string, innerFilename: string): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    zip({ [innerFilename]: strToU8(csv) }, { level: 9 }, (err, data) => {
+      if (err) reject(err)
+      else resolve(data)
+    })
+  })
+}
+
+function csvEntryNameForZip(zipFilename: string): string {
+  return zipFilename.endsWith(".zip") ? `${zipFilename.slice(0, -4)}.csv` : `${zipFilename}.csv`
 }
 
 type IssuesExportInput = {
@@ -236,7 +241,7 @@ export const createExportsWorker = ({
         const { csv, filename, exportName } = yield* dispatchExport(payload as ExportPayload)
 
         const content = yield* Effect.tryPromise({
-          try: () => compressCsv(csv),
+          try: () => zipCsv(csv, csvEntryNameForZip(filename)),
           catch: (cause) => new ExportError({ cause, kind }),
         })
 

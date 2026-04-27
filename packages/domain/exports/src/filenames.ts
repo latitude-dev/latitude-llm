@@ -16,11 +16,11 @@ function formatExportTimestamp(value: Date): string {
 
 /**
  * Builds a filename for an export artifact.
- * All exports are compressed as `.csv.gz`.
+ * All exports are packaged as `.zip` archives containing a single `.csv` entry.
  */
 function buildExportFilename(kind: ExportKind, name: string, at = new Date()): string {
   const safeName = sanitizeExportFilename(name)
-  return `${safeName}_${kind}_export_${formatExportTimestamp(at)}.csv.gz`
+  return `${safeName}_${kind}_export_${formatExportTimestamp(at)}.zip`
 }
 
 /**
