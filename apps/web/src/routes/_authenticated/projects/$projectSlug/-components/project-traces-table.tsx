@@ -6,6 +6,7 @@ import {
   type InfiniteTableSelection,
   type InfiniteTableSorting,
   ProviderIcon,
+  Status,
   TagList,
   Tooltip,
 } from "@repo/ui"
@@ -90,11 +91,28 @@ export function ProjectTracesTable({
         key: "startTime",
         header: "Start Time",
         sortKey: "startTime",
-        width: 180,
+        width: 210,
         render: (trace) => (
-          <Tooltip asChild trigger={<span>{relativeTime(new Date(trace.startTime))}</span>}>
-            {new Date(trace.startTime).toLocaleString()}
-          </Tooltip>
+          <span className="flex items-center justify-start gap-x-1.5">
+            <Tooltip asChild trigger={<span className="truncate">{relativeTime(new Date(trace.startTime))}</span>}>
+              {new Date(trace.startTime).toLocaleString()}
+            </Tooltip>
+            {trace.errorCount > 0 && (
+              <Tooltip
+                asChild
+                trigger={
+                  <Status
+                    variant="destructive"
+                    indicator={false}
+                    label={formatCount(trace.errorCount)}
+                    className="!rounded-md"
+                  />
+                }
+              >
+                {trace.errorCount} {trace.errorCount === 1 ? "error" : "errors"} in this trace
+              </Tooltip>
+            )}
+          </span>
         ),
       },
       {
