@@ -421,9 +421,7 @@ function createTaskDefinition(
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
           { name: "VITE_LAT_WEB_URL", value: webUrl },
-          ...(config.name === "production"
-            ? [{ name: "VITE_LAT_GTM_CONTAINER_ID", value: "GTM-5NWGV24H" }]
-            : []),
+          ...(config.name === "production" ? [{ name: "VITE_LAT_GTM_CONTAINER_ID", value: "GTM-5NWGV24H" }] : []),
           { name: "DD_TRACE_ENABLED", value: "true" },
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
@@ -452,8 +450,9 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
-          { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
-          { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
+          // TODO(observability): enable when we want to start tracing Latitude with Latitude
+          // { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+          // { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
           { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
         ]
@@ -720,8 +719,8 @@ function createMigrationTaskDefinition(
             { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
             { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
             { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
-            { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
-            { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
+            // { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+            // { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           ],
         }
         return JSON.stringify([def])
