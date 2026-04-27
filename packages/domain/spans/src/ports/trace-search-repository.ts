@@ -1,5 +1,5 @@
 import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 
 export interface TraceSearchDocumentRow {
   readonly organizationId: OrganizationId

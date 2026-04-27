@@ -1,5 +1,5 @@
 import type { OrganizationId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 
 /**
  * Per-window embed-token budgets for one organization. All three limits are

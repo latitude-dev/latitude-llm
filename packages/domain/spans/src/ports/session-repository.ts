@@ -1,5 +1,5 @@
 import type { ChSqlClient, FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Session } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 

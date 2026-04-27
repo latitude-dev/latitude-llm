@@ -1,5 +1,5 @@
 import type { SqlClient } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { EventPayloads } from "./event-payloads.ts"
 
 export type OutboxWriteEvent = {

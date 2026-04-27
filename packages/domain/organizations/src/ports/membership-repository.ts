@@ -1,5 +1,5 @@
 import type { MembershipId, NotFoundError, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Membership } from "../entities/membership.ts"
 
 export interface MemberWithUser {

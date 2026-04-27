@@ -1,5 +1,5 @@
 import type { ContextOptions } from "@latitude-data/telemetry"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { z } from "zod"
 import type { AICredentialError, AIError } from "./errors.ts"
 

@@ -1,5 +1,5 @@
 import type { IssueId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 
 export interface IssueListPage {

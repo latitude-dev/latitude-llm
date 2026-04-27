@@ -9,7 +9,7 @@ import type {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
 

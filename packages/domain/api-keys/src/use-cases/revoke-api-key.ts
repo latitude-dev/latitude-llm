@@ -1,5 +1,5 @@
 import { type ApiKeyId, type NotFoundError, type RepositoryError, SqlClient } from "@domain/shared"
-import { Effect, Context } from "effect"
+import { Context, Effect } from "effect"
 import { revoke } from "../entities/api-key.ts"
 import type { ApiKeyNotFoundError } from "../errors.ts"
 import { ApiKeyAlreadyRevokedError } from "../errors.ts"

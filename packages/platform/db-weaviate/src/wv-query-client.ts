@@ -1,5 +1,5 @@
 import { type OrganizationId, type RepositoryError, toRepositoryError } from "@domain/shared"
-import { Effect, Layer, Context } from "effect"
+import { Context, Effect, Layer } from "effect"
 import type { WeaviateClient } from "weaviate-client"
 
 interface WvQueryClientShape {

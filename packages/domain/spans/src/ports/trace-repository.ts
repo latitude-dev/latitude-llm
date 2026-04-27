@@ -7,7 +7,7 @@ import type {
   RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 import type { TraceCohortBaselineData } from "../trace-cohorts.ts"
 

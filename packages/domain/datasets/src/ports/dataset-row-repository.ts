@@ -1,5 +1,5 @@
 import type { ChSqlClient, DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
 import type { RowNotFoundError } from "../errors.ts"
 
