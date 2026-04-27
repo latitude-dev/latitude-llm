@@ -1,6 +1,6 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { classifyTraceForQueueUseCase, type QueueStrategy, SYSTEM_QUEUE_FLAGGER_MODEL } from "@domain/annotation-queues"
+import { classifyTraceForFlaggerUseCase, type QueueStrategy, SYSTEM_QUEUE_FLAGGER_MODEL } from "@domain/annotation-queues"
 import { mapJailbreakBench } from "../mappers/jailbreakbench.ts"
 import type { FixtureRow } from "../types.ts"
 import { fixtureRowToTraceDetail } from "./adapter.ts"
@@ -46,18 +46,18 @@ export interface BenchmarkTarget {
   readonly classify: (
     row: FixtureRow,
     strategyOverride?: QueueStrategy,
-  ) => ReturnType<typeof classifyTraceForQueueUseCase>
+  ) => ReturnType<typeof classifyTraceForFlaggerUseCase>
   readonly provider: string
   readonly modelId: string
   readonly optimization?: TsModuleOptimizationConfig
 }
 
-// Every flagger target follows the shape `flaggers:<queueSlug>`. The
+// Every flagger target follows the shape `flaggers:<flaggerSlug>`. The
 // factory wires a `BenchmarkTarget` to the existing classifier by passing
 // the slug through — no duplication of the slug string between the target
-// id and the `classifyTraceForQueueUseCase` call.
+// id and the `classifyTraceForFlaggerUseCase` call.
 interface FlaggerDef {
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly mapper: () => Promise<FixtureRow[]>
   readonly mapperSourcePath: string
 }
@@ -70,16 +70,16 @@ const camelCaseSlug = (slug: string): string => slug.replace(/-([a-z])/g, (_, c:
 // the production flagger uses (`SYSTEM_QUEUE_FLAGGER_MODEL`). If production
 // swaps the model, the benchmark reports update automatically — no manual
 // sync of provider / model ids.
-const flaggerTarget = ({ queueSlug, mapper, mapperSourcePath }: FlaggerDef): BenchmarkTarget => ({
-  id: `flaggers:${queueSlug}`,
+const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): BenchmarkTarget => ({
+  id: `flaggers:${flaggerSlug}`,
   mapper,
   mapperSourcePath,
   classify: (row, strategyOverride) =>
-    classifyTraceForQueueUseCase({
+    classifyTraceForFlaggerUseCase({
       organizationId: BENCHMARK_ORG_ID,
       projectId: BENCHMARK_PROJECT_ID,
       traceId: row.id,
-      queueSlug,
+      flaggerSlug,
       trace: fixtureRowToTraceDetail(row),
       ...(strategyOverride ? { strategyOverride } : {}),
     }),
@@ -87,16 +87,16 @@ const flaggerTarget = ({ queueSlug, mapper, mapperSourcePath }: FlaggerDef): Ben
   modelId: SYSTEM_QUEUE_FLAGGER_MODEL.model,
   optimization: {
     candidateKind: "ts-module",
-    strategyFilePath: flaggerStrategyFilePath(queueSlug),
+    strategyFilePath: flaggerStrategyFilePath(flaggerSlug),
     packageJsonPath: ANNOTATION_QUEUES_PACKAGE_JSON,
-    queueSlug,
-    exportName: `${camelCaseSlug(queueSlug)}Strategy`,
+    queueSlug: flaggerSlug,
+    exportName: `${camelCaseSlug(flaggerSlug)}Strategy`,
   },
 })
 
 export const TARGETS: readonly BenchmarkTarget[] = [
   flaggerTarget({
-    queueSlug: "jailbreaking",
+    flaggerSlug: "jailbreaking",
     mapper: mapJailbreakBench,
     mapperSourcePath: fileURLToPath(new URL("../mappers/jailbreakbench.ts", import.meta.url)),
   }),
