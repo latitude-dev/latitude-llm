@@ -473,21 +473,21 @@ describe("ScoreAnalyticsRepository", () => {
   describe("aggregateTagsByIssues", () => {
     const issueA = "issue_tagsaaaaaaaaaaaa"
     const issueB = "issue_tagsbbbbbbbbbbbb"
-    const traceA1 = "a".repeat(31) + "1"
-    const traceA2 = "a".repeat(31) + "2"
-    const traceB1 = "b".repeat(31) + "1"
-    const otherOrgTrace = "c".repeat(31) + "1"
+    const traceA1 = `${"a".repeat(31)}1`
+    const traceA2 = `${"a".repeat(31)}2`
+    const traceB1 = `${"b".repeat(31)}1`
+    const otherOrgTrace = `${"c".repeat(31)}1`
 
     beforeEach(async () => {
       await insertSpans([
-        makeSpanRow({ traceId: traceA1, spanId: "11" + "a".repeat(14), tags: ["checkout", "billing"] }),
+        makeSpanRow({ traceId: traceA1, spanId: `11${"a".repeat(14)}`, tags: ["checkout", "billing"] }),
         // Second span on the same trace with overlapping + new tags exercises trace-level dedup.
-        makeSpanRow({ traceId: traceA1, spanId: "12" + "a".repeat(14), tags: ["billing", "auth"] }),
-        makeSpanRow({ traceId: traceA2, spanId: "21" + "a".repeat(14), tags: ["search"] }),
-        makeSpanRow({ traceId: traceB1, spanId: "31" + "a".repeat(14), tags: ["onboarding"] }),
+        makeSpanRow({ traceId: traceA1, spanId: `12${"a".repeat(14)}`, tags: ["billing", "auth"] }),
+        makeSpanRow({ traceId: traceA2, spanId: `21${"a".repeat(14)}`, tags: ["search"] }),
+        makeSpanRow({ traceId: traceB1, spanId: `31${"a".repeat(14)}`, tags: ["onboarding"] }),
         // A span in another organization that must not leak through tenancy.
         {
-          ...makeSpanRow({ traceId: otherOrgTrace, spanId: "41" + "a".repeat(14), tags: ["leaked"] }),
+          ...makeSpanRow({ traceId: otherOrgTrace, spanId: `41${"a".repeat(14)}`, tags: ["leaked"] }),
           organization_id: "other_orgggggggggggggggg",
         },
       ])

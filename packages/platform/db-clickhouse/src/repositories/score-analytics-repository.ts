@@ -37,6 +37,11 @@ import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Cap on how many of an issue's most-recent traces we read when aggregating
+// tags. Tag distributions converge fast, so a sample of this size captures
+// effectively all tag variants while bounding the join cost for noisy issues.
+const ISSUE_TAG_TRACE_SAMPLE_LIMIT = 200
+
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
 const toAnalyticsRow = (score: Score) => ({
@@ -597,13 +602,21 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
+                // Sample the most-recent traces per issue (LIMIT N BY issue_id) so a noisy
+                // issue with tens of thousands of traces doesn't pull every trace row just
+                // to compute a tag union — tag distributions converge quickly.
                 query: `WITH issue_traces AS (
                         SELECT issue_id, trace_id
-                        FROM scores
-                        WHERE ${scopeClause(options)}
-                          AND issue_id IN ({issueIds:Array(String)})
-                          AND trace_id != ''
-                        GROUP BY issue_id, trace_id
+                        FROM (
+                          SELECT issue_id, trace_id, max(created_at) AS last_seen_at
+                          FROM scores
+                          WHERE ${scopeClause(options)}
+                            AND issue_id IN ({issueIds:Array(String)})
+                            AND trace_id != ''
+                          GROUP BY issue_id, trace_id
+                          ORDER BY issue_id, last_seen_at DESC
+                          LIMIT {tracesPerIssue:UInt32} BY issue_id
+                        )
                       ),
                       trace_tags AS (
                         SELECT trace_id, groupUniqArrayArray(tags) AS tags
@@ -622,6 +635,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   issueIds: Array.from(issueIds) as string[],
+                  tracesPerIssue: ISSUE_TAG_TRACE_SAMPLE_LIMIT,
                 },
                 format: "JSONEachRow",
               })
