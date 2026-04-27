@@ -30,7 +30,7 @@ catalog:
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-beta.21-b0c345d
   fast-json-stable-stringify: 2.1.0
-  '@effect/opentelemetry': 4.0.0-beta.4
+  '@effect/opentelemetry': 4.0.0-beta.57
   effect: 4.0.0-beta.4
   hono: 4.12.15
   ioredis: 5.10.1
