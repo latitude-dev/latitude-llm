@@ -1,8 +1,10 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
+import { EyeIcon } from "lucide-react"
 import type { AdminUserDetailsDto, AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
+import { AccountActionRow, AccountActionsSection } from "../-components/account-actions/section.tsx"
 import {
   DashboardHero,
   DashboardSection,
@@ -98,6 +100,15 @@ function BackofficeUserDetailPage() {
           <MembershipsGrid memberships={memberships} />
         )}
       </DashboardSection>
+
+      <AccountActionsSection>
+        <AccountActionRow
+          icon={EyeIcon}
+          title="Impersonate user"
+          description="Sign in as this user for support purposes. The impersonation banner shows on every page until you stop."
+          action={<ImpersonateUserButton userId={user.id} userEmail={user.email} />}
+        />
+      </AccountActionsSection>
 
       <PropertiesStrip entries={propertyEntries} />
     </div>
