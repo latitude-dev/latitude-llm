@@ -5,6 +5,7 @@ import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
+import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { ScoreAnalyticsRepositoryLive } from "./score-analytics-repository.ts"
 
@@ -41,6 +42,72 @@ function makeScoreRow(overrides: Partial<Record<string, unknown>> = {}) {
 
 async function insertScores(rows: ReturnType<typeof makeScoreRow>[]) {
   await ch.client.insert({ table: "scores", values: rows, format: "JSONEachRow" })
+}
+
+function makeSpanRow(overrides: {
+  readonly traceId: string
+  readonly spanId: string
+  readonly tags: readonly string[]
+  readonly startTime?: string
+}): SpanRow {
+  const startTime = overrides.startTime ?? "2026-03-15 12:00:00.000"
+  return {
+    organization_id: ORG_ID as string,
+    project_id: PROJECT_ID as string,
+    session_id: "",
+    user_id: "",
+    trace_id: overrides.traceId,
+    span_id: overrides.spanId,
+    parent_span_id: "",
+    api_key_id: "test-api-key",
+    simulation_id: "",
+    start_time: startTime,
+    end_time: startTime,
+    name: "test-span",
+    service_name: "test-service",
+    kind: 0,
+    status_code: 0,
+    status_message: "",
+    error_type: "",
+    tags: [...overrides.tags],
+    metadata: {},
+    operation: "",
+    provider: "",
+    model: "",
+    response_model: "",
+    tokens_input: 0,
+    tokens_output: 0,
+    tokens_cache_read: 0,
+    tokens_cache_create: 0,
+    tokens_reasoning: 0,
+    cost_input_microcents: 0,
+    cost_output_microcents: 0,
+    cost_total_microcents: 0,
+    cost_is_estimated: 0,
+    time_to_first_token_ns: 0,
+    is_streaming: 0,
+    response_id: "",
+    finish_reasons: [],
+    input_messages: "",
+    output_messages: "",
+    system_instructions: "",
+    tool_definitions: "",
+    tool_call_id: "",
+    tool_name: "",
+    tool_input: "",
+    tool_output: "",
+    attr_string: {},
+    attr_int: {},
+    attr_float: {},
+    attr_bool: {},
+    resource_string: {},
+    scope_name: "",
+    scope_version: "",
+  }
+}
+
+async function insertSpans(rows: SpanRow[]) {
+  await ch.client.insert({ table: "spans", values: rows, format: "JSONEachRow" })
 }
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
@@ -396,6 +463,68 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
       expect(aggs).toHaveLength(0)
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // aggregateTagsByIssues
+  // ------------------------------------------------------------------
+
+  describe("aggregateTagsByIssues", () => {
+    const issueA = "issue_tagsaaaaaaaaaaaa"
+    const issueB = "issue_tagsbbbbbbbbbbbb"
+    const traceA1 = "a".repeat(31) + "1"
+    const traceA2 = "a".repeat(31) + "2"
+    const traceB1 = "b".repeat(31) + "1"
+    const otherOrgTrace = "c".repeat(31) + "1"
+
+    beforeEach(async () => {
+      await insertSpans([
+        makeSpanRow({ traceId: traceA1, spanId: "11" + "a".repeat(14), tags: ["checkout", "billing"] }),
+        // Second span on the same trace with overlapping + new tags exercises trace-level dedup.
+        makeSpanRow({ traceId: traceA1, spanId: "12" + "a".repeat(14), tags: ["billing", "auth"] }),
+        makeSpanRow({ traceId: traceA2, spanId: "21" + "a".repeat(14), tags: ["search"] }),
+        makeSpanRow({ traceId: traceB1, spanId: "31" + "a".repeat(14), tags: ["onboarding"] }),
+        // A span in another organization that must not leak through tenancy.
+        {
+          ...makeSpanRow({ traceId: otherOrgTrace, spanId: "41" + "a".repeat(14), tags: ["leaked"] }),
+          organization_id: "other_orgggggggggggggggg",
+        },
+      ])
+
+      await insertScores([
+        makeScoreRow({ issue_id: issueA, trace_id: traceA1 }),
+        makeScoreRow({ issue_id: issueA, trace_id: traceA2 }),
+        makeScoreRow({ issue_id: issueB, trace_id: traceB1 }),
+        // Score linked to the cross-org trace under a foreign org id.
+        makeScoreRow({
+          organization_id: "other_orgggggggggggggggg",
+          issue_id: issueA,
+          trace_id: otherOrgTrace,
+        }),
+      ])
+    })
+
+    it("returns the union of trace-level tags grouped by issue, scoped to org/project", async () => {
+      const result = await runCh(
+        repo.aggregateTagsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+        }),
+      )
+
+      const tagsByIssue = new Map(result.map((entry) => [entry.issueId as string, [...entry.tags].sort()] as const))
+      expect(tagsByIssue.get(issueA)).toEqual(["auth", "billing", "checkout", "search"])
+      expect(tagsByIssue.get(issueB)).toEqual(["onboarding"])
+      expect(tagsByIssue.get(issueA)).not.toContain("leaked")
+    })
+
+    it("returns empty for no issue ids", async () => {
+      const result = await runCh(
+        repo.aggregateTagsByIssues({ organizationId: ORG_ID, projectId: PROJECT_ID, issueIds: [] }),
+      )
+      expect(result).toEqual([])
     })
   })
 
