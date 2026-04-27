@@ -1,4 +1,4 @@
-import { Avatar, Badge, Container, Text } from "@repo/ui"
+import { Avatar, Badge, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, notFound } from "@tanstack/react-router"
 import {
@@ -6,8 +6,16 @@ import {
   type AdminOrganizationProjectDto,
   adminGetOrganization,
 } from "../../../domains/admin/organizations.functions.ts"
-import { ProjectRow, UserRow } from "../-components/rows/index.ts"
+import {
+  DashboardHero,
+  DashboardSection,
+  DashboardSplit,
+  PropertiesStrip,
+  type PropertiesStripEntry,
+  StripeCustomerLink,
+} from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
+import { ProjectRow, UserRow } from "../-components/rows/index.ts"
 
 export const Route = createFileRoute("/backoffice/organizations/$organizationId")({
   loader: async ({ params }) => {
@@ -35,116 +43,129 @@ function BackofficeOrganizationDetailPage() {
     secondary: organization.slug,
   })
 
-  return (
-    <Container className="pt-6 pb-10 flex flex-col gap-6">
-      <header className="flex items-start gap-4">
-        <Avatar name={organization.name} size="lg" />
-        <div className="flex flex-col min-w-0 flex-1 gap-1">
-          <Text.H3 weight="semibold" ellipsis noWrap>
-            {organization.name}
-          </Text.H3>
-          <Text.H5 color="foregroundMuted" ellipsis noWrap>
-            /{organization.slug} · {organization.id}
-          </Text.H5>
-        </div>
-      </header>
-
-      <section className="flex flex-col gap-2">
-        <Text.H5 weight="semibold">Organization</Text.H5>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-md border border-border bg-background px-4 py-3">
-          <DetailRow label="Organization id" value={organization.id} />
-          <DetailRow label="Created" value={relativeTime(organization.createdAt)} />
-          <DetailRow label="Slug" value={organization.slug} />
-          <DetailRow label="Updated" value={relativeTime(organization.updatedAt)} />
-          <DetailRow label="Stripe customer" value={organization.stripeCustomerId ?? "(none)"} />
-          <DetailRow label="Members" value={String(organization.members.length)} />
-          <DetailRow label="Projects" value={String(organization.projects.length)} />
-        </div>
-      </section>
-
-      <MembersSection members={organization.members} />
-      <ProjectsSection projects={organization.projects} />
-    </Container>
-  )
-}
-
-function MembersSection({ members }: { members: AdminOrganizationMemberDto[] }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <Text.H5 weight="semibold">Members ({members.length})</Text.H5>
-      {members.length === 0 ? (
-        <div className="rounded-md border border-border bg-background px-4 py-3">
-          <Text.H5 color="foregroundMuted">This organization has no members.</Text.H5>
-        </div>
+  // The properties strip aggregates the "boring but sometimes needed"
+  // fields. Stripe customer id is rendered through `StripeCustomerLink`
+  // so it deeplinks into the Stripe dashboard — the most common
+  // follow-on action when staff are debugging billing.
+  const propertyEntries: PropertiesStripEntry[] = [
+    { label: "Org id", value: organization.id },
+    { label: "Created", value: new Date(organization.createdAt).toISOString() },
+    { label: "Updated", value: new Date(organization.updatedAt).toISOString() },
+    {
+      label: "Stripe customer",
+      value: organization.stripeCustomerId ? (
+        <StripeCustomerLink customerId={organization.stripeCustomerId} />
       ) : (
-        <div className="flex flex-col gap-1.5">
-          {members.map((member) => (
-            <UserRow
-              key={member.membershipId}
-              user={{
-                id: member.user.id,
-                email: member.user.email,
-                name: member.user.name,
-                image: member.user.image,
-                role: member.user.role,
-                // No memberships chips here — the org context is implicit on this page.
-                memberships: [],
-              }}
-              // Trailing surfaces *both* roles together: per-org role
-              // (always) and a small "platform admin" pill when the
-              // member is also a global admin. Two badges instead of
-              // one because they answer different questions: "what can
-              // they do in THIS org?" vs "are they staff?".
-              trailing={
-                <div className="flex items-center gap-1.5">
-                  {member.user.role === "admin" && <Badge variant="destructive">platform admin</Badge>}
-                  <Badge variant={member.role === "owner" ? "default" : "secondary"}>{member.role}</Badge>
-                </div>
-              }
-            />
-          ))}
-        </div>
-      )}
-    </section>
+        <span className="font-mono">(none)</span>
+      ),
+    },
+  ]
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pt-8 pb-12">
+      <DashboardHero
+        leading={<Avatar name={organization.name} size="lg" />}
+        title={organization.name}
+        meta={
+          <>
+            <span>/{organization.slug}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              <span className="font-medium text-foreground tabular-nums">{organization.members.length}</span>{" "}
+              {organization.members.length === 1 ? "member" : "members"}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              <span className="font-medium text-foreground tabular-nums">{organization.projects.length}</span>{" "}
+              {organization.projects.length === 1 ? "project" : "projects"}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              created <span className="font-medium text-foreground">{relativeTime(organization.createdAt)}</span>
+            </span>
+          </>
+        }
+      />
+
+      <DashboardSplit
+        ratio="wide-primary"
+        primary={
+          <DashboardSection title="Members" count={organization.members.length}>
+            {organization.members.length === 0 ? (
+              <Text.H6 color="foregroundMuted">This organization has no members.</Text.H6>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {organization.members.map((member: AdminOrganizationMemberDto) => (
+                  <MemberRow key={member.membershipId} member={member} />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
+        }
+        secondary={
+          <DashboardSection title="Projects" count={organization.projects.length}>
+            {organization.projects.length === 0 ? (
+              <Text.H6 color="foregroundMuted">No active projects.</Text.H6>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {organization.projects.map((project: AdminOrganizationProjectDto) => (
+                  <ProjectRow
+                    key={project.id}
+                    project={{
+                      id: project.id,
+                      name: project.name,
+                      slug: project.slug,
+                      // `organizationName` deliberately omitted — these
+                      // rows are rendered inside the parent org's own
+                      // detail page, so the chip would be redundant.
+                      createdAt: project.createdAt,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </DashboardSection>
+        }
+      />
+
+      <PropertiesStrip entries={propertyEntries} />
+    </div>
   )
 }
 
-function ProjectsSection({ projects }: { projects: AdminOrganizationProjectDto[] }) {
+/**
+ * Member row used inside the organisation's Members panel. Wraps the
+ * shared `<UserRow>` with a custom trailing slot:
+ *
+ * - Per-org role badge (always) — answers "what can they do here?"
+ * - Plus a `platform admin` pill when the member is also a global
+ *   admin — answers "are they staff?"
+ *
+ * The two badges live next to each other so the answer to both
+ * questions is visible at a single glance, which is the entire point
+ * of the org detail page.
+ */
+function MemberRow({ member }: { member: AdminOrganizationMemberDto }) {
   return (
-    <section className="flex flex-col gap-2">
-      <Text.H5 weight="semibold">Projects ({projects.length})</Text.H5>
-      {projects.length === 0 ? (
-        <div className="rounded-md border border-border bg-background px-4 py-3">
-          <Text.H5 color="foregroundMuted">This organization has no active projects.</Text.H5>
+    <UserRow
+      user={{
+        id: member.user.id,
+        email: member.user.email,
+        name: member.user.name,
+        image: member.user.image,
+        role: member.user.role,
+        // No memberships chips here — the org context is implicit on
+        // this page; rendering them would either be empty (we don't
+        // have the data) or noisy (every member's membership list
+        // would include this very org).
+        memberships: [],
+      }}
+      trailing={
+        <div className="flex items-center gap-1.5">
+          {member.user.role === "admin" && <Badge variant="destructive">platform admin</Badge>}
+          <Badge variant={member.role === "owner" ? "default" : "secondary"}>{member.role}</Badge>
         </div>
-      ) : (
-        <div className="flex flex-col gap-1.5">
-          {projects.map((project) => (
-            <ProjectRow
-              key={project.id}
-              project={{
-                id: project.id,
-                name: project.name,
-                slug: project.slug,
-                // `organizationName` deliberately omitted — the row is
-                // rendered inside the parent org's own detail page, so
-                // surfacing the org chip would be redundant. The row
-                // secondary line collapses to just the slug.
-                createdAt: project.createdAt,
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <Text.H6 color="foregroundMuted">{label}</Text.H6>
-      <Text.H6 ellipsis>{value}</Text.H6>
-    </>
+      }
+    />
   )
 }
