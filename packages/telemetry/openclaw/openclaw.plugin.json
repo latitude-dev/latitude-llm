@@ -5,7 +5,7 @@
   "version": "0.0.2",
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
+    "additionalProperties": true,
     "properties": {
       "apiKey": {
         "type": "string",
