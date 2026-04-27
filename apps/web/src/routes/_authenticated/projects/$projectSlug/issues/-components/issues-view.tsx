@@ -3,6 +3,7 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   type InfiniteTableSelection,
+  TagList,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -138,28 +139,31 @@ export function IssuesView({
       width: ISSUE_COLUMN_WIDTH,
       minWidth: ISSUE_COLUMN_MIN_WIDTH,
       render: (issue) => (
-        <div className="flex min-w-0 items-center gap-2">
-          <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
-            {issue.name}
-          </Text.H5>
-          {issue.evaluations.length > 0 ? (
-            <div className="shrink-0">
-              <IssueLifecycleStatuses
-                states={[]}
-                wrap={false}
-                extraStatuses={[
-                  {
-                    key: "monitored",
-                    label: "Monitored",
-                    variant: "success",
-                    tooltip: (
-                      <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
-                    ),
-                  },
-                ]}
-              />
-            </div>
-          ) : null}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
+              {issue.name}
+            </Text.H5>
+            {issue.evaluations.length > 0 ? (
+              <div className="shrink-0">
+                <IssueLifecycleStatuses
+                  states={[]}
+                  wrap={false}
+                  extraStatuses={[
+                    {
+                      key: "monitored",
+                      label: "Monitored",
+                      variant: "success",
+                      tooltip: (
+                        <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            ) : null}
+          </div>
+          {issue.tags.length > 0 ? <TagList tags={issue.tags} /> : null}
         </div>
       ),
     },

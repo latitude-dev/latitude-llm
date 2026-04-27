@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
+  IssueTagsAggregate,
   IssueTracePage,
   IssueTraceSummary,
   IssueTrendSeries,
@@ -146,6 +147,11 @@ type IssueTrendSeriesRow = {
   count: string
 }
 
+type IssueTagsRow = {
+  issue_id: string
+  tags: string[]
+}
+
 type CountRow = {
   total: string
 }
@@ -256,6 +262,11 @@ const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly Issu
     buckets,
   }))
 }
+
+const toIssueTagsAggregate = (row: IssueTagsRow): IssueTagsAggregate => ({
+  issueId: toIssueId(normalizeCHString(row.issue_id)),
+  tags: row.tags.map(normalizeCHString),
+})
 
 const toIssueTraceSummary = (row: IssueTraceSummaryRow): IssueTraceSummary => ({
   traceId: toTraceId(normalizeCHString(row.trace_id)),
@@ -576,6 +587,44 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+        }),
+
+      // -- aggregateTagsByIssues ---------------------------------------------
+      aggregateTagsByIssues: ({ organizationId, projectId, issueIds, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                        issue_traces.issue_id AS issue_id,
+                        arrayDistinct(arrayFlatten(groupArray(trace_tags.tags))) AS tags
+                      FROM (
+                        SELECT issue_id, trace_id
+                        FROM scores
+                        WHERE ${scopeClause(options)}
+                          AND issue_id IN ({issueIds:Array(String)})
+                          AND trace_id != ''
+                        GROUP BY issue_id, trace_id
+                      ) AS issue_traces
+                      INNER JOIN (
+                        SELECT trace_id, groupUniqArrayArray(tags) AS tags
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        GROUP BY trace_id
+                      ) AS trace_tags USING (trace_id)
+                      GROUP BY issue_traces.issue_id`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueIds: Array.from(issueIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueTagsRow>()
+            })
+            .pipe(Effect.map((rows) => rows.map(toIssueTagsAggregate)))
         }),
 
       // -- trendByIssue ------------------------------------------------------

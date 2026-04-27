@@ -149,6 +149,7 @@ const createScoreAnalyticsRepository = (input: {
         aggregateInputs.push(aggregateInput)
         return input.fullHistoryOccurrences.filter((occurrence) => aggregateInput.issueIds.includes(occurrence.issueId))
       }),
+    aggregateTagsByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.die("Unexpected trendByIssue"),
     listIssueWindowMetrics: (windowMetricInput) =>
       Effect.sync(() => {

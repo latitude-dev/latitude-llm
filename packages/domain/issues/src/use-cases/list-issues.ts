@@ -99,6 +99,7 @@ export interface IssueListItem {
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly IssueOccurrenceBucket[]
   readonly evaluations: readonly Evaluation[]
+  readonly tags: readonly string[]
 }
 
 export interface ListIssuesResult {
@@ -487,7 +488,7 @@ export const listIssuesUseCase = (
     })
     const trendScaffold = buildBucketScaffold(trendTimeRange)
 
-    const [evaluationPage, trendSeries] = yield* Effect.all([
+    const [evaluationPage, trendSeries, tagsAggregates] = yield* Effect.all([
       pageIssueIds.length === 0
         ? Effect.succeed({
             items: [] as readonly Evaluation[],
@@ -511,6 +512,13 @@ export const listIssuesUseCase = (
             issueIds: pageIssueIds,
             timeRange: trendTimeRange,
           }),
+      pageIssueIds.length === 0
+        ? Effect.succeed([])
+        : scoreAnalyticsRepository.aggregateTagsByIssues({
+            organizationId: parsed.organizationId,
+            projectId: parsed.projectId,
+            issueIds: pageIssueIds,
+          }),
     ])
 
     const evaluationsByIssueId = new Map<string, Evaluation[]>()
@@ -529,6 +537,8 @@ export const listIssuesUseCase = (
         }),
       ]),
     )
+
+    const tagsByIssueId = new Map(tagsAggregates.map((entry) => [entry.issueId, entry.tags] as const))
 
     return {
       analytics: {
@@ -559,6 +569,7 @@ export const listIssuesUseCase = (
         escalationOccurrenceThreshold: candidate.escalationOccurrenceThreshold,
         trend: trendByIssueId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
         evaluations: evaluationsByIssueId.get(candidate.issue.id) ?? [],
+        tags: tagsByIssueId.get(candidate.issue.id) ?? [],
       })),
       totalCount: tableCandidates.length,
       hasMore: parsed.offset + parsed.limit < tableCandidates.length,

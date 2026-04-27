@@ -30,6 +30,7 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     rollupByTraceIds: () => Effect.succeed([]),
     rollupBySessionIds: () => Effect.succeed([]),
     aggregateByIssues: () => Effect.succeed([]),
+    aggregateTagsByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.succeed([]),
     listIssueWindowMetrics: () => Effect.succeed([]),
     histogramByIssues: () => Effect.succeed([]),
