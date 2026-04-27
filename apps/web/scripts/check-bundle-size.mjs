@@ -8,6 +8,27 @@ const assetsDir = path.resolve(process.cwd(), ".output/public/assets")
 // Chunks that are known to exceed the limit and are lazy-loaded on demand.
 const ALLOWED_OVERSIZE = new Set(["echarts"])
 
+/**
+ * Recover the codeSplitting group name from a rolldown chunk filename
+ * like `echarts-7FKUQ-tc.js`. Naively stripping `-{hash}.js` does not
+ * work because rolldown sometimes produces hashes that themselves
+ * contain hyphens (e.g. `7FKUQ-tc`). We walk the dash-separated
+ * segments from longest-prefix to shortest and return the first
+ * candidate that's in the allowlist — that's robust to any number of
+ * hyphens in the hash. Returns null when no allowlisted prefix
+ * matches.
+ */
+function matchAllowedChunkName(basename) {
+  if (!basename.endsWith(".js")) return null
+  const stem = basename.slice(0, -".js".length)
+  const segments = stem.split("-")
+  for (let i = segments.length - 1; i >= 1; i--) {
+    const candidate = segments.slice(0, i).join("-")
+    if (ALLOWED_OVERSIZE.has(candidate)) return candidate
+  }
+  return null
+}
+
 async function collectFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
   const files = []
@@ -46,8 +67,7 @@ async function main() {
     }
 
     const basename = path.basename(file)
-    const chunkName = basename.replace(/-[\w]+\.js$/, "")
-    if (ALLOWED_OVERSIZE.has(chunkName)) {
+    if (matchAllowedChunkName(basename) !== null) {
       continue
     }
 

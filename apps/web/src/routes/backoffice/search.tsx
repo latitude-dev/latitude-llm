@@ -1,19 +1,23 @@
 import { MIN_SEARCH_QUERY_LENGTH, type SearchEntityType } from "@domain/admin"
-import { Container, Input, type TabOption, Tabs, Text } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { adminSearch } from "../../domains/admin/search.functions.ts"
+import { Omnibox } from "./-components/omnibox.tsx"
+import { RecentChips } from "./-components/recent-chips.tsx"
 import { SearchResults } from "./-components/search-results.tsx"
 
-const DEBOUNCE_MS = 300
+/**
+ * Spotlight-feel search page.
+ *
+ * The omnibox is the page — no title bar, no description, no
+ * ornamentation. Result rows materialise directly underneath as the
+ * user types, with a debounced fetch and skeleton placeholders during
+ * the request so the layout never jumps. Keyboard navigation between
+ * input and rows is wired up in the `Omnibox` component.
+ */
 
-const entityTabs: readonly TabOption<SearchEntityType>[] = [
-  { id: "all", label: "All" },
-  { id: "user", label: "Users" },
-  { id: "organization", label: "Organizations" },
-  { id: "project", label: "Projects" },
-]
+const DEBOUNCE_MS = 300
 
 export const Route = createFileRoute("/backoffice/search")({
   component: BackofficeSearchPage,
@@ -32,6 +36,7 @@ function BackofficeSearchPage() {
   const [rawQuery, setRawQuery] = useState("")
   const [entityType, setEntityType] = useState<SearchEntityType>("all")
   const debouncedQuery = useDebouncedValue(rawQuery.trim(), DEBOUNCE_MS)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const isQueryTooShort = debouncedQuery.length > 0 && debouncedQuery.length < MIN_SEARCH_QUERY_LENGTH
   const shouldFetch = debouncedQuery.length >= MIN_SEARCH_QUERY_LENGTH
@@ -42,29 +47,34 @@ function BackofficeSearchPage() {
     enabled: shouldFetch,
   })
 
+  // Show recent chips when the input is empty; hide them once the user
+  // starts typing so they don't compete with live results for attention.
+  // We key off the trimmed raw value (not the debounced one) so the
+  // chips disappear immediately on first keystroke instead of waiting
+  // out the 300 ms debounce.
+  const showRecent = rawQuery.trim().length === 0
+
   return (
-    <Container className="pt-6 pb-10 flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <Text.H2 weight="semibold">Search</Text.H2>
-        <Text.H5 color="foregroundMuted">Cross-organization lookup for users, organizations, and projects.</Text.H5>
-      </div>
-      <div className="flex flex-col gap-3">
-        <Input
-          type="search"
-          placeholder="Email, name, slug, or id (min 2 characters)"
-          value={rawQuery}
-          onChange={(e) => setRawQuery(e.target.value)}
-          maxLength={100}
-          autoFocus
-        />
-        <Tabs variant="bordered" size="sm" options={entityTabs} active={entityType} onSelect={setEntityType} />
-      </div>
-      <SearchResults
-        data={data}
-        isLoading={shouldFetch && isFetching}
-        query={debouncedQuery}
-        isQueryTooShort={isQueryTooShort}
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pt-12 pb-16">
+      <Omnibox
+        value={rawQuery}
+        onChange={setRawQuery}
+        entityType={entityType}
+        onEntityTypeChange={setEntityType}
+        resultsContainerRef={resultsRef}
       />
-    </Container>
+      <div ref={resultsRef}>
+        {showRecent ? (
+          <RecentChips />
+        ) : (
+          <SearchResults
+            data={data}
+            isLoading={shouldFetch && isFetching}
+            query={debouncedQuery}
+            isQueryTooShort={isQueryTooShort}
+          />
+        )}
+      </div>
+    </div>
   )
 }

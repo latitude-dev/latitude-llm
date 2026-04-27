@@ -15,7 +15,7 @@ export interface AdminUserDetailsMembershipDto {
   role: "owner" | "admin" | "member"
 }
 
-interface AdminUserDetailsDto {
+export interface AdminUserDetailsDto {
   id: string
   email: string
   name: string | null

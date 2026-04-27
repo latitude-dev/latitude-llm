@@ -24,6 +24,8 @@ export {
   type PollingOutboxConsumerConfig,
 } from "./outbox-consumer.ts"
 export { createOutboxWriter, OutboxEventWriterLive } from "./outbox-writer.ts"
+export { AdminOrganizationRepositoryLive } from "./repositories/admin-organization-repository.ts"
+export { AdminProjectRepositoryLive } from "./repositories/admin-project-repository.ts"
 export { AdminUserRepositoryLive } from "./repositories/admin-user-repository.ts"
 export { AnnotationQueueItemRepositoryLive } from "./repositories/annotation-queue-item-repository.ts"
 export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-repository.ts"
