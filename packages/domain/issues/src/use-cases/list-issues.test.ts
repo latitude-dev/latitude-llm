@@ -8,6 +8,7 @@ import {
 import {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
+  type IssueTagsAggregate,
   type IssueTrendSeries,
   type IssueWindowMetric,
   ScoreAnalyticsRepository,
@@ -127,12 +128,14 @@ const createScoreAnalyticsRepository = (input: {
   readonly fullHistoryOccurrences: readonly IssueOccurrenceAggregate[]
   readonly histogramBuckets?: readonly IssueOccurrenceBucket[]
   readonly trendSeries?: readonly IssueTrendSeries[]
+  readonly tagsAggregates?: readonly IssueTagsAggregate[]
   readonly totalTraces?: number
 }) => {
   const windowMetricInputs: unknown[] = []
   const aggregateInputs: unknown[] = []
   const histogramInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
   const trendInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
+  const tagsInputs: Array<{ issueIds: readonly string[] }> = []
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: () => Effect.die("Unexpected existsById"),
@@ -149,7 +152,11 @@ const createScoreAnalyticsRepository = (input: {
         aggregateInputs.push(aggregateInput)
         return input.fullHistoryOccurrences.filter((occurrence) => aggregateInput.issueIds.includes(occurrence.issueId))
       }),
-    aggregateTagsByIssues: () => Effect.succeed([]),
+    aggregateTagsByIssues: ({ issueIds }) =>
+      Effect.sync(() => {
+        tagsInputs.push({ issueIds })
+        return (input.tagsAggregates ?? []).filter((entry) => issueIds.includes(entry.issueId))
+      }),
     trendByIssue: () => Effect.die("Unexpected trendByIssue"),
     listIssueWindowMetrics: (windowMetricInput) =>
       Effect.sync(() => {
@@ -178,7 +185,7 @@ const createScoreAnalyticsRepository = (input: {
     listTracesByIssue: () => Effect.die("Unexpected listTracesByIssue"),
   }
 
-  return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs }
+  return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }
 }
 
 const createIssueProjectionRepository = (
@@ -484,6 +491,50 @@ describe("listIssuesUseCase", () => {
     expect(trendInputs[0]?.issueIds).toEqual([activeIssue.id, regressedIssue.id])
     expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-28T00:00:00.000Z")
     expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
+  })
+
+  it("attaches per-issue tag aggregates to the visible page", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const taggedIssue = makeIssue({
+      id: IssueId("a".repeat(24)),
+      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    })
+    const untaggedIssue = makeIssue({
+      id: IssueId("b".repeat(24)),
+      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    })
+
+    const { repository: issueRepository } = createFakeIssueRepository([taggedIssue, untaggedIssue])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository, tagsInputs } = createScoreAnalyticsRepository({
+      windowMetrics: [
+        makeWindowMetric({ issueId: taggedIssue.id, occurrences: 1 }),
+        makeWindowMetric({ issueId: untaggedIssue.id, occurrences: 1 }),
+      ],
+      fullHistoryOccurrences: [makeOccurrence({ issueId: taggedIssue.id }), makeOccurrence({ issueId: untaggedIssue.id })],
+      tagsAggregates: [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }],
+    })
+    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+
+    const result = await Effect.runPromise(
+      listIssuesUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+          ),
+        ),
+      ),
+    )
+
+    expect(tagsInputs).toEqual([{ issueIds: [taggedIssue.id, untaggedIssue.id] }])
+    const tagsByIssueId = new Map(result.items.map((item) => [item.id, item.tags] as const))
+    expect(tagsByIssueId.get(taggedIssue.id)).toEqual(["checkout", "billing"])
+    expect(tagsByIssueId.get(untaggedIssue.id)).toEqual([])
   })
 
   describe("analytics histogram time range", () => {
