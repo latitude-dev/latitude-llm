@@ -70,8 +70,10 @@ function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
   return seedDateDaysAgo(daysAgo, hour, minute)
 }
 
-function annotationSeedSourceId(sourceId: string): "UI" | "API" {
-  return sourceId === "seed-issue-scout" ? "UI" : "API"
+function annotationSeedSourceId(sourceId: string): "UI" | "API" | "SYSTEM" {
+  if (sourceId === "seed-issue-scout") return "UI"
+  if (sourceId === "system-signals") return "SYSTEM"
+  return "API"
 }
 
 function annotationValue(passed: boolean, tier: string): number {
