@@ -29,11 +29,6 @@ export const ISSUES_COLUMN_OPTIONS = [
 
 export type IssuesColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
 
-const ISSUE_COLUMN_WIDTH = 360
-const ISSUE_COLUMN_MIN_WIDTH = 280
-const STATUS_COLUMN_WIDTH = 104
-const STATUS_COLUMN_MIN_WIDTH = 96
-
 function SeenAtCell({
   lastSeenAtIso,
   firstSeenAtIso,
@@ -135,8 +130,8 @@ export function IssuesView({
     {
       key: "issue",
       header: "Issue",
-      width: ISSUE_COLUMN_WIDTH,
-      minWidth: ISSUE_COLUMN_MIN_WIDTH,
+      width: 360,
+      minWidth: 280,
       render: (issue) => (
         <div className="flex min-w-0 items-center gap-2">
           <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
@@ -166,8 +161,8 @@ export function IssuesView({
     {
       key: "status",
       header: "Status",
-      width: STATUS_COLUMN_WIDTH,
-      minWidth: STATUS_COLUMN_MIN_WIDTH,
+      width: 104,
+      minWidth: 104,
       sortKey: "state",
       render: (issue) => {
         const primaryState = getPrimaryLifecycleState(issue.states)
@@ -235,6 +230,11 @@ export function IssuesView({
       width: 76,
       minWidth: 76,
       align: "end",
+      // Affected traces % is `occurrences / totalTraces` with a constant
+      // denominator across the page, so sorting by either column is the same
+      // operation. Sharing the sort key lets clicks on either header drive the
+      // same sort and lights up the indicator on both at once.
+      sortKey: "occurrences",
       render: (issue) => formatPercent(issue.affectedTracesPercent),
     },
   ]
