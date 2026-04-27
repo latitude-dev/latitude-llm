@@ -2,17 +2,19 @@ import { existsSync, mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 import { cancel, confirm, intro, isCancel, log, note, outro, password, spinner, text } from "@clack/prompts"
 import pc from "picocolors"
+import { installPluginFiles, removePluginFiles } from "./install-files.ts"
 import {
   backupSettings,
-  ensurePluginEntry,
   hasLatitudePlugin,
+  type LatitudePluginConfig,
+  migrateLegacyEntries,
   PLUGIN_ID,
+  PLUGIN_INSTALL_DIR,
   readSettings,
-  removeEnv,
   removePluginEntry,
   SETTINGS_BACKUP_PATH,
   SETTINGS_PATH,
-  setEnv,
+  setPluginEntry,
   writeSettings,
 } from "./settings-file.ts"
 
@@ -60,6 +62,13 @@ interface InstallFlags {
   apiKey?: string | undefined
   project?: string | undefined
   environment?: EnvironmentConfig | undefined
+  /**
+   * Tristate: `true` = capture (the user passed `--allow-conversation`),
+   * `false` = scrub (the user passed `--no-content`), `undefined` = preserve
+   * existing or fall through to the first-install default. Keeping this
+   * tristate is what makes re-installs idempotent for hand-edited values.
+   */
+  allowConversationAccess?: boolean | undefined
   noPrompt?: boolean
   yes?: boolean
 }
@@ -89,10 +98,17 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
     if (environment) throw new Error("--staging and --dev are mutually exclusive")
     environment = DEV_ENV
   }
+  // Tristate: leave undefined unless the user explicitly asked one way or
+  // the other. Re-install then preserves whatever's in openclaw.json.
+  let allowConversationAccess: boolean | undefined
+  if (flags["no-content"] === true || flags["no-conversation"] === true) allowConversationAccess = false
+  if (flags["allow-conversation"] === true) allowConversationAccess = true
+
   return {
     apiKey: typeof flags["api-key"] === "string" ? flags["api-key"] : undefined,
     project: typeof flags.project === "string" ? flags.project : undefined,
     environment,
+    allowConversationAccess,
     noPrompt: flags["no-prompt"] === true || flags.yes === true,
     yes: flags.yes === true,
   }
@@ -110,7 +126,8 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   intro(pc.bgCyan(pc.black(" Latitude · OpenClaw telemetry ")))
 
   const existing = readSettings()
-  const existingEnv = existing.env ?? {}
+  const existingConfig =
+    (existing.plugins?.entries?.[PLUGIN_ID]?.config as LatitudePluginConfig | undefined) ?? undefined
   const envConfig = flags.environment ?? PRODUCTION_ENV
   const urls = urlsFor(envConfig)
 
@@ -129,10 +146,15 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   log.info(`Get an API key at ${pc.cyan(urls.apiKeys)}`)
   log.info(`Create a project at ${pc.cyan(urls.projects)}`)
 
-  const apiKey = await promptApiKey(existingEnv.LATITUDE_API_KEY, flags.apiKey)
-  const project = await promptProject(existingEnv.LATITUDE_PROJECT, flags.project)
+  const apiKey = await promptApiKey(existingConfig?.apiKey, flags.apiKey)
+  const project = await promptProject(existingConfig?.project, flags.project)
 
-  await applyChanges({ apiKey, project, envConfig })
+  await applyChanges({
+    apiKey,
+    project,
+    envConfig,
+    allowConversationAccess: flags.allowConversationAccess,
+  })
 
   note(
     [
@@ -153,8 +175,14 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
     throw new Error("Non-interactive install requires --api-key=... and --project=... (or run in a TTY).")
   }
   const envConfig = flags.environment ?? PRODUCTION_ENV
-  await applyChanges({ apiKey, project, envConfig })
+  await applyChanges({
+    apiKey,
+    project,
+    envConfig,
+    allowConversationAccess: flags.allowConversationAccess,
+  })
   process.stdout.write(`Installed Latitude plugin in ${SETTINGS_PATH}\n`)
+  process.stdout.write(`Plugin files at ${PLUGIN_INSTALL_DIR}\n`)
 }
 
 async function promptApiKey(_existing: string | undefined, flag: string | undefined): Promise<string> {
@@ -189,26 +217,49 @@ interface ApplyParams {
   apiKey: string
   project: string
   envConfig: EnvironmentConfig
+  /** Tristate — see `InstallFlags.allowConversationAccess`. */
+  allowConversationAccess: boolean | undefined
 }
 
-async function applyChanges({ apiKey, project, envConfig }: ApplyParams): Promise<void> {
-  const s = spinner()
-  s.start("Updating openclaw.json")
+async function applyChanges({ apiKey, project, envConfig, allowConversationAccess }: ApplyParams): Promise<void> {
+  // 1. Materialize plugin runtime files into ~/.openclaw/extensions/latitude-telemetry/
+  //    so OpenClaw's plugin discovery picks them up. This MUST happen before
+  //    we write the openclaw.json entry, otherwise the gateway file-watcher
+  //    will see the entry, fail to find the plugin, and emit a warning.
+  const filesSpinner = spinner()
+  filesSpinner.start("Installing plugin files")
+  const { destination } = installPluginFiles()
+  filesSpinner.stop(`Plugin files installed at ${destination}`)
+
+  // 2. Update openclaw.json with the plugin entry.
+  const settingsSpinner = spinner()
+  settingsSpinner.start("Updating openclaw.json")
   ensureSettingsDir()
   backupSettings()
   const settings = readSettings()
-  ensurePluginEntry(settings)
-  setEnv(settings, "LATITUDE_API_KEY", apiKey)
-  setEnv(settings, "LATITUDE_PROJECT", project)
-  if (envConfig.name !== "production") {
-    setEnv(settings, "LATITUDE_BASE_URL", envConfig.ingest)
-  } else {
-    // Clear any stale BASE_URL left over from a prior --staging/--dev install so
-    // re-running `install` without flags is idempotent back to production.
-    removeEnv(settings, ["LATITUDE_BASE_URL"])
-  }
+  // Migrate any leftover keys our 0.0.1 installer wrote that the strict zod
+  // schema rejects. Without this, re-installing on top of a 0.0.1 install
+  // would leave the gateway quarantining the file as `clobbered`.
+  migrateLegacyEntries(settings)
+
+  // Decide allowConversationAccess for this install:
+  //   - explicit flag (true|false) wins
+  //   - else preserve whatever's already in openclaw.json
+  //   - else first-install default is `true` (matches the README's promise)
+  const existingConfig = (settings.plugins?.entries?.[PLUGIN_ID]?.config ?? {}) as Partial<LatitudePluginConfig>
+  const finalAllowConversationAccess = allowConversationAccess ?? existingConfig.allowConversationAccess ?? true
+
+  setPluginEntry(settings, {
+    apiKey,
+    project,
+    baseUrl: envConfig.name === "production" ? undefined : envConfig.ingest,
+    allowConversationAccess: finalAllowConversationAccess,
+    // `debug` is intentionally not passed — `setPluginEntry` preserves the
+    // user's hand-edited value. Fresh installs leave the key absent (the
+    // runtime default is `false`).
+  })
   writeSettings(settings)
-  s.stop(`Updated ${SETTINGS_PATH}`)
+  settingsSpinner.stop(`Updated ${SETTINGS_PATH}`)
   if (existsSync(SETTINGS_BACKUP_PATH)) log.info(`Backup saved at ${pc.dim(SETTINGS_BACKUP_PATH)}`)
 }
 
@@ -227,17 +278,20 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
   intro(pc.bgYellow(pc.black(" Latitude · OpenClaw telemetry — uninstall ")))
   const settings = readSettings()
 
-  if (!hasLatitudePlugin(settings)) {
-    note("No Latitude plugin entry found — nothing to remove.", "Status")
+  const hasEntry = hasLatitudePlugin(settings)
+  const hasFiles = existsSync(PLUGIN_INSTALL_DIR)
+
+  if (!hasEntry && !hasFiles) {
+    note("No Latitude plugin entry or files found — nothing to remove.", "Status")
     outro(pc.dim("Nothing changed"))
     return
   }
 
   const plan = [
-    `Remove "${PLUGIN_ID}" plugin entry from ${SETTINGS_PATH}`,
-    "Remove LATITUDE_API_KEY / LATITUDE_PROJECT / LATITUDE_BASE_URL from env",
-    `Backup saved at ${SETTINGS_BACKUP_PATH}`,
-  ]
+    hasEntry ? `Remove "${PLUGIN_ID}" plugin entry from ${SETTINGS_PATH}` : null,
+    hasFiles ? `Delete plugin files at ${PLUGIN_INSTALL_DIR}` : null,
+    `Backup of openclaw.json saved at ${SETTINGS_BACKUP_PATH}`,
+  ].filter(Boolean) as string[]
   note(plan.join("\n"), "Plan")
 
   if (!flags.noPrompt && process.stdin.isTTY === true) {
@@ -247,10 +301,15 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
 
   const s = spinner()
   s.start("Reverting settings")
-  backupSettings()
-  removePluginEntry(settings)
-  removeEnv(settings, ["LATITUDE_API_KEY", "LATITUDE_PROJECT", "LATITUDE_BASE_URL"])
-  writeSettings(settings)
+  if (hasEntry) {
+    backupSettings()
+    removePluginEntry(settings)
+    // Also clean any legacy keys our 0.0.1 installer left behind so the file
+    // is fully back to a clean state.
+    migrateLegacyEntries(settings)
+    writeSettings(settings)
+  }
+  if (hasFiles) removePluginFiles()
   s.stop("Done")
   outro(pc.green("✓ Uninstalled"))
 }

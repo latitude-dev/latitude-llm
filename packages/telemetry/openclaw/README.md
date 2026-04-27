@@ -8,7 +8,10 @@ OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) 
 npx -y @latitude-data/openclaw-telemetry install
 ```
 
-The installer prompts for your Latitude API key and project slug, then writes a plugin entry to `~/.openclaw/openclaw.json` with `hooks.allowConversationAccess: true` so OpenClaw forwards raw conversation content to our handlers.
+The installer prompts for your Latitude API key and project slug, then:
+
+1. Materializes the plugin's runtime files into `~/.openclaw/extensions/latitude-telemetry/` (where OpenClaw's plugin discovery scans).
+2. Writes the plugin entry to `~/.openclaw/openclaw.json` under `plugins.entries["@latitude-data/openclaw-telemetry"].config` — credentials, base URL, and the `allowConversationAccess` flag all live here.
 
 Restart the OpenClaw gateway after install:
 
@@ -27,6 +30,7 @@ That's it. Traces show up at `https://console.latitude.so/projects/<your-slug>`.
 | `--staging` | Target `https://staging.latitude.so` / `https://staging-ingest.latitude.so`. |
 | `--dev` | Target `http://localhost:3000` / `http://localhost:3002`. |
 | `--yes` / `--no-prompt` | Skip all prompts. Required for non-TTY / CI invocations. |
+| `--no-content` | Skip raw prompt/response/tool I/O capture. Spans still emit with timing, token usage, model name, and ids. |
 
 Re-running `install` is idempotent — existing values are preserved.
 
@@ -36,7 +40,7 @@ Re-running `install` is idempotent — existing values are preserved.
 npx -y @latitude-data/openclaw-telemetry uninstall
 ```
 
-Shows a plan, asks for confirmation, then removes the plugin entry and the `LATITUDE_*` env vars from `~/.openclaw/openclaw.json`. A backup is saved at `openclaw.json.latitude-bak`.
+Shows a plan, asks for confirmation, then removes the plugin entry from `~/.openclaw/openclaw.json` and the materialized files at `~/.openclaw/extensions/latitude-telemetry/`. A backup of the settings file is saved at `openclaw.json.latitude-bak`.
 
 ## What gets sent
 
@@ -66,48 +70,39 @@ OpenClaw runs LLM hooks **fire-and-forget** (see [`src/plugins/hooks.ts`](https:
 
 ## Configuration reference
 
-Everything the installer writes. You can edit `~/.openclaw/openclaw.json` directly if you want to tweak:
+The installer writes the plugin entry under `plugins.entries[id].config`. Every key is optional except `apiKey` and `project`. You can hand-edit `~/.openclaw/openclaw.json` to tweak:
 
-### `env`
+### `plugins.entries["@latitude-data/openclaw-telemetry"].config`
 
-| Variable | Required | Default | Description |
+| Key | Required | Default | Description |
 | --- | --- | --- | --- |
-| `LATITUDE_API_KEY` | yes | — | Bearer token for Latitude ingestion. |
-| `LATITUDE_PROJECT` | yes | — | Slug of the project to route traces into. |
-| `LATITUDE_BASE_URL` | no | `https://ingest.latitude.so` | Override ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
-| `LATITUDE_OPENCLAW_ENABLED` | no | `1` | Set to `0` to pause the plugin without uninstalling. |
-| `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
+| `apiKey` | yes | — | Bearer token for Latitude ingestion. |
+| `project` | yes | — | Slug of the project to route traces into. |
+| `baseUrl` | no | `https://ingest.latitude.so` | Override OTLP ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
+| `allowConversationAccess` | no | `false` | When `true`, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When `false`, emit only timing, token usage, model name, agent id, and structural ids — same span tree, scrubbed payloads. |
+| `enabled` | no | `true` | Set to `false` to pause emission without uninstalling. |
+| `debug` | no | `false` | Log diagnostic lines to stderr (visible in the gateway log). |
 
-### `plugins.entries`
+### Environment variable fallbacks
 
-```json
-{
-  "@latitude-data/openclaw-telemetry": {
-    "enabled": true,
-    "hooks": {
-      "allowConversationAccess": true
-    }
-  }
-}
-```
-
-`allowConversationAccess` is load-bearing — OpenClaw scrubs payloads from `llm_input` / `llm_output` / `agent_end` for third-party plugins unless they opt in explicitly.
+If a key isn't set in `config`, the runtime falls back to environment variables on the gateway process. `LATITUDE_API_KEY`, `LATITUDE_PROJECT`, `LATITUDE_BASE_URL`, `LATITUDE_DEBUG`, and `LATITUDE_OPENCLAW_ENABLED` are all read this way. The installer doesn't set them — pluginConfig is the canonical surface — but they're useful for kicking debug on/off without editing `openclaw.json`.
 
 ### Manual installation
 
-If the installer doesn't fit your setup, the equivalent `openclaw.json` is:
+If the installer doesn't fit your setup, you need two things:
+
+1. **The plugin files** under a directory OpenClaw discovers (`~/.openclaw/extensions/<name>/` or any path listed in `plugins.load.paths`). The directory must contain at minimum `openclaw.plugin.json` and the compiled `dist/plugin.js`. Easiest: copy them out of the installed `node_modules/@latitude-data/openclaw-telemetry/`.
+2. **The plugin entry** in `~/.openclaw/openclaw.json`:
 
 ```jsonc
 {
-  "env": {
-    "LATITUDE_API_KEY": "lat_xxx",
-    "LATITUDE_PROJECT": "my-openclaw-project"
-  },
   "plugins": {
     "entries": {
       "@latitude-data/openclaw-telemetry": {
         "enabled": true,
-        "hooks": {
+        "config": {
+          "apiKey": "lat_xxx",
+          "project": "my-openclaw-project",
           "allowConversationAccess": true
         }
       }
@@ -116,17 +111,17 @@ If the installer doesn't fit your setup, the equivalent `openclaw.json` is:
 }
 ```
 
-Then ensure the package is installed where OpenClaw can load it (either in your OpenClaw workspace, or globally via `npm i -g @latitude-data/openclaw-telemetry`).
+Don't put `LATITUDE_*` keys at top-level `env` — OpenClaw's strict zod schema rejects them. Don't put `allowConversationAccess` under `hooks` either — that field is OpenClaw's strict reserved namespace and only accepts `allowPromptInjection` (older versions) or `allowPromptInjection` + `allowConversationAccess` (2026.4.22+). Our config bucket is `plugins.entries[id].config`, which is `record(string, unknown)` and accepted across all versions.
+
+After editing, run `openclaw config validate` — it should print `valid: true`. Then `openclaw gateway restart`.
 
 ## Privacy
 
-This plugin reads every LLM input and output and sends the **full content** to Latitude — system prompts, user prompts, assistant responses, tool I/O. There is no per-flag opt-in once `allowConversationAccess` is set: everything gets shipped.
+By default we emit **structural telemetry only** — span tree, timings, token usage, model name, agent name, run/session ids — but **no prompt or response content**. You opt in to content capture by setting `allowConversationAccess: true` (the default the interactive installer writes).
 
-If that's not what you want:
+When `allowConversationAccess` is on, every LLM call's full input messages, assistant output, system instructions, and tool I/O are attached to spans. Pass `--no-content` to the installer (or set the flag to `false` in `openclaw.json`) if you want telemetry without payloads.
 
-- Don't install the plugin.
-- Set `LATITUDE_OPENCLAW_ENABLED=0` in your shell before starting a sensitive session.
-- Run `uninstall`.
+To pause emission entirely without uninstalling, set `LATITUDE_OPENCLAW_ENABLED=0` in the gateway environment.
 
 ## Supported OpenClaw versions
 

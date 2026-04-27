@@ -25,9 +25,25 @@ describe("registerLatitudePlugin", () => {
     const { api } = makeApi()
     const spy = vi.spyOn(api, "on")
     registerLatitudePlugin(api, {
-      config: { apiKey: "", project: "", baseUrl: "", enabled: false, debug: false },
+      config: {
+        apiKey: "",
+        project: "",
+        baseUrl: "",
+        enabled: false,
+        debug: false,
+        allowConversationAccess: false,
+      },
     })
     expect(spy).not.toHaveBeenCalled()
+  })
+
+  it("reads creds from api.pluginConfig (the OpenClaw passes-config path)", () => {
+    const { api } = makeApi()
+    api.pluginConfig = { apiKey: "k", project: "p", allowConversationAccess: true }
+    const spy = vi.spyOn(api, "on")
+    registerLatitudePlugin(api)
+    // Plugin enabled and registered hooks because pluginConfig provided creds.
+    expect(spy).toHaveBeenCalled()
   })
 
   it("builds a run from the full hook sequence and emits it", async () => {
@@ -40,6 +56,7 @@ describe("registerLatitudePlugin", () => {
         baseUrl: "http://localhost:0", // unreachable — fetch will fail silently via logger.warn
         enabled: true,
         debug: false,
+        allowConversationAccess: true,
       },
       onEmit: (r) => emitted.push(r),
     })
