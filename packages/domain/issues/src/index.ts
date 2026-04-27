@@ -15,6 +15,7 @@ export {
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   ISSUE_REFRESH_THROTTLE_MS,
+  ISSUE_SOURCES,
   ISSUE_STATES,
   MIN_OCCURRENCES_FOR_VISIBILITY,
   NEW_ISSUE_AGE_DAYS,
@@ -22,9 +23,11 @@ export {
 export {
   type Issue,
   type IssueCentroid,
+  type IssueSource,
   type IssueState,
   issueCentroidSchema,
   issueSchema,
+  issueSourceSchema,
   issueStateSchema,
 } from "./entities/issue.ts"
 export {

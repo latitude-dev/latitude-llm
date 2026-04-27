@@ -92,6 +92,34 @@ Important state timestamps:
 - `resolvedAt`: manual or automatic resolution timestamp
 - `ignoredAt`: manual ignore timestamp
 
+## Issue Source
+
+The `source` field records the provenance of the **first score** that created the issue. It is immutable for the lifetime of the issue.
+
+```typescript
+type IssueSource = "annotation" | "custom" | "flagger";
+```
+
+- `"flagger"` — the issue was born from a deterministic system-queue flagger match (e.g. `tool-call-errors`, `output-schema-validation`, `empty-response`). The creating score carries `source: "annotation"`, `sourceId: "SYSTEM"`.
+- `"annotation"` — the issue was born from a human annotation (UI, API) or from a published system-queue draft that a human confirmed. The creating score carries `source: "annotation"` with `sourceId` equal to `"UI"`, `"API"`, or a queue CUID.
+- `"custom"` — the issue was born from a custom score pushed through the API. The creating score carries `source: "custom"`.
+
+> **Note**: `"evaluation"` is intentionally excluded. Evaluation scores are always linked to an existing issue at creation time; they never spawn a brand-new issue.
+
+The derivation rule applied at issue creation time:
+
+```typescript
+const deriveIssueSource = (score: Score): IssueSource => {
+  if (score.source === "annotation" && score.sourceId === "SYSTEM") {
+    return "flagger";
+  }
+  if (score.source === "annotation") {
+    return "annotation";
+  }
+  return "custom";
+};
+```
+
 Issue creation eligibility:
 
 - annotations are the primary signal
