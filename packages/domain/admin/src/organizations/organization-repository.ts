@@ -1,4 +1,4 @@
-import { type NotFoundError, type OrganizationId, type RepositoryError } from "@domain/shared"
+import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { AdminOrganizationDetails } from "./organization-details.ts"
 

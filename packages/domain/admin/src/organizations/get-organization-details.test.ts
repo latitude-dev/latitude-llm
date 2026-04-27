@@ -40,9 +40,7 @@ describe("getOrganizationDetailsUseCase", () => {
 
   it("propagates NotFoundError verbatim when the organisation does not exist", async () => {
     await expect(
-      Effect.runPromise(
-        getOrganizationDetailsUseCase({ organizationId: TARGET }).pipe(Effect.provide(missingRepo())),
-      ),
+      Effect.runPromise(getOrganizationDetailsUseCase({ organizationId: TARGET }).pipe(Effect.provide(missingRepo()))),
     ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Organization" })
   })
 })
