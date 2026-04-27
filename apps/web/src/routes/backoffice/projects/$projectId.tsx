@@ -1,7 +1,7 @@
-import { Badge, Icon, Text } from "@repo/ui"
+import { Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArchiveIcon, ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
+import { ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import {
   DashboardHero,
@@ -54,13 +54,6 @@ function BackofficeProjectDetailPage() {
       <DashboardHero
         leading={<ProjectHeroIcon emoji={emoji} name={displayName} />}
         title={displayName}
-        badges={
-          project.deletedAt ? (
-            <Badge variant="muted">
-              <Icon icon={ArchiveIcon} size="xs" /> deleted
-            </Badge>
-          ) : null
-        }
         meta={
           <>
             <span>/{project.slug}</span>
@@ -99,7 +92,6 @@ function BackofficeProjectDetailPage() {
             />
             <FactRow label="Last edited" value={relativeTime(project.lastEditedAt)} />
             <FactRow label="Updated" value={relativeTime(project.updatedAt)} />
-            {project.deletedAt && <FactRow label="Deleted" value={relativeTime(project.deletedAt)} />}
           </DashboardSection>
         }
         secondary={
