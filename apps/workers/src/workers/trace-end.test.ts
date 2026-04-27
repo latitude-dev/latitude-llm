@@ -130,6 +130,7 @@ const makeIssueRow = (input?: { readonly id?: string; readonly projectId?: strin
   projectId: input?.projectId ?? PROJECT_ID,
   name: "Trace-end worker issue",
   description: "Issue context for trace-end worker tests",
+  source: "annotation" as const,
   centroid: createIssueCentroid(),
   clusteredAt: TIMESTAMP,
   escalatedAt: null,

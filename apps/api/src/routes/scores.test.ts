@@ -214,6 +214,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       name: "Test Issue",
       description: "An issue for testing direct assignment",
+      source: "annotation",
       centroid: createIssueCentroid(),
       clusteredAt: new Date(),
     })
@@ -351,6 +352,7 @@ describe("Scores Routes Integration", () => {
       projectId,
       name: "Linked issue",
       description: "Used to verify passed linked evaluations stay unowned",
+      source: "annotation",
       centroid: createIssueCentroid(),
       clusteredAt: new Date(),
     })

@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."issues" ADD COLUMN "source" varchar(32);

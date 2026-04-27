@@ -11,6 +11,7 @@ import type {
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { serializeError } from "@repo/observability"
+import { base64urlEncode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 
@@ -20,6 +21,14 @@ import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-inc
 const tracer = trace.getTracer("bullmq")
 
 const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
+
+/**
+ * BullMQ v5 rejects colons in custom jobId values. We base64url-encode the
+ * dedupeKey so the raw (human-readable) key can still contain ':' separators.
+ * The encoded value is only used for BullMQ's jobId; deduplication.id keeps
+ * the original key so dedup windows behave as expected.
+ */
+const toSafeJobId = (dedupeKey: string): string => base64urlEncode(dedupeKey)
 
 const incidentToLogFields = (incident: BullMqWorkerIncident) => {
   if (incident.kind === "worker_error") {
@@ -110,7 +119,7 @@ export const createBullMqQueuePublisher = (
 
             const bullmqOptions: Record<string, unknown> = {}
             if (options?.dedupeKey) {
-              bullmqOptions.jobId = options.dedupeKey
+              bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
             }
             // `debounceMs` and `throttleMs` both map to BullMQ's `delay` + `deduplication`,
             // but the dedup flags differ:

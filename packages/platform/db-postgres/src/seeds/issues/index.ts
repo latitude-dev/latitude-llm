@@ -211,6 +211,7 @@ function buildIssueRow(input: {
     projectId: SEED_PROJECT_ID,
     name: input.issue.name,
     description: input.issue.description,
+    source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
     escalatedAt: fixtureDates.escalatedAt,
