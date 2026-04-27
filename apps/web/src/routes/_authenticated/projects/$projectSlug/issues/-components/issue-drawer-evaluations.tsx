@@ -1,5 +1,5 @@
 import { Button, CloseTrigger, Icon, Modal, Skeleton, Status, Text, Tooltip, useMountEffect, useToast } from "@repo/ui"
-import { BellPlusIcon, RotateCwIcon, XIcon } from "lucide-react"
+import { BellPlusIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -99,11 +99,13 @@ const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => 
 export function IssueDrawerEvaluations({
   projectId,
   issueId,
+  issueSource,
   evaluations,
   canMonitorIssue,
 }: {
   readonly projectId: string
   readonly issueId: string
+  readonly issueSource: "annotation" | "custom" | "flagger"
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly canMonitorIssue: boolean
 }) {
@@ -265,6 +267,20 @@ export function IssueDrawerEvaluations({
           </div>
         </div>
         {hiddenEvaluationCount > 0 ? <Skeleton className="h-4 w-48 self-center" /> : null}
+      </div>
+    )
+  }
+
+  if (visibleEvaluations.length === 0 && issueSource === "flagger") {
+    return (
+      <div className="flex w-full items-start gap-3 rounded-lg border border-dashed border-border px-5 py-4">
+        <Icon icon={ShieldCheckIcon} size="md" color="foregroundMuted" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <Text.H5M>Automatically monitored</Text.H5M>
+          <Text.H6 color="foregroundMuted">
+            This issue is already monitored on every trace, so a separate evaluation is not needed.
+          </Text.H6>
+        </div>
       </div>
     )
   }

@@ -68,6 +68,14 @@ function MonitoredByTooltip({ evaluationNames }: { readonly evaluationNames: rea
   )
 }
 
+function AutoMonitoredTooltip() {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Text.H6 color="foregroundMuted">This issue is automatically monitored on every trace</Text.H6>
+    </div>
+  )
+}
+
 export interface IssuesTableSorting {
   readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
@@ -137,7 +145,7 @@ export function IssuesView({
           <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
             {issue.name}
           </Text.H5>
-          {issue.evaluations.length > 0 ? (
+          {issue.source === "flagger" || issue.evaluations.length > 0 ? (
             <div className="shrink-0">
               <IssueLifecycleStatuses
                 states={[]}
@@ -147,9 +155,12 @@ export function IssuesView({
                     key: "monitored",
                     label: "Monitored",
                     variant: "success",
-                    tooltip: (
-                      <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
-                    ),
+                    tooltip:
+                      issue.source === "flagger" ? (
+                        <AutoMonitoredTooltip />
+                      ) : (
+                        <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
+                      ),
                   },
                 ]}
               />
