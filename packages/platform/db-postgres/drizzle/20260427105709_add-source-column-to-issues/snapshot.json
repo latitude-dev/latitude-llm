@@ -1,10 +1,10 @@
 {
-  "id": "456c9a03-ac99-4d03-b0d2-ab313e04346c",
-  "prevIds": [
-    "47f0258f-486a-45be-ba44-3f72df21a633"
-  ],
   "version": "8",
   "dialect": "postgres",
+  "id": "051f2a71-5945-4f34-a67c-f56fecbdb5e7",
+  "prevIds": [
+    "5f8a93b3-35b4-4038-98e3-3b771c1eebdc"
+  ],
   "ddl": [
     {
       "isRlsEnabled": true,
@@ -2151,7 +2151,7 @@
     {
       "type": "varchar(32)",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
