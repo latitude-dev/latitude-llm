@@ -3,7 +3,8 @@
 UPDATE "latitude"."issues" i
 SET "source" = CASE
   WHEN s.source = 'annotation' AND s.source_id = 'SYSTEM' THEN 'flagger'
-  ELSE s.source
+  WHEN s.source = 'annotation' THEN 'annotation'
+  ELSE 'custom'
 END
 FROM (
   SELECT DISTINCT ON (issue_id) issue_id, source, source_id
