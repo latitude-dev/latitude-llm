@@ -37,7 +37,7 @@ describe("appendToDisk", () => {
         namespace: "exports",
         organizationId: OrganizationId("o".repeat(24)),
         projectId: ProjectId("p".repeat(24)),
-        filename: "issues.csv.gz",
+        filename: "issues.zip",
         content: "first",
       }),
     )
@@ -47,7 +47,7 @@ describe("appendToDisk", () => {
         namespace: "exports",
         organizationId: OrganizationId("o".repeat(24)),
         projectId: ProjectId("p".repeat(24)),
-        filename: "issues.csv.gz",
+        filename: "issues.zip",
         fileKey: firstKey,
         content: " second",
       }),

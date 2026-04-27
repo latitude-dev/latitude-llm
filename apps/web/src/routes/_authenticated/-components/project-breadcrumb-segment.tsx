@@ -8,7 +8,8 @@ import { useProjectsCollection } from "../../../domains/projects/projects.collec
 import { CreateProjectModal } from "./create-project-modal.tsx"
 
 /**
- * Project switcher / label for the header breadcrumb. Registered on `projects/$projectSlug`.
+ * Project switcher / label for the header breadcrumb. Registered on `projects/$projectSlug`
+ * and on `settings` (where there's no slug — renders a "Select project" placeholder).
  */
 export function ProjectBreadcrumbSegment() {
   const { projectSlug } = useParams({ strict: false })
@@ -21,9 +22,10 @@ export function ProjectBreadcrumbSegment() {
 
   const { data: allProjects } = useProjectsCollection()
 
-  if (!project || !projectSlug) return null
+  // Slug in URL but no matching project: don't render a wrong label.
+  if (projectSlug && !project) return null
 
-  const [emoji, title] = extractLeadingEmoji(project.name)
+  const [emoji, title] = project ? extractLeadingEmoji(project.name) : ["", "Select project"]
 
   return (
     <>

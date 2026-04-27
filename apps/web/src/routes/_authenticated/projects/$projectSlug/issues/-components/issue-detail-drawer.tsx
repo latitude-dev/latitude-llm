@@ -403,8 +403,10 @@ export function IssueDetailDrawer({
             <IssueDrawerEvaluations
               projectId={projectId}
               issueId={issueId}
+              issueSource={issue?.source ?? "annotation"}
               evaluations={issue?.evaluations ?? []}
               canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+              isIssueLoading={isLoading}
             />
           </DetailSection>
 

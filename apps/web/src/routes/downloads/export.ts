@@ -35,12 +35,10 @@ export const Route = createFileRoute("/downloads/export")({
           return new Response("Not found", { status: 404 })
         }
 
-        const filename = key.split("/").at(-1) ?? "export.csv.gz"
-        const isGzip = filename.endsWith(".csv.gz")
-        const contentType = isGzip ? "application/gzip" : "text/csv"
+        const filename = key.split("/").at(-1) ?? "export.zip"
         return new Response(webStream, {
           headers: {
-            "Content-Type": contentType,
+            "Content-Type": "application/zip",
             "Content-Disposition": `attachment; filename="${filename}"`,
           },
         })
