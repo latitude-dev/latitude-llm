@@ -1,5 +1,6 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { AdminOrganizationSearchDto } from "../../../../domains/admin/search.functions.ts"
 import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
@@ -10,12 +11,6 @@ import { ViewedAgo } from "./viewed-ago.tsx"
  * Listing row for a backoffice organisation. Used in search results and
  * in cross-entity sections (e.g. a user's memberships list, where the
  * `trailing` slot is overridden to show the user's per-org role).
- *
- * Wrapped in a plain anchor (rather than `<Link>`) until the
- * `/backoffice/organizations/$organizationId` route file lands in a
- * later commit of this PR — TanStack Router's `<Link>` is strictly
- * typed against the registered route table and would error before the
- * route exists. Once the route ships, swap `<a>` for `<Link>` here.
  */
 export interface OrganizationRowProps {
   readonly organization: Pick<AdminOrganizationSearchDto, "id" | "name" | "slug"> & {
@@ -38,7 +33,11 @@ export function OrganizationRow({ organization, trailing }: OrganizationRowProps
           : undefined
 
   return (
-    <a href={`/backoffice/organizations/${organization.id}`} className="block">
+    <Link
+      to="/backoffice/organizations/$organizationId"
+      params={{ organizationId: organization.id }}
+      className="block"
+    >
       <Row
         leading={<Avatar name={organization.name} size="lg" />}
         primary={
@@ -53,6 +52,6 @@ export function OrganizationRow({ organization, trailing }: OrganizationRowProps
         }
         trailing={resolvedTrailing}
       />
-    </a>
+    </Link>
   )
 }

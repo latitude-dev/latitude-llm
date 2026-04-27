@@ -9,9 +9,15 @@ import { ViewedAgo } from "./viewed-ago.tsx"
 
 /**
  * Listing row for a backoffice project.
+ *
+ * `organizationName` is optional — when omitted, the row shows only
+ * the project slug in the secondary line. Used to suppress the
+ * redundant org chip when the row is rendered inside that very org's
+ * detail page.
  */
 export interface ProjectRowProps {
-  readonly project: Pick<AdminProjectSearchDto, "id" | "name" | "slug" | "organizationName"> & {
+  readonly project: Pick<AdminProjectSearchDto, "id" | "name" | "slug"> & {
+    readonly organizationName?: string
     readonly createdAt?: string
   }
   readonly trailing?: ReactNode
@@ -56,7 +62,7 @@ export function ProjectRow({ project, trailing }: ProjectRowProps) {
         }
         secondary={
           <>
-            <Badge variant="muted">{project.organizationName}</Badge>
+            {project.organizationName ? <Badge variant="muted">{project.organizationName}</Badge> : null}
             <Text.H6 color="foregroundMuted" ellipsis noWrap>
               /{project.slug}
             </Text.H6>
