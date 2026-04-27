@@ -117,6 +117,8 @@
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
+
+  --color-scrollbar: hsl(var(--scrollbar));
 }
 
 /* Keyframe animations */
@@ -244,6 +246,7 @@
     0px 1px 3px 0px hsl(var(--background-shadow) / 0.1),
     0px 1px 2px -1px hsl(var(--background-shadow) / 0.1),
     0px 0px 6px 0px hsl(var(--background-shadow) / 0.04);
+  --scrollbar: 217.9 11.92% 64.26%;
 }
 
 .dark {
@@ -297,6 +300,7 @@
     0px 2px 4px 0px hsl(var(--background-shadow) / 0.4),
     0px 1px 3px -1px hsl(var(--background-shadow) / 0.3),
     0px 0px 8px 0px hsl(var(--background-shadow) / 0.2);
+  --scrollbar: 217.9 11.92% 64.26%;
 }
 
 /* Base styles */
