@@ -1,5 +1,5 @@
 import type { EvaluationId, IssueId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import { z } from "zod"
 import type { Evaluation } from "../entities/evaluation.ts"
 
@@ -45,6 +45,6 @@ export interface EvaluationRepositoryShape {
   }): Effect.Effect<void, RepositoryError, SqlClient>
 }
 
-export class EvaluationRepository extends ServiceMap.Service<EvaluationRepository, EvaluationRepositoryShape>()(
+export class EvaluationRepository extends Context.Service<EvaluationRepository, EvaluationRepositoryShape>()(
   "@domain/evaluations/EvaluationRepository",
 ) {}

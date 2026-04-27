@@ -9,7 +9,7 @@ import type {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
@@ -97,6 +97,6 @@ export interface ScoreRepositoryShape {
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }
 
-export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(
+export class ScoreRepository extends Context.Service<ScoreRepository, ScoreRepositoryShape>()(
   "@domain/scores/ScoreRepository",
 ) {}

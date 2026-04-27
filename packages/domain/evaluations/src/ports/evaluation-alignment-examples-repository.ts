@@ -8,7 +8,7 @@ import {
   TraceId,
   type TraceId as TraceIdType,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import { z } from "zod"
 import { ALIGNMENT_CURATED_DATASET_MAX_ROWS } from "../constants.ts"
 
@@ -60,7 +60,7 @@ export interface EvaluationAlignmentExamplesRepositoryShape {
   ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError, SqlClient>
 }
 
-export class EvaluationAlignmentExamplesRepository extends ServiceMap.Service<
+export class EvaluationAlignmentExamplesRepository extends Context.Service<
   EvaluationAlignmentExamplesRepository,
   EvaluationAlignmentExamplesRepositoryShape
 >()("@domain/evaluations/EvaluationAlignmentExamplesRepository") {}

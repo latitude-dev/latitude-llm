@@ -1,5 +1,5 @@
 import type { MembershipId, NotFoundError, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { Membership } from "../entities/membership.ts"
 
 export interface MemberWithUser {
@@ -14,7 +14,7 @@ export interface MemberWithUser {
 }
 
 // MembershipRepository Service with all methods needed by use cases
-export class MembershipRepository extends ServiceMap.Service<
+export class MembershipRepository extends Context.Service<
   MembershipRepository,
   {
     findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError, SqlClient>

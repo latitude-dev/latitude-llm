@@ -7,7 +7,7 @@ import type {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
 
@@ -64,6 +64,6 @@ export interface SpanListOptions {
   readonly offset?: number
 }
 
-export class SpanRepository extends ServiceMap.Service<SpanRepository, SpanRepositoryShape>()(
+export class SpanRepository extends Context.Service<SpanRepository, SpanRepositoryShape>()(
   "@domain/spans/SpanRepository",
 ) {}

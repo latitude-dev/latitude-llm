@@ -1,4 +1,4 @@
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type {
   OptimizationBudget,
   OptimizationCandidate,
@@ -54,4 +54,4 @@ export interface OptimizerShape {
   optimize(input: OptimizeCandidateInput): Effect.Effect<OptimizationResult, OptimizerError>
 }
 
-export class Optimizer extends ServiceMap.Service<Optimizer, OptimizerShape>()("@domain/optimizations/Optimizer") {}
+export class Optimizer extends Context.Service<Optimizer, OptimizerShape>()("@domain/optimizations/Optimizer") {}

@@ -1,5 +1,5 @@
 import type { RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 
 export interface IssueProjectionCandidate {
   readonly uuid: string
@@ -32,7 +32,7 @@ export type IssuesCollectionProperties = {
   description: string // searchable issue description mirrored from Postgres
 }
 
-export class IssueProjectionRepository extends ServiceMap.Service<
+export class IssueProjectionRepository extends Context.Service<
   IssueProjectionRepository,
   {
     upsert(input: UpsertIssueProjectionInput): Effect.Effect<void, RepositoryError>

@@ -1,5 +1,5 @@
 import type { SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect, Context } from "effect"
 import type { EventPayloads } from "./event-payloads.ts"
 
 export type OutboxWriteEvent = {
@@ -18,6 +18,6 @@ export interface OutboxEventWriterShape {
   write(event: OutboxWriteEvent): Effect.Effect<void, unknown, SqlClient>
 }
 
-export class OutboxEventWriter extends ServiceMap.Service<OutboxEventWriter, OutboxEventWriterShape>()(
+export class OutboxEventWriter extends Context.Service<OutboxEventWriter, OutboxEventWriterShape>()(
   "@domain/events/OutboxEventWriter",
 ) {}
