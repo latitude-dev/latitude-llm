@@ -549,19 +549,21 @@ const generatedExtraIssueBlueprints = Array.from({ length: GENERATED_EXTRA_ISSUE
   buildGeneratedExtraIssueBlueprint(index),
 )
 
-const extraIssueFixtures: SeedIssueFixture[] = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map((issue, index) => ({
-  id:
-    SEED_EXTRA_ISSUE_IDS[index] ??
-    (() => {
-      throw new Error(`Missing extra seed issue ID for index ${index}`)
-    })(),
-  uuid:
-    SEED_EXTRA_ISSUE_UUIDS[index] ??
-    (() => {
-      throw new Error(`Missing extra seed issue UUID for index ${index}`)
-    })(),
-  ...issue,
-}))
+const extraIssueFixtures: SeedIssueFixture[] = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map(
+  (issue, index) => ({
+    id:
+      SEED_EXTRA_ISSUE_IDS[index] ??
+      (() => {
+        throw new Error(`Missing extra seed issue ID for index ${index}`)
+      })(),
+    uuid:
+      SEED_EXTRA_ISSUE_UUIDS[index] ??
+      (() => {
+        throw new Error(`Missing extra seed issue UUID for index ${index}`)
+      })(),
+    ...issue,
+  }),
+)
 
 export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [...baseIssueFixtures, ...extraIssueFixtures]
 
