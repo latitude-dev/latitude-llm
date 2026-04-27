@@ -25,7 +25,7 @@ catalog:
   better-auth: 1.5.6
   '@bull-board/api': 6.12.1
   '@bull-board/hono': 6.12.1
-  bullmq: 5.28.2
+  bullmq: 5.76.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-beta.21-b0c345d
@@ -33,7 +33,7 @@ catalog:
   '@effect/opentelemetry': 4.0.0-beta.4
   effect: 4.0.0-beta.4
   hono: 4.12.15
-  ioredis: 5.8.2
+  ioredis: 5.10.1
   pg: 8.16.0
   react: 19.2.5
   react-dom: 19.2.5
