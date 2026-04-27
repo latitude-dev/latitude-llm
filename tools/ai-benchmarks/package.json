@@ -14,22 +14,29 @@
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
     "benchmark:fetch": "node --import tsx src/scripts/benchmark-fetch.ts",
-    "benchmark:run": "node --import tsx src/scripts/benchmark-run.ts"
+    "benchmark:run": "node --import tsx src/scripts/benchmark-run.ts",
+    "benchmark:optimize": "node --import tsx src/scripts/benchmark-optimize.ts",
+    "benchmark:optimize:review": "node --import tsx src/scripts/benchmark-optimize-review.ts"
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/models": "workspace:*",
+    "@domain/optimizations": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/ai": "workspace:*",
     "@platform/ai-vercel": "workspace:*",
+    "@platform/op-gepa": "workspace:*",
+    "diff": "^8.0.4",
     "effect": "catalog:",
+    "esbuild": "0.25.10",
     "ink": "^6.3.1",
     "listr2": "^9.0.4",
     "papaparse": "^5.5.3",
     "react": "catalog:",
     "tsx": "catalog:",
+    "typescript": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -14,7 +14,7 @@ from op_gepa_engine.rpc.server import RpcServer
 from op_gepa_engine.util import Model, StrEnum
 
 type Component = str
-type Script = str
+type Script = str # <script hash>
 type System = dict[Component, Script]
 
 
@@ -47,8 +47,16 @@ class GepaOptimizeParams(Model):
     budget: Budget
 
 
+class GepaStopReason(StrEnum):
+    TIME_BUDGET = "time_budget"
+    TOKENS_BUDGET = "tokens_budget"
+    STAGNATION = "stagnation"
+    COMPLETED = "completed"
+
+
 class GepaOptimizeResult(Model):
     optimized: System
+    stopReason: GepaStopReason
 
 
 class GepaEvaluateParams(Model):
@@ -73,14 +81,21 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
     loop = asyncio.get_running_loop()
 
     # TODO: Stoppers are checked only after a full iteration, we should stop the algorithm early on!
-    timeout_stopper = TimeoutStopCondition(timeout_seconds=min(params.budget.time or ENGINE_MAX_TIME, ENGINE_MAX_TIME))
-    usage_stopper = UsageStopCondition(max_usage=min(params.budget.tokens or ENGINE_MAX_TOKENS, ENGINE_MAX_TOKENS))
-    stagnation_stopper = NoImprovementStopper(max_iterations_without_improvement=ENGINE_MAX_STAGNATION)
+    timeout_stopper = TrackingStopper(
+        GepaStopReason.TIME_BUDGET,
+        TimeoutStopCondition(timeout_seconds=min(params.budget.time or ENGINE_MAX_TIME, ENGINE_MAX_TIME)),
+    )
+    usage_inner = UsageStopCondition(max_usage=min(params.budget.tokens or ENGINE_MAX_TOKENS, ENGINE_MAX_TOKENS))
+    usage_stopper = TrackingStopper(GepaStopReason.TOKENS_BUDGET, usage_inner)
+    stagnation_stopper = TrackingStopper(
+        GepaStopReason.STAGNATION,
+        NoImprovementStopper(max_iterations_without_improvement=params.budget.stagnation or ENGINE_MAX_STAGNATION),
+    )
 
     run_optimize = partial[GEPAResult[Output, str]](
         optimize,
         seed=env.LAT_GEPA_SEED,
-        adapter=LatitudeAdapter(server, usage_stopper),
+        adapter=LatitudeAdapter(server, usage_inner),
         stop_callbacks=CompositeStopper(timeout_stopper, usage_stopper, stagnation_stopper, mode="any"),
         seed_candidate=params.baseline,
         trainset=params.trainset,
@@ -108,7 +123,16 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
 
     result = await loop.run_in_executor(None, run_optimize)
 
-    return GepaOptimizeResult(optimized=result.best_candidate)
+    # CompositeStopper(mode="any") short-circuits on the first stopper that
+    # returns True, so at most one wrapped stopper records `triggered=True`.
+    # Order matches the composite's argument order; if none triggered the run
+    # exhausted its candidate pool and we report it as completed.
+    stop_reason = next(
+        (s.reason for s in (timeout_stopper, usage_stopper, stagnation_stopper) if s.triggered),
+        GepaStopReason.COMPLETED,
+    )
+
+    return GepaOptimizeResult(optimized=result.best_candidate, stopReason=stop_reason)
 
 
 def register_gepa_handlers(server: RpcServer) -> None:
@@ -128,6 +152,27 @@ class UsageStopCondition(StopperProtocol):
 
     def __call__(self, gepa_state: GEPAState[Output, str]) -> bool:
         return self.cur_usage >= self.max_usage
+
+
+class TrackingStopper(StopperProtocol):
+    """Wraps a stopper and records whether it has fired so callers can identify
+    which condition ended the run. Relies on `CompositeStopper(mode="any")`
+    short-circuiting — only the first triggered stopper sets `triggered=True`."""
+
+    reason: "GepaStopReason"
+    inner: StopperProtocol
+    triggered: bool
+
+    def __init__(self, reason: "GepaStopReason", inner: StopperProtocol):
+        self.reason = reason
+        self.inner = inner
+        self.triggered = False
+
+    def __call__(self, gepa_state: GEPAState[Output, str]) -> bool:
+        if self.inner(gepa_state):
+            self.triggered = True
+            return True
+        return False
 
 
 class LatitudeAdapter(GEPAAdapter[Example, Trajectory, Output]):

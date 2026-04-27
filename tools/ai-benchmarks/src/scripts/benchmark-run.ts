@@ -6,8 +6,16 @@ import { Effect } from "effect"
 import { render } from "ink"
 import { Listr } from "listr2"
 import { createElement } from "react"
-import { type Baseline, diffAgainstBaseline, readBaseline, writeBaseline } from "../runner/baseline.ts"
-import { computeMetrics, computeMetricsBy, countByPhase } from "../runner/metrics.ts"
+import {
+  type Baseline,
+  type BaselineDiff,
+  diffAgainstBaseline,
+  hashRowIds,
+  readBaseline,
+  selectFailures,
+  writeBaseline,
+} from "../runner/baseline.ts"
+import { computeMetrics, computeMetricsBy, countByPhase, type Prediction } from "../runner/metrics.ts"
 import { computeCost } from "../runner/pricing.ts"
 import { runTarget } from "../runner/run.ts"
 import { stratifiedSample } from "../runner/sample.ts"
@@ -16,7 +24,7 @@ import { type BenchmarkTarget, resolveTargets, targetPath } from "../runner/targ
 import { type FixtureRow, fixtureRowSchema } from "../types.ts"
 import { formatCostUsd, formatPercent } from "../ui/format.ts"
 import { Report } from "../ui/Report.tsx"
-import type { InspectableRow, ReportData } from "../ui/types.ts"
+import type { InspectableFlip, InspectableRow, ReportData } from "../ui/types.ts"
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..")
 const FIXTURES_ROOT = join(PKG_ROOT, "fixtures")
@@ -131,30 +139,38 @@ function makeListr(target: BenchmarkTarget, options: RunOneOptions): Listr<Listr
 
           const sampled = options.sample !== undefined
           const baselinePath = join(BASELINES_ROOT, `${targetPath(target.id)}.json`)
+          const currentFailures = selectFailures(predictions)
+          const currentRowIdsHash = hashRowIds(predictions.map((p) => p.id))
           let baselinePresent = false
-          let flippedIds = new Set<string>()
-          let flips = 0
-          let newInCurrent = 0
-          let missingFromCurrent = 0
+          let diff: BaselineDiff | null = null
 
           if (!sampled) {
             const baseline = await readBaseline(baselinePath)
             if (baseline !== null) {
               baselinePresent = true
-              const diff = diffAgainstBaseline(predictions, baseline)
-              flips = diff.flips.length
-              newInCurrent = diff.newInCurrent.length
-              missingFromCurrent = diff.missingFromCurrent.length
-              flippedIds = new Set(diff.flips.map((f) => f.id))
+              diff = diffAgainstBaseline({
+                currentFailures,
+                currentFixtureSize: total,
+                currentRowIdsHash,
+                baseline,
+              })
             }
             if (options.updateBaseline) {
-              const next: Baseline = { runAt: new Date().toISOString(), metrics, predictions }
+              const next: Baseline = {
+                runAt: new Date().toISOString(),
+                metrics,
+                perTactic,
+                perPhase,
+                fixtureSize: total,
+                rowIdsHash: currentRowIdsHash,
+                failures: currentFailures,
+              }
               await writeBaseline(baselinePath, next)
             }
           }
 
           const rowsById = new Map(rows.map((r) => [r.id, r]))
-          const outcomesById = new Map(runResult.outcomes.map((o) => [o.row.id, o]))
+          const predictionsById = new Map(predictions.map((p) => [p.id, p]))
 
           const failedRows: InspectableRow[] = predictions
             .filter((p) => p.predicted !== p.expected)
@@ -164,10 +180,7 @@ function makeListr(target: BenchmarkTarget, options: RunOneOptions): Listr<Listr
               return { row, prediction: p }
             })
 
-          const flippedRows: InspectableRow[] = Array.from(flippedIds)
-            .map((id) => outcomesById.get(id))
-            .filter((o): o is NonNullable<typeof o> => o !== undefined)
-            .map((o) => ({ row: o.row, prediction: o.prediction }))
+          const flippedRows: InspectableFlip[] = diff === null ? [] : buildFlips(diff, rowsById, predictionsById)
 
           ctx.report = {
             targetId: target.id,
@@ -180,9 +193,10 @@ function makeListr(target: BenchmarkTarget, options: RunOneOptions): Listr<Listr
             cost,
             baseline: {
               present: baselinePresent,
-              flips,
-              newInCurrent,
-              missingFromCurrent,
+              addedFailures: diff?.addedFailures.length ?? 0,
+              removedFailures: diff?.removedFailures.length ?? 0,
+              changedFailures: diff?.changedFailures.length ?? 0,
+              fixtureChanged: diff?.fixtureChanged ?? false,
             },
             failedRows,
             flippedRows,
@@ -197,6 +211,53 @@ function makeListr(target: BenchmarkTarget, options: RunOneOptions): Listr<Listr
 }
 
 /**
+ * Order the diff into a single browseable list for the TUI flip view.
+ * Added (regressions) first, then changed, then removed (fixes), so a
+ * reviewer reads the worst news at the top.
+ */
+function buildFlips(
+  diff: BaselineDiff,
+  rowsById: ReadonlyMap<string, FixtureRow>,
+  predictionsById: ReadonlyMap<string, Prediction>,
+): InspectableFlip[] {
+  const pickRow = (id: string): FixtureRow => {
+    const row = rowsById.get(id)
+    if (row === undefined) throw new Error(`missing row ${id}`)
+    return row
+  }
+  const pickPrediction = (id: string) => {
+    const prediction = predictionsById.get(id)
+    if (prediction === undefined) throw new Error(`missing prediction ${id}`)
+    return prediction
+  }
+
+  const added: InspectableFlip[] = diff.addedFailures.map((f) => ({
+    kind: "added",
+    row: pickRow(f.id),
+    prediction: pickPrediction(f.id),
+  }))
+
+  const changed: InspectableFlip[] = diff.changedFailures.map((c) => ({
+    kind: "changed",
+    row: pickRow(c.id),
+    prediction: pickPrediction(c.id),
+    previous: { predicted: c.was.predicted, phase: c.was.phase },
+  }))
+
+  // `removed` rows are baseline failures that no longer fail in the current
+  // run. Their current prediction is a passing one; we still surface it so
+  // the reviewer sees the new (correct) phase next to the baseline state.
+  const removed: InspectableFlip[] = diff.removedFailures.map((f) => ({
+    kind: "removed",
+    row: pickRow(f.id),
+    prediction: pickPrediction(f.id),
+    previous: { predicted: f.predicted, phase: f.phase },
+  }))
+
+  return [...added, ...changed, ...removed]
+}
+
+/**
  * Print a one-line summary AFTER the ink TUI exits, so the terminal
  * scrollback carries the numbers even when the interactive view is gone.
  */
@@ -208,7 +269,7 @@ function printPersistentLine(data: ReportData): void {
   const baselineSummary = data.sampled
     ? "baseline skipped (sample)"
     : data.baseline.present
-      ? `${data.baseline.flips} flips vs baseline`
+      ? `+${data.baseline.addedFailures}/Δ${data.baseline.changedFailures}/-${data.baseline.removedFailures} vs baseline${data.baseline.fixtureChanged ? " (fixture changed)" : ""}`
       : "no baseline"
   console.log(
     `[${data.targetId}${sampleSuffix}] p=${formatPercent(m.precision)} r=${formatPercent(m.recall)} f1=${formatPercent(m.f1)} · cost=${formatCostUsd(data.cost.totalUsd)} · ${data.failedRows.length} failed, ${baselineSummary}`,
