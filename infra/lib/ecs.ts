@@ -421,6 +421,9 @@ function createTaskDefinition(
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
           { name: "VITE_LAT_WEB_URL", value: webUrl },
+          ...(config.name === "production"
+            ? [{ name: "VITE_LAT_GTM_CONTAINER_ID", value: "GTM-5NWGV24H" }]
+            : []),
           { name: "DD_TRACE_ENABLED", value: "true" },
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
