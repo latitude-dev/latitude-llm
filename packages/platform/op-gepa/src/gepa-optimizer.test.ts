@@ -71,6 +71,7 @@ vi.mock("./client.ts", () => {
         optimized: {
           "evaluation-script": proposed.script,
         },
+        stopReason: "completed" as const,
       }
     }
   }
@@ -160,6 +161,7 @@ describe("GepaOptimizerLive", () => {
         text: "opaque-baseline-candidate-text\n// optimized from trace-positive",
         hash: "hash-optimized",
       },
+      stopReason: "completed",
     })
     expect(clientState.started).toBe(1)
     expect(clientState.stopped).toBe(1)

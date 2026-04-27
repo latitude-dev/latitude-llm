@@ -31,6 +31,14 @@ export interface OptimizeCandidateInput {
   readonly baselineCandidate: OptimizationCandidate
   readonly dataset: OptimizationDatasetSplit
   readonly budget?: OptimizationBudget
+  /**
+   * Number of failure trajectories sampled per reflection round (passed
+   * through to GEPA's `reflection_minibatch_size`). Higher values give the
+   * proposer broader context per iteration at the cost of more input
+   * tokens; lower values run faster but see less of the failure surface.
+   * Defaults to `GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE` when omitted.
+   */
+  readonly reflectionMinibatchSize?: number
   readonly evaluate: (input: OptimizeEvaluationInput) => Promise<OptimizationEvaluationResult>
   readonly propose: (input: OptimizeProposalInput) => Promise<OptimizationCandidate>
   readonly abortSignal?: AbortSignal

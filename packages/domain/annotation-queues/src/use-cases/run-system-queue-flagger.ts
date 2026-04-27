@@ -12,6 +12,7 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { SYSTEM_QUEUE_FLAGGER_MAX_TOKENS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
 import { getQueueStrategy, hasQueueStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
+import type { QueueStrategy } from "../flagger-strategies/types.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -32,6 +33,11 @@ export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIErr
  * Callers that already hold a `TraceDetail` — eval harnesses, experiment runners,
  * any non-production code that shouldn't touch Clickhouse — use this shape with
  * {@link classifyTraceForQueueUseCase}.
+ *
+ * `strategyOverride` is the optimizer seam: when present it replaces the
+ * registry lookup keyed by `queueSlug`, so `tools/ai-benchmarks/benchmark:optimize`
+ * can evaluate a candidate strategy file without mutating the global registry.
+ * Production never sets this.
  */
 export interface ClassifyTraceForQueueInput {
   readonly organizationId: string
@@ -39,6 +45,7 @@ export interface ClassifyTraceForQueueInput {
   readonly traceId: string
   readonly queueSlug: string
   readonly trace: TraceDetail
+  readonly strategyOverride?: QueueStrategy
 }
 
 const systemQueueFlaggerOutputSchema = z.object({
@@ -78,7 +85,7 @@ const isSchemaMismatchCause = (cause: unknown): boolean => {
 export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classifyTraceForQueue")(function* (
   input: ClassifyTraceForQueueInput,
 ) {
-  const strategy = getQueueStrategy(input.queueSlug)
+  const strategy = input.strategyOverride ?? getQueueStrategy(input.queueSlug)
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.trace)) {
     return { matched: false }

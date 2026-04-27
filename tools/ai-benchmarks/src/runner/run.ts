@@ -89,8 +89,9 @@ interface RunOptions {
 
 /**
  * Classify every row for a target and return the aggregated outcomes plus
- * total token usage. Concurrency defaults to 10 — fine for Bedrock Nova Lite;
- * bump via options for higher-rate-limit models.
+ * total token usage. Concurrency defaults to 4 — sized for Bedrock Nova
+ * Lite's on-demand TPM quota in eu-central-1 (see the inline comment
+ * below for the math). Bump via options for higher-rate-limit models.
  */
 export const runTarget = (target: BenchmarkTarget, rows: readonly FixtureRow[], options: RunOptions = {}) =>
   Effect.gen(function* () {
