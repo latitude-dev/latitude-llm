@@ -1,5 +1,5 @@
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
@@ -156,6 +156,7 @@ export function useIssues(input: {
   const {
     data: paginatedData,
     isLoading,
+    isPlaceholderData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -165,6 +166,7 @@ export function useIssues(input: {
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
     enabled: (input.enabled ?? true) && input.projectId.length > 0,
   })
 
@@ -186,6 +188,10 @@ export function useIssues(input: {
     totalCount: firstPage?.totalCount ?? 0,
     occurrencesSum: firstPage?.occurrencesSum ?? 0,
     isLoading,
+    // True while a new query key is in flight and the previous result is being
+    // shown as placeholder (e.g. after a sort/filter change). Lets consumers
+    // surface skeleton states without unmounting the surrounding page layout.
+    isReloading: isPlaceholderData,
     infiniteScroll,
   }
 }
