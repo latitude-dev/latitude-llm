@@ -100,7 +100,7 @@ export const buildTracesExportUseCase = Effect.fn("spans.buildTracesExport")(fun
 
   if (input.selection?.mode === "selected") {
     const selectedTraceIds = input.selection.rowIds.map((traceId) => TraceId(traceId))
-    const traces = yield* traceRepo.listByTraceIds({
+    const traces = yield* traceRepo.listSummariesByTraceIds({
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceIds: selectedTraceIds,

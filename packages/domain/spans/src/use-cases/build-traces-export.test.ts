@@ -48,11 +48,7 @@ describe("buildTracesExportUseCase", () => {
     const firstTrace = makeTrace("a".repeat(32), { rootSpanName: "alpha" })
     const secondTrace = makeTrace("b".repeat(32), { rootSpanName: "beta" })
     const { repository } = createFakeTraceRepository({
-      listByTraceIds: () =>
-        Effect.succeed([
-          { ...secondTrace, systemInstructions: [], inputMessages: [], outputMessages: [], allMessages: [] },
-          { ...firstTrace, systemInstructions: [], inputMessages: [], outputMessages: [], allMessages: [] },
-        ] as never),
+      listSummariesByTraceIds: () => Effect.succeed([secondTrace, firstTrace]),
       matchesFiltersByTraceId: ({ traceId }) => Effect.succeed(traceId === firstTrace.traceId),
     })
 

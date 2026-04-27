@@ -126,7 +126,7 @@ export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
         const traces =
           traceIds.length === 0
             ? []
-            : yield* traceRepo.listByTraceIds({
+            : yield* traceRepo.listSummariesByTraceIds({
                 organizationId: orgId,
                 projectId,
                 traceIds,
@@ -249,7 +249,7 @@ export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
 
         if (!item) return null
 
-        const traces = yield* traceRepo.listByTraceIds({
+        const traces = yield* traceRepo.listSummariesByTraceIds({
           organizationId: orgId,
           projectId,
           traceIds: [TraceId(item.traceId as string)],

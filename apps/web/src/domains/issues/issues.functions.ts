@@ -19,7 +19,7 @@ import {
 } from "@domain/issues"
 import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings } from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { type Trace, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -209,7 +209,7 @@ const toIssueDetailRecord = (input: {
 
 export type IssueDetailRecord = ReturnType<typeof toIssueDetailRecord>
 
-const toIssueTraceRecord = (trace: TraceDetail): TraceRecord => toTraceRecord(trace)
+const toIssueTraceRecord = (trace: Trace): TraceRecord => toTraceRecord(trace)
 
 export type IssueTraceRecord = TraceRecord
 
@@ -472,7 +472,7 @@ export const listIssueTraces = createServerFn({ method: "GET" })
           })
         }
 
-        const traces = yield* traceRepository.listByTraceIds({
+        const traces = yield* traceRepository.listSummariesByTraceIds({
           organizationId: orgId,
           projectId,
           traceIds: tracePage.items.map((item) => item.traceId),
@@ -482,7 +482,7 @@ export const listIssueTraces = createServerFn({ method: "GET" })
         return toIssueTracePageRecord({
           items: tracePage.items
             .map((item) => traceById.get(item.traceId))
-            .filter((trace): trace is TraceDetail => trace !== undefined)
+            .filter((trace): trace is Trace => trace !== undefined)
             .map(toIssueTraceRecord),
           hasMore: tracePage.hasMore,
           limit: tracePage.limit,

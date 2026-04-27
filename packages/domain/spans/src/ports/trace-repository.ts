@@ -60,6 +60,38 @@ export interface TraceRepositoryShape {
     readonly searchQuery?: string
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
+  /**
+   * Lightweight summary lookup. Returns the {@link Trace} shape without the
+   * heavy `argMinIf` / `argMaxIf` message aggregates on the `traces` MV.
+   *
+   * Prefer this over {@link findByTraceId} whenever the caller only needs
+   * trace-level metadata (counts, timings, IDs, tags). Reading the heavy
+   * message columns from `traces` requires merging multi-MB
+   * `AggregateFunction(argMin/MaxIf, String, ...)` states across every
+   * unmerged partial row for the trace, which has caused server-side OOMs.
+   */
+  findSummaryByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }): Effect.Effect<Trace, NotFoundError | RepositoryError, ChSqlClient>
+
+  /** Bulk variant of {@link findSummaryByTraceId}. Missing trace_ids are dropped silently. */
+  listSummariesByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<readonly Trace[], RepositoryError, ChSqlClient>
+
+  /**
+   * Detail lookup including conversation messages. Use only when the caller
+   * actually consumes `inputMessages` / `outputMessages` / `allMessages` /
+   * `systemInstructions` — typically UI drawers, evaluators, dataset export.
+   *
+   * Implementation reads the summary from `traces` and the messages from
+   * `spans` (where each row holds the value as a plain String). It does NOT
+   * merge aggregate states on the heavy `traces` columns.
+   */
   findByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

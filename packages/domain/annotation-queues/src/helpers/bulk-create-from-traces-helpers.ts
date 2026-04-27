@@ -63,7 +63,7 @@ function fetchTracesById(args: { readonly projectId: ProjectId; readonly traceId
 
     const chSqlClient = yield* ChSqlClient
     const repo = yield* TraceRepository
-    const traces = yield* repo.listByTraceIds({
+    const traces = yield* repo.listSummariesByTraceIds({
       organizationId: chSqlClient.organizationId,
       projectId: args.projectId,
       traceIds: args.traceIds,

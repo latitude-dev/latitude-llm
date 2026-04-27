@@ -118,17 +118,17 @@ export const runTraceEndJob =
         } satisfies TraceEndRunResult
       }
 
-      const traceDetail = loaded.traceDetail
+      const trace = loaded.trace
 
       const [activeEvaluations, liveQueues] = yield* Effect.all(
         [
           listAllActiveEvaluations({
-            projectId: traceDetail.projectId,
+            projectId: trace.projectId,
           }),
           Effect.gen(function* () {
             const queueRepository = yield* AnnotationQueueRepository
             return yield* queueRepository.listLiveQueuesByProject({
-              projectId: traceDetail.projectId,
+              projectId: trace.projectId,
             })
           }),
         ],
@@ -180,16 +180,16 @@ export const runTraceEndJob =
         organizationId: payload.organizationId,
         projectId: payload.projectId,
         traceId: payload.traceId,
-        traceProjectId: traceDetail.projectId,
-        traceRowId: traceDetail.traceId,
-        sessionId: traceDetail.sessionId ?? null,
+        traceProjectId: trace.projectId,
+        traceRowId: trace.traceId,
+        sessionId: trace.sessionId ?? null,
         selectedEvaluations,
       })
 
       const { insertedItemCount } = yield* orchestrateTraceEndLiveQueueMaterializationUseCase({
-        traceProjectId: traceDetail.projectId,
-        traceRowId: traceDetail.traceId,
-        traceCreatedAt: traceDetail.startTime,
+        traceProjectId: trace.projectId,
+        traceRowId: trace.traceId,
+        traceCreatedAt: trace.startTime,
         selectedLiveQueueIds,
       })
 
@@ -227,15 +227,15 @@ export const runTraceEndJob =
         organizationId: payload.organizationId,
         projectId: payload.projectId,
         traceId: payload.traceId,
-        startTime: traceDetail.startTime.toISOString(),
-        rootSpanName: traceDetail.rootSpanName,
+        startTime: trace.startTime.toISOString(),
+        rootSpanName: trace.rootSpanName,
       })
 
       return {
         action: "completed",
         summary: {
-          traceId: traceDetail.traceId,
-          sessionId: traceDetail.sessionId ?? null,
+          traceId: trace.traceId,
+          sessionId: trace.sessionId ?? null,
           evaluations: {
             ...evaluationDecisionCounts,
             activeEvaluationsScanned: activeEvaluations.length,

@@ -207,11 +207,26 @@ const LIST_SELECT = `
   argMinIfMerge(root_span_name) AS root_span_name
 `
 
-const DETAIL_SELECT = `${LIST_SELECT},
-  argMinIfMerge(input_messages)        AS input_messages,
-  argMaxIfMerge(last_input_messages)   AS last_input_messages,
-  argMaxIfMerge(output_messages)       AS output_messages,
-  argMinIfMerge(system_instructions)   AS system_instructions
+/**
+ * Spans-table aggregation that mirrors the four message columns in the
+ * `traces` materialized view (see migration 00008, traces_mv definition):
+ *
+ *   - `input_messages`        = argMinIf(input_messages, start_time, input_messages != '')
+ *   - `last_input_messages`   = argMaxIf(input_messages, end_time, output_messages != '')
+ *   - `output_messages`       = argMaxIf(output_messages, end_time, output_messages != '')
+ *   - `system_instructions`   = argMinIf(system_instructions, start_time, system_instructions != '')
+ *
+ * Reading from `spans` instead of `argMin/MaxIfMerge(...)` on the `traces` MV
+ * avoids the AggregatingTransform OOM: each `spans` row holds the candidate
+ * value as a plain String, so the aggregate set is bounded by spans-per-trace
+ * (typically dozens), not by partial-state-rows × heavy-aggregate-states.
+ */
+const SPAN_MESSAGES_SELECT = `
+  trace_id,
+  argMinIf(input_messages, start_time, input_messages != '')           AS first_input_messages,
+  argMaxIf(input_messages, end_time, output_messages != '')            AS last_input_messages,
+  argMaxIf(output_messages, end_time, output_messages != '')           AS final_output_messages,
+  argMinIf(system_instructions, start_time, system_instructions != '') AS first_system_instructions
 `
 
 type TraceListRow = {
@@ -245,11 +260,12 @@ type TraceListRow = {
   root_span_name: string
 }
 
-type TraceDetailRow = TraceListRow & {
-  input_messages: string
+type SpanMessagesAggregateRow = {
+  trace_id: string
+  first_input_messages: string
   last_input_messages: string
-  output_messages: string
-  system_instructions: string
+  final_output_messages: string
+  first_system_instructions: string
 }
 
 const parseMessages = (json: string): GenAIMessage[] => {
@@ -370,19 +386,29 @@ const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
   }
 }
 
-const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
-  const systemInstructions = parseSystem(row.system_instructions)
-  const lastInput = parseMessages(row.last_input_messages)
-  const output = parseMessages(row.output_messages)
+const EMPTY_MESSAGES_ROW: Omit<SpanMessagesAggregateRow, "trace_id"> = {
+  first_input_messages: "",
+  last_input_messages: "",
+  final_output_messages: "",
+  first_system_instructions: "",
+}
+
+const toDomainTraceDetail = (
+  summary: Trace,
+  messages: Omit<SpanMessagesAggregateRow, "trace_id">,
+): TraceDetail => {
+  const systemInstructions = parseSystem(messages.first_system_instructions)
+  const lastInput = parseMessages(messages.last_input_messages)
+  const output = parseMessages(messages.final_output_messages)
 
   // Prepend system instructions as a system message at index 0
   const systemMessage: GenAIMessage | null =
     systemInstructions.length > 0 ? { role: "system", parts: systemInstructions } : null
 
   return {
-    ...toBaseFields(row),
+    ...summary,
     systemInstructions,
-    inputMessages: parseMessages(row.input_messages),
+    inputMessages: parseMessages(messages.first_input_messages),
     outputMessages: output,
     allMessages: systemMessage ? [systemMessage, ...lastInput, ...output] : [...lastInput, ...output],
   }
@@ -780,7 +806,11 @@ export const TraceRepositoryLive = Layer.effect(
           )
       })
 
-    const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) =>
+    const listSummariesByTraceIds: TraceRepositoryShape["listSummariesByTraceIds"] = ({
+      organizationId,
+      projectId,
+      traceIds,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         if (traceIds.length === 0) return []
@@ -788,7 +818,7 @@ export const TraceRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${DETAIL_SELECT}
+              query: `SELECT ${LIST_SELECT}
                     FROM traces
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
@@ -801,12 +831,71 @@ export const TraceRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<TraceDetailRow>()
+            return result.json<TraceListRow>()
           })
           .pipe(
-            Effect.map((rows) => rows.map(toDomainTraceDetail)),
-            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+            Effect.map((rows) => rows.map(toBaseFields)),
+            Effect.mapError((error) => toRepositoryError(error, "listSummariesByTraceIds")),
           )
+      })
+
+    /**
+     * Fetch the four message aggregates from `spans` (not `traces`) for a set
+     * of trace_ids, using the same `argMin/MaxIf` semantics as the `traces_mv`
+     * MV (see migration 00008). The values are plain Strings on `spans`, so
+     * the aggregate set is bounded by spans-per-trace and avoids the
+     * AggregatingTransform OOM that hits when reading the equivalent
+     * `argMin/MaxIfMerge(...)` columns from `traces`.
+     */
+    const fetchSpanMessagesForTraces = (
+      organizationId: string,
+      projectId: string,
+      traceIds: readonly string[],
+    ): Effect.Effect<readonly SpanMessagesAggregateRow[], unknown, ChSqlClient> =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        if (traceIds.length === 0) return []
+        return yield* chSqlClient.query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${SPAN_MESSAGES_SELECT}
+                    FROM spans
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND trace_id IN ({traceIds:Array(String)})
+                    GROUP BY trace_id`,
+            query_params: {
+              organizationId,
+              projectId,
+              traceIds: Array.from(traceIds),
+            },
+            format: "JSONEachRow",
+          })
+          return result.json<SpanMessagesAggregateRow>()
+        })
+      })
+
+    const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) =>
+      Effect.gen(function* () {
+        if (traceIds.length === 0) return []
+
+        const idStrings = traceIds.map((id) => id as string)
+
+        const [summaries, messageRows] = yield* Effect.all(
+          [
+            listSummariesByTraceIds({ organizationId, projectId, traceIds }),
+            fetchSpanMessagesForTraces(organizationId as string, projectId as string, idStrings).pipe(
+              Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+            ),
+          ],
+          { concurrency: "unbounded" },
+        )
+
+        const messagesByTraceId = new Map(messageRows.map((row) => [normalizeCHString(row.trace_id), row] as const))
+
+        return summaries.map((summary) => {
+          const messages = messagesByTraceId.get(summary.traceId as string) ?? EMPTY_MESSAGES_ROW
+          return toDomainTraceDetail(summary, messages)
+        })
       })
 
     const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
@@ -1202,39 +1291,44 @@ export const TraceRepositoryLive = Layer.effect(
             )
         }),
 
+      findSummaryByTraceId: ({ organizationId, projectId, traceId }) =>
+        listSummariesByTraceIds({ organizationId, projectId, traceIds: [traceId] }).pipe(
+          Effect.flatMap((rows) => {
+            const first = rows[0]
+            if (!first) {
+              return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
+            }
+            return Effect.succeed(first)
+          }),
+          Effect.mapError((error) =>
+            isNotFoundError(error) ? error : toRepositoryError(error, "findSummaryByTraceId"),
+          ),
+        ),
+
+      listSummariesByTraceIds,
+
       findByTraceId: ({ organizationId, projectId, traceId }) =>
         Effect.gen(function* () {
-          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          return yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT ${DETAIL_SELECT}
-                      FROM traces
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND trace_id = {traceId:FixedString(32)}
-                      GROUP BY organization_id, project_id, trace_id
-                      LIMIT 1`,
-                query_params: {
-                  organizationId: organizationId as string,
-                  projectId: projectId as string,
-                  traceId,
-                },
-                format: "JSONEachRow",
-              })
-              return result.json<TraceDetailRow>()
-            })
-            .pipe(
-              Effect.flatMap((rows) => {
-                const first = rows[0]
-                if (!first) {
-                  return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
-                }
-                return Effect.succeed(toDomainTraceDetail(first))
-              }),
-              Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
-            )
-        }),
+          const [summary, messageRows] = yield* Effect.all(
+            [
+              listSummariesByTraceIds({ organizationId, projectId, traceIds: [traceId] }),
+              fetchSpanMessagesForTraces(organizationId as string, projectId as string, [traceId as string]).pipe(
+                Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
+              ),
+            ],
+            { concurrency: "unbounded" },
+          )
+
+          const first = summary[0]
+          if (!first) {
+            return yield* Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
+          }
+
+          const messages = messageRows[0] ?? EMPTY_MESSAGES_ROW
+          return toDomainTraceDetail(first, messages)
+        }).pipe(
+          Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
+        ),
 
       matchesFiltersByTraceId,
 
