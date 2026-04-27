@@ -20,7 +20,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
     >
       <div
         className={cn("relative w-full grow", overflow, {
-          "custom-scrollbar min-w-full": overflow === "overflow-auto",
+          "min-w-full": overflow === "overflow-auto",
         })}
       >
         <table ref={ref} className={cn("w-max min-w-full caption-bottom text-sm", className)} {...props} />

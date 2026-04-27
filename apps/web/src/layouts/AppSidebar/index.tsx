@@ -299,7 +299,7 @@ export function AppSidebar({
 
         <div className="flex min-h-0 flex-1 flex-col">
           <nav
-            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4 custom-scrollbar", {
+            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4", {
               "items-center": collapsed,
             })}
           >

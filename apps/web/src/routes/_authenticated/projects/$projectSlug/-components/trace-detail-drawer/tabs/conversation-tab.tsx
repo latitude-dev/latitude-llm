@@ -105,10 +105,7 @@ function ConversationContent({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div
-        ref={scrollRef}
-        className="flex min-w-0 flex-col py-8 px-4 custom-scrollbar overflow-y-auto overflow-x-hidden flex-1"
-      >
+      <div ref={scrollRef} className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1">
         <Conversation
           messages={traceDetail.allMessages}
           enableNavigator

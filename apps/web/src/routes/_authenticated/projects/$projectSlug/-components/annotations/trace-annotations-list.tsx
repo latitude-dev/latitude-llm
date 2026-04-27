@@ -92,7 +92,7 @@ export function TraceAnnotationsList({
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6 gap-6">
+    <div className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
       {queueId && (
         <>
           <div className="flex flex-col">

@@ -149,7 +149,7 @@ export function InfiniteTable<T>({
           onScroll={handleScroll}
           className={cn(
             scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
-            "overflow-auto custom-scrollbar",
+            "overflow-auto",
             className,
           )}
         >
