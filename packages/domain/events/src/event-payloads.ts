@@ -148,4 +148,18 @@ export interface EventPayloads {
     readonly adminUserId: string
     readonly targetUserId: string
   }
+  /**
+   * Emitted when a platform admin changes another user's `users.role`
+   * via the backoffice ("Promote to staff" / "Demote from staff").
+   * `fromRole` and `toRole` are stored explicitly so audit queries
+   * don't have to reconstruct the transition from a delta on the
+   * users table — the row is mutable, so the historical snapshot
+   * lives in the event payload.
+   */
+  AdminUserRoleChanged: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly fromRole: "user" | "admin"
+    readonly toRole: "user" | "admin"
+  }
 }

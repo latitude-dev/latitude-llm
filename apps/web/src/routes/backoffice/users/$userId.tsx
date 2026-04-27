@@ -1,9 +1,10 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { EyeIcon } from "lucide-react"
+import { EyeIcon, ShieldCheckIcon } from "lucide-react"
 import type { AdminUserDetailsDto, AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
+import { PromoteDemoteStaffButton } from "../-components/account-actions/promote-demote.tsx"
 import { AccountActionRow, AccountActionsSection } from "../-components/account-actions/section.tsx"
 import {
   DashboardHero,
@@ -107,6 +108,16 @@ function BackofficeUserDetailPage() {
           title="Impersonate user"
           description="Sign in as this user for support purposes. The impersonation banner shows on every page until you stop."
           action={<ImpersonateUserButton userId={user.id} userEmail={user.email} />}
+        />
+        <AccountActionRow
+          icon={ShieldCheckIcon}
+          title={user.role === "admin" ? "Demote from staff" : "Promote to staff"}
+          description={
+            user.role === "admin"
+              ? "Revoke this user's platform-staff access. They keep their organization memberships."
+              : "Grant this user platform-staff access — backoffice + cross-org visibility + impersonation."
+          }
+          action={<PromoteDemoteStaffButton userId={user.id} userEmail={user.email} currentRole={user.role} />}
         />
       </AccountActionsSection>
 

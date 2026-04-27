@@ -162,6 +162,7 @@ export const createDomainEventsWorker = ({
     // every key in `EventPayloads` and would fail typecheck otherwise.
     AdminImpersonationStarted: () => Effect.void,
     AdminImpersonationStopped: () => Effect.void,
+    AdminUserRoleChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {
