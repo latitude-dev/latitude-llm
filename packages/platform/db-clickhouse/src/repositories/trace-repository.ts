@@ -393,10 +393,7 @@ const EMPTY_MESSAGES_ROW: Omit<SpanMessagesAggregateRow, "trace_id"> = {
   first_system_instructions: "",
 }
 
-const toDomainTraceDetail = (
-  summary: Trace,
-  messages: Omit<SpanMessagesAggregateRow, "trace_id">,
-): TraceDetail => {
+const toDomainTraceDetail = (summary: Trace, messages: Omit<SpanMessagesAggregateRow, "trace_id">): TraceDetail => {
   const systemInstructions = parseSystem(messages.first_system_instructions)
   const lastInput = parseMessages(messages.last_input_messages)
   const output = parseMessages(messages.final_output_messages)
