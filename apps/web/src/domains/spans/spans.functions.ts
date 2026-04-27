@@ -172,11 +172,14 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
 
           if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
 
+          const startTimeFrom = new Date(traceDetail.startTime.getTime() - 60 * 1000)
+          const startTimeTo = new Date(traceDetail.startTime.getTime() + 24 * 60 * 60 * 1000)
           const spans = yield* spanRepo.findMessagesForTrace({
             organizationId: orgId,
             projectId,
             traceId,
-            startTime: traceDetail.startTime,
+            startTimeFrom,
+            startTimeTo,
           })
 
           return buildConversationSpanMaps(traceDetail.allMessages, spans)

@@ -420,15 +420,9 @@ export const SpanRepositoryLive = Layer.effect(
             )
         }),
 
-      findMessagesForTrace: ({ organizationId, projectId, traceId, startTime }) =>
+      findMessagesForTrace: ({ organizationId, projectId, traceId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          // Bound start_time to a [-1m, +1d] window around the root span so
-          // partition pruning + the (org, project, start_time) primary key kick
-          // in. Without this the FINAL/dedupe step has to scan every monthly
-          // partition for the org and OOMs the server on large tenants.
-          const startTimeFrom = new Date(startTime.getTime() - 60 * 1000)
-          const startTimeTo = new Date(startTime.getTime() + 24 * 60 * 60 * 1000)
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({

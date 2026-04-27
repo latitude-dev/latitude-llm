@@ -78,12 +78,18 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const traceId = payload.traceId
     const startTime = new Date(payload.startTime)
 
-    // 1. Load span messages for the trace
+    // 1. Load span messages for the trace. Bound start_time to a [-1m, +1d]
+    // window around the root span so partition pruning + the
+    // (org, project, start_time) primary key on `spans` kick in — otherwise
+    // the dedupe step has to scan every monthly partition for the org.
+    const startTimeFrom = new Date(startTime.getTime() - 60 * 1000)
+    const startTimeTo = new Date(startTime.getTime() + 24 * 60 * 60 * 1000)
     const spanMessages = yield* spanRepo.findMessagesForTrace({
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
       traceId: TraceId(traceId),
-      startTime,
+      startTimeFrom,
+      startTimeTo,
     })
 
     if (spanMessages.length === 0) {
