@@ -93,6 +93,12 @@ export function getLifecycleStatesForDisplay(states: readonly string[]): readonl
   ]
 }
 
+// Mirrors the backend's `getPrimaryStatePriority` so the table can display the
+// same single state used for sorting by status.
+export function getPrimaryLifecycleState(states: readonly string[]): string | undefined {
+  return getLifecycleStatesForDisplay(states)[0]
+}
+
 export function formatLifecycleLabel(state: string): string {
   switch (state) {
     case "new":

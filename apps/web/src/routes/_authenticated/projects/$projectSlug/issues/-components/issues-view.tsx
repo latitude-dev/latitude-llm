@@ -14,7 +14,7 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
-import { formatPercent, formatSeenAgeParts } from "./issue-formatters.ts"
+import { formatPercent, formatSeenAgeParts, getPrimaryLifecycleState } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
@@ -31,8 +31,8 @@ export type IssuesColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
 
 const ISSUE_COLUMN_WIDTH = 360
 const ISSUE_COLUMN_MIN_WIDTH = 280
-const STATUS_COLUMN_WIDTH = 200
-const STATUS_COLUMN_MIN_WIDTH = 160
+const STATUS_COLUMN_WIDTH = 104
+const STATUS_COLUMN_MIN_WIDTH = 96
 
 function SeenAtCell({
   lastSeenAtIso,
@@ -169,11 +169,14 @@ export function IssuesView({
       width: STATUS_COLUMN_WIDTH,
       minWidth: STATUS_COLUMN_MIN_WIDTH,
       sortKey: "state",
-      render: (issue) => (
-        <div className="flex min-w-0 items-center">
-          <IssueLifecycleStatuses states={issue.states} wrap={false} />
-        </div>
-      ),
+      render: (issue) => {
+        const primaryState = getPrimaryLifecycleState(issue.states)
+        return (
+          <div className="flex min-w-0 items-center">
+            <IssueLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
+          </div>
+        )
+      },
     },
     {
       key: "trend",
@@ -192,6 +195,14 @@ export function IssuesView({
           showEscalationThresholdGuide
         />
       ),
+      renderSubheader: () => (
+        <div className="flex min-w-0 w-full items-center gap-0.5">
+          <Text.H6 color="foregroundMuted" className="min-w-0 truncate tabular-nums">
+            RANGE
+          </Text.H6>
+          <Text.H6B color="foreground">14d</Text.H6B>
+        </div>
+      ),
     },
     {
       key: "seenAt",
@@ -204,8 +215,8 @@ export function IssuesView({
     {
       key: "occurrences",
       header: "Occurrences",
-      width: 84,
-      minWidth: 84,
+      width: 76,
+      minWidth: 76,
       align: "end",
       sortKey: "occurrences",
       render: (issue) => formatCount(issue.occurrences),
@@ -221,8 +232,8 @@ export function IssuesView({
     {
       key: "affectedTraces",
       header: "Affected traces",
-      width: 89,
-      minWidth: 89,
+      width: 76,
+      minWidth: 76,
       align: "end",
       render: (issue) => formatPercent(issue.affectedTracesPercent),
     },

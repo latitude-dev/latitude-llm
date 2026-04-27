@@ -16,7 +16,11 @@ import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIc
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
 import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
-import { applyBulkIssueLifecycleAction, enqueueIssuesExport } from "../../../../../domains/issues/issues.functions.ts"
+import {
+  applyBulkIssueLifecycleAction,
+  enqueueIssuesExport,
+  type IssueRecord,
+} from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -38,6 +42,10 @@ import {
 const DEFAULT_SORTING: IssuesTableSorting = { column: "lastSeen", direction: "desc" }
 const DEFAULT_COLUMNS: IssuesColumnId[] = ISSUES_COLUMN_OPTIONS.map((column) => column.id)
 const ISSUE_SEARCH_DEBOUNCE_MS = 300
+const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly IssuesTableSorting["column"][]
+const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly IssuesTableSorting["direction"][]
+const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|state):(asc|desc)$/
+const EMPTY_ISSUES: readonly IssueRecord[] = []
 
 function parseColumnIds(raw?: string): IssuesColumnId[] {
   const values = raw
@@ -56,6 +64,24 @@ function serializeColumnIds(columnIds: readonly IssuesColumnId[]): string {
   return Array.from(new Set(["issue", ...columnIds])).join(",")
 }
 
+function serializeSorting(sorting: IssuesTableSorting): string {
+  return `${sorting.column}:${sorting.direction}`
+}
+
+function parseSorting(raw: string): IssuesTableSorting {
+  const [column, direction] = raw.split(":")
+  if (
+    SORT_COLUMNS.includes(column as IssuesTableSorting["column"]) &&
+    SORT_DIRECTIONS.includes(direction as IssuesTableSorting["direction"])
+  ) {
+    return {
+      column: column as IssuesTableSorting["column"],
+      direction: direction as IssuesTableSorting["direction"],
+    }
+  }
+  return DEFAULT_SORTING
+}
+
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
   component: IssuesPage,
 })
@@ -72,7 +98,11 @@ function IssuesPage() {
   const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
-  const [sorting, setSorting] = useState<IssuesTableSorting>(DEFAULT_SORTING)
+  const [rawSorting, setRawSorting] = useParamState("issuesSort", serializeSorting(DEFAULT_SORTING), {
+    validate: (value): value is string => SORT_PARAM_PATTERN.test(value),
+  })
+  const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
+  const setSorting = useCallback((next: IssuesTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -103,11 +133,12 @@ function IssuesPage() {
       : undefined
 
   const {
-    data: issues,
+    data: issuesData,
     analytics,
     occurrencesSum,
     totalCount,
     isLoading,
+    isReloading,
     infiniteScroll,
   } = useIssues({
     projectId: project.id,
@@ -116,6 +147,13 @@ function IssuesPage() {
     ...(searchQuery ? { searchQuery } : {}),
     ...(timeRange ? { timeRange } : {}),
   })
+
+  // While a filter/sort change is in flight we hide the (now stale) previous
+  // rows so the table and analytics fall back to their skeleton state. The
+  // surrounding page layout (filters, search, lifecycle tabs) keeps rendering
+  // because `isLoading` itself stays false during the placeholder window.
+  const showSkeletons = isLoading || isReloading
+  const issues = isReloading ? EMPTY_ISSUES : issuesData
 
   const currentIssueIndex = activeIssueId ? issueIdsRef.current.indexOf(activeIssueId) : -1
   const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
@@ -250,8 +288,10 @@ function IssuesPage() {
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
   const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
-  const hasNoIssues = issues.length === 0 && !hasActiveFilters
-  const showEmptyState = !isLoading && hasNoIssues
+  // Derived from the un-substituted data so a placeholder reload (which forces
+  // `issues` to []) does not falsely trigger the empty state.
+  const hasNoIssues = issuesData.length === 0 && !hasActiveFilters
+  const showEmptyState = !showSkeletons && hasNoIssues
 
   if (isLoading && hasNoIssues) {
     return null
@@ -351,7 +391,7 @@ function IssuesPage() {
         <div className="px-6">
           <IssuesAnalyticsPanel
             analytics={analytics}
-            isLoading={isLoading && issues.length === 0}
+            isLoading={showSkeletons}
             onRangeSelect={(range) => {
               setTimeFrom(range?.from ?? "")
               setTimeTo(range?.to ?? "")
@@ -360,7 +400,7 @@ function IssuesPage() {
         </div>
         <IssuesView
           issues={issues}
-          isLoading={isLoading}
+          isLoading={showSkeletons}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           occurrencesSum={occurrencesSum}
