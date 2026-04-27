@@ -19,6 +19,7 @@
     "@platform/cache-redis": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/utils": "workspace:*",
     "bullmq": "catalog:",
     "effect": "catalog:",
     "ioredis": "catalog:",

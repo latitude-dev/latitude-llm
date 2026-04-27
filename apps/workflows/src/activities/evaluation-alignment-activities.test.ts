@@ -84,22 +84,25 @@ const alignmentActivityScope = {
   jobId: "job-alignment-test",
 }
 
+const makeIssueRow = () => ({
+  id: issueId,
+  uuid: "11111111-1111-4111-8111-111111111111",
+  organizationId,
+  projectId,
+  name: "Tool output leakage",
+  description: "Secrets are exposed in assistant tool output.",
+  source: "annotation" as const,
+  centroid: createIssueCentroid(),
+  clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
+  createdAt: new Date("2026-04-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+})
+
 const insertIssue = async () => {
-  await pg.db.insert(issuesTable).values({
-    id: issueId,
-    uuid: "11111111-1111-4111-8111-111111111111",
-    organizationId,
-    projectId,
-    name: "Tool output leakage",
-    description: "Secrets are exposed in assistant tool output.",
-    centroid: createIssueCentroid(),
-    clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-04-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
-  })
+  await pg.db.insert(issuesTable).values([makeIssueRow()])
 }
 
 const insertScore = async (input: {

@@ -1677,6 +1677,9 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../observability
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       bullmq:
         specifier: 'catalog:'
         version: 5.76.2
