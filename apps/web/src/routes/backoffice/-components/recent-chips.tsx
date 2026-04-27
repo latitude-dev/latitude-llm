@@ -1,5 +1,6 @@
 import { Avatar, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import { Building2Icon } from "lucide-react"
 import { useRecentBackofficeViews, type RecentBackofficeView } from "../-lib/recently-viewed.ts"
 
@@ -40,23 +41,55 @@ export function RecentChips() {
   )
 }
 
+/**
+ * Each chip is a typed TanStack `<Link>`. Branching on `kind` per chip
+ * keeps the typed-route guarantee (params validated against the route
+ * registry) instead of bypassing it with a string `<a href>` — which
+ * also avoids triggering full-document navigations in dev. The visual
+ * shell is identical across kinds; only the route target differs.
+ */
 function RecentChip({ view }: { view: RecentBackofficeView }) {
-  return (
-    <a
-      href={hrefFor(view)}
-      className={[
-        "group flex items-center gap-2 rounded-full border border-border bg-background py-1.5 pl-1.5 pr-3",
-        "transition-colors hover:bg-muted/60",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "max-w-[18rem]",
-      ].join(" ")}
-      title={`${view.primary}${view.secondary ? ` · ${view.secondary}` : ""} · viewed ${relativeTime(new Date(view.viewedAt))}`}
-    >
+  const className = [
+    "group flex items-center gap-2 rounded-full border border-border bg-background py-1.5 pl-1.5 pr-3",
+    "transition-colors hover:bg-muted/60",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "max-w-[18rem]",
+  ].join(" ")
+  const title = `${view.primary}${view.secondary ? ` · ${view.secondary}` : ""} · viewed ${relativeTime(new Date(view.viewedAt))}`
+
+  const inner = (
+    <>
       <RecentChipLeading view={view} />
       <Text.H6 weight="medium" ellipsis noWrap>
         {chipLabel(view)}
       </Text.H6>
-    </a>
+    </>
+  )
+
+  if (view.kind === "user") {
+    return (
+      <Link to="/backoffice/users/$userId" params={{ userId: view.id }} className={className} title={title}>
+        {inner}
+      </Link>
+    )
+  }
+  if (view.kind === "organization") {
+    return (
+      <Link
+        to="/backoffice/organizations/$organizationId"
+        params={{ organizationId: view.id }}
+        className={className}
+        title={title}
+      >
+        {inner}
+      </Link>
+    )
+  }
+  // project
+  return (
+    <Link to="/backoffice/projects/$projectId" params={{ projectId: view.id }} className={className} title={title}>
+      {inner}
+    </Link>
   )
 }
 
@@ -87,17 +120,6 @@ function RecentChipLeading({ view }: { view: RecentBackofficeView }) {
       <Icon icon={Building2Icon} size="xs" color="foregroundMuted" />
     </span>
   )
-}
-
-const hrefFor = (view: RecentBackofficeView): string => {
-  switch (view.kind) {
-    case "user":
-      return `/backoffice/users/${view.id}`
-    case "organization":
-      return `/backoffice/organizations/${view.id}`
-    case "project":
-      return `/backoffice/projects/${view.id}`
-  }
 }
 
 const chipLabel = (view: RecentBackofficeView): string => {
