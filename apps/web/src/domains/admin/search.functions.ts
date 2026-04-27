@@ -10,7 +10,7 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { requireAdminSession } from "../../server/admin-auth.ts"
+import { adminMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
 /**
@@ -78,25 +78,17 @@ export const adminSearchInputSchema = z.object({
 /**
  * Backoffice unified search server function.
  *
- * Defence-in-depth note — every backoffice `createServerFn` handler MUST:
- * 1. Call {@link requireAdminSession} as its first line, before any IO.
- *    TanStack Start exposes server functions at stable RPC URLs reachable
- *    by any authenticated user; the route-level `notFound()` guard in
- *    `routes/backoffice/route.tsx` does not protect this layer.
- * 2. Use {@link getAdminPostgresClient} piped through `withPostgres`. The
- *    default organisation scope is `OrganizationId("system")`, which is the
- *    only sanctioned RLS-bypass signal in the codebase.
- *
- * Why no factory wrapper? TanStack Start's Vite plugin recognises
- * `createServerFn(...).handler(inlineFn)` literal chains and replaces the
- * handler body with a client-side RPC stub. A factory that wraps
- * `createServerFn` defeats that detection and leaks Node-only imports
- * (e.g. `withTracing`) into the browser bundle, breaking the build.
+ * Guard: {@link adminMiddleware} runs before the input validator and
+ * rejects non-admins with a `NotFoundError` identical to hitting a
+ * non-existent server function. Admin queries then use
+ * {@link getAdminPostgresClient} + `withPostgres` at the default
+ * `OrganizationId("system")` scope, which is the only sanctioned
+ * RLS-bypass signal in the codebase.
  */
 export const adminSearch = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .inputValidator(adminSearchInputSchema)
   .handler(async ({ data }): Promise<AdminSearchDto> => {
-    await requireAdminSession()
     const client = getAdminPostgresClient()
 
     const result = await Effect.runPromise(

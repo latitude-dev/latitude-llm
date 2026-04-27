@@ -1,21 +1,36 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
 import { ArrowLeft, Search, ShieldAlertIcon } from "lucide-react"
-import { getSession } from "../../domains/sessions/session.functions.ts"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
+import { requireAdminSession } from "../../server/admin-auth.ts"
 
-// Extract to a named helper so both `beforeLoad` (the parent gate) and the
-// loader use identical logic — and so the intent is explicit.
-const assertAdminSession = async () => {
-  const session = await getSession()
-  const role = (session?.user as { role?: string } | undefined)?.role
-  if (!session || role !== "admin") {
-    // 404, not redirect: the existence of the backoffice surface must not
-    // leak through error types, redirects, or Location headers.
-    throw notFound()
+// Delegate the role check to `requireAdminSession()` so the UI and RPC
+// surfaces share a single source of truth for the admin gate — including
+// the DB-fresh fetch that sidesteps Better Auth's 5-minute session cookie
+// cache (see the comment on `requireAdminSession`). The route-local
+// wrapper converts the domain `NotFoundError` into TanStack Router's
+// `notFound()` so the response is indistinguishable from any unknown
+// URL — no redirect, no 403, no Location header leak.
+//
+// Match on the Effect-native `_tag` (survives the RPC JSON boundary)
+// rather than `instanceof NotFoundError` or a blanket catch. Only
+// `NotFoundError` — the tagged error `requireAdminSession()` throws
+// when the caller is not an admin or is unauthenticated — is
+// collapsed into a 404. Anything else (DB outage, connectivity,
+// serialization bug from the Better Auth fresh-session fetch) must
+// bubble to the router error boundary instead of being silently
+// masked as a 404. Same discipline as the `$userId.tsx` loader.
+const guardBackofficeRoute = async () => {
+  try {
+    await requireAdminSession()
+  } catch (error) {
+    const tag = (error as { _tag?: string } | null | undefined)?._tag
+    if (tag === "NotFoundError") {
+      throw notFound()
+    }
+    throw error
   }
-  return session
 }
 
 export const Route = createFileRoute("/backoffice")({
@@ -24,11 +39,9 @@ export const Route = createFileRoute("/backoffice")({
   // Without this, `backoffice/index.tsx`'s `throw redirect({ to: "/backoffice/search" })`
   // would execute for unauthenticated probes and leak the subpath in the 307
   // Location header.
-  beforeLoad: async () => {
-    await assertAdminSession()
-  },
+  beforeLoad: guardBackofficeRoute,
   loader: async () => {
-    await assertAdminSession()
+    await guardBackofficeRoute()
     return null
   },
   component: BackofficeLayout,

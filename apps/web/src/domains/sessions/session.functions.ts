@@ -23,6 +23,32 @@ export const getSession = createServerFn({ method: "GET" }).handler(async () => 
   return session
 })
 
+/**
+ * Fetch the session while bypassing Better Auth's signed cookie cache
+ * (see `session.cookieCache` in `create-better-auth.ts`, 5-minute TTL).
+ * The default cache serves the user payload from a cookie without
+ * hitting the DB — which means a DB-level role or status change stays
+ * invisible for up to 5 minutes.
+ *
+ * Called by `requireAdminSession()` so role demotions take effect on
+ * the very next admin-gated request. Lives in the same module as
+ * `getSession` so the TanStack Start Vite compiler can strip its
+ * handler body (and the transitively-imported server-only modules
+ * like `@repo/observability` and `@platform/db-postgres`) out of the
+ * client bundle.
+ */
+export const getFreshSession = createServerFn({ method: "GET" }).handler(async () => {
+  const headers = getRequestHeaders()
+  const auth = getBetterAuth()
+
+  const session = await auth.api.getSession({
+    headers,
+    query: { disableCookieCache: true },
+  })
+
+  return session
+})
+
 export const ensureSession = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession()
 

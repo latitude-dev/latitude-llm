@@ -19,15 +19,13 @@ Non-admin users — authenticated or not — **MUST NOT** be able to access, enu
 
 ### 2. Server-function guard (RPC layer)
 
-Every backoffice `createServerFn` handler **MUST** call `requireAdminSession()` (`apps/web/src/server/admin-auth.ts`) as its first line, before any IO. It throws `NotFoundError` (**not** 401/403 — the error shape must not fingerprint the admin surface).
-
-Write handlers in the canonical TanStack Start shape:
+Every backoffice `createServerFn` handler **MUST** attach `adminMiddleware` from `apps/web/src/server/admin-middleware.ts`. The middleware fetches the session with Better Auth's cookie cache bypassed (so DB-level role demotions take effect on the next request, not 5 minutes later), rejects non-admins with `NotFoundError` (**not** 401/403 — the error shape must not fingerprint the admin surface), and injects `context.adminUserId` + `context.user` so handlers have admin identity available without re-fetching.
 
 ```ts
 export const adminThing = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])                    // GUARD, before input validation
   .inputValidator(inputSchema)
-  .handler(async ({ data }): Promise<ThingDto> => {
-    await requireAdminSession()                     // GUARD, first line
+  .handler(async ({ data, context }): Promise<ThingDto> => {
     const client = getAdminPostgresClient()
     const result = await Effect.runPromise(
       thingUseCase(data).pipe(
@@ -39,7 +37,13 @@ export const adminThing = createServerFn({ method: "GET" })
   })
 ```
 
-**Do not** wrap `createServerFn` in a factory. TanStack Start's Vite plugin detects and transforms the literal `createServerFn(...).handler(inlineFn)` chain — it replaces the handler body with a client RPC stub and strips the server-only imports from the browser bundle. A factory that hides `createServerFn` inside its own body defeats that detection, leaks Node-only imports (`withTracing`, `getAdminPostgresClient`, …) into the client bundle, and breaks `pnpm build` with `MISSING_EXPORT` errors against `@repo/observability/browser.ts`. Convention-based guard + mandatory code review is the correct discipline here; structural enforcement via a wrapper is not available at this layer.
+Middleware runs **before** `inputValidator`, so abusive payloads get rejected one step earlier (no Zod parse overhead on non-admin probes).
+
+**The sole exception is `stopImpersonating`**, which uses `impersonatingMiddleware` (from the same file) instead. During an active impersonation the current session's `user.role` is the *target's* role (usually `"user"`), so an admin-role check would reject the very call the admin needs to exit impersonation. `impersonatingMiddleware` gates on `session.impersonatedBy` being set and injects both `context.adminUserId` (recovered before Better Auth swaps the cookie back) and `context.targetUserId` for the audit event.
+
+**Do not** wrap `createServerFn` in a factory (e.g. `createBackofficeServerFn = (opts) => createServerFn(opts).middleware([...])`). TanStack Start's Vite plugin detects server functions by pattern-matching the literal `createServerFn(...).handler(inlineFn)` chain at the call site — a factory hides those tokens behind a different name, the compiler skips the file, and Node-only module-level imports (`withTracing`, `getAdminPostgresClient`, …) leak into the browser bundle, breaking `pnpm build` with `MISSING_EXPORT` errors against `@repo/observability/browser.ts`. Keep `createServerFn` literal at every call site and attach the middleware there; the `.middleware(…)` method is part of the chain the compiler recognises. Attaching at each call site also keeps the "which guard does this endpoint use?" decision visible in the handler body — important because `stopImpersonating` uses a different middleware than the rest.
+
+The route loader in `routes/backoffice/route.tsx` cannot use `createServerFn` middleware (route loaders aren't server functions). It calls `requireAdminSession()` from `admin-auth.ts` instead — same underlying fresh-session + role check, just exposed as a plain async helper. Both helpers share `assertAdminUser` and `getFreshSession`.
 
 ### 3. Database access guard
 
