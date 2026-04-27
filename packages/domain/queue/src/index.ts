@@ -1,4 +1,4 @@
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"

@@ -8,7 +8,7 @@ import {
   TraceId,
   type TraceId as TraceIdType,
 } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import { z } from "zod"
 import { ALIGNMENT_CURATED_DATASET_MAX_ROWS } from "../constants.ts"
 

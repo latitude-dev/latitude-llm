@@ -7,7 +7,7 @@ import type {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
 

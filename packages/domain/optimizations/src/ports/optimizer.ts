@@ -1,4 +1,4 @@
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type {
   OptimizationBudget,
   OptimizationCandidate,

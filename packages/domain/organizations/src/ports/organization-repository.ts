@@ -1,5 +1,5 @@
 import type { NotFoundError, OrganizationId, RepositoryError, SqlClient, UserId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { Organization } from "../entities/organization.ts"
 
 export class OrganizationRepository extends Context.Service<

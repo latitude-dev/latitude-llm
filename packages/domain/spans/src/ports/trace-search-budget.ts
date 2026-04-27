@@ -1,5 +1,5 @@
 import type { CacheError, OrganizationId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 
 /**
  * Per-organization embedding-token budget tracker.

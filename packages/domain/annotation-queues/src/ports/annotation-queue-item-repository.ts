@@ -1,5 +1,5 @@
 import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
 
 /**

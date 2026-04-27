@@ -1,5 +1,5 @@
 import type { RepositoryError } from "@domain/shared"
-import { type Effect, Context } from "effect"
+import { Context, type Effect } from "effect"
 import type { SearchEntityType, UnifiedSearchResult } from "./search-result.ts"
 
 /**
