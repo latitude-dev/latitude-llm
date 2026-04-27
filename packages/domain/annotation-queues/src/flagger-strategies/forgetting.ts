@@ -88,6 +88,13 @@ function formatStageForPrompt(stage: ConversationStage, index: number): string {
 }
 
 export const forgettingStrategy: QueueStrategy = {
+  annotator: {
+    name: "Forgetting",
+    description: "The assistant forgets earlier conversation context or instructions",
+    instructions:
+      "Use this queue when the assistant loses relevant session memory, repeats already-settled questions, contradicts previously established facts, or ignores earlier constraints/preferences from the same conversation. Do not use it for ambiguity that was never resolved or context that the user never provided.",
+  },
+
   // empty-response matched → no assistant text to evaluate for context loss.
   suppressedBy: [],
 

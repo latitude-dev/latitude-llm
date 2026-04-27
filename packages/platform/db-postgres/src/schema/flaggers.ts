@@ -21,8 +21,6 @@ export const flaggers = latitudeSchema.table(
   (t) => [
     organizationRLSPolicy("flaggers"),
     index("flaggers_project_list_idx").on(t.organizationId, t.projectId),
-    unique("flaggers_unique_slug_per_project_idx")
-      .on(t.organizationId, t.projectId, t.slug)
-      .nullsNotDistinct(),
+    unique("flaggers_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug).nullsNotDistinct(),
   ],
 )

@@ -1,7 +1,7 @@
 import {
-  type Flagger,
   FLAGGER_DEFAULT_ENABLED,
   FLAGGER_DEFAULT_SAMPLING,
+  type Flagger,
   FlaggerRepository,
   type FlaggerRepositoryShape,
   flaggerSchema,

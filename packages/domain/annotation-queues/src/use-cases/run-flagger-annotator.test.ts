@@ -15,12 +15,12 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { type RunSystemQueueAnnotatorInput, runSystemQueueAnnotatorUseCase } from "./run-system-queue-annotator.ts"
+import { type RunFlaggerAnnotatorInput, runFlaggerAnnotatorUseCase } from "./run-flagger-annotator.ts"
 
-const INPUT: RunSystemQueueAnnotatorInput = {
+const INPUT: RunFlaggerAnnotatorInput = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
-  queueSlug: "jailbreaking",
+  flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
   scoreId: "s".repeat(24),
 }
@@ -62,7 +62,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
   }
 }
 
-describe("runSystemQueueAnnotatorUseCase", () => {
+describe("runFlaggerAnnotatorUseCase", () => {
   it("returns structured feedback from AI generation", async () => {
     const expectedFeedback =
       "This conversation shows a clear jailbreaking attempt where the user tries to bypass safety constraints."
@@ -93,7 +93,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueAnnotatorUseCase(INPUT).pipe(
+      runFlaggerAnnotatorUseCase(INPUT).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
@@ -123,7 +123,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
         traceId: INPUT.traceId,
-        queueSlug: INPUT.queueSlug,
+        flaggerSlug: INPUT.flaggerSlug,
         scoreId: INPUT.scoreId,
       },
     })
@@ -188,7 +188,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
 
     await Effect.runPromise(
-      runSystemQueueAnnotatorUseCase(INPUT).pipe(
+      runFlaggerAnnotatorUseCase(INPUT).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
@@ -238,7 +238,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueAnnotatorUseCase(INPUT).pipe(
+      runFlaggerAnnotatorUseCase(INPUT).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
@@ -274,7 +274,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     const exit = await Effect.runPromise(
       Effect.exit(
-        runSystemQueueAnnotatorUseCase(INPUT).pipe(
+        runFlaggerAnnotatorUseCase(INPUT).pipe(
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(TraceRepository, traceRepo),
@@ -299,9 +299,9 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     }
   })
 
-  it("uses fallback prompt for unknown queue slug", async () => {
-    const unknownQueueInput = { ...INPUT, queueSlug: "unknown-queue" }
-    const expectedFeedback = "Feedback for unknown queue."
+  it("uses fallback prompt for unknown flagger slug", async () => {
+    const unknownQueueInput = { ...INPUT, flaggerSlug: "unknown-flagger" }
+    const expectedFeedback = "Feedback for unknown flagger."
 
     const { repository: traceRepo } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -325,7 +325,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
 
     await Effect.runPromise(
-      runSystemQueueAnnotatorUseCase(unknownQueueInput).pipe(
+      runFlaggerAnnotatorUseCase(unknownQueueInput).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
@@ -337,12 +337,12 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     )
 
     const generateCall = calls.generate[0]
-    expect(generateCall.system).toContain("unknown-queue")
-    expect(generateCall.system).toContain("System queue for pattern detection")
+    expect(generateCall.system).toContain("unknown-flagger")
+    expect(generateCall.system).toContain("Flagger for pattern detection")
   })
 
-  it("includes queue-specific instructions in system prompt", async () => {
-    const refusalInput = { ...INPUT, queueSlug: "refusal" }
+  it("includes flagger-specific instructions in system prompt", async () => {
+    const refusalInput = { ...INPUT, flaggerSlug: "refusal" }
     const expectedFeedback = "The assistant incorrectly refused a valid request."
 
     const { repository: traceRepo } = createFakeTraceRepository({
@@ -371,7 +371,7 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
 
     await Effect.runPromise(
-      runSystemQueueAnnotatorUseCase(refusalInput).pipe(
+      runFlaggerAnnotatorUseCase(refusalInput).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),

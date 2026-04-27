@@ -10,7 +10,8 @@ interface StartPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
+  readonly flaggerId: string
+  readonly flaggerSlug: string
   readonly reason: "sampled" | "ambiguous"
 }
 
@@ -28,14 +29,15 @@ const buildLogContext = (payload: StartPayload) => ({
   organizationId: payload.organizationId,
   projectId: payload.projectId,
   traceId: payload.traceId,
-  queueSlug: payload.queueSlug,
+  flaggerId: payload.flaggerId,
+  flaggerSlug: payload.flaggerSlug,
   reason: payload.reason,
 })
 
 /**
- * Thin worker that calls `workflowStarter.start(...)` for the system-queue
- * flagger workflow. Kept separate from the deterministic fan-out so transient
- * Temporal unavailability retries here with bounded BullMQ backoff (see
+ * Thin worker that calls `workflowStarter.start(...)` for the flagger workflow.
+ * Kept separate from the deterministic fan-out so transient Temporal
+ * unavailability retries here with bounded BullMQ backoff (see
  * `attempts`/`backoff` in the publisher call in `deterministic-flaggers.ts`)
  * instead of re-running every strategy.
  *
@@ -54,29 +56,30 @@ export const createStartFlaggerWorkflowWorker = ({
     start: (payload: StartPayload) =>
       workflowStarter
         .start(
-          "systemQueueFlaggerWorkflow",
+          "flaggerWorkflow",
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             traceId: payload.traceId,
-            queueSlug: payload.queueSlug,
+            flaggerId: payload.flaggerId,
+            flaggerSlug: payload.flaggerSlug,
           },
           {
-            workflowId: `system-queue-flagger:${payload.traceId}:${payload.queueSlug}`,
+            workflowId: `flagger:${payload.traceId}:${payload.flaggerSlug}`,
           },
         )
         .pipe(
           withTracing,
           Effect.tap(() =>
             Effect.sync(() =>
-              log.info("Started system-queue flagger workflow", {
+              log.info("Started flagger workflow", {
                 ...buildLogContext(payload),
               }),
             ),
           ),
           Effect.tapError((error) =>
             Effect.sync(() =>
-              log.error("Failed to start system-queue flagger workflow", {
+              log.error("Failed to start flagger workflow", {
                 ...buildLogContext(payload),
                 error,
               }),

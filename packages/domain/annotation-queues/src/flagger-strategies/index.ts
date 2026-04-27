@@ -8,7 +8,7 @@ import { outputSchemaValidationStrategy } from "./output-schema-validation.ts"
 import { refusalStrategy } from "./refusal.ts"
 import { toolCallErrorsStrategy } from "./tool-call-errors.ts"
 import { trashingStrategy } from "./trashing.ts"
-import type { QueueStrategy } from "./types.ts"
+import type { LlmCapableQueueStrategy, QueueStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
 // Strategy Registry
@@ -90,11 +90,15 @@ export function listQueueStrategySlugs(): readonly string[] {
 
 /**
  * True when the strategy can run the LLM classification path (has both
- * `buildSystemPrompt` and `buildPrompt`). Deterministic-only strategies
- * cannot route to the LLM workflow.
+ * `buildSystemPrompt` / `buildPrompt` and the `annotator` copy block).
+ * Deterministic-only strategies cannot route to the LLM workflow.
  */
-export function isLlmCapableStrategy(strategy: QueueStrategy): boolean {
-  return typeof strategy.buildSystemPrompt === "function" && typeof strategy.buildPrompt === "function"
+export function isLlmCapableStrategy(strategy: QueueStrategy): strategy is LlmCapableQueueStrategy {
+  return (
+    typeof strategy.buildSystemPrompt === "function" &&
+    typeof strategy.buildPrompt === "function" &&
+    strategy.annotator !== undefined
+  )
 }
 
 // Export strategies for testing

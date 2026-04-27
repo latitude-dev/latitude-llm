@@ -186,6 +186,13 @@ function isBenignAnatomyOrHealth(text: string): boolean {
 // ---------------------------------------------------------------------------
 
 export const nsfwStrategy: QueueStrategy = {
+  annotator: {
+    name: "NSFW",
+    description: "Workplace-inappropriate or toxic content appears",
+    instructions:
+      "Use this queue when the trace contains explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language. Do not use it for benign anatomy or health discussion, mild romance, neutral policy/safety discussion about unsafe content, or non-abusive colloquial language without clear toxicity.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     // NSFW needs at least some text to analyze
     const textMessages = extractNsfwSuspiciousSnippets(trace)

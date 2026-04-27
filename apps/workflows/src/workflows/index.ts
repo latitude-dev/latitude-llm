@@ -1,5 +1,6 @@
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
+export { flaggerWorkflow } from "./flagger-workflow.ts"
 export { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
 export {
   type OptimizeEvaluationWorkflowResult,
@@ -9,4 +10,3 @@ export {
   type RefreshEvaluationAlignmentWorkflowResult,
   refreshEvaluationAlignmentWorkflow,
 } from "./refresh-evaluation-alignment-workflow.ts"
-export { systemQueueFlaggerWorkflow } from "./system-queue-flagger-workflow.ts"

@@ -97,6 +97,13 @@ Return no explanation outside the structured output.
 `.trim()
 
 export const frustrationStrategy: QueueStrategy = {
+  annotator: {
+    name: "Frustration",
+    description: "The conversation shows clear user frustration or dissatisfaction",
+    instructions:
+      "Use this queue when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications or isolated terse replies without real evidence of frustration.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return extractUserTextMessages(trace).length > 0
   },
