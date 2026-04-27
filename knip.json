@@ -79,6 +79,10 @@
         "llamaindex",
         "openai"
       ]
+    },
+    "tools/ai-benchmarks": {
+      "entry": ["src/scripts/**/*.ts"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],

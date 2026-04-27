@@ -1,0 +1,11 @@
+# Benchmark fixtures are deterministic output of mappers running against pinned
+# upstream sources (HF datasets, GitHub artifacts, Latitude API in the future).
+# We regenerate them via `pnpm --filter @tools/ai-benchmarks benchmark:fetch`
+# rather than committing the generated JSONL.
+#
+# The .meta.json sidecars record the mapper source hash so benchmark:run can
+# detect stale fixtures — regenerated whenever benchmark:fetch runs.
+#
+# See prd/llm-flagger-evaluation-system.md — Decisions #1 and #15.
+*.jsonl
+*.meta.json
