@@ -2,7 +2,7 @@ import { Avatar, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { Building2Icon } from "lucide-react"
-import { useRecentBackofficeViews, type RecentBackofficeView } from "../-lib/recently-viewed.ts"
+import { type RecentBackofficeView, useRecentBackofficeViews } from "../-lib/recently-viewed.ts"
 
 const VISIBLE_COUNT = 6
 

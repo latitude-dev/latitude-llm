@@ -26,7 +26,9 @@ export interface DashboardSectionProps {
 
 export function DashboardSection({ title, count, aside, children, className }: DashboardSectionProps) {
   return (
-    <section className={["flex flex-col rounded-lg border border-border bg-background", className].filter(Boolean).join(" ")}>
+    <section
+      className={["flex flex-col rounded-lg border border-border bg-background", className].filter(Boolean).join(" ")}
+    >
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Text.H6 weight="semibold" noWrap>

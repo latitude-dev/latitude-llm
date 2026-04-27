@@ -4,12 +4,7 @@ import {
   type AdminOrganizationProject,
   AdminOrganizationRepository,
 } from "@domain/admin"
-import {
-  NotFoundError,
-  type OrganizationId,
-  SqlClient,
-  type SqlClientShape,
-} from "@domain/shared"
+import { NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"

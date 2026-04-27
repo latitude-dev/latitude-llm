@@ -43,13 +43,15 @@ export function ProjectRow({ project, trailing }: ProjectRowProps) {
   // See `UserRow` for the full rationale.
   const viewedAt = useRecentlyViewedAt("project", project.id)
   const resolvedTrailing =
-    trailing !== undefined
-      ? trailing
-      : viewedAt
-        ? <ViewedAgo at={viewedAt} />
-        : project.createdAt
-          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(project.createdAt)}</Text.H6>
-          : undefined
+    trailing !== undefined ? (
+      trailing
+    ) : viewedAt ? (
+      <ViewedAgo at={viewedAt} />
+    ) : project.createdAt ? (
+      <Text.H6 color="foregroundMuted" noWrap>
+        {relativeTime(project.createdAt)}
+      </Text.H6>
+    ) : undefined
 
   return (
     <Link to="/backoffice/projects/$projectId" params={{ projectId: project.id }} className="block">

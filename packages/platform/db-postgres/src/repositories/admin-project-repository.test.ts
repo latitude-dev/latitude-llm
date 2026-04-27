@@ -23,9 +23,9 @@ describe("AdminProjectRepositoryLive.findById", () => {
   beforeAll(async () => {
     const baseTime = new Date("2025-06-01T12:00:00.000Z")
 
-    await pg.db.insert(organizations).values([
-      { id: ORG, name: "Project Co", slug: "project-co", createdAt: baseTime, updatedAt: baseTime },
-    ])
+    await pg.db
+      .insert(organizations)
+      .values([{ id: ORG, name: "Project Co", slug: "project-co", createdAt: baseTime, updatedAt: baseTime }])
 
     await pg.db.insert(projects).values([
       {

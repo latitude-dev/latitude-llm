@@ -24,20 +24,18 @@ export function OrganizationRow({ organization, trailing }: OrganizationRowProps
   // See `UserRow` for the full rationale.
   const viewedAt = useRecentlyViewedAt("organization", organization.id)
   const resolvedTrailing =
-    trailing !== undefined
-      ? trailing
-      : viewedAt
-        ? <ViewedAgo at={viewedAt} />
-        : organization.createdAt
-          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(organization.createdAt)}</Text.H6>
-          : undefined
+    trailing !== undefined ? (
+      trailing
+    ) : viewedAt ? (
+      <ViewedAgo at={viewedAt} />
+    ) : organization.createdAt ? (
+      <Text.H6 color="foregroundMuted" noWrap>
+        {relativeTime(organization.createdAt)}
+      </Text.H6>
+    ) : undefined
 
   return (
-    <Link
-      to="/backoffice/organizations/$organizationId"
-      params={{ organizationId: organization.id }}
-      className="block"
-    >
+    <Link to="/backoffice/organizations/$organizationId" params={{ organizationId: organization.id }} className="block">
       <Row
         leading={<Avatar name={organization.name} size="lg" />}
         primary={

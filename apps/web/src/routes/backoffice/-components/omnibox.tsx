@@ -1,7 +1,7 @@
+import type { SearchEntityType } from "@domain/admin"
 import { Icon, type TabOption, Tabs } from "@repo/ui"
 import { SearchIcon } from "lucide-react"
 import { type Dispatch, type KeyboardEvent, type RefObject, type SetStateAction, useEffect, useRef } from "react"
-import type { SearchEntityType } from "@domain/admin"
 
 const entityTabs: readonly TabOption<SearchEntityType>[] = [
   { id: "all", label: "All" },

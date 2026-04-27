@@ -25,7 +25,6 @@ export function SearchRowSkeletonStack({ count = 3 }: { count?: number }) {
   return (
     <div className="flex flex-col gap-1.5">
       {Array.from({ length: count }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton placeholders, never reorder.
         <SearchRowSkeleton key={i} />
       ))}
     </div>

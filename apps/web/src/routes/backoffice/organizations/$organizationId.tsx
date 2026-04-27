@@ -14,8 +14,8 @@ import {
   type PropertiesStripEntry,
   StripeCustomerLink,
 } from "../-components/dashboard/index.ts"
-import { ProjectRow, UserRow } from "../-components/rows/index.ts"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
+import { ProjectRow, UserRow } from "../-components/rows/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/organizations/$organizationId")({

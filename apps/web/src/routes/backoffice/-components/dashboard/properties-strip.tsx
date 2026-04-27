@@ -33,7 +33,11 @@ export function PropertiesStrip({ entries }: PropertiesStripProps) {
         <span key={`${entry.label}:${idx}`} className="inline-flex items-center gap-1">
           <span className="text-muted-foreground/70">{entry.label}</span>
           {typeof entry.value === "string" ? <span className="font-mono">{entry.value}</span> : entry.value}
-          {idx < entries.length - 1 && <span aria-hidden="true" className="ml-1">·</span>}
+          {idx < entries.length - 1 && (
+            <span aria-hidden="true" className="ml-1">
+              ·
+            </span>
+          )}
         </span>
       ))}
     </footer>

@@ -1,6 +1,6 @@
 import { MIN_SEARCH_QUERY_LENGTH, type SearchEntityType } from "@domain/admin"
-import { createFileRoute } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
 import { adminSearch } from "../../domains/admin/search.functions.ts"
 import { Omnibox } from "./-components/omnibox.tsx"
