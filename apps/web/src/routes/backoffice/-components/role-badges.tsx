@@ -13,11 +13,14 @@ import { CrownIcon, ShieldCheckIcon, UserIcon } from "lucide-react"
  *
  * - **Global platform-staff flag** (`users.role === "admin"`) — answers
  *   "is this a Latitude employee?". Rendered with
- *   {@link PlatformStaffBadge}: solid destructive bg + uppercase
- *   "Latitude staff" label. Visually distinct on purpose — it's not a
- *   role within a tenant, it's a system-wide identity, and treating it
- *   like another flavor of role would obscure the difference at a
- *   glance.
+ *   {@link PlatformStaffBadge}: accent-tinted pill with the Latitude
+ *   logo and the word "staff". Visually distinct on purpose — it's
+ *   not a role within a tenant, it's a system-wide identity, and
+ *   treating it like another flavor of role would obscure the
+ *   difference at a glance. The logo carries the "this is a Latitude
+ *   employee" semantics directly without needing the heavier
+ *   destructive treatment of the impersonation banner (which
+ *   communicates a temporary hazardous state, not an identity).
  *
  * Both are intended to live next to each other in row trailing slots —
  * see the org detail page's members list, where a member's per-org
@@ -47,7 +50,7 @@ export function MemberRoleBadge({ role }: { role: MemberRole }) {
 }
 
 /**
- * Solid destructive pill for the platform-staff identity. Not a role
+ * Accent-tinted pill carrying the Latitude logo + "staff". Not a role
  * variant — see the file-level comment for why this is shaped
  * differently from {@link MemberRoleBadge}.
  */
