@@ -1,7 +1,7 @@
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { Bot, Braces, ChevronLeft, ChevronRight, FileCode2, Radio, Terminal } from "lucide-react"
-import { type ElementType, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import {
@@ -89,7 +89,39 @@ const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly descript
     },
   ]
 
-const DotLottieWc = "dotlottie-wc" as ElementType
+const ONBOARDING_IMAGE_DIMENSIONS: Record<
+  string,
+  {
+    readonly width: number
+    readonly height: number
+  }
+> = {
+  "/onboarding/role-engineer.png": { width: 1024, height: 567 },
+  "/onboarding/home.png": { width: 1024, height: 580 },
+  "/onboarding/issues.png": { width: 1024, height: 579 },
+  "/onboarding/traces.png": { width: 1024, height: 579 },
+}
+
+/** Full-width preview (matches step-2 gallery): uses the whole right pane width, natural image height. */
+function OnboardingPreviewImage({
+  src,
+  alt,
+  width,
+  height,
+}: {
+  readonly src: string
+  readonly alt: string
+  readonly width: number
+  readonly height: number
+}) {
+  return (
+    <div className="w-full overflow-hidden rounded-xl border-4 border-border bg-card shadow-xl">
+      <img src={src} alt={alt} width={width} height={height} className="block h-auto w-full max-w-full" />
+    </div>
+  )
+}
+
+const OnboardingWaitingLottie = lazy(() => import("./onboarding-waiting-lottie.tsx"))
 
 /** Order matches `packages/telemetry` on `main`: TS SDK + Python examples. */
 const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
@@ -221,7 +253,6 @@ export function OnboardingFlow({
   }, [selectedProvider.id])
 
   const [galleryIndex, setGalleryIndex] = useState(0)
-  const [isDotLottieReady, setIsDotLottieReady] = useState(false)
   const [traceReceived, setTraceReceived] = useState(false)
   const pollTimeoutRef = useRef<number | undefined>(undefined)
   const redirectTimeoutRef = useRef<number | undefined>(undefined)
@@ -266,28 +297,15 @@ export function OnboardingFlow({
     }
   })
 
-  useMountEffect(() => {
-    if (typeof document === "undefined") return
-    if (document.querySelector('script[data-dotlottie-wc="true"]')) {
-      setIsDotLottieReady(true)
-      return
-    }
-    const script = document.createElement("script")
-    script.type = "module"
-    script.src = "https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.3/dist/dotlottie-wc.js"
-    script.dataset.dotlottieWc = "true"
-    script.addEventListener("load", () => {
-      setIsDotLottieReady(true)
-    })
-    document.head.appendChild(script)
-  })
-
   const galleryItemIndex = WAITING_GALLERY.length === 0 ? 0 : galleryIndex % WAITING_GALLERY.length
   const activeGalleryItem = WAITING_GALLERY[galleryItemIndex] ?? {
     title: "",
     description: "",
     image: "",
   }
+  const roleImageSrc = ROLE_MOCKUPS[role]
+  const roleImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[roleImageSrc] ?? { width: 1024, height: 579 }
+  const galleryImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[activeGalleryItem.image] ?? { width: 1024, height: 579 }
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
@@ -335,14 +353,9 @@ export function OnboardingFlow({
             <div className="flex w-full flex-col gap-6">
               <div className="flex flex-col gap-4">
                 <div className="h-8 w-8 overflow-hidden rounded-md">
-                  {isDotLottieReady ? (
-                    <DotLottieWc
-                      src="https://lottie.host/40f19b57-50b7-4419-afb3-a8bb2b8623c8/nr6mmYVplZ.lottie"
-                      autoplay
-                      loop
-                      style={{ width: "32px", height: "32px" }}
-                    />
-                  ) : null}
+                  <Suspense fallback={<div className="h-8 w-8 shrink-0" aria-hidden />}>
+                    <OnboardingWaitingLottie />
+                  </Suspense>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Text.H2 weight="medium">
@@ -364,9 +377,7 @@ export function OnboardingFlow({
               {telemetrySetupMode === "coding-agent" ? (
                 <div className="flex flex-col gap-2">
                   <Text.H5M>Prompt</Text.H5M>
-                  <Text.H5 color="foregroundMuted">
-                    Send this prompt to your coding agent of choice.
-                  </Text.H5>
+                  <Text.H5 color="foregroundMuted">Send this prompt to your coding agent of choice.</Text.H5>
                   <CodeBlock value={codingAgentPrompt} copyable />
                 </div>
               ) : (
@@ -432,17 +443,20 @@ export function OnboardingFlow({
       <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24">
           {step === "role" ? (
-            <div className="mx-auto flex h-fit w-full max-w-[591px] flex-col items-center justify-center gap-4">
-              <div className="w-full overflow-hidden rounded-xl border-[6px] border-[#0b0f19] bg-[#0b0f19] shadow-xl">
-                <img src={ROLE_MOCKUPS[role]} alt={`${role} preview`} className="block h-auto w-full max-w-full" />
-              </div>
-              <Text.H5 color="foregroundMuted" align="center">
+            <div className="flex h-fit w-full flex-col items-center gap-4">
+              <OnboardingPreviewImage
+                src={roleImageSrc}
+                alt={`${role} preview`}
+                width={roleImageDimensions.width}
+                height={roleImageDimensions.height}
+              />
+              <Text.H5 className="w-full max-w-[591px]" color="foregroundMuted" align="center">
                 {ROLE_PANEL_TITLES[role]}
               </Text.H5>
             </div>
           ) : (
-            <div className="h-fit w-full flex flex-col gap-0 justify-center items-start">
-              <div className="w-full max-w-[591px] flex flex-col gap-6">
+            <div className="flex h-fit w-full flex-col items-start">
+              <div className="flex w-full max-w-[591px] flex-col gap-6">
                 <div className="flex flex-col gap-1">
                   <Text.H5M>{activeGalleryItem.title}</Text.H5M>
                   <Text.H6 color="foregroundMuted">{activeGalleryItem.description}</Text.H6>
@@ -464,11 +478,12 @@ export function OnboardingFlow({
                   </Button>
                 </div>
               </div>
-              <div className="mt-10 w-full overflow-hidden rounded-xl border-[6px] border-[#0b0f19] bg-[#0b0f19] shadow-xl">
-                <img
+              <div className="mt-10 w-full">
+                <OnboardingPreviewImage
                   src={activeGalleryItem.image}
                   alt={activeGalleryItem.title}
-                  className="block h-auto w-full max-w-full"
+                  width={galleryImageDimensions.width}
+                  height={galleryImageDimensions.height}
                 />
               </div>
             </div>

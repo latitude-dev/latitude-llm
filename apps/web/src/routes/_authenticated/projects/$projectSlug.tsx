@@ -3,13 +3,28 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
-import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
+import {
+  createProject,
+  getProjectBySlug,
+  listProjects,
+  type ProjectRecord,
+} from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   staticData: {
     breadcrumb: ProjectBreadcrumbSegment,
+  },
+  beforeLoad: async () => {
+    const projects = await listProjects()
+    if (projects.length > 0) return
+
+    const created = await createProject({ data: { name: "My project" } })
+    throw redirect({
+      to: "/projects/$projectSlug/onboarding",
+      params: { projectSlug: created.slug },
+    })
   },
   staleTime: Infinity,
   remountDeps: ({ params }) => params,

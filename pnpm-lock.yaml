@@ -364,6 +364,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@lottiefiles/dotlottie-wc':
+        specifier: ^0.9.12
+        version: 0.9.12
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -4066,6 +4069,12 @@ packages:
   '@lezer/lr@1.4.10':
     resolution: {integrity: sha512-rnCpTIBafOx4mRp43xOxDJbFipJm/c0cia/V5TiGlhmMa+wsSdoGmUN3w5Bqrks/09Q/D4tNAmWaT8p6NRi77A==}
 
+  '@lit-labs/ssr-dom-shim@1.5.1':
+    resolution: {integrity: sha512-Aou5UdlSpr5whQe8AA/bZG0jMj96CoJIWbGfZ91qieWu5AWUMKw8VR/pAkQkJYvBNhmCcWnZlyyk5oze8JIqYA==}
+
+  '@lit/reactive-element@2.1.2':
+    resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
+
   '@llamaindex/core@0.6.22':
     resolution: {integrity: sha512-/BXyemkvpxMaUhOkbwJ2PTvzKjSWkL8+6QLpz/n+pk8xBwMMe1GVBgli/J57gCyi8GbrlBafBj6GaPOgWub2Eg==}
 
@@ -4121,6 +4130,12 @@ packages:
   '@logdna/tail-file@2.2.0':
     resolution: {integrity: sha512-XGSsWDweP80Fks16lwkAUIr54ICyBs6PsI4mpfTLQaWgEJRtY9xEV+PeyDpJ+sJEGZxqINlpmAwe/6tS1pP8Ng==}
     engines: {node: '>=10.3.0'}
+
+  '@lottiefiles/dotlottie-wc@0.9.12':
+    resolution: {integrity: sha512-5iRQ33wXHzYrlRnzq0fuHMDA2JTng6wNv0WuQdhg956t63Gb06p3pRKzSvW1yUqgKaRI/iSPJTs3VooXZ/BdDw==}
+
+  '@lottiefiles/dotlottie-web@0.71.0':
+    resolution: {integrity: sha512-CliQttL0Rk0or/aDQkqUJXnC9Cm5TxzNdOqy/YlzKlU6mu+XgTMwyt5/HpPiltlMeaqBmM9mOzfevpyP4QmudQ==}
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
@@ -9260,6 +9275,15 @@ packages:
     resolution: {integrity: sha512-ME4Fb83LgEgwNw96RKNvKV4VTLuXfoKudAmm2lP8Kk87KaMK0/Xrx/aAkMWmT8mDb+3MlFDspfbCs7adjRxA2g==}
     engines: {node: '>=20.0.0'}
 
+  lit-element@4.2.2:
+    resolution: {integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==}
+
+  lit-html@3.3.2:
+    resolution: {integrity: sha512-Qy9hU88zcmaxBXcc10ZpdK7cOLXvXpRoBxERdtqV9QOrfpMZZ6pSYP91LhpPtap3sFMUiL7Tw2RImbe0Al2/kw==}
+
+  lit@3.3.2:
+    resolution: {integrity: sha512-NF9zbsP79l4ao2SNrH3NkfmFgN/hBYSQo90saIVI1o5GpjAdCPVstVzO1MrLOakHoEhYkrtRjPK6Ob521aoYWQ==}
+
   llamaindex@0.12.1:
     resolution: {integrity: sha512-/tXXITk/iVGBycOFaDhev6dgTBIr6Ycu4FoPIt6A5JcEAiB6ujONjiV36flVXUR8JdqwMtS767XMjV+36nV4yQ==}
     engines: {node: '>=18.0.0'}
@@ -13918,6 +13942,12 @@ snapshots:
     dependencies:
       '@lezer/common': 1.5.2
 
+  '@lit-labs/ssr-dom-shim@1.5.1': {}
+
+  '@lit/reactive-element@2.1.2':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
+
   '@llamaindex/core@0.6.22':
     dependencies:
       '@finom/zod-to-json-schema': 3.24.11(zod@4.3.6)
@@ -13963,6 +13993,13 @@ snapshots:
       - zod
 
   '@logdna/tail-file@2.2.0': {}
+
+  '@lottiefiles/dotlottie-wc@0.9.12':
+    dependencies:
+      '@lottiefiles/dotlottie-web': 0.71.0
+      lit: 3.3.2
+
+  '@lottiefiles/dotlottie-web@0.71.0': {}
 
   '@marijn/find-cluster-break@1.0.2': {}
 
@@ -17312,8 +17349,7 @@ snapshots:
 
   '@types/tough-cookie@4.0.5': {}
 
-  '@types/trusted-types@2.0.7':
-    optional: true
+  '@types/trusted-types@2.0.7': {}
 
   '@types/unist@2.0.11': {}
 
@@ -19414,6 +19450,22 @@ snapshots:
       log-update: 6.1.0
       rfdc: 1.4.1
       wrap-ansi: 9.0.2
+
+  lit-element@4.2.2:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
+      '@lit/reactive-element': 2.1.2
+      lit-html: 3.3.2
+
+  lit-html@3.3.2:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.3.2:
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+      lit-element: 4.2.2
+      lit-html: 3.3.2
 
   llamaindex@0.12.1(hono@4.12.15)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6):
     dependencies:
