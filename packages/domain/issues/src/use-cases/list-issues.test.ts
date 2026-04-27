@@ -511,7 +511,10 @@ describe("listIssuesUseCase", () => {
         makeWindowMetric({ issueId: taggedIssue.id, occurrences: 1 }),
         makeWindowMetric({ issueId: untaggedIssue.id, occurrences: 1 }),
       ],
-      fullHistoryOccurrences: [makeOccurrence({ issueId: taggedIssue.id }), makeOccurrence({ issueId: untaggedIssue.id })],
+      fullHistoryOccurrences: [
+        makeOccurrence({ issueId: taggedIssue.id }),
+        makeOccurrence({ issueId: untaggedIssue.id }),
+      ],
       tagsAggregates: [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }],
     })
     const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
