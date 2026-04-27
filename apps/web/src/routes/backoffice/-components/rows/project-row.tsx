@@ -2,7 +2,9 @@ import { Avatar, Badge, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import type { ReactNode } from "react"
 import type { AdminProjectSearchDto } from "../../../../domains/admin/search.functions.ts"
+import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
 import { Row } from "./row.tsx"
+import { ViewedAgo } from "./viewed-ago.tsx"
 
 /**
  * Listing row for a backoffice project.
@@ -34,14 +36,17 @@ export function ProjectRow({ project, trailing }: ProjectRowProps) {
   const [, nameWithoutEmoji] = extractLeadingEmoji(project.name)
   const displayName = nameWithoutEmoji || project.name
 
+  // Trailing precedence: explicit prop > "viewed Xh ago" > created-at.
+  // See `UserRow` for the full rationale.
+  const viewedAt = useRecentlyViewedAt("project", project.id)
   const resolvedTrailing =
-    trailing !== undefined ? (
-      trailing
-    ) : project.createdAt ? (
-      <Text.H6 color="foregroundMuted" noWrap>
-        {relativeTime(project.createdAt)}
-      </Text.H6>
-    ) : undefined
+    trailing !== undefined
+      ? trailing
+      : viewedAt
+        ? <ViewedAgo at={viewedAt} />
+        : project.createdAt
+          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(project.createdAt)}</Text.H6>
+          : undefined
 
   return (
     <a href={`/backoffice/projects/${project.id}`} className="block">

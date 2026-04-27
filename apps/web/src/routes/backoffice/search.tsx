@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { adminSearch } from "../../domains/admin/search.functions.ts"
 import { Omnibox } from "./-components/omnibox.tsx"
+import { RecentChips } from "./-components/recent-chips.tsx"
 import { SearchResults } from "./-components/search-results.tsx"
 
 /**
@@ -46,6 +47,13 @@ function BackofficeSearchPage() {
     enabled: shouldFetch,
   })
 
+  // Show recent chips when the input is empty; hide them once the user
+  // starts typing so they don't compete with live results for attention.
+  // We key off the trimmed raw value (not the debounced one) so the
+  // chips disappear immediately on first keystroke instead of waiting
+  // out the 300 ms debounce.
+  const showRecent = rawQuery.trim().length === 0
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pt-12 pb-16">
       <Omnibox
@@ -56,12 +64,16 @@ function BackofficeSearchPage() {
         resultsContainerRef={resultsRef}
       />
       <div ref={resultsRef}>
-        <SearchResults
-          data={data}
-          isLoading={shouldFetch && isFetching}
-          query={debouncedQuery}
-          isQueryTooShort={isQueryTooShort}
-        />
+        {showRecent ? (
+          <RecentChips />
+        ) : (
+          <SearchResults
+            data={data}
+            isLoading={shouldFetch && isFetching}
+            query={debouncedQuery}
+            isQueryTooShort={isQueryTooShort}
+          />
+        )}
       </div>
     </div>
   )

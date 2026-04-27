@@ -3,7 +3,9 @@ import { relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { AdminUserSearchDto } from "../../../../domains/admin/search.functions.ts"
+import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
 import { Row } from "./row.tsx"
+import { ViewedAgo } from "./viewed-ago.tsx"
 
 const MAX_MEMBERSHIP_CHIPS = 3
 
@@ -31,14 +33,24 @@ export function UserRow({ user, trailing }: UserRowProps) {
   const visibleMemberships = memberships.slice(0, MAX_MEMBERSHIP_CHIPS)
   const overflowCount = memberships.length - visibleMemberships.length
 
+  // Trailing precedence (same across all backoffice row components):
+  // 1. Explicit `trailing` prop wins — used by callers that want to
+  //    surface their own metadata (per-org role on a memberships list,
+  //    status pill, etc.). When the caller cares, the caller decides.
+  // 2. Otherwise, if the entity is in the user's recently-viewed
+  //    storage, render "viewed Xh ago". This nudge is more useful on a
+  //    list of search results than the entity's creation date — staff
+  //    care more about "have I been here?" than "when was it created?".
+  // 3. Fall back to relative created-at if available.
+  const viewedAt = useRecentlyViewedAt("user", user.id)
   const resolvedTrailing =
-    trailing !== undefined ? (
-      trailing
-    ) : user.createdAt ? (
-      <Text.H6 color="foregroundMuted" noWrap>
-        {relativeTime(user.createdAt)}
-      </Text.H6>
-    ) : undefined
+    trailing !== undefined
+      ? trailing
+      : viewedAt
+        ? <ViewedAgo at={viewedAt} />
+        : user.createdAt
+          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(user.createdAt)}</Text.H6>
+          : undefined
 
   return (
     <Link to="/backoffice/users/$userId" params={{ userId: user.id }} className="block">

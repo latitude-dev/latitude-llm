@@ -4,6 +4,7 @@ import type { AdminUserDetailsMembershipDto } from "../../../domains/admin/users
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
 import { ImpersonateUserButton } from "../-components/impersonate-user-button.tsx"
 import { OrganizationRow } from "../-components/rows/index.ts"
+import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/users/$userId")({
   loader: async ({ params }) => {
@@ -36,6 +37,18 @@ export const Route = createFileRoute("/backoffice/users/$userId")({
 
 function BackofficeUserDetailPage() {
   const user = Route.useLoaderData({ select: (data) => data.user })
+
+  // Record the visit so this user shows up in the recently-viewed
+  // strip on the search page and gets a "viewed Xh ago" indicator on
+  // result rows. Cached `primary` / `secondary` text is refreshed on
+  // every visit, so the chip caption stays in sync if the user is
+  // renamed.
+  useTrackRecentBackofficeView({
+    kind: "user",
+    id: user.id,
+    primary: user.email,
+    secondary: user.name?.trim() ? user.name : undefined,
+  })
 
   return (
     <Container className="pt-6 pb-10 flex flex-col gap-6">

@@ -2,7 +2,9 @@ import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import type { ReactNode } from "react"
 import type { AdminOrganizationSearchDto } from "../../../../domains/admin/search.functions.ts"
+import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
 import { Row } from "./row.tsx"
+import { ViewedAgo } from "./viewed-ago.tsx"
 
 /**
  * Listing row for a backoffice organisation. Used in search results and
@@ -23,14 +25,17 @@ export interface OrganizationRowProps {
 }
 
 export function OrganizationRow({ organization, trailing }: OrganizationRowProps) {
+  // Trailing precedence: explicit prop > "viewed Xh ago" > created-at.
+  // See `UserRow` for the full rationale.
+  const viewedAt = useRecentlyViewedAt("organization", organization.id)
   const resolvedTrailing =
-    trailing !== undefined ? (
-      trailing
-    ) : organization.createdAt ? (
-      <Text.H6 color="foregroundMuted" noWrap>
-        {relativeTime(organization.createdAt)}
-      </Text.H6>
-    ) : undefined
+    trailing !== undefined
+      ? trailing
+      : viewedAt
+        ? <ViewedAgo at={viewedAt} />
+        : organization.createdAt
+          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(organization.createdAt)}</Text.H6>
+          : undefined
 
   return (
     <a href={`/backoffice/organizations/${organization.id}`} className="block">
