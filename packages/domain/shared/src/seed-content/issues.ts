@@ -1369,8 +1369,7 @@ const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
     passed: false,
     errored: false,
     error: null,
-    feedback:
-      "System signals detected an empty assistant response immediately after a tool call returned an error.",
+    feedback: "System signals detected an empty assistant response immediately after a tool call returned an error.",
     metadata: {
       importName: "system-signals",
       reviewer: "auto-flagger",
@@ -1393,8 +1392,7 @@ const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
     passed: false,
     errored: false,
     error: null,
-    feedback:
-      "System signals flagged another empty completion after a downstream tool failure surfaced a 5xx.",
+    feedback: "System signals flagged another empty completion after a downstream tool failure surfaced a 5xx.",
     metadata: {
       importName: "system-signals",
       reviewer: "auto-flagger",
@@ -1441,8 +1439,7 @@ const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
     passed: false,
     errored: false,
     error: null,
-    feedback:
-      "System signals detected another empty response when a tool call returned a timeout error.",
+    feedback: "System signals detected another empty response when a tool call returned a timeout error.",
     metadata: {
       importName: "system-signals",
       reviewer: "auto-flagger",
