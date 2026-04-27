@@ -38,7 +38,7 @@ export function TraceTab({
   isDetailLoading,
   filters,
   onFiltersChange,
-  defaultSectionsOpen = true,
+  defaultOutputOpen = true,
 }: {
   readonly traceId: string
   readonly projectId: string
@@ -48,8 +48,7 @@ export function TraceTab({
   readonly isDetailLoading: boolean
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
-  /** Whether detail sections (Metadata, System Instructions, Input, Output) are open by default. Defaults to true. */
-  readonly defaultSectionsOpen?: boolean
+  readonly defaultOutputOpen?: boolean
 }) {
   const hasProviders = traceRecord && traceRecord.providers.length > 0
   const hasModels = traceRecord && traceRecord.models.length > 0
@@ -168,7 +167,7 @@ export function TraceTab({
       </div>
 
       {/* ── Metadata ── */}
-      <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={defaultSectionsOpen}>
+      <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>
         {() =>
           isRecordLoading ? (
             <Skeleton className="h-16 w-full" />
@@ -183,11 +182,7 @@ export function TraceTab({
       </DetailSection>
 
       {/* ── LLM content ── */}
-      <DetailSection
-        icon={<BrainIcon className="w-4 h-4" />}
-        label="System Instructions"
-        defaultOpen={defaultSectionsOpen}
-      >
+      <DetailSection icon={<BrainIcon className="w-4 h-4" />} label="System Instructions" defaultOpen={false}>
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -203,7 +198,7 @@ export function TraceTab({
         }
       </DetailSection>
 
-      <DetailSection icon={<ArrowDownRightIcon className="w-4 h-4" />} label="Input" defaultOpen={defaultSectionsOpen}>
+      <DetailSection icon={<ArrowDownRightIcon className="w-4 h-4" />} label="Input" defaultOpen={false}>
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -219,7 +214,7 @@ export function TraceTab({
         }
       </DetailSection>
 
-      <DetailSection icon={<ArrowUpRightIcon className="w-4 h-4" />} label="Output" defaultOpen={defaultSectionsOpen}>
+      <DetailSection icon={<ArrowUpRightIcon className="w-4 h-4" />} label="Output" defaultOpen={defaultOutputOpen}>
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
