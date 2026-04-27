@@ -134,7 +134,7 @@ Use `packages/domain/issues/src/errors.ts` as the **gold standard** for organizi
 - Colocate package-wide tagged error classes in `src/errors.ts`; use-cases import from `../errors.ts`.
 - Prefer **specific** error class names for domain rules; reserve `@domain/shared` errors for generic infrastructure shapes (`RepositoryError`, generic `NotFoundError`, etc.).
 - Export **union types** per flow or use-case group (for example `CheckEligibilityError`) so `Effect` error channels stay explicit.
-- Durable documentation for this pattern lives in `docs/issues.md` under *Domain errors (`@domain/issues` reference pattern)* and in `AGENTS.md` (domain schema conventions).
+- Durable documentation for this pattern lives in `dev-docs/issues.md` under *Domain errors (`@domain/issues` reference pattern)* and in `AGENTS.md` (domain schema conventions).
 
 ## HTTP error handling pattern
 
@@ -186,4 +186,4 @@ export class NotFoundError extends Data.TaggedError("NotFoundError")<{
 findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
 ```
 
-Repository **method naming** (`findById` vs `listByXxx`, `delete` vs `softDelete`, etc.) is documented in [docs/repositories.md](../../../docs/repositories.md). **`findBy*` must not return `Entity | null` for missing rows** — use `NotFoundError` (or domain-specific not-found) on the error channel; boundaries may catch and map to optional UX when required.
+Repository **method naming** (`findById` vs `listByXxx`, `delete` vs `softDelete`, etc.) is documented in [dev-docs/repositories.md](../../../dev-docs/repositories.md). **`findBy*` must not return `Entity | null` for missing rows** — use `NotFoundError` (or domain-specific not-found) on the error channel; boundaries may catch and map to optional UX when required.

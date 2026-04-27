@@ -1,6 +1,6 @@
 # Reliability
 
-> **Documentation**: `docs/reliability.md`, `docs/filters.md`, `docs/evaluations.md`, `docs/annotations.md`, `docs/scores.md`, `docs/issues.md`, `docs/simulations.md`, `docs/annotation-queues.md`, `docs/organizations.md`, `docs/projects.md`, `docs/users.md`, `docs/settings.md`, `docs/spans.md`
+> **Documentation**: `dev-docs/reliability.md`, `dev-docs/filters.md`, `dev-docs/evaluations.md`, `dev-docs/annotations.md`, `dev-docs/scores.md`, `dev-docs/issues.md`, `dev-docs/simulations.md`, `dev-docs/annotation-queues.md`, `dev-docs/organizations.md`, `dev-docs/projects.md`, `dev-docs/users.md`, `dev-docs/settings.md`, `dev-docs/spans.md`
 
 ## Spec Contract
 

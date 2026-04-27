@@ -14,10 +14,10 @@ Domain packages expose entity shapes from `src/entities/<entity>.ts`. Historical
 2. **Factories and mutators** should validate with `schema.parse` / `safeParse` where appropriate so schemas stay authoritative as rules evolve.
 3. **Shared ID and settings parsing** live in `@domain/shared` (`*IdSchema`, `organizationSettingsSchema`, `projectSettingsSchema`) so entity files do not duplicate CUID or settings rules.
 
-Authoring details and checklist: [`docs/domain-entities.md`](../domain-entities.md).
+Authoring details and checklist: [`dev-docs/domain-entities.md`](../../dev-docs/domain-entities.md).
 
 ## Consequences
 
-- One **golden path** for agents and humans; reference [`docs/domain-entities.md`](../domain-entities.md).
+- One **golden path** for agents and humans; reference [`dev-docs/domain-entities.md`](../../dev-docs/domain-entities.md).
 - Boundaries and tests can import the same schemas as domain code.
 - Complex or foreign types may use `z.custom` or readonly wrappers; that is still Zod-first.

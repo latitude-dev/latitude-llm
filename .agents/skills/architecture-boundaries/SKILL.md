@@ -52,14 +52,14 @@ Business logic lives here. Domain packages expose:
 
 ## Domain package layout
 
-Domain **entities** are **Zod-first**: `entitySchema` + `z.infer<typeof entitySchema>` in `src/entities/<entity>.ts`. See [`docs/domain-entities.md`](../../../docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](../../../docs/adr/0001-domain-entity-schema-style.md).
+Domain **entities** are **Zod-first**: `entitySchema` + `z.infer<typeof entitySchema>` in `src/entities/<entity>.ts`. See [`dev-docs/domain-entities.md`](../../../dev-docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](../../../docs/adr/0001-domain-entity-schema-style.md).
 
 - Treat canonical domain entity schemas as the source of truth. Schemas and types elsewhere in the same domain, plus app/platform boundary schemas, should derive from or reuse the entity shapes whenever practical instead of re-declaring the same fields.
 - When a boundary schema must differ materially from the entity shape, still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again.
 - Canonical entity schemas and their inferred entity types belong in `packages/domain/*/src/entities/<entity>.ts`.
 - Domain package constants belong in `packages/domain/*/src/constants.ts`.
-- Domain package errors belong in `packages/domain/*/src/errors.ts`. A full package-by-package inventory and import rules live in [`docs/domain-errors.md`](../../../docs/domain-errors.md).
-- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `docs/issues.md`.
+- Domain package errors belong in `packages/domain/*/src/errors.ts`. A full package-by-package inventory and import rules live in [`dev-docs/domain-errors.md`](../../../dev-docs/domain-errors.md).
+- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `dev-docs/issues.md`.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `packages/domain/*/src/helpers.ts`.
 - Types and schemas that exist only as inputs to one domain use-case belong in that use-case file rather than a generic side module, unless several use-cases truly share the exact same contract.
 - App and platform layers should build boundary-specific schemas by reusing or deriving from domain entity/use-case schemas whenever practical rather than redefining the same contract from scratch.
@@ -105,7 +105,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Platform packages implement adapters
 - Composition roots in apps provide live layers
 - Domain must never import concrete DB/cache/queue/object storage clients
-- **Repository method names:** Use the standard verbs in [docs/repositories.md](../../../docs/repositories.md) (`findById`, `findByXxx` for unique keys, `listByXxx` / `list` for collections, `save`, `delete` vs `softDelete`, etc.).
+- **Repository method names:** Use the standard verbs in [dev-docs/repositories.md](../../../dev-docs/repositories.md) (`findById`, `findByXxx` for unique keys, `listByXxx` / `list` for collections, `save`, `delete` vs `softDelete`, etc.).
 - Reliability async contracts should stay project-scoped as well as organization-scoped: include both `organizationId` and `projectId` in event/task/workflow payloads by default (except `MagicLinkEmailRequested`, `UserDeletionRequested`, `domain-events`, `magic-link-email`, and `user-deletion` payloads).
 
 ## Web standards first (domain, utils, shared)

@@ -5,7 +5,7 @@ This document standardizes how `packages/domain/*` exposes `Data.TaggedError` ty
 ## Standard
 
 - **One file per package** at `src/errors.ts` for errors that are part of the package vocabulary (shared across use-cases or exported to apps/platform).
-- **Reference implementation:** `packages/domain/issues/src/errors.ts` — see also *Domain errors (`@domain/issues` reference pattern)* in [`docs/issues.md`](./issues.md) and [effect-and-errors](../.agents/skills/effect-and-errors/SKILL.md).
+- **Reference implementation:** `packages/domain/issues/src/errors.ts` — see also *Domain errors (`@domain/issues` reference pattern)* in [`./issues.md`](./issues.md) and [effect-and-errors](../.agents/skills/effect-and-errors/SKILL.md).
 - **HTTP metadata:** every tagged error implements `HttpError` (`httpStatus`, `httpMessage`) as described in the Effect/errors skill.
 - **Generic cross-cutting errors** (`RepositoryError`, `NotFoundError`, etc.) stay in `@domain/shared` (`packages/domain/shared/src/errors.ts`).
 

@@ -211,7 +211,7 @@ pnpm --filter @platform/db-postgres pg:migrate
 
 ## Repository port naming
 
-Domain repository ports and method naming conventions (including Effect result shapes and when to use `listBy`* vs `findBy*`) live in [docs/repositories.md](../../../docs/repositories.md). Prefer that vocabulary for new Postgres-backed ports and when renaming existing methods.
+Domain repository ports and method naming conventions (including Effect result shapes and when to use `listBy`* vs `findBy*`) live in [dev-docs/repositories.md](../../../dev-docs/repositories.md). Prefer that vocabulary for new Postgres-backed ports and when renaming existing methods.
 
 ## Mapper conventions
 

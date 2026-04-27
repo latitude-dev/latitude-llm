@@ -114,7 +114,7 @@ The first phase that needs each external provider capability introduces it as a 
 - `@platform/ai-voyage` for embeddings and reranking
 - `@platform/db-weaviate` for issue projection storage/search
 
-The canonical cross-domain `AI.generate` feature catalog (purpose, telemetry tags, and call sites) lives in `docs/ai-generation-features.md`.
+The canonical cross-domain `AI.generate` feature catalog (purpose, telemetry tags, and call sites) lives in `./ai-generation-features.md`.
 
 Optimizer abstractions live in domain packages, while concrete optimizer implementations live in platform packages:
 
@@ -157,7 +157,7 @@ Rules:
 - the new reliability domain events publish directly through `createEventsPublisher(queuePublisher)` into `domain-events` only after their upstream writes are durable
 - BullMQ is transport, not lifecycle storage; durable progress, dedupe semantics, ownership, and visible progress stay in Postgres/domain state even when BullMQ provides the dedupe/debounce primitive
 - topic publication may request logical dedupe/debounce keyed by entity identity so BullMQ can reuse delayed jobs or job ids without leaking transport detail to callers
-- the `SpanIngested` debounced trace-end runtime is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed `trace-end:run` task; the worker composition root is `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`, with domain rules split across `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` (see `docs/spans.md`)
+- the `SpanIngested` debounced trace-end runtime is the canonical queue-backed debounce example: each new span for a trace reschedules the same logical delayed `trace-end:run` task; the worker composition root is `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`, with domain rules split across `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` (see `./spans.md`)
 - user-triggered async work that needs frontend progress feedback runs as a Temporal workflow with a deterministic, per-resource workflow id; a server-side status endpoint asks Temporal directly via `workflow.describe()` and workflow queries, and the UI polls that endpoint — there is no Redis-backed job-status mirror, because Temporal is the single source of truth for workflow state
 - queues stay single-step; long-running or multi-step orchestration belongs in workflows whose activities own retries, timers, and progress
 - reliability work extends the existing `apps/workflows` Temporal service and the existing `domain-events` dispatcher rail rather than introducing a second workflow runner or ad-hoc event-execution path

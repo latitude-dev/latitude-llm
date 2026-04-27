@@ -32,7 +32,7 @@ The live-seeds script is generator-backed rather than a simple fixture replayer:
 - traces within a case are scheduled against one shared simulated case timeline
 - spans within a trace are sent sequentially based on simulated finish timing
 - generation can be replayed exactly with `--seed`
-- runtime span enrichment follows the ambient seed conventions from `docs/seeds.md`, adding only the `live-seed` tag and `live_seed_fixture` metadata field on top
+- runtime span enrichment follows the ambient seed conventions from `dev-docs/seeds.md`, adding only the `live-seed` tag and `live_seed_fixture` metadata field on top
 
 ## Seeded Identity Used By The Script
 

@@ -11,7 +11,7 @@ Queue concepts:
 - a queue is conceptually `manual` when it has no filter configured and queue membership is created by explicit insertion rather than by stored filter materialization, always materialized as a trace id
 - a queue is conceptually `live` when it has a filter configured and is populated incrementally over time from that filter plus optional sampling
 
-The filter field reuses the shared `FilterSet` described in `docs/filters.md`, applied against the shared trace field registry also used by evaluation triggers.
+The filter field reuses the shared `FilterSet` described in `./filters.md`, applied against the shared trace field registry also used by evaluation triggers.
 
 ## System Queue Scaffolding
 
