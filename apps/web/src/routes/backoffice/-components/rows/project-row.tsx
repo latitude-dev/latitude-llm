@@ -1,5 +1,6 @@
 import { Avatar, Badge, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { AdminProjectSearchDto } from "../../../../domains/admin/search.functions.ts"
 import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
@@ -8,10 +9,6 @@ import { ViewedAgo } from "./viewed-ago.tsx"
 
 /**
  * Listing row for a backoffice project.
- *
- * Wrapped in a plain anchor (rather than `<Link>`) until the
- * `/backoffice/projects/$projectId` route file lands in a later commit
- * of this PR — see the note on `OrganizationRow`.
  */
 export interface ProjectRowProps {
   readonly project: Pick<AdminProjectSearchDto, "id" | "name" | "slug" | "organizationName"> & {
@@ -49,7 +46,7 @@ export function ProjectRow({ project, trailing }: ProjectRowProps) {
           : undefined
 
   return (
-    <a href={`/backoffice/projects/${project.id}`} className="block">
+    <Link to="/backoffice/projects/$projectId" params={{ projectId: project.id }} className="block">
       <Row
         leading={<ProjectIcon name={project.name} />}
         primary={
@@ -67,6 +64,6 @@ export function ProjectRow({ project, trailing }: ProjectRowProps) {
         }
         trailing={resolvedTrailing}
       />
-    </a>
+    </Link>
   )
 }
