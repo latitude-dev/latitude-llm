@@ -420,19 +420,44 @@ export const SpanRepositoryLive = Layer.effect(
             )
         }),
 
-      findMessagesForTrace: ({ organizationId, traceId }) =>
+      findMessagesForTrace: ({ organizationId, projectId, traceId, startTime }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          // Bound start_time to a [-1m, +1d] window around the root span so
+          // partition pruning + the (org, project, start_time) primary key kick
+          // in. Without this the FINAL/dedupe step has to scan every monthly
+          // partition for the org and OOMs the server on large tenants.
+          const startTimeFrom = new Date(startTime.getTime() - 60 * 1000)
+          const startTimeTo = new Date(startTime.getTime() + 24 * 60 * 60 * 1000)
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
+                // Dedupe ReplacingMergeTree rows with `LIMIT 1 BY span_id`
+                // (newest `ingested_at` wins) instead of `FINAL`, which
+                // merges all matching parts at query time and is the
+                // dominant memory cost for traces with heavy
+                // input/output_messages payloads.
                 query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
-                      FROM spans FINAL
-                      WHERE organization_id = {organizationId:String}
-                        AND trace_id = {traceId:FixedString(32)}
-                        AND operation IN ('chat', 'text_completion', 'execute_tool')
+                      FROM (
+                        SELECT span_id, operation, tool_call_id, input_messages, output_messages, start_time
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
+                          AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
+                          AND trace_id = {traceId:FixedString(32)}
+                          AND operation IN ('chat', 'text_completion', 'execute_tool')
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
                       ORDER BY start_time ASC`,
-                query_params: { organizationId: organizationId as string, traceId },
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  startTimeFrom: toClickhouseDateTime(startTimeFrom),
+                  startTimeTo: toClickhouseDateTime(startTimeTo),
+                  traceId,
+                },
                 format: "JSONEachRow",
               })
               return result.json<SpanMessagesRow>()

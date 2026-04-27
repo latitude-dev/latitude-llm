@@ -165,18 +165,19 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
           const traceRepo = yield* TraceRepository
           const spanRepo = yield* SpanRepository
 
-          const [traceDetail, spans] = yield* Effect.all([
-            traceRepo
-              .findByTraceId({
-                organizationId: orgId,
-                projectId: ProjectId(data.projectId),
-                traceId,
-              })
-              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-            spanRepo.findMessagesForTrace({ organizationId: orgId, traceId }),
-          ])
+          const projectId = ProjectId(data.projectId)
+          const traceDetail = yield* traceRepo
+            .findByTraceId({ organizationId: orgId, projectId, traceId })
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
           if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
+
+          const spans = yield* spanRepo.findMessagesForTrace({
+            organizationId: orgId,
+            projectId,
+            traceId,
+            startTime: traceDetail.startTime,
+          })
 
           return buildConversationSpanMaps(traceDetail.allMessages, spans)
         }).pipe(

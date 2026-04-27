@@ -50,7 +50,9 @@ export interface SpanRepositoryShape {
 
   findMessagesForTrace(input: {
     readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
     readonly traceId: TraceId
+    readonly startTime: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
 }
 

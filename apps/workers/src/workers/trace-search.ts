@@ -81,7 +81,9 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     // 1. Load span messages for the trace
     const spanMessages = yield* spanRepo.findMessagesForTrace({
       organizationId: OrganizationId(organizationId),
+      projectId: ProjectId(projectId),
       traceId: TraceId(traceId),
+      startTime,
     })
 
     if (spanMessages.length === 0) {
