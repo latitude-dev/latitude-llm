@@ -3,6 +3,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router"
 import type { AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
 import { ImpersonateUserButton } from "../-components/impersonate-user-button.tsx"
+import { OrganizationRow } from "../-components/rows/index.ts"
 
 export const Route = createFileRoute("/backoffice/users/$userId")({
   loader: async ({ params }) => {
@@ -74,22 +75,20 @@ function BackofficeUserDetailPage() {
             <Text.H5 color="foregroundMuted">This user is not a member of any organization.</Text.H5>
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {user.memberships.map((m: AdminUserDetailsMembershipDto) => (
-              <div
+              <OrganizationRow
                 key={m.organizationId}
-                className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-4 py-3"
-              >
-                <div className="flex flex-col min-w-0">
-                  <Text.H5 weight="medium" ellipsis noWrap>
-                    {m.organizationName}
-                  </Text.H5>
-                  <Text.H6 color="foregroundMuted" ellipsis noWrap>
-                    /{m.organizationSlug} · {m.organizationId}
-                  </Text.H6>
-                </div>
-                <Badge variant={m.role === "owner" ? "default" : "secondary"}>{m.role}</Badge>
-              </div>
+                organization={{
+                  id: m.organizationId,
+                  name: m.organizationName,
+                  slug: m.organizationSlug,
+                }}
+                // The user's per-org role replaces the default created-at trailing.
+                // Surfaces "is this user an owner of any of their orgs?" at a glance,
+                // which is the question staff are usually asking on this page.
+                trailing={<Badge variant={m.role === "owner" ? "default" : "secondary"}>{m.role}</Badge>}
+              />
             ))}
           </div>
         )}
