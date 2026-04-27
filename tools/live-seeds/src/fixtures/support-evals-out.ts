@@ -57,11 +57,11 @@ export const supportEvalsOutFixture: LiveSeedFixtureDefinition = {
       SEED_RETURNS_EVALUATION_ID,
       SEED_ACCESS_EVALUATION_ID,
     ],
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: [],
+  deterministicFlaggerMatches: [],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) => {
     const opening = rng.pick(OPENING_EXCHANGES)

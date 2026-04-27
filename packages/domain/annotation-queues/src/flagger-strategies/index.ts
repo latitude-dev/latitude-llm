@@ -15,14 +15,13 @@ import type { LlmCapableQueueStrategy, QueueStrategy } from "./types.ts"
 // ---------------------------------------------------------------------------
 //
 // Two kinds of strategies live in the same registry:
-//   1. LLM-capable strategies — back a provisioned system queue (slug in
-//      `SYSTEM_QUEUE_DEFINITIONS`); have both `buildSystemPrompt` and
-//      `buildPrompt`. Deterministic `no-match`/`ambiguous` route to the
-//      LLM workflow.
-//   2. Deterministic-only strategies — no provisioned queue, no LLM prompts.
+//   1. LLM-capable strategies — carry the `annotator` block; have both
+//      `buildSystemPrompt` and `buildPrompt`. Deterministic `no-match` /
+//      `ambiguous` route to the flagger workflow.
+//   2. Deterministic-only strategies — no LLM prompts and no `annotator`.
 //      Only their `matched` branch produces output (direct score write with
-//      `sourceId="SYSTEM"`). `no-match` is a no-op; they never return
-//      `ambiguous`.
+//      `source: "flagger"`, `sourceId: flagger.id`). `no-match` is a no-op;
+//      they never return `ambiguous`.
 // ---------------------------------------------------------------------------
 
 const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {

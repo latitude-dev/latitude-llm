@@ -1,6 +1,6 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { classifyTraceForFlaggerUseCase, type QueueStrategy, SYSTEM_QUEUE_FLAGGER_MODEL } from "@domain/annotation-queues"
+import { classifyTraceForFlaggerUseCase, FLAGGER_MODEL, type QueueStrategy } from "@domain/annotation-queues"
 import { mapJailbreakBench } from "../mappers/jailbreakbench.ts"
 import type { FixtureRow } from "../types.ts"
 import { fixtureRowToTraceDetail } from "./adapter.ts"
@@ -67,7 +67,7 @@ interface FlaggerDef {
 const camelCaseSlug = (slug: string): string => slug.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
 // Pricing + provenance for flagger benchmarks come from the same constant
-// the production flagger uses (`SYSTEM_QUEUE_FLAGGER_MODEL`). If production
+// the production flagger uses (`FLAGGER_MODEL`). If production
 // swaps the model, the benchmark reports update automatically — no manual
 // sync of provider / model ids.
 const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): BenchmarkTarget => ({
@@ -83,8 +83,8 @@ const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): B
       trace: fixtureRowToTraceDetail(row),
       ...(strategyOverride ? { strategyOverride } : {}),
     }),
-  provider: SYSTEM_QUEUE_FLAGGER_MODEL.provider,
-  modelId: SYSTEM_QUEUE_FLAGGER_MODEL.model,
+  provider: FLAGGER_MODEL.provider,
+  modelId: FLAGGER_MODEL.model,
   optimization: {
     candidateKind: "ts-module",
     strategyFilePath: flaggerStrategyFilePath(flaggerSlug),

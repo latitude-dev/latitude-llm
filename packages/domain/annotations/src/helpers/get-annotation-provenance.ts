@@ -15,6 +15,10 @@ export function getAnnotationProvenance(annotation: AnnotationProvenanceInput): 
 
   if (sourceId === "API") return "api"
 
+  // `"SYSTEM"` is a legacy sentinel: pre-flagger-refactor system queues wrote
+  // annotation scores with `sourceId = "SYSTEM"`. New flagger output lives on
+  // `source = "flagger"` and never reaches this helper. Kept here for read-time
+  // display of historical annotation rows.
   if (sourceId === "SYSTEM" || isValidId(sourceId)) return "agent"
 
   return null

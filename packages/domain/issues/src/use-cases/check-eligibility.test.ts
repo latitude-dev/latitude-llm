@@ -1,6 +1,6 @@
 import { type Score, ScoreRepository, scoreSchema } from "@domain/scores"
-import { FlaggerId } from "@domain/shared"
 import { createFakeScoreRepository } from "@domain/scores/testing"
+import { FlaggerId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"

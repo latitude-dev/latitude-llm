@@ -9,7 +9,7 @@ import {
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS, SYSTEM_QUEUE_ANNOTATOR_MODEL } from "../constants.ts"
+import { FLAGGER_ANNOTATOR_MAX_TOKENS, FLAGGER_ANNOTATOR_MODEL } from "../constants.ts"
 import { getQueueStrategy } from "../flagger-strategies/index.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
 
@@ -277,14 +277,14 @@ ${conversationText}
 Return structured data with a single "feedback" field per the system instructions.`
 
   const result = yield* ai.generate({
-    ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
-    maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
+    ...FLAGGER_ANNOTATOR_MODEL,
+    maxTokens: FLAGGER_ANNOTATOR_MAX_TOKENS,
     system: systemPrompt,
     prompt,
     schema: flaggerAnnotatorOutputSchema,
     telemetry: {
-      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerDraft,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
         { traceId: input.traceId, flaggerSlug: input.flaggerSlug, scoreId: input.scoreId },

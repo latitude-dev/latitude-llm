@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { detectOutputSchemaValidationSystemQueue } from "../helpers.ts"
+import { detectOutputSchemaValidationFlagger } from "../helpers.ts"
 import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 /**
@@ -13,7 +13,7 @@ export const outputSchemaValidationStrategy: QueueStrategy = {
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectOutputSchemaValidationSystemQueue(trace)
+    const result = detectOutputSchemaValidationFlagger(trace)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
   },
 }

@@ -96,7 +96,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       traceId: TraceId("n".repeat(32)),
       spanId: null,
       source: "annotation",
-      sourceId: "SYSTEM",
+      sourceId: "UI",
       simulationId: null,
       issueId: null,
       value: 0,

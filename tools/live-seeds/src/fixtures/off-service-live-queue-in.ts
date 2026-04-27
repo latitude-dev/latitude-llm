@@ -62,11 +62,11 @@ export const offServiceLiveQueueInFixture: LiveSeedFixtureDefinition = {
     "Non-support trace that should skip live evaluations by filter but still sample into the seeded live high-cost queue.",
   sampling: {
     liveQueueSample: true,
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: [],
+  deterministicFlaggerMatches: [],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) => {
     const opening = rng.pick(OPENING_EXCHANGES)

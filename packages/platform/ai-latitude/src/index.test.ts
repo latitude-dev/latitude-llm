@@ -67,8 +67,8 @@ describe("runWithAiTelemetry metadata propagation (e2e)", () => {
 
     const result = await runWithAiTelemetry(
       {
-        spanName: "queue.system.draft",
-        tags: ["system-queue:draft"],
+        spanName: "flagger.draft",
+        tags: ["flagger:draft"],
         metadata: {
           organizationId: "org-1",
           projectId: "proj-1",
@@ -118,8 +118,8 @@ describe("runWithAiTelemetry metadata propagation (e2e)", () => {
   it("stamps the span name and tags alongside metadata", async () => {
     await runWithAiTelemetry(
       {
-        spanName: "queue.system.draft",
-        tags: ["system-queue:draft"],
+        spanName: "flagger.draft",
+        tags: ["flagger:draft"],
         metadata: { scoreId: "score-xyz" },
       },
       async () => undefined,
@@ -128,9 +128,9 @@ describe("runWithAiTelemetry metadata propagation (e2e)", () => {
     await provider.forceFlush()
 
     const [exported] = exporter.getFinishedSpans()
-    expect(exported?.name).toBe("queue.system.draft")
-    expect(exported?.attributes["latitude.capture.name"]).toBe("queue.system.draft")
-    expect(exported?.attributes["latitude.tags"]).toBe(JSON.stringify(["system-queue:draft"]))
+    expect(exported?.name).toBe("flagger.draft")
+    expect(exported?.attributes["latitude.capture.name"]).toBe("flagger.draft")
+    expect(exported?.attributes["latitude.tags"]).toBe(JSON.stringify(["flagger:draft"]))
   })
 
   it("does not emit a span when telemetry is undefined", async () => {

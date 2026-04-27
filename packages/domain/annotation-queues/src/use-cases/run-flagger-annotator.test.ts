@@ -117,8 +117,8 @@ describe("runFlaggerAnnotatorUseCase", () => {
     expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
     expect(generateCall.telemetry).toMatchObject({
-      spanName: "queue.system.draft",
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      spanName: "flagger.draft",
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
       metadata: {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,

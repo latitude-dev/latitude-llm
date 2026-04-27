@@ -19,11 +19,11 @@ export const emptyResponseFixture: LiveSeedFixtureDefinition = {
   key: "empty-response",
   description: "Low-cost non-support trace that should deterministically match the Empty Response system queue.",
   sampling: {
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: ["empty-response"],
+  deterministicFlaggerMatches: ["empty-response"],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) =>
     createSingleTraceCase({

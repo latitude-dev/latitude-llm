@@ -7,8 +7,8 @@
 export const AI_GENERATE_TELEMETRY_TAGS = {
   issueDetails: ["issue:details"],
   annotationEnrichPublication: ["annotation:enrichment"],
-  queueSystemClassify: ["system-queue:classify"],
-  queueSystemDraft: ["system-queue:draft"],
+  flaggerClassify: ["flagger:classify"],
+  flaggerDraft: ["flagger:draft"],
   evaluationJudgeLive: ["eval:execute", "live"],
   evaluationJudgeAlignment: ["eval:execute", "alignment"],
   evaluationJudgeOptimization: ["eval:execute", "optimization"],
@@ -18,8 +18,8 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
 export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   issueDetails: "issue.details",
   annotationEnrichPublication: "annotation.enrich.publication",
-  queueSystemClassify: "queue.system.classify",
-  queueSystemDraft: "queue.system.draft",
+  flaggerClassify: "flagger.classify",
+  flaggerDraft: "flagger.draft",
   evaluationJudgeLive: "evaluation.judge.live",
   evaluationJudgeAlignment: "evaluation.judge.alignment",
   evaluationJudgeOptimization: "evaluation.judge.optimization",

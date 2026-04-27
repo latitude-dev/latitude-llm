@@ -99,7 +99,7 @@ describe("draftFlaggerAnnotationUseCase", () => {
     // upstream of the LLM call — see PRD: "Identity strategy").
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].telemetry).toMatchObject({
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
       metadata: expect.objectContaining({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,

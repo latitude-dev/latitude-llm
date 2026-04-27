@@ -219,10 +219,7 @@ describe("createIssueFromScoreUseCase", () => {
           ...baseScore,
           source: scoreSource,
           sourceId,
-          metadata:
-            scoreSource === "custom"
-              ? {}
-              : { rawFeedback: baseScore.feedback },
+          metadata: scoreSource === "custom" ? {} : { rawFeedback: baseScore.feedback },
         } as unknown as Score
         scores.set(sourceScore.id, sourceScore)
 

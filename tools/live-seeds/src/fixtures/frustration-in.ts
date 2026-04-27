@@ -47,11 +47,11 @@ export const frustrationInFixture: LiveSeedFixtureDefinition = {
   description:
     "Low-cost non-support trace written to look like a strong Frustration match and to sample into the Frustration system queue.",
   sampling: {
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: true,
     },
   },
-  deterministicSystemMatches: [],
+  deterministicFlaggerMatches: [],
   llmSystemIntents: ["frustration"],
   generateCase: ({ fixtureKey, rng }) => {
     const turns: GeneratedConversationTurnDefinition[] = [
