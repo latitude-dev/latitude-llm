@@ -19,9 +19,15 @@ import type {
  * touch. We avoid importing from `openclaw/plugin-sdk` so the package stays
  * usable when OpenClaw isn't installed (the CLI and tests don't need it),
  * and so we're robust to small signature changes across OpenClaw versions.
+ *
+ * `pluginConfig` is the user's `plugins.entries[id].config` block — that's
+ * the canonical place to read credentials and feature flags. The OpenClaw
+ * plugin SDK also exposes the same value as `api.pluginConfig` on the
+ * builder API; keep both names in sync if the upstream contract evolves.
  */
 export interface OpenClawPluginApiLike {
   logger?: Logger
+  pluginConfig?: Record<string, unknown>
   on: <K extends string>(
     hookName: K,
     handler: (event: unknown, ctx: unknown) => unknown,
@@ -52,15 +58,20 @@ export interface RegisterOptions {
  * nothing we do here can slow the agent loop.
  */
 export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts: RegisterOptions = {}): void {
-  const config = opts.config ?? loadConfig()
+  // Source of truth: OpenClaw passes the user's `plugins.entries[id].config`
+  // as `api.pluginConfig`. Env vars are a fallback so existing deploys with
+  // LATITUDE_* exported in the gateway environment keep working.
+  const config = opts.config ?? loadConfig(api.pluginConfig)
   const logger = opts.logger ?? createLogger(config.debug)
 
   if (!config.enabled) {
-    if (config.apiKey === "") logger.debug("disabled: LATITUDE_API_KEY is empty")
-    if (config.project === "") logger.debug("disabled: LATITUDE_PROJECT is empty")
+    if (config.apiKey === "") logger.debug("disabled: apiKey is empty (set plugins.entries[id].config.apiKey)")
+    if (config.project === "") logger.debug("disabled: project is empty (set plugins.entries[id].config.project)")
     return
   }
-  logger.debug(`enabled: project=${config.project} base=${config.baseUrl}`)
+  logger.debug(
+    `enabled: project=${config.project} base=${config.baseUrl} allowConversationAccess=${config.allowConversationAccess}`,
+  )
 
   const builder = new TurnBuilder()
 
@@ -108,7 +119,7 @@ export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts:
         return
       }
       opts.onEmit?.(run)
-      const payload = buildOtlpRequest(run)
+      const payload = buildOtlpRequest(run, { allowConversationAccess: config.allowConversationAccess })
       void postTraces({
         baseUrl: config.baseUrl,
         apiKey: config.apiKey,

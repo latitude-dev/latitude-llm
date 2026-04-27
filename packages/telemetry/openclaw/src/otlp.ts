@@ -11,11 +11,24 @@ import type {
 } from "./types.ts"
 
 const SCOPE_NAME = "@latitude-data/openclaw-telemetry"
-const SCOPE_VERSION = "0.0.1"
+const SCOPE_VERSION = "0.0.2"
+
+interface BuildOptions {
+  /**
+   * When false, content attributes are scrubbed from spans:
+   *   - `user_prompt` (interaction)
+   *   - `gen_ai.system_instructions`, `gen_ai.input.messages`,
+   *     `gen_ai.output.messages` (llm_request)
+   *   - `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result` (tool_execution)
+   * Timing, token usage, model name, ids, agent name, and counts are
+   * always emitted regardless of this flag.
+   */
+  allowConversationAccess: boolean
+}
 
 /** Build an OTLP export request for a single completed agent run. */
-export function buildOtlpRequest(run: RunRecord): OtlpExportRequest {
-  const spans = buildRunSpans(run)
+export function buildOtlpRequest(run: RunRecord, options: BuildOptions): OtlpExportRequest {
+  const spans = buildRunSpans(run, options)
   const rs: OtlpResourceSpans = {
     resource: { attributes: resourceAttrs() },
     scopeSpans: [{ scope: { name: SCOPE_NAME, version: SCOPE_VERSION }, spans }],
@@ -23,30 +36,30 @@ export function buildOtlpRequest(run: RunRecord): OtlpExportRequest {
   return { resourceSpans: [rs] }
 }
 
-function buildRunSpans(run: RunRecord): OtlpSpan[] {
+function buildRunSpans(run: RunRecord, options: BuildOptions): OtlpSpan[] {
   const traceId = hashHex(`${run.sessionId ?? "session"}:${run.runId}`, 32)
   const interactionSpanId = hashHex(`${traceId}:run`, 16)
-  const out: OtlpSpan[] = [buildInteractionSpan(traceId, interactionSpanId, run)]
+  const out: OtlpSpan[] = [buildInteractionSpan(traceId, interactionSpanId, run, options)]
 
   run.llmCalls.forEach((call, idx) => {
     const callSpanId = hashHex(`${traceId}:call:${idx}`, 16)
-    out.push(buildLlmSpan(traceId, interactionSpanId, callSpanId, call, idx, run))
+    out.push(buildLlmSpan(traceId, interactionSpanId, callSpanId, call, idx, run, options))
     // Tool spans are siblings of the llm_request, parented on the interaction
     // span so the run timeline renders as: llm → tool → llm → tool → ...
     call.toolCalls.forEach((tool, tIdx) => {
       const toolSpanId = hashHex(`${traceId}:call:${idx}:tool:${tIdx}`, 16)
-      out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run))
+      out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run, options))
     })
   })
   run.orphanTools.forEach((tool, idx) => {
     const toolSpanId = hashHex(`${traceId}:orphan-tool:${idx}`, 16)
-    out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run))
+    out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run, options))
   })
 
   return out
 }
 
-function buildInteractionSpan(traceId: string, spanId: string, run: RunRecord): OtlpSpan {
+function buildInteractionSpan(traceId: string, spanId: string, run: RunRecord, options: BuildOptions): OtlpSpan {
   const startNs = msToNs(run.startMs)
   const endNs = msToNs(run.endMs ?? run.startMs)
   const totalTools = run.llmCalls.reduce((sum, c) => sum + c.toolCalls.length, 0) + run.orphanTools.length
@@ -90,8 +103,12 @@ function buildInteractionSpan(traceId: string, spanId: string, run: RunRecord): 
         : undefined,
       totalUsage.total !== undefined ? int("gen_ai.usage.total_tokens", totalUsage.total) : undefined,
       // Surface the first user prompt so the Latitude UI has something
-      // recognisable in the interaction list.
-      run.llmCalls[0]?.prompt ? str("user_prompt", run.llmCalls[0].prompt) : undefined,
+      // recognisable in the interaction list — only when the operator opted
+      // in to conversation capture.
+      options.allowConversationAccess && run.llmCalls[0]?.prompt
+        ? str("user_prompt", run.llmCalls[0].prompt)
+        : undefined,
+      bool("latitude.captured.content", options.allowConversationAccess),
     ]),
     status: { code: run.success === false ? 2 : 1 },
   }
@@ -104,15 +121,16 @@ function buildLlmSpan(
   call: LlmCallRecord,
   callIdx: number,
   run: RunRecord,
+  options: BuildOptions,
 ): OtlpSpan {
   const startNs = msToNs(call.startMs)
   const endNs = msToNs(call.endMs ?? call.startMs)
 
-  const inputMessages = buildInputMessages(call)
-  const outputMessages = buildOutputMessages(call)
-  const systemInstructions = call.systemPrompt
-    ? JSON.stringify([{ type: "text", content: call.systemPrompt }])
-    : undefined
+  const captureContent = options.allowConversationAccess
+  const inputMessages = captureContent ? buildInputMessages(call) : undefined
+  const outputMessages = captureContent ? buildOutputMessages(call) : undefined
+  const systemInstructions =
+    captureContent && call.systemPrompt ? JSON.stringify([{ type: "text", content: call.systemPrompt }]) : undefined
 
   return {
     traceId,
@@ -157,10 +175,13 @@ function buildLlmSpan(
         : undefined,
       call.usage?.cacheWrite !== undefined ? int("cache_creation_tokens", call.usage.cacheWrite) : undefined,
       call.usage?.total !== undefined ? int("gen_ai.usage.total_tokens", call.usage.total) : undefined,
-      // Content — system prompt + full message arrays.
+      // Content — system prompt + full message arrays. Gated on
+      // allowConversationAccess. Even when off, we emit the structural
+      // attributes above (model, tokens, ids, agent name).
       systemInstructions ? str("gen_ai.system_instructions", systemInstructions) : undefined,
-      str("gen_ai.input.messages", JSON.stringify(inputMessages)),
-      str("gen_ai.output.messages", JSON.stringify(outputMessages)),
+      inputMessages ? str("gen_ai.input.messages", JSON.stringify(inputMessages)) : undefined,
+      outputMessages ? str("gen_ai.output.messages", JSON.stringify(outputMessages)) : undefined,
+      bool("latitude.captured.content", captureContent),
       // Misc signals.
       int("openclaw.images.count", call.imagesCount),
       int("llm_request.tool_call_count", call.toolCalls.length),
@@ -180,10 +201,12 @@ function buildToolSpan(
   spanId: string,
   tool: ToolCallRecord,
   run: RunRecord,
+  options: BuildOptions,
 ): OtlpSpan {
   const startNs = msToNs(tool.startMs)
   const endNs = msToNs(tool.endMs ?? tool.startMs)
   const isError = Boolean(tool.error)
+  const captureContent = options.allowConversationAccess
   return {
     traceId,
     spanId,
@@ -197,8 +220,12 @@ function buildToolSpan(
       str("gen_ai.operation.name", "execute_tool"),
       str("gen_ai.tool.name", tool.toolName),
       str("gen_ai.tool.call.id", tool.toolCallId),
-      str("gen_ai.tool.call.arguments", safeJson(tool.params)),
-      tool.result !== undefined ? str("gen_ai.tool.call.result", safeJson(tool.result)) : undefined,
+      // Tool args + result are content. Gate on allowConversationAccess —
+      // when off, we still emit the call's name, id, duration, error state,
+      // and agent name so the timeline + counters still work.
+      captureContent ? str("gen_ai.tool.call.arguments", safeJson(tool.params)) : undefined,
+      captureContent && tool.result !== undefined ? str("gen_ai.tool.call.result", safeJson(tool.result)) : undefined,
+      bool("latitude.captured.content", captureContent),
       isError ? str("error.type", "tool_error") : undefined,
       isError ? str("error.message", tool.error ?? "") : undefined,
       bool("tool.is_error", isError),

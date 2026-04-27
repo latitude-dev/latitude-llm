@@ -73,7 +73,7 @@ function sampleRun(overrides: Partial<RunRecord> = {}): RunRecord {
 
 describe("buildOtlpRequest", () => {
   it("emits an interaction + llm_request + tool_execution span tree", () => {
-    const req = buildOtlpRequest(sampleRun())
+    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
     const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
     expect(spans).toHaveLength(3)
     const [interaction, llm, tool] = spans
@@ -88,7 +88,7 @@ describe("buildOtlpRequest", () => {
   })
 
   it("tags every span with the agent name", () => {
-    const req = buildOtlpRequest(sampleRun())
+    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
     const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
     for (const s of spans) {
       const attrs = attrMap(s.attributes)
@@ -98,7 +98,7 @@ describe("buildOtlpRequest", () => {
   })
 
   it("captures everything on the llm_request span", () => {
-    const req = buildOtlpRequest(sampleRun())
+    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
     const llm = req.resourceSpans[0]?.scopeSpans[0]?.spans[1]
     const attrs = attrMap(llm?.attributes ?? [])
 
@@ -142,7 +142,7 @@ describe("buildOtlpRequest", () => {
   })
 
   it("captures tool arguments and results on the tool span", () => {
-    const req = buildOtlpRequest(sampleRun())
+    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
     const tool = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
     const attrs = attrMap(tool?.attributes ?? [])
     expect(attrs["gen_ai.tool.name"]).toBe("read_file")
@@ -162,7 +162,7 @@ describe("buildOtlpRequest", () => {
       usage: { input: 8, output: 2, total: 10 },
       toolCalls: [],
     })
-    const req = buildOtlpRequest(run)
+    const req = buildOtlpRequest(run, { allowConversationAccess: true })
     const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
     const attrs = attrMap(interaction?.attributes ?? [])
     expect(attrs["gen_ai.usage.input_tokens"]).toBe("50")
@@ -177,7 +177,7 @@ describe("buildOtlpRequest", () => {
     if (!tool) throw new Error("expected a tool call")
     tool.error = "boom"
     tool.result = undefined
-    const req = buildOtlpRequest(run)
+    const req = buildOtlpRequest(run, { allowConversationAccess: true })
     const toolSpan = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
     expect(toolSpan?.status.code).toBe(2)
     const attrs = attrMap(toolSpan?.attributes ?? [])
@@ -187,7 +187,7 @@ describe("buildOtlpRequest", () => {
 
   it("marks failed runs with interaction status code 2", () => {
     const run = sampleRun({ success: false, error: "run failed" })
-    const req = buildOtlpRequest(run)
+    const req = buildOtlpRequest(run, { allowConversationAccess: true })
     const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
     expect(interaction?.status.code).toBe(2)
     const attrs = attrMap(interaction?.attributes ?? [])
@@ -208,10 +208,63 @@ describe("buildOtlpRequest", () => {
       durationMs: 50,
       agentId: "router-agent",
     })
-    const req = buildOtlpRequest(run)
+    const req = buildOtlpRequest(run, { allowConversationAccess: true })
     const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
     const orphan = spans.find((s) => s.name === "tool:drift")
     expect(orphan).toBeDefined()
     expect(orphan?.parentSpanId).toBe(spans[0]?.spanId)
+  })
+
+  describe("when allowConversationAccess is false", () => {
+    it("scrubs content attributes from llm_request spans", () => {
+      const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: false })
+      const llm = req.resourceSpans[0]?.scopeSpans[0]?.spans[1]
+      const attrs = attrMap(llm?.attributes ?? [])
+
+      // Content gone.
+      expect(attrs["gen_ai.system_instructions"]).toBeUndefined()
+      expect(attrs["gen_ai.input.messages"]).toBeUndefined()
+      expect(attrs["gen_ai.output.messages"]).toBeUndefined()
+
+      // Structural / numeric attrs still present.
+      expect(attrs["gen_ai.request.model"]).toBe("gpt-5")
+      expect(attrs["gen_ai.usage.input_tokens"]).toBe("42")
+      expect(attrs["gen_ai.usage.total_tokens"]).toBe("49")
+      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
+      expect(attrs["openclaw.run.id"]).toBe("run-1")
+      expect(attrs["latitude.captured.content"]).toBe("false")
+    })
+
+    it("scrubs tool args + result but keeps name/id/duration/error/agent", () => {
+      const run = sampleRun()
+      const tool = run.llmCalls[0]?.toolCalls[0]
+      if (!tool) throw new Error("expected a tool call")
+      tool.error = undefined
+      const req = buildOtlpRequest(run, { allowConversationAccess: false })
+      const toolSpan = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
+      const attrs = attrMap(toolSpan?.attributes ?? [])
+
+      // Content gone.
+      expect(attrs["gen_ai.tool.call.arguments"]).toBeUndefined()
+      expect(attrs["gen_ai.tool.call.result"]).toBeUndefined()
+
+      // Structural still present.
+      expect(attrs["gen_ai.tool.name"]).toBe("read_file")
+      expect(attrs["gen_ai.tool.call.id"]).toBe("tc-1")
+      expect(attrs["tool.duration_ms"]).toBe("50")
+      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
+      expect(attrs["latitude.captured.content"]).toBe("false")
+    })
+
+    it("scrubs user_prompt from interaction span but keeps token/agent attrs", () => {
+      const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: false })
+      const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+      const attrs = attrMap(interaction?.attributes ?? [])
+
+      expect(attrs.user_prompt).toBeUndefined()
+      expect(attrs["gen_ai.usage.total_tokens"]).toBe("49")
+      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
+      expect(attrs["latitude.captured.content"]).toBe("false")
+    })
   })
 })
