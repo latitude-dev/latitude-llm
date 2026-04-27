@@ -24,6 +24,7 @@ const mkDetails = (overrides: Partial<AdminUserDetails> = {}): AdminUserDetails 
   image: null,
   role: "user",
   memberships: [],
+  sessions: [],
   createdAt: new Date("2024-01-01"),
   ...overrides,
 })

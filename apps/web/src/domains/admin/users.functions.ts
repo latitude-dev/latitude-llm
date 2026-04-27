@@ -1,19 +1,64 @@
-import { type AdminUserDetails, type AdminUserMembership, getUserDetailsUseCase } from "@domain/admin"
+import {
+  type AdminUserDetails,
+  type AdminUserMembership,
+  type AdminUserSession,
+  getUserDetailsUseCase,
+} from "@domain/admin"
 import { generateId, UserId } from "@domain/shared"
 import { AdminUserRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
+import { UAParser } from "ua-parser-js"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
+import { type GeoIpInfo, lookupGeoIpBatch } from "../../server/geoip.ts"
 
 export interface AdminUserDetailsMembershipDto {
   organizationId: string
   organizationName: string
   organizationSlug: string
   role: "owner" | "admin" | "member"
+}
+
+/**
+ * Pre-parsed view of an active session row, post-processed by the
+ * server function so the UI is pure: User-Agent parsing and GeoIP
+ * resolution both happen here, not in the browser. The TanStack Start
+ * compiler strips the `ua-parser-js` dep + `geoip.ts` module from the
+ * client bundle.
+ */
+export interface AdminUserSessionDto {
+  id: string
+  /**
+   * Better Auth's session token — the value
+   * `auth.api.revokeUserSession` takes. Sent to the client for the
+   * per-row Revoke button; the action itself runs server-side under
+   * `adminMiddleware`, so we're not granting any new authority by
+   * exposing it.
+   */
+  token: string
+  ipAddress: string | null
+  /** Raw User-Agent string. Kept for hover-to-reveal / debugging. */
+  userAgent: string | null
+  /** Best-effort browser name parsed from the User-Agent. */
+  browserName: string | null
+  /** Best-effort OS name parsed from the User-Agent. */
+  osName: string | null
+  /**
+   * `"desktop"` for parser results without an explicit device-type
+   * (the parser leaves `device.type` undefined for laptops/desktops);
+   * otherwise the parser's value (`"mobile"`, `"tablet"`, etc.).
+   */
+  deviceKind: string
+  geo: GeoIpInfo | null
+  createdAt: string
+  updatedAt: string
+  expiresAt: string
+  impersonatedByUserId: string | null
+  impersonatedByEmail: string | null
 }
 
 export interface AdminUserDetailsDto {
@@ -23,25 +68,54 @@ export interface AdminUserDetailsDto {
   image: string | null
   role: "user" | "admin"
   memberships: AdminUserDetailsMembershipDto[]
+  sessions: AdminUserSessionDto[]
   createdAt: string
 }
 
-const toDto = (details: AdminUserDetails): AdminUserDetailsDto => ({
-  id: details.id,
-  email: details.email,
-  name: details.name,
-  image: details.image,
-  role: details.role,
-  memberships: details.memberships.map(
-    (m: AdminUserMembership): AdminUserDetailsMembershipDto => ({
-      organizationId: m.organizationId,
-      organizationName: m.organizationName,
-      organizationSlug: m.organizationSlug,
-      role: m.role,
-    }),
-  ),
-  createdAt: details.createdAt.toISOString(),
-})
+const sessionToDto = (s: AdminUserSession, geo: GeoIpInfo | null): AdminUserSessionDto => {
+  const parsed = s.userAgent ? UAParser(s.userAgent) : null
+  return {
+    id: s.id,
+    token: s.token,
+    ipAddress: s.ipAddress,
+    userAgent: s.userAgent,
+    browserName: parsed?.browser.name ?? null,
+    osName: parsed?.os.name ?? null,
+    deviceKind: parsed?.device.type ?? "desktop",
+    geo,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+    expiresAt: s.expiresAt.toISOString(),
+    impersonatedByUserId: s.impersonatedByUserId,
+    impersonatedByEmail: s.impersonatedByEmail,
+  }
+}
+
+const toDto = async (details: AdminUserDetails): Promise<AdminUserDetailsDto> => {
+  // Resolve geo for every distinct IP in one pass — the helper
+  // dedupes internally so a user with 5 sessions on the same address
+  // issues at most one upstream call.
+  const geoByIp = await lookupGeoIpBatch(details.sessions.map((s) => s.ipAddress))
+  const sessions = details.sessions.map((s) => sessionToDto(s, s.ipAddress ? (geoByIp.get(s.ipAddress) ?? null) : null))
+
+  return {
+    id: details.id,
+    email: details.email,
+    name: details.name,
+    image: details.image,
+    role: details.role,
+    memberships: details.memberships.map(
+      (m: AdminUserMembership): AdminUserDetailsMembershipDto => ({
+        organizationId: m.organizationId,
+        organizationName: m.organizationName,
+        organizationSlug: m.organizationSlug,
+        role: m.role,
+      }),
+    ),
+    sessions,
+    createdAt: details.createdAt.toISOString(),
+  }
+}
 
 /**
  * Exported so tests can exercise input validation without spinning up the
@@ -75,7 +149,7 @@ export const adminGetUser = createServerFn({ method: "GET" })
       ),
     )
 
-    return toDto(details)
+    return await toDto(details)
   })
 
 /**
@@ -321,4 +395,64 @@ export const adminRevokeUserSessions = createServerFn({ method: "POST" })
     await auth.api.revokeUserSessions({ body: { userId: data.userId }, headers })
 
     return { ok: true, sessionCount }
+  })
+
+/**
+ * Exported for input-schema tests.
+ */
+export const adminRevokeUserSessionInputSchema = z.object({
+  userId: z.string().min(1).max(256),
+  sessionId: z.string().min(1).max(256),
+  /**
+   * The Better Auth `revokeUserSession` admin endpoint takes a
+   * session token (not the row id). We accept both on the wire — the
+   * UI hands us the token because that's what's needed for the
+   * actual revocation, and `sessionId` is plumbed through purely as
+   * the audit-event identifier (more readable than the token in
+   * audit logs, which are visible to support staff).
+   */
+  sessionToken: z.string().min(1).max(2048),
+})
+
+/**
+ * Sign a single session out — backing the per-row Revoke button on
+ * the Sessions panel.
+ *
+ * Audit-only by design: we don't fetch the user details before the
+ * revoke (the audit row stands on its own with adminUserId +
+ * targetUserId + sessionId), but we do scope the operation to a
+ * specific user so an out-of-band admin can't accidentally drop the
+ * wrong session by guessing a token. The `userId` is captured on
+ * the audit event for symmetry with the other admin-action events.
+ */
+export const adminRevokeUserSession = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminRevokeUserSessionInputSchema)
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const adminUserId = context.adminUserId
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter
+        .write({
+          id: generateId(),
+          eventName: "AdminUserSessionRevoked",
+          aggregateType: "user",
+          aggregateId: data.userId,
+          organizationId: "system",
+          payload: {
+            adminUserId,
+            targetUserId: data.userId,
+            sessionId: data.sessionId,
+          },
+          occurredAt: new Date(),
+        })
+        .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
+    )
+
+    const headers = getRequestHeaders()
+    const auth = getBetterAuth()
+    await auth.api.revokeUserSession({ body: { sessionToken: data.sessionToken }, headers })
+
+    return { ok: true }
   })

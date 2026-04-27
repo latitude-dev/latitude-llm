@@ -59,6 +59,7 @@
     "react-dom": "catalog:",
     "react-use": "^17.6.0",
     "rosetta-ai": "catalog:",
+    "ua-parser-js": "^2.0.6",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import { AdminUserRepository } from "@domain/admin"
 import { UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
-import { members, organizations, users } from "../schema/better-auth.ts"
+import { members, organizations, sessions, users } from "../schema/better-auth.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { AdminUserRepositoryLive } from "./admin-user-repository.ts"
@@ -18,6 +18,9 @@ const ORG_A = makeId("org-user-alpha")
 const ORG_B = makeId("org-user-beta")
 const TARGET = makeId("user-target")
 const UNMEMBERED = makeId("user-unmembered")
+const ADMIN = makeId("user-admin-imper")
+const FUTURE = new Date("2099-01-01T00:00:00.000Z")
+const PAST = new Date("2020-01-01T00:00:00.000Z")
 
 describe("AdminUserRepositoryLive.findById", () => {
   beforeAll(async () => {
@@ -42,6 +45,15 @@ describe("AdminUserRepositoryLive.findById", () => {
         createdAt: baseTime,
         updatedAt: baseTime,
       },
+      {
+        id: ADMIN,
+        email: "admin@latitude.so",
+        name: "Admin User",
+        emailVerified: true,
+        role: "admin" as const,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
     ])
 
     await pg.db.insert(organizations).values([
@@ -52,6 +64,46 @@ describe("AdminUserRepositoryLive.findById", () => {
     await pg.db.insert(members).values([
       { id: makeId("mem-a"), organizationId: ORG_A, userId: TARGET, role: "member" as const, createdAt: baseTime },
       { id: makeId("mem-b"), organizationId: ORG_B, userId: TARGET, role: "owner" as const, createdAt: baseTime },
+    ])
+
+    // Three sessions for TARGET:
+    //   - LIVE: a normal browser session that should surface
+    //   - IMP : an active impersonation by ADMIN (should sort first)
+    //   - DEAD: an expired session (must be filtered out)
+    await pg.db.insert(sessions).values([
+      {
+        id: makeId("s-live"),
+        userId: TARGET,
+        token: "tok-live",
+        ipAddress: "203.0.113.5",
+        userAgent: "Mozilla/5.0",
+        expiresAt: FUTURE,
+        createdAt: new Date("2025-06-02T10:00:00.000Z"),
+        updatedAt: new Date("2025-06-02T11:00:00.000Z"),
+      },
+      {
+        id: makeId("s-imp"),
+        userId: TARGET,
+        token: "tok-imp",
+        ipAddress: "203.0.113.10",
+        userAgent: "Mozilla/5.0",
+        expiresAt: FUTURE,
+        impersonatedBy: ADMIN,
+        // updatedAt earlier than the live session — proves the
+        // impersonation-first sort beats the recency sort.
+        createdAt: new Date("2025-06-02T08:00:00.000Z"),
+        updatedAt: new Date("2025-06-02T09:00:00.000Z"),
+      },
+      {
+        id: makeId("s-dead"),
+        userId: TARGET,
+        token: "tok-dead",
+        ipAddress: "203.0.113.99",
+        userAgent: "Mozilla/5.0",
+        expiresAt: PAST,
+        createdAt: PAST,
+        updatedAt: PAST,
+      },
     ])
   })
 
@@ -83,6 +135,27 @@ describe("AdminUserRepositoryLive.findById", () => {
 
     expect(result.id).toBe(UNMEMBERED)
     expect(result.memberships).toEqual([])
+    expect(result.sessions).toEqual([])
+  })
+
+  it("returns only active sessions, sorts impersonation first, and resolves the impersonator email", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminUserRepository
+        return yield* repo.findById(UserId(TARGET))
+      }),
+    )
+
+    // The expired `tok-dead` session is filtered out by the
+    // `expires_at > now()` predicate; only the two live rows remain.
+    expect(result.sessions.map((s) => s.token)).toEqual(["tok-imp", "tok-live"])
+
+    const [imp, live] = result.sessions
+    if (!imp || !live) throw new Error("expected two sessions")
+    expect(imp.impersonatedByUserId).toBe(ADMIN)
+    expect(imp.impersonatedByEmail).toBe("admin@latitude.so")
+    expect(live.impersonatedByUserId).toBeNull()
+    expect(live.impersonatedByEmail).toBeNull()
   })
 
   it("fails with NotFoundError for a non-existent user id", async () => {

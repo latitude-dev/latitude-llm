@@ -192,4 +192,20 @@ export interface EventPayloads {
     readonly targetUserId: string
     readonly sessionCount: number
   }
+  /**
+   * Emitted when a platform admin signs a user out of a single
+   * session via the per-row Revoke button on the Sessions panel.
+   * The session row carries `sessionId` so audit consumers can
+   * cross-reference the snapshot the admin saw against the row that
+   * was deleted — useful when investigating "which device was
+   * disconnected, and from where?". The session token is
+   * intentionally NOT included on the event: the row is destroyed
+   * immediately and storing the token would needlessly persist a
+   * dead authentication credential in the audit log.
+   */
+  AdminUserSessionRevoked: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly sessionId: string
+  }
 }

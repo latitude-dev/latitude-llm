@@ -16,6 +16,7 @@ import {
 } from "../-components/dashboard/index.ts"
 import { ImpersonateUserButton } from "../-components/impersonate-user-button.tsx"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
+import { SessionsPanel } from "../-components/sessions-panel.tsx"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/users/$userId")({
@@ -103,6 +104,8 @@ function BackofficeUserDetailPage() {
           <MembershipsGrid memberships={memberships} />
         )}
       </DashboardSection>
+
+      <SessionsPanel userId={user.id} userEmail={user.email} sessions={user.sessions} />
 
       <AccountActionsSection>
         <AccountActionRow
