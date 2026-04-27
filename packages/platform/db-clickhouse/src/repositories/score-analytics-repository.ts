@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
+  IssueTagsAggregate,
   IssueTracePage,
   IssueTraceSummary,
   IssueTrendSeries,
@@ -35,6 +36,11 @@ import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Cap on how many of an issue's most-recent traces we read when aggregating
+// tags. Tag distributions converge fast, so a sample of this size captures
+// effectively all tag variants while bounding the join cost for noisy issues.
+const ISSUE_TAG_TRACE_SAMPLE_LIMIT = 200
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
@@ -144,6 +150,11 @@ type IssueTrendSeriesRow = {
   issue_id: string
   bucket: string
   count: string
+}
+
+type IssueTagsRow = {
+  issue_id: string
+  tags: string[]
 }
 
 type CountRow = {
@@ -256,6 +267,11 @@ const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly Issu
     buckets,
   }))
 }
+
+const toIssueTagsAggregate = (row: IssueTagsRow): IssueTagsAggregate => ({
+  issueId: toIssueId(normalizeCHString(row.issue_id)),
+  tags: row.tags.map(normalizeCHString).filter((tag) => tag.length > 0),
+})
 
 const toIssueTraceSummary = (row: IssueTraceSummaryRow): IssueTraceSummary => ({
   traceId: toTraceId(normalizeCHString(row.trace_id)),
@@ -576,6 +592,56 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+        }),
+
+      // -- aggregateTagsByIssues ---------------------------------------------
+      aggregateTagsByIssues: ({ organizationId, projectId, issueIds, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                // Sample the most-recent traces per issue (LIMIT N BY issue_id) so a noisy
+                // issue with tens of thousands of traces doesn't pull every trace row just
+                // to compute a tag union — tag distributions converge quickly.
+                query: `WITH issue_traces AS (
+                        SELECT issue_id, trace_id
+                        FROM (
+                          SELECT issue_id, trace_id, max(created_at) AS last_seen_at
+                          FROM scores
+                          WHERE ${scopeClause(options)}
+                            AND issue_id IN ({issueIds:Array(String)})
+                            AND trace_id != ''
+                          GROUP BY issue_id, trace_id
+                          ORDER BY issue_id, last_seen_at DESC
+                          LIMIT {tracesPerIssue:UInt32} BY issue_id
+                        )
+                      ),
+                      trace_tags AS (
+                        SELECT trace_id, groupUniqArrayArray(tags) AS tags
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id IN (SELECT trace_id FROM issue_traces)
+                        GROUP BY trace_id
+                      )
+                      SELECT
+                        issue_traces.issue_id AS issue_id,
+                        groupUniqArrayArray(trace_tags.tags) AS tags
+                      FROM issue_traces
+                      INNER JOIN trace_tags USING (trace_id)
+                      GROUP BY issue_traces.issue_id`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueIds: Array.from(issueIds) as string[],
+                  tracesPerIssue: ISSUE_TAG_TRACE_SAMPLE_LIMIT,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<IssueTagsRow>()
+            })
+            .pipe(Effect.map((rows) => rows.map(toIssueTagsAggregate)))
         }),
 
       // -- trendByIssue ------------------------------------------------------

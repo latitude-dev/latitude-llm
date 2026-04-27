@@ -37,6 +37,7 @@ const makeListIssuesResult = (): ListIssuesResult => ({
       escalationOccurrenceThreshold: null,
       trend: [],
       evaluations: [],
+      tags: [],
     },
     {
       id: "issue-b",
@@ -59,6 +60,7 @@ const makeListIssuesResult = (): ListIssuesResult => ({
       escalationOccurrenceThreshold: null,
       trend: [],
       evaluations: [],
+      tags: [],
     },
   ],
   totalCount: 2,

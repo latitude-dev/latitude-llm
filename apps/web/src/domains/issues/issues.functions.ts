@@ -92,6 +92,7 @@ const toIssueRecord = (issue: IssueListItem) => ({
   escalationOccurrenceThreshold: issue.escalationOccurrenceThreshold,
   trend: issue.trend.map(toIssuesBucketRecord),
   evaluations: issue.evaluations.map(toEvaluationSummaryRecord),
+  tags: issue.tags,
 })
 
 export type IssueRecord = ReturnType<typeof toIssueRecord>
@@ -181,6 +182,7 @@ const toIssueDetailRecord = (input: {
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
   readonly evaluations: readonly EvaluationSummaryRecord[]
+  readonly tags: readonly string[]
   readonly keepMonitoringDefault: boolean
 }) => ({
   id: input.issue.id,
@@ -201,6 +203,7 @@ const toIssueDetailRecord = (input: {
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
   evaluations: input.evaluations,
+  tags: input.tags,
   keepMonitoringDefault: input.keepMonitoringDefault,
 })
 
@@ -367,7 +370,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         trendFrom.setUTCHours(0, 0, 0, 0)
         const trendScaffold = buildBucketScaffold({ from: trendFrom, to: trendTo })
 
-        const [occurrences, trend, evaluationPage, settings] = yield* Effect.all([
+        const [occurrences, trend, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
           scoreAnalyticsRepository.aggregateByIssues({
             organizationId: orgId,
             projectId,
@@ -386,6 +389,11 @@ export const getIssueDetail = createServerFn({ method: "GET" })
               lifecycle: "active",
               limit: 1000,
             },
+          }),
+          scoreAnalyticsRepository.aggregateTagsByIssues({
+            organizationId: orgId,
+            projectId,
+            issueIds: [issue.id],
           }),
           resolveSettings({ projectId }),
         ])
@@ -409,6 +417,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             buckets: trend,
           }),
           evaluations: evaluationPage.items.map(toEvaluationSummaryRecord),
+          tags: tagsAggregates[0]?.tags ?? [],
           keepMonitoringDefault: settings.keepMonitoring,
         })
       }).pipe(

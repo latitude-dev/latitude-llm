@@ -8,6 +8,7 @@ import {
   Modal,
   Skeleton,
   Switch,
+  TagList,
   Text,
   Tooltip,
   useToast,
@@ -322,6 +323,7 @@ export function IssueDetailDrawer({
                 <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
               )}
             </div>
+            {!isLoading && issue?.tags && issue.tags.length > 0 ? <TagList tags={issue.tags} /> : null}
           </div>
         }
       >

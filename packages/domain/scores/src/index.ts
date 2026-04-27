@@ -40,6 +40,7 @@ export { isImmutableScore } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
+  type IssueTagsAggregate,
   type IssueTracePage,
   type IssueTraceSummary,
   type IssueTrendSeries,

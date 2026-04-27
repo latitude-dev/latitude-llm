@@ -3,6 +3,7 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   type InfiniteTableSelection,
+  TagList,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -20,6 +21,7 @@ import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
 export const ISSUES_COLUMN_OPTIONS = [
   { id: "issue", label: "Issue", required: true },
+  { id: "tags", label: "Tags" },
   { id: "status", label: "Status" },
   { id: "trend", label: "Trend" },
   { id: "seenAt", label: "Seen at" },
@@ -168,6 +170,12 @@ export function IssuesView({
           ) : null}
         </div>
       ),
+    },
+    {
+      key: "tags",
+      header: "Tags",
+      width: 150,
+      render: (issue) => <TagList tags={issue.tags} />,
     },
     {
       key: "status",

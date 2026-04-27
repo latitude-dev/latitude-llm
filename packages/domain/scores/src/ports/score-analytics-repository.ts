@@ -94,6 +94,12 @@ export interface IssueWindowMetric {
   readonly lastSeenAt: Date
 }
 
+/** Per-issue rollup of tags across all traces affected by the issue. */
+export interface IssueTagsAggregate {
+  readonly issueId: IssueId
+  readonly tags: readonly string[]
+}
+
 /** Grouped issue trend result for batched chart reads. */
 export interface IssueTrendSeries {
   readonly issueId: IssueId
@@ -183,6 +189,14 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueIds: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
+
+  // -- Issue tag aggregation across affected traces --------------------------
+  aggregateTagsByIssues(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly IssueTagsAggregate[], RepositoryError, ChSqlClient>
 
   // -- Issue occurrence time-series ------------------------------------------
   trendByIssue(input: {
