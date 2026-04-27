@@ -440,7 +440,7 @@ LLM path (sampled `no-match` or `ambiguous`):
 - Repo-wide grep for `SYSTEM_QUEUE`, `system-queue`, `systemQueue`, `findSystemQueueBySlugInProject`, `provisionSystemQueues` returns no hits.
 - Repo-wide grep for `"SYSTEM"` as a `sourceId` literal returns no hits inside `packages/domain/*` or `apps/*`.
 - `pnpm typecheck` clean. Vitest suites for `@domain/annotation-queues`, `@domain/issues`, `@domain/scores`, `apps/workflows`, `apps/workers` all pass.
-- The whole branch ships as a single PR with one commit per phase.
+- The whole branch ships as a single PR. Phase 2 and Phase 3 are bundled into one commit because the publish/subscribe contract for `start-flagger-workflow` and the `EnqueueFlaggerWorkflowStart` callback shape are shared between the two phases — splitting them would leave one half of the rename in a transiently broken state.
 
 ## Open Items
 

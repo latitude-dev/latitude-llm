@@ -1,7 +1,7 @@
 import { type Score, ScoreRepository } from "@domain/scores"
 import { generateId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { Issue, IssueSource } from "../entities/issue.ts"
+import type { Issue } from "../entities/issue.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
 import { createIssueCentroid, updateIssueCentroid } from "../helpers.ts"
@@ -89,11 +89,7 @@ const buildNewIssueFromScore = ({
   })
 
   const source: IssueSource =
-    score.source === "annotation" && score.sourceId === "SYSTEM"
-      ? "flagger"
-      : score.source === "annotation"
-        ? "annotation"
-        : "custom"
+    score.source === "flagger" ? "flagger" : score.source === "annotation" ? "annotation" : "custom"
 
   return {
     id: generateId<"IssueId">(),
@@ -102,7 +98,6 @@ const buildNewIssueFromScore = ({
     projectId: score.projectId,
     name,
     description,
-    source,
     centroid,
     clusteredAt: centroid.clusteredAt,
     escalatedAt: null,
