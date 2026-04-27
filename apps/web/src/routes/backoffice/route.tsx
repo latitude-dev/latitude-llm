@@ -59,8 +59,16 @@ function BackofficeLayout() {
           <Text.H5 weight="semibold">Backoffice</Text.H5>
         </Link>
         <div className="flex items-center gap-1 ml-2">
-          <Icon icon={ShieldAlertIcon} size="xs" color="destructive" />
-          <Text.H6 color="destructive">Platform staff only</Text.H6>
+          {/*
+           * The "Platform staff only" wayfinding cue stays — it's useful so
+           * staff know they're in the admin surface — but it's rendered in
+           * a muted neutral colour, not destructive. Across the backoffice
+           * red is reserved exclusively for the impersonation banner /
+           * avatar overlay, where it signals an actively-hazardous session
+           * state. Bleeding red into static chrome dilutes that signal.
+           */}
+          <Icon icon={ShieldAlertIcon} size="xs" color="foregroundMuted" />
+          <Text.H6 color="foregroundMuted">Platform staff only</Text.H6>
         </div>
         <div className="flex-1" />
         <Button variant="outline" size="sm" onClick={() => void router.navigate({ to: "/" })}>
