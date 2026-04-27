@@ -1,4 +1,5 @@
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { FLAGGER_DEFAULT_SAMPLING } from "../constants.ts"
@@ -15,7 +16,10 @@ const createTestLayer = () => {
   const { repository, flaggers } = createFakeFlaggerRepository()
   return {
     flaggers,
-    layer: Layer.succeed(FlaggerRepository, repository),
+    layer: Layer.mergeAll(
+      Layer.succeed(FlaggerRepository, repository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+    ),
   }
 }
 

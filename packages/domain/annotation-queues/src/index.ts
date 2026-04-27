@@ -16,7 +16,6 @@ export {
   SYSTEM_QUEUE_FLAGGER_MODEL,
   type SystemQueueDefinition,
 } from "./constants.ts"
-export { type Flagger, FLAGGER_DEFAULT_ENABLED, flaggerSchema } from "./entities/flagger.ts"
 export {
   type AnnotationQueue,
   type AnnotationQueueSettings,
@@ -33,6 +32,7 @@ export {
   type AnnotationQueueItemStatus,
   annotationQueueItemSchema,
 } from "./entities/annotation-queue-items.ts"
+export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
 export { TooManyTracesSelectedError } from "./errors.ts"
 // Re-export strategy registry, strategies, types, and shared utilities from flagger-strategies
 export {
@@ -145,18 +145,26 @@ export {
   deleteQueueUseCase,
 } from "./use-cases/delete-queue.ts"
 export {
-  type DraftSystemQueueAnnotationError,
-  type DraftSystemQueueAnnotationOutput,
-  draftSystemQueueAnnotationUseCase,
-} from "./use-cases/draft-system-queue-annotation.ts"
+  type DraftFlaggerAnnotationError,
+  type DraftFlaggerAnnotationOutput,
+  draftFlaggerAnnotationUseCase,
+} from "./use-cases/draft-flagger-annotation.ts"
+export {
+  type FlaggerAnnotateInput,
+  type FlaggerAnnotateOutput,
+  type FlaggerAnnotatorOutput,
+  flaggerAnnotateInputSchema,
+  flaggerAnnotateOutputSchema,
+  flaggerAnnotatorOutputSchema,
+} from "./use-cases/flagger-annotator-contracts.ts"
 export {
   CACHE_TTL_SECONDS,
-  type EvictProjectSystemQueuesInput,
-  evictProjectSystemQueuesUseCase,
-  type GetProjectSystemQueuesInput,
-  getProjectSystemQueuesUseCase,
-  type SystemQueueCacheEntry,
-} from "./use-cases/get-project-system-queues.ts"
+  type EvictProjectFlaggersInput,
+  evictProjectFlaggersUseCase,
+  type FlaggerCacheEntry,
+  type GetProjectFlaggersInput,
+  getProjectFlaggersUseCase,
+} from "./use-cases/get-project-flaggers.ts"
 export {
   type MarkReviewStartedInput,
   markReviewStartedUseCase,
@@ -169,22 +177,22 @@ export {
 } from "./use-cases/materialize-live-queue-items.ts"
 export { orchestrateTraceEndLiveQueueMaterializationUseCase } from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
 export {
-  type PersistSystemQueueAnnotationError,
-  type PersistSystemQueueAnnotationInput,
-  persistSystemQueueAnnotationUseCase,
-} from "./use-cases/persist-system-queue-annotation.ts"
+  type PersistFlaggerAnnotationError,
+  type PersistFlaggerAnnotationInput,
+  persistFlaggerAnnotationUseCase,
+} from "./use-cases/persist-flagger-annotation.ts"
 export {
   type CheckAmbiguousRateLimit,
   type DroppedReason,
   type EnqueueFlaggerWorkflowStart,
   type FlaggerEnqueueReason,
-  type ProcessDeterministicFlaggersDeps,
-  type ProcessDeterministicFlaggersError,
-  type ProcessDeterministicFlaggersInput,
-  type ProcessDeterministicFlaggersResult,
-  processDeterministicFlaggersUseCase,
+  type ProcessFlaggersDeps,
+  type ProcessFlaggersError,
+  type ProcessFlaggersInput,
+  type ProcessFlaggersResult,
+  processFlaggersUseCase,
   type StrategyDecision,
-} from "./use-cases/process-deterministic-flaggers.ts"
+} from "./use-cases/process-flaggers.ts"
 export {
   type ProvisionFlaggersError,
   type ProvisionFlaggersInput,
@@ -202,29 +210,21 @@ export {
   requestBulkQueueItems,
 } from "./use-cases/request-bulk-queue-items.ts"
 export {
-  type AnnotateTraceForQueueInput,
-  annotateTraceForQueueUseCase,
-  type RunSystemQueueAnnotatorError,
-  type RunSystemQueueAnnotatorInput,
-  type RunSystemQueueAnnotatorResult,
-  runSystemQueueAnnotatorUseCase,
-} from "./use-cases/run-system-queue-annotator.ts"
+  type ClassifyTraceForFlaggerInput,
+  classifyTraceForFlaggerUseCase,
+  type RunFlaggerError,
+  type RunFlaggerInput,
+  type RunFlaggerResult,
+  runFlaggerUseCase,
+} from "./use-cases/run-flagger.ts"
 export {
-  type ClassifyTraceForQueueInput,
-  classifyTraceForQueueUseCase,
-  type RunSystemQueueFlaggerError,
-  type RunSystemQueueFlaggerInput,
-  type RunSystemQueueFlaggerResult,
-  runSystemQueueFlaggerUseCase,
-} from "./use-cases/run-system-queue-flagger.ts"
-export {
-  type SystemQueueAnnotateInput,
-  type SystemQueueAnnotateOutput,
-  type SystemQueueAnnotatorOutput,
-  systemQueueAnnotateInputSchema,
-  systemQueueAnnotateOutputSchema,
-  systemQueueAnnotatorOutputSchema,
-} from "./use-cases/system-queue-annotator-contracts.ts"
+  type AnnotateTraceForFlaggerInput,
+  annotateTraceForFlaggerUseCase,
+  type RunFlaggerAnnotatorError,
+  type RunFlaggerAnnotatorInput,
+  type RunFlaggerAnnotatorResult,
+  runFlaggerAnnotatorUseCase,
+} from "./use-cases/run-flagger-annotator.ts"
 export {
   type UncompleteQueueItemError,
   type UncompleteQueueItemInput,

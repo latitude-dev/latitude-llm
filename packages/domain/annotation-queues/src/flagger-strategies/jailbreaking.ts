@@ -407,6 +407,13 @@ function hasHighPrecisionJailbreakPatterns(trace: Pick<TraceDetail, "allMessages
 // ---------------------------------------------------------------------------
 
 export const jailbreakingStrategy: QueueStrategy = {
+  annotator: {
+    name: "Jailbreaking",
+    description: "Attempts to bypass system or safety constraints",
+    instructions:
+      "Use this queue for prompt injection, instruction hierarchy attacks, policy-evasion attempts, tool abuse intended to bypass guardrails, role or identity escape attempts, or assistant behavior that actually follows those bypass attempts. Do not use it for harmless roleplay or ordinary unsafe requests that the assistant correctly refuses.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.allMessages.length > 0
   },

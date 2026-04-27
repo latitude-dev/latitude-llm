@@ -14,36 +14,36 @@ import { SYSTEM_QUEUE_FLAGGER_MAX_TOKENS, SYSTEM_QUEUE_FLAGGER_MODEL } from "../
 import { getQueueStrategy, hasQueueStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import type { QueueStrategy } from "../flagger-strategies/types.ts"
 
-export interface RunSystemQueueFlaggerInput {
+export interface RunFlaggerInput {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
 }
 
-export interface RunSystemQueueFlaggerResult {
+export interface RunFlaggerResult {
   readonly matched: boolean
 }
 
-export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
+export type RunFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
 /**
  * Input for the pure classifier (no repository dependency).
  *
  * Callers that already hold a `TraceDetail` — eval harnesses, experiment runners,
  * any non-production code that shouldn't touch Clickhouse — use this shape with
- * {@link classifyTraceForQueueUseCase}.
+ * {@link classifyTraceForFlaggerUseCase}.
  *
  * `strategyOverride` is the optimizer seam: when present it replaces the
- * registry lookup keyed by `queueSlug`, so `tools/ai-benchmarks/benchmark:optimize`
+ * registry lookup keyed by `flaggerSlug`, so `tools/ai-benchmarks/benchmark:optimize`
  * can evaluate a candidate strategy file without mutating the global registry.
  * Production never sets this.
  */
-export interface ClassifyTraceForQueueInput {
+export interface ClassifyTraceForFlaggerInput {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly trace: TraceDetail
   readonly strategyOverride?: QueueStrategy
 }
@@ -52,7 +52,7 @@ const systemQueueFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
 })
 
-const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
+const loadTraceDetail = (input: RunFlaggerInput) =>
   Effect.gen(function* () {
     const traceRepository = yield* TraceRepository
 
@@ -82,10 +82,10 @@ const isSchemaMismatchCause = (cause: unknown): boolean => {
  * the trace was either sampled-in on `no-match` or rate-limited through on
  * `ambiguous`. Either way, the job is pure LLM classification.
  */
-export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classifyTraceForQueue")(function* (
-  input: ClassifyTraceForQueueInput,
+export const classifyTraceForFlaggerUseCase = Effect.fn("annotationQueues.classifyTraceForFlagger")(function* (
+  input: ClassifyTraceForFlaggerInput,
 ) {
-  const strategy = input.strategyOverride ?? getQueueStrategy(input.queueSlug)
+  const strategy = input.strategyOverride ?? getQueueStrategy(input.flaggerSlug)
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.trace)) {
     return { matched: false }
@@ -107,7 +107,7 @@ export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classify
         tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },
-          { traceId: input.traceId, queueSlug: input.queueSlug },
+          { traceId: input.traceId, flaggerSlug: input.flaggerSlug },
         ),
       },
     })
@@ -117,13 +117,13 @@ export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classify
         (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
         () =>
           Effect.gen(function* () {
-            yield* Effect.annotateCurrentSpan("queue.flaggerSchemaMismatch", true)
+            yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
             return { matched: false }
           }),
       ),
     )
 
-  return { matched: decisions.matched } satisfies RunSystemQueueFlaggerResult
+  return { matched: decisions.matched } satisfies RunFlaggerResult
 })
 
 /**
@@ -133,23 +133,21 @@ export const classifyTraceForQueueUseCase = Effect.fn("annotationQueues.classify
  * hitting ClickHouse if the queue slug has no registered strategy, no LLM
  * capability, or context is missing.
  */
-export const runSystemQueueFlaggerUseCase = Effect.fn("annotationQueues.runSystemQueueFlagger")(function* (
-  input: RunSystemQueueFlaggerInput,
-) {
-  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+export const runFlaggerUseCase = Effect.fn("annotationQueues.runFlagger")(function* (input: RunFlaggerInput) {
+  yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("flagger.flaggerSlug", input.flaggerSlug)
 
-  if (!hasQueueStrategy(input.queueSlug)) {
+  if (!hasQueueStrategy(input.flaggerSlug)) {
     return { matched: false }
   }
 
-  const strategy = getQueueStrategy(input.queueSlug)
+  const strategy = getQueueStrategy(input.flaggerSlug)
   if (!strategy || !isLlmCapableStrategy(strategy)) {
     return { matched: false }
   }
 
   const trace = yield* loadTraceDetail(input)
-  return yield* classifyTraceForQueueUseCase({ ...input, trace })
+  return yield* classifyTraceForFlaggerUseCase({ ...input, trace })
 })

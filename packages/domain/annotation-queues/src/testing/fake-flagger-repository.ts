@@ -1,10 +1,9 @@
 import { FlaggerId, generateId } from "@domain/shared"
 import { Effect } from "effect"
-import { FLAGGER_DEFAULT_ENABLED } from "../entities/flagger.ts"
-import type { Flagger } from "../entities/flagger.ts"
-import type { FlaggerRepositoryShape } from "../ports/flagger-repository.ts"
-
 import { FLAGGER_DEFAULT_SAMPLING } from "../constants.ts"
+import type { Flagger } from "../entities/flagger.ts"
+import { FLAGGER_DEFAULT_ENABLED } from "../entities/flagger.ts"
+import type { FlaggerRepositoryShape } from "../ports/flagger-repository.ts"
 
 export const createFakeFlaggerRepository = (
   seedOrOverrides?: readonly Flagger[] | Partial<FlaggerRepositoryShape>,

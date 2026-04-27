@@ -17,12 +17,12 @@ import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
-import { type RunSystemQueueFlaggerInput, runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
+import { type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
 
-const INPUT: RunSystemQueueFlaggerInput = {
+const INPUT: RunFlaggerInput = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
-  queueSlug: "jailbreaking",
+  flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
 }
 
@@ -68,7 +68,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
   }
 }
 
-describe("runSystemQueueFlaggerUseCase", () => {
+describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -96,7 +96,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -119,7 +119,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,
           traceId: INPUT.traceId,
-          queueSlug: "jailbreaking",
+          flaggerSlug: "jailbreaking",
         },
       },
     })
@@ -133,7 +133,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
   })
 
   // Note: deterministic short-circuiting now happens in the `deterministic-flaggers`
-  // worker upstream of this use-case. By the time `runSystemQueueFlaggerUseCase` is
+  // worker upstream of this use-case. By the time `runFlaggerUseCase` is
   // invoked (via the Temporal activity), the trace was either sampled-in on no-match
   // or rate-limited through on ambiguous — so this layer always calls the LLM.
   // The deterministic behavior is covered by `process-deterministic-flaggers.test.ts`
@@ -149,7 +149,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -191,7 +191,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -244,7 +244,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -286,7 +286,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -312,7 +312,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "resource-outliers" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "resource-outliers" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -336,7 +336,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "not-a-real-queue" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "not-a-real-queue" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -376,7 +376,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const exit = await Effect.runPromise(
       Effect.exit(
-        runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
+        runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(TraceRepository, repository),
@@ -435,7 +435,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -478,7 +478,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -519,7 +519,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -568,7 +568,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "nsfw" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "nsfw" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),

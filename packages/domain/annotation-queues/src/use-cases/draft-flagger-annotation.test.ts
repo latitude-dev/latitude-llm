@@ -1,7 +1,6 @@
 import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
-  AnnotationQueueId,
   ChSqlClient,
   ExternalUserId,
   OrganizationId,
@@ -9,23 +8,18 @@ import {
   SessionId,
   SimulationId,
   SpanId,
-  SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { AnnotationQueue } from "../entities/annotation-queue.ts"
-import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
-import { createFakeAnnotationQueueRepository } from "../testing/fake-annotation-queue-repository.ts"
-import { draftSystemQueueAnnotationUseCase } from "./draft-system-queue-annotation.ts"
+import { draftFlaggerAnnotationUseCase } from "./draft-flagger-annotation.ts"
 
 const ORG_ID = "a".repeat(24)
 const PROJECT_ID = "b".repeat(24)
 const TRACE_ID = "c".repeat(32)
-const QUEUE_ID = AnnotationQueueId("qqqqqqqqqqqqqqqqqqqqqqqq")
 
 const makeTraceDetail = (): TraceDetail => ({
   organizationId: OrganizationId(ORG_ID),
@@ -62,30 +56,11 @@ const makeTraceDetail = (): TraceDetail => ({
   allMessages: [{ role: "user", parts: [{ type: "text", content: "hello" }] }],
 })
 
-const makeSystemQueue = (): AnnotationQueue => ({
-  id: QUEUE_ID,
-  organizationId: OrganizationId(ORG_ID),
-  projectId: ProjectId(PROJECT_ID),
-  system: true,
-  name: "Jailbreaking",
-  slug: "jailbreaking",
-  description: "",
-  instructions: "",
-  settings: {},
-  assignees: [],
-  totalItems: 0,
-  completedItems: 0,
-  deletedAt: null,
-  createdAt: new Date("2026-01-01T00:00:00.000Z"),
-  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-})
-
-describe("draftSystemQueueAnnotationUseCase", () => {
+describe("draftFlaggerAnnotationUseCase", () => {
   it("generates a scoreId, returns it in the output, and forwards it to the annotator's telemetry", async () => {
     const { repository: traceRepo } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(makeTraceDetail()),
     })
-    const { repository: queueRepo } = createFakeAnnotationQueueRepository([makeSystemQueue()])
     const { calls, layer: aiLayer } = createFakeAI({
       generate: <T>() =>
         Effect.succeed({
@@ -96,17 +71,15 @@ describe("draftSystemQueueAnnotationUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      draftSystemQueueAnnotationUseCase({
+      draftFlaggerAnnotationUseCase({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
-        queueSlug: "jailbreaking",
+        flaggerSlug: "jailbreaking",
         traceId: TRACE_ID,
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
-            Layer.succeed(AnnotationQueueRepository, queueRepo),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             aiLayer,
           ),
@@ -118,8 +91,8 @@ describe("draftSystemQueueAnnotationUseCase", () => {
     expect(result.scoreId).toBeTruthy()
     expect(typeof result.scoreId).toBe("string")
     expect(result.scoreId.length).toBeGreaterThan(0)
-    expect(result.queueId).toBe(QUEUE_ID)
     expect(result.feedback).toBe("Draft feedback")
+    expect(result.traceId).toBe(TRACE_ID)
 
     // Identity: the same scoreId that's returned in the output MUST be the one
     // stamped on the LLM telemetry metadata (the whole point of generating it
@@ -131,44 +104,9 @@ describe("draftSystemQueueAnnotationUseCase", () => {
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         traceId: TRACE_ID,
-        queueSlug: "jailbreaking",
+        flaggerSlug: "jailbreaking",
         scoreId: result.scoreId,
       }),
     })
-  })
-
-  it("fails cleanly when the system queue does not exist in the project", async () => {
-    const { repository: traceRepo } = createFakeTraceRepository({
-      findByTraceId: () => Effect.succeed(makeTraceDetail()),
-    })
-    const { repository: queueRepo } = createFakeAnnotationQueueRepository([])
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>() => Effect.succeed({ object: { feedback: "unreachable" } as T, tokens: 0, duration: 0 }),
-    })
-
-    const exit = await Effect.runPromiseExit(
-      draftSystemQueueAnnotationUseCase({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        queueSlug: "not-provisioned",
-        traceId: TRACE_ID,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(TraceRepository, traceRepo),
-            Layer.succeed(AnnotationQueueRepository, queueRepo),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
-            aiLayer,
-          ),
-        ),
-      ),
-    )
-
-    expect(exit._tag).toBe("Failure")
-    if (exit._tag === "Failure") {
-      expect(JSON.stringify(exit.cause)).toContain("BadRequestError")
-      expect(JSON.stringify(exit.cause)).toContain("not-provisioned")
-    }
   })
 })

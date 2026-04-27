@@ -66,7 +66,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
     listByIssueId: () => Effect.succeed(EMPTY_PAGE),
-    findQueueDraftByTraceId: () => Effect.succeed(null),
+    findFlaggerDraftByTraceAndFlaggerId: () => Effect.succeed(null),
     ...overrides,
   }
 

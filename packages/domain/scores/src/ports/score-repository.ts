@@ -91,13 +91,14 @@ export interface ScoreRepositoryShape {
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /**
-   * Finds an existing queue-backed draft annotation by (queueId, traceId).
-   * Only returns draft annotations (draftedAt != null), never published rows.
-   * Used for idempotency in system queue annotate workflows.
+   * Finds an existing flagger-authored draft annotation by (flaggerId, traceId).
+   * Only returns draft annotations (`draftedAt != null`) where
+   * `(source, sourceId) === ("flagger", <flaggerId>)`. Used for idempotency in
+   * the flagger workflow's persist step.
    */
-  findQueueDraftByTraceId(input: {
+  findFlaggerDraftByTraceAndFlaggerId(input: {
     readonly projectId: ProjectId
-    readonly queueId: string
+    readonly flaggerId: string
     readonly traceId: TraceId
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }

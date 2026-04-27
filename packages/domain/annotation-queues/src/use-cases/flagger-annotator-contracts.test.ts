@@ -1,31 +1,33 @@
 import { describe, expect, it } from "vitest"
 import {
-  systemQueueAnnotateInputSchema,
-  systemQueueAnnotateOutputSchema,
-  systemQueueAnnotatorOutputSchema,
-} from "./system-queue-annotator-contracts.ts"
+  flaggerAnnotateInputSchema,
+  flaggerAnnotateOutputSchema,
+  flaggerAnnotatorOutputSchema,
+} from "./flagger-annotator-contracts.ts"
 
-describe("systemQueueAnnotateInputSchema", () => {
+describe("flaggerAnnotateInputSchema", () => {
   it("accepts valid input", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(true)
   })
 
   it("rejects missing organizationId", () => {
     const input = {
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -33,22 +35,24 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
   it("rejects missing projectId", () => {
     const input = {
       organizationId: "org_123",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -56,34 +60,36 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "org_123",
       projectId: "",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
-  it("rejects missing queueSlug", () => {
+  it("rejects missing flaggerSlug", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
-  it("rejects empty queueSlug", () => {
+  it("rejects empty flaggerSlug", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "",
       traceId: "trace_789",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -91,10 +97,11 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -102,11 +109,12 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "",
       scoreId: "score_abc",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -114,10 +122,11 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 
@@ -125,102 +134,115 @@ describe("systemQueueAnnotateInputSchema", () => {
     const input = {
       organizationId: "org_123",
       projectId: "proj_456",
-      queueSlug: "jailbreaking",
+      flaggerId: "flagger_xyz",
+      flaggerSlug: "jailbreaking",
       traceId: "trace_789",
       scoreId: "",
     }
-    const result = systemQueueAnnotateInputSchema.safeParse(input)
+    const result = flaggerAnnotateInputSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects missing flaggerId", () => {
+    const input = {
+      organizationId: "org_123",
+      projectId: "proj_456",
+      flaggerSlug: "jailbreaking",
+      traceId: "trace_789",
+      scoreId: "score_abc",
+    }
+    const result = flaggerAnnotateInputSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
 })
 
-describe("systemQueueAnnotateOutputSchema", () => {
+describe("flaggerAnnotateOutputSchema", () => {
   it("accepts valid output", () => {
     const output = {
-      queueId: "queue_123",
+      flaggerId: "flagger_123",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
       wasCreated: true,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(true)
   })
 
   it("accepts wasCreated false", () => {
     const output = {
-      queueId: "queue_123",
+      flaggerId: "flagger_123",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
       wasCreated: false,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(true)
   })
 
-  it("rejects missing queueId", () => {
+  it("rejects missing flaggerId", () => {
     const output = {
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
       wasCreated: true,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 
-  it("rejects empty queueId", () => {
+  it("rejects empty flaggerId", () => {
     const output = {
-      queueId: "",
+      flaggerId: "",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
       wasCreated: true,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 
   it("rejects missing traceId", () => {
     const output = {
-      queueId: "queue_123",
+      flaggerId: "flagger_123",
       draftAnnotationId: "draft_789",
       wasCreated: true,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 
   it("rejects missing draftAnnotationId", () => {
     const output = {
-      queueId: "queue_123",
+      flaggerId: "flagger_123",
       traceId: "trace_456",
       wasCreated: true,
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 
   it("rejects missing wasCreated", () => {
     const output = {
-      queueId: "queue_123",
+      flaggerId: "flagger_123",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
     }
-    const result = systemQueueAnnotateOutputSchema.safeParse(output)
+    const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 })
 
-describe("systemQueueAnnotatorOutputSchema", () => {
+describe("flaggerAnnotatorOutputSchema", () => {
   it("accepts valid feedback", () => {
     const output = {
       feedback: "This response contains a jailbreak attempt.",
     }
-    const result = systemQueueAnnotatorOutputSchema.safeParse(output)
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
     expect(result.success).toBe(true)
   })
 
   it("rejects missing feedback", () => {
     const output = {}
-    const result = systemQueueAnnotatorOutputSchema.safeParse(output)
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 
@@ -228,7 +250,7 @@ describe("systemQueueAnnotatorOutputSchema", () => {
     const output = {
       feedback: "",
     }
-    const result = systemQueueAnnotatorOutputSchema.safeParse(output)
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
   })
 })

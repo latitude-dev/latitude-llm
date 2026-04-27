@@ -248,6 +248,13 @@ export function getStageWorkSignals(stage: ConversationStage): WorkSignals {
 // ---------------------------------------------------------------------------
 
 export const lazinessStrategy: QueueStrategy = {
+  annotator: {
+    name: "Laziness",
+    description: "The assistant avoids doing the requested work",
+    instructions:
+      "Use this queue when the assistant gives a shallow partial answer, stops early without justification, refuses to inspect provided context, or pushes work back onto the user that the assistant should have done itself. Do not use it when the task is genuinely blocked by missing access, missing context, or policy constraints.",
+  },
+
   // empty-response matched → no assistant text to evaluate.
   // trashing matched → assistant is stuck looping on identical tool calls,
   // a different failure mode than deferring/punting work.
