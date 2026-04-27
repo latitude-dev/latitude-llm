@@ -12,10 +12,11 @@
   "scripts": {
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
   }
 }

@@ -11,10 +11,11 @@
     "start": "node --no-experimental-webstorage .output/server/index.mjs",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/admin": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",

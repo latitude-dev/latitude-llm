@@ -10,7 +10,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
-  getTraceCohortSummaryByProject,
+  getTraceCohortSummaryByTags,
   getTraceDetail,
   getTraceDistinctValues,
   getTraceMetricsByProject,
@@ -28,10 +28,12 @@ export function useTracesInfiniteScroll({
   projectId,
   sorting,
   filters,
+  searchQuery,
 }: {
   readonly projectId: string
   readonly sorting: InfiniteTableSorting
   readonly filters?: FilterSet
+  readonly searchQuery?: string
 }) {
   const {
     data: paginatedData,
@@ -40,7 +42,7 @@ export function useTracesInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["traces", projectId, sorting, filters],
+    queryKey: ["traces", projectId, sorting, filters, searchQuery],
     queryFn: async ({ pageParam }) => {
       const result = await listTracesByProject({
         data: {
@@ -50,6 +52,7 @@ export function useTracesInfiniteScroll({
           sortBy: sorting.column,
           sortDirection: sorting.direction,
           filters,
+          searchQuery,
         },
       })
       return result ?? { traces: [], hasMore: false }
@@ -75,10 +78,18 @@ export function useTracesInfiniteScroll({
   return { data, isLoading, infiniteScroll }
 }
 
-export function useTracesCount({ projectId, filters }: { readonly projectId: string; readonly filters?: FilterSet }) {
+export function useTracesCount({
+  projectId,
+  filters,
+  searchQuery,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+  readonly searchQuery?: string
+}) {
   const { data: totalCount = 0, isLoading } = useQuery({
-    queryKey: ["traces-count", projectId, filters],
-    queryFn: () => countTracesByProject({ data: { projectId, filters } }),
+    queryKey: ["traces-count", projectId, filters, searchQuery],
+    queryFn: () => countTracesByProject({ data: { projectId, filters, searchQuery } }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
   })
@@ -86,34 +97,47 @@ export function useTracesCount({ projectId, filters }: { readonly projectId: str
   return { totalCount, isLoading }
 }
 
-export function useTraceMetrics({ projectId, filters }: { readonly projectId: string; readonly filters?: FilterSet }) {
+export function useTraceMetrics({
+  projectId,
+  filters,
+  searchQuery,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+  readonly searchQuery?: string
+}) {
   return useQuery({
-    queryKey: ["traces-metrics", projectId, filters],
+    queryKey: ["traces-metrics", projectId, filters, searchQuery],
     queryFn: () =>
       getTraceMetricsByProject({
         data: {
           projectId,
           ...(filters ? { filters } : {}),
+          ...(searchQuery ? { searchQuery } : {}),
         },
       }),
     staleTime: 30_000,
   })
 }
 
-export function useTraceCohortSummary({
+export function useTraceCohortSummaryByTags({
   projectId,
-  filters,
+  tags,
 }: {
   readonly projectId: string
-  readonly filters?: FilterSet
+  readonly tags: ReadonlyArray<string>
 }) {
+  // Canonicalize the tag combination for a stable cache key: dedupe + sort so that
+  // ["a","b"] and ["b","a"] share a single query. Tag comparison is case-sensitive
+  // on the backend (ClickHouse String equality), so do NOT lowercase.
+  const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
   return useQuery<TraceCohortSummary>({
-    queryKey: ["traces-cohort-summary", projectId, filters],
+    queryKey: ["traces-cohort-summary-by-tags", projectId, sortedTags],
     queryFn: () =>
-      getTraceCohortSummaryByProject({
+      getTraceCohortSummaryByTags({
         data: {
           projectId,
-          ...(filters ? { filters } : {}),
+          tags: sortedTags,
         },
       }),
     staleTime: 30_000,
@@ -124,11 +148,13 @@ export function useTraceCohortSummary({
 export function useTraceTimeHistogram({
   projectId,
   filters,
+  searchQuery,
   rangeStartIso: rangeStartIsoOverride,
   rangeEndIso: rangeEndIsoOverride,
 }: {
   readonly projectId: string
   readonly filters: FilterSet
+  readonly searchQuery?: string
   readonly rangeStartIso?: string
   readonly rangeEndIso?: string
 }) {
@@ -147,9 +173,17 @@ export function useTraceTimeHistogram({
       rangeStartIso: effectiveRangeStartIso,
       rangeEndIso: effectiveRangeEndIso,
       bucketSeconds: bs,
-      queryKey: ["traces-histogram", projectId, filters, effectiveRangeStartIso, effectiveRangeEndIso, bs] as const,
+      queryKey: [
+        "traces-histogram",
+        projectId,
+        filters,
+        searchQuery,
+        effectiveRangeStartIso,
+        effectiveRangeEndIso,
+        bs,
+      ] as const,
     }
-  }, [projectId, filters, rangeStartIsoOverride, rangeEndIsoOverride])
+  }, [projectId, filters, searchQuery, rangeStartIsoOverride, rangeEndIsoOverride])
 
   const query = useQuery({
     queryKey,
@@ -161,6 +195,7 @@ export function useTraceTimeHistogram({
           rangeEndIso,
           bucketSeconds,
           ...(Object.keys(filters).length > 0 ? { filters } : {}),
+          ...(searchQuery ? { searchQuery } : {}),
         },
       }),
     staleTime: 30_000,

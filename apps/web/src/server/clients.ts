@@ -2,7 +2,13 @@ import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } 
 import { generateId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createBetterAuth, createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import {
+  createBetterAuth,
+  createOutboxWriter,
+  createPostgresClient,
+  type PostgresClient,
+  SqlClientLive,
+} from "@platform/db-postgres"
 import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -29,23 +35,6 @@ let redisInstance: RedisClient | undefined
 let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
-
-const getEmailFlowFromMagicLinkUrl = ({
-  magicLinkUrl,
-  webUrl,
-}: {
-  magicLinkUrl: string
-  webUrl: string
-}): "signin" | "signup" | null => {
-  const parsedMagicLinkUrl = new URL(magicLinkUrl)
-  const callbackUrl = parsedMagicLinkUrl.searchParams.get("callbackURL")
-
-  if (!callbackUrl) return null
-
-  const parsedCallbackUrl = new URL(callbackUrl, webUrl)
-  const emailFlowRaw = parsedCallbackUrl.searchParams.get("emailFlow")
-  return emailFlowRaw === "signin" || emailFlowRaw === "signup" ? emailFlowRaw : null
-}
 
 /**
  * Postgres client using the admin (superuser) connection.
@@ -187,7 +176,7 @@ export const getBetterAuth = () => {
               organizationId: "system",
               payload: { userId: user.id, email: user.email },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       onMemberCreated: async (member) => {
@@ -204,12 +193,10 @@ export const getBetterAuth = () => {
                 role: member.role,
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       sendMagicLink: async ({ email, url }) => {
-        const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })
-
         await Effect.runPromise(
           outboxWriter
             .write({
@@ -221,10 +208,9 @@ export const getBetterAuth = () => {
                 email,
                 magicLinkUrl: url,
                 organizationId: "system",
-                emailFlow,
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
       sendInvitationEmail: async (data) => {
@@ -248,7 +234,7 @@ export const getBetterAuth = () => {
               },
               occurredAt: new Date(),
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
         await Effect.runPromise(
           outboxWriter
@@ -264,7 +250,7 @@ export const getBetterAuth = () => {
                 role: data.role,
               },
             })
-            .pipe(withTracing),
+            .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
       },
     })

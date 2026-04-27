@@ -37,14 +37,16 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
       logTouchBuffer: options.logTouchBuffer,
     }),
   )
-  routes.use("/:organizationId/*", createOrganizationContextMiddleware())
+  // The org entity is loaded on every protected request from the API key's
+  // resolved org id. No path param feeds into it — see the middleware.
+  routes.use("*", createOrganizationContextMiddleware())
 
-  routes.route("/:organizationId/projects", createProjectsRoutes())
-  routes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
-  routes.route("/:organizationId/projects/:projectId/annotations", createAnnotationsRoutes())
-  routes.route("/:organizationId/api-keys", createApiKeysRoutes())
+  routes.route("/projects", createProjectsRoutes())
+  routes.route("/projects/:projectSlug/scores", createScoresRoutes())
+  routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
+  routes.route("/api-keys", createApiKeysRoutes())
 
-  v1.route("/organizations", routes)
+  v1.route("/", routes)
 
   app.route("/v1", v1)
 }

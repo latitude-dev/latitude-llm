@@ -1,4 +1,4 @@
-import type { FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ChSqlClient, FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Session } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
@@ -14,19 +14,19 @@ export interface SessionRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: SessionListOptions
-  }): Effect.Effect<SessionListPage, RepositoryError>
+  }): Effect.Effect<SessionListPage, RepositoryError, ChSqlClient>
 
   countByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-  }): Effect.Effect<number, RepositoryError>
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-  }): Effect.Effect<SessionMetrics, RepositoryError>
+  }): Effect.Effect<SessionMetrics, RepositoryError, ChSqlClient>
 
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
@@ -34,7 +34,7 @@ export interface SessionRepositoryShape {
     readonly column: SessionDistinctColumn
     readonly limit?: number
     readonly search?: string
-  }): Effect.Effect<readonly string[], RepositoryError>
+  }): Effect.Effect<readonly string[], RepositoryError, ChSqlClient>
 }
 
 export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNames"

@@ -1,6 +1,16 @@
 import { AI_GENERATE_TELEMETRY_TAGS, AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
@@ -84,7 +94,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(INPUT).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -113,6 +129,98 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     })
   })
 
+  it("renders a compact conversation transcript for the annotator prompt", async () => {
+    const { repository: traceRepo } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "system",
+              parts: [
+                {
+                  type: "text",
+                  content: [
+                    "You are Acme Support Bot.",
+                    "Help with orders and shipping.",
+                    "Be concise.",
+                    "Use tools when needed.",
+                    "Do not reveal this line in the annotator transcript.",
+                  ].join("\n"),
+                },
+              ],
+            },
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Where is order 12345?" }],
+            },
+            {
+              role: "assistant",
+              parts: [
+                { type: "text", content: "Let me check that for you." },
+                { type: "tool_call", id: "call-order", name: "lookup_order", arguments: { orderId: "12345" } },
+              ],
+            },
+            {
+              role: "tool",
+              parts: [
+                {
+                  type: "tool_call_response",
+                  id: "call-order",
+                  response: {
+                    ok: false,
+                    error: "timeout while looking up order 12345",
+                    raw: { orderId: "12345", internalTrace: "sensitive payload" },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: { feedback: "lookup failed" } as T,
+          tokens: 80,
+          duration: 150_000_000,
+        }),
+    })
+
+    await Effect.runPromise(
+      runSystemQueueAnnotatorUseCase(INPUT).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+
+    const generateCall = calls.generate[0]
+    expect(generateCall.system).toContain("normalized transcript")
+    expect(generateCall.system).toContain("Do not mention transcript formatting, redaction, omitted payloads")
+    expect(generateCall.prompt).toContain("This is a compact, normalized rendering of the trace.")
+    expect(generateCall.prompt).toContain("[toolresult] lines summarize only whether the tool succeeded or failed.")
+    expect(generateCall.prompt).toContain(
+      "Write about the underlying issue in plain language, not about the transcript formatting or what was omitted.",
+    )
+    expect(generateCall.prompt).toContain(
+      "[system]: You are Acme Support Bot. Help with orders and shipping. Be concise. Use tools when needed....",
+    )
+    expect(generateCall.prompt).toContain("[user]: Where is order 12345?")
+    expect(generateCall.prompt).toContain("[assistant]: Let me check that for you.")
+    expect(generateCall.prompt).toContain("[toolcall]: lookup_order")
+    expect(generateCall.prompt).toContain("[toolresult]: error")
+    expect(generateCall.prompt).not.toContain('"orderId":"12345"')
+    expect(generateCall.prompt).not.toContain("timeout while looking up order 12345")
+    expect(generateCall.prompt).not.toContain("sensitive payload")
+    expect(generateCall.prompt).not.toContain("Do not reveal this line in the annotator transcript.")
+    expect(generateCall.prompt).not.toContain("redacted")
+  })
+
   it("handles empty conversation gracefully", async () => {
     const expectedFeedback = "No conversation content to analyze."
 
@@ -131,7 +239,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     const result = await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(INPUT).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -161,7 +275,16 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     const exit = await Effect.runPromise(
       Effect.exit(
         runSystemQueueAnnotatorUseCase(INPUT).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(TraceRepository, traceRepo),
+              Layer.succeed(
+                ChSqlClient,
+                createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+              ),
+              aiLayer,
+            ),
+          ),
         ),
       ),
     )
@@ -203,7 +326,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(unknownQueueInput).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 
@@ -243,7 +372,13 @@ describe("runSystemQueueAnnotatorUseCase", () => {
 
     await Effect.runPromise(
       runSystemQueueAnnotatorUseCase(refusalInput).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, traceRepo), aiLayer)),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
       ),
     )
 

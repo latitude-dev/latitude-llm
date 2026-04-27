@@ -12,13 +12,19 @@ import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-ut
 
 const API_TEST_ANCHOR_TRACE_ID = "22222222222222222222222222222222" as const
 
-const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, projectId: string) => {
+const createProjectRecord = async (
+  database: InMemoryPostgres,
+  organizationId: string,
+  projectId: string,
+): Promise<string> => {
+  const slug = `project-${projectId.slice(0, 8)}`
   await database.db.insert(projects).values({
     id: projectId,
     organizationId,
     name: `Project ${projectId}`,
-    slug: `project-${projectId.slice(0, 8)}`,
+    slug,
   })
+  return slug
 }
 
 const textMessage = (role: "user" | "assistant", content: string): SpanDetail["inputMessages"][number] => ({
@@ -106,7 +112,7 @@ describe("Annotations Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "aaaaaaaaaaaaaaaaaaaaaaaa"
     const traceId = "11111111111111111111111111111111"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
       organizationId: tenant.organizationId,
@@ -115,7 +121,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -153,7 +159,7 @@ describe("Annotations Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "ffffffffffffffffffffffff"
     const traceId = "99999999999999999999999999999999"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
       organizationId: tenant.organizationId,
@@ -162,7 +168,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -200,7 +206,7 @@ describe("Annotations Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "gggggggggggggggggggggggg"
     const traceId = "88888888888888888888888888888888"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
       organizationId: tenant.organizationId,
@@ -210,7 +216,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -236,10 +242,10 @@ describe("Annotations Routes Integration", () => {
   it<ApiTestContext>("returns 404 when trace filters resolve to zero traces", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "hhhhhhhhhhhhhhhhhhhhhhhh"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -273,7 +279,7 @@ describe("Annotations Routes Integration", () => {
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "iiiiiiiiiiiiiiiiiiiiiiii"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
       organizationId: tenant.organizationId,
@@ -290,7 +296,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -323,7 +329,7 @@ describe("Annotations Routes Integration", () => {
   it<ApiTestContext>("creates annotation with anchor metadata", async ({ app, database, clickhouse }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "bbbbbbbbbbbbbbbbbbbbbbbb"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedAnnotationTrace({
       clickhouse,
       organizationId: tenant.organizationId,
@@ -334,7 +340,7 @@ describe("Annotations Routes Integration", () => {
     })
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -366,10 +372,10 @@ describe("Annotations Routes Integration", () => {
   it<ApiTestContext>("returns 400 with { error } shape for invalid payloads", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
-    await createProjectRecord(database, tenant.organizationId, projectId)
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -400,10 +406,10 @@ describe("Annotations Routes Integration", () => {
 
   it<ApiTestContext>("returns 404 for non-existent project", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const fakeProjectId = "nnnnnnnnnnnnnnnnnnnnnnnn"
+    const fakeProjectSlug = "nonexistent-project-slug"
 
     const response = await app.fetch(
-      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${fakeProjectId}/annotations`, {
+      new Request(`http://localhost/v1/projects/${fakeProjectSlug}/annotations`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),

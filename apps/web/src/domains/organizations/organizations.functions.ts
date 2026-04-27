@@ -4,7 +4,12 @@ import {
   updateOrganizationUseCase,
 } from "@domain/organizations"
 import { OrganizationId, UserId } from "@domain/shared"
-import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  MembershipRepositoryLive,
+  OrganizationRepositoryLive,
+  SqlClientLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
@@ -62,14 +67,14 @@ export const createOrganization = createServerFn({ method: "POST" })
             slug,
           },
         })
-        .pipe(withTracing),
+        .pipe(Effect.provide(SqlClientLive(adminClient, OrganizationId(organization.id))), withTracing),
     )
 
     return organization
   })
 
 const organizationSettingsSchema = z.object({
-  keepMonitoring: z.boolean().optional(),
+  keepMonitoring: z.boolean().optional(), // TODO: deprecated. Removed from frontend but maintained to keep cascaded settings scaffold
 })
 
 export const updateOrganization = createServerFn({ method: "POST" })

@@ -148,226 +148,226 @@ const evictSystemQueueCache = (queue: Pick<AnnotationQueue, "organizationId" | "
 export const AnnotationQueueRepositoryLive = Layer.effect(
   AnnotationQueueRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-
     return {
-      listByProject: ({ projectId, options }) => {
-        const limit = options.limit ?? DEFAULT_LIMIT
-        const { sortBy, sortDirection } = resolveSort(options.sortBy, options.sortDirection)
-        const cursorClause = options.cursor ? cursorWhere(sortBy, sortDirection, options.cursor) : undefined
-        if (options.cursor && cursorClause === null) {
-          return Effect.fail(
-            new RepositoryError({
+      listByProject: ({ projectId, options }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const limit = options.limit ?? DEFAULT_LIMIT
+          const { sortBy, sortDirection } = resolveSort(options.sortBy, options.sortDirection)
+          const cursorClause = options.cursor ? cursorWhere(sortBy, sortDirection, options.cursor) : undefined
+          if (options.cursor && cursorClause === null) {
+            return yield* new RepositoryError({
               operation: "listByProject",
               cause: new Error("Invalid queue list cursor"),
-            }),
-          )
-        }
+            })
+          }
 
-        const [o1, o2] = orderClause(sortBy, sortDirection)
+          const [o1, o2] = orderClause(sortBy, sortDirection)
 
-        return sqlClient
-          .query((db, organizationId) => {
-            const whereBase = and(
-              eq(annotationQueues.organizationId, organizationId),
-              eq(annotationQueues.projectId, projectId),
-              isNull(annotationQueues.deletedAt),
+          return yield* sqlClient
+            .query((db, organizationId) => {
+              const whereBase = and(
+                eq(annotationQueues.organizationId, organizationId),
+                eq(annotationQueues.projectId, projectId),
+                isNull(annotationQueues.deletedAt),
+              )
+              const where = cursorClause ? and(whereBase, cursorClause) : whereBase
+
+              return db
+                .select()
+                .from(annotationQueues)
+                .where(where)
+                .orderBy(o1, o2)
+                .limit(limit + 1)
+            })
+            .pipe(
+              Effect.map((rows) => {
+                const hasMore = rows.length > limit
+                const pageRows = rows.slice(0, limit)
+                const items = pageRows.map(toDomainQueue)
+                const tail = pageRows[pageRows.length - 1]
+                const nextCursor =
+                  hasMore && tail !== undefined
+                    ? (tailToCursor(sortBy, tail) as {
+                        sortValue: string
+                        id: string
+                      })
+                    : undefined
+                return {
+                  items,
+                  hasMore,
+                  ...(nextCursor !== undefined ? { nextCursor } : {}),
+                }
+              }),
+              Effect.mapError((cause) => new RepositoryError({ operation: "listByProject", cause })),
             )
-            const where = cursorClause ? and(whereBase, cursorClause) : whereBase
-
-            return db
-              .select()
-              .from(annotationQueues)
-              .where(where)
-              .orderBy(o1, o2)
-              .limit(limit + 1)
-          })
-          .pipe(
-            Effect.map((rows) => {
-              const hasMore = rows.length > limit
-              const pageRows = rows.slice(0, limit)
-              const items = pageRows.map(toDomainQueue)
-              const tail = pageRows[pageRows.length - 1]
-              const nextCursor =
-                hasMore && tail !== undefined
-                  ? (tailToCursor(sortBy, tail) as {
-                      sortValue: string
-                      id: string
-                    })
-                  : undefined
-              return {
-                items,
-                hasMore,
-                ...(nextCursor !== undefined ? { nextCursor } : {}),
-              }
-            }),
-            Effect.mapError((cause) => new RepositoryError({ operation: "listByProject", cause })),
-          )
-      },
+        }),
 
       findByIdInProject: ({ projectId, queueId }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(annotationQueues)
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.id, queueId),
-                  isNull(annotationQueues.deletedAt),
-                ),
-              )
-              .limit(1),
-          )
-          .pipe(
-            Effect.map((rows) => {
-              const row = rows[0]
-              return row !== undefined ? toDomainQueue(row) : null
-            }),
-            Effect.mapError((cause) => new RepositoryError({ operation: "findByIdInProject", cause })),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.id, queueId),
+                    isNull(annotationQueues.deletedAt),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.map((rows) => {
+                const row = rows[0]
+                return row !== undefined ? toDomainQueue(row) : null
+              }),
+              Effect.mapError((cause) => new RepositoryError({ operation: "findByIdInProject", cause })),
+            )
+        }),
 
       findBySlugInProject: ({ projectId, queueSlug }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(annotationQueues)
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.slug, queueSlug),
-                  isNull(annotationQueues.deletedAt),
-                ),
-              )
-              .limit(1),
-          )
-          .pipe(
-            Effect.map((rows) => {
-              const row = rows[0]
-              return row !== undefined ? toDomainQueue(row) : null
-            }),
-            Effect.mapError(
-              (cause) =>
-                new RepositoryError({
-                  operation: "findBySlugInProject",
-                  cause,
-                }),
-            ),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.slug, queueSlug),
+                    isNull(annotationQueues.deletedAt),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.map((rows) => {
+                const row = rows[0]
+                return row !== undefined ? toDomainQueue(row) : null
+              }),
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "findBySlugInProject",
+                    cause,
+                  }),
+              ),
+            )
+        }),
 
       listSystemQueuesByProject: ({ projectId }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(annotationQueues)
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.system, true),
-                  isNull(annotationQueues.deletedAt),
-                ),
-              )
-              .orderBy(annotationQueues.createdAt),
-          )
-          .pipe(
-            Effect.map((rows) => rows.map(toDomainQueue)),
-            Effect.mapError(
-              (cause) =>
-                new RepositoryError({
-                  operation: "listSystemQueuesByProject",
-                  cause,
-                }),
-            ),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.system, true),
+                    isNull(annotationQueues.deletedAt),
+                  ),
+                )
+                .orderBy(annotationQueues.createdAt),
+            )
+            .pipe(
+              Effect.map((rows) => rows.map(toDomainQueue)),
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "listSystemQueuesByProject",
+                    cause,
+                  }),
+              ),
+            )
+        }),
 
       listLiveQueuesByProject: ({ projectId }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(annotationQueues)
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  isNull(annotationQueues.deletedAt),
-                  sql`${annotationQueues.settings}->'filter' IS NOT NULL`,
-                ),
-              )
-              .orderBy(annotationQueues.createdAt),
-          )
-          .pipe(
-            Effect.map((rows) => rows.map(toDomainQueue)),
-            Effect.mapError(
-              (cause) =>
-                new RepositoryError({
-                  operation: "listLiveQueuesByProject",
-                  cause,
-                }),
-            ),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    isNull(annotationQueues.deletedAt),
+                    sql`${annotationQueues.settings}->'filter' IS NOT NULL`,
+                  ),
+                )
+                .orderBy(annotationQueues.createdAt),
+            )
+            .pipe(
+              Effect.map((rows) => rows.map(toDomainQueue)),
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "listLiveQueuesByProject",
+                    cause,
+                  }),
+              ),
+            )
+        }),
 
       findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .select()
-              .from(annotationQueues)
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.system, true),
-                  eq(annotationQueues.slug, queueSlug),
-                ),
-              )
-              .limit(1),
-          )
-          .pipe(
-            Effect.map((rows) => {
-              const row = rows[0]
-              return row !== undefined ? toDomainQueue(row) : null
-            }),
-            Effect.mapError(
-              (cause) =>
-                new RepositoryError({
-                  operation: "findSystemQueueBySlugInProject",
-                  cause,
-                }),
-            ),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.system, true),
+                    eq(annotationQueues.slug, queueSlug),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.map((rows) => {
+                const row = rows[0]
+                return row !== undefined ? toDomainQueue(row) : null
+              }),
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "findSystemQueueBySlugInProject",
+                    cause,
+                  }),
+              ),
+            )
+        }),
 
       save: (queue) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .insert(annotationQueues)
-              .values({
-                ...(queue.id !== undefined ? { id: queue.id } : {}),
-                organizationId,
-                projectId: queue.projectId,
-                system: queue.system,
-                name: queue.name,
-                slug: queue.slug,
-                description: queue.description,
-                instructions: queue.instructions,
-                settings: queue.settings,
-                assignees: queue.assignees,
-                totalItems: queue.totalItems,
-                completedItems: queue.completedItems,
-                deletedAt: queue.deletedAt,
-                createdAt: queue.createdAt,
-                updatedAt: queue.updatedAt,
-              })
-              .onConflictDoUpdate({
-                target: annotationQueues.id,
-                set: {
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .insert(annotationQueues)
+                .values({
+                  ...(queue.id !== undefined ? { id: queue.id } : {}),
+                  organizationId,
+                  projectId: queue.projectId,
+                  system: queue.system,
                   name: queue.name,
                   slug: queue.slug,
                   description: queue.description,
@@ -377,156 +377,185 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                   totalItems: queue.totalItems,
                   completedItems: queue.completedItems,
                   deletedAt: queue.deletedAt,
+                  createdAt: queue.createdAt,
                   updatedAt: queue.updatedAt,
-                },
-              })
-              .returning(),
-          )
-          .pipe(
-            Effect.map((rows) => toDomainQueue(rows[0])),
-            Effect.mapError((cause) => new RepositoryError({ operation: "save", cause })),
-            Effect.tap((saved) => evictSystemQueueCache(saved)),
-          ),
+                })
+                .onConflictDoUpdate({
+                  target: annotationQueues.id,
+                  set: {
+                    name: queue.name,
+                    slug: queue.slug,
+                    description: queue.description,
+                    instructions: queue.instructions,
+                    settings: queue.settings,
+                    assignees: queue.assignees,
+                    totalItems: queue.totalItems,
+                    completedItems: queue.completedItems,
+                    deletedAt: queue.deletedAt,
+                    updatedAt: queue.updatedAt,
+                  },
+                })
+                .returning(),
+            )
+            .pipe(
+              Effect.map((rows) => toDomainQueue(rows[0])),
+              Effect.mapError((cause) => new RepositoryError({ operation: "save", cause })),
+              Effect.tap((saved) => evictSystemQueueCache(saved)),
+            )
+        }),
 
       insertIfNotExists: (queue) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .insert(annotationQueues)
-              .values({
-                id: queue.id,
-                organizationId,
-                projectId: queue.projectId,
-                system: queue.system,
-                name: queue.name,
-                slug: queue.slug,
-                description: queue.description,
-                instructions: queue.instructions,
-                settings: queue.settings,
-                assignees: queue.assignees,
-                totalItems: queue.totalItems,
-                completedItems: queue.completedItems,
-                deletedAt: queue.deletedAt,
-                createdAt: queue.createdAt,
-                updatedAt: queue.updatedAt,
-              })
-              .onConflictDoNothing({
-                target: [
-                  annotationQueues.organizationId,
-                  annotationQueues.projectId,
-                  annotationQueues.slug,
-                  annotationQueues.deletedAt,
-                ],
-              })
-              .returning({ id: annotationQueues.id }),
-          )
-          .pipe(
-            Effect.map((result) => result.length > 0),
-            Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
-            Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .insert(annotationQueues)
+                .values({
+                  id: queue.id,
+                  organizationId,
+                  projectId: queue.projectId,
+                  system: queue.system,
+                  name: queue.name,
+                  slug: queue.slug,
+                  description: queue.description,
+                  instructions: queue.instructions,
+                  settings: queue.settings,
+                  assignees: queue.assignees,
+                  totalItems: queue.totalItems,
+                  completedItems: queue.completedItems,
+                  deletedAt: queue.deletedAt,
+                  createdAt: queue.createdAt,
+                  updatedAt: queue.updatedAt,
+                })
+                .onConflictDoNothing({
+                  target: [
+                    annotationQueues.organizationId,
+                    annotationQueues.projectId,
+                    annotationQueues.slug,
+                    annotationQueues.deletedAt,
+                  ],
+                })
+                .returning({ id: annotationQueues.id }),
+            )
+            .pipe(
+              Effect.map((result) => result.length > 0),
+              Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
+              Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
+            )
+        }),
 
       incrementTotalItems: ({ projectId, queueId, delta = 1 }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(annotationQueues)
-              .set({
-                totalItems: sql`${annotationQueues.totalItems} + ${delta}`,
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.id, queueId),
-                  isNull(annotationQueues.deletedAt),
-                ),
-              )
-              .returning(),
-          )
-          .pipe(
-            Effect.flatMap((rows) => {
-              const row = rows[0]
-              if (row === undefined) {
-                return Effect.fail(
-                  new RepositoryError({
-                    operation: "incrementTotalItems",
-                    cause: new Error(`Queue not found: ${queueId}`),
-                  }),
-                )
-              }
-              return Effect.succeed(toDomainQueue(row))
-            }),
-            Effect.mapError((cause) =>
-              cause instanceof RepositoryError
-                ? cause
-                : new RepositoryError({
-                    operation: "incrementTotalItems",
-                    cause,
-                  }),
-            ),
-            Effect.tap((queue) => evictSystemQueueCache(queue)),
-          ),
-
-      incrementTotalItemsMany: ({ projectId, queueIds }) =>
-        queueIds.length === 0
-          ? Effect.void
-          : sqlClient
-              .query((db, organizationId) =>
-                db
-                  .update(annotationQueues)
-                  .set({
-                    totalItems: sql`${annotationQueues.totalItems} + 1`,
-                    updatedAt: new Date(),
-                  })
-                  .where(
-                    and(
-                      eq(annotationQueues.organizationId, organizationId),
-                      eq(annotationQueues.projectId, projectId),
-                      inArray(annotationQueues.id, [...queueIds]),
-                      isNull(annotationQueues.deletedAt),
-                    ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(annotationQueues)
+                .set({
+                  totalItems: sql`${annotationQueues.totalItems} + ${delta}`,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.id, queueId),
+                    isNull(annotationQueues.deletedAt),
                   ),
-              )
-              .pipe(
-                Effect.asVoid,
-                Effect.mapError(
-                  (cause) =>
+                )
+                .returning(),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (row === undefined) {
+                  return Effect.fail(
                     new RepositoryError({
-                      operation: "incrementTotalItemsMany",
+                      operation: "incrementTotalItems",
+                      cause: new Error(`Queue not found: ${queueId}`),
+                    }),
+                  )
+                }
+                return Effect.succeed(toDomainQueue(row))
+              }),
+              Effect.mapError((cause) =>
+                cause instanceof RepositoryError
+                  ? cause
+                  : new RepositoryError({
+                      operation: "incrementTotalItems",
                       cause,
                     }),
-                ),
               ),
+              Effect.tap((queue) => evictSystemQueueCache(queue)),
+            )
+        }),
+
+      incrementTotalItemsMany: ({ projectId, queueIds }) =>
+        Effect.gen(function* () {
+          if (queueIds.length === 0) {
+            return
+          }
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(annotationQueues)
+                .set({
+                  totalItems: sql`${annotationQueues.totalItems} + 1`,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    inArray(annotationQueues.id, [...queueIds]),
+                    isNull(annotationQueues.deletedAt),
+                  ),
+                ),
+            )
+            .pipe(
+              Effect.asVoid,
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "incrementTotalItemsMany",
+                    cause,
+                  }),
+              ),
+            )
+        }),
 
       incrementCompletedItems: ({ projectId, queueId, delta }) =>
-        sqlClient
-          .query((db, organizationId) =>
-            db
-              .update(annotationQueues)
-              .set({
-                completedItems: sql`GREATEST(0, ${annotationQueues.completedItems} + ${delta})`,
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(annotationQueues.organizationId, organizationId),
-                  eq(annotationQueues.projectId, projectId),
-                  eq(annotationQueues.id, queueId),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(annotationQueues)
+                .set({
+                  completedItems: sql`GREATEST(0, ${annotationQueues.completedItems} + ${delta})`,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.id, queueId),
+                  ),
                 ),
+            )
+            .pipe(
+              Effect.asVoid,
+              Effect.mapError(
+                (cause) =>
+                  new RepositoryError({
+                    operation: "incrementCompletedItems",
+                    cause,
+                  }),
               ),
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.mapError(
-              (cause) =>
-                new RepositoryError({
-                  operation: "incrementCompletedItems",
-                  cause,
-                }),
-            ),
-          ),
+            )
+        }),
     } satisfies AnnotationQueueRepositoryShape
   }),
 )

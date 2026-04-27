@@ -4,8 +4,6 @@
  * Classes:
  *   no-scrollbar           — hide scrollbar while keeping overflow scroll (all browsers)
  *   scrollable-indicator   — gradient fade at top/bottom to indicate scrollable content
- *   custom-scrollbar       — overlay scrollbar with styled thumb (webkit)
- *   custom-scrollbar-screenshot — use with custom-scrollbar to hide overflow in screenshots
  */
 
 /* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
@@ -35,28 +33,22 @@
   background-attachment: local, local, scroll, scroll;
 }
 
-/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
-@utility custom-scrollbar {
-  /* biome-ignore lint/complexity/noImportantStyles: required to override parent overflow so overlay scrollbar works */
-  overflow: overlay !important;
-  &::-webkit-scrollbar {
-    @apply w-5 h-5;
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
   }
-  &::-webkit-scrollbar-thumb {
-    @apply bg-gray-400;
-    @apply rounded-full bg-clip-padding border-solid;
-    @apply border-transparent border-[6px];
-  }
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-  &::-webkit-scrollbar-corner {
-    background-color: transparent;
-  }
-}
 
-/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
-@utility custom-scrollbar-screenshot {
-  /* biome-ignore lint/complexity/noImportantStyles: required so screenshot capture hides overflow reliably */
-  overflow: hidden !important;
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar);
+    border-radius: 5px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar) transparent;
+  }
 }

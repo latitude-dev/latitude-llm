@@ -76,11 +76,11 @@ const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
 export const ApiKeyRepositoryLive = Layer.effect(
   ApiKeyRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
     const encryptionKey = yield* getEncryptionKey()
 
     const list = () =>
       Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const results = yield* sqlClient.query((db, organizationId) =>
           db
             .select()
@@ -94,6 +94,7 @@ export const ApiKeyRepositoryLive = Layer.effect(
     return {
       findById: (id: ApiKeyIdType) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [result] = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
@@ -110,21 +111,28 @@ export const ApiKeyRepositoryLive = Layer.effect(
       list,
 
       delete: (id: ApiKeyIdType) =>
-        sqlClient.query((db, organizationId) =>
-          db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
-        ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient.query((db, organizationId) =>
+            db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
+          )
+        }),
 
       touch: (id: ApiKeyIdType) =>
-        sqlClient.query((db, organizationId) =>
-          db
-            .update(apiKeys)
-            .set({ lastUsedAt: new Date(), updatedAt: new Date() })
-            .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
-        ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(apiKeys)
+              .set({ lastUsedAt: new Date(), updatedAt: new Date() })
+              .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
+          )
+        }),
 
       // Cross-org lookup — uses direct db access (bypasses RLS)
       save: (apiKey: ApiKey) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const row = yield* toInsertRow(apiKey, encryptionKey)
 
           yield* sqlClient.query((db) =>
@@ -141,6 +149,7 @@ export const ApiKeyRepositoryLive = Layer.effect(
       // Cross-org lookup — uses direct db access (bypasses RLS)
       findByTokenHash: (tokenHash: string) =>
         Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [result] = yield* sqlClient.query((db) =>
             db.select().from(apiKeys).where(eq(apiKeys.tokenHash, tokenHash)).limit(1),
           )
@@ -152,14 +161,17 @@ export const ApiKeyRepositoryLive = Layer.effect(
 
       // Cross-org batch update — uses direct db access (bypasses RLS)
       touchBatch: (ids: readonly ApiKeyIdType[]) =>
-        sqlClient
-          .query((db) =>
-            db
-              .update(apiKeys)
-              .set({ lastUsedAt: new Date(), updatedAt: new Date() })
-              .where(inArray(apiKeys.id, ids as ApiKeyIdType[])),
-          )
-          .pipe(Effect.mapError((e) => toRepositoryError(e, "touchBatch"))),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .update(apiKeys)
+                .set({ lastUsedAt: new Date(), updatedAt: new Date() })
+                .where(inArray(apiKeys.id, ids as ApiKeyIdType[])),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "touchBatch")))
+        }),
     }
   }),
 )

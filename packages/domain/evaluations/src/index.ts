@@ -3,7 +3,6 @@ export type {
   BaselineEvaluationExampleResult,
   BaselineEvaluationResult,
   CollectedEvaluationAlignmentExamples,
-  GeneratedEvaluationDetails,
   GeneratedEvaluationDraft,
   HydratedEvaluationAlignmentExample,
   IncrementalEvaluationRefreshResult,
@@ -14,17 +13,14 @@ export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
   ALIGNMENT_DEFAULT_SEED,
-  ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
-  ALIGNMENT_MCC_TOLERANCE,
-  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+  ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS,
+  ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS,
+  ALIGNMENT_METRIC_TOLERANCE,
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
   DEFAULT_EVALUATION_SAMPLING,
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-  EVALUATION_ALIGNMENT_STATE_QUERY,
   EVALUATION_NAME_MAX_LENGTH,
   EVALUATION_TURNS,
-  type EvaluationAlignmentWorkflowState,
 } from "./constants.ts"
 export {
   type ConfusionMatrix,
@@ -59,11 +55,15 @@ export {
   buildLiveEvaluationExecuteTraceDedupeKey,
   type ConfusionMatrixObservation,
   calculateAccuracy,
+  calculateAlignmentMetric,
+  calculateAlignmentMetricDrop,
+  calculateBalancedAccuracy,
   calculateF1,
   calculateMatthewsCorrelationCoefficient,
-  calculateMatthewsCorrelationCoefficientDrop,
   calculatePrecision,
   calculateRecall,
+  calculateSpecificity,
+  calculateTrueness,
   decideAlignmentRefreshStrategy,
   deriveConfusionMatrix,
   deriveEvaluationAlignmentMetrics,
@@ -71,7 +71,7 @@ export {
   emptyConfusionMatrix,
   getLiveEvaluationEligibility,
   getLiveEvaluationTurnScope,
-  hasMatthewsCorrelationCoefficientDropExceededTolerance,
+  hasAlignmentMetricDropExceededTolerance,
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
@@ -79,7 +79,6 @@ export {
   softDeleteEvaluation,
   toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
-  truncateEvaluationName,
   unarchiveEvaluation,
 } from "./helpers.ts"
 export {
@@ -89,9 +88,11 @@ export {
   EvaluationAlignmentExamplesRepository,
   type EvaluationAlignmentExamplesRepositoryShape,
   type EvaluationAlignmentNegativePriority,
+  type EvaluationAlignmentPositivePriority,
   evaluationAlignmentExampleLabelSchema,
   evaluationAlignmentExampleSchema,
   evaluationAlignmentNegativePrioritySchema,
+  evaluationAlignmentPositivePrioritySchema,
   type ListEvaluationAlignmentExamplesInput,
   type ListNegativeEvaluationAlignmentExamplesInput,
 } from "./ports/evaluation-alignment-examples-repository.ts"
@@ -115,7 +116,6 @@ export {
 export {
   buildEvaluationAlignmentJudgeTelemetryCapture,
   buildEvaluationGepaProposeTelemetryCapture,
-  buildEvaluationGepaSummaryTelemetryCapture,
   buildEvaluationJudgeLiveTelemetryCapture,
   buildEvaluationOptimizationJudgeTelemetryCapture,
   type EvaluationAlignmentJudgeTelemetryScope,
@@ -152,6 +152,10 @@ export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evalu
 export { evaluateIncrementalDraftUseCase } from "./use-cases/alignment/evaluate-incremental-draft.ts"
 export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-baseline-draft.ts"
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
+export {
+  type LoadAlignmentStateOrInactiveResult,
+  loadAlignmentStateOrInactiveUseCase,
+} from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
   buildLiveTraceEndEvaluationSelectionKey,

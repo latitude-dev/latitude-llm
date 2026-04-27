@@ -69,7 +69,10 @@ export function MultiSelectFilter({
       autoHighlight
       modal
       value={[...selected]}
-      onValueChange={onChange}
+      onValueChange={(values: string[]) => {
+        onChange(values)
+        setInputValue("")
+      }}
       items={allItems}
       itemToStringValue={(v) => v}
       isItemEqualToValue={(a, b) => a === b}

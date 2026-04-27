@@ -2,7 +2,10 @@ import { Button, cn, Icon, Select, type SelectOption, Text, Textarea, ThumbButto
 import { InfoIcon, SparklesIcon } from "lucide-react"
 import { memo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
+import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useIssue, useIssues } from "../../../../../../domains/issues/issues.collection.ts"
+
+const SAVE_HOTKEY = "Mod+Enter"
 
 const ISSUE_SELECTOR_BATCH_SIZE = 50
 const ISSUE_SELECTOR_SEARCH_DEBOUNCE_MS = 300
@@ -171,13 +174,18 @@ export function AnnotationInput({
             if (e.key === "Escape" && onCancel) {
               e.preventDefault()
               onCancel()
+              return
+            }
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              handleSave()
             }
           }}
           placeholder={commentPlaceholder}
           disabled={isLoading}
           autoFocus={autoFocus}
         />
-        {commentError && <Text.H6 color="destructiveMutedForeground">Add a comment to save</Text.H6>}
+        {commentError && <Text.H6 color="destructiveMutedForeground">Add some feedback first</Text.H6>}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-2 pb-2">
@@ -219,6 +227,7 @@ export function AnnotationInput({
           )}
           <Button variant="default" size="sm" isLoading={isLoading} onClick={handleSave}>
             Save
+            <HotkeyBadge hotkey={SAVE_HOTKEY} />
           </Button>
         </div>
       </div>

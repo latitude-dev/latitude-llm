@@ -3,7 +3,6 @@ export { GepaClient, resolveGepaProcessOptions } from "./client.ts"
 export {
   GEPA_BATCH_SIZE,
   GEPA_DEFAULT_SEED,
-  GEPA_DETAILS_GENERATOR_MODEL,
   GEPA_MAX_STAGNATION,
   GEPA_MAX_TIME,
   GEPA_MAX_TOKENS,
@@ -12,11 +11,6 @@ export {
   GEPA_RPC_METHODS,
 } from "./constants.ts"
 export { GepaOptimizerLive } from "./gepa-optimizer.ts"
-export {
-  buildGepaDetailsPrompt,
-  GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
-  gepaDetailsOutputSchema,
-} from "./prompts/details.ts"
 export {
   buildGepaProposalPrompt,
   GEPA_PROPOSER_SYSTEM_PROMPT,

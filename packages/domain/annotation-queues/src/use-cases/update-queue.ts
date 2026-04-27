@@ -1,4 +1,4 @@
-import { type ProjectId, type RepositoryError, toSlug } from "@domain/shared"
+import { type ProjectId, type RepositoryError, type SqlClient, toSlug } from "@domain/shared"
 import { Data, Effect } from "effect"
 import {
   type AnnotationQueue,
@@ -34,7 +34,7 @@ export type UpdateQueueError = RepositoryError | QueueNotFoundError
 
 export const updateQueueUseCase = (
   input: UpdateQueueInput,
-): Effect.Effect<UpdateQueueResult, UpdateQueueError, AnnotationQueueRepository> =>
+): Effect.Effect<UpdateQueueResult, UpdateQueueError, AnnotationQueueRepository | SqlClient> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)

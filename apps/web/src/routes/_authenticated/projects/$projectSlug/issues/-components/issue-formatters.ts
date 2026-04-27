@@ -3,7 +3,7 @@ const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
-const lifecycleDisplayOrder = ["regressed", "escalating", "new", "resolved", "ignored"] as const
+const lifecycleDisplayOrder = ["regressed", "escalating", "new", "ongoing", "resolved", "ignored"] as const
 const lifecycleDisplayOrderSet = new Set<string>(lifecycleDisplayOrder)
 
 function formatCompactElapsed(elapsedMs: number): string {
@@ -44,6 +44,18 @@ export function formatIssueAgeAgoLabel(iso: string): string {
   return `${formatCompactElapsed(Math.max(0, now - t))} ago`
 }
 
+export function getAlignmentVariant(score: number): "destructive" | "warning" | "success" {
+  if (score < 0.5) {
+    return "destructive"
+  }
+
+  if (score < 0.75) {
+    return "warning"
+  }
+
+  return "success"
+}
+
 export function formatPercent(value: number): string {
   const percent = Math.max(0, value) * 100
 
@@ -81,12 +93,20 @@ export function getLifecycleStatesForDisplay(states: readonly string[]): readonl
   ]
 }
 
+// Mirrors the backend's `getPrimaryStatePriority` so the table can display the
+// same single state used for sorting by status.
+export function getPrimaryLifecycleState(states: readonly string[]): string | undefined {
+  return getLifecycleStatesForDisplay(states)[0]
+}
+
 export function formatLifecycleLabel(state: string): string {
   switch (state) {
     case "new":
       return "New"
     case "escalating":
       return "Escalating"
+    case "ongoing":
+      return "Ongoing"
     case "resolved":
       return "Resolved"
     case "regressed":

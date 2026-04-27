@@ -2,9 +2,10 @@ import { Effect, ServiceMap } from "effect"
 import { z } from "zod"
 import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
+import type { SqlClient } from "./sql-client.ts"
 
 export const organizationSettingsSchema = z.object({
-  keepMonitoring: z.boolean().optional(),
+  keepMonitoring: z.boolean().optional(), // TODO: deprecated. Removed from frontend but maintained to keep cascaded settings scaffold
 })
 
 export const projectSettingsSchema = z.object({
@@ -39,8 +40,8 @@ export function resolveSettingsCascade(input: {
 export class SettingsReader extends ServiceMap.Service<
   SettingsReader,
   {
-    getOrganizationSettings: () => Effect.Effect<OrganizationSettings | null, RepositoryError>
-    getProjectSettings: (projectId: ProjectId) => Effect.Effect<ProjectSettings | null, RepositoryError>
+    getOrganizationSettings: () => Effect.Effect<OrganizationSettings | null, RepositoryError, SqlClient>
+    getProjectSettings: (projectId: ProjectId) => Effect.Effect<ProjectSettings | null, RepositoryError, SqlClient>
   }
 >()("@domain/shared/SettingsReader") {}
 

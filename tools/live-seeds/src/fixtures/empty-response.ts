@@ -20,7 +20,6 @@ export const emptyResponseFixture: LiveSeedFixtureDefinition = {
   description: "Low-cost non-support trace that should deterministically match the Empty Response system queue.",
   sampling: {
     systemQueueSamples: {
-      "empty-response": true,
       frustration: false,
     },
   },

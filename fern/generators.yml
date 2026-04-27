@@ -1,0 +1,18 @@
+api:
+  specs:
+    - openapi: ../apps/api/openapi.json
+
+groups:
+  local:
+    generators:
+      - name: fernapi/fern-typescript-node-sdk
+        version: 3.64.1
+        output:
+          # Fern writes generated TypeScript source files here (Client.ts,
+          # index.ts, api/, core/, errors/, environments.ts). The surrounding
+          # package shell (`package.json`, `tsconfig.json`, `tsdown.config.ts`,
+          # `src/index.ts` re-export) is hand-written one level up at
+          # `packages/sdk/typescript/`. Fern owns everything inside `src/`;
+          # running `pnpm generate:sdk` overwrites the contents.
+          location: local-file-system
+          path: ../packages/sdk/typescript/src

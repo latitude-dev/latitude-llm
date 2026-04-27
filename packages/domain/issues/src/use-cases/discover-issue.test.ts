@@ -10,7 +10,17 @@ import { OutboxEventWriter } from "@domain/events"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
-import { EvaluationId, IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, SqlClient } from "@domain/shared"
+import {
+  ChSqlClient,
+  EvaluationId,
+  IssueId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SqlClient,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -68,6 +78,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   projectId,
   name: "Token leakage in responses",
   description: "The assistant leaks API tokens in its response.",
+  source: "annotation",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
@@ -103,6 +114,9 @@ const createPassthroughSqlClient = (id: string) =>
     transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
     query: () => Effect.die("Unexpected direct SQL query in unit test"),
   })
+
+const createPassthroughChSqlClient = (id: string) =>
+  Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(id) }))
 
 const createWorkflowStarter = () => {
   const startedWorkflows: Array<{
@@ -172,6 +186,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -248,6 +263,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -306,6 +322,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -366,6 +383,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -432,6 +450,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -481,6 +500,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 
@@ -531,6 +551,7 @@ describe("discoverIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
         Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
       ),
     )
 

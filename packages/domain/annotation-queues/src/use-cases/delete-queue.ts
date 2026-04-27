@@ -1,4 +1,4 @@
-import type { ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
@@ -34,7 +34,7 @@ export type DeleteQueueError = RepositoryError | DeleteQueueNotFoundError | Syst
 
 export const deleteQueueUseCase = (
   input: DeleteQueueInput,
-): Effect.Effect<DeleteQueueResult, DeleteQueueError, AnnotationQueueRepository> =>
+): Effect.Effect<DeleteQueueResult, DeleteQueueError, AnnotationQueueRepository | SqlClient> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("queue.id", input.queueId)
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)

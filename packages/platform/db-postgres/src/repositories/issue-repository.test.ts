@@ -24,6 +24,7 @@ const otherIssueId = IssueId("j".repeat(24))
 const issueBase = {
   organizationId: organizationId as string,
   projectId: projectId as string,
+  source: "annotation" as const,
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,

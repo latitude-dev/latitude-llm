@@ -1,4 +1,5 @@
-import { IssueId } from "@domain/shared"
+import { IssueId, OrganizationId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -27,6 +28,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   projectId,
   name: "Token leakage",
   description: "The assistant leaks API tokens in its response.",
+  source: "annotation",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
@@ -65,6 +67,7 @@ describe("syncIssueProjectionsUseCase", () => {
       }).pipe(
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 
@@ -98,6 +101,7 @@ describe("syncIssueProjectionsUseCase", () => {
       }).pipe(
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 

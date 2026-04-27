@@ -6,7 +6,8 @@ import {
   provisionSystemQueuesUseCase,
 } from "@domain/annotation-queues"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
-import { deterministicSampling } from "@domain/shared"
+import { createProject, ProjectRepository } from "@domain/projects"
+import { deterministicSampling, type OrganizationId, type ProjectId } from "@domain/shared"
 import {
   AGENT_PROFILES,
   type AgentProfile,
@@ -25,6 +26,7 @@ import {
   closePostgres,
   createPostgresClient,
   EvaluationRepositoryLive,
+  ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
@@ -59,9 +61,45 @@ const EVALUATION_LABELS: Record<string, string> = {
 
 export type SeedTargets = {
   readonly evaluationsById: Readonly<Record<string, Evaluation>>
-  readonly highCostLiveQueue: AnnotationQueue
+  /**
+   * High-cost live queue in the target project. `undefined` when running in
+   * system-queues-only mode against a fresh project that hasn't been seeded
+   * with the evaluation/live-queue fixtures — callers must guard access.
+   */
+  readonly highCostLiveQueue: AnnotationQueue | undefined
   readonly systemQueuesBySlug: Readonly<Record<string, AnnotationQueue>>
 }
+
+/**
+ * Resolved run-time identity for a live-seeds invocation. The default flow
+ * targets the seeded `Default Project`; when the CLI overrides the project
+ * slug, we look up the project by slug (scoped to `SEED_ORG_ID`, the Acme
+ * seed org) and enter `systemQueuesOnly` mode so the tool doesn't assert that
+ * evaluations + the high-cost live queue exist in the target project.
+ */
+export type SeedRunContext = {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly projectSlug: string
+  readonly apiKeyToken: string
+  readonly systemQueuesOnly: boolean
+}
+
+/**
+ * Fixtures whose sampling plan doesn't require seeded evaluations or a live
+ * queue — safe to run against a fresh project that only has system queues
+ * provisioned. Derived from fixture metadata so the allowlist stays in sync
+ * with the actual fixture set.
+ */
+const isSystemQueuesOnlyFixture = (fixture: LiveSeedFixtureDefinition): boolean => {
+  const hasEvaluationSampling = (fixture.sampling.includeEvaluationIds ?? []).length > 0
+  const hasLiveQueueSampling = fixture.sampling.liveQueueSample !== undefined
+  return !hasEvaluationSampling && !hasLiveQueueSampling
+}
+
+const SYSTEM_QUEUE_ONLY_FIXTURE_KEYS = new Set<string>(
+  liveSeedFixtures.filter(isSystemQueuesOnlyFixture).map((fixture) => fixture.key),
+)
 
 export type LiveSeedSamplePreview = {
   readonly evaluationsById: Readonly<Record<string, boolean>>
@@ -103,6 +141,18 @@ export type SendLiveSeedDataOptions = {
   readonly parallelCases: number
   readonly verboseSpans: boolean
   readonly seed?: string
+  /**
+   * Override target project slug. When set, the tool looks up the project by
+   * slug in the Acme seed org and runs in system-queues-only mode (evaluations
+   * + high-cost live queue are not required to exist in the target project).
+   * Fixture selection is restricted to the system-queue-triggering set.
+   */
+  readonly projectSlug?: string
+  /**
+   * Override API key token for ingest `Authorization` header. Defaults to the
+   * seed token (`lat_seed_default_api_key_token`), which is Acme-scoped.
+   */
+  readonly apiKeyToken?: string
 }
 
 export type BuildLiveSeedRunPlanOptions = {
@@ -111,6 +161,7 @@ export type BuildLiveSeedRunPlanOptions = {
   readonly timeScale: number
   readonly seed: string
   readonly targets: SeedTargets
+  readonly ctx: SeedRunContext
 }
 
 export type DispatchResolvedCasesOptions = {
@@ -118,6 +169,15 @@ export type DispatchResolvedCasesOptions = {
   readonly parallelCases: number
   readonly runId: string
   readonly verboseSpans?: boolean
+  /**
+   * Auth + project routing for `postSpanToIngest`. Optional because tests
+   * bypass the real HTTP path via `postTraceSpan`; `sendLiveSeedData` always
+   * fills this in with a resolved `SeedRunContext`.
+   */
+  readonly auth?: {
+    readonly apiKeyToken: string
+    readonly projectSlug: string
+  }
   readonly postTraceSpan?: (input: {
     readonly seedCase: ResolvedLiveSeedCase
     readonly trace: ResolvedLiveSeedTrace
@@ -216,16 +276,29 @@ function labelForEvaluation(evaluationId: string): string {
   return label
 }
 
-function resolveSelectedFixtures(keys?: readonly string[]): readonly LiveSeedFixtureDefinition[] {
+function resolveSelectedFixtures(
+  keys?: readonly string[],
+  options?: { readonly systemQueuesOnly?: boolean },
+): readonly LiveSeedFixtureDefinition[] {
+  const available = options?.systemQueuesOnly
+    ? liveSeedFixtures.filter((fixture) => SYSTEM_QUEUE_ONLY_FIXTURE_KEYS.has(fixture.key))
+    : liveSeedFixtures
+
   if (!keys || keys.length === 0) {
-    return liveSeedFixtures
+    return available
   }
 
-  const fixturesByKey = new Map(liveSeedFixtures.map((fixture) => [fixture.key, fixture]))
+  const fixturesByKey = new Map(available.map((fixture) => [fixture.key, fixture]))
 
   return keys.map((key) => {
     const fixture = fixturesByKey.get(key)
     if (!fixture) {
+      if (options?.systemQueuesOnly && liveSeedFixtures.some((f) => f.key === key)) {
+        throw new Error(
+          `Fixture "${key}" requires seeded evaluations or live queues that aren't present in the override project. ` +
+            `In system-queues-only mode, pick from: ${[...SYSTEM_QUEUE_ONLY_FIXTURE_KEYS].sort().join(", ")}.`,
+        )
+      }
       throw new Error(`Unknown fixture "${key}". Valid fixtures: ${[...liveSeedFixtureKeys].sort().join(", ")}`)
     }
     return fixture
@@ -308,15 +381,15 @@ function buildTraceDispatchContext(trace: ResolvedLiveSeedTrace): TraceDispatchC
   }
 }
 
-async function provisionSystemQueues(): Promise<void> {
+async function provisionSystemQueues(ctx: SeedRunContext): Promise<void> {
   const client = createPostgresClient()
 
   try {
     const results = await Effect.runPromise(
       provisionSystemQueuesUseCase({
-        organizationId: SEED_ORG_ID,
-        projectId: SEED_PROJECT_ID,
-      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, SEED_ORG_ID)),
+        organizationId: ctx.organizationId,
+        projectId: ctx.projectId,
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, ctx.organizationId)),
     )
 
     console.log("[provision] System queues")
@@ -328,7 +401,71 @@ async function provisionSystemQueues(): Promise<void> {
   }
 }
 
-async function loadSeedTargets(): Promise<SeedTargets> {
+/**
+ * Resolve a `SeedRunContext` from CLI options. Defaults to the seed identity
+ * (Acme org + Default Project + seed API key). When `projectSlug` is overridden
+ * the project is looked up by slug (scoped to `SEED_ORG_ID`, the Acme seed org)
+ * and `systemQueuesOnly` is turned on. Missing projects are created on the fly
+ * so the CLI works against a fresh slug without requiring a UI round-trip.
+ */
+async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<SeedRunContext> {
+  const apiKeyToken = options.apiKeyToken ?? SEED_API_KEY_TOKEN
+
+  if (!options.projectSlug || options.projectSlug === SEED_PROJECT_SLUG) {
+    return {
+      organizationId: SEED_ORG_ID,
+      projectId: SEED_PROJECT_ID,
+      projectSlug: SEED_PROJECT_SLUG,
+      apiKeyToken,
+      systemQueuesOnly: false,
+    }
+  }
+
+  const targetSlug = options.projectSlug
+  const client = createPostgresClient()
+
+  try {
+    const existing = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
+        return yield* repo.findBySlug(targetSlug)
+      }).pipe(withPostgres(ProjectRepositoryLive, client, SEED_ORG_ID)),
+    ).catch((error: unknown) => {
+      if (error instanceof Error && "_tag" in error && error._tag === "NotFoundError") {
+        return null
+      }
+      throw error
+    })
+
+    const project =
+      existing ??
+      (await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          const created = createProject({
+            organizationId: SEED_ORG_ID,
+            name: targetSlug,
+            slug: targetSlug,
+          })
+          yield* repo.save(created)
+          console.log(`[live-seeds] Created project "${targetSlug}" in the Acme seed org`)
+          return created
+        }).pipe(withPostgres(ProjectRepositoryLive, client, SEED_ORG_ID)),
+      ))
+
+    return {
+      organizationId: SEED_ORG_ID,
+      projectId: project.id,
+      projectSlug: project.slug,
+      apiKeyToken,
+      systemQueuesOnly: true,
+    }
+  } finally {
+    await closePostgres(client.pool)
+  }
+}
+
+async function loadSeedTargets(ctx: SeedRunContext): Promise<SeedTargets> {
   const client = createPostgresClient()
 
   try {
@@ -338,22 +475,29 @@ async function loadSeedTargets(): Promise<SeedTargets> {
         const queueRepository = yield* AnnotationQueueRepository
 
         return {
+          // Evaluations + live queues aren't required in fresh-project mode,
+          // but loading them is cheap and lets us still print them in the
+          // plan summary if they happen to exist.
           evaluations: yield* evaluationRepository.listByProjectId({
-            projectId: SEED_PROJECT_ID,
+            projectId: ctx.projectId,
             options: {
               lifecycle: "active",
               limit: 100,
             },
           }),
           liveQueues: yield* queueRepository.listLiveQueuesByProject({
-            projectId: SEED_PROJECT_ID,
+            projectId: ctx.projectId,
           }),
           systemQueues: yield* queueRepository.listSystemQueuesByProject({
-            projectId: SEED_PROJECT_ID,
+            projectId: ctx.projectId,
           }),
         }
       }).pipe(
-        withPostgres(Layer.mergeAll(EvaluationRepositoryLive, AnnotationQueueRepositoryLive), client, SEED_ORG_ID),
+        withPostgres(
+          Layer.mergeAll(EvaluationRepositoryLive, AnnotationQueueRepositoryLive),
+          client,
+          ctx.organizationId,
+        ),
       ),
     )
 
@@ -363,21 +507,25 @@ async function loadSeedTargets(): Promise<SeedTargets> {
         .map((evaluation) => [evaluation.id, evaluation]),
     )
 
-    for (const evaluationId of SEEDED_EVALUATION_ORDER) {
-      requireItem(
-        evaluationsById[evaluationId],
-        `Missing seeded active evaluation ${labelForEvaluation(evaluationId)} (${evaluationId})`,
-      )
+    if (!ctx.systemQueuesOnly) {
+      for (const evaluationId of SEEDED_EVALUATION_ORDER) {
+        requireItem(
+          evaluationsById[evaluationId],
+          `Missing seeded active evaluation ${labelForEvaluation(evaluationId)} (${evaluationId})`,
+        )
+      }
     }
 
-    const highCostLiveQueue = requireItem(
-      liveQueues.find((queue) => queue.slug === HIGH_COST_LIVE_QUEUE_SLUG),
-      `Missing live queue "${HIGH_COST_LIVE_QUEUE_SLUG}" in seeded project`,
-    )
+    const highCostLiveQueue = ctx.systemQueuesOnly
+      ? liveQueues.find((queue) => queue.slug === HIGH_COST_LIVE_QUEUE_SLUG)
+      : requireItem(
+          liveQueues.find((queue) => queue.slug === HIGH_COST_LIVE_QUEUE_SLUG),
+          `Missing live queue "${HIGH_COST_LIVE_QUEUE_SLUG}" in seeded project`,
+        )
 
     requireItem(
       systemQueues.find((queue) => queue.slug === FRUSTRATION_SYSTEM_QUEUE_SLUG),
-      `Missing system queue "${FRUSTRATION_SYSTEM_QUEUE_SLUG}" in seeded project`,
+      `Missing system queue "${FRUSTRATION_SYSTEM_QUEUE_SLUG}" in project "${ctx.projectSlug}" — did you forget to provision system queues?`,
     )
 
     return {
@@ -390,42 +538,58 @@ async function loadSeedTargets(): Promise<SeedTargets> {
   }
 }
 
-async function sampleLiveEvaluation(target: Evaluation, traceId: string): Promise<boolean> {
+async function sampleLiveEvaluation(ctx: SeedRunContext, target: Evaluation, traceId: string): Promise<boolean> {
   return deterministicSampling({
     sampling: target.trigger.sampling,
-    keyParts: [SEED_ORG_ID, SEED_PROJECT_ID, target.id, traceId],
+    keyParts: [ctx.organizationId, ctx.projectId, target.id, traceId],
   })
 }
 
-async function sampleLiveQueue(target: AnnotationQueue, traceId: string): Promise<boolean> {
+async function sampleLiveQueue(ctx: SeedRunContext, target: AnnotationQueue, traceId: string): Promise<boolean> {
   return deterministicSampling({
     sampling: target.settings.sampling ?? LIVE_QUEUE_DEFAULT_SAMPLING,
-    keyParts: [SEED_ORG_ID, SEED_PROJECT_ID, target.id, traceId],
+    keyParts: [ctx.organizationId, ctx.projectId, target.id, traceId],
   })
 }
 
-async function sampleSystemQueue(target: AnnotationQueue, traceId: string): Promise<boolean> {
+async function sampleSystemQueue(ctx: SeedRunContext, target: AnnotationQueue, traceId: string): Promise<boolean> {
   return deterministicSampling({
     sampling: target.settings.sampling ?? 0,
-    keyParts: [SEED_ORG_ID, SEED_PROJECT_ID, traceId, target.slug],
+    keyParts: [ctx.organizationId, ctx.projectId, traceId, target.slug],
   })
 }
 
-async function computeSamplePreview(targets: SeedTargets, traceId: string): Promise<LiveSeedSamplePreview> {
-  const evaluationsById = Object.fromEntries(
-    await Promise.all(
-      SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
-        const evaluation = targets.evaluationsById[evaluationId]
-        return [evaluationId, await sampleLiveEvaluation(evaluation, traceId)] as const
-      }),
-    ),
-  )
+async function computeSamplePreview(
+  ctx: SeedRunContext,
+  targets: SeedTargets,
+  traceId: string,
+): Promise<LiveSeedSamplePreview> {
+  // In system-queues-only mode the target project isn't guaranteed to have
+  // the seeded evaluations or high-cost live queue. Skip those branches
+  // instead of crashing on `targets.evaluationsById[id]` / `highCostLiveQueue`.
+  const evaluationsById = ctx.systemQueuesOnly
+    ? {}
+    : Object.fromEntries(
+        await Promise.all(
+          SEEDED_EVALUATION_ORDER.map(async (evaluationId) => {
+            const evaluation = targets.evaluationsById[evaluationId]
+            if (!evaluation) {
+              throw new Error(`loadSeedTargets did not return evaluation ${evaluationId}`)
+            }
+            return [evaluationId, await sampleLiveEvaluation(ctx, evaluation, traceId)] as const
+          }),
+        ),
+      )
 
-  const liveQueue = await sampleLiveQueue(targets.highCostLiveQueue, traceId)
+  const liveQueue =
+    ctx.systemQueuesOnly || !targets.highCostLiveQueue
+      ? false
+      : await sampleLiveQueue(ctx, targets.highCostLiveQueue, traceId)
+
   const systemQueuesBySlug = Object.fromEntries(
     await Promise.all(
       Object.entries(targets.systemQueuesBySlug).map(async ([queueSlug, queue]) => {
-        return [queueSlug, await sampleSystemQueue(queue, traceId)] as const
+        return [queueSlug, await sampleSystemQueue(ctx, queue, traceId)] as const
       }),
     ),
   )
@@ -511,6 +675,7 @@ function validateGeneratedCase(
 }
 
 async function findTraceIdForCaseTrace(input: {
+  readonly ctx: SeedRunContext
   readonly fixture: LiveSeedFixtureDefinition
   readonly generatedTrace: LiveSeedGeneratedCaseTrace
   readonly targets: SeedTargets
@@ -528,7 +693,7 @@ async function findTraceIdForCaseTrace(input: {
       `seed-live-seeds:${input.runSeed}:${input.fixture.key}:${input.caseIndex.toString()}:${input.traceIndex.toString()}:${input.generatedTrace.key}:${attempt.toString()}`,
       32,
     )
-    const preview = await computeSamplePreview(input.targets, traceId)
+    const preview = await computeSamplePreview(input.ctx, input.targets, traceId)
 
     if (samplePreviewMatchesPlan(samplingPlan, preview)) {
       return { traceId, preview }
@@ -583,7 +748,7 @@ function getCaseDispatchWindowMs(seedCase: ResolvedLiveSeedCase): number {
 }
 
 export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions): Promise<LiveSeedRunPlan> {
-  const fixtures = resolveSelectedFixtures(options.fixtureKeys)
+  const fixtures = resolveSelectedFixtures(options.fixtureKeys, { systemQueuesOnly: options.ctx.systemQueuesOnly })
   const runId = runIdForSeed(options.seed)
 
   const cases = await Promise.all(
@@ -605,6 +770,7 @@ export async function buildLiveSeedRunPlan(options: BuildLiveSeedRunPlanOptions)
         const traces = await Promise.all(
           generatedCase.traces.map(async (generatedTrace, traceIndex) => {
             const { traceId, preview } = await findTraceIdForCaseTrace({
+              ctx: options.ctx,
               fixture,
               generatedTrace,
               targets: options.targets,
@@ -664,13 +830,19 @@ function formatSystemQueueSamples(
     .join(", ")
 }
 
-function printFixturePlan(plan: LiveSeedRunPlan, ingestBaseUrl: string, provisioned: boolean, parallelCases: number) {
+function printFixturePlan(
+  plan: LiveSeedRunPlan,
+  ingestBaseUrl: string,
+  provisioned: boolean,
+  parallelCases: number,
+  ctx: SeedRunContext,
+) {
   const plannedTraceCount = getPlannedTraceCount(plan.cases)
   const plannedSpanCount = getPlannedSpanCount(plan.cases)
 
   console.log("[plan] Live-seed run")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
-  console.log(`  - project slug: ${SEED_PROJECT_SLUG}`)
+  console.log(`  - project slug: ${ctx.projectSlug}${ctx.systemQueuesOnly ? " (system-queues-only mode)" : ""}`)
   console.log(`  - system queue provisioning: ${provisioned ? "enabled" : "skipped"}`)
   console.log(`  - trace-end debounce: ${Math.ceil(TRACE_END_DEBOUNCE_MS / 1000).toString()}s`)
   console.log(`  - runId: ${plan.runId}`)
@@ -726,13 +898,14 @@ async function postSpanToIngest(
   ingestBaseUrl: string,
   traceId: string,
   request: BuiltTraceSpan["request"],
+  auth: { readonly apiKeyToken: string; readonly projectSlug: string },
 ): Promise<void> {
   const response = await fetch(`${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${SEED_API_KEY_TOKEN}`,
+      Authorization: `Bearer ${auth.apiKeyToken}`,
       "Content-Type": "application/json",
-      "X-Latitude-Project": SEED_PROJECT_SLUG,
+      "X-Latitude-Project": auth.projectSlug,
     },
     body: JSON.stringify(request),
   })
@@ -833,7 +1006,12 @@ export async function dispatchResolvedCases(
             span: scheduled.span,
           })
         } else {
-          await postSpanToIngest(options.ingestBaseUrl, scheduled.trace.traceId, scheduled.span.request)
+          if (!options.auth) {
+            throw new Error(
+              "dispatchResolvedCases requires `auth` (apiKeyToken + projectSlug) when `postTraceSpan` is not provided",
+            )
+          }
+          await postSpanToIngest(options.ingestBaseUrl, scheduled.trace.traceId, scheduled.span.request, options.auth)
         }
 
         sentSpanCount += 1
@@ -891,32 +1069,35 @@ export function printFixtureCatalog(): void {
 
 export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promise<void> {
   const seed = options.seed ?? randomUUID().replaceAll("-", "")
+  const ctx = await resolveRunContext(options)
 
   if (options.provisionSystemQueues) {
-    await provisionSystemQueues()
+    await provisionSystemQueues(ctx)
   }
 
-  const targets = await loadSeedTargets()
+  const targets = await loadSeedTargets(ctx)
   const plan = await buildLiveSeedRunPlan({
     ...(options.fixtureKeys ? { fixtureKeys: options.fixtureKeys } : {}),
     countPerFixture: options.countPerFixture,
     timeScale: options.timeScale,
     seed,
     targets,
+    ctx,
   })
 
-  printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelCases)
+  printFixturePlan(plan, options.ingestBaseUrl, options.provisionSystemQueues, options.parallelCases, ctx)
 
   const plannedTraceCount = getPlannedTraceCount(plan.cases)
   const plannedSpanCount = getPlannedSpanCount(plan.cases)
   console.log(
-    `\n[send] Dispatching ${plan.cases.length.toString()} cases (${plannedTraceCount.toString()} traces, ${plannedSpanCount.toString()} spans planned) across ${resolveSelectedFixtures(options.fixtureKeys).length.toString()} fixtures...`,
+    `\n[send] Dispatching ${plan.cases.length.toString()} cases (${plannedTraceCount.toString()} traces, ${plannedSpanCount.toString()} spans planned) across ${resolveSelectedFixtures(options.fixtureKeys, { systemQueuesOnly: ctx.systemQueuesOnly }).length.toString()} fixtures...`,
   )
   const dispatchResult = await dispatchResolvedCases(plan.cases, {
     ingestBaseUrl: options.ingestBaseUrl,
     parallelCases: options.parallelCases,
     runId: plan.runId,
     verboseSpans: options.verboseSpans,
+    auth: { apiKeyToken: ctx.apiKeyToken, projectSlug: ctx.projectSlug },
   })
 
   console.log(

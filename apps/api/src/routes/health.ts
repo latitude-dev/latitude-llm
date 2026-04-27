@@ -12,6 +12,7 @@ const HealthResponseSchema = z
 const healthRoute = createRoute({
   method: "get",
   path: "/health",
+  operationId: "health.get",
   tags: ["Health"],
   summary: "Health check",
   responses: {

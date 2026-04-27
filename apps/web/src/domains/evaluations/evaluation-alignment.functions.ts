@@ -1,6 +1,5 @@
 import {
   deriveEvaluationAlignmentMetrics,
-  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
   type Evaluation,
   EvaluationNotFoundError,
   EvaluationRepository,
@@ -9,7 +8,7 @@ import {
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
-import { EvaluationRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { EvaluationRepositoryLive, IssueRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -44,6 +43,28 @@ export type IssueAlignmentStateRecord =
   | { readonly kind: "generating" }
   | { readonly kind: "realigning"; readonly evaluationId: string }
 
+const buildGenerateWorkflowId = (issueId: string) => `evaluations:generate:${issueId}`
+const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
+const buildRefreshAlignmentWorkflowId = (evaluationId: string) => `evaluations:refreshAlignment:${evaluationId}`
+
+// `workflowStarter.start` is built on `Effect.promise`, so a concurrent caller
+// racing between our `describe()` pre-check and this `start()` surfaces as an
+// Effect *defect*, not a typed error. Translate that specific defect into the
+// same `BadRequestError` the pre-check uses so the UI sees a friendly 400
+// instead of a generic unhandled-error response.
+const translateAlreadyStartedToBadRequest = <R>(
+  effect: Effect.Effect<void, never, R>,
+  message: string,
+): Effect.Effect<void, BadRequestError, R> =>
+  effect.pipe(
+    Effect.catchDefect((defect) => {
+      if (defect instanceof Error && defect.name === "WorkflowExecutionAlreadyStartedError") {
+        return Effect.fail(new BadRequestError({ message }))
+      }
+      return Effect.die(defect)
+    }),
+  )
+
 export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   id: evaluation.id,
   issueId: evaluation.issueId,
@@ -74,7 +95,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
-    const workflowId = `evaluations:alignment:${issueId}`
+    const workflowId = buildGenerateWorkflowId(issueId)
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -105,19 +126,20 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
     }
 
     await Effect.runPromise(
-      workflowStarter
-        .start(
-          "evaluationAlignmentWorkflow",
+      translateAlreadyStartedToBadRequest(
+        workflowStarter.start(
+          "optimizeEvaluationWorkflow",
           {
             organizationId,
             projectId,
             issueId,
+            evaluationId: null,
             jobId,
-            reason: "initial-generation",
           },
           { workflowId },
-        )
-        .pipe(withTracing),
+        ),
+        "An evaluation is already being generated for this issue",
+      ).pipe(withTracing),
     )
 
     const outboxWriter = getOutboxWriter()
@@ -136,7 +158,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
             issueId: data.issueId,
           },
         })
-        .pipe(withTracing),
+        .pipe(Effect.provide(SqlClientLive(client, OrganizationId(organizationId))), withTracing),
     )
   })
 
@@ -150,7 +172,7 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
-    const workflowId = `evaluations:alignment:${data.evaluationId}`
+    const workflowId = buildOptimizeWorkflowId(data.evaluationId)
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -171,12 +193,12 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
-    // Pre-check: reject with a friendly BadRequestError when a refresh-loop
-    // workflow is already running for this evaluation. The underlying
-    // `signalWithStart` is idempotent (Temporal delivers the signal to the
-    // existing run), but the UI contract here is "one manual realignment
-    // at a time per evaluation" — so we surface an explicit error instead
-    // of silently coalescing a second click into the in-flight run.
+    // Pre-check: reject with a friendly BadRequestError when an optimization
+    // workflow is already running for this evaluation. The UI contract is
+    // "one manual realignment at a time per evaluation" — surface an explicit
+    // error instead of letting Temporal's `workflowIdConflictPolicy: "FAIL"`
+    // surface a generic already-started error. That policy is still the
+    // ultimate safety net for races between this describe and the start below.
     const existingDescription = await Effect.runPromise(workflowQuerier.describe(workflowId))
     if (existingDescription?.status === "running") {
       throw new BadRequestError({
@@ -185,25 +207,20 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     }
 
     await Effect.runPromise(
-      workflowStarter
-        .signalWithStart(
-          "evaluationAlignmentWorkflow",
+      translateAlreadyStartedToBadRequest(
+        workflowStarter.start(
+          "optimizeEvaluationWorkflow",
           {
             organizationId,
             projectId,
             issueId,
             evaluationId: data.evaluationId,
             jobId,
-            refreshLoop: true,
-            reason: "manual-realignment",
           },
-          {
-            workflowId,
-            signal: EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
-            signalArgs: [{ reason: "manual-realignment", jobId }],
-          },
-        )
-        .pipe(withTracing),
+          { workflowId },
+        ),
+        "This evaluation is already being realigned",
+      ).pipe(withTracing),
     )
   })
 
@@ -216,7 +233,12 @@ export const getIssueAlignmentState = createServerFn({ method: "GET" })
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
 
-    const initialDescription = await Effect.runPromise(workflowQuerier.describe(`evaluations:alignment:${issueId}`))
+    // Initial generation runs as `optimizeEvaluationWorkflow` under the
+    // per-issue `evaluations:generate:${issueId}` id until an evaluation row
+    // is persisted. A running workflow here unambiguously means "actively
+    // running" — the new workflows are linear and exit on completion, so
+    // there is no more "alive-but-napping between timers" state.
+    const initialDescription = await Effect.runPromise(workflowQuerier.describe(buildGenerateWorkflowId(issueId)))
 
     if (initialDescription?.status === "running") {
       return { kind: "generating" }
@@ -234,18 +256,17 @@ export const getIssueAlignmentState = createServerFn({ method: "GET" })
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
 
+    // Per active evaluation, the UI shows `realigning` whenever either the
+    // automatic refresh workflow or the optimization workflow is running —
+    // from the user's perspective both block the "Realign now" button.
+    // `describe()`-only polling stays honest now that no workflow sleeps
+    // between activities.
     for (const evaluation of activeEvaluations) {
-      // We rely on `describe()` only (metadata-only RPC, no history replay)
-      // and treat any running refresh-loop workflow as "realigning". We
-      // deliberately avoid `query()` here: querying a *closed* workflow
-      // asks the server to replay its history via a worker, and if that
-      // replay can't complete (manual termination mid-run, no worker able
-      // to replay, etc.) the query hangs the whole request indefinitely.
-      // The trade-off: an idle-but-alive refresh loop shows as "realigning"
-      // until it exits — acceptable since the loop is short-lived between
-      // debounced refresh bursts, and the UI can poll again.
-      const description = await Effect.runPromise(workflowQuerier.describe(`evaluations:alignment:${evaluation.id}`))
-      if (description?.status === "running") {
+      const descriptions = await Promise.all([
+        Effect.runPromise(workflowQuerier.describe(buildRefreshAlignmentWorkflowId(evaluation.id))),
+        Effect.runPromise(workflowQuerier.describe(buildOptimizeWorkflowId(evaluation.id))),
+      ])
+      if (descriptions.some((description) => description?.status === "running")) {
         return {
           kind: "realigning",
           evaluationId: evaluation.id,

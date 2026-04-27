@@ -6,6 +6,7 @@ import {
 import { createIssueCentroid } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId, ScoreId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { runSpansSeed } from "@platform/db-clickhouse/testing"
 import { evaluations as evaluationsTable } from "@platform/db-postgres/schema/evaluations"
@@ -13,7 +14,7 @@ import { issues as issuesTable } from "@platform/db-postgres/schema/issues"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
 import { setupTestPostgres } from "@platform/db-postgres/testing"
 import { setupTestClickHouse } from "@platform/testkit"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const pg = setupTestPostgres()
@@ -35,7 +36,10 @@ vi.mock("@platform/ai", async () => {
   const { Effect, Layer } = (await vi.importActual("effect")) as typeof import("effect")
 
   return {
-    withAi: () => Effect.provide(Layer.succeed(AI, mockAi)),
+    // Matches the real signature: `(layer, redis?) => Effect.provide(...)` — the
+    // returned transformer removes `AI` from `R`, so tests that pipe through it
+    // don't need a cast to satisfy the requirement channel.
+    withAi: (_layer?: unknown, _redisClient?: unknown) => Effect.provide(Layer.succeed(AI, mockAi)),
   }
 })
 
@@ -63,7 +67,6 @@ import {
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
   generateBaselineEvaluationDraft,
-  generateEvaluationDetails,
   loadEvaluationAlignmentState,
   optimizeEvaluationDraft,
   persistEvaluationAlignmentResult,
@@ -81,22 +84,25 @@ const alignmentActivityScope = {
   jobId: "job-alignment-test",
 }
 
+const makeIssueRow = () => ({
+  id: issueId,
+  uuid: "11111111-1111-4111-8111-111111111111",
+  organizationId,
+  projectId,
+  name: "Tool output leakage",
+  description: "Secrets are exposed in assistant tool output.",
+  source: "annotation" as const,
+  centroid: createIssueCentroid(),
+  clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
+  createdAt: new Date("2026-04-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+})
+
 const insertIssue = async () => {
-  await pg.db.insert(issuesTable).values({
-    id: issueId,
-    uuid: "11111111-1111-4111-8111-111111111111",
-    organizationId,
-    projectId,
-    name: "Tool output leakage",
-    description: "Secrets are exposed in assistant tool output.",
-    centroid: createIssueCentroid(),
-    clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-04-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
-  })
+  await pg.db.insert(issuesTable).values([makeIssueRow()])
 }
 
 const insertScore = async (input: {
@@ -214,6 +220,9 @@ describe("evaluation-alignment activities", () => {
       ),
     )
 
+    // The `@platform/ai` mock above intercepts `withAi` at runtime; `Layer.empty`
+    // satisfies the real module's static signature with concrete generics so the
+    // requirement channel narrows to `never` without an `as unknown as` cast.
     const traceDetails = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* TraceRepository
@@ -222,7 +231,7 @@ describe("evaluation-alignment activities", () => {
           projectId,
           traceIds: seededTraceIds,
         })
-      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, organizationId)),
+      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, organizationId), withAi(Layer.empty)),
     )
 
     const hydratedCandidates = traceDetails.filter((detail) => detail.allMessages.length > 0).slice(0, 2)
@@ -273,6 +282,7 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("s".repeat(24))],
           label: "positive",
+          positivePriority: "failed-annotation-no-passes",
           negativePriority: null,
           annotationFeedback: "Leaked token in output",
           conversation: [{ role: "user", content: "Print the deployment token." }],
@@ -297,69 +307,6 @@ describe("evaluation-alignment activities", () => {
       sampling: 10,
     })
     expect(mockAi.generate).not.toHaveBeenCalled()
-  })
-
-  it("generates evaluation name and description from issue context and script via AI", async () => {
-    mockAi.generate.mockImplementation(() =>
-      Effect.succeed({
-        object: {
-          name: "Fabricated refund guarantees",
-          description:
-            "Checks whether the assistant invents refund or cancellation guarantees. Passes when the conversation is free of fabricated guarantees; fails when the assistant makes up refund promises.",
-        },
-        tokens: 30,
-        duration: 100,
-      }),
-    )
-
-    const script = wrapPromptAsEvaluationScript(
-      `Check the conversation for fabricated guarantees.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
-    )
-
-    const result = await generateEvaluationDetails({
-      ...alignmentActivityScope,
-      evaluationHash: "eh-details-1",
-      issueName: "Fabricated refund guarantees in support answers",
-      issueDescription: "The agent invents refund or cancellation guarantees not confirmed in the conversation.",
-      script,
-    })
-
-    expect(result.name).toBe("Fabricated refund guarantees")
-    expect(result.description).toContain("Passes when")
-    expect(result.description).toContain("fails when")
-    expect(result.description).not.toContain("Phase 12")
-    expect(result.description).not.toContain("scaffolded")
-
-    expect(mockAi.generate).toHaveBeenCalledTimes(1)
-    const call = mockAi.generate.mock.calls[0]?.[0]
-    expect(call.prompt).toContain("Fabricated refund guarantees in support answers")
-    expect(call.prompt).toContain("Final evaluation script:")
-    expect(call.prompt).toContain(script)
-  })
-
-  it("truncates long evaluation names from the AI layer", async () => {
-    const longName = "A".repeat(200)
-    mockAi.generate.mockImplementation(() =>
-      Effect.succeed({
-        object: {
-          name: longName,
-          description: "Some description.",
-        },
-        tokens: 10,
-        duration: 50,
-      }),
-    )
-
-    const result = await generateEvaluationDetails({
-      ...alignmentActivityScope,
-      evaluationHash: "eh-details-2",
-      issueName: "Test issue",
-      issueDescription: "Test description",
-      script: wrapPromptAsEvaluationScript("Test prompt"),
-    })
-
-    expect(result.name.length).toBeLessThanOrEqual(128)
-    expect(result.name).toBe(longName.slice(0, 128).trimEnd())
   })
 
   it("evaluates the generated baseline against curated examples and derives a confusion matrix", async () => {
@@ -397,6 +344,7 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("s".repeat(24))],
           label: "positive",
+          positivePriority: "failed-annotation-no-passes",
           negativePriority: null,
           annotationFeedback: "Leaked deployment token",
           conversation: [
@@ -412,7 +360,8 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("t".repeat(24))],
           label: "negative",
-          negativePriority: "no-failed-scores",
+          positivePriority: null,
+          negativePriority: "passed-annotation-no-failures",
           annotationFeedback: null,
           conversation: [
             { role: "user", content: "Summarize the checklist." },
@@ -525,7 +474,7 @@ describe("evaluation-alignment activities", () => {
     expect(mockAi.generate).not.toHaveBeenCalled()
   })
 
-  it("keeps incremental refreshes metric-only when new examples stay within the MCC tolerance", async () => {
+  it("keeps incremental refreshes metric-only when new examples stay within the alignment metric tolerance", async () => {
     mockAi.generate.mockImplementation((input: { readonly prompt: string }) => {
       const hasLeakage = input.prompt.includes("sk-live-123")
       return Effect.succeed({
@@ -566,6 +515,7 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("s".repeat(24))],
           label: "positive",
+          positivePriority: "failed-annotation-no-passes",
           negativePriority: null,
           annotationFeedback: "Leaked token",
           conversation: [
@@ -593,7 +543,7 @@ describe("evaluation-alignment activities", () => {
     })
   })
 
-  it("escalates incremental refreshes to full re-optimization when MCC drops past tolerance", async () => {
+  it("escalates incremental refreshes to full re-optimization when the alignment metric drops past tolerance", async () => {
     mockAi.generate.mockImplementation(() =>
       Effect.succeed({
         object: {
@@ -632,7 +582,8 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("t".repeat(24))],
           label: "negative",
-          negativePriority: "no-failed-scores",
+          positivePriority: null,
+          negativePriority: "passed-annotation-no-failures",
           annotationFeedback: null,
           conversation: [
             { role: "user", content: "Summarize the checklist." },
@@ -644,7 +595,7 @@ describe("evaluation-alignment activities", () => {
     })
 
     expect(result.strategy).toBe("full-reoptimization")
-    expect(result.matthewsCorrelationCoefficientDrop).toBeGreaterThan(0.05)
+    expect(result.alignmentMetricDrop).toBeGreaterThan(0.05)
   })
 
   it("runs the workflow optimization seam through the optimizer port", async () => {
@@ -750,6 +701,7 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("s".repeat(24))],
           label: "positive",
+          positivePriority: "failed-annotation-no-passes",
           negativePriority: null,
           annotationFeedback: "Leaked deployment token",
           conversation: [
@@ -765,7 +717,8 @@ describe("evaluation-alignment activities", () => {
           sessionId: null,
           scoreIds: [ScoreId("t".repeat(24))],
           label: "negative",
-          negativePriority: "no-failed-scores",
+          positivePriority: null,
+          negativePriority: "passed-annotation-no-failures",
           annotationFeedback: null,
           conversation: [
             { role: "user", content: "Summarize the checklist." },
@@ -781,7 +734,9 @@ describe("evaluation-alignment activities", () => {
     expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
   })
 
-  it("persists the evaluated confusion matrix on the saved evaluation row", async () => {
+  it("persists the evaluated confusion matrix and inherits name/description from the issue", async () => {
+    await insertIssue()
+
     const result = await persistEvaluationAlignmentResult({
       organizationId,
       projectId,
@@ -803,13 +758,13 @@ describe("evaluation-alignment activities", () => {
         debounce: 0,
         sampling: 10,
       },
-      name: "Tool output leakage monitor",
-      description: "Generated from curated examples.",
     })
 
     const saved = await pg.db.select().from(evaluationsTable)
     const evaluation = saved.find((row) => row.id === result.evaluationId)
 
+    expect(evaluation?.name).toBe("Tool output leakage")
+    expect(evaluation?.description).toBe("Secrets are exposed in assistant tool output.")
     expect(evaluation?.alignment).toEqual({
       evaluationHash: "hash-activity-test",
       confusionMatrix: {
@@ -819,5 +774,41 @@ describe("evaluation-alignment activities", () => {
         trueNegatives: 4,
       },
     })
+  })
+
+  it("overwrites an existing evaluation's name/description with the linked issue's current values", async () => {
+    await insertIssue()
+    const evaluationId = await insertEvaluation({})
+
+    const result = await persistEvaluationAlignmentResult({
+      organizationId,
+      projectId,
+      issueId,
+      evaluationId,
+      script: wrapPromptAsEvaluationScript(
+        `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+      ),
+      evaluationHash: "hash-overwrite-test",
+      confusionMatrix: {
+        truePositives: 5,
+        falsePositives: 0,
+        falseNegatives: 0,
+        trueNegatives: 5,
+      },
+      trigger: {
+        filter: {},
+        turn: "every",
+        debounce: 0,
+        sampling: 10,
+      },
+    })
+
+    const saved = await pg.db.select().from(evaluationsTable)
+    const evaluation = saved.find((row) => row.id === result.evaluationId)
+
+    expect(evaluation?.name).toBe("Tool output leakage")
+    expect(evaluation?.description).toBe("Secrets are exposed in assistant tool output.")
+    expect(evaluation?.name).not.toBe("Existing evaluation")
+    expect(evaluation?.description).not.toBe("Existing evaluation description")
   })
 })

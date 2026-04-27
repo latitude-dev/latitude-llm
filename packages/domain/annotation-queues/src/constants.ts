@@ -15,11 +15,41 @@ export const LIVE_QUEUE_DEFAULT_SAMPLING = 10
 /** Default sampling percentage for system-created queues when provisioned. */
 export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 
+/**
+ * Default rate limit for enqueueing the LLM flagger workflow when a strategy
+ * reports `ambiguous`. The key is `{organizationId, queueSlug}` — a hot trace
+ * topic (e.g. a jailbreak pattern firing for every request) can otherwise
+ * stampede the workflow queue with thousands of LLM calls per minute.
+ *
+ * The limiter fails open on Redis errors so a cache outage cannot drop traffic
+ * silently; we prefer over-spending on LLM calls to under-detecting issues.
+ */
+export const AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT = {
+  maxRequests: 30,
+  windowSeconds: 60,
+} as const
+
 // ---------------------------------------------------------------------------
 // Context-window limits for the system-queue flagger LLM
 // ---------------------------------------------------------------------------
 
 export const SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW = 8
+
+// ---------------------------------------------------------------------------
+// Token budget constants for queue-specific prompts
+// ---------------------------------------------------------------------------
+
+/** Maximum conversation stages to include in a prompt (user block -> assistant block pairs) */
+export const MAX_STAGES_PER_PROMPT = 3
+
+/** Maximum suspicious snippets to include for NSFW/jailbreaking detection */
+export const MAX_SUSPICIOUS_SNIPPETS = 5
+
+/** Maximum characters per text excerpt to keep tokens bounded */
+export const MAX_EXCERPT_LENGTH = 500
+
+/** Maximum characters per excerpt when including multiple snippets */
+export const MAX_SNIPPET_EXCERPT_LENGTH = 300
 
 export const SYSTEM_QUEUE_FLAGGER_MODEL = {
   provider: "amazon-bedrock",
@@ -27,7 +57,7 @@ export const SYSTEM_QUEUE_FLAGGER_MODEL = {
   temperature: 0,
 } as const
 
-export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 256
+export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 512
 
 export const SYSTEM_QUEUE_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
@@ -119,9 +149,9 @@ export const SYSTEM_QUEUE_DEFINITIONS: readonly SystemQueueDefinition[] = [
   {
     slug: "nsfw",
     name: "NSFW",
-    description: "Sexual or otherwise not-safe-for-work content appears",
+    description: "Workplace-inappropriate or toxic content appears",
     instructions:
-      "Use this queue when the trace contains sexual content, explicit erotic material, or other clearly NSFW content that should be reviewed. Do not use it for benign anatomy or health discussion, mild romance, or safety-oriented policy discussion that is not itself NSFW.",
+      "Use this queue when the trace contains explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language. Do not use it for benign anatomy or health discussion, mild romance, neutral policy/safety discussion about unsafe content, or non-abusive colloquial language without clear toxicity.",
     sampling: 10,
   },
   {

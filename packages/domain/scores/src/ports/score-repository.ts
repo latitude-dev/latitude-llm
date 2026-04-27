@@ -6,6 +6,7 @@ import type {
   ScoreId,
   SessionId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
@@ -29,14 +30,14 @@ export interface ScoreListPage {
 }
 
 export interface ScoreRepositoryShape {
-  findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError>
-  save(score: Score): Effect.Effect<void, RepositoryError>
+  findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError, SqlClient>
+  save(score: Score): Effect.Effect<void, RepositoryError, SqlClient>
   assignIssueIfUnowned(input: {
     readonly scoreId: ScoreId
     readonly issueId: IssueId
     readonly updatedAt: Date
-  }): Effect.Effect<boolean, RepositoryError>
-  delete(id: ScoreId): Effect.Effect<void, RepositoryError>
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  delete(id: ScoreId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Checks whether a canonical persisted evaluation score already exists in the
    * current live-monitoring turn scope. When `sessionId` is present the scope
@@ -47,7 +48,7 @@ export interface ScoreRepositoryShape {
     readonly evaluationId: string
     readonly traceId: TraceId
     readonly sessionId?: SessionId | null
-  }): Effect.Effect<boolean, RepositoryError>
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
    * Checks whether a canonical persisted evaluation score already exists for
    * one concrete `(evaluationId, traceId)` pair.
@@ -56,39 +57,39 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly evaluationId: string
     readonly traceId: TraceId
-  }): Effect.Effect<boolean, RepositoryError>
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /** When `sourceId` is omitted, lists all scores for the project with the given `source` (e.g. every annotation). */
   listBySourceId(input: {
     readonly projectId: ProjectId
     readonly source: ScoreSource
     readonly sourceId?: string
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   listByTraceId(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId
     readonly source?: ScoreSource
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   listBySessionId(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   listBySpanId(input: {
     readonly projectId: ProjectId
     readonly spanId: SpanId
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   listByIssueId(input: {
     readonly projectId: ProjectId
     readonly issueId: IssueId
     readonly options?: ScoreListOptions
-  }): Effect.Effect<ScoreListPage, RepositoryError>
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /**
    * Finds an existing queue-backed draft annotation by (queueId, traceId).
    * Only returns draft annotations (draftedAt != null), never published rows.
@@ -98,7 +99,7 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly queueId: string
     readonly traceId: TraceId
-  }): Effect.Effect<Score | null, RepositoryError>
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }
 
 export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(

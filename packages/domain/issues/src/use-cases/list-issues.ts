@@ -7,10 +7,17 @@ import {
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
 } from "@domain/scores"
-import { cuidSchema, OrganizationId, ProjectId, type RepositoryError } from "@domain/shared"
+import {
+  type ChSqlClient,
+  cuidSchema,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  type SqlClient,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type Issue, IssueState } from "../entities/issue.ts"
+import { type Issue, type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { type IssueProjectionCandidate, IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -18,7 +25,7 @@ import { IssueRepository } from "../ports/issue-repository.ts"
 export const issuesLifecycleGroupSchema = z.enum(["active", "archived"])
 export type IssuesLifecycleGroup = z.infer<typeof issuesLifecycleGroupSchema>
 
-export const issuesSortFieldSchema = z.enum(["lastSeen", "occurrences"])
+export const issuesSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
 export type IssuesSortField = z.infer<typeof issuesSortFieldSchema>
 
 export const issuesSortDirectionSchema = z.enum(["asc", "desc"])
@@ -60,6 +67,7 @@ export type ListIssuesError = RepositoryError
 export interface IssueListAnalyticsCounts {
   readonly newIssues: number
   readonly escalatingIssues: number
+  readonly ongoingIssues: number
   readonly regressedIssues: number
   readonly resolvedIssues: number
   readonly seenOccurrences: number
@@ -77,6 +85,7 @@ export interface IssueListItem {
   readonly projectId: string
   readonly name: string
   readonly description: string
+  readonly source: IssueSource
   readonly states: readonly string[]
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -222,6 +231,28 @@ const matchesLifecycleGroup = (
 const compareDesc = (left: number, right: number): number => right - left
 const compareAsc = (left: number, right: number): number => left - right
 
+const LIFECYCLE_STATE_PRIORITY: Record<string, number> = {
+  [IssueState.Regressed]: 0,
+  [IssueState.Escalating]: 1,
+  [IssueState.New]: 2,
+  [IssueState.Ongoing]: 3,
+  [IssueState.Resolved]: 4,
+  [IssueState.Ignored]: 5,
+}
+
+const UNKNOWN_STATE_PRIORITY = 99
+
+const getPrimaryStatePriority = (states: readonly string[]): number => {
+  let best = UNKNOWN_STATE_PRIORITY
+  for (const state of states) {
+    const priority = LIFECYCLE_STATE_PRIORITY[state]
+    if (priority !== undefined && priority < best) {
+      best = priority
+    }
+  }
+  return best
+}
+
 const sortCandidates = (
   candidates: readonly AnalyticsCandidate[],
   input: {
@@ -238,6 +269,14 @@ const sortCandidates = (
           : compareDesc(left.windowMetric.occurrences, right.windowMetric.occurrences)
       if (occurrencesComparison !== 0) {
         return occurrencesComparison
+      }
+    } else if (input.field === "state") {
+      const leftPriority = getPrimaryStatePriority(left.lifecycleStates)
+      const rightPriority = getPrimaryStatePriority(right.lifecycleStates)
+      const stateComparison =
+        input.direction === "asc" ? compareAsc(leftPriority, rightPriority) : compareDesc(leftPriority, rightPriority)
+      if (stateComparison !== 0) {
+        return stateComparison
       }
     } else {
       const lastSeenComparison =
@@ -297,6 +336,7 @@ const toCandidate = (input: {
 const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): IssueListAnalyticsCounts => ({
   newIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.New)).length,
   escalatingIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Escalating)).length,
+  ongoingIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Ongoing)).length,
   regressedIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Regressed)).length,
   resolvedIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Resolved)).length,
   seenOccurrences: candidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0),
@@ -307,7 +347,12 @@ export const listIssuesUseCase = (
 ): Effect.Effect<
   ListIssuesResult,
   ListIssuesError,
-  EvaluationRepository | IssueProjectionRepository | IssueRepository | ScoreAnalyticsRepository
+  | ChSqlClient
+  | EvaluationRepository
+  | IssueProjectionRepository
+  | IssueRepository
+  | ScoreAnalyticsRepository
+  | SqlClient
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
@@ -356,6 +401,7 @@ export const listIssuesUseCase = (
           counts: {
             newIssues: 0,
             escalatingIssues: 0,
+            ongoingIssues: 0,
             regressedIssues: 0,
             resolvedIssues: 0,
             seenOccurrences: 0,
@@ -500,6 +546,7 @@ export const listIssuesUseCase = (
         projectId: candidate.issue.projectId,
         name: candidate.issue.name,
         description: candidate.issue.description,
+        source: candidate.issue.source,
         states: candidate.lifecycleStates,
         createdAt: candidate.issue.createdAt,
         updatedAt: candidate.issue.updatedAt,

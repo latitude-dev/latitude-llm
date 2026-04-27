@@ -42,6 +42,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   projectId: "pppppppppppppppppppppppp",
   name: "Secret leakage",
   description: "The assistant reveals internal credentials.",
+  source: "annotation",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
@@ -296,5 +297,24 @@ describe("issue lifecycle helpers", () => {
     })
 
     expect(states).toEqual([IssueState.New, IssueState.Ignored])
+  })
+
+  it("marks older active issues with no specific lifecycle signal as ongoing", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-03-15T08:00:00.000Z"),
+        updatedAt: new Date("2026-03-15T08:00:00.000Z"),
+        clusteredAt: new Date("2026-03-15T08:00:00.000Z"),
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: new Date("2026-03-15T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-08T08:00:00.000Z"),
+        recentOccurrences: 2,
+        baselineAvgOccurrences: 1,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.Ongoing])
   })
 })

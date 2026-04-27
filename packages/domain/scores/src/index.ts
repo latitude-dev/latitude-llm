@@ -5,7 +5,9 @@ export {
   SCORE_SOURCES,
 } from "./constants.ts"
 export {
+  ANNOTATION_ANCHOR_TEXT_FORMATS,
   type AnnotationAnchor,
+  type AnnotationAnchorTextFormat,
   type AnnotationScore,
   type AnnotationScoreMetadata,
   type AnnotationScorePartialSourceId,

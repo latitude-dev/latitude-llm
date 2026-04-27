@@ -3,6 +3,7 @@ import {
   type ProjectId,
   type RepositoryError,
   SessionId,
+  type SqlClient,
   scoreIdSchema,
   TraceId,
   type TraceId as TraceIdType,
@@ -14,10 +15,15 @@ import { ALIGNMENT_CURATED_DATASET_MAX_ROWS } from "../constants.ts"
 export const evaluationAlignmentExampleLabelSchema = z.enum(["positive", "negative"])
 export type EvaluationAlignmentExampleLabel = z.infer<typeof evaluationAlignmentExampleLabelSchema>
 
+export const evaluationAlignmentPositivePrioritySchema = z.enum([
+  "failed-annotation-no-passes",
+  "failed-annotation-with-passes",
+])
+export type EvaluationAlignmentPositivePriority = z.infer<typeof evaluationAlignmentPositivePrioritySchema>
+
 export const evaluationAlignmentNegativePrioritySchema = z.enum([
   "passed-annotation-no-failures",
-  "no-failed-scores",
-  "unrelated-issue-scores",
+  "passed-annotation-unrelated-failures",
 ])
 export type EvaluationAlignmentNegativePriority = z.infer<typeof evaluationAlignmentNegativePrioritySchema>
 
@@ -26,6 +32,7 @@ export const evaluationAlignmentExampleSchema = z.object({
   sessionId: z.string().min(1).transform(SessionId).nullable(),
   scoreIds: z.array(scoreIdSchema).min(1),
   label: evaluationAlignmentExampleLabelSchema,
+  positivePriority: evaluationAlignmentPositivePrioritySchema.nullable(),
   negativePriority: evaluationAlignmentNegativePrioritySchema.nullable(),
   annotationFeedback: z.string().nullable(),
 })
@@ -47,10 +54,10 @@ export const DEFAULT_ALIGNMENT_EXAMPLE_LIMIT = ALIGNMENT_CURATED_DATASET_MAX_ROW
 export interface EvaluationAlignmentExamplesRepositoryShape {
   listPositiveExamples(
     input: ListEvaluationAlignmentExamplesInput,
-  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError, SqlClient>
   listNegativeExamples(
     input: ListNegativeEvaluationAlignmentExamplesInput,
-  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError>
+  ): Effect.Effect<readonly EvaluationAlignmentExample[], RepositoryError, SqlClient>
 }
 
 export class EvaluationAlignmentExamplesRepository extends ServiceMap.Service<

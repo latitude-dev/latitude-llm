@@ -1,6 +1,7 @@
 export {
   SESSION_ID_MAX_LENGTH,
   SPAN_ID_LENGTH,
+  TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
 } from "./constants.ts"
@@ -17,7 +18,7 @@ export {
 } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { SpanDecodingError, TraceCohortUnavailableError } from "./errors.ts"
+export { SpanDecodingError } from "./errors.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
@@ -28,7 +29,6 @@ export {
   mergeTraceHistogramTimeFilters,
   parseStartTimeBoundsFromFilters,
   pickTraceHistogramBucketSeconds,
-  resolveTraceCohortFilters,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
 export type {
@@ -54,7 +54,6 @@ export type {
 } from "./ports/trace-repository.ts"
 export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
 export {
-  buildTraceCohortListingSpec,
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaseline,
   buildTraceMetricBaselines,
@@ -72,7 +71,6 @@ export {
   TRACE_RESOURCE_OUTLIER_MULTIPLIER,
   type TraceCohortBaselineData,
   type TraceCohortKey,
-  type TraceCohortListingSpec,
   type TraceCohortMetric,
   type TraceCohortSummary,
   type TraceCohortSummaryEntry,
@@ -87,13 +85,8 @@ export {
   traceCohortMetrics,
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
-export type {
-  BuildTraceCohortListingSpecError,
-  BuildTraceCohortListingSpecInput,
-} from "./use-cases/build-trace-cohort-listing-spec.ts"
-export { buildTraceCohortListingSpecUseCase } from "./use-cases/build-trace-cohort-listing-spec.ts"
-export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
-export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
+export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
+export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type {
   LoadTraceForTraceEndFound,
   LoadTraceForTraceEndResult,

@@ -2,7 +2,9 @@ import type { ScoreSource } from "@domain/scores"
 
 export const ISSUE_NAME_MAX_LENGTH = 128
 
-export const ISSUE_STATES = ["new", "escalating", "resolved", "regressed", "ignored"] as const
+export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
+
+export const ISSUE_SOURCES = ["annotation", "custom", "flagger"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
 
@@ -90,11 +92,18 @@ export const ISSUE_DETAILS_GENERATION_MODEL = {
 export const ISSUE_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
-// Issue refresh debounce
+// Issue refresh throttle
 // ---------------------------------------------------------------------------
 
-/** Debounce window for issue name/description regeneration (8 hours in milliseconds). */
-export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
+/**
+ * Throttle window for issue name/description regeneration (8 hours in
+ * milliseconds). Used as `throttleMs` on the `issues:refresh` queue task:
+ * the first `ScoreAssignedToIssue` schedules the refresh for `now + 8h`, and
+ * subsequent assignments within that window are dropped by BullMQ. Guarantees
+ * an upper bound of 8h on refresh latency and at most one refresh per issue
+ * per 8h, even under a constant annotation stream.
+ */
+export const ISSUE_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Denoising / visibility

@@ -1,4 +1,5 @@
 import {
+  ChSqlClient,
   ExternalUserId,
   IssueId,
   OrganizationId,
@@ -7,8 +8,10 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -74,6 +77,7 @@ function makePositiveExample(index: number): EvaluationAlignmentExample {
     sessionId: null,
     scoreIds: [ScoreId("a".repeat(24))],
     label: "positive",
+    positivePriority: "failed-annotation-no-passes",
     negativePriority: null,
     annotationFeedback: null,
   }
@@ -86,7 +90,8 @@ function makeNegativeExample(index: number): EvaluationAlignmentExample {
     sessionId: null,
     scoreIds: [ScoreId("b".repeat(24))],
     label: "negative",
-    negativePriority: "no-failed-scores",
+    positivePriority: null,
+    negativePriority: "passed-annotation-no-failures",
     annotationFeedback: null,
   }
 }
@@ -117,6 +122,8 @@ function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShap
           }),
           Layer.succeed(EvaluationAlignmentExamplesRepository, exampleRepository),
           Layer.succeed(TraceRepository, traceRepository),
+          Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+          Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: ORGANIZATION_ID })),
         ),
       ),
     ),

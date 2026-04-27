@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "@bull-board/hono": "catalog:",
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
+    "@domain/ai": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
@@ -24,6 +25,7 @@
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",
+    "@domain/product-feedback": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/queue": "workspace:*",
@@ -41,6 +43,7 @@
     "@platform/db-weaviate": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/latitude-api": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
@@ -52,6 +55,6 @@
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
-    "tsup": "^8.0.0"
+    "tsdown": "catalog:"
   }
 }

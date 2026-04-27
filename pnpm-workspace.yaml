@@ -4,6 +4,7 @@ packages:
   - "!packages/telemetry/python/**"
   - infra
   - tools/*
+  - examples/**
 
 catalog:
   '@biomejs/biome': 2.4.6
@@ -19,27 +20,29 @@ catalog:
   '@types/pg': 8.16.0
   '@types/react': 19.2.14
   '@types/react-dom': 19.2.3
+  '@typescript/native-preview': 7.0.0-dev.20260421.2
   '@vitejs/plugin-react': 6.0.1
   better-auth: 1.5.6
   '@bull-board/api': 6.12.1
   '@bull-board/hono': 6.12.1
-  bullmq: 5.28.2
+  bullmq: 5.76.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-beta.21-b0c345d
   fast-json-stable-stringify: 2.1.0
   '@effect/opentelemetry': 4.0.0-beta.4
   effect: 4.0.0-beta.4
-  hono: 4.12.14
-  ioredis: 5.8.2
+  hono: 4.12.15
+  ioredis: 5.10.1
   pg: 8.16.0
   react: 19.2.5
   react-dom: 19.2.5
   rosetta-ai: 2.0.0
   protobufjs: 7.5.5
+  tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.5.8
-  typescript: 5.9.3
+  typescript: 6.0.3
   vite: 8.0.5
   vitest: 4.1.0
   zod: 4.3.6

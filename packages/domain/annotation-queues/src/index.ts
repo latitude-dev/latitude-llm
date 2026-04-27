@@ -1,4 +1,5 @@
 export {
+  AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT,
   ANNOTATION_QUEUE_NAME_MAX_LENGTH,
   ANNOTATION_QUEUE_SLUG_MAX_LENGTH,
   LIVE_QUEUE_DEFAULT_SAMPLING,
@@ -31,6 +32,43 @@ export {
   annotationQueueItemSchema,
 } from "./entities/annotation-queue-items.ts"
 export { TooManyTracesSelectedError } from "./errors.ts"
+// Re-export strategy registry, strategies, types, and shared utilities from flagger-strategies
+export {
+  // Types
+  type ConversationStage,
+  type DetectionResult,
+  emptyResponseStrategy,
+  // Shared utilities
+  extractConversationStages,
+  extractUserTextMessages,
+  extractWorkSignals,
+  // Strategies
+  forgettingStrategy,
+  frustrationStrategy,
+  // Registry functions
+  getQueueStrategy,
+  getStageWorkSignals,
+  hasQueueStrategy,
+  isLlmCapableStrategy,
+  jailbreakingStrategy,
+  lazinessStrategy,
+  listQueueStrategySlugs,
+  MAX_EXCERPT_LENGTH,
+  MAX_SNIPPET_EXCERPT_LENGTH,
+  MAX_STAGES_PER_PROMPT,
+  MAX_SUSPICIOUS_SNIPPETS,
+  nsfwStrategy,
+  outputSchemaValidationStrategy,
+  type QueueStrategy,
+  rankStagesByRefusalLikelihood,
+  refusalStrategy,
+  type SuspiciousSnippet,
+  scoreRefusalLikelihood,
+  toolCallErrorsStrategy,
+  trashingStrategy,
+  truncateExcerpt,
+  type WorkSignals,
+} from "./flagger-strategies/index.ts"
 export type { TraceSelection } from "./helpers/bulk-create-from-traces-helpers.ts"
 export {
   annotationQueueItemStatus,
@@ -77,9 +115,7 @@ export {
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
   buildLiveTraceEndQueueSelectionKey,
-  buildLiveTraceEndSystemQueueSelectionKey,
   buildTraceEndLiveQueueSelectionInputs,
-  buildTraceEndSystemQueueSelectionInputs,
 } from "./use-cases/build-trace-end-queue-selection.ts"
 export {
   type CompleteQueueItemError,
@@ -122,16 +158,24 @@ export {
   type MaterializeLiveQueueItemsResult,
   materializeLiveQueueItemsUseCase,
 } from "./use-cases/materialize-live-queue-items.ts"
-export {
-  orchestrateTraceEndLiveQueueMaterializationUseCase,
-  orchestrateTraceEndSystemQueueWorkflowStartsUseCase,
-  type StartSystemQueueFlaggerForTraceOnce,
-} from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
+export { orchestrateTraceEndLiveQueueMaterializationUseCase } from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
 export {
   type PersistSystemQueueAnnotationError,
   type PersistSystemQueueAnnotationInput,
   persistSystemQueueAnnotationUseCase,
 } from "./use-cases/persist-system-queue-annotation.ts"
+export {
+  type CheckAmbiguousRateLimit,
+  type DroppedReason,
+  type EnqueueFlaggerWorkflowStart,
+  type FlaggerEnqueueReason,
+  type ProcessDeterministicFlaggersDeps,
+  type ProcessDeterministicFlaggersError,
+  type ProcessDeterministicFlaggersInput,
+  type ProcessDeterministicFlaggersResult,
+  processDeterministicFlaggersUseCase,
+  type StrategyDecision,
+} from "./use-cases/process-deterministic-flaggers.ts"
 export {
   type ProvisionSystemQueuesError,
   type ProvisionSystemQueuesInput,
@@ -144,19 +188,16 @@ export {
   requestBulkQueueItems,
 } from "./use-cases/request-bulk-queue-items.ts"
 export {
-  DETERMINISTIC_SYSTEM_MATCHERS,
-  type RunDeterministicSystemMatchersError,
-  type RunDeterministicSystemMatchersInput,
-  type RunDeterministicSystemMatchersResult,
-  runDeterministicSystemMatchersUseCase,
-} from "./use-cases/run-deterministic-system-matchers.ts"
-export {
+  type AnnotateTraceForQueueInput,
+  annotateTraceForQueueUseCase,
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,
   type RunSystemQueueAnnotatorResult,
   runSystemQueueAnnotatorUseCase,
 } from "./use-cases/run-system-queue-annotator.ts"
 export {
+  type ClassifyTraceForQueueInput,
+  classifyTraceForQueueUseCase,
   type RunSystemQueueFlaggerError,
   type RunSystemQueueFlaggerInput,
   type RunSystemQueueFlaggerResult,

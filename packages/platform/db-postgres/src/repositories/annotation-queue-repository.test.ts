@@ -1,5 +1,5 @@
 import { AnnotationQueueRepository } from "@domain/annotation-queues"
-import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError, type SqlClient } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -21,7 +21,7 @@ function makeId(prefix: string): string {
 
 const pg = setupTestPostgres()
 
-const runWithLive = <A, E>(effect: Effect.Effect<A, E, AnnotationQueueRepository>) =>
+const runWithLive = <A, E>(effect: Effect.Effect<A, E, AnnotationQueueRepository | SqlClient>) =>
   Effect.runPromise(effect.pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)))
 
 describe("AnnotationQueueRepositoryLive", () => {

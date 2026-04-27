@@ -22,7 +22,6 @@ const _registry = {
     send: {
       readonly email: string
       readonly magicLinkUrl: string
-      readonly emailFlow: string | null
       readonly organizationId: string
     }
   }>(),
@@ -79,7 +78,7 @@ const _registry = {
         readonly toIso?: string
       }
       readonly sort?: {
-        readonly field: "lastSeen" | "occurrences"
+        readonly field: "lastSeen" | "occurrences" | "state"
         readonly direction: "asc" | "desc"
       }
     }
@@ -110,7 +109,13 @@ const _registry = {
   }>(),
 
   evaluations: payloads<{
-    align: {
+    automaticRefreshAlignment: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly evaluationId: string
+    }
+    automaticOptimization: {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string
@@ -152,6 +157,32 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+    }
+  }>(),
+
+  // Runs the deterministic portion of every registered flagger strategy against
+  // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
+  // that return `no-match` are sampled and, if selected, routed to the LLM
+  // workflow; `ambiguous` strategies are rate-limited per {org, slug} and also
+  // routed to the LLM workflow. Per-strategy failures are isolated.
+  "deterministic-flaggers": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
+  }>(),
+
+  // Thin start-workflow job. Separates the Temporal `start()` call out of the
+  // deterministic-flaggers hot path so transient Temporal unavailability retries
+  // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
+  "start-flagger-workflow": payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly queueSlug: string
+      readonly reason: "sampled" | "ambiguous"
     }
   }>(),
 
@@ -198,6 +229,37 @@ const _registry = {
       readonly organizationId: string
       readonly payload: Record<string, unknown>
       readonly occurredAt: string
+    }
+  }>(),
+
+  "trace-search": payloads<{
+    refreshTrace: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly startTime: string
+      readonly rootSpanName: string
+    }
+  }>(),
+
+  // Writes annotations into the Latitude-owned dogfood project via
+  // @platform/latitude-api. The worker is fire-and-forget from the reviewer's
+  // perspective — the web route 202s immediately on enqueue, and BullMQ's
+  // retry policy drives redelivery on transient failures.
+  "product-feedback": payloads<{
+    submitSystemAnnotatorReview: {
+      readonly upstreamScoreId: string
+      // Discriminated at the type level: reject requires a comment, approve does
+      // not. Mirrors the Phase 5 UI's disabled-submit behaviour on reject.
+      readonly review:
+        | { readonly decision: "approve"; readonly comment?: string }
+        | { readonly decision: "reject"; readonly comment: string }
+    }
+    submitEnrichmentReview: {
+      readonly upstreamScoreId: string
+      readonly review:
+        | { readonly decision: "good"; readonly comment?: string }
+        | { readonly decision: "bad"; readonly comment: string }
     }
   }>(),
 }

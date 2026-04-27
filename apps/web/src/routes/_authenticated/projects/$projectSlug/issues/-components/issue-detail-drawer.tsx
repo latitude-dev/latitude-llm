@@ -14,7 +14,6 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowDownRightIcon,
@@ -155,7 +154,6 @@ export function IssueDetailDrawer({
   readonly canNavigateNext: boolean
   readonly canNavigatePrev: boolean
 }) {
-  const navigate = useNavigate()
   const { toast } = useToast()
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -175,25 +173,17 @@ export function IssueDetailDrawer({
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
 
-  const handleTraceClick = (traceId: string) => {
-    void navigate({
-      to: "/projects/$projectSlug",
-      params: { projectSlug },
-      search: {
-        tab: "traces",
-        traceId,
-        traceDetailTab: "annotations",
-      },
-    })
-  }
-
   const getTraceHref = (trace: { readonly traceId: string }) => {
     return `/projects/${projectSlug}?tab=traces&traceId=${trace.traceId}&traceDetailTab=annotations`
   }
 
+  const openTraceInNewTab = (traceId: string) => {
+    window.open(getTraceHref({ traceId }), "_blank", "noopener,noreferrer")
+  }
+
   const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
     const shortName = input.rootSpanName || input.traceId.slice(0, 8)
-    return `Open trace ${shortName} with annotations tab in traces dashboard`
+    return `Open trace ${shortName} with annotations tab in a new tab`
   }
 
   const runLifecycleCommand = async (command: "resolve" | "unresolve" | "ignore" | "unignore", override?: boolean) => {
@@ -426,13 +416,15 @@ export function IssueDetailDrawer({
             contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
             <ProjectTracesTable
+              projectId={projectId}
               data={traces}
               isLoading={tracesLoading}
               visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-              onTraceClick={(trace) => handleTraceClick(trace.traceId)}
+              onTraceClick={(trace) => openTraceInNewTab(trace.traceId)}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
               getTraceHref={getTraceHref}
+              linkTarget="_blank"
               rowInteractionRole="link"
               infiniteScroll={infiniteScroll}
               blankSlate="This issue has not been seen on any traces yet."

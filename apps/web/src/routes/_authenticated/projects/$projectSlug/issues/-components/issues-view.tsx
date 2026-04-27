@@ -14,12 +14,13 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
-import { formatPercent, formatSeenAgeParts } from "./issue-formatters.ts"
+import { formatPercent, formatSeenAgeParts, getPrimaryLifecycleState } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
 export const ISSUES_COLUMN_OPTIONS = [
   { id: "issue", label: "Issue", required: true },
+  { id: "status", label: "Status" },
   { id: "trend", label: "Trend" },
   { id: "seenAt", label: "Seen at" },
   { id: "occurrences", label: "Occurrences" },
@@ -27,9 +28,6 @@ export const ISSUES_COLUMN_OPTIONS = [
 ] as const
 
 export type IssuesColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
-
-const ISSUE_COLUMN_WIDTH = 480
-const ISSUE_COLUMN_MIN_WIDTH = 360
 
 function SeenAtCell({
   lastSeenAtIso,
@@ -71,7 +69,7 @@ function MonitoredByTooltip({ evaluationNames }: { readonly evaluationNames: rea
 }
 
 export interface IssuesTableSorting {
-  readonly column: "lastSeen" | "occurrences"
+  readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
 }
 
@@ -132,37 +130,48 @@ export function IssuesView({
     {
       key: "issue",
       header: "Issue",
-      width: ISSUE_COLUMN_WIDTH,
-      minWidth: ISSUE_COLUMN_MIN_WIDTH,
+      width: 360,
+      minWidth: 280,
       render: (issue) => (
         <div className="flex min-w-0 items-center gap-2">
           <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
             {issue.name}
           </Text.H5>
-          <div className="shrink-0">
-            <IssueLifecycleStatuses
-              states={issue.states}
-              wrap={false}
-              {...(issue.evaluations.length > 0
-                ? {
-                    extraStatuses: [
-                      {
-                        key: "monitored",
-                        label: "Monitored",
-                        variant: "success",
-                        tooltip: (
-                          <MonitoredByTooltip
-                            evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)}
-                          />
-                        ),
-                      },
-                    ],
-                  }
-                : {})}
-            />
-          </div>
+          {issue.evaluations.length > 0 ? (
+            <div className="shrink-0">
+              <IssueLifecycleStatuses
+                states={[]}
+                wrap={false}
+                extraStatuses={[
+                  {
+                    key: "monitored",
+                    label: "Monitored",
+                    variant: "success",
+                    tooltip: (
+                      <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
+                    ),
+                  },
+                ]}
+              />
+            </div>
+          ) : null}
         </div>
       ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: 104,
+      minWidth: 104,
+      sortKey: "state",
+      render: (issue) => {
+        const primaryState = getPrimaryLifecycleState(issue.states)
+        return (
+          <div className="flex min-w-0 items-center">
+            <IssueLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
+          </div>
+        )
+      },
     },
     {
       key: "trend",
@@ -181,6 +190,14 @@ export function IssuesView({
           showEscalationThresholdGuide
         />
       ),
+      renderSubheader: () => (
+        <div className="flex min-w-0 w-full items-center gap-0.5">
+          <Text.H6 color="foregroundMuted" className="min-w-0 truncate tabular-nums">
+            RANGE
+          </Text.H6>
+          <Text.H6B color="foreground">14d</Text.H6B>
+        </div>
+      ),
     },
     {
       key: "seenAt",
@@ -193,8 +210,8 @@ export function IssuesView({
     {
       key: "occurrences",
       header: "Occurrences",
-      width: 84,
-      minWidth: 84,
+      width: 76,
+      minWidth: 76,
       align: "end",
       sortKey: "occurrences",
       render: (issue) => formatCount(issue.occurrences),
@@ -210,9 +227,14 @@ export function IssuesView({
     {
       key: "affectedTraces",
       header: "Affected traces",
-      width: 89,
-      minWidth: 89,
+      width: 76,
+      minWidth: 76,
       align: "end",
+      // Affected traces % is `occurrences / totalTraces` with a constant
+      // denominator across the page, so sorting by either column is the same
+      // operation. Sharing the sort key lets clicks on either header drive the
+      // same sort and lights up the indicator on both at once.
+      sortKey: "occurrences",
       render: (issue) => formatPercent(issue.affectedTracesPercent),
     },
   ]

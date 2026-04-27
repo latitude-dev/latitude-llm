@@ -1,4 +1,8 @@
-import { EvaluationAlignmentExamplesRepository, type EvaluationAlignmentNegativePriority } from "@domain/evaluations"
+import {
+  EvaluationAlignmentExamplesRepository,
+  type EvaluationAlignmentNegativePriority,
+  type EvaluationAlignmentPositivePriority,
+} from "@domain/evaluations"
 import type { ScoreMetadata } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
@@ -140,6 +144,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
       sessionId: "session-positive",
       scoreIds: ["k".repeat(24), "l".repeat(24)],
       label: "positive",
+      positivePriority: "failed-annotation-no-passes",
       negativePriority: null,
       annotationFeedback: "feedback | feedback",
     })
@@ -192,6 +197,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         sessionId: null,
         scoreIds: ["a".repeat(24)],
         label: "positive",
+        positivePriority: "failed-annotation-no-passes",
         negativePriority: null,
         annotationFeedback: "feedback",
       },
@@ -200,14 +206,65 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         sessionId: "session-present",
         scoreIds: ["b".repeat(24), "c".repeat(24)],
         label: "positive",
+        positivePriority: "failed-annotation-no-passes",
         negativePriority: null,
         annotationFeedback: "feedback | feedback",
       },
     ])
   })
 
+  it("returns positive examples in priority order, preferring those without any passed scores", async () => {
+    await database.db.insert(scoresTable).values([
+      // Tier 2 inserted first — has a passed annotation on top of the failed target annotation.
+      makeScoreRow({
+        id: "d".repeat(24),
+        traceId: "trace-tier-2",
+        sessionId: "session-tier-2",
+        issueId: issueId as string,
+        passed: false,
+        source: "annotation",
+        metadata: annotationMetadata("failed target annotation"),
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+      }),
+      makeScoreRow({
+        id: "e".repeat(24),
+        traceId: "trace-tier-2",
+        sessionId: "session-tier-2",
+        issueId: otherIssueId as string,
+        passed: true,
+        source: "annotation",
+        metadata: annotationMetadata("passed on other issue"),
+        createdAt: new Date("2026-04-01T00:01:00.000Z"),
+      }),
+      // Tier 1 inserted after — failed target annotation with no passed scores at all.
+      makeScoreRow({
+        id: "f".repeat(24),
+        traceId: "trace-tier-1",
+        sessionId: "session-tier-1",
+        issueId: issueId as string,
+        passed: false,
+        source: "annotation",
+        metadata: annotationMetadata("failed target annotation"),
+        createdAt: new Date("2026-04-01T00:02:00.000Z"),
+      }),
+    ])
+
+    const positives = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationAlignmentExamplesRepository
+        return yield* repository.listPositiveExamples({ projectId, issueId })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(positives.map((item) => [item.traceId, item.positivePriority])).toEqual([
+      ["trace-tier-1", "failed-annotation-no-passes"],
+      ["trace-tier-2", "failed-annotation-with-passes"],
+    ] satisfies ReadonlyArray<readonly [string, EvaluationAlignmentPositivePriority]>)
+  })
+
   it("returns negative examples in priority order and excludes traces tied to the target issue", async () => {
     await database.db.insert(scoresTable).values([
+      // Tier 1: passed annotation + no failed scores.
       makeScoreRow({
         id: "o".repeat(24),
         traceId: "trace-tier-1",
@@ -218,26 +275,39 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         metadata: annotationMetadata("all good"),
         createdAt: new Date("2026-04-01T01:00:00.000Z"),
       }),
+      // Tier 2: passed annotation + a failed score on a different issue.
       makeScoreRow({
-        id: "p".repeat(24),
+        id: "q".repeat(24),
         traceId: "trace-tier-2",
         sessionId: "session-tier-2",
         issueId: null,
         passed: true,
-        source: "evaluation",
-        metadata: evaluationMetadata("hash-tier-2"),
+        source: "annotation",
+        metadata: annotationMetadata("passed on target"),
         createdAt: new Date("2026-04-01T01:01:00.000Z"),
       }),
       makeScoreRow({
         id: "r".repeat(24),
-        traceId: "trace-tier-3",
-        sessionId: "session-tier-3",
+        traceId: "trace-tier-2",
+        sessionId: "session-tier-2",
         issueId: otherIssueId as string,
         passed: false,
         source: "annotation",
-        metadata: annotationMetadata("different issue"),
+        metadata: annotationMetadata("failed on other issue"),
         createdAt: new Date("2026-04-01T01:02:00.000Z"),
       }),
+      // Ineligible: only passed evaluation/custom scores, no passed annotation.
+      makeScoreRow({
+        id: "p".repeat(24),
+        traceId: "trace-no-passed-annotation",
+        sessionId: "session-no-passed-annotation",
+        issueId: null,
+        passed: true,
+        source: "evaluation",
+        metadata: evaluationMetadata("hash-no-annotation"),
+        createdAt: new Date("2026-04-01T01:03:00.000Z"),
+      }),
+      // Ineligible: linked to the target issue.
       makeScoreRow({
         id: "t".repeat(24),
         traceId: "trace-target-linked",
@@ -246,8 +316,9 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         passed: true,
         source: "annotation",
         metadata: annotationMetadata("linked to target issue"),
-        createdAt: new Date("2026-04-01T01:03:00.000Z"),
+        createdAt: new Date("2026-04-01T01:04:00.000Z"),
       }),
+      // Ineligible: explicitly excluded trace.
       makeScoreRow({
         id: "u".repeat(24),
         traceId: "trace-excluded",
@@ -256,7 +327,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         passed: true,
         source: "annotation",
         metadata: annotationMetadata("exclude me"),
-        createdAt: new Date("2026-04-01T01:04:00.000Z"),
+        createdAt: new Date("2026-04-01T01:05:00.000Z"),
       }),
     ])
 
@@ -273,8 +344,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
 
     expect(negatives.map((item) => [item.traceId, item.negativePriority])).toEqual([
       ["trace-tier-1", "passed-annotation-no-failures"],
-      ["trace-tier-2", "no-failed-scores"],
-      ["trace-tier-3", "unrelated-issue-scores"],
+      ["trace-tier-2", "passed-annotation-unrelated-failures"],
     ] satisfies ReadonlyArray<readonly [string, EvaluationAlignmentNegativePriority]>)
   })
 

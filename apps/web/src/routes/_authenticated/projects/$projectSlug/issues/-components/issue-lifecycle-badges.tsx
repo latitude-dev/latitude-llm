@@ -5,6 +5,7 @@ import { formatLifecycleLabel, getLifecycleStatesForDisplay } from "./issue-form
 const STATE_VARIANTS = {
   new: "outlineAccent",
   escalating: "outlineWarningMuted",
+  ongoing: "outline",
   resolved: "outlineMuted",
   regressed: "outlineDestructiveMuted",
   ignored: "outlineMuted",

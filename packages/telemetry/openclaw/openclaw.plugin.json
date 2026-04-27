@@ -1,0 +1,40 @@
+{
+  "id": "@latitude-data/openclaw-telemetry",
+  "name": "Latitude Telemetry",
+  "description": "Streams every OpenClaw agent run to Latitude as OTLP traces — full prompt, message history, assistant output, tool I/O, token usage, and agent name.",
+  "version": "0.0.2",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "description": "Latitude bearer token. Required."
+      },
+      "project": {
+        "type": "string",
+        "description": "Latitude project slug to route traces into. Required."
+      },
+      "baseUrl": {
+        "type": "string",
+        "description": "OTLP ingest origin. Defaults to https://ingest.latitude.so. Override for staging/dev."
+      },
+      "allowConversationAccess": {
+        "type": "boolean",
+        "default": false,
+        "description": "When true, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When false, emit only timing, token usage, model name, agent id, and ids."
+      },
+      "debug": {
+        "type": "boolean",
+        "default": false,
+        "description": "Log diagnostic lines to stderr."
+      },
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Set to false to pause emission without uninstalling."
+      }
+    },
+    "required": ["apiKey", "project"]
+  }
+}

@@ -17,11 +17,15 @@ const getTraceContext = () => {
 
 const toSerializable = (value: unknown): unknown => {
   if (value instanceof Error) {
-    return {
+    const result: Record<string, unknown> = {
       name: value.name,
       message: value.message,
       stack: value.stack,
     }
+    if ("cause" in value && value.cause !== undefined) {
+      result.cause = toSerializable(value.cause)
+    }
+    return result
   }
 
   if (typeof value === "bigint") {

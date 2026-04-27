@@ -29,6 +29,8 @@ import {
   TraceId,
   UnauthorizedError,
 } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -614,6 +616,7 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
         withClickHouse(TraceRepositoryLive, chClient, orgId),
+        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )
@@ -665,6 +668,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
+          withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),
       )

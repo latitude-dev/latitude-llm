@@ -7,6 +7,7 @@ import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-forma
 const COUNT_CARDS = [
   { key: "newIssues", label: "New issues" },
   { key: "escalatingIssues", label: "Escalating issues" },
+  { key: "ongoingIssues", label: "Ongoing issues" },
   { key: "regressedIssues", label: "Regressed issues" },
   { key: "resolvedIssues", label: "Resolved issues" },
   { key: "seenOccurrences", label: "Seen occurrences" },

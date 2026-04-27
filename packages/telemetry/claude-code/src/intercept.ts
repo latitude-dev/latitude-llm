@@ -7,7 +7,8 @@
 // This runs inside the claude process. It has zero dependencies, uses only node
 // built-ins, and is fail-silent: any error falls through to the original fetch.
 
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync } from "node:fs"
+import { writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
@@ -37,30 +38,37 @@ async function interceptedFetch(
     return originalFetch(input, init)
   }
 
-  let bodyText: string | undefined
-  try {
-    bodyText = await extractBody(input, init)
-  } catch {
-    bodyText = undefined
-  }
-
-  const response = await originalFetch(input, init)
+  // Extract the body in parallel with the outbound fetch so we don't gate TTFB on
+  // reading the request payload. For the common case where init.body is already a
+  // string this resolves synchronously; for Request inputs we clone up-front (while
+  // the body is still undisturbed) and read the clone's text concurrently with the
+  // network call.
+  const bodyPromise = extractBody(input, init).catch(() => undefined)
+  const responsePromise = originalFetch(input, init)
+  const response = await responsePromise
+  const bodyText = await bodyPromise
 
   if (!bodyText || !response.ok || !response.body) return response
 
   try {
     // Tee the response stream: one side goes to the caller (the Anthropic SDK), the
     // other side we scan for the message_start SSE event. As soon as that event
-    // arrives, we know the message id and write the request file synchronously —
-    // well before the Stop hook can fire, eliminating the race we'd have if we
-    // waited for the full response to drain.
+    // arrives, we know the message id, write the request file asynchronously, then
+    // cancel this branch so the caller's branch is no longer coupled to us via tee
+    // backpressure for the rest of the response.
     const [forCaller, forScan] = response.body.tee()
     void scanForMessageIdAndWrite(forScan, bodyText, url)
+
+    // Strip content-length; the upstream value refers to the original body and
+    // can confuse runtimes/proxies that inspect the wrapped stream. SSE responses
+    // use chunked transfer encoding anyway.
+    const headers = new Headers(response.headers)
+    headers.delete("content-length")
 
     return new Response(forCaller, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers,
     })
   } catch (err) {
     if (DEBUG) process.stderr.write(`[latitude-intercept] tee failed: ${String(err)}\n`)
@@ -81,18 +89,16 @@ async function scanForMessageIdAndWrite(
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      // Once we've written the file we no longer need to decode or buffer any
-      // more bytes — we just keep pulling from our tee branch so the underlying
-      // source isn't back-pressured while the SDK consumes the other branch.
-      if (wrote) continue
       if (value) buffered += decoder.decode(value, { stream: true })
       const messageId = extractMessageId(buffered)
       if (messageId) {
-        writeRequest(messageId, bodyText, url)
         wrote = true
-        // Free the buffer promptly so memory doesn't hold the partial SSE prefix
-        // for the rest of a long stream.
         buffered = ""
+        // Fire-and-forget the write so we can cancel this tee branch immediately.
+        // Cancelling frees the caller's branch from any backpressure coupling for
+        // the rest of the response.
+        void writeRequest(messageId, bodyText, url)
+        break
       }
     }
     if (!wrote && DEBUG) {
@@ -101,6 +107,11 @@ async function scanForMessageIdAndWrite(
   } catch (err) {
     if (DEBUG) process.stderr.write(`[latitude-intercept] scan failed: ${String(err)}\n`)
   } finally {
+    try {
+      await reader.cancel()
+    } catch {
+      // best-effort
+    }
     try {
       reader.releaseLock()
     } catch {
@@ -182,7 +193,7 @@ function extractMessageId(sseText: string): string | undefined {
   return undefined
 }
 
-function writeRequest(messageId: string, bodyText: string, url: string): void {
+async function writeRequest(messageId: string, bodyText: string, url: string): Promise<void> {
   const safeId = messageId.replace(/[^a-zA-Z0-9_-]/g, "_")
   const filename = join(REQUESTS_DIR, `${safeId}.json`)
   try {
@@ -192,7 +203,7 @@ function writeRequest(messageId: string, bodyText: string, url: string): void {
       url,
       request: safeParse(bodyText),
     }
-    writeFileSync(filename, JSON.stringify(payload), "utf-8")
+    await writeFile(filename, JSON.stringify(payload), "utf-8")
     if (DEBUG) process.stderr.write(`[latitude-intercept] wrote ${filename}\n`)
   } catch (err) {
     if (DEBUG) process.stderr.write(`[latitude-intercept] write failed: ${String(err)}\n`)

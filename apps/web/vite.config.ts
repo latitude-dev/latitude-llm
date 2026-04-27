@@ -34,20 +34,36 @@ const temporalExternal: (string | RegExp)[] = [
   "long",
 ]
 
+// @effect/opentelemetry ships a WebSdk.js entry that imports from
+// @opentelemetry/sdk-trace-web (an optional peer, browser-only). The SSR
+// bundle never reaches the web SDK path, but Rolldown's resolver scans it.
+// Externalize so Rolldown does not attempt to resolve the missing peer.
+const ssrExternal: (string | RegExp)[] = [
+  ...temporalExternal,
+  "@opentelemetry/sdk-trace-web",
+]
+
 export default defineConfig({
   // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
   plugins: [
     tanstackStart(),
     nitro({
       sourcemap: true,
-      rollupConfig: { external: temporalExternal },
-      rolldownConfig: { external: temporalExternal },
+      rollupConfig: { external: ssrExternal },
+      rolldownConfig: { external: ssrExternal },
     }),
     tailwindcss(),
     react(),
   ],
   ssr: {
-    external: ["@temporalio/client", "@temporalio/proto", "@grpc/grpc-js", "protobufjs", "long"],
+    external: [
+      "@temporalio/client",
+      "@temporalio/proto",
+      "@grpc/grpc-js",
+      "protobufjs",
+      "long",
+      "@opentelemetry/sdk-trace-web",
+    ],
   },
   resolve: {
     conditions: ["source", "browser"],

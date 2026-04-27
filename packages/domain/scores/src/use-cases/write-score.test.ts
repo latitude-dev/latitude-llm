@@ -1,6 +1,6 @@
 import { OutboxEventWriter } from "@domain/events"
-import { OrganizationId, SessionId, SpanId, SqlClient, TraceId, UserId } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { ChSqlClient, OrganizationId, SessionId, SpanId, SqlClient, TraceId, UserId } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { ScoreAnalyticsRepository } from "../ports/score-analytics-repository.ts"
@@ -30,11 +30,18 @@ function createTestLayers() {
   })
 
   const SqlClientTest = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) }))
+  const ChSqlClientTest = Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(cuid) }))
 
   return {
     store,
     events,
-    layer: Layer.mergeAll(ScoreRepositoryTest, ScoreAnalyticsRepositoryTest, OutboxEventWriterTest, SqlClientTest),
+    layer: Layer.mergeAll(
+      ScoreRepositoryTest,
+      ScoreAnalyticsRepositoryTest,
+      OutboxEventWriterTest,
+      SqlClientTest,
+      ChSqlClientTest,
+    ),
   }
 }
 

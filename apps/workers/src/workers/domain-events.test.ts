@@ -1,6 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
-import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
+import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -40,7 +40,6 @@ describe("domain-events dispatcher", () => {
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      emailFlow: null,
       organizationId: "org-1",
     })
 
@@ -52,7 +51,6 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.payload).toEqual({
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      emailFlow: null,
       organizationId: "org-1",
     })
     expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)
@@ -197,7 +195,8 @@ describe("domain-events dispatcher", () => {
       issueId: "issue-42",
     })
     expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+    expect(published[0]?.options?.throttleMs).toBe(ISSUE_REFRESH_THROTTLE_MS)
+    expect(published[0]?.options?.debounceMs).toBeUndefined()
   })
 
   it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {

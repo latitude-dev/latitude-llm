@@ -1,10 +1,11 @@
 import { generateId, UnauthorizedError } from "@domain/shared"
+import { SqlClientLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 
 /** Throws {@link UnauthorizedError} when there is no authenticated session (for use inside server handlers). */
 export function assertAuthenticatedSession<T>(session: T | null | undefined): asserts session is NonNullable<T> {
@@ -18,6 +19,32 @@ export const getSession = createServerFn({ method: "GET" }).handler(async () => 
   const auth = getBetterAuth()
 
   const session = await auth.api.getSession({ headers })
+
+  return session
+})
+
+/**
+ * Fetch the session while bypassing Better Auth's signed cookie cache
+ * (see `session.cookieCache` in `create-better-auth.ts`, 5-minute TTL).
+ * The default cache serves the user payload from a cookie without
+ * hitting the DB — which means a DB-level role or status change stays
+ * invisible for up to 5 minutes.
+ *
+ * Called by `requireAdminSession()` so role demotions take effect on
+ * the very next admin-gated request. Lives in the same module as
+ * `getSession` so the TanStack Start Vite compiler can strip its
+ * handler body (and the transitively-imported server-only modules
+ * like `@repo/observability` and `@platform/db-postgres`) out of the
+ * client bundle.
+ */
+export const getFreshSession = createServerFn({ method: "GET" }).handler(async () => {
+  const headers = getRequestHeaders()
+  const auth = getBetterAuth()
+
+  const session = await auth.api.getSession({
+    headers,
+    query: { disableCookieCache: true },
+  })
 
   return session
 })
@@ -72,7 +99,7 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
         },
         occurredAt: new Date(),
       })
-      .pipe(withTracing),
+      .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
   )
 
   // Revoke the session so the user is logged out

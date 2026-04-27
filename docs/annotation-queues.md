@@ -28,7 +28,7 @@ When a project is created:
 5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
 6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
 
-The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`) derived from their names, enabling slug-based routing throughout the pipeline. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they publish annotation scores directly from the trace-end runtime — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
+The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`) derived from their names, enabling slug-based routing throughout the pipeline. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they share the unified `QueueStrategy` registry as deterministic-only strategies and publish SYSTEM-authored annotation scores directly from the deterministic-flagger worker — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
 ### Caching
 
@@ -41,37 +41,64 @@ Project system queue state is cached in Redis with a read-through pattern:
 
 The cache stores the full list of system queues for a project, making fan-out operations fast and reducing database load.
 
-### Trace Routing: Trace-End Runtime + Per-Queue Workflow Start
+### Trace Routing: Trace-End → Deterministic-Flagger Worker → Workflow Start
 
-When a trace ends, the debounced trace-end runtime evaluates the project's provisioned system queues and starts one workflow per selected queue:
+Trace-end no longer fans out per-queue workflows directly. Instead, every trace-end enqueues a single `deterministic-flaggers:run` job. That job runs **every** registered flagger strategy's deterministic phase, then routes the per-strategy outcome — only `no-match` (sampled-in) and `ambiguous` (rate-limited) outcomes ever reach the LLM workflow.
 
-**Selection (`trace-end:run`)**:
+**Step 1 — `trace-end:run`**:
 
 1. Triggered by debounced `SpanIngested`
-2. Reads all active system queues for the project (cached or from DB)
-3. Applies deterministic sampling per queue and skips queues with `sampling <= 0`
-4. Starts `systemQueueFlaggerWorkflow` directly for each selected queue
+2. Loads the trace and runs live-evaluation + live-queue selection (unchanged)
+3. Enqueues a single `deterministic-flaggers:run` job for the trace, deduped on `deterministic-flaggers:{traceId}`. No system-queue sampling happens here.
 
-**Workflow start dedupe**:
+**Step 2 — `deterministic-flaggers:run`** (new worker; high-throughput, fault-isolated):
 
-1. The worker uses a Redis-backed iteration-progress key to avoid starting the same `(traceId, queueSlug)` workflow twice
-2. Workflow ids use `system-queue-flagger:{traceId}:{queueSlug}` so queue evaluation stays durable and slug-addressable
+1. Loads `TraceDetail` once
+2. Loads provisioned system queues for the project (cached)
+3. Fans out across the strategy registry in **two phases** to honor the suppression dependency graph:
+   - **Phase 1**: strategies with no `suppressedBy` run in parallel; their `matched` decisions form a `phase1MatchedSlugs` set.
+   - **Phase 2**: strategies with `suppressedBy` short-circuit before any detection work if any listed suppressor is in that set, emitting `{ action: "suppressed", suppressedBy }`.
+4. Routes each per-strategy `DetectionResult`:
+   - **`matched`** → write a `SYSTEM`-authored score directly using the strategy-supplied `feedback` string. No queue item, no draft, no LLM call. (Issues clustering picks it up via `ScoreCreated` like the other direct-deterministic signals.)
+   - **`no-match`** (LLM-capable strategy + provisioned system queue) → apply per-queue `settings.sampling`. Sampled-in traces enqueue `start-flagger-workflow` with `reason: "sampled"`. Otherwise dropped (`sampled-out`).
+   - **`ambiguous`** (LLM-capable strategy + provisioned system queue) → check per-`{org, slug}` Redis rate limit (`AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT`, default 30 req / 60 s, fail-open). Under the limit → enqueue `start-flagger-workflow` with `reason: "ambiguous"`. Otherwise dropped (`rate-limited`).
+5. Per-strategy errors are caught at the slug boundary and recorded as `action: "failed"` with a strategy-scoped log; one broken detector cannot break the rest of the fan-out.
 
-**Deterministic Sampling**:
+The rate limit prevents a hot trace pattern (e.g., a jailbreak signature firing on every request from one org) from stampeding the LLM workflow queue with thousands of calls per minute. The Redis key shape is `org:{organizationId}:ratelimit:flagger-ambiguous:{queueSlug}`.
+
+**Step 3 — `start-flagger-workflow:start`** (thin worker):
+
+1. Calls `workflowStarter.start("systemQueueFlaggerWorkflow", { organizationId, projectId, traceId, queueSlug }, { workflowId: "system-queue-flagger:{traceId}:{queueSlug}" })`
+2. BullMQ-level retry policy (`attempts: 4`, exponential 2 s base, ~14 s total) absorbs short Temporal outages without re-running the deterministic fan-out
+3. Exhausted attempts log + drop (TODO: DLQ + alert)
+
+**Cross-strategy suppression** (initial wiring):
+
+| Phase-2 strategy | `suppressedBy` | Reasoning |
+| --- | --- | --- |
+| `refusal` | `jailbreaking`, `nsfw` | A justified refusal of a jailbreak / NSFW prompt is correct behavior, not a defect |
+| `laziness` | `trashing` | An identical-tool-call loop is a different failure mode than punting / deferring work |
+
+Only `matched` (not `ambiguous`) suppresses, so suppression stays high-precision. The registry validates the dependency graph at module load — every suppressor must exist and itself be in phase 1 (no transitive suppression).
+
+**Sampling and rate limiting**:
 
 ```typescript
-// Sampling check applied to every provisioned system queue
-hash(traceId) % 100 < sampling
+// Per-strategy sampling (no-match path, LLM-capable strategies)
+hash(`${organizationId}:${projectId}:${queueSlug}:${traceId}`) % 100 < sampling
+
+// Per-{org, slug} ambiguous rate limit (ambiguous path)
+INCR org:{organizationId}:ratelimit:flagger-ambiguous:{queueSlug} ≤ 30 per 60s
 ```
 
-- **Queues with `sampling = 0%`**: Excluded entirely (disabled)
-- **Provisioned default**: system queues are currently provisioned with the shared `SYSTEM_QUEUE_DEFAULT_SAMPLING = 10`
+- **Queues with `sampling = 0%`**: skip the no-match → LLM path entirely (deterministic-only for that queue)
+- **Provisioned default**: `SYSTEM_QUEUE_DEFAULT_SAMPLING = 10`
 - **Editing**: users may later tune `settings.sampling` per system queue
-- Non-sampled traces skip the flagger workflow and are not flagged
+- The `ambiguous` path is gated by the rate limit, not by sampling — every `ambiguous` outcome under the limit reaches the LLM
 
 ### System Queue Flagger Workflow
 
-The Temporal workflow orchestrates queue evaluation through a three-step process:
+The Temporal workflow is now **LLM-only**. The deterministic phase moved out into the `deterministic-flaggers` worker (above); the workflow only runs when the deterministic phase produced `no-match` (sampled-in) or `ambiguous` (under the rate limit) for an LLM-capable strategy.
 
 **Workflow**: `systemQueueFlaggerWorkflow`
 - Input: `(organizationId, projectId, traceId, queueSlug)`
@@ -82,12 +109,12 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
 1. **`runFlagger`**:
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
    - loads trace analytics context from the shared trace repository path
-   - resolves the queue slug through a domain matcher map
+   - resolves the queue slug through the strategy registry, builds queue-specific prompts, and calls the flagger LLM
    - returns `{ matched }`
 
 2. **`draftAnnotate`** (only when `matched: true`):
    - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
-   - generates feedback using LLM with full conversation context
+   - generates feedback using the annotator LLM with full conversation context
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
@@ -97,23 +124,38 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
    - handles idempotency (checks for existing drafts)
    - returns `{ queueId, draftAnnotationId, wasCreated }`
 
-**Current matcher coverage**:
+**Queue-Specific Strategy Architecture**:
 
-- **Matcher entrypoints present but currently noop**:
-  - `jailbreaking`
-  - `refusal`
-  - `frustration`
-  - `forgetting`
-  - `laziness`
-  - `nsfw`
-  - `trashing`
+A single registry (`packages/domain/annotation-queues/src/flagger-strategies`) holds **all** strategies — both LLM-capable and deterministic-only. Each strategy implements:
 
-Deterministic signals for `tool-call-errors`, `output-schema-validation`, and `empty-response` do not flow through this flagger workflow. They run inline in the trace-end runtime and publish annotation scores directly — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
+1. **`hasRequiredContext(trace)`** — quick guard against running detection when the trace cannot be evaluated
+2. **`detectDeterministically(trace)`** (optional) — returns `{ kind: "matched", feedback }`, `{ kind: "no-match" }`, or `{ kind: "ambiguous" }`. Missing implementation defaults to `no-match`.
+3. **`buildSystemPrompt(trace)` + `buildPrompt(trace)`** (optional) — only LLM-capable strategies provide both. `isLlmCapableStrategy()` distinguishes them; deterministic-only strategies never reach the workflow.
+4. **`suppressedBy?: readonly string[]`** (optional) — list of slugs whose `matched` outcome makes this strategy non-applicable for the same trace (see suppression matrix above).
+
+`DetectionResult.matched` carries a `feedback: string`. The deterministic worker writes that exact string into the score row's `feedback` column and `metadata.rawFeedback`, so `issues:discovery` can cluster identical signals — matched-deterministic does not need a draft annotation step; the deterministic detector is authoritative for both the decision and the human-readable explanation.
+
+**Strategy Registry**:
+
+| Queue | Detection Type | Deterministic `matched` | Deterministic `ambiguous` | LLM context |
+|-------|---------------|------------------------|---------------------------|-------------|
+| `jailbreaking` | LLM-capable + deterministic | High-precision bypass patterns (DAN mode, direct injection) | Suspicious snippets (override/extraction phrases, indirect-injection markers) | Suspicious snippets |
+| `nsfw` | LLM-capable + deterministic | High-precision workplace-inappropriate patterns | Borderline signals | Text-only excerpts |
+| `trashing` | LLM-capable + deterministic | Identical tool+args invocation ≥ 3× (LoopGuard) | ≥ 5 calls with one tool ≥ 60% share | Tool-call sequence |
+| `refusal` | LLM-capable, ambiguous-only | — | Explicit refusal phrases (score ≥ 2) | Top 3 conversation stages |
+| `laziness` | LLM-capable, ambiguous-only | — | Deferral / punting phrases | Top 3 stages + work signals |
+| `frustration` | LLM-capable, ambiguous-only | — | Conservative pre-filter on user messages | User messages only |
+| `forgetting` | LLM-capable (default) | — | Defaults to `no-match` (placeholder) | Conversation excerpt |
+| `tool-call-errors` | Deterministic-only | Per-match: malformed tool call, duplicate id, tool-returned-error | — | n/a |
+| `output-schema-validation` | Deterministic-only | Per-match: trailing comma, unclosed JSON string, parse failure | — | n/a |
+| `empty-response` | Deterministic-only | Empty / whitespace-only / degenerate single-character output | — | n/a |
+
+`refusal`, `laziness`, and `frustration` are deliberately ambiguous-only — their deterministic signals are conservative pre-filters that route to the LLM rather than write a score directly. `forgetting`'s deterministic phase is a placeholder until a concrete classifier is added.
 
 **Retry Policy**:
-- Initial interval: 1s
-- Maximum attempts: 3
-- Non-retryable errors remain tied to workflow/activity configuration; unknown queue slugs currently return `matched: false` from the domain use case instead of throwing
+- Workflow start: bounded BullMQ retries at the `start-flagger-workflow` worker (`attempts: 4`, exponential 2 s base) absorb short Temporal outages without re-running the deterministic fan-out
+- Inside the workflow: Temporal activity retry policy (initial interval 1 s, max attempts 3) covers transient activity failures
+- Unknown queue slugs return `matched: false` from the domain use case instead of throwing
 
 ### Trace Assignment Flow
 
@@ -124,27 +166,48 @@ SpanIngested (domain event, debounced)
     ↓
 domain-events dispatcher
     ↓
-trace-end:run (sample queues, batch live filters, start workflows)
+trace-end:run (live evaluations, live-queue materialization, enqueue deterministic-flaggers)
     ↓
-systemQueueFlaggerWorkflow (one workflow per selected queue)
+deterministic-flaggers:run (load trace once, fan out across all strategies in two phases)
     ↓
-runFlagger activity
-    ↓
-If matched:
-    draftAnnotate activity (LLM feedback generation)
-        ↓
-    persistAnnotation activity (transactional persist)
-        ↓
-    Queue item created + Draft annotation written
+   ┌── matched ─────────→ writeScore(SYSTEM, draftedAt=null, feedback=<deterministic>)
+   │                              ↓
+   │                        ScoreCreated → issues:discovery
+   │
+   ├── no-match (sampled-in) ───┐
+   │                            │
+   ├── ambiguous (under limit) ─┤
+   │                            ↓
+   │                  start-flagger-workflow:start (BullMQ, attempts: 4)
+   │                            ↓
+   │                  systemQueueFlaggerWorkflow (Temporal, LLM-only)
+   │                            ↓
+   │                  runFlagger → matched? → draftAnnotate → persistAnnotation
+   │                                                              ↓
+   │                                            Queue item + draft annotation
+   │
+   ├── suppressed (phase-1 suppressor matched) → recorded, no further work
+   ├── dropped   (sampled-out / rate-limited / no-llm-capability) → recorded
+   └── failed    (per-strategy isolated error) → logged + recorded
 ```
 
-The workflow now fully automates the path from trace to reviewable draft annotation.
+The deterministic worker is the new authoritative entry point: every trace's flagger fan-out goes through it, and every strategy's per-trace decision is recorded for telemetry.
 
 ### Direct Deterministic System Signals
 
-Some deterministic signals are code-driven (zero false positives) and do not benefit from human review before becoming issues. Those skip the annotation queue entirely and publish annotation scores directly from the trace-end runtime so the existing `issues:discovery` pipeline (embeddings + BM25 hybrid search) can cluster them.
+Whenever a strategy's `detectDeterministically` returns `matched`, the deterministic-flagger worker writes a `SYSTEM`-authored annotation score directly using the strategy-supplied `feedback` string and skips the queue + LLM workflow entirely. This applies to **every** matched-deterministic outcome, not only the deterministic-only strategies — `jailbreaking`, `nsfw`, `trashing`, and the three deterministic-only signals all hit this path when their high-precision deterministic predicates fire.
 
-**Signals handled inline** (no queue, no Temporal workflow, no LLM annotator):
+The reasoning: matched-deterministic decisions are code-driven and have low enough false-positive rates that human pre-review adds no value. Routing them straight into `issues:discovery` keeps the LLM workflow focused on the genuinely ambiguous cases.
+
+**Strategies that write a score on matched-deterministic** (no queue, no Temporal workflow, no LLM annotator):
+
+LLM-capable strategies (matched bypasses the workflow that exists for their `ambiguous` / `no-match` paths):
+
+- `jailbreaking`: high-precision bypass patterns (DAN mode, system prompt override, role-tag injection). Feedback: `"Jailbreak attempt: matched a high-precision bypass pattern (prompt injection / instruction override)"`.
+- `nsfw`: high-precision workplace-inappropriate pattern. Feedback: `"NSFW content: matched a high-precision workplace-inappropriate pattern"`.
+- `trashing`: identical tool+args invocation repeated ≥ 3× (LoopGuard). Feedback: `"Trashing: identical tool+args invocation repeated N times"`.
+
+Deterministic-only strategies (no LLM prompts, only ever produce `matched` or `no-match`):
 
 - `tool-call-errors`: inspects conversation history for malformed tool interactions or failed tool responses, and writes a score with feedback like `Tool "<name>" returned error: <snippet>`.
 - `output-schema-validation`: inspects assistant output text for malformed or truncated structured-output JSON, and writes a score with feedback like `Assistant output failed JSON parse (malformed or truncated structured output)`.
@@ -152,51 +215,41 @@ Some deterministic signals are code-driven (zero false positives) and do not ben
 
 **Score shape** for each match:
 
-- `source = "annotation"`, `sourceId = "SYSTEM"` (new sentinel added alongside `UI`/`API`)
+- `source = "annotation"`, `sourceId = "SYSTEM"` (sentinel alongside `UI`/`API`)
 - `draftedAt = null` (published immediately — not a draft)
 - `annotatorId = null` (system-authored)
-- `passed = false`, `value = 0`, `feedback = <deterministic template>`
+- `passed = false`, `value = 0`, `feedback = <strategy-supplied>`
 - `metadata.rawFeedback = feedback`
 
-Published scores emit `ScoreCreated` inside the same transaction, so `issues:discovery` picks them up and clusters them by feedback text similarity — identical signals collapse into one issue, while meaningfully different ones (different tool names, different error classes) form distinct issues.
+Published scores emit `ScoreCreated`, so `issues:discovery` picks them up and clusters them by feedback text similarity — identical signals collapse into one issue, while meaningfully different ones (different tool names, different error classes) form distinct issues.
 
-**Flow**:
-
-```
-SpanIngested (domain event, debounced)
-    ↓
-domain-events dispatcher
-    ↓
-trace-end:run (loads TraceDetail once)
-    ↓
-runDeterministicSystemMatchersUseCase (inline detector evaluation; matching detectors then persist scores)
-    ↓
-For each matching detector → writeScoreUseCase(source="annotation", sourceId="SYSTEM", draftedAt=null)
-    ↓
-ScoreCreated published → issues:discovery picks it up → issue created or attached
-```
-
-Because these signals are not gated by a queue sampling setting, every trace is evaluated.
+Because the deterministic phase is not gated by a queue sampling setting, every trace runs every strategy's deterministic check. Sampling and rate limiting only gate the LLM workflow path.
 
 ### Key Infrastructure Files
 
-- **Domain**: `packages/domain/annotation-queues/src/use-cases/`
-  - `provision-system-queues.ts` - Idempotent queue creation
-  - `get-project-system-queues.ts` - Cached queue listing
-  - `materialize-live-queue-items.ts` - Batch insert pending live-queue rows after the shared trace-end selection pass
-  - `build-trace-end-queue-selection.ts` - Build `TraceEndSelectionSpec` maps and stable keys for live and system queues in that pass
-  - `orchestrate-trace-end-annotation-queue-effects.ts` - Run live-queue materialization and sequential system-queue workflow starts (the worker supplies the idempotent Temporal start hook)
-  - `run-system-queue-flagger.ts` - Slug-to-matcher queue evaluation
-  - `draft-system-queue-annotation.ts` - LLM feedback generation
-  - `persist-system-queue-annotation.ts` - Transactional queue item + draft creation
+- **Domain**: `packages/domain/annotation-queues/src/`
+  - `flagger-strategies/` — unified strategy registry (`index.ts`) plus per-slug detectors. Module load validates the `suppressedBy` graph (suppressors must exist and live in phase 1)
+  - `use-cases/process-deterministic-flaggers.ts` - Two-phase fan-out across the strategy registry; routes matched / no-match / ambiguous outcomes
+  - `use-cases/provision-system-queues.ts` - Idempotent queue creation
+  - `use-cases/get-project-system-queues.ts` - Cached queue listing
+  - `use-cases/materialize-live-queue-items.ts` - Batch insert pending live-queue rows after the shared trace-end selection pass
+  - `use-cases/build-trace-end-queue-selection.ts` - Build `TraceEndSelectionSpec` maps and stable keys for live and system queues
+  - `use-cases/orchestrate-trace-end-annotation-queue-effects.ts` - Run live-queue materialization in the trace-end pass
+  - `use-cases/run-system-queue-flagger.ts` - LLM-only flagger evaluation invoked from the Temporal workflow
+  - `use-cases/draft-system-queue-annotation.ts` - LLM feedback generation
+  - `use-cases/persist-system-queue-annotation.ts` - Transactional queue item + draft creation
+
+- **Platform**: `packages/platform/cache-redis/src/rate-limiter.ts` — generic `checkRedisRateLimit` (atomic INCR + TTL pipeline, fail-open on Redis error)
 
 - **Workers**: `apps/workers/src/workers/`
   - `project-provisioning.ts` - BullMQ-based provisioning
-  - `trace-end.ts` - `trace-end` topic worker: `runTraceEndJob` wires Postgres/ClickHouse/Redis, the queue publisher, and Temporal/Redis dedupe, and composes `@domain/spans`, `@domain/evaluations`, and `@domain/annotation-queues` orchestrators for one debounced `run`
+  - `trace-end.ts` - `trace-end` topic worker: live evaluations, live-queue materialization, and a single `deterministic-flaggers:run` enqueue per trace
+  - `deterministic-flaggers.ts` - `deterministic-flaggers:run` worker: wires the rate-limiter and the `start-flagger-workflow` publisher into `processDeterministicFlaggersUseCase`. Logs and propagates publish failures so per-strategy failures surface as `action: "failed"` decisions
+  - `start-flagger-workflow.ts` - thin worker calling `workflowStarter.start("systemQueueFlaggerWorkflow", …)` with bounded BullMQ retries (`attempts: 4`, exponential 2 s)
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
-  - `system-queue-flagger-workflow.ts` - Temporal workflow with flagger, draft, and persist activities
+  - `system-queue-flagger-workflow.ts` - Temporal workflow with flagger, draft, and persist activities (LLM-only after this refactor)
   - `activities/index.ts` - `runFlagger`, `draftAnnotate`, and `persistAnnotation` activities
 
 - **Repository**: `packages/platform/db-postgres/src/repositories/annotation-queue-repository.ts`
@@ -243,8 +296,8 @@ Every project starts with these system-created manual queues:
 
 ### NSFW
 
-- description: sexual or otherwise not-safe-for-work content appears
-- instructions: use this queue when the trace contains sexual content, explicit erotic material, or other clearly NSFW content that should be reviewed. Do not use it for benign anatomy or health discussion, mild romance, or safety-oriented policy discussion that is not itself NSFW.
+- description: workplace-inappropriate or toxic content appears
+- instructions: use this queue when the trace contains explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language. Do not use it for benign anatomy or health discussion, mild romance, neutral policy/safety discussion about unsafe content, or non-abusive colloquial language without clear toxicity.
 
 ### Trashing
 
@@ -268,13 +321,15 @@ Every project starts with these system-created manual queues:
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
 - whenever a `SpanIngested` domain event is observed for a project, the `domain-events` dispatcher debounces and publishes `trace-end:run` for that trace
-- `trace-end:run` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per selected queue
-- queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
-- there are no deterministic matchers in this flagger anymore; deterministic signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) publish annotation scores directly from the trace-end runtime without going through this flagger — see [Direct Deterministic System Signals](#direct-deterministic-system-signals)
-- the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
-- the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
-- positive workflow matches trigger `draftAnnotate` (LLM feedback generation) followed by `persistAnnotation` (transactional queue item + draft creation)
-- system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
+- `trace-end:run` enqueues a single `deterministic-flaggers:run` job for the trace; it does **not** sample queues or start workflows itself
+- the `deterministic-flaggers` worker fans out across every registered strategy in two phases (suppressors first, then suppressedBy strategies) and routes per-strategy outcomes:
+  - `matched` → write a `SYSTEM`-authored score directly with the strategy-supplied `feedback` (no queue item, no draft, no LLM)
+  - `no-match` (LLM-capable + provisioned queue) → apply per-queue `settings.sampling`; sampled-in traces enqueue `start-flagger-workflow` (`reason: "sampled"`)
+  - `ambiguous` (LLM-capable + provisioned queue) → check the per-`{org, slug}` Redis rate limit; under-limit traces enqueue `start-flagger-workflow` (`reason: "ambiguous"`)
+- `start-flagger-workflow` is a thin worker that calls `workflowStarter.start("systemQueueFlaggerWorkflow", …)` with bounded BullMQ retries so short Temporal outages don't replay the whole deterministic fan-out
+- the Temporal workflow is now LLM-only: `runFlagger` invokes the queue-specific LLM, then `draftAnnotate` + `persistAnnotation` create the queue item + draft annotation transactionally
+- per-strategy errors in the deterministic worker are caught at the slug boundary and recorded as `action: "failed"`; one broken detector cannot break the rest of the fan-out
+- system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user; setting `sampling = 0` disables only the no-match → LLM path (matched-deterministic still writes a score)
 
 ### Live Queues
 
@@ -352,7 +407,7 @@ Creation rules:
 
 - manual queue insertion creates the row from the trace dashboard bulk action
 - manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
-- system-created queue insertion happens automatically via `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation
+- system-created queue insertion happens automatically via `systemQueueFlaggerWorkflow` (LLM path only) when a `no-match`/`ambiguous` deterministic outcome reaches the workflow and the LLM matches, creating both the queue item and the draft annotation; a `matched` deterministic outcome writes a published score directly without creating a queue item
 - live queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
 - all paths create queue items with `completedAt = null`
 
@@ -381,7 +436,8 @@ Required Postgres indexes:
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
-- system-created queue insertion happens automatically via the `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation transactionally
+- system-created queue insertion happens automatically via the `systemQueueFlaggerWorkflow` (LLM-only path) when a `no-match`/`ambiguous` deterministic outcome reaches the workflow and the LLM matches, creating both the queue item and the draft annotation transactionally
+- a `matched` deterministic outcome bypasses the queue and the workflow entirely and writes a published `SYSTEM`-authored score (`draftedAt = null`) directly so `issues:discovery` can cluster it
 - live queue materialization is incremental on debounced `SpanIngested` and evaluates `sampling` before the shared batched `filter` query
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 

@@ -1,4 +1,4 @@
-import type { NotFoundError, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
 
@@ -103,14 +103,16 @@ export interface ListByTraceIdInput {
 }
 
 export interface AnnotationQueueItemRepositoryShape {
-  listByQueue(input: ListAnnotationQueueItemsInput): Effect.Effect<AnnotationQueueItemListPage, RepositoryError>
-  findById(input: FindAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem | null, RepositoryError>
+  listByQueue(
+    input: ListAnnotationQueueItemsInput,
+  ): Effect.Effect<AnnotationQueueItemListPage, RepositoryError, SqlClient>
+  findById(input: FindAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem | null, RepositoryError, SqlClient>
   /**
    * Insert a queue item if no item with the same (organizationId, projectId, queueId, traceId)
    * exists. Returns true if inserted, false if a conflict was encountered.
    * This is idempotent and safe for concurrent use.
    */
-  insertIfNotExists(input: InsertAnnotationQueueItemInput): Effect.Effect<boolean, RepositoryError>
+  insertIfNotExists(input: InsertAnnotationQueueItemInput): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
    * Bulk insert queue items using INSERT ... ON CONFLICT DO NOTHING.
    * Returns the count of actually inserted rows.
@@ -118,7 +120,7 @@ export interface AnnotationQueueItemRepositoryShape {
    */
   bulkInsertIfNotExists(
     input: BulkInsertAnnotationQueueItemInput,
-  ): Effect.Effect<{ insertedCount: number }, RepositoryError>
+  ): Effect.Effect<{ insertedCount: number }, RepositoryError, SqlClient>
   /**
    * Insert one trace into multiple queues in a single batch operation.
    * Uses INSERT ... ON CONFLICT DO NOTHING and returns the queue IDs that had actual inserts.
@@ -126,16 +128,18 @@ export interface AnnotationQueueItemRepositoryShape {
    */
   insertManyAcrossQueues(
     input: InsertManyAcrossQueuesInput,
-  ): Effect.Effect<{ insertedQueueIds: readonly string[] }, RepositoryError>
-  listByTraceId(input: ListByTraceIdInput): Effect.Effect<readonly AnnotationQueueItem[], RepositoryError>
-  getAdjacentItems(input: GetAdjacentItemsInput): Effect.Effect<AdjacentItems, RepositoryError>
-  getQueuePosition(input: GetQueuePositionInput): Effect.Effect<QueuePosition, RepositoryError>
-  update(input: UpdateAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem, RepositoryError | NotFoundError>
+  ): Effect.Effect<{ insertedQueueIds: readonly string[] }, RepositoryError, SqlClient>
+  listByTraceId(input: ListByTraceIdInput): Effect.Effect<readonly AnnotationQueueItem[], RepositoryError, SqlClient>
+  getAdjacentItems(input: GetAdjacentItemsInput): Effect.Effect<AdjacentItems, RepositoryError, SqlClient>
+  getQueuePosition(input: GetQueuePositionInput): Effect.Effect<QueuePosition, RepositoryError, SqlClient>
+  update(
+    input: UpdateAnnotationQueueItemInput,
+  ): Effect.Effect<AnnotationQueueItem, RepositoryError | NotFoundError, SqlClient>
   /**
    * Finds the first uncompleted item in the queue ordered by `traceCreatedAt DESC`.
    * Returns null if all items in the queue are completed.
    */
-  getNextUncompletedItem(input: GetNextUncompletedItemInput): Effect.Effect<string | null, RepositoryError>
+  getNextUncompletedItem(input: GetNextUncompletedItemInput): Effect.Effect<string | null, RepositoryError, SqlClient>
 }
 
 export class AnnotationQueueItemRepository extends ServiceMap.Service<

@@ -1,8 +1,19 @@
 export {
   SESSION_ID_MAX_LENGTH,
   SPAN_ID_LENGTH,
+  TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
+  TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS,
+  TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS,
+  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
+  TRACE_SEARCH_EMBEDDING_MODEL,
+  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
 export type { Session } from "./entities/session.ts"
 export { sessionSchema } from "./entities/session.ts"
@@ -17,7 +28,7 @@ export {
 } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { SpanDecodingError, TraceCohortUnavailableError } from "./errors.ts"
+export { SpanDecodingError } from "./errors.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
@@ -28,9 +39,10 @@ export {
   mergeTraceHistogramTimeFilters,
   parseStartTimeBoundsFromFilters,
   pickTraceHistogramBucketSeconds,
-  resolveTraceCohortFilters,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
+export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
   SessionDistinctColumn,
   SessionListCursor,
@@ -53,8 +65,15 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
+export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
+export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
+export type {
+  TraceSearchDocumentRow,
+  TraceSearchEmbeddingRow,
+  TraceSearchRepositoryShape,
+} from "./ports/trace-search-repository.ts"
+export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
 export {
-  buildTraceCohortListingSpec,
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaseline,
   buildTraceMetricBaselines,
@@ -72,7 +91,6 @@ export {
   TRACE_RESOURCE_OUTLIER_MULTIPLIER,
   type TraceCohortBaselineData,
   type TraceCohortKey,
-  type TraceCohortListingSpec,
   type TraceCohortMetric,
   type TraceCohortSummary,
   type TraceCohortSummaryEntry,
@@ -88,17 +106,17 @@ export {
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
 export type {
-  BuildTraceCohortListingSpecError,
-  BuildTraceCohortListingSpecInput,
-} from "./use-cases/build-trace-cohort-listing-spec.ts"
-export { buildTraceCohortListingSpecUseCase } from "./use-cases/build-trace-cohort-listing-spec.ts"
+  TraceSearchDocument,
+  TraceSearchDocumentInput,
+} from "./use-cases/build-trace-search-document.ts"
+export { buildTraceSearchDocument } from "./use-cases/build-trace-search-document.ts"
 export type {
   BuildTracesExportInput,
   BuildTracesExportResult,
 } from "./use-cases/build-traces-export.ts"
 export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
-export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
-export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
+export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
+export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export type {

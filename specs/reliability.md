@@ -190,12 +190,22 @@ The dispatcher is a `switch` on `event.name` with full TypeScript narrowing — 
 
 ### Dedupe and debounce
 
-`publish()` accepts optional `dedupeKey` and `debounceMs`. BullMQ maps these to `jobId` and `delay` + `deduplication` with sliding-window semantics (`extend: true, replace: true`).
+`publish()` accepts optional `dedupeKey`, `debounceMs`, and `throttleMs`. `debounceMs` and `throttleMs` are mutually exclusive; callers pick one based on the semantic the task needs:
+
+- **`debounceMs`** (sliding window, `extend: true, replace: true` in BullMQ): each publish pushes the fire time forward and replaces the pending payload. Appropriate when you want to wait for a stream of events to settle, as with `trace-end:run` after `SpanIngested`.
+- **`throttleMs`** (first-publish-wins, `extend: false, replace: false` in BullMQ): the first publish schedules the fire time and subsequent publishes within the window are dropped. Requires `dedupeKey`. Bounds worst-case latency at `throttleMs` and caps fires at once per window per key, even under a continuous publish stream. Appropriate for annotation-driven refreshes where starvation under continuous input would be a product bug.
 
 ```typescript
+// Sliding window (debounce) — used by trace-end:run
+pub.publish("trace-end", "run", payload, {
+  dedupeKey: `trace-end:run:${traceId}`,
+  debounceMs: TRACE_END_DEBOUNCE_MS,
+})
+
+// First-publish-wins (throttle) — used by issues:refresh and the evaluation alignment chain
 pub.publish("issues", "refresh", payload, {
   dedupeKey: `issues:refresh:${issueId}`,
-  debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+  throttleMs: ISSUE_REFRESH_THROTTLE_MS,
 })
 ```
 
@@ -217,7 +227,7 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to debounce and publish `trace-end:run`
 - `ScoreCreated`: written transactionally after every canonical score write, including drafts; the payload carries the canonical `scoreId` plus an optional selected `issueId`, and the `domain-events` dispatcher consumes it by publishing the deduped `issues:discovery` task and the debounced `annotation-scores:publishHumanAnnotation` task
-- `ScoreAssignedToIssue`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be debounced; consumed by the `domain-events` dispatcher to publish `issues:refresh`
+- `ScoreAssignedToIssue`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be throttled; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
@@ -229,14 +239,15 @@ Initial reliability topic/task contracts:
 
 - `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
-- `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
+- `issues` / `refresh`: throttled asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue (first-publish-wins, 8h window per issue)
 - `trace-end` / `run`: implemented as `runTraceEndJob` in `apps/workers/src/workers/trace-end.ts`; loads one ended trace, runs the shared sample-first selection pass across live evaluations, live queues, and system queues via `@domain/spans` / `@domain/evaluations` / `@domain/annotation-queues` orchestrators, then applies downstream work (execute publishes, live-queue membership writes, system-queue workflow starts)
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 
 Initial reliability workflows:
 
 - `issue-discovery`: multi-activity workflow for create-or-match similarity discovery after the centralized `issues:discovery` gate decides the score still needs retrieval/rerank work, plus a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
-- `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
+- `refresh-evaluation-alignment`: linear workflow invoked by the throttled `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins). On start it compares `sha1(evaluation.script)` against `evaluation.alignment.evaluationHash`. When they match (the persisted matrix was produced by the script that is live right now), it only judges examples created after the last alignment, merges their confusion matrix into the persisted one, and either persists the refreshed matrix (`metric-only`), publishes `evaluations:automaticOptimization` for full re-optimization (`full-reoptimization`), or exits (`no-op`). When the hashes diverge (something updated `evaluation.script` outside `persistAlignmentResultUseCase`), it rebuilds the matrix from scratch against every curated example, persists it with the freshly computed hash, and exits (`full-metric-rebuild`) — no GEPA escalation, because the alignment metric drop is re-evaluated cleanly on the next incremental pass. It never sleeps — the 1h window is owned by the queue
+- `optimize-evaluation`: linear workflow that serves all three evaluation-write paths. Started directly by the `apps/web` server function for initial generation (workflow id `evaluations:generate:${issueId}`) and manual realignment (workflow id `evaluations:optimize:${evaluationId}`), and by the throttled `evaluations:automaticOptimization` queue task (8h, first-publish-wins) after an alignment metric drop (same `evaluations:optimize:${evaluationId}` id). Runs example collection, baseline draft, GEPA optimization, baseline evaluation, and persistence; skips the name/description generation pass when an evaluation already exists so an auto-run does not silently rename it. The 8h re-optimization throttle is owned by the queue, not by the workflow
 
 Issue handling now has two queue-backed steps before/after the workflow boundary: `issues:discovery` is a single-step gate for centralized direct-routing decisions, while `issues:refresh` is a single-step debounced task for subsequent detail regeneration of existing issues. The initial name/description for a brand-new issue must still be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. Only the branch that still needs similarity retrieval starts the Temporal `issue-discovery` workflow.
 
@@ -506,7 +517,7 @@ Even before the full runtime exists, MVP must already treat this as the real arc
 
 Evaluations generated from issues (by user demand) are the mainline flow of the reliability system.
 
-Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id and returns immediately without exposing any internal identifier; the frontend polls a dedicated status endpoint that asks Temporal directly (`workflow.describe()` for the initial run, plus a workflow query for in-flight manual-realignment) while the generation/alignment pipeline runs in the background. Temporal is the single source of truth for workflow state; no Redis-backed job-status mirror exists. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
+Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `optimize-evaluation` Temporal workflow with a deterministic `evaluations:generate:${issueId}` workflow id and returns immediately without exposing any internal identifier; the frontend polls a dedicated status endpoint that asks Temporal directly via `workflow.describe()` on the three relevant workflow ids (`evaluations:generate:${issueId}`, `evaluations:refreshAlignment:${evaluationId}`, and `evaluations:optimize:${evaluationId}` per linked evaluation) while the generation/alignment pipeline runs in the background. Temporal is the single source of truth for workflow state; no Redis-backed job-status mirror exists. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
 
 After explicit creation, automatic dynamic realignment remains unchanged for each linked evaluation: the system still refreshes alignment asynchronously as new annotations arrive.
 
@@ -515,11 +526,16 @@ To generate or realign an evaluation for an issue, annotation-derived truth foll
 - drafts and errored scores must never be used as alignment examples
 - alignment reads only published, non-errored canonical Postgres scores
 
-1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue; the minimum required positive-example count is `1`
-2. negative examples where the issue is absent, using this priority order among non-draft, non-errored scores when they exist:
-   1. conversations with no failed scores and at least one passed annotation as long as that score is also non-draft and non-errored
-   2. conversations with no failed scores
-   3. conversations with scores, either passed or failed, but unrelated to the issue we are trying to align for, as long as those scores are also non-draft and non-errored
+1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue, using this priority order:
+   1. conversations with at least one failed annotation linked to the target issue and no passed scores at all
+   2. conversations with at least one failed annotation linked to the target issue, regardless of any passed scores that may also be on the same conversation
+
+   The minimum required positive-example count is `1` (this happens naturally because otherwise the issue would not have been created in the first place).
+2. negative examples where the issue is absent, drawn only from conversations that have at least one passed annotation (non-draft, non-errored), using this priority order:
+   1. conversations with at least one passed annotation and no failed scores at all
+   2. conversations with at least one passed annotation and failed scores, as long as every failed score is unrelated to the issue we are trying to align for
+
+   Conversations without any passed annotation are never used as negatives, even when only passed evaluation/custom scores exist — the signal is considered too weak. Any score tied to the target issue (regardless of `passed`) disqualifies the conversation as a negative.
 
 There is no minimum negative-example count. This means a user can still generate a monitor for a brand new issue from a single failed, non-errored, non-draft human annotation linked to that issue, even before any explicit negatives exist.
 
@@ -527,7 +543,7 @@ Early monitors created from such sparse evidence may be weakly aligned, which is
 
 The only persisted alignment primitive is the confusion matrix.
 
-When this spec references alignment, it means the MCC (Matthews Correlation Coefficient) derived from that confusion matrix. Accuracy, F1, and other comparison metrics must also be computed from the same stored counts instead of being persisted separately.
+When this spec references alignment, it means the headline alignment metric derived from that confusion matrix. The headline metric is referred to as the "alignment metric" throughout the code and UI; the concrete formula (currently balanced accuracy = (recall + specificity) / 2) lives behind that name so it can be swapped without touching callers. Accuracy, recall, specificity, precision, F1, and MCC must also be computed from the same stored counts instead of being persisted separately.
 
 Stop conditions:
 
@@ -539,21 +555,22 @@ After the best script is selected, a second pass generates or refreshes the eval
 
 Alignment scheduling must follow the proposal exactly:
 
-- user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `evaluation-alignment` workflow
+- user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `optimize-evaluation` workflow under an `evaluations:generate:${issueId}` workflow id
 - asynchronous debounced recomputation after new human annotations arrive
 - metric recomputation debounced to at most once per hour
 - full re-optimization debounced to at most once every eight hours
-- manual realignment must be available and rate-limited
+- manual realignment must be available and throttled
 - the evaluation UI must show alignment status and last aligned timestamp
 
 When a user creates a new issue-linked evaluation, it must initialize `trigger.sampling` from a named constant in `packages/domain/evaluations`. The starting default for that constant is `10`, meaning new issue-linked evaluations sample `10%` of eligible traffic until a user changes the sampling value.
 
 Incremental refresh behavior:
 
-- hash the script when alignment completes
-- if the script hash did not change, only evaluate new examples since the last alignment window, adding them to the existing confusion matrix counters
-- if derived alignment (MCC) decreases more than the configured tolerance band, run full optimization again
-- if derived alignment (MCC) stays effectively the same or improves, keep the script and just update alignment state
+- hash the script (`sha1`) when alignment completes and persist it alongside the confusion matrix on `evaluation.alignment.evaluationHash`
+- on refresh, re-hash the live script and compare to the persisted hash; when they match, only evaluate new examples since the last alignment window and add their counters to the existing matrix
+- when the hashes diverge, treat the persisted matrix as stale (it was produced by a different script) and rebuild it from scratch against every curated example, persisting the freshly computed hash so the next refresh is back on the incremental path
+- if the derived alignment metric decreases more than the configured tolerance band, run full optimization again
+- if the derived alignment metric stays effectively the same or improves, keep the script and just update alignment state
 
 ### Evaluation Optimizer
 
@@ -563,13 +580,13 @@ That abstraction lives in `@domain/optimizations`, while the first concrete impl
 
 The abstraction in `@domain/optimizations` must support Pareto-driven multi-objective optimization with this ordered priority model:
 
-1. maximize alignment (MCC) against human judgment
+1. maximize the alignment metric against human judgment
 2. minimize cost in dollars, derived from stored microcent values
 3. minimize duration in seconds, derived from stored nanosecond values
 
 Concrete optimizers may search the candidate space differently, but the abstraction must preserve that priority ordering when reporting and selecting candidate scripts. The abstraction should model optimizer orchestration contracts and result comparison, not embed GEPA's concrete search algorithm.
 
-The optimizer-facing alignment objective is the derived MCC produced by the ground-truth evaluation run. The only persisted alignment primitive remains the confusion matrix, from which MCC, accuracy, F1, and other metrics can be computed.
+The optimizer-facing alignment objective is the derived alignment metric produced by the ground-truth evaluation run. The only persisted alignment primitive remains the confusion matrix, from which the alignment metric, accuracy, recall, specificity, precision, F1, and MCC can be computed.
 
 Persisted reliability cost stays in a field named `cost` and is stored in microcents. UI/reporting and optimizer-facing cost displays convert that stored value into dollars at read time.
 
@@ -714,7 +731,7 @@ type EvaluationAlignment = {
     falsePositives: number;
     falseNegatives: number;
     trueNegatives: number;
-  }; // stored counts from which MCC and other metrics can be derived later on
+  }; // stored counts from which the alignment metric and other metrics are derived on read
 };
 ```
 
@@ -1873,9 +1890,9 @@ Issue discovery never auto-creates those evaluations. The managed UI exposes `Mo
 
 That action is asynchronous:
 
-- the server starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id derived from the issue (initial generation) or evaluation (manual realignment) and returns immediately — no internal identifier leaks back to the frontend
+- the server starts the `optimize-evaluation` Temporal workflow with a deterministic workflow id derived from the issue (`evaluations:generate:${issueId}` for initial generation) or the evaluation (`evaluations:optimize:${evaluationId}` for manual realignment) and returns immediately — no internal identifier leaks back to the frontend
 - Temporal is the single source of truth for workflow state: no Redis-backed job-status mirror is written, and no `jobId` contract is exposed to the UI
-- the frontend polls a dedicated server function (`getIssueAlignmentState`) that asks Temporal directly via `workflow.describe()` for the initial run and a workflow query handler for in-flight manual-realignment state
+- the frontend polls a dedicated server function (`getIssueAlignmentState`) that asks Temporal directly via `workflow.describe()` on the three relevant workflow ids: `evaluations:generate:${issueId}` for the initial-generation run and `evaluations:refreshAlignment:${evaluationId}` + `evaluations:optimize:${evaluationId}` per active linked evaluation. All three new workflows are linear and exit when their activities finish, so a running status unambiguously means "actively running" — there is no more "alive-but-napping" state
 - that response is reduced to a minimal UI contract (`idle` / `generating` / `realigning` with `evaluationId`), intentionally omitting internal identifiers like `runId` or `currentJobId`
 - when the workflow terminates, its final status and any error are available through Temporal's own history; the frontend infers "just finished" by observing the transition back to `idle`, then re-fetches the issue/evaluation reads through the normal data-fetching path
 
@@ -2183,7 +2200,7 @@ Issues table columns:
 - `Seen at`: last seen / age, like `11d ago / 3y old`; this display uses full-history issue timestamps and is not re-based by the page-level time range, lifecycle-tab, or search controls
 - `Occurrences`: occurrence count for the selected time range; the column header also shows the sum of occurrences across all matched issues, not only the issues visible on the current page
 - `Affected traces`: `occurrences / total traces in the selected time window`, expressed as a percentage and capped at `100%`
-- `Evaluations`: linked evaluations shown as truncated tags containing the evaluation name plus alignment MCC percentage; if no evaluations are linked, show `-`
+- `Evaluations`: linked evaluations shown as truncated tags containing the evaluation name plus the alignment metric percentage; if no evaluations are linked, show `-`
 
 #### Issue Details Drawer
 
@@ -2208,12 +2225,12 @@ Linked evaluations section behavior:
 - render one evaluation row per linked evaluation
 - each evaluation row has two subrows:
   1. evaluation name
-  2. last alignment date, alignment MCC percentage, and a manual realign action
+  2. last alignment date, alignment metric percentage, and a manual realign action; the alignment badge tooltip surfaces the confusion matrix and a "Advanced statistics" link button that opens a modal with every metric derivable from the matrix (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - if a realignment is currently in progress, replace the realign action with a loading spinner and the text `Aligning...`
 - each linked evaluation row also includes an archive action with a confirmation modal explaining that archiving it will stop monitoring this issue through that evaluation
 - when there are no linked evaluations, show a `Monitor issue` button here
 - when there is already at least one linked evaluation, do not show another monitor-generation button in the managed UI
-- `Monitor issue` reuses the asynchronous `evaluation-alignment` workflow kickoff plus polling flow defined above
+- `Monitor issue` reuses the asynchronous `optimize-evaluation` workflow kickoff plus polling flow defined above
 
 Mini traces table behavior:
 
@@ -2707,19 +2724,19 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [x] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
 - [x] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
-- [x] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `evaluation-alignment` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
-- [x] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
-- [x] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
-- [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
-- [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, a deterministic per-resource workflow id so the workflow is the queryable resource (no `jobId` leaked to callers), and a polling server function that asks Temporal directly via `workflow.describe()` and workflow queries for frontend status — Temporal is the single source of truth, no Redis-backed job-status mirror.
-- [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
-- [x] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
-- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same deterministic per-resource workflow id contract where a user-triggered run needs polling feedback — the polling server function asks Temporal directly (via `workflow.describe()` and workflow query handlers) rather than reading any Redis-backed job-status mirror.
-- [x] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
+- [x] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `optimize-evaluation` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for the alignment metric, cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
+- [x] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across the derived alignment metric, cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
+- [x] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `optimize-evaluation` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
+- [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting the alignment metric separately.
+- [x] Implement user-triggered initial generation/alignment as the `optimize-evaluation` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, a deterministic per-resource workflow id so the workflow is the queryable resource (no `jobId` leaked to callers), and a polling server function that asks Temporal directly via `workflow.describe()` and workflow queries for frontend status — Temporal is the single source of truth, no Redis-backed job-status mirror.
+- [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch. The refresh workflow enforces the hash invariant explicitly — it loads `evaluation.script` plus `evaluation.alignment.evaluationHash` and compares `sha1(script)` to the persisted hash. A match means the persisted matrix was produced by the live script, so the incremental merge is safe. A mismatch means the script drifted from the hash that produced the matrix (someone updated `evaluation.script` outside `persistAlignmentResultUseCase`); in that case the workflow rebuilds the confusion matrix from scratch against every curated example and persists it with the freshly computed hash so future refreshes are back on the incremental path. The rebuild does not trigger GEPA — the alignment metric drop is re-evaluated on the next incremental pass once the hash and script agree again.
+- [x] Implement annotation-driven throttled refresh with the one-hour / eight-hour cadence from the proposal through delayed BullMQ queue tasks that kick off single-purpose Temporal workflows: `evaluations:automaticRefreshAlignment` (1h throttle, keyed per evaluation) starts `refresh-evaluation-alignment`, which publishes `evaluations:automaticOptimization` (8h throttle, keyed per evaluation) to start `optimize-evaluation` when the incremental pass reports `full-reoptimization`; workflows themselves do not sleep or manage timers — throttle semantics (first-publish-wins, subsequent drops) live in `dedupeKey + throttleMs` on the queue, so a continuous annotation stream cannot starve the refresh and fire latency is bounded at the configured window.
+- [x] Implement manual throttled realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `optimize-evaluation` workflow path and the same deterministic per-resource workflow id contract where a user-triggered run needs polling feedback — the polling server function asks Temporal directly (via `workflow.describe()` and workflow query handlers) rather than reading any Redis-backed job-status mirror.
+- [x] Implement the post-alignment name/description generation pass for evaluations as a separate `optimize-evaluation` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
 - [x] Implement curated example sizing plus deterministic balanced train/validation splitting for alignment runs using the configured bounds and defaults from this spec.
 - [x] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
 
-**Exit gate**: users can generate evaluations from issues when needed through Temporal-backed `evaluation-alignment` workflows with deterministic per-resource ids polled directly from Temporal (no Redis-backed job-status mirror) and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
+**Exit gate**: users can generate evaluations from issues when needed through Temporal-backed `optimize-evaluation` workflows with deterministic per-resource ids polled directly from Temporal (no Redis-backed job-status mirror) and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
 
 ### (LAT-470) Phase 13 - Live Monitoring And Evaluation Execution
 

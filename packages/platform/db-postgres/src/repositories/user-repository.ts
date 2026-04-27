@@ -22,26 +22,28 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
 export const UserRepositoryLive = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
-    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-
     return {
       findByEmail: (email: string) =>
-        sqlClient
-          .query((db) => db.select().from(users).where(eq(users.email, email)).limit(1))
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "User", id: email }))
-              }
-              return Effect.succeed(toDomainUser(result))
-            }),
-          ),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) => db.select().from(users).where(eq(users.email, email)).limit(1))
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "User", id: email }))
+                }
+                return Effect.succeed(toDomainUser(result))
+              }),
+            )
+        }),
 
       setNameIfMissing: ({ userId, name }: { userId: string; name: string }) =>
         Effect.gen(function* () {
           if (!name.trim()) return
 
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
             db
               .update(users)
@@ -56,7 +58,10 @@ export const UserRepositoryLive = Layer.effect(
         }),
 
       delete: (userId: string) =>
-        sqlClient.query((db) => db.delete(users).where(eq(users.id, userId))).pipe(Effect.asVoid),
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient.query((db) => db.delete(users).where(eq(users.id, userId))).pipe(Effect.asVoid)
+        }),
     }
   }),
 )

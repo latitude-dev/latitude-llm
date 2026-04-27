@@ -3,10 +3,21 @@ import {
   listSourceScoresUseCase,
   ScoreAnalyticsRepository,
   ScoreRepository,
+  scoreSchema,
   writeScoreUseCase,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
+import {
+  ChSqlClient,
+  IssueId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SessionId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -32,6 +43,7 @@ const createWriteProvider = (database: InMemoryPostgres, organizationId: string)
         OrganizationId(organizationId),
       ),
       Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
     )
 }
 
@@ -67,6 +79,57 @@ describe("ScoreRepositoryLive + score use cases", () => {
       .select()
       .from(scoresTable)
       .where(eq(scoresTable.organizationId, organizationId))
+
+    expect(persistedRows).toHaveLength(0)
+  })
+
+  it("fails before insert when the score row organization differs from the SQL client organization", async () => {
+    const sqlClientOrganizationId = "j".repeat(24)
+    const rowOrganizationId = "k".repeat(24)
+    const scoreId = ScoreId("m".repeat(24))
+
+    const score = scoreSchema.parse({
+      id: scoreId,
+      organizationId: rowOrganizationId,
+      projectId: annotationProjectId,
+      sessionId: SessionId("session-rls-mismatch"),
+      traceId: TraceId("n".repeat(32)),
+      spanId: null,
+      source: "annotation",
+      sourceId: "SYSTEM",
+      simulationId: null,
+      issueId: null,
+      value: 0,
+      passed: false,
+      feedback: "Tool call failed",
+      metadata: { rawFeedback: "Tool call failed" },
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date("2026-04-22T13:15:13.004Z"),
+      updatedAt: new Date("2026-04-22T13:15:13.004Z"),
+    })
+
+    const result = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        yield* repository.save(score)
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(sqlClientOrganizationId))),
+    )
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      const message = String(result.cause)
+      expect(message).toContain("Score save organization context mismatch")
+      expect(message).toContain(`row=${rowOrganizationId}`)
+      expect(message).toContain(`sqlClient=${sqlClientOrganizationId}`)
+    }
+
+    const persistedRows = await database.db.select().from(scoresTable).where(eq(scoresTable.id, scoreId))
 
     expect(persistedRows).toHaveLength(0)
   })

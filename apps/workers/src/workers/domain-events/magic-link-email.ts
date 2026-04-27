@@ -35,7 +35,7 @@ export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => 
 
         let rendered: RenderedEmail
 
-        if (payload.emailFlow === "signup") {
+        if (user === null) {
           rendered = yield* Effect.tryPromise(() =>
             signupMagicLinkTemplate({ userName, magicLinkUrl: payload.magicLinkUrl }),
           )

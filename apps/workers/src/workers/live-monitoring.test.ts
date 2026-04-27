@@ -5,7 +5,7 @@ import {
   evaluationSchema,
 } from "@domain/evaluations"
 import type { EventEnvelope } from "@domain/events"
-import type { PublishOptions, QueueName, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { PublishOptions, QueueName, QueuePublisherShape } from "@domain/queue"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import type { RedisClient } from "@platform/cache-redis"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
@@ -141,11 +141,6 @@ type PublishedMessage = {
   readonly options?: PublishOptions
 }
 
-const createFakeWorkflowStarter = (): WorkflowStarterShape => ({
-  start: () => Effect.void,
-  signalWithStart: () => Effect.void,
-})
-
 const createFakeRedisClient = (): RedisClient => {
   const values = new Map<string, string>()
   const sets = new Map<string, Set<string>>()
@@ -257,7 +252,6 @@ describe("live monitoring integration", () => {
     createTraceEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      workflowStarter: createFakeWorkflowStarter(),
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),
@@ -338,7 +332,6 @@ describe("live monitoring integration", () => {
     createTraceEndWorker({
       consumer: harness.consumer,
       publisher: harness.publisher,
-      workflowStarter: createFakeWorkflowStarter(),
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),

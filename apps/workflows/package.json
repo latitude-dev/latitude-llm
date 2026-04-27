@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "dev": "tsx watch src/server.ts",
     "triggerWorkflowTest": "tsx src/trigger-test.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@domain/evaluations": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/optimizations": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
@@ -31,6 +32,7 @@
     "@platform/db-weaviate": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/op-gepa": "workspace:*",
+    "@platform/queue-bullmq": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
@@ -41,6 +43,6 @@
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
-    "tsup": "^8.0.0"
+    "tsdown": "catalog:"
   }
 }

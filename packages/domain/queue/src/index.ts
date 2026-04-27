@@ -83,7 +83,42 @@ export class WorkflowQuerier extends ServiceMap.Service<WorkflowQuerier, Workflo
 
 export interface PublishOptions {
   readonly dedupeKey?: string
+  /**
+   * Debounce window in ms. Each publish within the window extends the TTL
+   * and replaces the pending payload, so the task fires after `debounceMs`
+   * of quiet on this `dedupeKey`. Appropriate when you want to wait for a
+   * stream of events to settle (e.g. `trace-end:run` after `SpanIngested`).
+   *
+   * Mutually exclusive with `throttleMs`.
+   */
   readonly debounceMs?: number
+  /**
+   * Throttle window in ms. The first publish schedules the task for
+   * `now + throttleMs`; subsequent publishes within the window are dropped
+   * (clock not extended, payload not replaced). Guarantees a hard upper
+   * bound of `throttleMs` on fire latency from the first publish, plus a
+   * maximum rate of one fire per `throttleMs` per `dedupeKey`. Appropriate
+   * when you want a predictable "at most once per N" cadence even under a
+   * constant flow of publishes (e.g. annotation-driven alignment refresh).
+   *
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`.
+   */
+  readonly throttleMs?: number
+  /**
+   * Total attempts BullMQ should make before the job is considered failed
+   * (inclusive of the first try). Set alongside `backoff` to get bounded
+   * exponential retry for transient dependency failures (e.g. Temporal
+   * unavailability). Without a `backoff` set, retries fire immediately.
+   */
+  readonly attempts?: number
+  /**
+   * Exponential backoff between retry attempts, in milliseconds. Delay is
+   * `delayMs * 2^(attempt-1)`. Ignored when `attempts` is unset or ≤ 1.
+   */
+  readonly backoff?: {
+    readonly type: "exponential"
+    readonly delayMs: number
+  }
 }
 
 export interface QueuePublisherShape {

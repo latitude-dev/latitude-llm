@@ -2,7 +2,6 @@ import { DetailDrawer, DetailSummary, Text } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useEffect, useRef, useSyncExternalStore } from "react"
-
 import { useAnnotationQueueItem } from "../../../../../../../domains/annotation-queue-items/annotation-queue-items.collection.ts"
 import { useAnnotationsByTrace } from "../../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../../domains/annotations/annotations.functions.ts"
@@ -183,11 +182,12 @@ function AnnotationQueueItemDetailPage() {
           </div>
           <TraceTab
             traceId={traceId}
+            projectId={projectId}
             traceRecord={traceDetail ?? undefined}
             traceDetail={traceDetail}
             isRecordLoading={isRecordLoading}
             isDetailLoading={isDetailLoading}
-            defaultSectionsOpen={false}
+            defaultOutputOpen={false}
           />
         </DetailDrawer>
 

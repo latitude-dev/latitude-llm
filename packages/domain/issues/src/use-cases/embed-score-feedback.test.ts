@@ -1,6 +1,8 @@
 import { createFakeAI } from "@domain/ai/testing"
 import { type Score, ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
+import { OrganizationId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
@@ -51,6 +53,7 @@ describe("embedScoreFeedbackUseCase", () => {
       embedScoreFeedbackUseCase({ organizationId, projectId, scoreId: score.id }).pipe(
         Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, repository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
       ),
     )
 

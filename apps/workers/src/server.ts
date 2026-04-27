@@ -28,6 +28,7 @@ import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowSt
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
+import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
@@ -37,10 +38,13 @@ import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
+import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
+import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
+import { createTraceSearchWorker } from "./workers/trace-search.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -156,9 +160,13 @@ const bootstrap = async () => {
     createLiveEvaluationsWorker(ctx)
     createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
+    createDeterministicFlaggersWorker(ctx)
+    createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
+    createProductFeedbackWorker(ctx)
+    createTraceSearchWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))

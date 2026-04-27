@@ -12,7 +12,7 @@ services:
     command: postgres -c wal_level=logical
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:25.12
     env_file:
       - .env.${NODE_ENV:-development}
     ports:
@@ -51,8 +51,8 @@ services:
     env_file:
       - .env.${NODE_ENV:-development}
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
   temporal:
     image: temporalio/auto-setup:1.27.2

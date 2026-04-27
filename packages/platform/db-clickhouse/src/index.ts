@@ -16,6 +16,7 @@ export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-rep
 export { SessionRepositoryLive } from "./repositories/session-repository.ts"
 export { SpanRepositoryLive } from "./repositories/span-repository.ts"
 export { TraceRepositoryLive } from "./repositories/trace-repository.ts"
+export { TraceSearchRepositoryLive } from "./repositories/trace-search-repository.ts"
 export { buildScoreRollupSubquery, splitScoreFilters } from "./score-filter-subquery.ts"
 export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.ts"
 export { withClickHouse } from "./with-clickhouse.ts"

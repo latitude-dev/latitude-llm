@@ -32,20 +32,20 @@ The `packages/domain/issues` package is the **reference implementation** for how
 
 ## Background Tasks
 
-Issue discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including debounced `issues:refresh`.
+Issue discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including the throttled `issues:refresh` task.
 
 The main contracts are:
 
 - `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs similarity retrieval after the centralized `issues:discovery` gate runs
 - `issues:discovery` as a deduped single-step task that rechecks canonical score eligibility and chooses between selected/linked issue assignment or the fallback Temporal workflow
-- `issues:refresh` as a debounced single-step task for one issue whose name/description debounce window has elapsed
+- `issues:refresh` as a throttled single-step task for one issue whose name/description throttle window has elapsed
 
 Rules:
 
 - canonical score writes emit `ScoreCreated` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that score event; the payload may carry a selected `issueId` for a published annotation
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
-- debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
-- `ScoreAssignedToIssue` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
+- throttled issue refresh relies on the `issues:refresh` queue task with logical `dedupeKey` + `throttleMs`, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans — first publish schedules fire; subsequent publishes within the window are dropped
+- `ScoreAssignedToIssue` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour throttle window (at most one refresh per issue per 8h, fires at most 8h after the first assignment)
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - issue-generated evaluation creation is also asynchronous: kickoff starts a deterministic-id Temporal workflow and returns nothing to the caller; the frontend polls `getIssueAlignmentState`, which asks Temporal directly (`workflow.describe()` for the initial run, a query handler for in-flight manual-realignment) — there is no Redis-backed job-status key
 
@@ -91,6 +91,34 @@ Important state timestamps:
 - `escalatedAt`: latest escalation transition timestamp
 - `resolvedAt`: manual or automatic resolution timestamp
 - `ignoredAt`: manual ignore timestamp
+
+## Issue Source
+
+The `source` field records the provenance of the **first score** that created the issue. It is immutable for the lifetime of the issue.
+
+```typescript
+type IssueSource = "annotation" | "custom" | "flagger";
+```
+
+- `"flagger"` — the issue was born from a deterministic system-queue flagger match (e.g. `tool-call-errors`, `output-schema-validation`, `empty-response`). The creating score carries `source: "annotation"`, `sourceId: "SYSTEM"`.
+- `"annotation"` — the issue was born from a human annotation (UI, API) or from a published system-queue draft that a human confirmed. The creating score carries `source: "annotation"` with `sourceId` equal to `"UI"`, `"API"`, or a queue CUID.
+- `"custom"` — the issue was born from a custom score pushed through the API. The creating score carries `source: "custom"`.
+
+> **Note**: `"evaluation"` is intentionally excluded. Evaluation scores are always linked to an existing issue at creation time; they never spawn a brand-new issue.
+
+The derivation rule applied at issue creation time:
+
+```typescript
+const deriveIssueSource = (score: Score): IssueSource => {
+  if (score.source === "annotation" && score.sourceId === "SYSTEM") {
+    return "flagger";
+  }
+  if (score.source === "annotation") {
+    return "annotation";
+  }
+  return "custom";
+};
+```
 
 Issue creation eligibility:
 
@@ -146,7 +174,7 @@ Execution rules:
 - `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
 - scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
 - `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
-- `issues:refresh` runs after the configured debounce window elapses for an existing issue
+- `issues:refresh` runs after the configured throttle window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
 - the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
@@ -168,7 +196,7 @@ Concrete v1 mechanics worth carrying forward:
 Current v2 starting defaults layered on top of those v1 learnings:
 
 - rerank limit: `100`
-- issue details regeneration debounce: `8 hours`
+- issue details regeneration throttle: `8 hours` (at most once per issue, fires at most 8h after the first assignment)
 - keep the low-evidence visibility threshold configurable instead of hard-coding it into the issue model
 
 Important v2 correction:
@@ -293,8 +321,8 @@ Issue-linked evaluation creation is explicit:
 - issue discovery and issue creation do not automatically create evaluations
 - issues may have several linked evaluations
 - the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
-- each trigger starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id; the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal directly until the workflow terminates and the resulting evaluation appears via normal data-fetching
-- once created, automatic debounced realignment continues as new annotations arrive
+- each trigger starts the `optimize-evaluation` Temporal workflow with a deterministic `evaluations:generate:${issueId}` workflow id for initial generation (or `evaluations:optimize:${evaluationId}` for manual realignment); the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal via `workflow.describe()` until the workflow terminates and the resulting evaluation appears via normal data-fetching
+- once created, automatic throttled realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToIssue`, which the `domain-events` dispatcher routes to `issues:refresh` (throttled at 8h), which in turn publishes `evaluations:automaticRefreshAlignment` (throttled at 1h, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (throttled at 8h) when the incremental alignment-metric drop exceeds tolerance. All windows are first-publish-wins so a continuous annotation stream cannot push the fire time forward indefinitely
 
 Once an issue-linked evaluation exists:
 
@@ -446,7 +474,7 @@ Issues table behavior:
 - `Seen at` combines recency and age, for example `11d ago / 3y old`
 - `Occurrences` uses the selected time range and its column header also shows the sum across all matched issues
 - `Affected traces` is the occurrences count divided by the total number of traces in the selected time window, capped at `100%`
-- `Evaluations` shows linked evaluation tags with truncated names plus alignment MCC percentage, or `-` when none are linked
+- `Evaluations` shows linked evaluation tags with truncated names plus the alignment metric percentage, or `-` when none are linked
 
 Issue details drawer behavior:
 
@@ -454,6 +482,6 @@ Issue details drawer behavior:
 - the header uses the same close and previous/next navigation pattern as the `Traces` details drawer
 - the header actions are ignore/unignore and resolve/unresolve
 - the body includes issue name/description, a summary row, a collapsible 14-day trend histogram ending today, a collapsible linked-evaluations section, and a collapsible infinitely paginated mini traces table
-- linked evaluations show name, last alignment date, MCC, manual realign, and per-evaluation archive actions
+- linked evaluations show name, last alignment date, alignment metric, manual realign, and per-evaluation archive actions; the alignment badge tooltip surfaces the confusion matrix plus a "Advanced statistics" link button that opens a modal with every metric derivable from it (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - while a realignment is in flight, the UI shows `Aligning...`
 - when an issue has no linked evaluations, the drawer shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button

@@ -167,14 +167,14 @@ Rules:
 Initial reliability async contracts:
 
 - domain events: `SpanIngested`, `ScoreCreated`, `ScoreAssignedToIssue`
-- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`
-- workflows: `issue-discovery`, `evaluation-alignment`, `annotation-publication`, `system-queue-flagger`
+- topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`, `evaluations:automaticRefreshAlignment`, `evaluations:automaticOptimization`
+- workflows: `issue-discovery`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
 For the initial reliability events, `SpanIngested` publishes directly through `createEventsPublisher(queuePublisher)` because it comes from a high-volume append-only flow whose upstream write is already durable before publication.
 
-`ScoreCreated` and `ScoreAssignedToIssue` are intentionally different from the direct-publication telemetry events: they are recorded through the transactional outbox rail so score-row persistence stays atomic with downstream fan-out. `ScoreCreated` is emitted for every canonical score write (including drafts); the `domain-events` dispatcher always publishes a deduped `issues:discovery` task plus a debounced `annotation-scores:publishHumanAnnotation` task (five-minute debounce window keyed by score id), while `issues:discovery` itself loads the score and skips when no issue work applies. The debounced annotation task only starts `annotation-publication` when the score is still a human-authored draft; otherwise it returns immediately. `ScoreAssignedToIssue` carries debounced `issues:refresh` intent after a score is linked into an existing issue.
+`ScoreCreated` and `ScoreAssignedToIssue` are intentionally different from the direct-publication telemetry events: they are recorded through the transactional outbox rail so score-row persistence stays atomic with downstream fan-out. `ScoreCreated` is emitted for every canonical score write (including drafts); the `domain-events` dispatcher always publishes a deduped `issues:discovery` task plus a debounced `annotation-scores:publishHumanAnnotation` task (five-minute debounce window keyed by score id), while `issues:discovery` itself loads the score and skips when no issue work applies. The debounced annotation task only starts `annotation-publication` when the score is still a human-authored draft; otherwise it returns immediately. `ScoreAssignedToIssue` carries throttled `issues:refresh` intent after a score is linked into an existing issue — the first assignment schedules the refresh for `now + 8h`, later assignments within that window are dropped so a constant annotation stream cannot starve the refresh.
 
 ## Spec Governance
 
@@ -222,7 +222,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - the `issues:discovery` task rechecks canonical eligibility and centralizes three branches: selected annotation issue intent (including a `ScoreCreated` payload `issueId` captured while drafting when the published row no longer stores that link), issue-linked evaluation routing for evaluation-originated failed scores that still arrive unowned, or the fallback Temporal `issue-discovery` workflow when similarity search is still needed
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
 - when discovery creates a brand-new issue, the workflow goes through a dedicated create-from-score step that generates issue details from the initial occurrence before the first issue row is persisted
-- issue name/description regeneration for existing issues runs through the debounced `issues:refresh` task keyed by the canonical issue id
+- issue name/description regeneration for existing issues runs through the throttled `issues:refresh` task keyed by the canonical issue id (at most once per 8h per issue; first publish wins)
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
@@ -241,7 +241,7 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - annotation-derived ground truth is split into positive and negative examples
 - drafts and errored scores are excluded from evaluation alignment entirely
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
-- issue-generated evaluation creation starts the `evaluation-alignment` Temporal workflow with a deterministic, per-resource workflow id and returns immediately; the frontend polls a status endpoint that asks Temporal directly (`workflow.describe()` plus a workflow query for in-flight manual-realignment), with no Redis-backed status mirror
+- issue-generated evaluation creation starts the `optimize-evaluation` Temporal workflow under a deterministic `evaluations:generate:${issueId}` id (initial generation) or `evaluations:optimize:${evaluationId}` id (manual realignment) and returns immediately; the frontend polls a status endpoint that asks Temporal directly via `workflow.describe()` on the three relevant workflow ids (generate + optimize + refreshAlignment), with no Redis-backed status mirror
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
 - live evaluation triggering is incremental on debounced `SpanIngested`; the `domain-events` dispatcher publishes `trace-end:run`, that runtime checks active evaluations project-wide, applies deterministic sampling first, batches the remaining shared `FilterSet` checks together with live queues, then applies evaluation turn/debounce rules and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
@@ -250,8 +250,8 @@ For the initial reliability events, `SpanIngested` publishes directly through `c
 - newly created issue-linked evaluations initialize `trigger.sampling` from a named constant, with an initial default of `10%`
 - GEPA is the first optimizer, but the optimizer interface must stay replaceable
 - the optimizer objective is the scalar trajectory score derived from whether `predictedPositive` equals `expectedPositive`
-- only the confusion matrix is persisted; MCC, accuracy, F1, and other metrics are derived from it
-- unchanged scripts can refresh alignment incrementally before a full re-optimization run, and debounced/manual refresh work runs through the `evaluation-alignment` workflow
+- only the confusion matrix is persisted; the headline alignment metric (currently balanced accuracy), plus recall, specificity, precision, F1, MCC, and accuracy are all derived from it on read. Decision and display code refer to the headline value generically as the "alignment metric" so the underlying formula can change without touching callers
+- unchanged scripts can refresh alignment incrementally before a full re-optimization run; annotation-driven automatic refresh flows through the throttled `evaluations:automaticRefreshAlignment` queue task (1h, first-publish-wins) into `refresh-evaluation-alignment`, which on a `full-reoptimization` outcome publishes `evaluations:automaticOptimization` (8h, first-publish-wins) to start `optimize-evaluation`; the throttle (not debounce) semantics bound worst-case latency at 1h / 8h and cap fires at once per window per evaluation even under a constant annotation stream. Initial generation and manual realignment also run through `optimize-evaluation` directly under `evaluations:generate:${issueId}` / `evaluations:optimize:${evaluationId}` ids, so a manual run and a pending automatic optimize collapse into one in-flight run via Temporal's workflow-id dedupe
 - v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, Node workers remain the primary runtime, and Python can remain just the search engine behind a stdio JSON-RPC boundary packaged into the workers image
 
 ### Simulations

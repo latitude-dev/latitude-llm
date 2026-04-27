@@ -2,6 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
+  ChSqlClient,
   ExternalUserId,
   NotFoundError,
   OrganizationId,
@@ -12,7 +13,7 @@ import {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { Span, TraceDetail } from "@domain/spans"
 import { SpanRepository, TraceRepository } from "@domain/spans"
 import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } from "@domain/spans/testing"
@@ -109,6 +110,7 @@ export function createTestLayers(options?: { traceDetail?: TraceDetail | null; s
   })
 
   const SqlClientTest = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) }))
+  const ChSqlClientTest = Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(cuid) }))
 
   const TraceRepositoryTest = Layer.succeed(TraceRepository, traceRepository)
   const SpanRepositoryTest = Layer.succeed(SpanRepository, spanRepository)
@@ -121,6 +123,7 @@ export function createTestLayers(options?: { traceDetail?: TraceDetail | null; s
       ScoreAnalyticsRepositoryTest,
       OutboxEventWriterTest,
       SqlClientTest,
+      ChSqlClientTest,
       TraceRepositoryTest,
       SpanRepositoryTest,
     ),

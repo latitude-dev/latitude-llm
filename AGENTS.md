@@ -8,6 +8,10 @@ Multi-tenant LLM observability platform. The repo is a **pnpm** workspace orches
 
 At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use-cases); **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Weaviate**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
 
+## Repo-wide conventions
+
+- Organization-scoped Redis or cache keys must start with the organization prefix: `org:${organizationId}:...`. Put the org id first so tenancy is obvious and keyspaces stay consistently partitioned.
+
 ## How to use this guide
 
 1. Skim the **skill glossary** below and open the skill that matches your task.
@@ -15,7 +19,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **14** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **15** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
@@ -25,6 +29,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Architecture and boundaries** | [.agents/skills/architecture-boundaries/SKILL.md](.agents/skills/architecture-boundaries/SKILL.md) | Layering, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **web-standard APIs in domain/shared/utils**, multi-tenancy, DDD layout, anti-patterns, **machine-facing MCP/API product surfaces** |
 | **Background jobs and events** | [.agents/skills/async-jobs-and-events/SKILL.md](.agents/skills/async-jobs-and-events/SKILL.md) | **Queues/workers**, **domain events**, side effects **outside** HTTP handlers, task payload design, debounce/dedupe, delayed job semantics, **domain event naming**, **publisher–consumer decoupling** |
 | **Authentication** | [.agents/skills/authentication/SKILL.md](.agents/skills/authentication/SKILL.md) | **Better Auth**, sessions, web session helpers, org context on session, **`@domain/auth`** flows |
+| **Backoffice** | [.agents/skills/backoffice/SKILL.md](.agents/skills/backoffice/SKILL.md) | Staff-only `/backoffice` features, **`createAdminServerFn`** factory, admin guards + RLS-bypass path, `@domain/admin` feature-folder layout |
 | **Better Auth best practices** | [.agents/skills/better-auth-best-practices/SKILL.md](.agents/skills/better-auth-best-practices/SKILL.md) | **Better Auth** server/client setup, DB adapters, sessions, plugins, env (`auth.ts`); email/password, OAuth; **better-auth.com** API reference |
 | **Code style and TypeScript** | [.agents/skills/code-style/SKILL.md](.agents/skills/code-style/SKILL.md) | Biome, imports, strict TS, naming, **Zod-first shared contracts**, literal-union enums, named constants, generated files |
 | **ClickHouse and Weaviate** | [.agents/skills/database-clickhouse-weaviate/SKILL.md](.agents/skills/database-clickhouse-weaviate/SKILL.md) | Parameterized CH queries, Goose migrations, append-only migration rules, Weaviate collections/migrations |

@@ -1,4 +1,4 @@
-import type { OrganizationId, RepositoryError } from "@domain/shared"
+import type { OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
@@ -10,7 +10,7 @@ export interface ListAllProjectsInput {
 
 export const listAllProjectsUseCase = (
   input: ListAllProjectsInput,
-): Effect.Effect<readonly Project[], RepositoryError, ProjectRepository> =>
+): Effect.Effect<readonly Project[], RepositoryError, ProjectRepository | SqlClient> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("project.organizationId", input.organizationId)
     const repo = yield* ProjectRepository

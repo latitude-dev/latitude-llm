@@ -13,7 +13,8 @@ import {
   ScoreAnalyticsRepository,
   type ScoreAnalyticsRepositoryShape,
 } from "@domain/scores"
-import { EvaluationId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { type Issue, IssueState } from "../entities/issue.ts"
@@ -33,6 +34,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   projectId: projectId as string,
   name: "Issue candidate",
   description: "Repeated assistant failure",
+  source: "annotation",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,
@@ -300,6 +302,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -453,6 +457,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -461,7 +467,9 @@ describe("listIssuesUseCase", () => {
     expect(calls).toEqual([])
     expect(result.analytics.counts.resolvedIssues).toBe(1)
     expect(result.analytics.counts.regressedIssues).toBe(1)
+    expect(result.analytics.counts.ongoingIssues).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
+    expect(result.items.map((item) => item.states)).toEqual([[IssueState.Ongoing], [IssueState.Regressed]])
     expect(result.items.map((item) => item.id)).toEqual([activeIssue.id, regressedIssue.id])
     expect(result.occurrencesSum).toBe(9)
     expect(result.items[0]?.affectedTracesPercent).toBe(0.5)
@@ -620,6 +628,8 @@ describe("listIssuesUseCase", () => {
               Layer.succeed(EvaluationRepository, evaluationRepository),
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
             ),
           ),
         ),
@@ -708,6 +718,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -789,6 +801,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),
@@ -853,6 +867,8 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
         ),
       ),

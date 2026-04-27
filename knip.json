@@ -28,7 +28,7 @@
     },
     "packages/domain/email": {
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": ["@react-email/preview-server"]
+      "ignoreDependencies": []
     },
     "packages/domain/*": {
       "project": ["src/**/*.ts"]
@@ -42,6 +42,17 @@
     },
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
+    },
+    "packages/sdk/typescript": {
+      "entry": [],
+      "project": [],
+      "ignoreBinaries": []
+    },
+    "examples/sdks/typescript": {
+      "entry": ["src/**/*.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreBinaries": [],
+      "ignoreDependencies": []
     },
     "packages/ui": {
       "project": ["src/**/*.ts", "src/**/*.tsx"]
@@ -68,8 +79,12 @@
         "llamaindex",
         "openai"
       ]
+    },
+    "tools/ai-benchmarks": {
+      "entry": ["src/scripts/**/*.ts"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
-  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"]
+  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random", "fern-api"]
 }

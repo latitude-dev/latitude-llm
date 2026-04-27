@@ -19,6 +19,8 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  id-token: write
 
 jobs:
   check-for-changes:
@@ -136,6 +138,14 @@ jobs:
 
           echo "tag_created=true" >> "$GITHUB_OUTPUT"
           echo "Created and pushed tag: $new_version"
+
+  trigger-deploy:
+    needs: create-tag
+    if: needs.create-tag.outputs.tag_created == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+    secrets: inherit
 
   notify-no-changes:
     needs: check-for-changes

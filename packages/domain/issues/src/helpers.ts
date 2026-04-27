@@ -229,5 +229,9 @@ export const deriveIssueLifecycleStates = ({
     states.add(IssueState.Ignored)
   }
 
+  if (states.size === 0) {
+    states.add(IssueState.Ongoing)
+  }
+
   return ISSUE_STATES.filter((state): state is IssueStateValue => states.has(state))
 }

@@ -129,6 +129,25 @@ describe("createAiLayer", () => {
 
     expect(embedCalls.count).toBe(1)
   })
+
+  it("keys embed cache on inputType so document and query calls don't collide", async () => {
+    const embedCalls = { count: 0 }
+    const redis = createRedisClient()
+
+    const ai = await Effect.runPromise(getAI(createAiLayer(embedLayer(embedCalls), redis)))
+
+    const base = { text: "hello", model: "voyage-4-large", dimensions: 2048 } as const
+
+    await Effect.runPromise(ai.embed({ ...base, inputType: "document" }))
+    await Effect.runPromise(ai.embed({ ...base, inputType: "query" }))
+
+    // Different inputType → different cache key → two provider calls.
+    expect(embedCalls.count).toBe(2)
+
+    // Same inputType → cache hit, no new provider call.
+    await Effect.runPromise(ai.embed({ ...base, inputType: "query" }))
+    expect(embedCalls.count).toBe(2)
+  })
 })
 
 describe("withAi", () => {

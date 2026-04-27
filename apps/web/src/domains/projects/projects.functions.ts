@@ -4,6 +4,8 @@ import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
 import { isValidId, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
+import { withAi } from "@platform/ai"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   DatasetRepositoryLive,
@@ -11,6 +13,7 @@ import {
   IssueRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  SqlClientLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -18,7 +21,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getOutboxWriter, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 const logger = createLogger("project-stats")
 
@@ -150,7 +153,7 @@ export const deleteProject = createServerFn({ method: "POST" })
             projectId: data.id,
           },
         })
-        .pipe(withTracing),
+        .pipe(Effect.provide(SqlClientLive(client, organizationId)), withTracing),
     )
   })
 
@@ -191,6 +194,7 @@ export const getProjectStats = createServerFn({ method: "GET" })
       })
     }).pipe(
       withClickHouse(TraceRepositoryLive, chClient, orgId),
+      withAi(AIEmbedLive, getRedisClient()),
       withTracing,
       Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countTraces" }))),
       Effect.orElseSucceed(() => 0),

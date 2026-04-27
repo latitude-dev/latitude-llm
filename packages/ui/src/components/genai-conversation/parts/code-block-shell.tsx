@@ -22,7 +22,10 @@ export function CodeBlockShell({
   return (
     <pre
       {...(contentType ? { "data-content-type": contentType } : {})}
-      className={cn("not-prose overflow-auto rounded-lg bg-muted p-3 text-xs", className)}
+      className={cn(
+        "not-prose min-w-0 max-w-full overflow-hidden whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs",
+        className,
+      )}
     >
       {children}
     </pre>

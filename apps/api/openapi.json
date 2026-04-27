@@ -1,0 +1,1861 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Latitude API",
+    "version": "1.0.0",
+    "description": "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header."
+  },
+  "servers": [
+    {
+      "url": "https://api.latitude.so",
+      "description": "Production"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Organization-scoped API key"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "enum": [
+              "api"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "service",
+          "status"
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "slug",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "CreateProjectBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ProjectList": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          }
+        },
+        "required": [
+          "projects"
+        ]
+      },
+      "UpdateProjectBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New project name"
+          }
+        }
+      },
+      "ScoreResponse": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/CustomScoreResponse"
+          },
+          {
+            "$ref": "#/components/schemas/EvaluationScoreResponse"
+          }
+        ]
+      },
+      "CustomScoreResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "traceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 32,
+            "maxLength": 32
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "issueId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "errored": {
+            "type": "boolean"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "draftedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "custom"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ]
+      },
+      "EvaluationScoreResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "traceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 32,
+            "maxLength": 32
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "issueId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "errored": {
+            "type": "boolean"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "draftedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "evaluation"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "evaluationHash": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "evaluationHash"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ]
+      },
+      "CreateScoreBody": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/CreateCustomScoreBody"
+          },
+          {
+            "$ref": "#/components/schemas/CreateEvaluationScoreBody"
+          }
+        ]
+      },
+      "CreateCustomScoreBody": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128,
+            "default": null
+          },
+          "traceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 32,
+            "maxLength": 32,
+            "default": null
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16,
+            "default": null
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "default": null
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "default": {}
+          },
+          "_evaluation": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "default": false
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "sourceId"
+        ]
+      },
+      "CreateEvaluationScoreBody": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128,
+            "default": null
+          },
+          "traceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 32,
+            "maxLength": 32,
+            "default": null
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16,
+            "default": null
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "default": null
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "_evaluation": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "evaluationHash": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "evaluationHash"
+            ]
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "_evaluation",
+          "sourceId",
+          "metadata"
+        ],
+        "description": "Internal, don't use"
+      },
+      "AnnotationScoreResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "traceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 32,
+            "maxLength": 32
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "issueId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "errored": {
+            "type": "boolean"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "draftedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "annotation"
+            ]
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UI",
+                  "API",
+                  "SYSTEM"
+                ]
+              },
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              }
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "rawFeedback": {
+                "type": "string"
+              },
+              "messageIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "partIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "startOffset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "endOffset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "rawFeedback"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ]
+      },
+      "CreateAnnotationBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "sessionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128,
+            "default": null
+          },
+          "spanId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 16,
+            "maxLength": 16,
+            "default": null
+          },
+          "simulationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "issueId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "annotatorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "partIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "startOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "anchor": {
+            "type": "object",
+            "properties": {
+              "messageIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "partIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "startOffset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "endOffset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "trace": {
+            "$ref": "#/components/schemas/TraceRef"
+          },
+          "draft": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "trace"
+        ],
+        "example": {
+          "value": 1,
+          "passed": true,
+          "feedback": "Approved - the system annotator correctly flagged this as a refusal.",
+          "trace": {
+            "by": "filters",
+            "filters": {
+              "metadata.scoreId": [
+                {
+                  "op": "eq",
+                  "value": "abc123def456ghi789jkl012"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "TraceRef": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "by": {
+                "type": "string",
+                "enum": [
+                  "id"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32
+              }
+            },
+            "required": [
+              "by",
+              "id"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "by": {
+                "type": "string",
+                "enum": [
+                  "filters"
+                ]
+              },
+              "filters": {
+                "$ref": "#/components/schemas/FilterSet"
+              }
+            },
+            "required": [
+              "by",
+              "filters"
+            ]
+          }
+        ]
+      },
+      "FilterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        }
+      },
+      "FilterCondition": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "neq",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "in",
+              "notIn",
+              "contains",
+              "notContains"
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "op",
+          "value"
+        ]
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "The API key token. Only included in the creation response — store it securely."
+          },
+          "tokenHash": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "token",
+          "tokenHash",
+          "lastUsedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateApiKeyBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable name for the API key"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ApiKeyList": {
+        "type": "object",
+        "properties": {
+          "apiKeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyListItem"
+            }
+          }
+        },
+        "required": [
+          "apiKeys"
+        ]
+      },
+      "ApiKeyListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "lastUsedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health.get",
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects": {
+      "post": {
+        "operationId": "projects.create",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create project",
+        "description": "Creates a new project within the organization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "projects.list",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List projects",
+        "description": "Returns all projects in the organization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}": {
+      "get": {
+        "operationId": "projects.get",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get project",
+        "description": "Returns a single project by slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "projects.update",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update project",
+        "description": "Updates a project's name and/or description.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "projects.delete",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete project",
+        "description": "Soft-deletes a project by slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Project deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/scores": {
+      "post": {
+        "operationId": "scores.create",
+        "tags": [
+          "Scores"
+        ],
+        "summary": "Create project score",
+        "description": "Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScoreBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Score created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/annotations": {
+      "post": {
+        "operationId": "annotations.create",
+        "tags": [
+          "Annotations"
+        ],
+        "summary": "Create project annotation",
+        "description": "Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAnnotationBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Annotation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationScoreResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/api-keys": {
+      "post": {
+        "operationId": "apiKeys.create",
+        "tags": [
+          "API Keys"
+        ],
+        "x-fern-sdk-group-name": "apiKeys",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Generate API key",
+        "description": "Generates a new API key for the organization. The token is only returned once — store it securely.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "apiKeys.list",
+        "tags": [
+          "API Keys"
+        ],
+        "x-fern-sdk-group-name": "apiKeys",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List API keys",
+        "description": "Returns all API keys for the organization. Tokens are not included in the list response.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/api-keys/{id}": {
+      "delete": {
+        "operationId": "apiKeys.revoke",
+        "tags": [
+          "API Keys"
+        ],
+        "x-fern-sdk-group-name": "apiKeys",
+        "x-fern-sdk-method-name": "revoke",
+        "summary": "Revoke API key",
+        "description": "Soft-deletes an API key, immediately invalidating it.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "API key revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

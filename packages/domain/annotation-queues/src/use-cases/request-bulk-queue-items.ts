@@ -5,6 +5,7 @@ import {
   ChSqlClient,
   type ProjectId,
   type RepositoryError,
+  type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { AnnotationQueueSettings } from "../entities/annotation-queue.ts"
@@ -56,7 +57,7 @@ export function requestBulkQueueItems(
 ): Effect.Effect<
   { queueId: AnnotationQueueId },
   RequestBulkQueueItemsError,
-  ChSqlClient | QueuePublisher | AnnotationQueueRepository
+  ChSqlClient | QueuePublisher | AnnotationQueueRepository | SqlClient
 > {
   return Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("queue.projectId", args.projectId)

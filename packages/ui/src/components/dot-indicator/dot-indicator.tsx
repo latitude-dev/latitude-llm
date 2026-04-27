@@ -40,4 +40,4 @@ function DotIndicator({
   )
 }
 
-export { DotIndicator, dotIndicatorVariants }
+export { DotIndicator }

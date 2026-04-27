@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/claude-code-telemetry",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Claude Code Stop-hook that streams session transcripts to Latitude as OTLP traces",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -33,10 +33,10 @@
     "./intercept": "./dist/intercept.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
@@ -46,11 +46,12 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "tsup": "^8.0.0",
+    "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5.5.4"
+    "typescript": "^6.0.3"
   }
 }

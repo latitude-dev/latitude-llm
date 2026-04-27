@@ -1,3 +1,5 @@
+import { ChSqlClient, OrganizationId } from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Trace } from "../entities/trace.ts"
@@ -60,7 +62,10 @@ describe("buildTracesExportUseCase", () => {
         projectId,
         filters: { tags: [{ op: "contains", value: "important" }] },
         selection: { mode: "selected", rowIds: [firstTrace.traceId, secondTrace.traceId] },
-      }).pipe(Effect.provideService(TraceRepository, repository)),
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+      ),
     )
 
     expect(result.csv).toContain(`${firstTrace.traceId},1,0`)

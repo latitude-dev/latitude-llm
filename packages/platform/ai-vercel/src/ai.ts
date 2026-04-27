@@ -256,10 +256,17 @@ export const AIGenerateLive = Layer.effect(
                 }
 
                 const result = await generateText(call)
+                const usage = result.usage
 
                 return {
                   object: result.output,
-                  tokens: result.usage?.totalTokens ?? 0,
+                  tokens: usage?.totalTokens ?? 0,
+                  tokenUsage: {
+                    input: usage?.inputTokens ?? 0,
+                    output: usage?.outputTokens ?? 0,
+                    ...(usage?.reasoningTokens !== undefined ? { reasoning: usage.reasoningTokens } : {}),
+                    ...(usage?.cachedInputTokens !== undefined ? { cacheRead: usage.cachedInputTokens } : {}),
+                  },
                   duration: Math.round((performance.now() - startTime) * 1_000_000),
                 } satisfies GenerateResult<T>
               }

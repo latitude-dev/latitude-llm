@@ -11,13 +11,14 @@
   "scripts": {
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
     "seed:live-seeds": "node --import tsx src/scripts/send-live-seeds.ts"
   },
   "dependencies": {
     "@domain/annotation-queues": "workspace:*",
     "@domain/evaluations": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/db-postgres": "workspace:*",

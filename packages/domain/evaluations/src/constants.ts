@@ -21,22 +21,38 @@ export const EVALUATION_TURNS = ["first", "every", "last"] as const
 // Alignment cadence
 // ---------------------------------------------------------------------------
 
-/** Debounce window for metric recomputation after new annotations (1 hour in milliseconds). */
-export const ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS = 1 * 60 * 60 * 1000
+/**
+ * Throttle window for incremental metric recomputation after new annotations
+ * (1 hour in milliseconds). Used as `throttleMs` on the
+ * `evaluations:automaticRefreshAlignment` queue task: the first annotation that
+ * flows through `issues:refresh` schedules the workflow for `now + 1h`, and
+ * subsequent annotations within that hour are dropped by BullMQ. Guarantees an
+ * upper bound of 1h on fire latency and at most one refresh per evaluation
+ * per hour, even under a constant annotation stream.
+ */
+export const ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS = 1 * 60 * 60 * 1000
 
-/** Debounce window for full re-optimization after new annotations (8 hours in milliseconds). */
-export const ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS = 8 * 60 * 60 * 1000
+/**
+ * Throttle window for full re-optimization after an incremental alignment
+ * metric drop (8 hours in milliseconds). Used as `throttleMs` on the
+ * `evaluations:automaticOptimization` queue task: the first escalation from
+ * `refreshEvaluationAlignmentWorkflow` schedules the optimize workflow for
+ * `now + 8h`, and subsequent escalations within that window are dropped.
+ * Guarantees at most one GEPA pass per evaluation per 8h.
+ */
+export const ALIGNMENT_FULL_REOPTIMIZE_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Alignment tolerances
 // ---------------------------------------------------------------------------
 
 /**
- * MCC tolerance band for incremental refresh.
- * If derived MCC drops by more than this amount after incremental evaluation,
- * the system triggers a full re-optimization instead of keeping the current script.
+ * Alignment metric tolerance band for incremental refresh.
+ * If the derived alignment metric drops by more than this amount after
+ * incremental evaluation, the system triggers a full re-optimization instead
+ * of keeping the current script.
  */
-export const ALIGNMENT_MCC_TOLERANCE = 0.05
+export const ALIGNMENT_METRIC_TOLERANCE = 0.05
 
 // ---------------------------------------------------------------------------
 // Deterministic example curation and splitting
@@ -59,28 +75,3 @@ export const ALIGNMENT_TRAIN_SPLIT = 0.7
 
 /** Fraction of curated examples assigned to the validation split. */
 export const ALIGNMENT_VALIDATION_SPLIT = 0.3
-
-// ---------------------------------------------------------------------------
-// Cross-process contract for the evaluation alignment Temporal workflow
-// ---------------------------------------------------------------------------
-//
-// These live here (rather than in a separate `alignment/workflow.ts` subpath)
-// so the Temporal workflow bundle can import them from the same known-good
-// `@domain/evaluations/constants` subpath that it already uses for the
-// debounce windows above. The workflow file itself lives in `apps/workflows`,
-// but the signal name, query name, and query response shape are shared with
-// `apps/workers` (auto-refresh) and `apps/web` (manual triggers + polling).
-//
-// Workflow IDs use the format `evaluations:alignment:${issueId|evaluationId}`
-// and are inlined at each call site.
-
-export const EVALUATION_ALIGNMENT_REFRESH_SIGNAL = "scheduleRefresh"
-
-export const EVALUATION_ALIGNMENT_STATE_QUERY = "getEvaluationAlignmentWorkflowState"
-
-export type EvaluationAlignmentWorkflowState = {
-  readonly manualRealignment: {
-    readonly isBusy: boolean
-    readonly currentJobId: string | null
-  }
-}

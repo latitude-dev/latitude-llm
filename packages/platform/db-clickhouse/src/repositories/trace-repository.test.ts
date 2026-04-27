@@ -1,3 +1,5 @@
+import { AI, AIError, type AIShape } from "@domain/ai"
+import type { ChSqlClient } from "@domain/shared"
 import {
   OrganizationId,
   ProjectId,
@@ -7,16 +9,24 @@ import {
   SEED_PROJECT_ID,
   TraceId,
 } from "@domain/shared/seeding"
-import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
+import { TRACE_SEARCH_EMBEDDING_DIMENSIONS, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { scoreSeeders } from "../seeds/scores/index.ts"
 import { fixedTraceSeeders } from "../seeds/spans/fixed-traces.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { TraceRepositoryLive } from "./trace-repository.ts"
+
+/** Mock AI layer that provides a fake embedding service for testing. */
+const mockAILayer = Layer.succeed(AI, {
+  generate: () => Effect.fail(new AIError({ message: "Generate not implemented in mock" })),
+  embed: () => Effect.succeed({ embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1) }),
+  rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
+} as AIShape)
 
 const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
@@ -110,14 +120,18 @@ if (firstScoreSeeder === undefined) {
 
 const ch = setupTestClickHouse()
 
+const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
+
 describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
 
   beforeAll(async () => {
+    const combinedLayer = TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer))
     repo = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* TraceRepository
-      }).pipe(withClickHouse(TraceRepositoryLive, ch.client, ORG_ID)),
+      }).pipe(withClickHouse(combinedLayer, ch.client, ORG_ID)),
     )
   })
 
@@ -128,7 +142,7 @@ describe("TraceRepository", () => {
 
   describe("matchesFiltersByTraceId", () => {
     it("returns true when the trace matches the canonical filter semantics", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -143,7 +157,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns false when the trace does not match the filters", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -158,7 +172,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns false for a missing trace id", async () => {
-      const matches = await Effect.runPromise(
+      const matches = await runCh(
         repo.matchesFiltersByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -173,7 +187,7 @@ describe("TraceRepository", () => {
     })
   })
 
-  describe("getCohortBaselineByProjectId", () => {
+  describe("getCohortBaselineByTags", () => {
     it("ignores zero-filled cost and token values in percentile baselines", async () => {
       const rows = Array.from({ length: 10 }, (_value, index) => {
         const startTime = new Date(Date.UTC(2026, 0, 1, 0, 0, index))
@@ -189,13 +203,11 @@ describe("TraceRepository", () => {
 
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
 
-      const baseline = await Effect.runPromise(
-        repo.getCohortBaselineByProjectId({
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          filters: {
-            tags: [{ op: "in", value: [BASELINE_TEST_TAG] }],
-          },
+          tags: [BASELINE_TEST_TAG],
         }),
       )
 
@@ -209,11 +221,152 @@ describe("TraceRepository", () => {
       expect(baseline.metrics.tokensTotal.p50).toBe(100)
       expect(baseline.metrics.tokensTotal.p90).toBe(100)
     })
+
+    it("isolates cohorts by exact tag combination, independent of order", async () => {
+      const makeRowWithTags = (traceIdx: number, cost: number, tags: readonly string[]): SpanRow => {
+        const startTime = new Date(Date.UTC(2026, 0, 2, 0, 0, traceIdx))
+        const row = makeSpanRow({
+          traceId: `${traceIdx.toString(16).padStart(2, "0")}${"c".repeat(30)}`,
+          spanId: `${traceIdx.toString(16).padStart(2, "0")}${"d".repeat(14)}`,
+          startTime,
+          costTotalMicrocents: cost,
+          tokensInput: 0,
+          tokensOutput: 0,
+        })
+        return { ...row, tags: [...tags] }
+      }
+
+      const cheapRows = Array.from({ length: 5 }, (_v, i) => makeRowWithTags(i, 100, ["cheap"]))
+      const expensiveRows = Array.from({ length: 5 }, (_v, i) => makeRowWithTags(i + 5, 10_000, ["expensive"]))
+      const reversedOrderRows = Array.from({ length: 3 }, (_v, i) => makeRowWithTags(i + 10, 500, ["beta", "alpha"]))
+
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "spans", [...cheapRows, ...expensiveRows, ...reversedOrderRows]),
+      )
+
+      const cheapBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cheap"] }),
+      )
+      const expensiveBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["expensive"] }),
+      )
+
+      expect(cheapBaseline.metrics.costTotalMicrocents.p50).toBe(100)
+      expect(expensiveBaseline.metrics.costTotalMicrocents.p50).toBe(10_000)
+      expect(cheapBaseline.traceCount).toBe(5)
+      expect(expensiveBaseline.traceCount).toBe(5)
+
+      // Order-independent match: query ["alpha","beta"] finds rows stored with ["beta","alpha"]
+      const alphaBetaBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha", "beta"] }),
+      )
+      expect(alphaBetaBaseline.traceCount).toBe(3)
+      expect(alphaBetaBaseline.metrics.costTotalMicrocents.p50).toBe(500)
+
+      // A subset of tags must NOT match a strict superset cohort.
+      const alphaOnlyBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha"] }),
+      )
+      expect(alphaOnlyBaseline.traceCount).toBe(0)
+    })
+
+    it("treats the empty-tags cohort as a distinct bucket of untagged traces", async () => {
+      const untaggedRows = Array.from({ length: 3 }, (_v, i): SpanRow => {
+        const row = makeSpanRow({
+          traceId: `${(20 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
+          spanId: `${(20 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 3, 0, 0, i)),
+          costTotalMicrocents: 777,
+          tokensInput: 0,
+          tokensOutput: 0,
+        })
+        return { ...row, tags: [] }
+      })
+
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", untaggedRows))
+
+      const emptyCohort = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: [] }),
+      )
+
+      expect(emptyCohort.traceCount).toBe(3)
+      expect(emptyCohort.metrics.costTotalMicrocents.p50).toBe(777)
+
+      // Tagged-cohort queries must not pick up untagged rows.
+      const taggedCohort = await runCh(
+        repo.getCohortBaselineByTags({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          tags: [BASELINE_TEST_TAG],
+        }),
+      )
+      expect(taggedCohort.metrics.costTotalMicrocents.p50).not.toBe(777)
+    })
+
+    it("gates p95 (<100 samples) and p99 (<1000 samples) to null", async () => {
+      const rows = Array.from({ length: 10 }, (_v, i) =>
+        makeSpanRow({
+          traceId: `${(30 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(30 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 4, 0, 0, i)),
+          costTotalMicrocents: (i + 1) * 10,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+      )
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
+
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          tags: [BASELINE_TEST_TAG],
+        }),
+      )
+
+      expect(baseline.metrics.costTotalMicrocents.p95).toBeNull()
+      expect(baseline.metrics.costTotalMicrocents.p99).toBeNull()
+    })
+
+    it("honors excludeTraceId", async () => {
+      const keptRows = Array.from({ length: 3 }, (_v, i) =>
+        makeSpanRow({
+          traceId: `${(40 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(40 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 5, 0, 0, i)),
+          costTotalMicrocents: 100,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+      )
+      const excludedRow = makeSpanRow({
+        traceId: `44${"a".repeat(30)}`,
+        spanId: `44${"b".repeat(14)}`,
+        startTime: new Date(Date.UTC(2026, 0, 5, 0, 0, 3)),
+        costTotalMicrocents: 999_999,
+        tokensInput: 0,
+        tokensOutput: 0,
+      })
+
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [...keptRows, excludedRow]))
+
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          tags: [BASELINE_TEST_TAG],
+          excludeTraceId: excludedRow.trace_id as TraceId,
+        }),
+      )
+
+      expect(baseline.traceCount).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.p50).toBe(100)
+    })
   })
 
   describe("findByTraceId", () => {
     it("prepends system instructions as first message in allMessages", async () => {
-      const detail = await Effect.runPromise(
+      const detail = await runCh(
         repo.findByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -228,7 +381,7 @@ describe("TraceRepository", () => {
     })
 
     it("allMessages starts with system message when systemInstructions present", async () => {
-      const detail = await Effect.runPromise(
+      const detail = await runCh(
         repo.findByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -251,7 +404,7 @@ describe("TraceRepository", () => {
 
   describe("listMatchingFilterIdsByTraceId", () => {
     it("returns the filter ids that match one trace", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -278,7 +431,7 @@ describe("TraceRepository", () => {
     })
 
     it("supports independent score-backed filters in the same batch", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -312,7 +465,7 @@ describe("TraceRepository", () => {
     })
 
     it("returns an empty list when the trace does not exist", async () => {
-      const filterIds = await Effect.runPromise(
+      const filterIds = await runCh(
         repo.listMatchingFilterIdsByTraceId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
@@ -327,6 +480,163 @@ describe("TraceRepository", () => {
       )
 
       expect(filterIds).toEqual([])
+    })
+  })
+
+  describe("listByProjectId with searchQuery (hybrid path)", () => {
+    // These test traces are inserted fresh in each test (no shared seeder),
+    // so their IDs don't collide with the fixed/scored seeders above.
+    const HYBRID_TRACE = TraceId(`${"a".repeat(31)}0`) // lexical + semantic match
+    const LEX_ONLY_TRACE = TraceId(`${"b".repeat(31)}0`) // lexical match, no embedding
+    const SEM_ONLY_TRACE = TraceId(`${"c".repeat(31)}0`) // no lexical, aligned embedding
+    const NOISE_TRACE = TraceId(`${"d".repeat(31)}0`) // anti-parallel embedding → below floor
+    const DIMS = 2048
+    const QUERY = "needle"
+
+    // Mock AI returns [0.1, 0.1, ...]; cosineSimilarity against:
+    //   aligned  [0.1, 0.1, ...]   → 1.0
+    //   antiparallel [-0.1, -0.1, ...] → -1.0
+    const alignedEmbedding = new Array(DIMS).fill(0.1) as readonly number[]
+    const antiparallelEmbedding = new Array(DIMS).fill(-0.1) as readonly number[]
+
+    const insertSearchRows = async () => {
+      const startTime = new Date(Date.UTC(2026, 0, 1, 0, 0, 0))
+      const spans = [HYBRID_TRACE, LEX_ONLY_TRACE, SEM_ONLY_TRACE, NOISE_TRACE].map((traceId, i) =>
+        makeSpanRow({
+          traceId,
+          spanId: `${i.toString(16).padStart(2, "0")}${"e".repeat(14)}`,
+          startTime: new Date(startTime.getTime() + i * 1000),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+      )
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", spans))
+
+      const docs = [
+        { traceId: HYBRID_TRACE, text: `customer ${QUERY} in checkout` },
+        { traceId: LEX_ONLY_TRACE, text: `audit review mentions ${QUERY}` },
+        { traceId: SEM_ONLY_TRACE, text: "unrelated routine diagnostic" },
+        { traceId: NOISE_TRACE, text: "unrelated noise text" },
+      ]
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "trace_search_documents",
+          docs.map((d, i) => ({
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: d.traceId,
+            start_time: toClickHouseDateTime(new Date(startTime.getTime() + i * 1000)),
+            root_span_name: "root",
+            search_text: d.text,
+            content_hash: `${"f".repeat(63)}${i}`,
+            indexed_at: toClickHouseDateTime(startTime),
+          })),
+        ),
+      )
+
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "trace_search_embeddings", [
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: HYBRID_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}0`,
+            embedding_model: "voyage-4-large",
+            embedding: [...alignedEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: SEM_ONLY_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}2`,
+            embedding_model: "voyage-4-large",
+            embedding: [...alignedEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+          {
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: NOISE_TRACE,
+            start_time: toClickHouseDateTime(startTime),
+            content_hash: `${"f".repeat(63)}3`,
+            embedding_model: "voyage-4-large",
+            embedding: [...antiparallelEmbedding],
+            indexed_at: toClickHouseDateTime(startTime),
+          },
+        ]),
+      )
+    }
+
+    it("ranks lexical+semantic, lexical-only, and semantic-only hits above the floor and drops antiparallel noise", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: QUERY },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+
+      // HYBRID_TRACE (score 1.0) and SEM_ONLY_TRACE (0.7) are semantic-ranked
+      // above LEX_ONLY_TRACE (0.3). NOISE_TRACE (-0.7) is cut by the HAVING
+      // floor. This is also the UNION-ALL/FULL-OUTER-JOIN regression test:
+      // SEM_ONLY_TRACE has no lexical row, and with FULL OUTER JOIN its
+      // FixedString(32) trace_id would coalesce to zero bytes and drop out
+      // of the downstream inner join against `traces`. UNION ALL preserves it.
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+
+      // HYBRID > SEM_ONLY > LEX_ONLY by relevance, regardless of trace_id tie-break.
+      expect(ids.indexOf(HYBRID_TRACE)).toBeLessThan(ids.indexOf(SEM_ONLY_TRACE))
+      expect(ids.indexOf(SEM_ONLY_TRACE)).toBeLessThan(ids.indexOf(LEX_ONLY_TRACE))
+    })
+
+    it("keeps count / metrics / histogram consistent with the list", async () => {
+      await insertSearchRows()
+
+      const [page, count, metrics, histogram] = await Promise.all([
+        runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: QUERY },
+          }),
+        ),
+        runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: QUERY })),
+        runCh(
+          repo.aggregateMetricsByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            searchQuery: QUERY,
+          }),
+        ),
+        runCh(
+          repo.histogramByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            bucketSeconds: 3600,
+            searchQuery: QUERY,
+          }),
+        ),
+      ])
+
+      // All four agree on the same 3-trace result set (hybrid, lexical-only,
+      // semantic-only — the antiparallel noise row is below the floor).
+      const histogramCount = histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)
+      expect(page.items).toHaveLength(3)
+      expect(count).toBe(3)
+      expect(metrics.spanCount.sum).toBe(3)
+      expect(histogramCount).toBe(3)
     })
   })
 })

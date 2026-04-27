@@ -6,18 +6,16 @@ const ErrorSchema = z
   })
   .openapi("Error")
 
-export const OrgParamsSchema = z.object({
-  organizationId: z.string().openapi({ description: "Organization ID" }),
-})
+// All protected endpoints are already org-scoped via the Bearer API key
+// (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),
+// so the path schemas carry only resource identifiers — not the organization.
 
-export const OrgAndIdParamsSchema = z.object({
-  organizationId: z.string().openapi({ description: "Organization ID" }),
+export const IdParamsSchema = z.object({
   id: z.string().openapi({ description: "Resource ID" }),
 })
 
-export const OrgAndProjectParamsSchema = z.object({
-  organizationId: z.string().openapi({ description: "Organization ID" }),
-  projectId: z.string().openapi({ description: "Project ID" }),
+export const ProjectParamsSchema = z.object({
+  projectSlug: z.string().openapi({ description: "Project slug (human-readable identifier)" }),
 })
 
 /** Security scheme applied to protected endpoints. */

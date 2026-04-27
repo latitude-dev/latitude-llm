@@ -6,7 +6,6 @@ import {
   evaluationSchema,
 } from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
-import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import type { FilterSet } from "@domain/shared"
@@ -17,9 +16,31 @@ import { issues } from "@platform/db-postgres/schema/issues"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
+
+// vi.hoisted runs before imports, so we can't reference a constant here;
+// the literal 2048 matches TRACE_SEARCH_EMBEDDING_DIMENSIONS (voyage-4-large).
+const { mockAi } = vi.hoisted(() => ({
+  mockAi: {
+    generate: vi.fn(),
+    embed: vi.fn().mockReturnValue({ embedding: new Array(2048).fill(0.1) }),
+    rerank: vi.fn(),
+  },
+}))
+
+vi.mock("@platform/ai", async () => {
+  const { AI } = (await vi.importActual("@domain/ai")) as typeof import("@domain/ai")
+  const { Effect: Eff, Layer } = (await vi.importActual("effect")) as typeof import("effect")
+
+  // Matches the real signature: returning `Effect.provide(...)` directly
+  // removes `AI` from the requirement channel, so call sites don't need casts.
+  return {
+    withAi: (_layer?: unknown, _redisClient?: unknown) => Eff.provide(Layer.succeed(AI, mockAi)),
+  }
+})
+
 import { createRunHandler, createTraceEndWorker, runTraceEndJob } from "./trace-end.ts"
 
 const pg = setupTestPostgres()
@@ -109,6 +130,7 @@ const makeIssueRow = (input?: { readonly id?: string; readonly projectId?: strin
   projectId: input?.projectId ?? PROJECT_ID,
   name: "Trace-end worker issue",
   description: "Issue context for trace-end worker tests",
+  source: "annotation" as const,
   centroid: createIssueCentroid(),
   clusteredAt: TIMESTAMP,
   escalatedAt: null,
@@ -219,23 +241,6 @@ const insertTraceRows = async (rows: Array<Record<string, unknown>>) => {
   })
 }
 
-const createFakeWorkflowStarter = () => {
-  const startedWorkflows: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: { readonly workflowId: string }
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        startedWorkflows.push({ workflow, input, options })
-      }),
-    signalWithStart: () => Effect.die("signalWithStart should not be called by trace-end tests"),
-  }
-
-  return { workflowStarter, startedWorkflows }
-}
-
 const createFakeRedisClient = (): RedisClient => {
   const values = new Map<string, string>()
   const sets = new Map<string, Set<string>>()
@@ -283,13 +288,11 @@ describe("createTraceEndWorker", () => {
   it("registers the trace-end run task", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     createTraceEndWorker({
       consumer,
       publisher,
-      workflowStarter,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient,
@@ -302,13 +305,11 @@ describe("createTraceEndWorker", () => {
 describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, startedWorkflows } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -325,7 +326,6 @@ describe("runTraceEndJob", () => {
       traceId: TRACE_ID,
     })
     expect(published).toEqual([])
-    expect(startedWorkflows).toEqual([])
   })
 })
 
@@ -380,13 +380,11 @@ describe("runTraceEndJob", () => {
     await pg.db.insert(scores).values([makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })])
 
     const { publisher, published } = createFakeQueuePublisher()
-    const { workflowStarter, startedWorkflows } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -418,54 +416,44 @@ describe("runTraceEndJob", () => {
           filterMissCount: 1,
           insertedItemCount: 1,
         },
-        systemQueues: {
-          systemQueuesScanned: 2,
-          selectedCount: 1,
-          sampledOutCount: 1,
-          filterMissCount: 0,
-          startedWorkflowCount: 1,
-        },
-        deterministicSystemMatches: {
-          matchedSlugs: [],
-        },
+        deterministicFlaggersEnqueued: true,
       },
     })
 
-    expect(published).toEqual([
-      {
-        queue: "live-evaluations",
-        task: "execute",
-        payload: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          evaluationId: "e".repeat(24),
-          traceId: TRACE_ID,
-        },
-        options: {
-          dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+    expect(published).toEqual(
+      expect.arrayContaining([
+        {
+          queue: "live-evaluations",
+          task: "execute",
+          payload: {
             organizationId: ORGANIZATION_ID,
             projectId: PROJECT_ID,
             evaluationId: "e".repeat(24),
             traceId: TRACE_ID,
-          }),
+          },
+          options: {
+            dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+              organizationId: ORGANIZATION_ID,
+              projectId: PROJECT_ID,
+              evaluationId: "e".repeat(24),
+              traceId: TRACE_ID,
+            }),
+          },
         },
-      },
-    ])
-
-    expect(startedWorkflows).toEqual([
-      {
-        workflow: "systemQueueFlaggerWorkflow",
-        input: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          traceId: TRACE_ID,
-          queueSlug: "system-selected",
+        {
+          queue: "deterministic-flaggers",
+          task: "run",
+          payload: {
+            organizationId: ORGANIZATION_ID,
+            projectId: PROJECT_ID,
+            traceId: TRACE_ID,
+          },
+          options: {
+            dedupeKey: `deterministic-flaggers:${TRACE_ID}`,
+          },
         },
-        options: {
-          workflowId: "system-queue-flagger:tttttttttttttttttttttttttttttttt:system-selected",
-        },
-      },
-    ])
+      ]),
+    )
 
     const queueItems = await pg.db.select().from(annotationQueueItems)
     expect(queueItems).toHaveLength(1)
@@ -477,6 +465,15 @@ describe("runTraceEndJob", () => {
     const missedQueue = persistedQueues.find((queue) => queue.id === "r".repeat(24))
     expect(selectedQueue?.totalItems).toBe(1)
     expect(missedQueue?.totalItems).toBe(0)
+
+    // Verify trace-search refresh task was published
+    const traceSearchPublish = published.find((p) => p.queue === "trace-search")
+    expect(traceSearchPublish?.task).toBe("refreshTrace")
+    expect(traceSearchPublish?.payload).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId: PROJECT_ID,
+      traceId: TRACE_ID,
+    })
   })
 })
 
@@ -528,7 +525,6 @@ describe("createRunHandler", () => {
     ])
 
     const { publisher } = createFakeQueuePublisher()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const redisClient = createFakeRedisClient()
     const log = createMockLogger()
 
@@ -536,7 +532,6 @@ describe("createRunHandler", () => {
       createRunHandler({
         log,
         publisher,
-        workflowStarter,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
@@ -571,16 +566,7 @@ describe("createRunHandler", () => {
         filterMissCount: 0,
         insertedItemCount: 1,
       },
-      systemQueues: {
-        systemQueuesScanned: 1,
-        selectedCount: 1,
-        sampledOutCount: 0,
-        filterMissCount: 0,
-        startedWorkflowCount: 1,
-      },
-      deterministicSystemMatches: {
-        matchedSlugs: [],
-      },
+      deterministicFlaggersEnqueued: true,
     })
   })
 })

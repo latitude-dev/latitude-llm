@@ -10,7 +10,8 @@ import type {
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
+import { serializeError } from "@repo/observability"
+import { base64urlEncode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 
@@ -20,6 +21,14 @@ import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-inc
 const tracer = trace.getTracer("bullmq")
 
 const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
+
+/**
+ * BullMQ v5 rejects colons in custom jobId values. We base64url-encode the
+ * dedupeKey so the raw (human-readable) key can still contain ':' separators.
+ * The encoded value is only used for BullMQ's jobId; deduplication.id keeps
+ * the original key so dedup windows behave as expected.
+ */
+const toSafeJobId = (dedupeKey: string): string => base64urlEncode(dedupeKey)
 
 const incidentToLogFields = (incident: BullMqWorkerIncident) => {
   if (incident.kind === "worker_error") {
@@ -101,19 +110,45 @@ export const createBullMqQueuePublisher = (
       ) =>
         Effect.tryPromise({
           try: async () => {
+            if (options?.debounceMs !== undefined && options?.throttleMs !== undefined) {
+              throw new Error(`publish(${queue}, ${String(task)}): debounceMs and throttleMs are mutually exclusive`)
+            }
+            if (options?.throttleMs !== undefined && !options.dedupeKey) {
+              throw new Error(`publish(${queue}, ${String(task)}): throttleMs requires a dedupeKey`)
+            }
+
             const bullmqOptions: Record<string, unknown> = {}
             if (options?.dedupeKey) {
-              bullmqOptions.jobId = options.dedupeKey
+              bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
             }
-            if (options?.debounceMs) {
-              bullmqOptions.delay = options.debounceMs
-              if (options.dedupeKey) {
+            // `debounceMs` and `throttleMs` both map to BullMQ's `delay` + `deduplication`,
+            // but the dedup flags differ:
+            //   - debounce: `extend: true, replace: true` — each publish within the TTL
+            //     pushes the fire time forward and overwrites the payload. Fires after
+            //     `debounceMs` of quiet.
+            //   - throttle: `extend: false, replace: false` — the first publish wins.
+            //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
+            //     exactly `throttleMs` after the first publish.
+            const delayMs = options?.debounceMs ?? options?.throttleMs
+            if (delayMs !== undefined) {
+              bullmqOptions.delay = delayMs
+              if (options?.dedupeKey) {
+                const isThrottle = options.throttleMs !== undefined
                 bullmqOptions.deduplication = {
                   id: options.dedupeKey,
-                  ttl: options.debounceMs,
-                  extend: true,
-                  replace: true,
+                  ttl: delayMs,
+                  extend: !isThrottle,
+                  replace: !isThrottle,
                 }
+              }
+            }
+            if (options?.attempts !== undefined && options.attempts > 0) {
+              bullmqOptions.attempts = options.attempts
+            }
+            if (options?.backoff) {
+              bullmqOptions.backoff = {
+                type: options.backoff.type,
+                delay: options.backoff.delayMs,
               }
             }
             const readyQueue = await getReadyQueue(queue)
@@ -203,7 +238,10 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                       await Effect.runPromiseWith(services)(handler(payload))
                       span.setStatus({ code: SpanStatusCode.OK })
                     } catch (error) {
-                      const err = recordSpanExceptionForDatadog(span, error)
+                      // Inner Effect spans already record the exception with the
+                      // richer Effect-rendered stack. Keep the root job span in
+                      // error state without duplicating a lower-fidelity event.
+                      const err = toError(error)
                       span.setStatus({
                         code: SpanStatusCode.ERROR,
                         message: err.message,

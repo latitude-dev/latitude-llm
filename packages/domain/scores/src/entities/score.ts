@@ -15,11 +15,15 @@ export type AnnotationScoreSourceId = z.infer<typeof annotationScoreSourceIdSche
 
 export const scoreValueSchema = z.number().min(0).max(1)
 
+export const ANNOTATION_ANCHOR_TEXT_FORMATS = ["pretty-json"] as const
+export type AnnotationAnchorTextFormat = (typeof ANNOTATION_ANCHOR_TEXT_FORMATS)[number]
+
 type AnnotationAnchorInput = {
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
   readonly startOffset?: number | undefined
   readonly endOffset?: number | undefined
+  readonly textFormat?: AnnotationAnchorTextFormat | undefined
 }
 
 const annotationAnchorFields = {
@@ -27,6 +31,7 @@ const annotationAnchorFields = {
   partIndex: z.number().int().nonnegative().optional(), // optional raw GenAI `parts[]` index inside the target message
   startOffset: z.number().int().nonnegative().optional(), // optional start offset for substring annotations within a textual part
   endOffset: z.number().int().nonnegative().optional(), // optional end offset for substring annotations within a textual part
+  textFormat: z.enum(ANNOTATION_ANCHOR_TEXT_FORMATS).optional(), // optional UI-side text transform applied before the offsets were captured (e.g. prettified JSON); resolvers must apply the same transform before slicing
 } as const
 
 function validateAnnotationAnchor(anchor: AnnotationAnchorInput, ctx: z.core.$RefinementCtx<unknown>) {

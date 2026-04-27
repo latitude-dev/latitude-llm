@@ -1,4 +1,4 @@
-import { type ProjectId, type RepositoryError, toSlug } from "@domain/shared"
+import { type ProjectId, type RepositoryError, type SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { LIVE_QUEUE_DEFAULT_SAMPLING } from "../constants.ts"
 import {
@@ -26,7 +26,7 @@ export type CreateQueueError = RepositoryError
 
 export const createQueueUseCase = (
   input: CreateQueueInput,
-): Effect.Effect<CreateQueueResult, CreateQueueError, AnnotationQueueRepository> =>
+): Effect.Effect<CreateQueueResult, CreateQueueError, AnnotationQueueRepository | SqlClient> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)

@@ -1,6 +1,7 @@
 import type { AnnotationAnchor } from "@domain/scores"
 import {
   BadRequestError,
+  type ChSqlClient,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
@@ -25,7 +26,7 @@ export const resolveWriteAnnotationTraceContext = (input: {
 }): Effect.Effect<
   { readonly sessionId: string | null; readonly spanId: string | null },
   BadRequestError | RepositoryError,
-  TraceRepository | SpanRepository
+  TraceRepository | SpanRepository | ChSqlClient
 > =>
   Effect.gen(function* () {
     const needsSessionResolution = input.sessionId === null

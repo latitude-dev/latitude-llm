@@ -1,4 +1,5 @@
-import { EvaluationId, generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { EvaluationId, generateId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -67,7 +68,10 @@ describe("listAllActiveEvaluations", () => {
     }
 
     const result = await Effect.runPromise(
-      listAllActiveEvaluations({ projectId: PROJECT_ID }).pipe(Effect.provideService(EvaluationRepository, repo)),
+      listAllActiveEvaluations({ projectId: PROJECT_ID }).pipe(
+        Effect.provideService(EvaluationRepository, repo),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      ),
     )
 
     expect(calls).toEqual([{ offset: 0, limit: PAGE_SIZE }])
@@ -120,7 +124,10 @@ describe("listAllActiveEvaluations", () => {
     }
 
     const result = await Effect.runPromise(
-      listAllActiveEvaluations({ projectId: PROJECT_ID }).pipe(Effect.provideService(EvaluationRepository, repo)),
+      listAllActiveEvaluations({ projectId: PROJECT_ID }).pipe(
+        Effect.provideService(EvaluationRepository, repo),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      ),
     )
 
     expect(calls).toEqual([

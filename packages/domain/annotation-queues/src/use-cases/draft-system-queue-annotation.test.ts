@@ -2,14 +2,17 @@ import { AI_GENERATE_TELEMETRY_TAGS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
   AnnotationQueueId,
+  ChSqlClient,
   ExternalUserId,
   OrganizationId,
   ProjectId,
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -103,6 +106,8 @@ describe("draftSystemQueueAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
             Layer.succeed(AnnotationQueueRepository, queueRepo),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             aiLayer,
           ),
         ),
@@ -152,6 +157,8 @@ describe("draftSystemQueueAnnotationUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, traceRepo),
             Layer.succeed(AnnotationQueueRepository, queueRepo),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
             aiLayer,
           ),
         ),

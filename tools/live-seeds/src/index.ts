@@ -13,6 +13,7 @@ export {
   printFixtureCatalog,
   type ResolvedLiveSeedCase,
   type ResolvedLiveSeedTrace,
+  type SeedRunContext,
   type SeedTargets,
   type SendLiveSeedDataOptions,
   sendLiveSeedData,

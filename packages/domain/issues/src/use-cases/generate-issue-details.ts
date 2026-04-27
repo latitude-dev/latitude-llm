@@ -107,6 +107,8 @@ You must:
 - avoid user-specific, trace-specific, or date-specific details
 - keep the title short and searchable
 - keep the description concise and human-readable
+
+Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep both the title and description only as long as they need to be. The original context and nuance must still come through; simpler wording is the goal, not less information.
 `.trim()
 
 export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>

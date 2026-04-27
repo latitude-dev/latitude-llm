@@ -13,6 +13,12 @@ on:
         options:
           - staging
           - production
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -31,7 +37,7 @@ jobs:
   # ── Staging ──────────────────────────────────────────────
 
   staging-build:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.environment == 'staging'
     uses: ./.github/workflows/build-images.yml
     with:
       environment: staging
@@ -371,6 +377,7 @@ jobs:
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
+          VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |
@@ -398,7 +405,7 @@ jobs:
 
   production-build:
     needs: [check, typecheck, test]
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.environment == 'production'
     uses: ./.github/workflows/build-images.yml
     with:
       environment: production
@@ -738,6 +745,7 @@ jobs:
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
+          VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |

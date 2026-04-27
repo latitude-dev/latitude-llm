@@ -1,5 +1,4 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceCohortSummary } from "@domain/spans"
 import type { InfiniteTableSorting } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { type RefObject, useCallback, useMemo } from "react"
@@ -10,15 +9,12 @@ import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { DEFAULT_TRACE_TABLE_SORTING, ProjectTracesTable, type TraceColumnId } from "./project-traces-table.tsx"
 
-type Baselines = TraceCohortSummary["baselines"]
-
 interface TracesViewProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
   readonly activeDrawerTab: string
-  readonly baselines?: Baselines | undefined
   readonly sorting: InfiniteTableSorting
   readonly onSortingChange: (sorting: InfiniteTableSorting) => void
   readonly selectionState: SelectionState<string>
@@ -37,7 +33,6 @@ export function TracesView({
   filtersOpen,
   activeTraceId,
   activeDrawerTab,
-  baselines,
   sorting,
   onSortingChange,
   selectionState,
@@ -129,6 +124,7 @@ export function TracesView({
       <Layout.List>
         <ProjectTracesTable
           {...listingLayoutIntrinsicScroll.projectTracesTable}
+          projectId={projectId}
           data={traces}
           isLoading={isLoading}
           visibleColumnIds={visibleColumnIds}
@@ -143,7 +139,6 @@ export function TracesView({
           blankSlate={hasActiveFilters ? "No traces match the current filters" : "No traces found"}
           traceMetrics={traceMetrics}
           metricsLoading={metricsLoading}
-          baselines={baselines}
         />
       </Layout.List>
     </Layout.Body>

@@ -32,6 +32,7 @@ export type SeedIssueFixture = {
   readonly uuid: string
   readonly name: string
   readonly description: string
+  readonly source: "annotation" | "custom" | "flagger"
   readonly createdDaysAgo: number
   readonly clusteredDaysAgo: number
   readonly updatedDaysAgo: number
@@ -40,7 +41,7 @@ export type SeedIssueFixture = {
   readonly ignoredDaysAgo: number | null
 }
 
-const baseIssueFixtures = [
+const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_ISSUE_ID,
     uuid: SEED_ISSUE_UUID,
@@ -50,6 +51,7 @@ const baseIssueFixtures = [
       "explicitly excludes cliffs, mesas, rooftop use, canyon anchoring, and other unsupported terrain or " +
       "installation conditions. The model may invent loyalty waivers, promise reimbursement before review, " +
       "or reframe misuse as a covered manufacturing defect.",
+    source: "annotation",
     createdDaysAgo: 82,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -65,6 +67,7 @@ const baseIssueFixtures = [
       "The support agent suggests combining Acme products in ways that compound danger, such as pairing " +
       "propulsion products, spatial distortion tools, weather controls, or seismic products. The model often " +
       "ignores documented incident history, invents authorization exceptions, or treats uncertified bundles as safe.",
+    source: "annotation",
     createdDaysAgo: 71,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -81,6 +84,7 @@ const baseIssueFixtures = [
       "delivery services that Acme does not actually provide. The behavior is especially risky around cliffside " +
       "destinations, hazardous goods, and interplanetary shipping requests where the model turns review-only paths " +
       "into guaranteed service commitments.",
+    source: "annotation",
     createdDaysAgo: 4,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -96,6 +100,7 @@ const baseIssueFixtures = [
       "The support agent promises immediate refunds, free pickup, or no-questions-asked replacements for orders " +
       "that still require inspection, are outside the return window, or carry restocking requirements. The pattern " +
       "usually appears when customers insist on urgent refunds for partially used or damaged products.",
+    source: "annotation",
     createdDaysAgo: 58,
     clusteredDaysAgo: 2,
     updatedDaysAgo: 2,
@@ -111,6 +116,7 @@ const baseIssueFixtures = [
       "The support agent offers courtesy credits, loyalty refunds, or retroactive surcharge reversals that are not " +
       "documented in Acme billing policy. The issue is noisy because some customers mention real discounts, but the " +
       "failure pattern is the model confidently minting credits or waivers without approval or an existing case note.",
+    source: "custom",
     createdDaysAgo: 46,
     clusteredDaysAgo: 10,
     updatedDaysAgo: 9,
@@ -126,6 +132,7 @@ const baseIssueFixtures = [
       "The support agent skips identity checks during account recovery by accepting weak proof, disabling MFA on " +
       "request, exposing partial account data before verification, or issuing recovery guidance that should only be " +
       "available after approved ownership checks.",
+    source: "annotation",
     createdDaysAgo: 34,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -141,6 +148,7 @@ const baseIssueFixtures = [
       "The support agent tells customers that Acme can provide certified on-site installation, field sign-off, or " +
       "compliance inspection paperwork for products that are shipped self-service only. The hallucination often mixes " +
       "real reseller setup programs with nonexistent Acme-operated installation teams.",
+    source: "custom",
     createdDaysAgo: 83,
     clusteredDaysAgo: 2,
     updatedDaysAgo: 2,
@@ -150,7 +158,7 @@ const baseIssueFixtures = [
   },
 ]
 
-const curatedExtraIssueBlueprints = [
+const curatedExtraIssueBlueprints: Omit<SeedIssueFixture, "id" | "uuid">[] = [
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:
@@ -161,6 +169,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 70,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent fabricates export-control clearances",
@@ -172,6 +181,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 45,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent guarantees chargeback reversals",
@@ -183,6 +193,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 54,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 22,
+    source: "annotation",
   },
   {
     name: "Agent invents procurement onboarding approvals",
@@ -194,6 +205,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 49,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent overcommits recall reimbursement scope",
@@ -205,6 +217,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 41,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent invents reseller discount ladders",
@@ -216,6 +229,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 30,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent promises warehouse stock reservations without hold confirmation",
@@ -227,6 +241,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 32,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent fabricates multilingual legal review sign-off",
@@ -238,6 +253,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 11,
+    source: "annotation",
   },
   {
     name: "Agent invents partner-managed installation crews",
@@ -249,6 +265,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 29,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent overstates certification renewal status",
@@ -260,6 +277,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 24,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent fabricates incident root-cause determinations",
@@ -271,6 +289,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 14,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent promises automatic contract renewals with frozen pricing",
@@ -282,6 +301,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 15,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent invents hazardous-goods packaging exemptions",
@@ -293,6 +313,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 18,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent overcommits loyalty-tier case escalation rights",
@@ -304,6 +325,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 12,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent invents data-retention deletions already completed",
@@ -315,6 +337,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: null,
     ignoredDaysAgo: 7,
+    source: "annotation",
   },
   {
     name: "Agent promises API quota boosts without capacity approval",
@@ -326,6 +349,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 8,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent fabricates offline service windows",
@@ -337,6 +361,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: null,
     resolvedDaysAgo: 6,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
   {
     name: "Agent invents customer-specific insurance riders",
@@ -348,6 +373,7 @@ const curatedExtraIssueBlueprints = [
     escalatedDaysAgo: 5,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
+    source: "annotation",
   },
 ] as const
 
@@ -506,6 +532,7 @@ function buildGeneratedExtraIssueBlueprint(index: number): Omit<SeedIssueFixture
 
   return {
     name: `Agent ${verb} ${domain.titlePrefix} ${commitment.title}`,
+    source: "annotation",
     description:
       `The support agent ${verb} ${commitment.descriptionObject} in ${domain.label} before ${domain.reviewTeam} completes the documented ${domain.workflow}. ` +
       `The failure pattern usually involves ${commitment.consequence}, and the model ${domain.failurePattern}.`,
@@ -522,19 +549,21 @@ const generatedExtraIssueBlueprints = Array.from({ length: GENERATED_EXTRA_ISSUE
   buildGeneratedExtraIssueBlueprint(index),
 )
 
-const extraIssueFixtures = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map((issue, index) => ({
-  id:
-    SEED_EXTRA_ISSUE_IDS[index] ??
-    (() => {
-      throw new Error(`Missing extra seed issue ID for index ${index}`)
-    })(),
-  uuid:
-    SEED_EXTRA_ISSUE_UUIDS[index] ??
-    (() => {
-      throw new Error(`Missing extra seed issue UUID for index ${index}`)
-    })(),
-  ...issue,
-}))
+const extraIssueFixtures: SeedIssueFixture[] = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map(
+  (issue, index) => ({
+    id:
+      SEED_EXTRA_ISSUE_IDS[index] ??
+      (() => {
+        throw new Error(`Missing extra seed issue ID for index ${index}`)
+      })(),
+    uuid:
+      SEED_EXTRA_ISSUE_UUIDS[index] ??
+      (() => {
+        throw new Error(`Missing extra seed issue UUID for index ${index}`)
+      })(),
+    ...issue,
+  }),
+)
 
 export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [...baseIssueFixtures, ...extraIssueFixtures]
 

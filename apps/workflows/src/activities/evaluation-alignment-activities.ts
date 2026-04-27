@@ -1,25 +1,24 @@
-import { AI } from "@domain/ai"
 import {
   type BaselineEvaluationResult,
-  buildEvaluationGepaSummaryTelemetryCapture,
   type CollectedEvaluationAlignmentExamples,
   collectAlignmentExamplesUseCase,
   evaluateBaselineDraftUseCase,
   evaluateIncrementalDraftUseCase,
-  type GeneratedEvaluationDetails,
   type GeneratedEvaluationDraft,
   generateBaselineDraftUseCase,
   type HydratedEvaluationAlignmentExample,
   type IncrementalEvaluationRefreshResult,
+  type LoadAlignmentStateOrInactiveResult,
   type LoadedEvaluationAlignmentState,
+  loadAlignmentStateOrInactiveUseCase,
   loadAlignmentStateUseCase,
   type PersistEvaluationAlignmentResult,
   persistAlignmentResultUseCase,
-  truncateEvaluationName,
 } from "@domain/evaluations"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationAlignmentExamplesRepositoryLive,
@@ -27,12 +26,6 @@ import {
   IssueRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import {
-  buildGepaDetailsPrompt,
-  GEPA_DETAILS_GENERATOR_MODEL,
-  GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
-  gepaDetailsOutputSchema,
-} from "@platform/op-gepa"
 import { withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -67,6 +60,23 @@ export const loadEvaluationAlignmentState = (input: {
     ),
   )
 
+// Like `loadEvaluationAlignmentState`, but returns `{ status: "inactive" }`
+// instead of failing when the evaluation is missing/archived/deleted/mismatched.
+// Used by the throttled auto-alignment workflows so a delayed BullMQ job
+// that fires after an evaluation has been archived exits cleanly.
+export const loadEvaluationAlignmentStateOrInactive = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string
+}): Promise<LoadAlignmentStateOrInactiveResult> =>
+  Effect.runPromise(
+    loadAlignmentStateOrInactiveUseCase(input).pipe(
+      withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withTracing,
+    ),
+  )
+
 export const collectEvaluationAlignmentExamples = (input: {
   readonly organizationId: string
   readonly projectId: string
@@ -78,6 +88,7 @@ export const collectEvaluationAlignmentExamples = (input: {
     collectAlignmentExamplesUseCase(input).pipe(
       withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withAi(AIEmbedLive, getRedisClient()),
       withTracing,
     ),
   )
@@ -182,62 +193,12 @@ export const evaluateIncrementalEvaluationDraft = (input: {
     ),
   )
 
-export const generateEvaluationDetails = (input: {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly issueId: string
-  readonly evaluationId: string | null
-  readonly jobId: string
-  readonly evaluationHash: string
-  readonly issueName: string
-  readonly issueDescription: string
-  readonly script: string
-}): Promise<GeneratedEvaluationDetails> =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const ai = yield* AI
-      const result = yield* ai.generate({
-        ...GEPA_DETAILS_GENERATOR_MODEL,
-        telemetry: buildEvaluationGepaSummaryTelemetryCapture({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          issueId: input.issueId,
-          evaluationId: input.evaluationId,
-          jobId: input.jobId,
-          evaluationHash: input.evaluationHash,
-        }),
-        system: GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
-        prompt: buildGepaDetailsPrompt({
-          issueName: input.issueName,
-          issueDescription: input.issueDescription,
-          script: input.script,
-        }),
-        schema: gepaDetailsOutputSchema,
-      })
-
-      return {
-        name: truncateEvaluationName(result.object.name),
-        description: result.object.description,
-      }
-    }).pipe(
-      withAi(AIGenerateLive, getRedisClient()),
-      withTracing,
-      Effect.mapError(
-        (cause) =>
-          new EvaluationAlignmentActivityError({
-            activity: "generateEvaluationDetails",
-            cause,
-          }),
-      ),
-    ),
-  )
-
 export const persistEvaluationAlignmentResult = (
   input: Parameters<typeof persistAlignmentResultUseCase>[0],
 ): Promise<PersistEvaluationAlignmentResult> =>
   Effect.runPromise(
     persistAlignmentResultUseCase(input).pipe(
-      withPostgres(EvaluationRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withTracing,
     ),
   )

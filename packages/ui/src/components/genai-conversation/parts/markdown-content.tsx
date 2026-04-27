@@ -1,3 +1,4 @@
+import { isJsonBlock, LARGE_MARKDOWN_CONTENT_THRESHOLD, prettifyCompactJson } from "@repo/utils"
 import { use, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
@@ -29,27 +30,12 @@ const rehypeHighlightPlugin: [typeof rehypeHighlight, { detect: false }] = [rehy
 const markdownComponents: Components = {
   pre: ({ children }) => <CodeBlockShell>{children}</CodeBlockShell>,
 }
-export const LARGE_MARKDOWN_CONTENT_THRESHOLD = 20_000
 export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
 
 function getLargeContentPreview(content: string) {
   if (content.length <= LARGE_MARKDOWN_PREVIEW_LENGTH) return content
 
   return `${content.slice(0, LARGE_MARKDOWN_PREVIEW_LENGTH)}\n\n[truncated ${content.length - LARGE_MARKDOWN_PREVIEW_LENGTH} characters]`
-}
-
-export function isJsonBlock(content: string): boolean {
-  const t = content.trim()
-  if (t.length < 2) return false
-  const first = t[0]
-  const last = t[t.length - 1]
-  if (!((first === "{" && last === "}") || (first === "[" && last === "]"))) return false
-  try {
-    JSON.parse(t)
-    return true
-  } catch {
-    return false
-  }
 }
 
 export function MarkdownContent({
@@ -97,7 +83,7 @@ export function MarkdownContent({
   }
 
   if (isJson) {
-    return <JsonContent content={content} messageIndex={messageIndex} partIndex={partIndex} />
+    return <JsonContent content={prettifyCompactJson(content)} messageIndex={messageIndex} partIndex={partIndex} />
   }
 
   return (

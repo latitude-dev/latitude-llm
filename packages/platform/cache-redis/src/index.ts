@@ -1,5 +1,7 @@
 export { CacheStore, type CacheStoreShape } from "@domain/shared"
 export { RedisCacheStoreLive } from "./ai-cache.ts"
+export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
+export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
 
 import { ServiceMap } from "effect"
 
@@ -21,3 +23,4 @@ export {
   createRedisConnection,
   createRedisConnectionEffect,
 } from "./connection.ts"
+export { checkRedisRateLimit, type RateLimitCheckInput, type RateLimitCheckResult } from "./rate-limiter.ts"

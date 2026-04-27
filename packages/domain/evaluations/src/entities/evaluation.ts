@@ -56,7 +56,7 @@ export function defaultEvaluationTrigger(): EvaluationTrigger {
 // ---------------------------------------------------------------------------
 
 export const confusionMatrixSchema = z.object({
-  truePositives: z.number().int().nonnegative(), // stored counts from which MCC and other metrics can be derived later on
+  truePositives: z.number().int().nonnegative(),
   falsePositives: z.number().int().nonnegative(),
   falseNegatives: z.number().int().nonnegative(),
   trueNegatives: z.number().int().nonnegative(),
@@ -70,7 +70,7 @@ export type ConfusionMatrix = z.infer<typeof confusionMatrixSchema>
 
 export const evaluationAlignmentSchema = z.object({
   evaluationHash: z.string(), // sha1 of the script so we know if we can increment or recompute the confusion matrix
-  confusionMatrix: confusionMatrixSchema, // stored counts from which MCC and other metrics can be derived later on
+  confusionMatrix: confusionMatrixSchema, // stored counts from which the alignment metric and other metrics are derived on read
 })
 
 export type EvaluationAlignment = z.infer<typeof evaluationAlignmentSchema>
