@@ -1,0 +1,219 @@
+---
+title: Telemetry Overview
+description: Connect your LLM stack to Latitude's observability platform with Telemetry. See traces, add scores and annotations, and run evaluations.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+Latitude Telemetry instruments your AI application and sends traces to Latitude. Built entirely on **OpenTelemetry**, it works alongside your existing observability stack (Datadog, Sentry, Jaeger, etc.) without conflicts or vendor lock-in.
+
+Once connected, every LLM execution becomes a trace in Latitude that you can inspect in the **Traces** view, enrich with **scores and annotations**, and evaluate with [Evaluations](../evaluations/overview).
+
+## Quick Start
+
+One function sets up everything: auto-instrumentation, the Latitude exporter, and async context propagation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    npm install @latitude-data/telemetry
+    ```
+
+    ```ts
+    import { initLatitude } from "@latitude-data/telemetry"
+    import OpenAI from "openai"
+
+    const latitude = initLatitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+      instrumentations: ["openai"],
+    })
+
+    await latitude.ready
+
+    const openai = new OpenAI()
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "Hello" }],
+    })
+
+    await latitude.shutdown()
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```bash
+    pip install latitude-telemetry
+    ```
+
+    ```python
+    from latitude_telemetry import init_latitude
+    from openai import OpenAI
+
+    latitude = init_latitude(
+        api_key="your-api-key",
+        project_slug="your-project-slug",
+        instrumentations=["openai"],
+    )
+
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+
+    latitude.shutdown()
+    ```
+  </Tab>
+</Tabs>
+
+That's it. Your LLM calls now appear as traces in Latitude.
+
+## Adding Context with `capture()`
+
+Auto-instrumentation traces LLM calls without any extra code. Use `capture()` when you want to attach business context such as user IDs, session IDs, tags, or metadata to group and filter traces in Latitude.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { initLatitude, capture } from "@latitude-data/telemetry"
+
+    const latitude = initLatitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+      instrumentations: ["openai"],
+    })
+
+    await latitude.ready
+
+    await capture(
+      "handle-user-request",
+      async () => {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: userMessage }],
+        })
+        return response.choices[0].message.content
+      },
+      {
+        userId: "user_123",
+        sessionId: "session_abc",
+        tags: ["production", "v2-agent"],
+        metadata: { requestId: "req-xyz" },
+      },
+    )
+
+    await latitude.shutdown()
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import init_latitude, capture
+
+    latitude = init_latitude(
+        api_key="your-api-key",
+        project_slug="your-project-slug",
+        instrumentations=["openai"],
+    )
+
+    capture(
+        "handle-user-request",
+        lambda: client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": user_message}],
+        ),
+        {
+            "user_id": "user_123",
+            "session_id": "session_abc",
+            "tags": ["production", "v2-agent"],
+            "metadata": {"request_id": "req-xyz"},
+        },
+    )
+
+    latitude.shutdown()
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+`capture()` does **not** create spans. It only attaches context to spans created by auto-instrumentation. Wrap the request or agent entrypoint once; you don't need to wrap every internal step.
+</Info>
+
+## Streaming
+
+When streaming responses, consume the stream **inside** the `capture()` callback so the span duration covers the full operation and child spans nest correctly:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture("stream-reply", async () => {
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: input }],
+        stream: true,
+      })
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) res.write(content)
+      }
+      res.end()
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    def stream_reply():
+        stream = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": input}],
+            stream=True,
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    capture("stream-reply", stream_reply)
+    ```
+  </Tab>
+</Tabs>
+
+## How It Fits Into Your Stack
+
+Latitude Telemetry is built on OpenTelemetry standards:
+
+1. **Auto-instrumentation** patches your LLM SDK (OpenAI, Anthropic, etc.) to emit spans for every call.
+2. **`LatitudeSpanProcessor`** filters for LLM-relevant spans (`gen_ai.*`, `ai.*`, `openinference.*` attributes) and exports them to Latitude via OTLP.
+3. **`capture()`** uses OpenTelemetry's native `context.with()` to attach Latitude-specific attributes (user, session, tags) to spans within its scope.
+
+If you already run OpenTelemetry for other backends, you can add `LatitudeSpanProcessor` alongside your existing processors. See the [TypeScript SDK](typescript) or [Python SDK](python) reference for advanced setup.
+
+## Supported Integrations
+
+### Providers
+
+| Provider | Instrumentation | Package (TS) | Package (Python) |
+|---|---|---|---|
+| [OpenAI](providers/openai) | `"openai"` | `openai` | `openai` |
+| [Anthropic](providers/anthropic) | `"anthropic"` | `@anthropic-ai/sdk` | `anthropic` |
+| [Amazon Bedrock](providers/amazon-bedrock) | `"bedrock"` | `@aws-sdk/client-bedrock-runtime` | `boto3` |
+| [Cohere](providers/cohere) | `"cohere"` | `cohere-ai` | `cohere` |
+| [Together AI](providers/together-ai) | `"togetherai"` | `together-ai` | `together` |
+| [Vertex AI](providers/vertex-ai) | `"vertexai"` | `@google-cloud/vertexai` | `google-cloud-aiplatform` |
+| [Google AI Platform](providers/google-ai-platform) | `"aiplatform"` | `@google-cloud/aiplatform` | `google-cloud-aiplatform` |
+| [Azure OpenAI](providers/azure) | `"openai"` | `openai` | `openai` |
+
+### Frameworks
+
+| Framework | Instrumentation | Package (TS) | Package (Python) |
+|---|---|---|---|
+| [Vercel AI SDK](frameworks/vercel-ai-sdk) | - | `ai` | - |
+| [LangChain](frameworks/langchain) | `"langchain"` | `langchain` | `langchain-core` |
+| [LlamaIndex](frameworks/llamaindex) | `"llamaindex"` | `llamaindex` | `llama-index` |
+
+## Next Steps
+
+- **SDK Reference**: [TypeScript SDK](typescript) · [Python SDK](python)
+- **Understand your data**: [Traces](../observability/traces) · [Sessions](../observability/sessions)
+- **Act on your data**: [Evaluations](../evaluations/overview) · [Annotations](../annotations/overview)

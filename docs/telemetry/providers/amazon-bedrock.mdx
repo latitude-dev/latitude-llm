@@ -1,0 +1,215 @@
+---
+title: Amazon Bedrock
+description: Connect your Amazon Bedrock-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Amazon Bedrock**.
+
+<Check>
+  You'll keep calling Bedrock exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **AWS Bedrock SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import {
+          BedrockRuntimeClient,
+          InvokeModelCommand,
+        } from "@aws-sdk/client-bedrock-runtime"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["bedrock"],
+        })
+
+        await latitude.ready
+
+        const client = new BedrockRuntimeClient({ region: "us-east-1" })
+
+        await capture("generate-reply", async () => {
+          const command = new InvokeModelCommand({
+            modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+            contentType: "application/json",
+            body: JSON.stringify({
+              anthropic_version: "bedrock-2023-05-31",
+              max_tokens: 1024,
+              messages: [{ role: "user", content: "Hello" }],
+            }),
+          })
+          const response = await client.send(command)
+          return JSON.parse(new TextDecoder().decode(response.body))
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        import json
+        from latitude_telemetry import init_latitude, capture
+        import boto3
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["bedrock"],
+        )
+
+        client = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+        def generate_reply():
+            response = client.invoke_model(
+                modelId="anthropic.claude-3-haiku-20240307-v1:0",
+                contentType="application/json",
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 1024,
+                    "messages": [{"role": "user", "content": "Hello"}],
+                }),
+            )
+            return json.loads(response["body"].read())
+
+        capture("generate-reply", generate_reply)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Streaming
+
+When streaming, consume the stream inside `capture()` so the span covers the full operation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { InvokeModelWithResponseStreamCommand } from "@aws-sdk/client-bedrock-runtime"
+
+    await capture("stream-reply", async () => {
+      const command = new InvokeModelWithResponseStreamCommand({
+        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+        contentType: "application/json",
+        body: JSON.stringify({
+          anthropic_version: "bedrock-2023-05-31",
+          max_tokens: 1024,
+          messages: [{ role: "user", content: input }],
+        }),
+      })
+      const response = await client.send(command)
+
+      for await (const event of response.body!) {
+        if (event.chunk) {
+          const data = JSON.parse(new TextDecoder().decode(event.chunk.bytes))
+          if (data.type === "content_block_delta") {
+            res.write(data.delta.text)
+          }
+        }
+      }
+      res.end()
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    def stream_reply():
+        response = client.invoke_model_with_response_stream(
+            modelId="anthropic.claude-3-haiku-20240307-v1:0",
+            contentType="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": input}],
+            }),
+        )
+        for event in response["body"]:
+            chunk = json.loads(event["chunk"]["bytes"])
+            if chunk.get("type") == "content_block_delta":
+                yield chunk["delta"]["text"]
+
+    capture("stream-reply", stream_reply)
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your Bedrock calls: just initialize Latitude and your LLM calls are traced.

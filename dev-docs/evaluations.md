@@ -257,7 +257,7 @@ The base trigger model includes:
 Trigger semantics:
 
 - `turn`, `debounce`, `sampling`, and `filter` are all part of the evaluation trigger model
-- `filter` uses the shared `FilterSet` described in `docs/filters.md`, applied against the shared trace field registry
+- `filter` uses the shared `FilterSet` described in `./filters.md`, applied against the shared trace field registry
 - an empty `filter` means "match all traces"
 - new evaluations generated from issues initialize `sampling` from a named constant in `packages/domain/evaluations`, with an initial default of `10`
 
@@ -271,7 +271,7 @@ Live evaluation triggering is incremental:
 - the execute path still rechecks canonical duplicate state before running hosted AI work, and Postgres also enforces that only one non-draft canonical evaluation score can exist for the same `(evaluationId, traceId)` pair, so concurrent workers cannot persist duplicate monitor results
 - the hosted AI call inside `live-evaluations:execute` runs inside a stable telemetry capture span named `evaluation.live.execute` with queued identity metadata including `organizationId`, `projectId`, `evaluationId`, and `traceId`
 - `trace-end:run` batches live-evaluation and live-queue filter checks together instead of using separate queue tasks
-- trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `docs/filters.md`
+- trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `./filters.md`
 - in code, the evaluation side of that shared pass lives in `@domain/evaluations`: `buildTraceEndEvaluationSelectionInputs` builds selection specs and eligible rows, and `orchestrateTraceEndLiveEvaluationExecutesUseCase` applies turn rules, checks canonical score state via `ScoreRepository`, and enqueues `live-evaluations:execute` through an injected publish callback (the worker binds the real BullMQ publisher)
 
 ## Lifecycle

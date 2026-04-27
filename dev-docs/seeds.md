@@ -280,6 +280,6 @@ Standalone demo-only records are a last resort.
 
 ## Maintenance Rule
 
-`docs/seeds.md` is the durable guide for how the default seed should be understood and extended.
+`./seeds.md` is the durable guide for how the default seed should be understood and extended.
 
 If the seeded narrative, ownership boundaries, lifecycle graph, or extension rules change, update this file along with the implementation so future seed work continues to follow the same coherent model.

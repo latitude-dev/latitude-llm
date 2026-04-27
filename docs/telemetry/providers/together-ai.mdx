@@ -1,0 +1,184 @@
+---
+title: Together AI
+description: Connect your Together AI-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Together AI** SDK.
+
+<Check>
+  You'll keep calling Together AI exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Together AI SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import Together from "together-ai"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["togetherai"],
+        })
+
+        await latitude.ready
+
+        const client = new Together()
+
+        await capture("generate-reply", async () => {
+          const response = await client.chat.completions.create({
+            model: "meta-llama/Llama-3-70b-chat-hf",
+            messages: [{ role: "user", content: "Hello" }],
+          })
+          return response.choices[0].message.content
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        from together import Together
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["togetherai"],
+        )
+
+        client = Together()
+
+        def generate_reply():
+            response = client.chat.completions.create(
+                model="meta-llama/Llama-3-70b-chat-hf",
+                messages=[{"role": "user", "content": "Hello"}],
+            )
+            return response.choices[0].message.content
+
+        capture("generate-reply", generate_reply)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Streaming
+
+When streaming, consume the stream inside `capture()` so the span covers the full operation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture("stream-reply", async () => {
+      const stream = await client.chat.completions.create({
+        model: "meta-llama/Llama-3-70b-chat-hf",
+        messages: [{ role: "user", content: input }],
+        stream: true,
+      })
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) res.write(content)
+      }
+      res.end()
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    def stream_reply():
+        stream = client.chat.completions.create(
+            model="meta-llama/Llama-3-70b-chat-hf",
+            messages=[{"role": "user", "content": input}],
+            stream=True,
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    capture("stream-reply", stream_reply)
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your Together AI calls: just initialize Latitude and your LLM calls are traced.

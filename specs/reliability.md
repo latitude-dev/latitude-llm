@@ -1,6 +1,6 @@
 # Reliability
 
-> **Documentation**: `docs/reliability.md`, `docs/filters.md`, `docs/evaluations.md`, `docs/annotations.md`, `docs/scores.md`, `docs/issues.md`, `docs/simulations.md`, `docs/annotation-queues.md`, `docs/organizations.md`, `docs/projects.md`, `docs/users.md`, `docs/settings.md`, `docs/spans.md`
+> **Documentation**: `dev-docs/reliability.md`, `dev-docs/filters.md`, `dev-docs/evaluations.md`, `dev-docs/annotations.md`, `dev-docs/scores.md`, `dev-docs/issues.md`, `dev-docs/simulations.md`, `dev-docs/annotation-queues.md`, `dev-docs/organizations.md`, `dev-docs/projects.md`, `dev-docs/users.md`, `dev-docs/settings.md`, `dev-docs/spans.md`
 
 ## Spec Contract
 
@@ -1038,6 +1038,33 @@ System-created default queues:
 
 - description: the trace has unusually high latency, cost, or usage
 - instructions: review traces whose latency, token usage, or cost materially exceeds project norms. This queue is primarily detected through deterministic outlier checks based on project medians and configured thresholds rather than the low-cost flagger model.
+
+#### Thrashing
+
+- description: the agent cycles between tools without making progress
+- instructions: review traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
+
+The flagger for this queue receives a structured payload derived from the trace's span tree rather than raw conversation messages alone. The payload must include the ordered tool call sequence so the flagger can detect repetition and cycling patterns:
+
+```typescript
+type ThrashingFlaggerPayload = {
+  conversation_excerpt: Array<{ role: string; content: string }>; // last N assistant/user turns for goal context
+  system_prompt_excerpt: string; // leading portion of the system prompt, truncated to a fixed token budget
+  turn_count: number; // total conversation turns in the trace
+  tool_call_sequence: Array<{
+    tool_name: string;
+    call_index: number; // zero-based position in the full trace tool call order
+    outcome: "success" | "error" | "empty_result";
+  }>; // most recent SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS entries (tail); summary below reflects the full trace
+  tool_call_summary: {
+    total_calls: number;
+    failed_calls: number;
+    repeated_tool_calls: Array<{ tool_name: string; call_count: number }>; // tools invoked more than once, sorted by call_count desc
+    tools_available: string[]; // tool names declared in the trace context
+    tools_used: string[]; // deduplicated tool names actually invoked
+  };
+};
+```
 
 #### Thrashing
 

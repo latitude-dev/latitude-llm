@@ -15,6 +15,12 @@ latitude-lock.json
 .vscode
 .opencode
 
+# Docs autoupdate (generated in CI / local runs)
+scripts/docs-autoupdate/.pr-body.md
+
+# Local docs tooling (keep out of product-docs PRs)
+docs/docs-writer/
+
 # Node / package manager artifacts
 node_modules
 .pnpm-store

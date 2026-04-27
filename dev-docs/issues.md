@@ -6,7 +6,7 @@ They group similar failed, non-errored, non-draft scores into actionable failure
 
 ## Domain errors (`@domain/issues` reference pattern)
 
-Repository-wide rules and a per-package `errors.ts` inventory are in [`docs/domain-errors.md`](./domain-errors.md).
+Repository-wide rules and a per-package `errors.ts` inventory are in [`./domain-errors.md`](./domain-errors.md).
 
 The `packages/domain/issues` package is the **reference implementation** for how domain-specific errors should be organized in this repository. When adding a new `packages/domain/*` package or growing error surfaces in an existing one, mirror this layout before inventing a different structure.
 

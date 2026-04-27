@@ -1,0 +1,66 @@
+---
+title: Core Concepts
+description: Understand how organizations, projects, and key entities relate to each other in Latitude
+---
+
+# Core Concepts
+
+Latitude organizes your work into a hierarchy of organizations and projects, with all reliability features scoped to the right level.
+
+## Organizations
+
+An organization is the top-level ownership boundary. It represents your team or company.
+
+Organizations own:
+
+- **Members**: Team members who can access the organization's projects
+- **API keys**: Used for programmatic access from your applications
+- **Settings**: Organization-wide defaults, including monitoring behavior
+
+All data in Latitude is organization-scoped. Members of one organization cannot see another organization's data.
+
+## Projects
+
+A project is the main product boundary for reliability workflows. Each project typically corresponds to one agent, application, or feature you want to monitor.
+
+<Frame>
+  <img src="/images/getting-started/projects.png" alt="Projects page showing a list of projects with issues, datasets, and trace counts" />
+</Frame>
+
+Everything you work with day-to-day is project-scoped:
+
+- **Traces and sessions**: Your agent's captured interactions
+- **Evaluations**: Automated monitoring scripts
+- **Issues**: Discovered failure patterns
+- **Annotation queues**: Human review workflows
+- **Simulations**: Pre-ship test runs
+- **Scores**: All verdicts from evaluations, annotations, and custom sources
+
+When you create a project, Latitude automatically provisions default system annotation queues so human review has immediate value before you configure custom queues.
+
+### Project Settings
+
+Projects can override organization-level defaults:
+
+- **Keep monitoring**: Controls whether issue-linked evaluations stay active after an issue is resolved. When set at the project level, it overrides the organization default. When a user resolves an issue, this setting determines the default state of the "keep monitoring" toggle in the confirmation dialog.
+
+## How Settings Cascade
+
+Settings resolve from the most specific scope to the broadest:
+
+1. **Project settings**: Checked first
+2. **Organization settings**: Used as fallback when the project doesn't override
+
+For example, if a project has `keepMonitoring` set to `true`, that applies regardless of the organization setting. If the project doesn't set it, the organization default is used.
+
+## Access Model
+
+- **Web users** authenticate through browser sessions with an active organization context
+- **API clients** authenticate with API keys scoped to an organization
+- Users without an active organization are routed to onboarding
+
+## Next Steps
+
+- [Developer Quick Start](./quick-start-dev): Connect your first agent
+- [No-Code Quick Start](./quick-start-pm): Explore the Latitude UI
+- [Observability](../observability/overview): How telemetry flows into projects

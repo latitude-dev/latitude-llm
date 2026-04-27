@@ -1,5 +1,155 @@
-"integrations": {
-    "gtm": {
-        "tagId": "GTM-5NWGV24H"
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "theme": "mint",
+  "name": "Latitude Docs",
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://latitude.so"
+  },
+  "colors": {
+    "primary": "#0080FF",
+    "light": "#3399FF",
+    "dark": "#0066CC"
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "fonts": {
+    "family": "Inter",
+    "heading": {
+      "family": "Inter",
+      "weight": 600
     }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "background": {
+    "decoration": "gradient"
+  },
+  "styling": {
+    "eyebrow": "breadcrumbs",
+    "codeblocks": {
+      "theme": {
+        "light": "github-light",
+        "dark": "github-dark"
+      }
+    }
+  },
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/latitude-dev/latitude-llm"
+        },
+        {
+          "anchor": "YouTube",
+          "icon": "youtube",
+          "href": "https://www.youtube.com/@trylatitude"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "getting-started/introduction",
+          "getting-started/quick-start-dev",
+          "getting-started/quick-start-pm"
+        ]
+      },
+      {
+        "group": "Telemetry",
+        "pages": [
+          "telemetry/overview",
+          {
+            "group": "Providers",
+            "pages": [
+              "telemetry/providers/openai",
+              "telemetry/providers/anthropic",
+              "telemetry/providers/gemini",
+              "telemetry/providers/azure",
+              "telemetry/providers/amazon-bedrock",
+              "telemetry/providers/google-ai-platform",
+              "telemetry/providers/vertex-ai",
+              "telemetry/providers/groq",
+              "telemetry/providers/mistral",
+              "telemetry/providers/ollama",
+              "telemetry/providers/cohere",
+              "telemetry/providers/together-ai",
+              "telemetry/providers/litellm",
+              "telemetry/providers/replicate",
+              "telemetry/providers/sagemaker",
+              "telemetry/providers/watsonx",
+              "telemetry/providers/aleph-alpha",
+              "telemetry/providers/transformers"
+            ]
+          },
+          {
+            "group": "Frameworks",
+            "pages": [
+              "telemetry/frameworks/vercel-ai-sdk",
+              "telemetry/frameworks/langchain",
+              "telemetry/frameworks/llamaindex",
+              "telemetry/frameworks/crewai",
+              "telemetry/frameworks/dspy",
+              "telemetry/frameworks/haystack"
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Observability",
+        "pages": [
+          "observability/overview",
+          "observability/traces",
+          "observability/sessions"
+        ]
+      },
+      {
+        "group": "Evaluations",
+        "pages": [
+          "evaluations/overview",
+          "evaluations/triggers",
+          "evaluations/alignment"
+        ]
+      },
+      {
+        "group": "Annotations",
+        "pages": [
+          "annotations/overview",
+          "annotations/annotation-queues",
+          "annotations/inline-annotations"
+        ]
+      },
+      {
+        "group": "Scores",
+        "pages": [
+          "scores/overview",
+          "scores/analytics"
+        ]
+      },
+      {
+        "group": "Issues",
+        "pages": [
+          "issues/overview",
+          "issues/management"
+        ]
+      },
+      {
+        "group": "Simulations",
+        "pages": ["simulations/overview"]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/latitude-dev/latitude-llm",
+      "slack": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
+    }
+  }
 }

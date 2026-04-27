@@ -1,0 +1,189 @@
+---
+title: Anthropic
+description: Connect your Anthropic-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Anthropic** SDK.
+
+<Check>
+  You'll keep calling Anthropic exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Anthropic SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import Anthropic from "@anthropic-ai/sdk"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["anthropic"],
+        })
+
+        await latitude.ready
+
+        const client = new Anthropic()
+
+        await capture("generate-reply", async () => {
+          const message = await client.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            messages: [{ role: "user", content: "Hello" }],
+          })
+          return message.content[0].text
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        from anthropic import Anthropic
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["anthropic"],
+        )
+
+        client = Anthropic()
+
+        def generate_reply():
+            message = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": "Hello"}],
+            )
+            return message.content[0].text
+
+        capture("generate-reply", generate_reply)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Streaming
+
+When streaming, consume the stream inside `capture()` so the span covers the full operation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture("stream-reply", async () => {
+      const stream = client.messages.stream({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: input }],
+      })
+
+      for await (const event of stream) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
+        ) {
+          res.write(event.delta.text)
+        }
+      }
+      res.end()
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    def stream_reply():
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": input}],
+        ) as stream:
+            for text in stream.text_stream:
+                yield text
+
+    capture("stream-reply", stream_reply)
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your Anthropic calls: just initialize Latitude and your LLM calls are traced.

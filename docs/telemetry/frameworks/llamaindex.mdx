@@ -1,0 +1,143 @@
+---
+title: LlamaIndex
+description: Connect your LlamaIndex-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **LlamaIndex**.
+
+<Check>
+  You'll keep calling LlamaIndex exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **LlamaIndex**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { Settings } from "llamaindex"
+        import { openai } from "@llamaindex/openai"
+        import { agent } from "@llamaindex/workflow"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["llamaindex"],
+        })
+
+        await latitude.ready
+
+        Settings.llm = openai({ model: "gpt-4o" })
+        const myAgent = agent({ tools: [] })
+
+        await capture("llamaindex-query", async () => {
+          const response = await myAgent.run("Hello")
+          return response
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["llamaindex"],
+        )
+
+        documents = SimpleDirectoryReader("data").load_data()
+        index = VectorStoreIndex.from_documents(documents)
+        query_engine = index.as_query_engine()
+
+        def llamaindex_query():
+            response = query_engine.query("What is this document about?")
+            return str(response)
+
+        capture("llamaindex-query", llamaindex_query)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+3. LlamaIndex retrieval and synthesis steps appear as child spans
+
+---
+
+## That's It
+
+No changes to your LlamaIndex calls: just initialize Latitude and your LLM calls are traced.

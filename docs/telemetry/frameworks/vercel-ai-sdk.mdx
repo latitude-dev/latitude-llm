@@ -1,0 +1,109 @@
+---
+title: Vercel AI SDK
+description: Connect your Vercel AI SDK-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Vercel AI SDK**.
+
+The Vercel AI SDK has built-in OpenTelemetry support via its `experimental_telemetry` flag. Latitude's smart filter automatically picks up these `ai.*` spans. No instrumentation string needed.
+
+<Check>
+  You'll keep calling the Vercel AI SDK exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  The Vercel AI SDK integration is **TypeScript only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Node.js project that uses the **Vercel AI SDK** (`ai` package)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    Initialize Latitude **without** an `instrumentations` array. The Vercel AI SDK emits its own OpenTelemetry spans. Set `experimental_telemetry.isEnabled` to `true` on your AI SDK calls.
+
+    ```ts
+    import { initLatitude, capture } from "@latitude-data/telemetry"
+    import { generateText } from "ai"
+    import { openai } from "@ai-sdk/openai"
+
+    const latitude = initLatitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+    })
+
+    await latitude.ready
+
+    await capture("generate-support-reply", async () => {
+      const { text } = await generateText({
+        model: openai("gpt-4o"),
+        prompt: "Hello",
+        experimental_telemetry: {
+          isEnabled: true,
+        },
+      })
+      return text
+    })
+
+    await latitude.shutdown()
+    ```
+
+    <Note>
+      The `experimental_telemetry.isEnabled` flag must be set to `true` on each
+      Vercel AI SDK call (`generateText`, `streamText`, etc.) for spans to be emitted.
+    </Note>
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your Vercel AI SDK calls: just initialize Latitude and enable `experimental_telemetry`.

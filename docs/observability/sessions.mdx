@@ -1,0 +1,103 @@
+---
+title: Sessions
+description: Understand multi-turn conversations and session-level aggregation
+---
+
+# Sessions
+
+A session is an **optional** grouping of related traces into a multi-turn conversation. While spans and traces are always present (they're part of the OpenTelemetry standard), sessions only exist when your application provides a `session_id` with its telemetry. They let you view the full conversation arc across multiple interactions.
+
+<Frame>
+  <img src="/images/observability/sessions.png" alt="Sessions view showing grouped traces within a session" />
+</Frame>
+
+## How Sessions Work
+
+Sessions are formed when your application provides a `session_id` with its telemetry. All traces sharing the same session ID are grouped together chronologically.
+
+A session might look like:
+
+1. **Trace 1**: User asks "What's the weather?". The agent responds with current weather
+2. **Trace 2**: User asks "What about tomorrow?". The agent responds with the forecast
+3. **Trace 3**: User asks "Should I bring an umbrella?". The agent gives a recommendation
+
+Each turn is its own trace with its own spans, scores, and evaluations. The session ties them together.
+
+## Viewing Sessions
+
+Toggle between **Traces** and **Sessions** using the switcher in the top right of the observability page.
+
+The sessions view shows:
+
+- **Expandable session rows**: Click a session to reveal all traces within it
+- **Start time**: When the session began
+- **Name**: The trace name (from `path` in your `capture()` call)
+- **Duration**: Total duration across all traces in the session
+- **Time to First Token**: Median TTFT across the session's traces
+- **Cost**: Aggregated cost across all traces
+- **Session ID**: The identifier your application provided
+- **User ID**: The end user, if provided via telemetry metadata
+- **Models**: Which LLM models were used across the session
+- **Span count**: Total spans across all traces
+
+Each trace within a session is listed with its own metrics, so you can spot which specific turn had high latency or cost.
+
+## Why Sessions Matter
+
+Sessions enable:
+
+- **Conversation-level evaluation**: Evaluations can target session-level interactions, not just individual turns. This catches problems like context loss, contradiction, and conversational drift.
+- **Session-level score aggregation**: Roll up scores across an entire conversation to see overall quality, not just per-turn results.
+- **Richer issue context**: When drilling into issues, seeing the full session context helps understand failure patterns that only emerge across multiple turns.
+
+## Sending Session IDs
+
+To group traces into sessions, pass a `session_id` when capturing telemetry:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    await telemetry.capture(
+      {
+        projectId: 123,
+        path: 'invoke_agent',
+        sessionId: 'session-abc-123', // Group traces into a session
+      },
+      async () => {
+        // Your agent code
+      }
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    @telemetry.capture(
+        project_id=123,
+        path="invoke_agent",
+        session_id="session-abc-123",  # Group traces into a session
+    )
+    def invoke_agent(input: str):
+        # Your agent code
+        pass
+    ```
+  </Tab>
+</Tabs>
+
+Every `capture()` call with the same `session_id` will be grouped into the same session.
+
+## Sessions and Annotation Queues
+
+When you add a session to an annotation queue, Latitude resolves it to the session's newest trace. The queue item stores that trace, and the reviewer sees the full conversation context derived from all traces sharing the same session ID.
+
+This means:
+
+- Queue items always reference a specific trace
+- Session context is derived at review time from related traces
+- Reviewers see the conversation in full, not just one isolated turn
+
+## Next Steps
+
+- [Traces](./traces): The individual interactions that make up a session
+- [Scores](../scores/overview): How scores attach to traces and sessions
+- [Evaluations](../evaluations/triggers): Configuring evaluations to target sessions
+- [Annotation Queues](../annotations/annotation-queues): Adding sessions to review backlogs

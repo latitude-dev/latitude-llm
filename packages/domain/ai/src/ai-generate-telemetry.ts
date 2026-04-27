@@ -2,7 +2,7 @@
  * Stable tag tuples and span names for Latitude `capture` on structured `AI.generate` calls.
  * Use with `GenerateInput.telemetry` / `GenerateTelemetryCapture`.
  *
- * Human-facing catalog of each feature (purpose, tags, call sites): `docs/ai-generation-features.md`.
+ * Human-facing catalog of each feature (purpose, tags, call sites): `dev-docs/ai-generation-features.md`.
  */
 export const AI_GENERATE_TELEMETRY_TAGS = {
   issueDetails: ["issue:details"],

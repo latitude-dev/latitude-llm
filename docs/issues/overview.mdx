@@ -1,0 +1,116 @@
+---
+title: Issues Overview
+description: Understand how Latitude discovers and tracks failure patterns in your agent
+---
+
+# Issues
+
+Issues are recurring failure patterns that Latitude discovers automatically from your agent's interactions. Instead of manually sifting through traces to find problems, Latitude groups similar failures together and gives each pattern a name, a trend, and a lifecycle you can act on.
+
+## The Issues Page
+
+<Frame>
+  <img
+    src="/images/issues/issues-list.png"
+    alt="Issues page showing discovered failure patterns with status, trends, and occurrence data"
+  />
+</Frame>
+
+The Issues page shows all discovered failure patterns for your project. At the top, summary cards show key counts: regressions, escalating issues, active issues, new issues, and total events. A histogram below shows issue occurrences over time.
+
+The table lists each issue with:
+
+- **Issue name**: The automatically generated name for the failure pattern
+- **Status**: The current lifecycle state (New, Escalating, Regressed, etc.)
+- **Trend**: A sparkline showing recent occurrence activity
+- **Total events**: How many times this issue has been detected
+- **Affected users**: What percentage of users have been impacted
+- **Evaluations**: Linked monitoring evaluations and their status
+
+Use the **Active / Inactive** tabs to switch between current issues and resolved or ignored ones. The **Filters** button and **search bar** help you find specific issues.
+
+## How Issues Are Discovered
+
+When a score fails (from an evaluation, annotation, or custom source), Latitude checks whether the failure matches an existing issue or represents something new:
+
+- **If it matches**, the score is linked to that issue and its occurrence count increases
+- **If no match is found**, a new issue is created automatically with a name and description generated from the failure
+
+You don't need to predefine failure categories. Latitude finds them from the patterns in your data. A single failed score can create a new issue.
+
+Scores from evaluations that are already linked to an issue skip this matching and assign directly.
+
+## Issue Detail
+
+Click any issue to open the detail drawer:
+
+<Frame>
+  <img
+    src="/images/issues/issue-detail.png"
+    alt="Issue detail drawer showing status, trend, linked evaluation, and trace logs"
+  />
+</Frame>
+
+The drawer shows:
+
+- **Name and description**: What the failure pattern is about
+- **Status, last occurrence, and total events**: A quick summary of the issue's current state
+- **Trend**: A collapsible histogram showing new events over the selected time window, with a change indicator (e.g., "+251, 42%")
+- **Evaluation**: Linked monitoring evaluations with their status, coverage percentage, and alignment (MCC). Click the link icon to jump to the evaluation detail
+- **Logs**: Recent traces where this issue was detected, with timestamps and durations. Click any trace to investigate the full conversation
+
+The header provides **Ignore** and **Resolve** actions, plus navigation arrows to move between issues.
+
+## Issue Lifecycle
+
+Each issue has a lifecycle state that tells you where it stands:
+
+| State          | Meaning                                                                  |
+| -------------- | ------------------------------------------------------------------------ |
+| **New**        | Discovered less than 7 days ago                                          |
+| **Escalating** | Occurrences are increasing significantly compared to the recent baseline |
+| **Resolved**   | No recent occurrences, or manually resolved by your team                 |
+| **Regressed**  | New occurrences appeared after the issue was previously resolved         |
+| **Ignored**    | Manually ignored. Hidden from default views but can be restored          |
+
+An issue can be in multiple states at once. For example, an issue can be both **New** and **Escalating** if it was discovered recently and is already growing.
+
+## What You Can Do with an Issue
+
+### Generate an Evaluation
+
+Click **Generate Evaluation** on any issue to create an automated monitor. Latitude builds a script optimized to detect that specific failure pattern and runs it on live traffic going forward. Once active, you'll see the evaluation's status, coverage, and MCC in the issue drawer.
+
+### Investigate with Traces
+
+The **Logs** section in the detail drawer links directly to the traces where the issue was detected. Click into specific traces to see the actual conversations and understand what triggers the problem.
+
+### Resolve or Ignore
+
+- **Resolve** when the underlying problem is fixed. You can choose to keep linked evaluations active (to catch regressions) or archive them.
+- **Ignore** when the issue isn't worth tracking. This immediately archives linked evaluations and hides the issue from active views.
+
+## Issue Visibility
+
+Latitude keeps the issues list actionable by filtering out noise:
+
+- Issues with **human annotations** are always visible
+- Issues that were **manually linked** are always visible
+- **Low-evidence issues** (only automated matches, no human confirmation) may be hidden until enough evidence accumulates
+
+As more failures match an issue or a team member annotates a related trace, the issue is promoted to full visibility automatically.
+
+## How Issues Connect to Other Features
+
+| Feature                                    | Relationship                                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **[Scores](../scores/overview)**           | Failed scores feed into issue discovery. Each issue groups scores with similar failure feedback |
+| **[Evaluations](../evaluations/overview)** | Issues can generate monitoring evaluations. Evaluation failures link back to their issue        |
+| **[Annotations](../annotations/overview)** | Human annotations confirm issue detections and improve evaluation alignment                     |
+| **[Alignment](../evaluations/alignment)**  | Annotations on issue-linked traces produce alignment metrics for the issue's evaluations        |
+
+## Next Steps
+
+- [Issue Management](./management): Workflows for triaging, investigating, and resolving issues
+- [Evaluations](../evaluations/overview): How evaluations connect to issues
+- [Annotations](../annotations/overview): How human feedback strengthens issue detection

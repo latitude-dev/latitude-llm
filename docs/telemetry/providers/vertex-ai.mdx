@@ -1,0 +1,143 @@
+---
+title: Vertex AI
+description: Connect your Vertex AI-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Google Cloud Vertex AI**.
+
+<Check>
+  You'll keep calling Vertex AI exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Vertex AI SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { VertexAI } from "@google-cloud/vertexai"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["vertexai"],
+        })
+
+        await latitude.ready
+
+        const vertexAI = new VertexAI({
+          project: process.env.GCP_PROJECT_ID!,
+          location: "us-central1",
+        })
+        const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+        await capture("generate-reply", async () => {
+          const result = await model.generateContent("Hello")
+          return result.response.candidates?.[0].content.parts[0].text
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        import vertexai
+        from vertexai.generative_models import GenerativeModel
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["vertexai"],
+        )
+
+        vertexai.init(project="your-gcp-project", location="us-central1")
+        model = GenerativeModel("gemini-1.5-flash")
+
+        def generate_reply():
+            response = model.generate_content("Hello")
+            return response.text
+
+        capture("generate-reply", generate_reply)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your Vertex AI calls: just initialize Latitude and your LLM calls are traced.

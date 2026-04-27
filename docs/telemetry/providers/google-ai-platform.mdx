@@ -1,0 +1,142 @@
+---
+title: Google AI Platform
+description: Connect your Google AI Platform-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Google Cloud AI Platform**.
+
+<Check>
+  You'll keep calling AI Platform exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Google Cloud AI Platform SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { PredictionServiceClient } from "@google-cloud/aiplatform"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["aiplatform"],
+        })
+
+        await latitude.ready
+
+        const client = new PredictionServiceClient()
+
+        await capture("generate-prediction", async () => {
+          const [response] = await client.predict({
+            endpoint: `projects/${process.env.GCP_PROJECT_ID}/locations/us-central1/publishers/google/models/text-bison`,
+            instances: [{ content: "Hello" }],
+            parameters: { temperature: 0.2, maxOutputTokens: 256 },
+          })
+          return response.predictions
+        })
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        from google.cloud import aiplatform
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["aiplatform"],
+        )
+
+        aiplatform.init(project="your-gcp-project", location="us-central1")
+
+        def generate_prediction():
+            model = aiplatform.TextGenerationModel.from_pretrained("text-bison")
+            response = model.predict("Hello", temperature=0.2, max_output_tokens=256)
+            return response.text
+
+        capture("generate-prediction", generate_prediction)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+---
+
+## That's It
+
+No changes to your AI Platform calls: just initialize Latitude and your LLM calls are traced.

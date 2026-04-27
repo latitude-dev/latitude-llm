@@ -70,7 +70,7 @@ Explicit link choices are human overrides:
 
 ## Managed Queue Review
 
-The main in-product annotation workflow is the focused queue review screen documented in `docs/annotation-queues.md`.
+The main in-product annotation workflow is the focused queue review screen documented in `./annotation-queues.md`.
 
 Annotation behavior in that screen must support:
 
@@ -177,7 +177,7 @@ Because of that:
 
 Annotation queues are the workflow surface for managed review, but the annotation itself remains just a score.
 
-Queue provenance is carried primarily through the annotation score `source_id` when the annotation came from a queue. Queue behavior and UX are documented separately in `docs/annotation-queues.md`.
+Queue provenance is carried primarily through the annotation score `source_id` when the annotation came from a queue. Queue behavior and UX are documented separately in `./annotation-queues.md`.
 
 Queue completion is separate from annotation creation:
 
