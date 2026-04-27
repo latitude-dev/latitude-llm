@@ -1,4 +1,4 @@
-import { Avatar, Badge, Text } from "@repo/ui"
+import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, notFound } from "@tanstack/react-router"
 import {
@@ -14,8 +14,9 @@ import {
   type PropertiesStripEntry,
   StripeCustomerLink,
 } from "../-components/dashboard/index.ts"
-import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { ProjectRow, UserRow } from "../-components/rows/index.ts"
+import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
+import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/organizations/$organizationId")({
   loader: async ({ params }) => {
@@ -64,7 +65,7 @@ function BackofficeOrganizationDetailPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pt-8 pb-12">
       <DashboardHero
-        leading={<Avatar name={organization.name} size="lg" />}
+        leading={<Avatar name={organization.name} size="xl" />}
         title={organization.name}
         meta={
           <>
@@ -162,8 +163,8 @@ function MemberRow({ member }: { member: AdminOrganizationMemberDto }) {
       }}
       trailing={
         <div className="flex items-center gap-1.5">
-          {member.user.role === "admin" && <Badge variant="destructive">platform admin</Badge>}
-          <Badge variant={member.role === "owner" ? "default" : "secondary"}>{member.role}</Badge>
+          {member.user.role === "admin" && <PlatformStaffBadge />}
+          <MemberRoleBadge role={member.role} />
         </div>
       }
     />

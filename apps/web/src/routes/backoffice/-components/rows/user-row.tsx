@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { AdminUserSearchDto } from "../../../../domains/admin/search.functions.ts"
 import { useRecentlyViewedAt } from "../../-lib/recently-viewed.ts"
+import { PlatformStaffBadge } from "../role-badges.tsx"
 import { Row } from "./row.tsx"
 import { ViewedAgo } from "./viewed-ago.tsx"
 
@@ -44,13 +45,15 @@ export function UserRow({ user, trailing }: UserRowProps) {
   // 3. Fall back to relative created-at if available.
   const viewedAt = useRecentlyViewedAt("user", user.id)
   const resolvedTrailing =
-    trailing !== undefined
-      ? trailing
-      : viewedAt
-        ? <ViewedAgo at={viewedAt} />
-        : user.createdAt
-          ? <Text.H6 color="foregroundMuted" noWrap>{relativeTime(user.createdAt)}</Text.H6>
-          : undefined
+    trailing !== undefined ? (
+      trailing
+    ) : viewedAt ? (
+      <ViewedAgo at={viewedAt} />
+    ) : user.createdAt ? (
+      <Text.H6 color="foregroundMuted" noWrap>
+        {relativeTime(user.createdAt)}
+      </Text.H6>
+    ) : undefined
 
   return (
     <Link to="/backoffice/users/$userId" params={{ userId: user.id }} className="block">
@@ -58,14 +61,14 @@ export function UserRow({ user, trailing }: UserRowProps) {
         leading={<Avatar name={displayName} imageSrc={user.image} size="lg" />}
         primary={
           <Text.H5 weight="medium" ellipsis noWrap>
-            {user.email}
+            {displayName}
           </Text.H5>
         }
-        primaryBadges={user.role === "admin" ? <Badge variant="destructive">admin</Badge> : null}
+        primaryBadges={user.role === "admin" ? <PlatformStaffBadge /> : null}
         secondary={
           <>
             <Text.H6 color="foregroundMuted" ellipsis noWrap>
-              {user.name?.trim() ? user.name : "(no name)"}
+              {user.email}
             </Text.H6>
             {memberships.length > 0 && (
               <>

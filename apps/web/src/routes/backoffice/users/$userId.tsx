@@ -1,10 +1,7 @@
-import { Avatar, Badge, Text } from "@repo/ui"
+import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import type {
-  AdminUserDetailsDto,
-  AdminUserDetailsMembershipDto,
-} from "../../../domains/admin/users.functions.ts"
+import type { AdminUserDetailsDto, AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
 import {
   DashboardHero,
@@ -13,6 +10,7 @@ import {
   type PropertiesStripEntry,
 } from "../-components/dashboard/index.ts"
 import { ImpersonateUserButton } from "../-components/impersonate-user-button.tsx"
+import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/users/$userId")({
@@ -48,7 +46,7 @@ function BackofficeUserDetailPage() {
     secondary: user.name?.trim() ? user.name : undefined,
   })
 
-  const displayName = user.name?.trim() ? user.name : "(no name)"
+  const displayName = user.name?.trim() ? user.name : user.email
   const memberships = user.memberships
   const ownedCount = memberships.filter((m: AdminUserDetailsMembershipDto) => m.role === "owner").length
 
@@ -67,12 +65,12 @@ function BackofficeUserDetailPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pt-8 pb-12">
       <DashboardHero
-        leading={<Avatar name={displayName === "(no name)" ? user.email : displayName} imageSrc={user.image} size="lg" />}
-        title={user.email}
-        badges={user.role === "admin" ? <Badge variant="destructive">platform admin</Badge> : null}
+        leading={<Avatar name={displayName} imageSrc={user.image} size="xl" />}
+        title={displayName}
+        badges={user.role === "admin" ? <PlatformStaffBadge /> : null}
         meta={
           <>
-            <span>{displayName}</span>
+            <span>{user.email}</span>
             <span aria-hidden="true">·</span>
             <span>
               joined <span className="font-medium text-foreground">{relativeTime(user.createdAt)}</span>
@@ -166,7 +164,7 @@ function MembershipCard({ membership }: { membership: AdminUserDetailsMembership
           /{membership.organizationSlug}
         </Text.H6>
       </div>
-      <Badge variant={membership.role === "owner" ? "default" : "secondary"}>{membership.role}</Badge>
+      <MemberRoleBadge role={membership.role} />
     </Link>
   )
 }
