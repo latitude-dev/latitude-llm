@@ -1,9 +1,10 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { EyeIcon, ShieldCheckIcon } from "lucide-react"
+import { AtSignIcon, EyeIcon, ShieldCheckIcon } from "lucide-react"
 import type { AdminUserDetailsDto, AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
+import { ChangeEmailButton } from "../-components/account-actions/change-email.tsx"
 import { PromoteDemoteStaffButton } from "../-components/account-actions/promote-demote.tsx"
 import { AccountActionRow, AccountActionsSection } from "../-components/account-actions/section.tsx"
 import {
@@ -118,6 +119,12 @@ function BackofficeUserDetailPage() {
               : "Grant this user platform-staff access — backoffice + cross-org visibility + impersonation."
           }
           action={<PromoteDemoteStaffButton userId={user.id} userEmail={user.email} currentRole={user.role} />}
+        />
+        <AccountActionRow
+          icon={AtSignIcon}
+          title="Change email"
+          description="Update this user's primary login email. Useful for typo corrections at sign-up. Active sessions are not signed out."
+          action={<ChangeEmailButton userId={user.id} currentEmail={user.email} />}
         />
       </AccountActionsSection>
 

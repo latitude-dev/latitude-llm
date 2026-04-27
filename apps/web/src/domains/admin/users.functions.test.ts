@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { adminGetUserInputSchema, adminSetUserRoleInputSchema } from "./users.functions.ts"
+import {
+  adminChangeUserEmailInputSchema,
+  adminGetUserInputSchema,
+  adminSetUserRoleInputSchema,
+} from "./users.functions.ts"
 
 describe("adminGetUserInputSchema", () => {
   it("accepts a valid userId", () => {
@@ -43,5 +47,45 @@ describe("adminSetUserRoleInputSchema", () => {
 
   it("rejects a userId above the max length", () => {
     expect(adminSetUserRoleInputSchema.safeParse({ userId: "x".repeat(257), role: "admin" }).success).toBe(false)
+  })
+})
+
+describe("adminChangeUserEmailInputSchema", () => {
+  it("accepts a valid email", () => {
+    const result = adminChangeUserEmailInputSchema.safeParse({ userId: "user-123", newEmail: "user@example.com" })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.newEmail).toBe("user@example.com")
+    }
+  })
+
+  it("trims and lowercases the new email so audit events stay normalized", () => {
+    const result = adminChangeUserEmailInputSchema.safeParse({
+      userId: "user-123",
+      newEmail: "  Mixed.Case@Example.COM  ",
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.newEmail).toBe("mixed.case@example.com")
+    }
+  })
+
+  it("rejects malformed emails", () => {
+    expect(adminChangeUserEmailInputSchema.safeParse({ userId: "user-123", newEmail: "not-an-email" }).success).toBe(
+      false,
+    )
+  })
+
+  it("rejects a missing email", () => {
+    expect(adminChangeUserEmailInputSchema.safeParse({ userId: "user-123" }).success).toBe(false)
+  })
+
+  it("rejects an absurdly long email (defensive bound against abuse)", () => {
+    const longEmail = `${"x".repeat(320)}@example.com`
+    expect(adminChangeUserEmailInputSchema.safeParse({ userId: "user-123", newEmail: longEmail }).success).toBe(false)
+  })
+
+  it("rejects an empty userId", () => {
+    expect(adminChangeUserEmailInputSchema.safeParse({ userId: "", newEmail: "user@example.com" }).success).toBe(false)
   })
 })

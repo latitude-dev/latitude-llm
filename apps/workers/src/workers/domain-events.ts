@@ -163,6 +163,7 @@ export const createDomainEventsWorker = ({
     AdminImpersonationStarted: () => Effect.void,
     AdminImpersonationStopped: () => Effect.void,
     AdminUserRoleChanged: () => Effect.void,
+    AdminUserEmailChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

@@ -162,4 +162,19 @@ export interface EventPayloads {
     readonly fromRole: "user" | "admin"
     readonly toRole: "user" | "admin"
   }
+  /**
+   * Emitted when a platform admin updates a user's primary email
+   * via the backoffice. Snapshot both addresses so audit queries
+   * can attribute future logins under the new email back to the
+   * admin who renamed the account. Issued via Better Auth's
+   * `adminUpdateUser` endpoint, which writes through the internal
+   * adapter — `emailVerified` is intentionally left untouched
+   * (admins routinely correct typos for users who already verified).
+   */
+  AdminUserEmailChanged: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly fromEmail: string
+    readonly toEmail: string
+  }
 }
