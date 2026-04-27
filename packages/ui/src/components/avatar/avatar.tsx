@@ -2,13 +2,17 @@ import type { CSSProperties } from "react"
 import { useHashColor } from "../../hooks/use-hash-color.ts"
 import { cn } from "../../utils/cn.ts"
 
-export type AvatarSize = "xs" | "sm" | "md" | "lg"
+export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl"
 
 const sizeClass: Record<AvatarSize, string> = {
   xs: "h-5 w-5 text-[8px]",
   sm: "h-6 w-6 text-xs",
   md: "h-7 w-7 text-[10px]",
   lg: "h-8 w-8 text-sm",
+  // Detail-page hero scale (~56 px). Used by the backoffice
+  // user / organisation dashboards so the leading visual matches
+  // the height of the title + subtitle stack.
+  xl: "h-14 w-14 text-xl",
 }
 
 export function initialsFromDisplayName(name: string): string {
