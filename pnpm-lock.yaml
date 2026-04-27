@@ -76,8 +76,8 @@ catalogs:
       specifier: 2.1.0
       version: 2.1.0
     hono:
-      specifier: 4.12.14
-      version: 4.12.14
+      specifier: 4.12.15
+      version: 4.12.15
     ioredis:
       specifier: 5.8.2
       version: 5.8.2
@@ -193,16 +193,16 @@ importers:
         version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.14)
+        version: 1.19.13(hono@4.12.15)
       '@hono/otel':
         specifier: ^1.1.1
-        version: 1.1.1(hono@4.12.14)
+        version: 1.1.1(hono@4.12.15)
       '@hono/swagger-ui':
         specifier: ^0.5.0
-        version: 0.5.3(hono@4.12.14)
+        version: 0.5.3(hono@4.12.15)
       '@hono/zod-openapi':
         specifier: ^1.2.4
-        version: 1.3.0(hono@4.12.14)(zod@4.3.6)
+        version: 1.3.0(hono@4.12.15)(zod@4.3.6)
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -238,7 +238,7 @@ importers:
         version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
-        version: 4.12.14
+        version: 4.12.15
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -278,10 +278,10 @@ importers:
         version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.14)
+        version: 1.19.13(hono@4.12.15)
       '@hono/otel':
         specifier: ^1.1.1
-        version: 1.1.1(hono@4.12.14)
+        version: 1.1.1(hono@4.12.15)
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -311,7 +311,7 @@ importers:
         version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
-        version: 4.12.14
+        version: 4.12.15
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -508,7 +508,7 @@ importers:
         version: 6.12.1(@bull-board/ui@6.12.1)
       '@bull-board/hono':
         specifier: 'catalog:'
-        version: 6.12.1(hono@4.12.14)
+        version: 6.12.1(hono@4.12.15)
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -562,7 +562,7 @@ importers:
         version: link:../../packages/domain/users
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.14)
+        version: 1.19.13(hono@4.12.15)
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -619,7 +619,7 @@ importers:
         version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
-        version: 4.12.14
+        version: 4.12.15
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1747,7 +1747,7 @@ importers:
         version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
-        version: 4.12.14
+        version: 4.12.15
 
   packages/platform/workflows-temporal:
     dependencies:
@@ -1943,7 +1943,7 @@ importers:
         version: 1.3.4(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.34.0(ws@8.20.0)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(ws@8.20.0)
       llamaindex:
         specifier: ^0.12.1
-        version: 0.12.1(hono@4.12.14)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6)
+        version: 0.12.1(hono@4.12.15)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6)
       openai:
         specifier: ^6.33.0
         version: 6.34.0(ws@8.20.0)(zod@4.3.6)
@@ -8723,8 +8723,8 @@ packages:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
 
-  hono@4.12.14:
-    resolution: {integrity: sha512-am5zfg3yu6sqn5yjKBNqhnTX7Cv+m00ox+7jbaKkrLMRJ4rAdldd1xPd/JzbBWspqaQv6RSTrgFN95EsfhC+7w==}
+  hono@4.12.15:
+    resolution: {integrity: sha512-qM0jDhFEaCBb4TxoW7f53Qrpv9RBiayUHo0S52JudprkhvpjIrGoU1mnnr29Fvd1U335ZFPZQY1wlkqgfGXyLg==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.1:
@@ -13003,12 +13003,12 @@ snapshots:
       '@bull-board/ui': 6.12.1
       redis-info: 3.1.0
 
-  '@bull-board/hono@6.12.1(hono@4.12.14)':
+  '@bull-board/hono@6.12.1(hono@4.12.15)':
     dependencies:
       '@bull-board/api': 6.12.1(@bull-board/ui@6.12.1)
       '@bull-board/ui': 6.12.1
       ejs: 3.1.10
-      hono: 4.12.14
+      hono: 4.12.15
 
   '@bull-board/ui@6.12.1':
     dependencies:
@@ -13470,31 +13470,31 @@ snapshots:
       protobufjs: 7.5.5
       yargs: 17.7.2
 
-  '@hono/node-server@1.19.13(hono@4.12.14)':
+  '@hono/node-server@1.19.13(hono@4.12.15)':
     dependencies:
-      hono: 4.12.14
+      hono: 4.12.15
 
-  '@hono/otel@1.1.1(hono@4.12.14)':
+  '@hono/otel@1.1.1(hono@4.12.15)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.40.0
-      hono: 4.12.14
+      hono: 4.12.15
 
-  '@hono/swagger-ui@0.5.3(hono@4.12.14)':
+  '@hono/swagger-ui@0.5.3(hono@4.12.15)':
     dependencies:
-      hono: 4.12.14
+      hono: 4.12.15
 
-  '@hono/zod-openapi@1.3.0(hono@4.12.14)(zod@4.3.6)':
+  '@hono/zod-openapi@1.3.0(hono@4.12.15)(zod@4.3.6)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.5.0(zod@4.3.6)
-      '@hono/zod-validator': 0.7.6(hono@4.12.14)(zod@4.3.6)
-      hono: 4.12.14
+      '@hono/zod-validator': 0.7.6(hono@4.12.15)(zod@4.3.6)
+      hono: 4.12.15
       openapi3-ts: 4.5.0
       zod: 4.3.6
 
-  '@hono/zod-validator@0.7.6(hono@4.12.14)(zod@4.3.6)':
+  '@hono/zod-validator@0.7.6(hono@4.12.15)(zod@4.3.6)':
     dependencies:
-      hono: 4.12.14
+      hono: 4.12.15
       zod: 4.3.6
 
   '@humanwhocodes/retry@0.4.3': {}
@@ -13865,17 +13865,17 @@ snapshots:
       tree-sitter: 0.22.4
       web-tree-sitter: 0.24.7
 
-  '@llamaindex/workflow-core@1.3.4(hono@4.12.14)(rxjs@7.8.2)(zod@4.3.6)':
+  '@llamaindex/workflow-core@1.3.4(hono@4.12.15)(rxjs@7.8.2)(zod@4.3.6)':
     optionalDependencies:
-      hono: 4.12.14
+      hono: 4.12.15
       rxjs: 7.8.2
       zod: 4.3.6
 
-  '@llamaindex/workflow@1.1.24(@llamaindex/core@0.6.22)(@llamaindex/env@0.1.30)(hono@4.12.14)(rxjs@7.8.2)(zod@4.3.6)':
+  '@llamaindex/workflow@1.1.24(@llamaindex/core@0.6.22)(@llamaindex/env@0.1.30)(hono@4.12.15)(rxjs@7.8.2)(zod@4.3.6)':
     dependencies:
       '@llamaindex/core': 0.6.22
       '@llamaindex/env': 0.1.30
-      '@llamaindex/workflow-core': 1.3.4(hono@4.12.14)(rxjs@7.8.2)(zod@4.3.6)
+      '@llamaindex/workflow-core': 1.3.4(hono@4.12.15)(rxjs@7.8.2)(zod@4.3.6)
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
       - hono
@@ -18843,7 +18843,7 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
-  hono@4.12.14: {}
+  hono@4.12.15: {}
 
   hookable@6.1.1: {}
 
@@ -19277,12 +19277,12 @@ snapshots:
 
   lilconfig@2.1.0: {}
 
-  llamaindex@0.12.1(hono@4.12.14)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6):
+  llamaindex@0.12.1(hono@4.12.15)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6):
     dependencies:
       '@llamaindex/core': 0.6.22
       '@llamaindex/env': 0.1.30
       '@llamaindex/node-parser': 2.0.22(@llamaindex/core@0.6.22)(@llamaindex/env@0.1.30)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)
-      '@llamaindex/workflow': 1.1.24(@llamaindex/core@0.6.22)(@llamaindex/env@0.1.30)(hono@4.12.14)(rxjs@7.8.2)(zod@4.3.6)
+      '@llamaindex/workflow': 1.1.24(@llamaindex/core@0.6.22)(@llamaindex/env@0.1.30)(hono@4.12.15)(rxjs@7.8.2)(zod@4.3.6)
       '@types/lodash': 4.17.24
       '@types/node': 24.12.2
       lodash: 4.18.1
