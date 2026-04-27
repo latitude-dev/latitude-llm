@@ -31,7 +31,6 @@ import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/obse
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings/organization'
 import { Route as AuthenticatedSettingsMembersRouteImport } from './routes/_authenticated/settings/members'
-import { Route as AuthenticatedSettingsIssuesRouteImport } from './routes/_authenticated/settings/issues'
 import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_authenticated/settings/api-keys'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
@@ -160,12 +159,6 @@ const AuthenticatedSettingsMembersRoute =
     path: '/members',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
-const AuthenticatedSettingsIssuesRoute =
-  AuthenticatedSettingsIssuesRouteImport.update({
-    id: '/issues',
-    path: '/issues',
-    getParentRoute: () => AuthenticatedSettingsRoute,
-  } as any)
 const AuthenticatedSettingsApiKeysRoute =
   AuthenticatedSettingsApiKeysRouteImport.update({
     id: '/api-keys',
@@ -268,7 +261,6 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
-  '/settings/issues': typeof AuthenticatedSettingsIssuesRoute
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -301,7 +293,6 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeIndexRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
-  '/settings/issues': typeof AuthenticatedSettingsIssuesRoute
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -339,7 +330,6 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
-  '/_authenticated/settings/issues': typeof AuthenticatedSettingsIssuesRoute
   '/_authenticated/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -378,7 +368,6 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug'
     | '/settings/account'
     | '/settings/api-keys'
-    | '/settings/issues'
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
@@ -411,7 +400,6 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/settings/account'
     | '/settings/api-keys'
-    | '/settings/issues'
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
@@ -448,7 +436,6 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/api-keys'
-    | '/_authenticated/settings/issues'
     | '/_authenticated/settings/members'
     | '/_authenticated/settings/organization'
     | '/api/auth/$'
@@ -639,13 +626,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsMembersRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
-    '/_authenticated/settings/issues': {
-      id: '/_authenticated/settings/issues'
-      path: '/issues'
-      fullPath: '/settings/issues'
-      preLoaderRoute: typeof AuthenticatedSettingsIssuesRouteImport
-      parentRoute: typeof AuthenticatedSettingsRoute
-    }
     '/_authenticated/settings/api-keys': {
       id: '/_authenticated/settings/api-keys'
       path: '/api-keys'
@@ -774,7 +754,6 @@ const DesignSystemRouteRouteWithChildren =
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsApiKeysRoute: typeof AuthenticatedSettingsApiKeysRoute
-  AuthenticatedSettingsIssuesRoute: typeof AuthenticatedSettingsIssuesRoute
   AuthenticatedSettingsMembersRoute: typeof AuthenticatedSettingsMembersRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -783,7 +762,6 @@ interface AuthenticatedSettingsRouteChildren {
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
   AuthenticatedSettingsApiKeysRoute: AuthenticatedSettingsApiKeysRoute,
-  AuthenticatedSettingsIssuesRoute: AuthenticatedSettingsIssuesRoute,
   AuthenticatedSettingsMembersRoute: AuthenticatedSettingsMembersRoute,
   AuthenticatedSettingsOrganizationRoute:
     AuthenticatedSettingsOrganizationRoute,

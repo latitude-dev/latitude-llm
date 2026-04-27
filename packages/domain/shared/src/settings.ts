@@ -5,7 +5,7 @@ import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
 
 export const organizationSettingsSchema = z.object({
-  keepMonitoring: z.boolean().optional(),
+  keepMonitoring: z.boolean().optional(), // TODO: deprecated. Removed from frontend but maintained to keep cascaded settings scaffold
 })
 
 export const projectSettingsSchema = z.object({

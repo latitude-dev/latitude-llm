@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
-import { Building2, Key, ShieldAlert, UserRound, Users } from "lucide-react"
+import { Building2, Key, UserRound, Users } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 
@@ -11,7 +11,6 @@ const navItems = [
   { label: "Organization", to: "/settings/organization", icon: Building2 },
   { label: "Members", to: "/settings/members", icon: Users },
   { label: "API Keys", to: "/settings/api-keys", icon: Key },
-  { label: "Issues", to: "/settings/issues", icon: ShieldAlert },
   { label: "Account", to: "/settings/account", icon: UserRound },
 ] as const
 
