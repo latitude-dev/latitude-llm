@@ -1,9 +1,15 @@
-import { Badge, Container, Icon, Text } from "@repo/ui"
+import { Badge, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import { ArchiveIcon } from "lucide-react"
+import { createFileRoute, Link, notFound } from "@tanstack/react-router"
+import { ArchiveIcon, ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
-import { OrganizationRow } from "../-components/rows/index.ts"
+import {
+  DashboardHero,
+  DashboardSection,
+  DashboardSplit,
+  FactRow,
+  PropertiesStrip,
+} from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
@@ -12,11 +18,11 @@ export const Route = createFileRoute("/backoffice/projects/$projectId")({
       const project = await adminGetProject({ data: { projectId: params.projectId } })
       return { project }
     } catch (error) {
-      // Same `_tag`-discriminating error handling as `users/$userId.tsx`
-      // and the route-level `guardBackofficeRoute`. NotFound (= "project
-      // doesn't exist" or "caller isn't an admin") collapses to the
-      // standard 404; everything else (DB outage, connectivity,
-      // serialization bug) bubbles to the router error boundary.
+      // Same `_tag`-discriminating error handling as the other detail
+      // pages: NotFound (= "project doesn't exist" or "caller isn't an
+      // admin") collapses to the standard 404; everything else (DB
+      // outage, connectivity, serialization bug) bubbles to the router
+      // error boundary so ops can see it.
       const tag = (error as { _tag?: string } | null | undefined)?._tag
       if (tag === "NotFoundError") {
         throw notFound()
@@ -32,9 +38,10 @@ function BackofficeProjectDetailPage() {
   const [emoji, nameWithoutEmoji] = extractLeadingEmoji(project.name)
   const displayName = nameWithoutEmoji || project.name
 
-  // Record the visit so this project shows up in the recently-viewed
-  // strip on the search page and as a "viewed Xh ago" indicator on
-  // result rows. Cached labels refresh every visit.
+  // Record the visit so this project surfaces in the recently-viewed
+  // strip + per-row "viewed Xh ago" indicator on subsequent searches.
+  // Cached labels (`primary` / `secondary`) refresh every visit so
+  // chip captions stay in sync if the project is renamed.
   useTrackRecentBackofficeView({
     kind: "project",
     id: project.id,
@@ -43,95 +50,145 @@ function BackofficeProjectDetailPage() {
   })
 
   return (
-    <Container className="pt-6 pb-10 flex flex-col gap-6">
-      <header className="flex items-start gap-4">
-        <ProjectHeaderIcon emoji={emoji} name={displayName} />
-        <div className="flex flex-col min-w-0 flex-1 gap-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Text.H3 weight="semibold" ellipsis noWrap>
-              {displayName}
-            </Text.H3>
-            {project.deletedAt && (
-              <Badge variant="muted">
-                <Icon icon={ArchiveIcon} size="xs" /> deleted
-              </Badge>
-            )}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pt-8 pb-12">
+      <DashboardHero
+        leading={<ProjectHeroIcon emoji={emoji} name={displayName} />}
+        title={displayName}
+        badges={
+          project.deletedAt ? (
+            <Badge variant="muted">
+              <Icon icon={ArchiveIcon} size="xs" /> deleted
+            </Badge>
+          ) : null
+        }
+        meta={
+          <>
+            <span>/{project.slug}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              in{" "}
+              <Link
+                to="/backoffice/organizations/$organizationId"
+                params={{ organizationId: project.organization.id }}
+                className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+              >
+                {project.organization.name}
+              </Link>
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              last edited <span className="font-medium text-foreground">{relativeTime(project.lastEditedAt)}</span>
+            </span>
+          </>
+        }
+      />
+
+      <DashboardSplit
+        primary={
+          <DashboardSection title="Activity">
+            <FactRow label="Created" value={relativeTime(project.createdAt)} />
+            <FactRow
+              label="First trace"
+              value={
+                project.firstTraceAt ? (
+                  relativeTime(project.firstTraceAt)
+                ) : (
+                  <Text.H6 color="foregroundMuted">(no traces yet)</Text.H6>
+                )
+              }
+            />
+            <FactRow label="Last edited" value={relativeTime(project.lastEditedAt)} />
+            <FactRow label="Updated" value={relativeTime(project.updatedAt)} />
+            {project.deletedAt && <FactRow label="Deleted" value={relativeTime(project.deletedAt)} />}
+          </DashboardSection>
+        }
+        secondary={
+          <DashboardSection title="Settings">
+            <FactRow
+              label="Monitoring"
+              value={
+                project.settings?.keepMonitoring === true ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon icon={CheckIcon} size="xs" />
+                    <Text.H6>enabled</Text.H6>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon icon={MinusIcon} size="xs" color="foregroundMuted" />
+                    <Text.H6 color="foregroundMuted">disabled</Text.H6>
+                  </span>
+                )
+              }
+            />
+          </DashboardSection>
+        }
+      />
+
+      <DashboardSection
+        title="Organization"
+        aside={
+          <Link
+            to="/backoffice/organizations/$organizationId"
+            params={{ organizationId: project.organization.id }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            View
+            <Icon icon={ArrowRightIcon} size="xs" />
+          </Link>
+        }
+      >
+        <Link
+          to="/backoffice/organizations/$organizationId"
+          params={{ organizationId: project.organization.id }}
+          className="-m-1 flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted/60"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Text.H6 weight="semibold" color="foregroundMuted">
+              {project.organization.name.trim()[0]?.toUpperCase() ?? "?"}
+            </Text.H6>
           </div>
-          <Text.H5 color="foregroundMuted" ellipsis noWrap>
-            /{project.slug} · {project.id}
-          </Text.H5>
-        </div>
-      </header>
+          <div className="flex min-w-0 flex-col">
+            <Text.H5 weight="medium" ellipsis noWrap>
+              {project.organization.name}
+            </Text.H5>
+            <Text.H6 color="foregroundMuted" ellipsis noWrap>
+              /{project.organization.slug}
+            </Text.H6>
+          </div>
+        </Link>
+      </DashboardSection>
 
-      <section className="flex flex-col gap-2">
-        <Text.H5 weight="semibold">Project</Text.H5>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-md border border-border bg-background px-4 py-3">
-          <DetailRow label="Project id" value={project.id} />
-          <DetailRow label="Created" value={relativeTime(project.createdAt)} />
-          <DetailRow label="Slug" value={project.slug} />
-          <DetailRow label="Last edited" value={relativeTime(project.lastEditedAt)} />
-          <DetailRow
-            label="First trace"
-            value={project.firstTraceAt ? relativeTime(project.firstTraceAt) : "(no traces yet)"}
-          />
-          <DetailRow label="Updated" value={relativeTime(project.updatedAt)} />
-          <DetailRow
-            label="Settings · keepMonitoring"
-            value={project.settings?.keepMonitoring === true ? "enabled" : "disabled"}
-          />
-          {project.deletedAt && <DetailRow label="Deleted" value={relativeTime(project.deletedAt)} />}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <Text.H5 weight="semibold">Organization</Text.H5>
-        <OrganizationRow
-          organization={{
-            id: project.organization.id,
-            name: project.organization.name,
-            slug: project.organization.slug,
-          }}
-          // The default trailing slot is created-at; here we have no
-          // org timestamps loaded (we only fetched the join cells we
-          // need for navigation), so let the row render without
-          // trailing metadata. Keeps the visual identical to a search
-          // result row pointing at the same org.
-          trailing={null}
-        />
-      </section>
-    </Container>
+      <PropertiesStrip
+        entries={[
+          { label: "Project id", value: project.id },
+          { label: "Org id", value: project.organization.id },
+          { label: "Created", value: new Date(project.createdAt).toISOString() },
+          { label: "Updated", value: new Date(project.updatedAt).toISOString() },
+        ]}
+      />
+    </div>
   )
 }
 
 /**
- * Header icon block for a project. Mirrors the row component's
- * `ProjectIcon` but at a larger header scale — emoji-in-card if the
- * project name leads with one, fallback to a plain coloured square
- * with the first letter.
+ * Header icon for a project. Emoji-in-card if the project name leads
+ * with one (mirrors the search-results row shape but at hero scale),
+ * otherwise a coloured letter block.
  */
-function ProjectHeaderIcon({ emoji, name }: { emoji: string | null; name: string }) {
+function ProjectHeroIcon({ emoji, name }: { emoji: string | null; name: string }) {
   if (emoji) {
     return (
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-2xl leading-none">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-3xl leading-none">
         {emoji}
       </div>
     )
   }
   const initial = name.trim()[0]?.toUpperCase() ?? "?"
   return (
-    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-      <Text.H3 weight="semibold" color="foregroundMuted">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border bg-muted">
+      <Text.H2 weight="semibold" color="foregroundMuted">
         {initial}
-      </Text.H3>
+      </Text.H2>
     </div>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <Text.H6 color="foregroundMuted">{label}</Text.H6>
-      <Text.H6>{value}</Text.H6>
-    </>
   )
 }
