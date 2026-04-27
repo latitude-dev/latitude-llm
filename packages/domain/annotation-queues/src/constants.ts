@@ -16,6 +16,12 @@ export const LIVE_QUEUE_DEFAULT_SAMPLING = 10
 export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 
 /**
+ * Default sampling percentage applied to a per-project flagger row at
+ * provisioning time. Only consulted by LLM-capable strategies on `no-match`.
+ */
+export const FLAGGER_DEFAULT_SAMPLING = 10
+
+/**
  * Default rate limit for enqueueing the LLM flagger workflow when a strategy
  * reports `ambiguous`. The key is `{organizationId, queueSlug}` — a hot trace
  * topic (e.g. a jailbreak pattern firing for every request) can otherwise

@@ -2,6 +2,7 @@ export {
   AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT,
   ANNOTATION_QUEUE_NAME_MAX_LENGTH,
   ANNOTATION_QUEUE_SLUG_MAX_LENGTH,
+  FLAGGER_DEFAULT_SAMPLING,
   LIVE_QUEUE_DEFAULT_SAMPLING,
   MAX_TRACES_PER_QUEUE_IMPORT,
   QUEUE_REVIEW_HOTKEYS,
@@ -15,6 +16,7 @@ export {
   SYSTEM_QUEUE_FLAGGER_MODEL,
   type SystemQueueDefinition,
 } from "./constants.ts"
+export { type Flagger, FLAGGER_DEFAULT_ENABLED, flaggerSchema } from "./entities/flagger.ts"
 export {
   type AnnotationQueue,
   type AnnotationQueueSettings,
@@ -112,6 +114,13 @@ export {
   type ListSystemQueuesInput,
   type SaveQueueInput,
 } from "./ports/annotation-queue-repository.ts"
+export {
+  type FindFlaggerByProjectAndSlugInput,
+  FlaggerRepository,
+  type FlaggerRepositoryShape,
+  type ListFlaggersByProjectInput,
+  type ProvisionFlaggersForProjectInput,
+} from "./ports/flagger-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
   buildLiveTraceEndQueueSelectionKey,
@@ -176,6 +185,11 @@ export {
   processDeterministicFlaggersUseCase,
   type StrategyDecision,
 } from "./use-cases/process-deterministic-flaggers.ts"
+export {
+  type ProvisionFlaggersError,
+  type ProvisionFlaggersInput,
+  provisionFlaggersUseCase,
+} from "./use-cases/provision-flaggers.ts"
 export {
   type ProvisionSystemQueuesError,
   type ProvisionSystemQueuesInput,

@@ -48,6 +48,7 @@ export type EvaluationId = Id<"EvaluationId">
 export type SimulationId = Id<"SimulationId">
 export type AnnotationQueueId = Id<"AnnotationQueueId">
 export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
+export type FlaggerId = Id<"FlaggerId">
 
 // Telemetry-related IDs
 export type TraceId = Id<"TraceId">
@@ -69,6 +70,7 @@ export const EvaluationId = (value: string): EvaluationId => value as Evaluation
 export const SimulationId = (value: string): SimulationId => value as SimulationId
 export const AnnotationQueueId = (value: string): AnnotationQueueId => value as AnnotationQueueId
 export const AnnotationQueueItemId = (value: string): AnnotationQueueItemId => value as AnnotationQueueItemId
+export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
@@ -90,6 +92,7 @@ export const issueIdSchema = cuidSchema.transform(IssueId)
 export const evaluationIdSchema = cuidSchema.transform(EvaluationId)
 export const annotationQueueIdSchema = cuidSchema.transform(AnnotationQueueId)
 export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueItemId)
+export const flaggerIdSchema = cuidSchema.transform(FlaggerId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
 
 // The telemetry-related IDs have custom length constraints

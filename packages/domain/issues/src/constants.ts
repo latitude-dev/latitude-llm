@@ -49,6 +49,7 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
   annotation: 1.0,
   evaluation: 0.8,
   custom: 0.8,
+  flagger: 1.0,
 } as const
 
 // ---------------------------------------------------------------------------

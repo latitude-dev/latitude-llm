@@ -14,7 +14,7 @@ export const scores = latitudeSchema.table(
     traceId: varchar("trace_id", { length: 32 }), // optional trace id inherited from instrumentation
     spanId: varchar("span_id", { length: 16 }), // optional span id inherited from instrumentation
 
-    source: varchar("source", { length: 32 }).$type<ScoreSource>().notNull(), // "evaluation" | "annotation" | "custom"
+    source: varchar("source", { length: 32 }).$type<ScoreSource>().notNull(), // "evaluation" | "annotation" | "custom" | "flagger"
     sourceId: varchar("source_id", { length: 128 }).notNull(), // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link

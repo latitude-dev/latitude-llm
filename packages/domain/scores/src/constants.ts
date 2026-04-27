@@ -1,4 +1,4 @@
-export const SCORE_SOURCES = ["evaluation", "annotation", "custom"] as const
+export const SCORE_SOURCES = ["evaluation", "annotation", "custom", "flagger"] as const
 
 export const ANNOTATION_SCORE_PARTIAL_SOURCE_IDS = ["UI", "API", "SYSTEM"] as const
 
