@@ -12,6 +12,8 @@ import {
   SEED_EVALUATION_ID,
   SEED_EXTRA_ISSUE_IDS,
   SEED_EXTRA_ISSUE_UUIDS,
+  SEED_FLAGGER_ISSUE_ID,
+  SEED_FLAGGER_ISSUE_UUID,
   SEED_GENERATE_ISSUE_ID,
   SEED_GENERATE_ISSUE_UUID,
   SEED_INSTALLATION_ISSUE_ID,
@@ -154,6 +156,22 @@ const baseIssueFixtures: SeedIssueFixture[] = [
     updatedDaysAgo: 2,
     escalatedDaysAgo: null,
     resolvedDaysAgo: 7,
+    ignoredDaysAgo: null,
+  },
+  {
+    id: SEED_FLAGGER_ISSUE_ID,
+    uuid: SEED_FLAGGER_ISSUE_UUID,
+    name: "Assistant returns empty responses on tool failures",
+    description:
+      "After an internal tool call fails, the assistant frequently returns an empty or placeholder response instead " +
+      "of acknowledging the error or asking the customer to retry. The pattern is detected automatically on every " +
+      "trace, so this issue is monitored without a separate evaluation.",
+    source: "flagger",
+    createdDaysAgo: 18,
+    clusteredDaysAgo: 0,
+    updatedDaysAgo: 0,
+    escalatedDaysAgo: 0,
+    resolvedDaysAgo: null,
     ignoredDaysAgo: null,
   },
 ]

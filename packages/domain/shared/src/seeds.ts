@@ -100,6 +100,10 @@ export const SEED_ACCESS_ISSUE_UUID = "f6a7b8c9-d1e2-4f3a-9b4c-5d6e7f8091a2"
 export const SEED_INSTALLATION_ISSUE_ID = IssueId("i1n2s3t4a5l6l7c8e9r0t1f2")
 export const SEED_INSTALLATION_ISSUE_UUID = "0a7b8c9d-e1f2-4a3b-8c4d-5e6f7091a2b3"
 
+/** Issue 8: active flagger-sourced issue (auto-monitored, no separate evaluation). */
+export const SEED_FLAGGER_ISSUE_ID = IssueId("f1l2a3g4g5e6r7e8m9p0t1y2")
+export const SEED_FLAGGER_ISSUE_UUID = "1b8c9d0e-f1a2-4b3c-9d4e-5f6071a2b3c4"
+
 function fixedSeedEntityId(prefix: string, index: number): string {
   return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
 }
