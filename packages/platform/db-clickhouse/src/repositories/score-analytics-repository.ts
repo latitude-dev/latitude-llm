@@ -265,7 +265,7 @@ const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly Issu
 
 const toIssueTagsAggregate = (row: IssueTagsRow): IssueTagsAggregate => ({
   issueId: toIssueId(normalizeCHString(row.issue_id)),
-  tags: row.tags.map(normalizeCHString),
+  tags: row.tags.map(normalizeCHString).filter((tag) => tag.length > 0),
 })
 
 const toIssueTraceSummary = (row: IssueTraceSummaryRow): IssueTraceSummary => ({
@@ -597,24 +597,27 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT
-                        issue_traces.issue_id AS issue_id,
-                        arrayDistinct(arrayFlatten(groupArray(trace_tags.tags))) AS tags
-                      FROM (
+                query: `WITH issue_traces AS (
                         SELECT issue_id, trace_id
                         FROM scores
                         WHERE ${scopeClause(options)}
                           AND issue_id IN ({issueIds:Array(String)})
                           AND trace_id != ''
                         GROUP BY issue_id, trace_id
-                      ) AS issue_traces
-                      INNER JOIN (
+                      ),
+                      trace_tags AS (
                         SELECT trace_id, groupUniqArrayArray(tags) AS tags
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          AND trace_id IN (SELECT trace_id FROM issue_traces)
                         GROUP BY trace_id
-                      ) AS trace_tags USING (trace_id)
+                      )
+                      SELECT
+                        issue_traces.issue_id AS issue_id,
+                        groupUniqArrayArray(trace_tags.tags) AS tags
+                      FROM issue_traces
+                      INNER JOIN trace_tags USING (trace_id)
                       GROUP BY issue_traces.issue_id`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
