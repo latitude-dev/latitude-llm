@@ -8,7 +8,6 @@ import { resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
-import { EnsureOrganizationOnboarding } from "./_authenticated/-components/ensure-organization-onboarding.tsx"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -184,7 +183,6 @@ function AuthenticatedLayout() {
         organizationId={organizationId}
         organizationName={org?.name}
       />
-      <EnsureOrganizationOnboarding organizationId={organizationId} />
       {isProjectOnboarding ? null : <NavHeader />}
       <main
         className={

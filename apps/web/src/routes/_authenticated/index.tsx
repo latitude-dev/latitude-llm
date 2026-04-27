@@ -22,7 +22,7 @@ import {
 import { extractLeadingEmoji, formatCount } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router"
 import { DatabaseIcon, PlusIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
@@ -32,13 +32,23 @@ import {
   useProjectsCollection,
   useProjectsStats,
 } from "../../domains/projects/projects.collection.ts"
-import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
+import { createProject, listProjects, type ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../lib/form-server-action.ts"
 import { CreateProjectModal } from "./-components/create-project-modal.tsx"
 import { useAuthenticatedOrganizationId } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
+  beforeLoad: async () => {
+    const projects = await listProjects()
+    if (projects.length > 0) return
+
+    const created = await createProject({ data: { name: "My project" } })
+    throw redirect({
+      to: "/projects/$projectSlug/onboarding",
+      params: { projectSlug: created.slug },
+    })
+  },
   component: DashboardPage,
 })
 
@@ -59,8 +69,17 @@ function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string
   )
 }
 
-function DeleteProjectModal({ project, onClose }: { project: ProjectRecord; onClose: () => void }) {
+function DeleteProjectModal({
+  project,
+  onClose,
+  reloadAfterDelete,
+}: {
+  project: ProjectRecord
+  onClose: () => void
+  reloadAfterDelete?: boolean
+}) {
   const { toast } = useToast()
+  const router = useRouter()
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -71,6 +90,11 @@ function DeleteProjectModal({ project, onClose }: { project: ProjectRecord; onCl
         title: "Success",
         description: `Project "${project.name}" has been deleted.`,
       })
+      if (reloadAfterDelete) {
+        // Force a new route load so server-side beforeLoad bootstrap runs immediately.
+        await router.navigate({ to: "/", replace: true })
+        return
+      }
       onClose()
     } catch (error) {
       toast({
@@ -210,7 +234,13 @@ function ProjectsTable({
       </Table>
 
       {projectToRename && <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />}
-      {projectToDelete && <DeleteProjectModal project={projectToDelete} onClose={() => setProjectToDelete(null)} />}
+      {projectToDelete && (
+        <DeleteProjectModal
+          project={projectToDelete}
+          onClose={() => setProjectToDelete(null)}
+          reloadAfterDelete={projects.length === 1}
+        />
+      )}
     </>
   )
 }
