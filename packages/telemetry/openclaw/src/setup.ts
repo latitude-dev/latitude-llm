@@ -62,7 +62,13 @@ interface InstallFlags {
   apiKey?: string | undefined
   project?: string | undefined
   environment?: EnvironmentConfig | undefined
-  allowConversationAccess?: boolean
+  /**
+   * Tristate: `true` = capture (the user passed `--allow-conversation`),
+   * `false` = scrub (the user passed `--no-content`), `undefined` = preserve
+   * existing or fall through to the first-install default. Keeping this
+   * tristate is what makes re-installs idempotent for hand-edited values.
+   */
+  allowConversationAccess?: boolean | undefined
   noPrompt?: boolean
   yes?: boolean
 }
@@ -92,11 +98,11 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
     if (environment) throw new Error("--staging and --dev are mutually exclusive")
     environment = DEV_ENV
   }
-  // Default: capture conversation content. Users who don't want it can pass
-  // --no-content (or set it to false later in openclaw.json).
-  let allowConversationAccess = true
+  // Tristate: leave undefined unless the user explicitly asked one way or
+  // the other. Re-install then preserves whatever's in openclaw.json.
+  let allowConversationAccess: boolean | undefined
   if (flags["no-content"] === true || flags["no-conversation"] === true) allowConversationAccess = false
-  if (flags["allow-conversation"] === false) allowConversationAccess = false
+  if (flags["allow-conversation"] === true) allowConversationAccess = true
 
   return {
     apiKey: typeof flags["api-key"] === "string" ? flags["api-key"] : undefined,
@@ -147,7 +153,7 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
     apiKey,
     project,
     envConfig,
-    allowConversationAccess: flags.allowConversationAccess ?? true,
+    allowConversationAccess: flags.allowConversationAccess,
   })
 
   note(
@@ -173,7 +179,7 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
     apiKey,
     project,
     envConfig,
-    allowConversationAccess: flags.allowConversationAccess ?? true,
+    allowConversationAccess: flags.allowConversationAccess,
   })
   process.stdout.write(`Installed Latitude plugin in ${SETTINGS_PATH}\n`)
   process.stdout.write(`Plugin files at ${PLUGIN_INSTALL_DIR}\n`)
@@ -211,7 +217,8 @@ interface ApplyParams {
   apiKey: string
   project: string
   envConfig: EnvironmentConfig
-  allowConversationAccess: boolean
+  /** Tristate — see `InstallFlags.allowConversationAccess`. */
+  allowConversationAccess: boolean | undefined
 }
 
 async function applyChanges({ apiKey, project, envConfig, allowConversationAccess }: ApplyParams): Promise<void> {
@@ -234,12 +241,22 @@ async function applyChanges({ apiKey, project, envConfig, allowConversationAcces
   // schema rejects. Without this, re-installing on top of a 0.0.1 install
   // would leave the gateway quarantining the file as `clobbered`.
   migrateLegacyEntries(settings)
+
+  // Decide allowConversationAccess for this install:
+  //   - explicit flag (true|false) wins
+  //   - else preserve whatever's already in openclaw.json
+  //   - else first-install default is `true` (matches the README's promise)
+  const existingConfig = (settings.plugins?.entries?.[PLUGIN_ID]?.config ?? {}) as Partial<LatitudePluginConfig>
+  const finalAllowConversationAccess = allowConversationAccess ?? existingConfig.allowConversationAccess ?? true
+
   setPluginEntry(settings, {
     apiKey,
     project,
     baseUrl: envConfig.name === "production" ? undefined : envConfig.ingest,
-    allowConversationAccess,
-    debug: false,
+    allowConversationAccess: finalAllowConversationAccess,
+    // `debug` is intentionally not passed — `setPluginEntry` preserves the
+    // user's hand-edited value. Fresh installs leave the key absent (the
+    // runtime default is `false`).
   })
   writeSettings(settings)
   settingsSpinner.stop(`Updated ${SETTINGS_PATH}`)

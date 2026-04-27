@@ -68,12 +68,43 @@ export function backupSettings(): void {
   if (existsSync(SETTINGS_PATH)) copyFileSync(SETTINGS_PATH, SETTINGS_BACKUP_PATH)
 }
 
+interface SetPluginEntryPatch {
+  /** New API key. Always overwrites — comes from the install prompt. */
+  apiKey: string
+  /** New project slug. Always overwrites — comes from the install prompt. */
+  project: string
+  /**
+   * New `baseUrl`. `undefined` clears any existing override (used when
+   * installing back to production). Anything else overwrites.
+   */
+  baseUrl: string | undefined
+  /**
+   * `true`/`false` overwrites; `undefined` preserves the existing value (or
+   * leaves the key absent if there is none).
+   */
+  allowConversationAccess?: boolean | undefined
+  /** Same semantics as `allowConversationAccess`. */
+  debug?: boolean | undefined
+  /**
+   * `true`/`false` overwrites; `undefined` preserves the existing value, or
+   * defaults to `true` for a fresh install. This keeps a paused plugin
+   * (`enabled: false` in openclaw.json) paused across re-installs.
+   */
+  enabled?: boolean | undefined
+}
+
 /**
  * Set the `plugins.entries[id]` block for our plugin. Writes credentials and
  * options into the `.config` bucket — never under `hooks` (strict zod) and
  * never as top-level `env` keys (root schema rejects them).
+ *
+ * Re-install idempotency: only `apiKey` / `project` / `baseUrl` always
+ * overwrite (these come from the install prompts). `enabled`, `debug`, and
+ * `allowConversationAccess` are preserved when not provided in the patch,
+ * so a user who hand-edited `enabled: false` or `debug: true` doesn't lose
+ * their choice on a re-install.
  */
-export function setPluginEntry(settings: OpenClawSettings, config: LatitudePluginConfig): void {
+export function setPluginEntry(settings: OpenClawSettings, patch: SetPluginEntryPatch): void {
   const plugins = settings.plugins ?? {}
   const entries = plugins.entries ?? {}
   const existing = entries[PLUGIN_ID] ?? {}
@@ -81,24 +112,28 @@ export function setPluginEntry(settings: OpenClawSettings, config: LatitudePlugi
 
   const nextConfig: Record<string, unknown> = {
     ...existingConfig,
-    apiKey: config.apiKey,
-    project: config.project,
+    apiKey: patch.apiKey,
+    project: patch.project,
   }
-  if (config.baseUrl !== undefined) {
-    nextConfig.baseUrl = config.baseUrl
+  if (patch.baseUrl !== undefined) {
+    nextConfig.baseUrl = patch.baseUrl
   } else {
     delete nextConfig.baseUrl
   }
-  if (config.allowConversationAccess !== undefined) {
-    nextConfig.allowConversationAccess = config.allowConversationAccess
+  if (patch.allowConversationAccess !== undefined) {
+    nextConfig.allowConversationAccess = patch.allowConversationAccess
   }
-  if (config.debug !== undefined) {
-    nextConfig.debug = config.debug
+  if (patch.debug !== undefined) {
+    nextConfig.debug = patch.debug
   }
+
+  // Preserve user-edited `enabled: false` across re-installs. Fresh install
+  // (no existing entry, no explicit patch) defaults to true.
+  const nextEnabled = patch.enabled ?? existing.enabled ?? true
 
   entries[PLUGIN_ID] = {
     ...existing,
-    enabled: true,
+    enabled: nextEnabled,
     config: nextConfig,
   }
   plugins.entries = entries
@@ -143,11 +178,12 @@ export function migrateLegacyEntries(settings: OpenClawSettings): { changed: boo
     }
   }
 
-  // Strip `LATITUDE_*` keys our 0.0.1 installer mistakenly wrote at root.
-  // OpenClaw's root schema is strict; root-level `env` accepts only `{shellEnv,
-  // vars}`, not arbitrary keys. The same fix applies whether the keys are at
-  // settings.env.LATITUDE_* or as top-level settings.LATITUDE_* — we clean
-  // both since older installers may have produced either layout.
+  // Strip `LATITUDE_*` keys our 0.0.1 installer mistakenly wrote under
+  // `settings.env`. OpenClaw's root schema is strict; the `env` block accepts
+  // only `{shellEnv, vars}`, so any `LATITUDE_*` key sitting directly under
+  // `env` causes the gateway to quarantine the file. (0.0.1 only ever wrote
+  // to `settings.env.LATITUDE_*`, never to top-level `settings.LATITUDE_*`,
+  // so we don't bother sweeping the root.)
   const env = settings.env
   if (env && typeof env === "object" && !Array.isArray(env)) {
     const envObj = env as Record<string, unknown>

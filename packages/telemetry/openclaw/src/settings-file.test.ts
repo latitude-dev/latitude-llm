@@ -44,7 +44,7 @@ describe("setPluginEntry", () => {
         },
       },
     }
-    setPluginEntry(settings, { apiKey: "new-k", project: "new-p" })
+    setPluginEntry(settings, { apiKey: "new-k", project: "new-p", baseUrl: undefined })
     const config = settings.plugins.entries[PLUGIN_ID]?.config as Record<string, unknown>
     expect(config.baseUrl).toBeUndefined()
     expect(config.apiKey).toBe("new-k")
@@ -62,7 +62,7 @@ describe("setPluginEntry", () => {
         },
       },
     }
-    setPluginEntry(settings, { apiKey: "k", project: "p" })
+    setPluginEntry(settings, { apiKey: "k", project: "p", baseUrl: undefined })
     const entry = settings.plugins.entries[PLUGIN_ID] as {
       subagent?: { allowModelOverride?: boolean }
       config?: Record<string, unknown>
@@ -70,6 +70,80 @@ describe("setPluginEntry", () => {
     expect(entry.subagent?.allowModelOverride).toBe(true)
     expect(entry.config?.customField).toBe("keep me")
     expect(entry.config?.apiKey).toBe("k")
+  })
+
+  it("preserves a hand-edited `enabled: false` across re-installs", () => {
+    const settings: OpenClawSettings = {
+      plugins: {
+        entries: {
+          [PLUGIN_ID]: {
+            enabled: false,
+            config: { apiKey: "old", project: "old" },
+          },
+        },
+      },
+    }
+    setPluginEntry(settings, { apiKey: "new", project: "new", baseUrl: undefined })
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
+    // Paused plugin stays paused — operator's intent wins.
+    expect(entry?.enabled).toBe(false)
+    expect((entry?.config as Record<string, unknown>)?.apiKey).toBe("new")
+  })
+
+  it("defaults to enabled=true for a fresh install (no existing entry)", () => {
+    const settings: OpenClawSettings = {}
+    setPluginEntry(settings, { apiKey: "k", project: "p", baseUrl: undefined })
+    expect(settings.plugins?.entries?.[PLUGIN_ID]?.enabled).toBe(true)
+  })
+
+  it("explicitly setting enabled overrides existing", () => {
+    const settings: OpenClawSettings = {
+      plugins: { entries: { [PLUGIN_ID]: { enabled: false } } },
+    }
+    setPluginEntry(settings, { apiKey: "k", project: "p", baseUrl: undefined, enabled: true })
+    expect(settings.plugins?.entries?.[PLUGIN_ID]?.enabled).toBe(true)
+  })
+
+  it("preserves existing debug when not overridden", () => {
+    const settings: OpenClawSettings = {
+      plugins: {
+        entries: { [PLUGIN_ID]: { config: { apiKey: "x", project: "y", debug: true } } },
+      },
+    }
+    setPluginEntry(settings, { apiKey: "x", project: "y", baseUrl: undefined })
+    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config as Record<string, unknown>
+    expect(config.debug).toBe(true)
+  })
+
+  it("preserves existing allowConversationAccess when not overridden", () => {
+    const settings: OpenClawSettings = {
+      plugins: {
+        entries: {
+          [PLUGIN_ID]: { config: { apiKey: "x", project: "y", allowConversationAccess: false } },
+        },
+      },
+    }
+    setPluginEntry(settings, { apiKey: "x", project: "y", baseUrl: undefined })
+    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config as Record<string, unknown>
+    expect(config.allowConversationAccess).toBe(false)
+  })
+
+  it("explicit allowConversationAccess in patch overrides existing", () => {
+    const settings: OpenClawSettings = {
+      plugins: {
+        entries: {
+          [PLUGIN_ID]: { config: { apiKey: "x", project: "y", allowConversationAccess: false } },
+        },
+      },
+    }
+    setPluginEntry(settings, {
+      apiKey: "x",
+      project: "y",
+      baseUrl: undefined,
+      allowConversationAccess: true,
+    })
+    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config as Record<string, unknown>
+    expect(config.allowConversationAccess).toBe(true)
   })
 })
 
