@@ -248,3 +248,77 @@ export const adminChangeUserEmail = createServerFn({ method: "POST" })
 
     return { ok: true, fromEmail, toEmail }
   })
+
+/**
+ * Exported for input-schema tests.
+ */
+export const adminRevokeUserSessionsInputSchema = z.object({
+  userId: z.string().min(1).max(256),
+})
+
+/**
+ * Sign a user out of every active session ("Revoke all sessions"
+ * row in the user-detail Account actions section).
+ *
+ * Flow:
+ * 1. `adminMiddleware` injects `context.adminUserId`.
+ * 2. Best-effort count active sessions via `auth.api.listUserSessions`
+ *    so the audit event can report how many sessions were affected.
+ *    On failure we fall back to `0` and still emit the event — the
+ *    primary audit value is "the admin took this action", not the
+ *    exact count.
+ * 3. Write `AdminUserSessionsRevoked` to the outbox before the
+ *    revocation, matching the discipline of `impersonateUser` /
+ *    `adminSetUserRole`.
+ * 4. Call `auth.api.revokeUserSessions`. Better Auth's admin
+ *    plugin invokes `internalAdapter.deleteSessions(userId)` which
+ *    drops every session row for that user.
+ *
+ * Note: an admin revoking their own sessions is allowed; the next
+ * request after the cookie cache flushes will redirect them to
+ * /login.
+ */
+export const adminRevokeUserSessions = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminRevokeUserSessionsInputSchema)
+  .handler(async ({ data, context }): Promise<{ ok: true; sessionCount: number }> => {
+    const adminUserId = context.adminUserId
+    const headers = getRequestHeaders()
+    const auth = getBetterAuth()
+
+    let sessionCount = 0
+    try {
+      const result = await auth.api.listUserSessions({
+        body: { userId: data.userId },
+        headers,
+      })
+      sessionCount = result.sessions.length
+    } catch {
+      // Swallow — the audit event still fires with sessionCount: 0.
+      // The primary signal of this row is "admin did the revoke",
+      // not the count.
+    }
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter
+        .write({
+          id: generateId(),
+          eventName: "AdminUserSessionsRevoked",
+          aggregateType: "user",
+          aggregateId: data.userId,
+          organizationId: "system",
+          payload: {
+            adminUserId,
+            targetUserId: data.userId,
+            sessionCount,
+          },
+          occurredAt: new Date(),
+        })
+        .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
+    )
+
+    await auth.api.revokeUserSessions({ body: { userId: data.userId }, headers })
+
+    return { ok: true, sessionCount }
+  })

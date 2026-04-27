@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   adminChangeUserEmailInputSchema,
   adminGetUserInputSchema,
+  adminRevokeUserSessionsInputSchema,
   adminSetUserRoleInputSchema,
 } from "./users.functions.ts"
 
@@ -87,5 +88,19 @@ describe("adminChangeUserEmailInputSchema", () => {
 
   it("rejects an empty userId", () => {
     expect(adminChangeUserEmailInputSchema.safeParse({ userId: "", newEmail: "user@example.com" }).success).toBe(false)
+  })
+})
+
+describe("adminRevokeUserSessionsInputSchema", () => {
+  it("accepts a valid userId", () => {
+    expect(adminRevokeUserSessionsInputSchema.safeParse({ userId: "user-123" }).success).toBe(true)
+  })
+
+  it("rejects an empty userId", () => {
+    expect(adminRevokeUserSessionsInputSchema.safeParse({ userId: "" }).success).toBe(false)
+  })
+
+  it("rejects a userId above the max length", () => {
+    expect(adminRevokeUserSessionsInputSchema.safeParse({ userId: "x".repeat(257) }).success).toBe(false)
   })
 })

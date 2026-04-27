@@ -177,4 +177,19 @@ export interface EventPayloads {
     readonly fromEmail: string
     readonly toEmail: string
   }
+  /**
+   * Emitted when a platform admin signs a user out of every active
+   * session ("Revoke all sessions" in the backoffice). `sessionCount`
+   * is captured at the moment of revocation as a best-effort hint —
+   * useful for audit queries like "did the admin actually log
+   * anybody out, or did the user have no active sessions anyway?"
+   * — and intentionally not used as a source of truth (Better Auth
+   * could roll up sessions between the listing call and the
+   * revocation).
+   */
+  AdminUserSessionsRevoked: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly sessionCount: number
+  }
 }
