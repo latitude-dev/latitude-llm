@@ -29,6 +29,7 @@ import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddToQueueModal } from "../annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
+import { SearchBlankSlate } from "./-components/search-blank-slate.tsx"
 import { SearchEmptyState } from "./-components/search-empty-state.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
@@ -195,6 +196,8 @@ function SearchPage() {
           </div>
         </Layout.ActionsRow>
       </Layout.Actions>
+
+      {!hasSearchQuery ? <SearchBlankSlate /> : null}
 
       {hasSearchQuery ? (
         <Layout.Actions className="pt-0">
