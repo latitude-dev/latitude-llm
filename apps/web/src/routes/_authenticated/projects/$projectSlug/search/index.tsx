@@ -1,9 +1,10 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Input, type SortDirection, Tooltip, toast } from "@repo/ui"
+import { Button, Icon, Popover, PopoverAnchor, PopoverContent, type SortDirection, toast, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, SearchIcon } from "lucide-react"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, LayersIcon } from "lucide-react"
 import { useRef, useState } from "react"
+import { getInValues, setFieldConditions } from "../../../../../components/filters-builder/utils.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -12,14 +13,12 @@ import { EMPTY_SELECTION, type SelectionState } from "../../../../../lib/hooks/u
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "../-components/project-traces-table.tsx"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "../-components/trace-detail-drawer.tsx"
 import {
   DEFAULT_TRACE_COLUMNS,
   DEFAULT_TRACE_SORTING,
   getBulkSelection,
   getSelectedCount,
-  getTimeFilterValue,
   parseFilters,
   parseTraceColumnIds,
   serializeFilters,
@@ -30,8 +29,10 @@ import { useRouteProject } from "../-route-data.ts"
 import { AddToQueueModal } from "../annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
 import { SearchBlankSlate } from "./-components/search-blank-slate.tsx"
-
-const SEARCH_QUERY_MAX_LENGTH = 500
+import { SearchEmptyState } from "./-components/search-empty-state.tsx"
+import { SearchFilterPanel } from "./-components/search-filter-panel.tsx"
+import { SearchFilterPills } from "./-components/search-filter-pills.tsx"
+import { SearchInput } from "./-components/search-input.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/search/")({
   component: SearchPage,
@@ -45,11 +46,10 @@ function SearchPage() {
   const [q, setQ] = useParamState("q", "")
   const hasSearchQuery = q.length > 0
 
-  // Results state — kept at the top level so the layout slots below
+  // Trace listing state — kept at the top level so the layout slots below
   // (`Layout.Actions`, `Layout.Aside`, …) remain DIRECT children of `<Layout>`.
   // `ListingLayout` discovers its panes via `Children.toArray`, which doesn't
   // see through function components.
-  const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
@@ -67,12 +67,11 @@ function SearchPage() {
   })
 
   const traceIdsRef = useRef<string[]>([])
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const filters = parseFilters(rawFilters || undefined)
   const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
   const hasActiveFilters = Object.keys(filters).length > 0
-  const timeFrom = getTimeFilterValue(filters, "gte")
-  const timeTo = getTimeFilterValue(filters, "lte")
   const sorting = { column: sortBy, direction: sortDirection } as const
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
@@ -81,7 +80,14 @@ function SearchPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount } = useTracesCount({
+  // Panel state — `draftFilters` is the in-progress edit while the panel is
+  // open, snapshotted from `filters` on open and committed back to the URL on
+  // close. Filter edits only hit the URL on close so the table doesn't refetch
+  // mid-edit.
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [draftFilters, setDraftFilters] = useState<FilterSet>(filters)
+
+  const { totalCount: totalTraceCount, isLoading: isTraceCountLoading } = useTracesCount({
     projectId: hasSearchQuery ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
     searchQuery: q,
@@ -100,13 +106,47 @@ function SearchPage() {
     setSortDirection(next.direction)
   }
 
-  const onFiltersChange = (next: FilterSet) => {
-    setFiltersOpen(true)
+  const commitFilters = (next: FilterSet) => {
     setRawFilters(serializeFilters(next) ?? "")
   }
 
-  const clearFilters = () => {
-    setRawFilters("")
+  const openPanel = () => {
+    if (panelOpen) return
+    setDraftFilters(filters)
+    setPanelOpen(true)
+  }
+
+  const applyAndClosePanel = () => {
+    if (!panelOpen) return
+    setPanelOpen(false)
+    commitFilters(draftFilters)
+  }
+
+  const focusSearchInput = () => {
+    searchInputRef.current?.focus()
+  }
+
+  const onSearchSubmit = (next: string) => {
+    setQ(next)
+    applyAndClosePanel()
+  }
+
+  const onTagAccepted = (tag: string) => {
+    setDraftFilters((prev) => {
+      const existing = getInValues(prev, "tags")
+      if (existing.includes(tag)) return prev
+      return setFieldConditions(prev, "tags", [{ op: "in", value: [...existing, tag] }])
+    })
+  }
+
+  const removePill = (field: string) => {
+    if (field === "metadata") {
+      const next = Object.fromEntries(Object.entries(filters).filter(([key]) => !key.startsWith("metadata.")))
+      commitFilters(next)
+      return
+    }
+    const { [field]: _removed, ...rest } = filters
+    commitFilters(rest)
   }
 
   const closeTraceDrawer = () => {
@@ -167,213 +207,224 @@ function SearchPage() {
   const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
 
   useHotkeys([
-    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev), options: { enabled: hasSearchQuery } },
+    {
+      hotkey: "/",
+      callback: () => focusSearchInput(),
+      options: { ignoreInputs: true },
+    },
+    {
+      hotkey: "Mod+K",
+      callback: () => focusSearchInput(),
+    },
     {
       hotkey: "Escape",
-      callback: closeTraceDrawer,
-      options: { enabled: !!activeTraceId, ignoreInputs: true },
+      callback: () => {
+        if (panelOpen) {
+          applyAndClosePanel()
+          return
+        }
+        closeTraceDrawer()
+      },
+      options: { enabled: panelOpen || !!activeTraceId, ignoreInputs: true },
     },
   ])
 
+  const activeTags = getInValues(draftFilters, "tags")
+
   return (
-    <Layout>
-      <Layout.Actions>
-        <Layout.ActionsRow className="justify-stretch">
-          <div className="relative flex w-full items-center gap-2">
-            {hasSearchQuery ? (
-              <Tooltip
-                asChild
-                trigger={
-                  <Button asChild variant="ghost" size="icon">
-                    <Link to="/projects/$projectSlug/search" params={{ projectSlug }} aria-label="Clear search">
-                      <Icon icon={ArrowLeftIcon} size="sm" />
-                    </Link>
-                  </Button>
-                }
-              >
-                Clear search
-              </Tooltip>
-            ) : null}
-            <SearchInput key={q} initialValue={q} onSubmit={setQ} />
-          </div>
-        </Layout.ActionsRow>
-      </Layout.Actions>
-
-      {!hasSearchQuery ? <SearchBlankSlate /> : null}
-
-      {hasSearchQuery ? (
-        <Layout.Actions className="pt-0">
-          <Layout.ActionsRow>
-            <Layout.ActionRowItem>
-              <TimeFilterDropdown
-                {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
-                {...(timeTo ? { startTimeTo: timeTo } : {})}
-                onChange={(from, to) => {
-                  const next = { ...filters }
-                  if (from || to) {
-                    const conditions = [
-                      ...(from ? [{ op: "gte" as const, value: from }] : []),
-                      ...(to ? [{ op: "lte" as const, value: to }] : []),
-                    ]
-                    next.startTime = conditions
-                  } else {
-                    delete next.startTime
-                  }
-                  setRawFilters(serializeFilters(next) ?? "")
-                }}
-              />
-              <ColumnsSelector
-                columns={TRACE_COLUMN_OPTIONS}
-                selectedColumnIds={visibleTraceColumnIds}
-                onChange={(nextColumnIds) =>
-                  setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
-                }
-              />
-              <Button
-                variant={filtersOpen ? "outline" : "ghost"}
-                size="sm"
-                onClick={() => setFiltersOpen(!filtersOpen)}
-              >
-                <Icon icon={FilterIcon} size="sm" />
-                Filters
-                {hasActiveFilters ? (
-                  <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
-                    {Object.keys(filters).length}
-                  </span>
-                ) : null}
-              </Button>
-              {hasActiveFilters ? (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear all
-                </Button>
-              ) : null}
-            </Layout.ActionRowItem>
-          </Layout.ActionsRow>
-        </Layout.Actions>
-      ) : null}
-
-      {hasSearchQuery && showBulkActions ? (
-        <div className="flex flex-row items-center gap-2 px-6">
-          <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
-            <Icon icon={DownloadIcon} size="sm" />
-            Export Traces ({selectedCount.toLocaleString()})
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-            <Icon icon={DatabaseIcon} size="sm" />
-            Add to Dataset ({selectedCount})
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
-            <Icon icon={LayersIcon} size="sm" />
-            Add to Annotation Queue ({selectedCount})
-          </Button>
-        </div>
-      ) : null}
-
-      {hasSearchQuery ? (
-        <TracesView
-          projectId={projectId}
-          filters={filters}
-          filtersOpen={filtersOpen}
-          activeTraceId={activeTraceId || undefined}
-          activeDrawerTab={traceDetailTab}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          selectionState={selectionState}
-          onSelectionChange={setSelectionState}
-          totalTraceCount={totalTraceCount}
-          onFiltersChange={onFiltersChange}
-          onFiltersClose={() => setFiltersOpen(false)}
-          onActiveTraceChange={onActiveTraceChange}
-          traceIdsRef={traceIdsRef}
-          visibleColumnIds={visibleTraceColumnIds}
-          searchQuery={q}
+    <>
+      {panelOpen ? (
+        <button
+          type="button"
+          aria-label="Close filter panel"
+          className="fixed inset-0 z-40 bg-background/50"
+          onClick={applyAndClosePanel}
         />
       ) : null}
 
-      {hasSearchQuery && activeTraceId ? (
-        <Layout.Aside>
-          <TraceDetailDrawer
-            key={activeTraceId}
-            traceId={activeTraceId}
+      <Layout>
+        <Layout.Actions>
+          <Popover
+            open={panelOpen}
+            modal={false}
+            onOpenChange={(open) => {
+              if (!open) applyAndClosePanel()
+            }}
+          >
+            <PopoverAnchor asChild>
+              <div className="flex flex-col gap-3">
+                <Layout.ActionsRow className="justify-stretch">
+                  <div className="relative flex w-full items-center gap-2">
+                    {hasSearchQuery ? (
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Button asChild variant="ghost" size="icon">
+                            <Link
+                              to="/projects/$projectSlug/search"
+                              params={{ projectSlug }}
+                              aria-label="Clear search"
+                            >
+                              <Icon icon={ArrowLeftIcon} size="sm" />
+                            </Link>
+                          </Button>
+                        }
+                      >
+                        Clear search
+                      </Tooltip>
+                    ) : null}
+                    <SearchInput
+                      key={q}
+                      initialValue={q}
+                      onSubmit={onSearchSubmit}
+                      onFocus={openPanel}
+                      inputRef={searchInputRef}
+                      projectId={projectId}
+                      excludeTags={activeTags}
+                      onTagAccepted={onTagAccepted}
+                    />
+                  </div>
+                </Layout.ActionsRow>
+
+                {hasActiveFilters && !panelOpen ? (
+                  <Layout.ActionsRow>
+                    <SearchFilterPills
+                      filters={filters}
+                      onRemove={removePill}
+                      onPillClick={() => focusSearchInput()}
+                      onClearAll={() => commitFilters({})}
+                    />
+                  </Layout.ActionsRow>
+                ) : null}
+              </div>
+            </PopoverAnchor>
+
+            <PopoverContent
+              align="start"
+              side="bottom"
+              sideOffset={4}
+              className="w-[var(--radix-popover-trigger-width)] min-w-[600px] max-w-[900px] p-0"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+            >
+              <SearchFilterPanel
+                projectId={projectId}
+                filters={draftFilters}
+                onFiltersChange={setDraftFilters}
+              />
+            </PopoverContent>
+          </Popover>
+        </Layout.Actions>
+
+        {!hasSearchQuery ? <SearchBlankSlate /> : null}
+
+        {hasSearchQuery ? (
+          <Layout.Actions className="pt-0">
+            <Layout.ActionsRow>
+              <Layout.ActionRowItem>
+                <ColumnsSelector
+                  columns={TRACE_COLUMN_OPTIONS}
+                  selectedColumnIds={visibleTraceColumnIds}
+                  onChange={(nextColumnIds) =>
+                    setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
+                  }
+                />
+              </Layout.ActionRowItem>
+            </Layout.ActionsRow>
+          </Layout.Actions>
+        ) : null}
+
+        {hasSearchQuery && selectedCount > 0 ? (
+          <div className="flex flex-row items-center gap-2 px-6">
+            <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+              <Icon icon={DownloadIcon} size="sm" />
+              Export Traces ({selectedCount.toLocaleString()})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+              <Icon icon={DatabaseIcon} size="sm" />
+              Add to Dataset ({selectedCount})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
+              <Icon icon={LayersIcon} size="sm" />
+              Add to Annotation Queue ({selectedCount})
+            </Button>
+          </div>
+        ) : null}
+
+        {hasSearchQuery && !showSearchEmptyState ? (
+          <TracesView
             projectId={projectId}
             filters={filters}
-            onFiltersChange={onFiltersChange}
-            onClose={closeTraceDrawer}
-            onNextTrace={() => navigateTrace(1)}
-            onPrevTrace={() => navigateTrace(-1)}
-            canNavigateNext={canNavigateNext}
-            canNavigatePrev={canNavigatePrev}
+            filtersOpen={false}
+            activeTraceId={activeTraceId || undefined}
+            activeDrawerTab={traceDetailTab}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalTraceCount}
+            onFiltersChange={commitFilters}
+            onFiltersClose={() => {}}
+            onActiveTraceChange={onActiveTraceChange}
+            traceIdsRef={traceIdsRef}
+            visibleColumnIds={visibleTraceColumnIds}
+            searchQuery={q}
           />
-        </Layout.Aside>
-      ) : null}
+        ) : null}
 
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
-        <ExportConfirmationModal
-          open={exportModalOpen}
-          onOpenChange={setExportModalOpen}
-          itemLabel="trace"
-          selectedCount={selectedCount}
-          onConfirm={() => void handleExportTraces()}
-          exporting={exporting}
-        />
-      ) : null}
+        {showSearchEmptyState ? <SearchEmptyState /> : null}
 
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
-        <AddToDatasetModal
-          open={addToDatasetOpen}
-          onOpenChange={setAddToDatasetOpen}
-          projectId={projectId}
-          selection={bulkSelection}
-          selectedCount={selectedCount}
-          onSuccess={clearSelections}
-        />
-      ) : null}
+        {hasSearchQuery && !showSearchEmptyState && activeTraceId ? (
+          <Layout.Aside>
+            <TraceDetailDrawer
+              key={activeTraceId}
+              traceId={activeTraceId}
+              projectId={projectId}
+              filters={filters}
+              onFiltersChange={commitFilters}
+              onClose={closeTraceDrawer}
+              onNextTrace={() => navigateTrace(1)}
+              onPrevTrace={() => navigateTrace(-1)}
+              canNavigateNext={canNavigateNext}
+              canNavigatePrev={canNavigatePrev}
+            />
+          </Layout.Aside>
+        ) : null}
 
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
-        <AddToQueueModal
-          open={addToQueueOpen}
-          onOpenChange={setAddToQueueOpen}
-          projectId={projectId}
-          projectSlug={projectSlug}
-          selection={bulkSelection}
-          selectedCount={selectedCount}
-          {...(hasActiveFilters ? { filters } : {})}
-          onSuccess={clearSelections}
-        />
-      ) : null}
-    </Layout>
-  )
-}
+        {hasSearchQuery && bulkSelection ? (
+          <ExportConfirmationModal
+            open={exportModalOpen}
+            onOpenChange={setExportModalOpen}
+            itemLabel="trace"
+            selectedCount={selectedCount}
+            onConfirm={() => void handleExportTraces()}
+            exporting={exporting}
+          />
+        ) : null}
 
-function SearchInput({
-  initialValue,
-  onSubmit,
-}: {
-  readonly initialValue: string
-  readonly onSubmit: (value: string) => void
-}) {
-  const [draft, setDraft] = useState(initialValue)
+        {hasSearchQuery && bulkSelection ? (
+          <AddToDatasetModal
+            open={addToDatasetOpen}
+            onOpenChange={setAddToDatasetOpen}
+            projectId={projectId}
+            selection={bulkSelection}
+            selectedCount={selectedCount}
+            onSuccess={clearSelections}
+          />
+        ) : null}
 
-  return (
-    <div className="relative flex-1">
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-        <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-      </div>
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") return
-          event.preventDefault()
-          const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
-          onSubmit(next)
-        }}
-        placeholder="Search"
-        size="lg"
-        maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className="w-full pl-9"
-        autoFocus
-      />
-    </div>
+        {hasSearchQuery && bulkSelection ? (
+          <AddToQueueModal
+            open={addToQueueOpen}
+            onOpenChange={setAddToQueueOpen}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            selection={bulkSelection}
+            selectedCount={selectedCount}
+            {...(hasActiveFilters ? { filters } : {})}
+            onSuccess={clearSelections}
+          />
+        ) : null}
+      </Layout>
+    </>
   )
 }
