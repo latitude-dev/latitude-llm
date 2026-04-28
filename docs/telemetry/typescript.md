@@ -3,10 +3,6 @@ title: TypeScript SDK
 description: Full API reference for @latitude-data/telemetry, the TypeScript SDK for Latitude Telemetry.
 ---
 
-<Warning>
-  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
-</Warning>
-
 # TypeScript SDK
 
 Instrument your AI application and send traces to Latitude. Built on OpenTelemetry.
@@ -122,69 +118,7 @@ await registerLatitudeInstrumentations({
 })
 ```
 
-### With Datadog
-
-```ts
-import tracer from "dd-trace"
-import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
-
-const ddTracer = tracer.init({ service: "my-app", env: "production" })
-const provider = new ddTracer.TracerProvider()
-
-provider.addSpanProcessor(
-  new LatitudeSpanProcessor(
-    process.env.LATITUDE_API_KEY!,
-    process.env.LATITUDE_PROJECT_SLUG!,
-  ),
-)
-
-provider.register()
-```
-
-### With Sentry
-
-```ts
-import * as Sentry from "@sentry/node"
-import {
-  SentrySpanProcessor,
-  SentrySampler,
-  SentryPropagator,
-} from "@sentry/opentelemetry"
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
-import {
-  LatitudeSpanProcessor,
-  registerLatitudeInstrumentations,
-} from "@latitude-data/telemetry"
-
-const sentryClient = Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  skipOpenTelemetrySetup: true,
-  tracesSampleRate: 1.0,
-})
-
-const provider = new NodeTracerProvider({
-  sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
-  spanProcessors: [
-    new SentrySpanProcessor(),
-    new LatitudeSpanProcessor(
-      process.env.LATITUDE_API_KEY!,
-      process.env.LATITUDE_PROJECT_SLUG!,
-    ),
-  ],
-})
-
-provider.register({
-  propagator: new SentryPropagator(),
-  contextManager: new Sentry.SentryContextManager(),
-})
-
-await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
-  tracerProvider: provider,
-})
-
-Sentry.validateOpenTelemetrySetup()
-```
+For examples of integrating with **Datadog**, **Sentry**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
 
 ## Public API Reference
 
@@ -295,9 +229,15 @@ type InstrumentationType =
 function registerLatitudeInstrumentations(options: {
   instrumentations: InstrumentationType[]
   tracerProvider: TracerProvider
-  instrumentationModules?: Partial<Record<InstrumentationType, unknown>>
+  modules?: Partial<Record<InstrumentationType, unknown>>
+  enrichTokens?: Partial<Record<InstrumentationType, boolean>>
 }): Promise<void>
 ```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `modules` | `Partial<Record<InstrumentationType, unknown>>` | Auto-required | Explicit module references for instrumentations that can't be auto-required |
+| `enrichTokens` | `Partial<Record<InstrumentationType, boolean>>` | `{ openai: true, togetherai: false }` | Enable or disable token usage enrichment per instrumentation |
 
 ## Supported Providers
 

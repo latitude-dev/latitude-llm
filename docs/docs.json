@@ -66,6 +66,9 @@
         "group": "Telemetry",
         "pages": [
           "telemetry/overview",
+          "telemetry/otel-exporter",
+          "telemetry/typescript",
+          "telemetry/python",
           {
             "group": "Providers",
             "pages": [
