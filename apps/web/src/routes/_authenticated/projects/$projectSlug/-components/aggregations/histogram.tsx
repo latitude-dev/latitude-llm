@@ -1,10 +1,10 @@
 import type { FilterSet } from "@domain/shared"
-import { denseTraceTimeHistogramBuckets } from "@domain/spans"
+import { denseTraceTimeHistogramBuckets, type TraceHistogramMetric } from "@domain/spans"
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
-import { formatCount } from "@repo/utils"
 import { useCallback, useMemo } from "react"
 
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
+import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
@@ -14,11 +14,12 @@ function formatBucketAxisLabel(iso: string): string {
 interface HistogramProps {
   readonly projectId: string
   readonly filters: FilterSet
+  readonly metric: TraceHistogramMetric
   /** Called when user selects a time range via brush on the histogram. */
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }
 
-export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps) {
+export function Histogram({ projectId, filters, metric, onRangeSelect }: HistogramProps) {
   const {
     data: sparseBuckets,
     isLoading,
@@ -33,13 +34,15 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
     [sparseBuckets, rangeStartIso, rangeEndIso, bucketSeconds],
   )
 
+  const definition = HISTOGRAM_METRIC_DEFINITIONS[metric]
+
   const chartData = useMemo(
     () =>
       denseBuckets.map((b) => ({
         category: formatBucketAxisLabel(b.bucketStart),
-        value: b.traceCount,
+        value: definition.selectBucket(b),
       })),
-    [denseBuckets],
+    [denseBuckets, definition],
   )
 
   const handleSelect = useCallback(
@@ -61,8 +64,9 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
   )
 
   const formatTooltip = useCallback(
-    (category: string, value: number) => `${category}<br/><b>${formatCount(value)}</b> traces`,
-    [],
+    (category: string, value: number) =>
+      `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`,
+    [definition],
   )
 
   if (isLoading) {
@@ -95,7 +99,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
         data={chartData}
         height={160}
         showYAxis={false}
-        ariaLabel="Trace count by time bucket"
+        ariaLabel={`${definition.label} by time bucket`}
         formatTooltip={formatTooltip}
         onSelect={onRangeSelect ? handleSelect : undefined}
       />

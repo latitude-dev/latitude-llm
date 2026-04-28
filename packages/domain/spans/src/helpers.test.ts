@@ -4,6 +4,7 @@ import {
   denseTraceTimeHistogramBuckets,
   pickTraceHistogramBucketSeconds,
 } from "./helpers.ts"
+import { emptyTraceTimeHistogramBucket } from "./ports/trace-repository.ts"
 
 describe("alignUnixSecondsToHistogramBucket", () => {
   it("matches ClickHouse-style intDiv(ts, bs) * bs", () => {
@@ -38,23 +39,38 @@ describe("pickTraceHistogramBucketSeconds", () => {
 })
 
 describe("denseTraceTimeHistogramBuckets", () => {
-  it("fills missing buckets with zero", () => {
+  it("fills missing buckets with zero across all metric fields", () => {
     const rangeStartIso = "2024-06-01T10:00:00.000Z"
     const rangeEndIso = "2024-06-01T12:00:00.000Z"
-    const sparse = [{ bucketStart: "2024-06-01T11:00:00.000Z", traceCount: 7 }]
-    const dense = denseTraceTimeHistogramBuckets(sparse, rangeStartIso, rangeEndIso, 3600)
+    const populated = {
+      bucketStart: "2024-06-01T11:00:00.000Z",
+      traceCount: 7,
+      costTotalMicrocentsSum: 1234,
+      durationNsMedian: 5_000_000,
+      tokensTotalSum: 200,
+      spanCountSum: 14,
+      timeToFirstTokenNsMedian: 3_000_000,
+    }
+    const dense = denseTraceTimeHistogramBuckets([populated], rangeStartIso, rangeEndIso, 3600)
     expect(dense).toHaveLength(3)
-    expect(dense[0]).toEqual({ bucketStart: "2024-06-01T10:00:00.000Z", traceCount: 0 })
-    expect(dense[1]).toEqual({ bucketStart: "2024-06-01T11:00:00.000Z", traceCount: 7 })
-    expect(dense[2]).toEqual({ bucketStart: "2024-06-01T12:00:00.000Z", traceCount: 0 })
+    expect(dense[0]).toEqual(emptyTraceTimeHistogramBucket("2024-06-01T10:00:00.000Z"))
+    expect(dense[1]).toEqual(populated)
+    expect(dense[2]).toEqual(emptyTraceTimeHistogramBucket("2024-06-01T12:00:00.000Z"))
   })
 
-  it("returns all zeros when sparse is empty", () => {
+  it("returns all-zero buckets across every metric when sparse is empty", () => {
     const rangeStartIso = "2024-06-01T00:00:00.000Z"
     const rangeEndIso = "2024-06-01T01:00:00.000Z"
     const dense = denseTraceTimeHistogramBuckets(undefined, rangeStartIso, rangeEndIso, 3600)
     expect(dense).toHaveLength(2)
-    expect(dense.every((b) => b.traceCount === 0)).toBe(true)
+    for (const bucket of dense) {
+      expect(bucket.traceCount).toBe(0)
+      expect(bucket.costTotalMicrocentsSum).toBe(0)
+      expect(bucket.durationNsMedian).toBe(0)
+      expect(bucket.tokensTotalSum).toBe(0)
+      expect(bucket.spanCountSum).toBe(0)
+      expect(bucket.timeToFirstTokenNsMedian).toBe(0)
+    }
   })
 
   it("returns empty array for invalid range", () => {
@@ -62,15 +78,43 @@ describe("denseTraceTimeHistogramBuckets", () => {
     expect(denseTraceTimeHistogramBuckets([], "not-a-date", "2024-06-01T01:00:00.000Z", 60)).toEqual([])
   })
 
-  it("sums duplicate aligned sparse rows", () => {
+  it("merges duplicate aligned sparse rows: sums additive fields, keeps max for medians", () => {
+    // ClickHouse GROUP BY guarantees one sparse row per aligned bucket, so this defensive fold
+    // is unreachable in practice. When it does fire, additive fields combine; medians can't be
+    // re-derived from two pre-computed medians, so we take the max as a safe upper bound rather
+    // than producing a meaningless sum.
     const rangeStartIso = "2024-06-01T10:00:00.000Z"
     const rangeEndIso = "2024-06-01T10:59:59.999Z"
     const sparse = [
-      { bucketStart: "2024-06-01T10:00:00.000Z", traceCount: 2 },
-      { bucketStart: "2024-06-01T10:00:00.123Z", traceCount: 3 },
+      {
+        bucketStart: "2024-06-01T10:00:00.000Z",
+        traceCount: 2,
+        costTotalMicrocentsSum: 100,
+        durationNsMedian: 1_000,
+        tokensTotalSum: 30,
+        spanCountSum: 4,
+        timeToFirstTokenNsMedian: 500,
+      },
+      {
+        bucketStart: "2024-06-01T10:00:00.123Z",
+        traceCount: 3,
+        costTotalMicrocentsSum: 200,
+        durationNsMedian: 2_000,
+        tokensTotalSum: 70,
+        spanCountSum: 6,
+        timeToFirstTokenNsMedian: 1_500,
+      },
     ]
     const dense = denseTraceTimeHistogramBuckets(sparse, rangeStartIso, rangeEndIso, 3600)
     expect(dense).toHaveLength(1)
-    expect(dense[0]?.traceCount).toBe(5)
+    expect(dense[0]).toEqual({
+      bucketStart: "2024-06-01T10:00:00.000Z",
+      traceCount: 5,
+      costTotalMicrocentsSum: 300,
+      durationNsMedian: 2_000,
+      tokensTotalSum: 100,
+      spanCountSum: 10,
+      timeToFirstTokenNsMedian: 1_500,
+    })
   })
 })
