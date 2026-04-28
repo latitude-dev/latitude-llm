@@ -136,7 +136,7 @@ const createScoreAnalyticsRepository = (input: {
   const aggregateInputs: unknown[] = []
   const histogramInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
   const trendInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
-  const tagsInputs: Array<{ issueIds: readonly string[]; from: Date | undefined; to: Date | undefined }> = []
+  const tagsInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date | undefined }> = []
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: () => Effect.die("Unexpected existsById"),

@@ -16,6 +16,7 @@ import {
   issuesSortFieldSchema,
   type ListIssuesResult,
   listIssuesUseCase,
+  TAG_AGGREGATION_FALLBACK_DAYS,
 } from "@domain/issues"
 import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings } from "@domain/shared"
@@ -373,7 +374,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         // Match the listIssuesUseCase tag-aggregation window so the drawer
         // and the table show a consistent set of tags for the same issue.
         const tagsFrom = new Date(now)
-        tagsFrom.setUTCDate(tagsFrom.getUTCDate() - 30)
+        tagsFrom.setUTCDate(tagsFrom.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
 
         const [occurrences, trend, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
           scoreAnalyticsRepository.aggregateByIssues({

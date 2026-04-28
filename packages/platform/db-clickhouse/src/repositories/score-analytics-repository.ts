@@ -624,21 +624,24 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (issueIds.length === 0) return []
 
-          const scoresTimeRange = buildScoreCreatedAtTimeRange(timeRange, "tags_scores")
-          const scoresTimeClause =
-            scoresTimeRange.clauses.length > 0 ? ` AND ${scoresTimeRange.clauses.join(" AND ")}` : ""
-
-          const tracesTimeClauses: string[] = []
-          const tracesTimeParams: Record<string, unknown> = {}
-          if (timeRange.from) {
-            tracesTimeClauses.push(`min_start_time >= toDateTime64({tags_traces_from:String}, 3, 'UTC')`)
-            tracesTimeParams.tags_traces_from = toClickHouseDateTime64(timeRange.from)
+          // The IssueTagsTimeRange type guarantees `from`; `to` is optional and
+          // only emitted when present.
+          const scoresClauses = [
+            "created_at >= toDateTime64({tags_scores_from:String}, 3, 'UTC')",
+            ...(timeRange.to ? ["created_at <= toDateTime64({tags_scores_to:String}, 3, 'UTC')"] : []),
+          ]
+          const tracesClauses = [
+            "min_start_time >= toDateTime64({tags_traces_from:String}, 3, 'UTC')",
+            ...(timeRange.to ? ["min_start_time <= toDateTime64({tags_traces_to:String}, 3, 'UTC')"] : []),
+          ]
+          const timeParams: Record<string, unknown> = {
+            tags_scores_from: toClickHouseDateTime64(timeRange.from),
+            tags_traces_from: toClickHouseDateTime64(timeRange.from),
           }
           if (timeRange.to) {
-            tracesTimeClauses.push(`min_start_time <= toDateTime64({tags_traces_to:String}, 3, 'UTC')`)
-            tracesTimeParams.tags_traces_to = toClickHouseDateTime64(timeRange.to)
+            timeParams.tags_scores_to = toClickHouseDateTime64(timeRange.to)
+            timeParams.tags_traces_to = toClickHouseDateTime64(timeRange.to)
           }
-          const tracesTimeClause = tracesTimeClauses.length > 0 ? ` AND ${tracesTimeClauses.join(" AND ")}` : ""
 
           return yield* chSqlClient
             .query(async (client) => {
@@ -650,7 +653,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                           FROM scores
                           WHERE ${scopeClause(options)}
                             AND issue_id IN ({issueIds:Array(String)})
-                            AND trace_id != ''${scoresTimeClause}
+                            AND trace_id != ''
+                            AND ${scoresClauses.join(" AND ")}
                           GROUP BY issue_id, trace_id
                           ORDER BY issue_id, last_seen_at DESC
                           LIMIT {tracesPerIssue:UInt32} BY issue_id
@@ -661,7 +665,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND trace_id IN (SELECT trace_id FROM issue_traces)${tracesTimeClause}
+                          AND trace_id IN (SELECT trace_id FROM issue_traces)
+                          AND ${tracesClauses.join(" AND ")}
                         GROUP BY trace_id
                       )
                       SELECT
@@ -674,8 +679,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                   ...scopeParams(organizationId, projectId),
                   issueIds: Array.from(issueIds) as string[],
                   tracesPerIssue: ISSUE_TAG_TRACE_SAMPLE_LIMIT,
-                  ...scoresTimeRange.params,
-                  ...tracesTimeParams,
+                  ...timeParams,
                 },
                 format: "JSONEachRow",
               })

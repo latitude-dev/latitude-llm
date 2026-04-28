@@ -3,6 +3,7 @@ import {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
   type IssueTrendSeries,
+  type IssueTagsTimeRange,
   type IssueWindowMetric,
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
@@ -173,21 +174,27 @@ const resolveTrendTimeRange = (input: {
   }
 }
 
-// Tag aggregation needs an explicit time bound to keep CH scans on `scores`
-// and `traces` partition-pruned (see aggregateTagsByIssues impl). If the
-// operator selected a range we honor it; otherwise we fall back to ~30 days,
-// which captures effectively all currently-relevant tags while still pinning
-// the scan to a small number of monthly partitions.
-const TAG_AGGREGATION_FALLBACK_DAYS = 30
+/**
+ * Tag aggregation needs an explicit lower-bound time so CH scans on `scores`
+ * and `traces` stay partition-pruned (see `aggregateTagsByIssues` impl). If
+ * the operator selected a range we honor it; otherwise we fall back to ~30
+ * days, which captures effectively all currently-relevant tags while still
+ * pinning the scan to a small number of monthly partitions.
+ *
+ * Exported so other call sites that fetch tags for the same issues
+ * (e.g. the issue detail handler) can use the same window and stay visually
+ * consistent with the list.
+ */
+export const TAG_AGGREGATION_FALLBACK_DAYS = 30
 
 const resolveTagsTimeRange = (input: {
   readonly timeRange: ScoreAnalyticsTimeRange | undefined
   readonly now: Date
-}): ScoreAnalyticsTimeRange => {
-  if (input.timeRange?.from || input.timeRange?.to) {
-    return input.timeRange
+}): IssueTagsTimeRange => {
+  if (input.timeRange?.from) {
+    return input.timeRange.to ? { from: input.timeRange.from, to: input.timeRange.to } : { from: input.timeRange.from }
   }
-  const to = input.now
+  const to = input.timeRange?.to ?? input.now
   const from = new Date(to)
   from.setUTCDate(from.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
   return { from, to }
