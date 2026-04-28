@@ -194,6 +194,7 @@ class LatitudeSpanProcessor:
 @dataclass
 class LatitudeSpanProcessorOptions:
     disable_redact: bool = False
+    redact: RedactSpanProcessorOptions | None = None
     disable_batch: bool = False
     disable_smart_filter: bool = False
     should_export_span: Callable[[ReadableSpan], bool] | None = None

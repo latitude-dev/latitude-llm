@@ -233,9 +233,15 @@ type InstrumentationType =
 function registerLatitudeInstrumentations(options: {
   instrumentations: InstrumentationType[]
   tracerProvider: TracerProvider
-  instrumentationModules?: Partial<Record<InstrumentationType, unknown>>
+  modules?: Partial<Record<InstrumentationType, unknown>>
+  enrichTokens?: Partial<Record<InstrumentationType, boolean>>
 }): Promise<void>
 ```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `modules` | `Partial<Record<InstrumentationType, unknown>>` | Auto-required | Explicit module references for instrumentations that can't be auto-required |
+| `enrichTokens` | `Partial<Record<InstrumentationType, boolean>>` | `{ openai: true, togetherai: false }` | Enable or disable token usage enrichment per instrumentation |
 
 ## Supported Providers
 
