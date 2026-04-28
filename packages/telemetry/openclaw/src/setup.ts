@@ -1,16 +1,18 @@
 import { existsSync, mkdirSync } from "node:fs"
-import { dirname } from "node:path"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { cancel, confirm, intro, isCancel, log, note, outro, password, spinner, text } from "@clack/prompts"
 import pc from "picocolors"
-import { installPluginFiles, removePluginFiles } from "./install-files.ts"
+import { compareCalver, getOpenclawVersion, MIN_OPENCLAW_VERSION, runOpenclaw } from "./openclaw-cli.ts"
 import {
+  addToPluginsAllow,
   backupSettings,
   hasLatitudePlugin,
   type LatitudePluginConfig,
   migrateLegacyEntries,
   PLUGIN_ID,
-  PLUGIN_INSTALL_DIR,
   readSettings,
+  removeFromPluginsAllow,
   removePluginEntry,
   SETTINGS_BACKUP_PATH,
   SETTINGS_PATH,
@@ -63,12 +65,13 @@ interface InstallFlags {
   project?: string | undefined
   environment?: EnvironmentConfig | undefined
   /**
-   * Tristate: `true` = capture (the user passed `--allow-conversation`),
-   * `false` = scrub (the user passed `--no-content`), `undefined` = preserve
-   * existing or fall through to the first-install default. Keeping this
-   * tristate is what makes re-installs idempotent for hand-edited values.
+   * Tristate: `true` = capture (`--allow-conversation`), `false` = scrub
+   * (`--no-content`), `undefined` = preserve existing or first-install
+   * default. Tristate keeps re-install idempotent for hand-edited values.
    */
   allowConversationAccess?: boolean | undefined
+  /** When true, skip adding the plugin id to `plugins.allow`. */
+  noTrust?: boolean
   noPrompt?: boolean
   yes?: boolean
 }
@@ -98,8 +101,8 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
     if (environment) throw new Error("--staging and --dev are mutually exclusive")
     environment = DEV_ENV
   }
-  // Tristate: leave undefined unless the user explicitly asked one way or
-  // the other. Re-install then preserves whatever's in openclaw.json.
+  // Tristate: leave undefined unless the user explicitly asked one way or the
+  // other. Re-install then preserves whatever's already in openclaw.json.
   let allowConversationAccess: boolean | undefined
   if (flags["no-content"] === true || flags["no-conversation"] === true) allowConversationAccess = false
   if (flags["allow-conversation"] === true) allowConversationAccess = true
@@ -109,6 +112,7 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
     project: typeof flags.project === "string" ? flags.project : undefined,
     environment,
     allowConversationAccess,
+    noTrust: flags["no-trust"] === true,
     noPrompt: flags["no-prompt"] === true || flags.yes === true,
     yes: flags.yes === true,
   }
@@ -124,6 +128,11 @@ export async function runInstall(flags: InstallFlags = {}): Promise<void> {
 
 async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   intro(pc.bgCyan(pc.black(" Latitude · OpenClaw telemetry ")))
+
+  // Bail before any prompts if the host OpenClaw is too old. We'd rather
+  // tell the user to upgrade than walk them through a config we can't make
+  // work on their version.
+  ensureOpenclawIsCompatible()
 
   const existing = readSettings()
   const existingConfig =
@@ -154,6 +163,7 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
     project,
     envConfig,
     allowConversationAccess: flags.allowConversationAccess,
+    noTrust: flags.noTrust === true,
   })
 
   note(
@@ -169,6 +179,7 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
 }
 
 async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
+  ensureOpenclawIsCompatible()
   const apiKey = flags.apiKey
   const project = flags.project
   if (!apiKey || !project) {
@@ -180,9 +191,9 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
     project,
     envConfig,
     allowConversationAccess: flags.allowConversationAccess,
+    noTrust: flags.noTrust === true,
   })
   process.stdout.write(`Installed Latitude plugin in ${SETTINGS_PATH}\n`)
-  process.stdout.write(`Plugin files at ${PLUGIN_INSTALL_DIR}\n`)
 }
 
 async function promptApiKey(_existing: string | undefined, flag: string | undefined): Promise<string> {
@@ -219,27 +230,50 @@ interface ApplyParams {
   envConfig: EnvironmentConfig
   /** Tristate — see `InstallFlags.allowConversationAccess`. */
   allowConversationAccess: boolean | undefined
+  noTrust: boolean
 }
 
-async function applyChanges({ apiKey, project, envConfig, allowConversationAccess }: ApplyParams): Promise<void> {
-  // 1. Materialize plugin runtime files into ~/.openclaw/extensions/latitude-telemetry/
-  //    so OpenClaw's plugin discovery picks them up. This MUST happen before
-  //    we write the openclaw.json entry, otherwise the gateway file-watcher
-  //    will see the entry, fail to find the plugin, and emit a warning.
-  const filesSpinner = spinner()
-  filesSpinner.start("Installing plugin files")
-  const { destination } = installPluginFiles()
-  filesSpinner.stop(`Plugin files installed at ${destination}`)
+async function applyChanges({
+  apiKey,
+  project,
+  envConfig,
+  allowConversationAccess,
+  noTrust,
+}: ApplyParams): Promise<void> {
+  // 1. Hand placement off to OpenClaw. `openclaw plugins install <path>`
+  //    copies our package into ~/.openclaw/extensions/<encoded-id>/, writes
+  //    the install record into ~/.openclaw/plugins/installs.json, and
+  //    creates a (disabled, configless) plugins.entries[id] in
+  //    openclaw.json. We layer config + hooks + allow on top in step 2.
+  //    --force lets us overwrite an existing install (e.g. when re-running
+  //    on top of a previous version).
+  const packageRoot = resolvePackageRoot()
+  const installSpinner = spinner()
+  installSpinner.start(`Installing plugin via openclaw plugins install ${packageRoot}`)
+  const installResult = runOpenclaw(["plugins", "install", packageRoot, "--force"], { timeoutMs: 60_000 })
+  if (!installResult.ok) {
+    installSpinner.stop("openclaw plugins install failed")
+    if (installResult.reason === "enoent") {
+      throw new Error("`openclaw` not found on PATH. Install OpenClaw first (https://openclaw.ai/install) and re-run.")
+    }
+    if (installResult.reason === "timeout") {
+      throw new Error("openclaw plugins install timed out after 60s. Try running it manually to see what's stuck.")
+    }
+    const detail = installResult.stderr.trim() || installResult.stdout.trim() || `exit code ${installResult.code}`
+    throw new Error(`openclaw plugins install failed: ${detail}`)
+  }
+  installSpinner.stop("Plugin registered with OpenClaw")
 
-  // 2. Update openclaw.json with the plugin entry.
+  // 2. Layer our config, hooks, and (optionally) plugins.allow on top of the
+  //    entry OpenClaw just created. We don't touch placement — that's
+  //    OpenClaw's job — only the policy fields.
   const settingsSpinner = spinner()
   settingsSpinner.start("Updating openclaw.json")
   ensureSettingsDir()
   backupSettings()
   const settings = readSettings()
-  // Migrate any leftover keys our 0.0.1 installer wrote that the strict zod
-  // schema rejects. Without this, re-installing on top of a 0.0.1 install
-  // would leave the gateway quarantining the file as `clobbered`.
+  // Sweep `LATITUDE_*` keys our 0.0.1 leaked under settings.env. Idempotent
+  // when the keys aren't there.
   migrateLegacyEntries(settings)
 
   // Decide allowConversationAccess for this install:
@@ -254,18 +288,73 @@ async function applyChanges({ apiKey, project, envConfig, allowConversationAcces
     project,
     baseUrl: envConfig.name === "production" ? undefined : envConfig.ingest,
     allowConversationAccess: finalAllowConversationAccess,
-    // `debug` is intentionally not passed — `setPluginEntry` preserves the
-    // user's hand-edited value. Fresh installs leave the key absent (the
-    // runtime default is `false`).
+    // `debug` is intentionally not passed — `setPluginEntry` preserves
+    // hand-edited values; fresh installs leave the key absent (runtime
+    // default is `false`).
   })
+
+  // Plugins.allow handling. Running `npx install` is itself the trust
+  // signal — auto-add unless the user explicitly opted out via --no-trust.
+  // Without this, OpenClaw prints a "plugins.allow is empty" warning at
+  // every gateway start.
+  if (!noTrust) {
+    addToPluginsAllow(settings)
+  }
+
   writeSettings(settings)
   settingsSpinner.stop(`Updated ${SETTINGS_PATH}`)
   if (existsSync(SETTINGS_BACKUP_PATH)) log.info(`Backup saved at ${pc.dim(SETTINGS_BACKUP_PATH)}`)
+  if (noTrust) {
+    log.warning(
+      `--no-trust set; OpenClaw will warn at every gateway start that ${PLUGIN_ID} is untrusted. Add it to plugins.allow yourself when you're ready.`,
+    )
+  }
 }
 
 function ensureSettingsDir(): void {
   const dir = dirname(SETTINGS_PATH)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+}
+
+/**
+ * Verify `openclaw` is on PATH AND its version is >= MIN_OPENCLAW_VERSION.
+ * Aborts with a clear upgrade message otherwise. Called before any user
+ * prompts so we don't waste their time collecting credentials we can't
+ * use.
+ */
+function ensureOpenclawIsCompatible(): void {
+  const v = getOpenclawVersion()
+  if (!v.ok) {
+    if (v.error === "missing") {
+      cancel("OpenClaw CLI not found on PATH. Install or update via `npm install -g openclaw@latest` and re-run.")
+      process.exit(1)
+    }
+    cancel(
+      `Couldn't parse OpenClaw version output${v.raw ? ` (got: ${pc.dim(v.raw)})` : ""}. Run \`openclaw --version\` and report the output.`,
+    )
+    process.exit(1)
+  }
+  if (compareCalver(v.version, MIN_OPENCLAW_VERSION) < 0) {
+    cancel(
+      `OpenClaw ${v.version} is older than the minimum supported version (${MIN_OPENCLAW_VERSION}). Run \`npm install -g openclaw@latest\` and re-run install.`,
+    )
+    process.exit(1)
+  }
+  log.info(`OpenClaw ${pc.dim(v.version)} (>= ${MIN_OPENCLAW_VERSION})`)
+}
+
+/**
+ * Resolve the absolute path to our package's root (the directory that
+ * contains `package.json` + `openclaw.plugin.json` + `dist/`). The compiled
+ * CLI lives at `<package-root>/dist/cli.js`, so `import.meta.url`'s parent
+ * directory's parent is our root.
+ *
+ * `openclaw plugins install <path>` copies files synchronously, so we
+ * don't have to keep this directory alive past the spawn return.
+ */
+function resolvePackageRoot(): string {
+  const here = dirname(fileURLToPath(import.meta.url))
+  return resolve(here, "..")
 }
 
 // ─── Uninstall ──────────────────────────────────────────────────────────────
@@ -276,22 +365,25 @@ interface UninstallFlags {
 
 export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
   intro(pc.bgYellow(pc.black(" Latitude · OpenClaw telemetry — uninstall ")))
+
   const settings = readSettings()
-
   const hasEntry = hasLatitudePlugin(settings)
-  const hasFiles = existsSync(PLUGIN_INSTALL_DIR)
 
-  if (!hasEntry && !hasFiles) {
-    note("No Latitude plugin entry or files found — nothing to remove.", "Status")
+  // Without an entry, there's nothing for `openclaw plugins uninstall` to
+  // remove either — short-circuit cleanly. If the user wants to uninstall
+  // even when our entry is gone (e.g. we crashed mid-install), they can
+  // run `openclaw plugins uninstall` themselves.
+  if (!hasEntry) {
+    note("No Latitude plugin entry found — nothing to remove.", "Status")
     outro(pc.dim("Nothing changed"))
     return
   }
 
   const plan = [
-    hasEntry ? `Remove "${PLUGIN_ID}" plugin entry from ${SETTINGS_PATH}` : null,
-    hasFiles ? `Delete plugin files at ${PLUGIN_INSTALL_DIR}` : null,
+    `Run \`openclaw plugins uninstall ${PLUGIN_ID} --force\` (removes files, install record, and plugin entry)`,
+    `Sweep any leftover LATITUDE_* keys from settings.env`,
     `Backup of openclaw.json saved at ${SETTINGS_BACKUP_PATH}`,
-  ].filter(Boolean) as string[]
+  ]
   note(plan.join("\n"), "Plan")
 
   if (!flags.noPrompt && process.stdin.isTTY === true) {
@@ -299,17 +391,39 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
     if (isCancel(ok) || ok !== true) return onCancel()
   }
 
+  // 1. Hand uninstall to OpenClaw. It removes files, the install record,
+  //    plugins.entries[id], plugins.allow, plugins.deny, plugins.load.paths
+  //    — see src/plugins/uninstall.ts.
   const s = spinner()
-  s.start("Reverting settings")
-  if (hasEntry) {
-    backupSettings()
-    removePluginEntry(settings)
-    // Also clean any legacy keys our 0.0.1 installer left behind so the file
-    // is fully back to a clean state.
-    migrateLegacyEntries(settings)
-    writeSettings(settings)
+  s.start("Reverting via openclaw plugins uninstall")
+  const uninstallResult = runOpenclaw(["plugins", "uninstall", PLUGIN_ID, "--force"], { timeoutMs: 60_000 })
+  if (!uninstallResult.ok) {
+    s.stop("openclaw plugins uninstall failed")
+    if (uninstallResult.reason === "enoent") {
+      log.warning(
+        "`openclaw` not found on PATH. Falling back to local cleanup — files at ~/.openclaw/extensions/ may remain.",
+      )
+    } else {
+      const detail =
+        uninstallResult.stderr.trim() || uninstallResult.stdout.trim() || `exit code ${uninstallResult.code}`
+      log.warning(`openclaw plugins uninstall reported: ${detail}. Continuing with local cleanup.`)
+    }
+  } else {
+    s.stop("Plugin removed by OpenClaw")
   }
-  if (hasFiles) removePluginFiles()
-  s.stop("Done")
+
+  // 2. Defensive cleanup — `openclaw plugins uninstall` already strips the
+  //    entry and plugins.allow on success, but if it failed above (enoent
+  //    / non-zero) we still want our state out of openclaw.json. These
+  //    are all idempotent.
+  const cleanupSpinner = spinner()
+  cleanupSpinner.start("Reverting openclaw.json")
+  backupSettings()
+  const post = readSettings()
+  removePluginEntry(post)
+  removeFromPluginsAllow(post)
+  migrateLegacyEntries(post)
+  writeSettings(post)
+  cleanupSpinner.stop("Done")
   outro(pc.green("✓ Uninstalled"))
 }
