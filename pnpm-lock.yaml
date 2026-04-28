@@ -1386,6 +1386,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../domain/issues
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared

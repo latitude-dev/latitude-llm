@@ -1,7 +1,7 @@
 import type { AI } from "@domain/ai"
 import type { OutboxEventWriter } from "@domain/events"
 import { ScoreRepository } from "@domain/scores"
-import { ProjectId, type RepositoryError, ScoreId, type SqlClient } from "@domain/shared"
+import { type CacheError, ProjectId, type RepositoryError, ScoreId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { CheckEligibilityError, IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
@@ -28,6 +28,7 @@ export type FinalizeIssueDiscoveryResult = AssignScoreToIssueResult | CreateIssu
 
 export type FinalizeIssueDiscoveryError =
   | AssignScoreToIssueError
+  | CacheError
   | CheckEligibilityError
   | CreateIssueFromScoreError
   | IssueDiscoveryLockUnavailableError
@@ -109,6 +110,7 @@ export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput
 
     return yield* lockRepository.withLock(
       {
+        organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),
         lockKey: buildFeedbackLockKey({ source: score.source, sourceId: score.sourceId, feedback: input.feedback }),
       },
@@ -120,6 +122,7 @@ export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput
 
         return yield* lockRepository.withLock(
           {
+            organizationId: input.organizationId,
             projectId: ProjectId(input.projectId),
             lockKey: "project",
           },

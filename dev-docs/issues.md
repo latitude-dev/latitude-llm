@@ -182,10 +182,9 @@ Execution rules:
 - the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
 - after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
-- the no-match path is only provisional; before creating a new issue, finalization must first acquire a feedback-scoped advisory transaction lock and re-run hybrid search, rerank, and Postgres candidate resolution
-- if the feedback-scoped re-check still finds no issue, finalization must acquire the project-scoped advisory transaction lock and re-run retrieval again before creating
-- each advisory lock acquisition must be non-blocking; if the lock is already held, finalization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
-- each finalization transaction must configure a bounded `idle_in_transaction_session_timeout` so Postgres releases acquired advisory locks by aborting the transaction if external finalization work exceeds the configured window
+- the no-match path is only provisional; before creating a new issue, finalization must first acquire a feedback-scoped Redis lock and re-run hybrid search, rerank, and Postgres candidate resolution
+- if the feedback-scoped re-check still finds no issue, finalization must acquire the project-scoped Redis lock and re-run retrieval again before creating
+- each Redis lock acquisition must be non-blocking; if the lock is already held, finalization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
 - the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
 - resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
@@ -194,28 +193,27 @@ Execution rules:
 
 Weaviate is a retrieval accelerator, not the write-side source of correctness. A newly created issue can be present in Postgres before its Weaviate projection is visible to another concurrent discovery workflow. Therefore a workflow-level no-match result is not sufficient authority to create a new issue.
 
-The no-match branch must enter `finalizeIssueDiscoveryUseCase`, which uses layered Postgres advisory transaction locks. A feedback-scoped lock serializes identical feedback strings from the same score source/source id, reducing deterministic-flagger herds. A project-scoped lock remains the correctness boundary before brand-new issue creation, so differently worded but semantically duplicate no-match workflows still cannot create concurrently.
+The no-match branch must enter `finalizeIssueDiscoveryUseCase`, which uses layered Redis locks. A feedback-scoped lock serializes identical feedback strings from the same score source/source id, reducing deterministic-flagger herds before external retrieval work. A project-scoped lock serializes brand-new issue creation attempts for the project, so differently worded but semantically duplicate no-match workflows do not create concurrently while Weaviate projections catch up.
 
-Inside the locked transaction finalization must:
+Inside locked finalization must:
 
 1. re-fetch the score by id
-2. set a local `idle_in_transaction_session_timeout` for the transaction
-3. acquire the feedback-scoped advisory transaction lock
-4. re-run hybrid issue search against Weaviate using the same canonical feedback and normalized embedding
-5. re-run rerank and resolve the selected issue UUID against Postgres
-6. assign the score to the matched issue if the locked re-check now finds one
-7. otherwise acquire the project-scoped advisory transaction lock and repeat the retrieval/rerank/Postgres resolution check
-8. assign to the project-lock match if one is found
-9. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
-10. sync the issue projection before committing and releasing the locks
+2. acquire the feedback-scoped Redis lock
+3. re-run hybrid issue search against Weaviate using the same canonical feedback and normalized embedding
+4. re-run rerank and resolve the selected issue UUID against Postgres
+5. assign the score to the matched issue if the locked re-check now finds one
+6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank/Postgres resolution check
+7. assign to the project-lock match if one is found
+8. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
+9. sync the issue projection before releasing the locks
 
-This intentionally trades a short bounded transaction around external retrieval for correctness and implementation simplicity. The lock is not a table lock; it only affects other finalizers that request the same advisory key. Lock acquisition must use `pg_try_advisory_xact_lock`; if the key is already held, finalization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. If finalization stalls after acquiring a lock while waiting on external work, Postgres aborts the idle transaction after the configured timeout and releases the advisory lock.
+This intentionally moves the long external retrieval/rerank/generation section outside Postgres transactions. Lock acquisition must use Redis `SET ... NX PX`; if the key is already held, finalization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. Redis lock keys must be organization-prefixed (`org:${organizationId}:...`) and released with token comparison so one worker cannot release another worker's lock after TTL expiry.
 
 The correctness invariant is:
 
 - same-feedback finalization is serialized before project-level finalization to reduce deterministic-flagger herds
-- contended finalizers retry instead of waiting on Postgres advisory locks
-- project-level brand-new issue creation is serialized by the bounded advisory transaction lock
+- contended finalizers retry instead of waiting on Postgres or holding database transactions
+- project-level brand-new issue creation is serialized by the Redis project lock
 - assignment to an existing issue remains row-safe through the issue row lock and conditional score ownership claim
 - Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows
 
