@@ -4,17 +4,23 @@ import {
   type AnnotationQueueSettings,
   createQueueUseCase,
   deleteQueueUseCase,
+  evictProjectFlaggersUseCase,
+  FlaggerRepository,
+  getQueueStrategy,
+  isLlmCapableStrategy,
+  updateFlaggerUseCase,
   updateQueueUseCase,
 } from "@domain/annotation-queues"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { AnnotationQueueRepositoryLive, FlaggerRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { queueInputSchema } from "../../components/annotation-queues/queue-form-schema.ts"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 const queueListCursorSchema = z.object({
   sortValue: z.string(),
@@ -64,6 +70,108 @@ const toAnnotationQueueRecord = (q: {
 })
 
 export type AnnotationQueueRecord = ReturnType<typeof toAnnotationQueueRecord>
+
+const deterministicFlaggerDetails: Record<string, { readonly name: string; readonly description: string }> = {
+  "tool-call-errors": {
+    name: "Tool call errors",
+    description: "Flags malformed, duplicate, or explicitly failed tool responses without calling an LLM.",
+  },
+  "output-schema-validation": {
+    name: "Output schema validation",
+    description: "Flags malformed or truncated structured output in assistant responses without calling an LLM.",
+  },
+  "empty-response": {
+    name: "Empty response",
+    description: "Flags empty, whitespace-only, or degenerate assistant responses without calling an LLM.",
+  },
+}
+
+const humanizeSlug = (slug: string) => slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+
+const toFlaggerRecord = (flagger: {
+  readonly id: string
+  readonly organizationId: string
+  readonly projectId: string
+  readonly slug: string
+  readonly enabled: boolean
+  readonly sampling: number
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}) => {
+  const strategy = getQueueStrategy(flagger.slug)
+  const details =
+    strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : deterministicFlaggerDetails[flagger.slug]
+
+  return {
+    id: flagger.id,
+    organizationId: flagger.organizationId,
+    projectId: flagger.projectId,
+    slug: flagger.slug,
+    name: details?.name ?? humanizeSlug(flagger.slug),
+    description: details?.description ?? "Flags matching trace behavior for review.",
+    instructions:
+      strategy && isLlmCapableStrategy(strategy)
+        ? strategy.annotator.instructions
+        : "Runs deterministically from telemetry data and does not call an LLM.",
+    enabled: flagger.enabled,
+    sampling: flagger.sampling,
+    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
+    suppressedBy: strategy?.suppressedBy ?? [],
+    createdAt: flagger.createdAt.toISOString(),
+    updatedAt: flagger.updatedAt.toISOString(),
+  }
+}
+
+export type FlaggerRecord = ReturnType<typeof toFlaggerRecord>
+
+export const listFlaggersByProject = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data }): Promise<readonly FlaggerRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const client = getPostgresClient()
+
+    const flaggers = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* FlaggerRepository
+        return yield* repo.listByProject({ projectId })
+      }).pipe(withPostgres(FlaggerRepositoryLive, client, orgId), withTracing),
+    )
+
+    return flaggers.map(toFlaggerRecord)
+  })
+
+export const updateFlagger = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      slug: z.string(),
+      enabled: z.boolean(),
+    }),
+  )
+  .handler(async ({ data }): Promise<FlaggerRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const client = getPostgresClient()
+
+    const flagger = await Effect.runPromise(
+      updateFlaggerUseCase({ projectId, slug: data.slug, enabled: data.enabled }).pipe(
+        withPostgres(FlaggerRepositoryLive, client, orgId),
+        withTracing,
+      ),
+    )
+
+    await Effect.runPromise(
+      evictProjectFlaggersUseCase({ organizationId, projectId }).pipe(
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+
+    return flagger ? toFlaggerRecord(flagger) : null
+  })
 
 export const listAnnotationQueuesByProject = createServerFn({ method: "GET" })
   .inputValidator(

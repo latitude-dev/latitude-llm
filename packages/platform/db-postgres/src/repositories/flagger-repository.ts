@@ -119,6 +119,34 @@ export const FlaggerRepositoryLive = Layer.effect(
               Effect.mapError((cause) => new RepositoryError({ operation: "provisionForProject", cause })),
             )
         }),
+
+      update: ({ projectId, slug, enabled }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const now = new Date()
+
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(flaggers)
+                .set({ enabled, updatedAt: now })
+                .where(
+                  and(
+                    eq(flaggers.organizationId, organizationId),
+                    eq(flaggers.projectId, projectId),
+                    eq(flaggers.slug, slug),
+                  ),
+                )
+                .returning(),
+            )
+            .pipe(
+              Effect.map((rows) => {
+                const row = rows[0]
+                return row !== undefined ? toDomainFlagger(row) : null
+              }),
+              Effect.mapError((cause) => new RepositoryError({ operation: "update", cause })),
+            )
+        }),
     } satisfies FlaggerRepositoryShape
   }),
 )

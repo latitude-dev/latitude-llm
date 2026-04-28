@@ -54,6 +54,8 @@ Manual ignore behavior is separate:
 - ignoring an issue always archives linked evaluations immediately
 - `keepMonitoring` does not affect the manual ignore path
 
+Project flagger configuration does not live in `projects.settings`. It lives in the project-scoped `flaggers` table so users can enable or disable each provisioned flagger independently and inspect what each flagger does.
+
 ## Post-MVP Execution Settings
 
 The original provider/model plan is intentionally deferred, not discarded.

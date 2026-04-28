@@ -13,33 +13,22 @@ Queue concepts:
 
 The filter field reuses the shared `FilterSet` described in `./filters.md`, applied against the shared trace field registry also used by evaluation triggers.
 
-## System Queue Scaffolding
+## Flagger Scaffolding
 
-System annotation queues are provisioned automatically for every project. This section describes the infrastructure that makes that possible, from project creation through trace assignment.
+Flagger rows are provisioned automatically for every project. This section describes the infrastructure that makes that possible, from project creation through trace assignment.
 
 ### Project Provisioning
 
 When a project is created:
 
 1. **Domain Event**: `createProjectUseCase` emits a `ProjectCreated` domain event to the Outbox table
-2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `project-provisioning:provision-system-queues` task
-3. **Queue-Based Provisioning**: The `project-provisioning` worker handles idempotent queue creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
+2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `projects:provision` task
+3. **Queue-Based Provisioning**: The projects worker handles idempotent flagger creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
 4. **Idempotency**: Uses `ON CONFLICT (organization_id, project_id, slug) DO NOTHING` to handle replays safely
-5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
-6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
 
-The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`) derived from their names, enabling slug-based routing throughout the pipeline. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) do **not** create annotation queues; they share the unified `QueueStrategy` registry as deterministic-only strategies and publish SYSTEM-authored annotation scores directly from the deterministic-flagger worker — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
+The flaggers are created with fixed slugs from the unified `QueueStrategy` registry. Deterministic telemetry signals (`tool-call-errors`, `output-schema-validation`, `empty-response`) are represented as flagger rows like LLM-capable strategies, but they publish SYSTEM-authored annotation scores directly from the deterministic-flagger worker — see [Direct Deterministic System Signals](#direct-deterministic-system-signals).
 
-### Caching
-
-Project system queue state is cached in Redis with a read-through pattern:
-
-- **Key**: `org:{organizationId}:projects:{projectId}:system-queues`
-- **TTL**: 5 minutes
-- **Invalidation**: Triggered after provisioning, manual queue edits, or deletions
-- **Cache Miss**: Falls back to repository query and repopulates the cache
-
-The cache stores the full list of system queues for a project, making fan-out operations fast and reducing database load.
+The project settings UI lists the provisioned flagger rows with their strategy details and lets users enable or disable each flagger independently. Toggling a flagger updates the flagger row and evicts the project flagger cache.
 
 ### Trace Routing: Trace-End → Deterministic-Flagger Worker → Workflow Start
 
@@ -54,14 +43,14 @@ Trace-end no longer fans out per-queue workflows directly. Instead, every trace-
 **Step 2 — `deterministic-flaggers:run`** (new worker; high-throughput, fault-isolated):
 
 1. Loads `TraceDetail` once
-2. Loads provisioned system queues for the project (cached)
+2. Loads provisioned flaggers for the project
 3. Fans out across the strategy registry in **two phases** to honor the suppression dependency graph:
    - **Phase 1**: strategies with no `suppressedBy` run in parallel; their `matched` decisions form a `phase1MatchedSlugs` set.
    - **Phase 2**: strategies with `suppressedBy` short-circuit before any detection work if any listed suppressor is in that set, emitting `{ action: "suppressed", suppressedBy }`.
 4. Routes each per-strategy `DetectionResult`:
    - **`matched`** → write a `SYSTEM`-authored score directly using the strategy-supplied `feedback` string. No queue item, no draft, no LLM call. (Issues clustering picks it up via `ScoreCreated` like the other direct-deterministic signals.)
-   - **`no-match`** (LLM-capable strategy + provisioned system queue) → apply per-queue `settings.sampling`. Sampled-in traces enqueue `start-flagger-workflow` with `reason: "sampled"`. Otherwise dropped (`sampled-out`).
-   - **`ambiguous`** (LLM-capable strategy + provisioned system queue) → check per-`{org, slug}` Redis rate limit (`AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT`, default 30 req / 60 s, fail-open). Under the limit → enqueue `start-flagger-workflow` with `reason: "ambiguous"`. Otherwise dropped (`rate-limited`).
+   - **`no-match`** (LLM-capable strategy + provisioned flagger) → apply per-flagger `sampling`. Sampled-in traces enqueue `start-flagger-workflow` with `reason: "sampled"`. Otherwise dropped (`sampled-out`).
+   - **`ambiguous`** (LLM-capable strategy + provisioned flagger) → check per-`{org, slug}` Redis rate limit (`AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT`, default 30 req / 60 s, fail-open). Under the limit → enqueue `start-flagger-workflow` with `reason: "ambiguous"`. Otherwise dropped (`rate-limited`).
 5. Per-strategy errors are caught at the slug boundary and recorded as `action: "failed"` with a strategy-scoped log; one broken detector cannot break the rest of the fan-out.
 
 The rate limit prevents a hot trace pattern (e.g., a jailbreak signature firing on every request from one org) from stampeding the LLM workflow queue with thousands of calls per minute. The Redis key shape is `org:{organizationId}:ratelimit:flagger-ambiguous:{queueSlug}`.

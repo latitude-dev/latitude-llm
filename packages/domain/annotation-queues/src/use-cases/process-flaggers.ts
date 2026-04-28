@@ -120,6 +120,8 @@ export const processFlaggersUseCase = Effect.fn("annotationQueues.processFlagger
   yield* Effect.annotateCurrentSpan("traceId", input.traceId)
 
   const traceRepository = yield* TraceRepository
+  const slugs = listQueueStrategySlugs()
+
   const trace = yield* traceRepository.findByTraceId({
     organizationId: OrganizationId(input.organizationId),
     projectId: ProjectId(input.projectId),
@@ -132,7 +134,6 @@ export const processFlaggersUseCase = Effect.fn("annotationQueues.processFlagger
   })
   const flaggerBySlug = new Map(flaggers.map((flagger) => [flagger.slug, flagger]))
 
-  const slugs = listQueueStrategySlugs()
   const phase1Slugs: string[] = []
   const phase2Slugs: string[] = []
   for (const slug of slugs) {

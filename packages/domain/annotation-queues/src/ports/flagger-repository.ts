@@ -17,6 +17,12 @@ export interface ProvisionFlaggersForProjectInput {
   readonly slugs: readonly string[]
 }
 
+export interface UpdateFlaggerInput {
+  readonly projectId: ProjectId
+  readonly slug: string
+  readonly enabled: boolean
+}
+
 export interface FlaggerRepositoryShape {
   /** All flagger rows for a project, in slug order. */
   listByProject(input: ListFlaggersByProjectInput): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
@@ -32,6 +38,7 @@ export interface FlaggerRepositoryShape {
   provisionForProject(
     input: ProvisionFlaggersForProjectInput,
   ): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
+  update(input: UpdateFlaggerInput): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
 }
 
 export class FlaggerRepository extends ServiceMap.Service<FlaggerRepository, FlaggerRepositoryShape>()(

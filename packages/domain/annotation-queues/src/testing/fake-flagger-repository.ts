@@ -60,6 +60,17 @@ export const createFakeFlaggerRepository = (
           .sort((a, b) => a.slug.localeCompare(b.slug))
       }),
 
+    update: ({ projectId, slug, enabled }) =>
+      Effect.sync(() => {
+        const id = indexByProjectSlug.get(keyFor(projectId, slug))
+        if (!id) return null
+        const existing = flaggers.get(id)
+        if (!existing) return null
+        const updated = { ...existing, enabled, updatedAt: new Date() }
+        flaggers.set(id, updated)
+        return updated
+      }),
+
     ...overrides,
   }
 
