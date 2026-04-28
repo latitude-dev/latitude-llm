@@ -114,6 +114,8 @@ function SearchPage() {
     searchQuery: q,
   })
 
+  const showSearchEmptyState = hasSearchQuery && !isTraceCountLoading && totalTraceCount === 0
+
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
   // Bulk actions only render for explicitly-picked rows. `mode: "all"` and
@@ -348,7 +350,7 @@ function SearchPage() {
           </Layout.Actions>
         ) : null}
 
-        {hasSearchQuery && selectedCount > 0 ? (
+        {hasSearchQuery && showBulkActions ? (
           <div className="flex flex-row items-center gap-2 px-6">
             <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
               <Icon icon={DownloadIcon} size="sm" />
@@ -405,7 +407,7 @@ function SearchPage() {
           </Layout.Aside>
         ) : null}
 
-        {hasSearchQuery && bulkSelection ? (
+        {hasSearchQuery && showBulkActions && bulkSelection ? (
           <ExportConfirmationModal
             open={exportModalOpen}
             onOpenChange={setExportModalOpen}
@@ -416,7 +418,7 @@ function SearchPage() {
           />
         ) : null}
 
-        {hasSearchQuery && bulkSelection ? (
+        {hasSearchQuery && showBulkActions && bulkSelection ? (
           <AddToDatasetModal
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}
@@ -427,7 +429,7 @@ function SearchPage() {
           />
         ) : null}
 
-        {hasSearchQuery && bulkSelection ? (
+        {hasSearchQuery && showBulkActions && bulkSelection ? (
           <AddToQueueModal
             open={addToQueueOpen}
             onOpenChange={setAddToQueueOpen}
