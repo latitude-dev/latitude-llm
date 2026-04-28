@@ -33,11 +33,24 @@ export function runOpenclaw(args: string[], opts: { timeoutMs?: number; stdin?: 
     stdio: ["pipe", "pipe", "pipe"],
   })
 
-  // spawnSync surfaces ENOENT through `result.error` rather than a thrown
-  // exception when called this way. Detect it and other I/O errors by code.
+  // spawnSync surfaces I/O errors through `result.error` rather than a thrown
+  // exception when called this way. Order matters: a timeout shows up as
+  // `error.code === "ETIMEDOUT"` AND/OR `signal === "SIGTERM"|"SIGKILL"`
+  // depending on platform — classify it before the generic `if (err)`
+  // catch-all so callers reliably get `reason: "timeout"` (and the
+  // timeout-specific error messages in setup.ts aren't dead code).
   const err = result.error as (NodeJS.ErrnoException & { code?: string }) | undefined
   if (err?.code === "ENOENT") {
     return { ok: false, reason: "enoent", stdout: "", stderr: "", code: null }
+  }
+  if (err?.code === "ETIMEDOUT" || result.signal === "SIGTERM" || result.signal === "SIGKILL") {
+    return {
+      ok: false,
+      reason: "timeout",
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+      code: null,
+    }
   }
   if (err) {
     // Treat any other spawn error as an unparseable exit failure.
@@ -47,16 +60,6 @@ export function runOpenclaw(args: string[], opts: { timeoutMs?: number; stdin?: 
       stdout: result.stdout ?? "",
       stderr: result.stderr ?? String(err),
       code: typeof result.status === "number" ? result.status : 1,
-    }
-  }
-
-  if (result.signal === "SIGTERM" || result.signal === "SIGKILL") {
-    return {
-      ok: false,
-      reason: "timeout",
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-      code: null,
     }
   }
 
