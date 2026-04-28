@@ -417,37 +417,6 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         }),
 
-      findFlaggerDraftByTraceAndFlaggerId: ({
-        projectId,
-        flaggerId,
-        traceId,
-      }: {
-        readonly projectId: ProjectId
-        readonly flaggerId: string
-        readonly traceId: TraceId
-      }) =>
-        Effect.gen(function* () {
-          const sqlClient = yield* resolveSqlClient()
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(scores)
-                .where(
-                  and(
-                    eq(scores.organizationId, organizationId),
-                    eq(scores.projectId, projectId),
-                    eq(scores.source, "flagger"),
-                    eq(scores.sourceId, flaggerId),
-                    eq(scores.traceId, traceId as string),
-                    isNotNull(scores.draftedAt),
-                  ),
-                )
-                .limit(1),
-            )
-            .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
-        }),
-
       findFlaggerPublishedByTraceAndFlaggerId: ({
         projectId,
         flaggerId,

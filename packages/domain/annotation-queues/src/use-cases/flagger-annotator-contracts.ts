@@ -21,7 +21,6 @@ export const flaggerAnnotateOutputSchema = z.object({
   flaggerId: z.string().min(1),
   traceId: z.string().min(1),
   draftAnnotationId: z.string().min(1),
-  wasCreated: z.boolean(),
 })
 
 export type FlaggerAnnotateOutput = z.infer<typeof flaggerAnnotateOutputSchema>

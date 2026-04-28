@@ -162,18 +162,6 @@ describe("flaggerAnnotateOutputSchema", () => {
       flaggerId: "flagger_123",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
-      wasCreated: true,
-    }
-    const result = flaggerAnnotateOutputSchema.safeParse(output)
-    expect(result.success).toBe(true)
-  })
-
-  it("accepts wasCreated false", () => {
-    const output = {
-      flaggerId: "flagger_123",
-      traceId: "trace_456",
-      draftAnnotationId: "draft_789",
-      wasCreated: false,
     }
     const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(true)
@@ -183,7 +171,6 @@ describe("flaggerAnnotateOutputSchema", () => {
     const output = {
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
-      wasCreated: true,
     }
     const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
@@ -194,7 +181,6 @@ describe("flaggerAnnotateOutputSchema", () => {
       flaggerId: "",
       traceId: "trace_456",
       draftAnnotationId: "draft_789",
-      wasCreated: true,
     }
     const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
@@ -204,7 +190,6 @@ describe("flaggerAnnotateOutputSchema", () => {
     const output = {
       flaggerId: "flagger_123",
       draftAnnotationId: "draft_789",
-      wasCreated: true,
     }
     const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)
@@ -214,17 +199,6 @@ describe("flaggerAnnotateOutputSchema", () => {
     const output = {
       flaggerId: "flagger_123",
       traceId: "trace_456",
-      wasCreated: true,
-    }
-    const result = flaggerAnnotateOutputSchema.safeParse(output)
-    expect(result.success).toBe(false)
-  })
-
-  it("rejects missing wasCreated", () => {
-    const output = {
-      flaggerId: "flagger_123",
-      traceId: "trace_456",
-      draftAnnotationId: "draft_789",
     }
     const result = flaggerAnnotateOutputSchema.safeParse(output)
     expect(result.success).toBe(false)

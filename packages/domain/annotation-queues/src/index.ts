@@ -173,11 +173,6 @@ export {
 } from "./use-cases/materialize-live-queue-items.ts"
 export { orchestrateTraceEndLiveQueueMaterializationUseCase } from "./use-cases/orchestrate-trace-end-annotation-queue-effects.ts"
 export {
-  type PersistFlaggerAnnotationError,
-  type PersistFlaggerAnnotationInput,
-  persistFlaggerAnnotationUseCase,
-} from "./use-cases/persist-flagger-annotation.ts"
-export {
   type CheckAmbiguousRateLimit,
   type DroppedReason,
   type EnqueueFlaggerWorkflowStart,
@@ -216,6 +211,11 @@ export {
   type RunFlaggerAnnotatorResult,
   runFlaggerAnnotatorUseCase,
 } from "./use-cases/run-flagger-annotator.ts"
+export {
+  type SaveFlaggerAnnotationError,
+  type SaveFlaggerAnnotationInput,
+  saveFlaggerAnnotationUseCase,
+} from "./use-cases/save-flagger-annotation.ts"
 export {
   type UncompleteQueueItemError,
   type UncompleteQueueItemInput,

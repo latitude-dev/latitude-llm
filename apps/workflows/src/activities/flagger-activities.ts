@@ -1,9 +1,9 @@
 import {
   draftFlaggerAnnotationUseCase,
   type FlaggerAnnotateOutput,
-  persistFlaggerAnnotationUseCase,
   type RunFlaggerResult,
   runFlaggerUseCase,
+  saveFlaggerAnnotationUseCase,
 } from "@domain/annotation-queues"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
@@ -50,7 +50,7 @@ interface DraftAnnotateOutput {
   readonly traceId: string
   readonly feedback: string
   readonly traceCreatedAt: string
-  /** Pre-generated score id; forwarded verbatim to `persistAnnotation`. */
+  /** Pre-generated score id; forwarded verbatim to `saveAnnotation`. */
   readonly scoreId: string
 }
 
@@ -83,7 +83,7 @@ export const draftAnnotate = async (input: {
     ),
   )
 
-export const persistAnnotation = async (input: {
+export const saveAnnotation = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
@@ -94,7 +94,7 @@ export const persistAnnotation = async (input: {
   readonly scoreId: string
 }): Promise<FlaggerAnnotateOutput> =>
   Effect.runPromise(
-    persistFlaggerAnnotationUseCase(input).pipe(
+    saveFlaggerAnnotationUseCase(input).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),
@@ -109,7 +109,7 @@ export const persistAnnotation = async (input: {
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
-          logger.error("Flagger persist annotation activity failed", {
+          logger.error("Flagger save annotation activity failed", {
             organizationId: input.organizationId,
             projectId: input.projectId,
             traceId: input.traceId,
