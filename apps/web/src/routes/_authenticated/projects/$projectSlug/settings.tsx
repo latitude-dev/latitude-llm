@@ -14,14 +14,12 @@ import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
 import {
-  flaggersQueryKey,
   updateFlaggerMutation,
   useProjectFlaggers,
 } from "../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import type { FlaggerRecord } from "../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
-import { getQueryClient } from "../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
 import { useRouteProject } from "./-route-data.ts"
 
@@ -91,7 +89,7 @@ function ProjectSettingsPage() {
           checked={flagger.enabled}
           loading={savingFlaggerSlug === flagger.slug}
           disabled={savingFlaggerSlug !== null && savingFlaggerSlug !== flagger.slug}
-          onCheckedChange={(checked) => void handleFlaggerEnabledChange(flagger.slug, checked)}
+          onCheckedChange={(checked) => void handleFlaggerEnabledChange(flagger, checked)}
           aria-label={`Toggle ${flagger.name}`}
         />
       ),
@@ -136,17 +134,18 @@ function ProjectSettingsPage() {
     }
   }
 
-  const handleFlaggerEnabledChange = async (slug: string, checked: boolean) => {
+  const handleFlaggerEnabledChange = async (flagger: FlaggerRecord, checked: boolean) => {
     if (savingFlaggerSlug) return
 
-    setSavingFlaggerSlug(slug)
+    setSavingFlaggerSlug(flagger.slug)
     try {
-      await updateFlaggerMutation({
+      const transaction = updateFlaggerMutation({
         projectId: currentProject.id,
-        slug,
+        id: flagger.id,
+        slug: flagger.slug,
         enabled: checked,
       })
-      await getQueryClient().invalidateQueries({ queryKey: flaggersQueryKey(currentProject.id) })
+      await transaction.isPersisted.promise
       toast({ description: checked ? "Flagger enabled" : "Flagger disabled" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })

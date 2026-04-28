@@ -41,6 +41,7 @@ export {
   extractConversationStages,
   extractUserTextMessages,
   extractWorkSignals,
+  type FlaggerSlug,
   // Strategies
   forgettingStrategy,
   frustrationStrategy,
@@ -114,7 +115,7 @@ export {
   FlaggerRepository,
   type FlaggerRepositoryShape,
   type ListFlaggersByProjectInput,
-  type ProvisionFlaggersForProjectInput,
+  type SaveFlaggersForProjectInput,
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"

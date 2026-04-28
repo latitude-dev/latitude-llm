@@ -8,7 +8,7 @@ import { outputSchemaValidationStrategy } from "./output-schema-validation.ts"
 import { refusalStrategy } from "./refusal.ts"
 import { toolCallErrorsStrategy } from "./tool-call-errors.ts"
 import { trashingStrategy } from "./trashing.ts"
-import type { LlmCapableQueueStrategy, QueueStrategy } from "./types.ts"
+import { FLAGGER_STRATEGY_SLUGS, type FlaggerSlug, type LlmCapableQueueStrategy, type QueueStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
 // Strategy Registry
@@ -24,7 +24,7 @@ import type { LlmCapableQueueStrategy, QueueStrategy } from "./types.ts"
 //      they never return `ambiguous`.
 // ---------------------------------------------------------------------------
 
-const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
+const STRATEGY_REGISTRY = {
   // LLM-capable
   frustration: frustrationStrategy,
   nsfw: nsfwStrategy,
@@ -38,7 +38,7 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
   "tool-call-errors": toolCallErrorsStrategy,
   "output-schema-validation": outputSchemaValidationStrategy,
   "empty-response": emptyResponseStrategy,
-}
+} satisfies Record<FlaggerSlug, QueueStrategy>
 
 // Validate the suppressedBy dependency graph at module load. The two-phase
 // fan-out in `processDeterministicFlaggersUseCase` requires every suppressor
@@ -50,7 +50,7 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
     const suppressors = strategy.suppressedBy
     if (!suppressors || suppressors.length === 0) continue
     for (const suppressor of suppressors) {
-      const target = STRATEGY_REGISTRY[suppressor]
+      const target = STRATEGY_REGISTRY[suppressor as FlaggerSlug]
       if (!target) {
         throw new Error(
           `Invalid flagger strategy registry: "${slug}" lists unknown suppressor "${suppressor}" in suppressedBy`,
@@ -70,7 +70,7 @@ const STRATEGY_REGISTRY: Record<string, QueueStrategy> = {
  * Returns null for unknown slugs.
  */
 export function getQueueStrategy(queueSlug: string): QueueStrategy | null {
-  return STRATEGY_REGISTRY[queueSlug] ?? null
+  return STRATEGY_REGISTRY[queueSlug as FlaggerSlug] ?? null
 }
 
 /**
@@ -83,8 +83,8 @@ export function hasQueueStrategy(queueSlug: string): boolean {
 /**
  * List all queue slugs with registered strategies.
  */
-export function listQueueStrategySlugs(): readonly string[] {
-  return Object.keys(STRATEGY_REGISTRY)
+export function listQueueStrategySlugs(): readonly FlaggerSlug[] {
+  return FLAGGER_STRATEGY_SLUGS
 }
 
 /**
@@ -134,4 +134,4 @@ export {
   truncateExcerpt,
 } from "./shared.ts"
 // Re-export types
-export type { DetectionResult, QueueStrategy } from "./types.ts"
+export type { DetectionResult, FlaggerSlug, QueueStrategy } from "./types.ts"

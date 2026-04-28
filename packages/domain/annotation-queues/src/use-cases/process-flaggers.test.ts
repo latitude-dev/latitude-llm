@@ -21,6 +21,7 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import type { Flagger } from "../entities/flagger.ts"
+import type { FlaggerSlug } from "../flagger-strategies/index.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
@@ -74,7 +75,7 @@ const makeTraceDetail = (allMessages: TraceDetail["allMessages"]): TraceDetail =
   allMessages,
 })
 
-const makeFlagger = (slug: string, sampling: number, enabled = true): Flagger => ({
+const makeFlagger = (slug: FlaggerSlug, sampling: number, enabled = true): Flagger => ({
   id: FlaggerId(`${slug.padEnd(24, "x").slice(0, 24)}`),
   organizationId: ORG_ID,
   projectId: PROJECT_ID,

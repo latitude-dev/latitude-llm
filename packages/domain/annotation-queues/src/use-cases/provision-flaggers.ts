@@ -27,7 +27,7 @@ export const provisionFlaggersUseCase = Effect.fn("annotationQueues.provisionFla
   const repository = yield* FlaggerRepository
   const slugs = listQueueStrategySlugs()
 
-  const rows = yield* repository.provisionForProject({
+  const rows = yield* repository.saveManyForProject({
     projectId: input.projectId,
     slugs,
   })
