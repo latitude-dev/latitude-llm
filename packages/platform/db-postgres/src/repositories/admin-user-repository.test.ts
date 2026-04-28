@@ -19,6 +19,9 @@ const ORG_B = makeId("org-user-beta")
 const TARGET = makeId("user-target")
 const UNMEMBERED = makeId("user-unmembered")
 const ADMIN = makeId("user-admin-imper")
+const SESSION_LIVE = makeId("s-live")
+const SESSION_IMP = makeId("s-imp")
+const SESSION_DEAD = makeId("s-dead")
 const FUTURE = new Date("2099-01-01T00:00:00.000Z")
 const PAST = new Date("2020-01-01T00:00:00.000Z")
 
@@ -72,7 +75,7 @@ describe("AdminUserRepositoryLive.findById", () => {
     //   - DEAD: an expired session (must be filtered out)
     await pg.db.insert(sessions).values([
       {
-        id: makeId("s-live"),
+        id: SESSION_LIVE,
         userId: TARGET,
         token: "tok-live",
         ipAddress: "203.0.113.5",
@@ -82,7 +85,7 @@ describe("AdminUserRepositoryLive.findById", () => {
         updatedAt: new Date("2025-06-02T11:00:00.000Z"),
       },
       {
-        id: makeId("s-imp"),
+        id: SESSION_IMP,
         userId: TARGET,
         token: "tok-imp",
         ipAddress: "203.0.113.10",
@@ -95,7 +98,7 @@ describe("AdminUserRepositoryLive.findById", () => {
         updatedAt: new Date("2025-06-02T09:00:00.000Z"),
       },
       {
-        id: makeId("s-dead"),
+        id: SESSION_DEAD,
         userId: TARGET,
         token: "tok-dead",
         ipAddress: "203.0.113.99",
@@ -146,9 +149,9 @@ describe("AdminUserRepositoryLive.findById", () => {
       }),
     )
 
-    // The expired `tok-dead` session is filtered out by the
+    // The expired `s-dead` session is filtered out by the
     // `expires_at > now()` predicate; only the two live rows remain.
-    expect(result.sessions.map((s) => s.token)).toEqual(["tok-imp", "tok-live"])
+    expect(result.sessions.map((s) => s.id)).toEqual([SESSION_IMP, SESSION_LIVE])
 
     const [imp, live] = result.sessions
     if (!imp || !live) throw new Error("expected two sessions")
@@ -156,6 +159,19 @@ describe("AdminUserRepositoryLive.findById", () => {
     expect(imp.impersonatedByEmail).toBe("admin@latitude.so")
     expect(live.impersonatedByUserId).toBeNull()
     expect(live.impersonatedByEmail).toBeNull()
+  })
+
+  it("findById does NOT surface session tokens — they're a live credential and stay server-side", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminUserRepository
+        return yield* repo.findById(UserId(TARGET))
+      }),
+    )
+
+    for (const session of result.sessions) {
+      expect(session).not.toHaveProperty("token")
+    }
   })
 
   it("fails with NotFoundError for a non-existent user id", async () => {
@@ -167,5 +183,62 @@ describe("AdminUserRepositoryLive.findById", () => {
         }),
       ),
     ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "User" })
+  })
+})
+
+describe("AdminUserRepositoryLive.findActiveSessionTokenForUser", () => {
+  it("returns the token for an active session that belongs to the named user", async () => {
+    const token = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminUserRepository
+        return yield* repo.findActiveSessionTokenForUser(UserId(TARGET), SESSION_LIVE)
+      }),
+    )
+    expect(token).toBe("tok-live")
+  })
+
+  it("works for an impersonation session as well — token belongs to the impersonated user, not the admin", async () => {
+    const token = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminUserRepository
+        return yield* repo.findActiveSessionTokenForUser(UserId(TARGET), SESSION_IMP)
+      }),
+    )
+    expect(token).toBe("tok-imp")
+  })
+
+  it("fails with NotFoundError when the session id exists but belongs to a different user", async () => {
+    // SESSION_LIVE belongs to TARGET; asking under UNMEMBERED must
+    // collapse into NotFoundError (not return the token).
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminUserRepository
+          return yield* repo.findActiveSessionTokenForUser(UserId(UNMEMBERED), SESSION_LIVE)
+        }),
+      ),
+    ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Session" })
+  })
+
+  it("fails with NotFoundError when the session is expired (the active-only filter applies)", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminUserRepository
+          return yield* repo.findActiveSessionTokenForUser(UserId(TARGET), SESSION_DEAD)
+        }),
+      ),
+    ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Session" })
+  })
+
+  it("fails with NotFoundError for an unknown session id", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminUserRepository
+          return yield* repo.findActiveSessionTokenForUser(UserId(TARGET), makeId("s-missing"))
+        }),
+      ),
+    ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Session" })
   })
 })

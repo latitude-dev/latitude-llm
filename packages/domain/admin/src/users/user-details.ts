@@ -25,13 +25,15 @@ export type AdminUserMembership = z.infer<typeof adminUserMembershipSchema>
  * second-pass lookup so audit views can read "Carlos was impersonating
  * this session" without a join in every consumer.
  *
- * `token` is the value Better Auth's `revokeUserSession` admin
- * endpoint takes — we surface it here so the per-row Revoke button
- * has the identifier it needs without re-fetching the session.
+ * The session **token** is intentionally NOT exposed here — it's a
+ * live authentication credential and surfacing it through the
+ * domain DTO would let it reach the wire payload, browser memory,
+ * and any consumer logging the result. The per-session Revoke flow
+ * resolves the token server-side at revoke time via
+ * {@link AdminUserRepository.findActiveSessionTokenForUser}.
  */
 export const adminUserSessionSchema = z.object({
   id: z.string(),
-  token: z.string(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),
   createdAt: z.date(),

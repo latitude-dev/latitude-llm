@@ -1,3 +1,7 @@
+export {
+  type GetActiveSessionTokenInput,
+  getActiveSessionTokenUseCase,
+} from "./get-active-session-token.ts"
 export { type GetUserDetailsInput, getUserDetailsUseCase } from "./get-user-details.ts"
 export {
   type AdminUserDetails,

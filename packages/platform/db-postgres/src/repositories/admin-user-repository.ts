@@ -75,7 +75,6 @@ export const AdminUserRepositoryLive = Layer.effect(
             db
               .select({
                 id: sessions.id,
-                token: sessions.token,
                 ipAddress: sessions.ipAddress,
                 userAgent: sessions.userAgent,
                 createdAt: sessions.createdAt,
@@ -110,7 +109,6 @@ export const AdminUserRepositoryLive = Layer.effect(
           const userSessions: AdminUserSession[] = liveSessions
             .map((s) => ({
               id: s.id,
-              token: s.token,
               ipAddress: s.ipAddress ?? null,
               userAgent: s.userAgent ?? null,
               createdAt: s.createdAt,
@@ -142,6 +140,26 @@ export const AdminUserRepositoryLive = Layer.effect(
             createdAt: row.createdAt,
           }
           return details
+        }),
+      findActiveSessionTokenForUser: (userId, sessionId) =>
+        Effect.gen(function* () {
+          const now = new Date()
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ token: sessions.token })
+              .from(sessions)
+              .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId), gt(sessions.expiresAt, now)))
+              .limit(1),
+          )
+          const found = rows[0]
+          if (!found) {
+            // Collapse "session id not found" and "session belongs to
+            // another user" into the same NotFoundError so a probing
+            // caller can't distinguish the two — the existence of a
+            // session id under a different user is itself sensitive.
+            return yield* Effect.fail(new NotFoundError({ entity: "Session", id: sessionId }))
+          }
+          return found.token
         }),
     }
   }),

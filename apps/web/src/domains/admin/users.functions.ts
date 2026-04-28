@@ -2,6 +2,7 @@ import {
   type AdminUserDetails,
   type AdminUserMembership,
   type AdminUserSession,
+  getActiveSessionTokenUseCase,
   getUserDetailsUseCase,
 } from "@domain/admin"
 import { generateId, UserId } from "@domain/shared"
@@ -32,14 +33,6 @@ export interface AdminUserDetailsMembershipDto {
  */
 export interface AdminUserSessionDto {
   id: string
-  /**
-   * Better Auth's session token — the value
-   * `auth.api.revokeUserSession` takes. Sent to the client for the
-   * per-row Revoke button; the action itself runs server-side under
-   * `adminMiddleware`, so we're not granting any new authority by
-   * exposing it.
-   */
-  token: string
   ipAddress: string | null
   /** Raw User-Agent string. Kept for hover-to-reveal / debugging. */
   userAgent: string | null
@@ -76,7 +69,6 @@ const sessionToDto = (s: AdminUserSession, geo: GeoIpInfo | null): AdminUserSess
   const parsed = s.userAgent ? UAParser(s.userAgent) : null
   return {
     id: s.id,
-    token: s.token,
     ipAddress: s.ipAddress,
     userAgent: s.userAgent,
     browserName: parsed?.browser.name ?? null,
@@ -403,33 +395,43 @@ export const adminRevokeUserSessions = createServerFn({ method: "POST" })
 export const adminRevokeUserSessionInputSchema = z.object({
   userId: z.string().min(1).max(256),
   sessionId: z.string().min(1).max(256),
-  /**
-   * The Better Auth `revokeUserSession` admin endpoint takes a
-   * session token (not the row id). We accept both on the wire — the
-   * UI hands us the token because that's what's needed for the
-   * actual revocation, and `sessionId` is plumbed through purely as
-   * the audit-event identifier (more readable than the token in
-   * audit logs, which are visible to support staff).
-   */
-  sessionToken: z.string().min(1).max(2048),
 })
 
 /**
  * Sign a single session out — backing the per-row Revoke button on
  * the Sessions panel.
  *
- * Audit-only by design: we don't fetch the user details before the
- * revoke (the audit row stands on its own with adminUserId +
- * targetUserId + sessionId), but we do scope the operation to a
- * specific user so an out-of-band admin can't accidentally drop the
- * wrong session by guessing a token. The `userId` is captured on
- * the audit event for symmetry with the other admin-action events.
+ * The session **token** (Better Auth's revoke credential) is
+ * resolved server-side, not accepted from the client. The handler
+ * looks up the row by `(userId, sessionId)` and a `expires_at >
+ * now()` predicate; if no row matches, the use-case fails with
+ * `NotFoundError`, the audit event is **not** written, and the
+ * client surfaces a "not found" — both "session id doesn't exist"
+ * and "session belongs to a different user" collapse into the same
+ * outcome. That gives us:
+ *   1. The token never round-trips through the wire / browser.
+ *   2. A tampered request that mismatches `userId` and `sessionId`
+ *      can't drop someone else's session and have it audited under
+ *      the wrong target.
+ *   3. The audit event stays consistent — a row only exists when a
+ *      revoke actually fired against the named user.
  */
 export const adminRevokeUserSession = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(adminRevokeUserSessionInputSchema)
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const adminUserId = context.adminUserId
+
+    // Verify ownership and resolve the token in one step. NotFoundError
+    // surfaces before the outbox write, so a probing call can't pollute
+    // the audit log with a `targetUserId` that doesn't actually own the
+    // session.
+    const sessionToken = await Effect.runPromise(
+      getActiveSessionTokenUseCase({ userId: UserId(data.userId), sessionId: data.sessionId }).pipe(
+        withPostgres(AdminUserRepositoryLive, getAdminPostgresClient()),
+        withTracing,
+      ),
+    )
 
     const outboxWriter = getOutboxWriter()
     await Effect.runPromise(
@@ -452,7 +454,7 @@ export const adminRevokeUserSession = createServerFn({ method: "POST" })
 
     const headers = getRequestHeaders()
     const auth = getBetterAuth()
-    await auth.api.revokeUserSession({ body: { sessionToken: data.sessionToken }, headers })
+    await auth.api.revokeUserSession({ body: { sessionToken }, headers })
 
     return { ok: true }
   })

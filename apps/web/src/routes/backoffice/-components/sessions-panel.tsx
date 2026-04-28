@@ -56,7 +56,7 @@ export function SessionsPanel({ userId, userEmail, sessions }: SessionsPanelProp
     setIsSubmitting(true)
     try {
       await adminRevokeUserSession({
-        data: { userId, sessionId: pending.id, sessionToken: pending.token },
+        data: { userId, sessionId: pending.id },
       })
       toast({ description: "Session revoked." })
       void router.invalidate()

@@ -7,14 +7,21 @@ import { AdminUserRepository } from "./user-repository.ts"
 
 const TARGET_ID = "user-target" as UserId
 
+// Stub for the second port method — `getUserDetailsUseCase` doesn't
+// exercise it, but the `Service` shape requires both implementations.
+const stubFindActiveSessionTokenForUser = (_userId: UserId, sessionId: string) =>
+  Effect.fail(new NotFoundError({ entity: "Session", id: sessionId }))
+
 const successfulRepo = (result: AdminUserDetails) =>
   Layer.succeed(AdminUserRepository, {
     findById: () => Effect.succeed(result),
+    findActiveSessionTokenForUser: stubFindActiveSessionTokenForUser,
   })
 
 const missingRepo = () =>
   Layer.succeed(AdminUserRepository, {
     findById: (id) => Effect.fail(new NotFoundError({ entity: "User", id })),
+    findActiveSessionTokenForUser: stubFindActiveSessionTokenForUser,
   })
 
 const mkDetails = (overrides: Partial<AdminUserDetails> = {}): AdminUserDetails => ({

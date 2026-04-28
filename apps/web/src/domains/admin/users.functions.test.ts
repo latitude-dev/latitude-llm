@@ -107,22 +107,22 @@ describe("adminRevokeUserSessionsInputSchema", () => {
 })
 
 describe("adminRevokeUserSessionInputSchema", () => {
-  const validInput = { userId: "user-123", sessionId: "sess-abc", sessionToken: "tok-xyz" }
+  const validInput = { userId: "user-123", sessionId: "sess-abc" }
 
   it("accepts a valid input", () => {
     expect(adminRevokeUserSessionInputSchema.safeParse(validInput).success).toBe(true)
   })
 
-  it("rejects when sessionId is missing — needed for the audit-event identifier", () => {
+  it("rejects when sessionId is missing", () => {
     expect(adminRevokeUserSessionInputSchema.safeParse({ ...validInput, sessionId: undefined }).success).toBe(false)
   })
 
-  it("rejects when sessionToken is missing — needed for the actual revoke call", () => {
-    expect(adminRevokeUserSessionInputSchema.safeParse({ ...validInput, sessionToken: "" }).success).toBe(false)
+  it("rejects when userId is empty", () => {
+    expect(adminRevokeUserSessionInputSchema.safeParse({ ...validInput, userId: "" }).success).toBe(false)
   })
 
-  it("rejects an absurdly long token (defensive bound against abuse)", () => {
-    expect(adminRevokeUserSessionInputSchema.safeParse({ ...validInput, sessionToken: "x".repeat(2049) }).success).toBe(
+  it("rejects a sessionId above the max length (defensive bound against abuse)", () => {
+    expect(adminRevokeUserSessionInputSchema.safeParse({ ...validInput, sessionId: "x".repeat(257) }).success).toBe(
       false,
     )
   })
