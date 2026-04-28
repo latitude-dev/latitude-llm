@@ -140,7 +140,12 @@ Run `openclaw config validate` — should print `valid: true`. Then `openclaw ga
 
 ## Privacy
 
-By default we capture **full content** — prompts, assistant responses, system instructions, tool I/O — and ship it to Latitude alongside the structural telemetry. The interactive installer writes `allowConversationAccess: true` to both the `hooks` and `config` blocks unless you pass `--no-content`.
+There are two defaults at play — keep them straight:
+
+- **Installer default**: when you run `npx -y @latitude-data/openclaw-telemetry install` without `--no-content`, the installer writes `allowConversationAccess: true` to both the `hooks` and `config` blocks. **You get full content capture** — prompts, assistant responses, system instructions, tool I/O — shipped to Latitude alongside structural telemetry.
+- **Runtime default for absent keys**: if you hand-write `openclaw.json` and leave `allowConversationAccess` out entirely, `config.allowConversationAccess` falls back to `false` at the plugin's runtime (privacy-preserving) and `hooks.allowConversationAccess` falls back to OpenClaw's default (also `false`, which means dispatch is blocked and you get nothing). **Manual installs without those keys produce no traces, not "structural-only traces".**
+
+The installer always writes both keys to the same value, so the installer-driven path is unambiguous. The runtime-default trap only matters for hand-rolled configs.
 
 When you pass `--no-content` (or hand-edit both flags to `false`), we emit the same span tree but scrub the content attributes (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `gen_ai.tool.call.arguments`/`result`, the interaction's `user_prompt`). Timings, token usage, model name, agent name, ids, and the `latitude.captured.content: false` boolean still flow.
 
