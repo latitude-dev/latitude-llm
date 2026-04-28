@@ -64,9 +64,8 @@ function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string
   return seedTimestampDaysAgo(daysAgo, hour, minute)
 }
 
-function annotationSeedSourceId(sourceId: string): "UI" | "API" | "SYSTEM" {
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
-  if (sourceId === "system-signals") return "SYSTEM"
   return "API"
 }
 

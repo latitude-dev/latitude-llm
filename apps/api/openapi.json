@@ -809,8 +809,7 @@
                 "type": "string",
                 "enum": [
                   "UI",
-                  "API",
-                  "SYSTEM"
+                  "API"
                 ]
               },
               {
@@ -841,6 +840,12 @@
               "endOffset": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "textFormat": {
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
               }
             },
             "required": [
@@ -972,6 +977,12 @@
               "endOffset": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "textFormat": {
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
               }
             }
           },
