@@ -64,6 +64,17 @@ Click on a trace to open the detail view, which shows:
   <img src="/images/traces/trace-detailed.png" alt="Trace detail view showing conversation, span tree, and metadata" />
 </Frame>
 
+## Searching Traces
+
+Click **Search** in the project sidebar to run a natural-language query across your traces. Latitude combines lexical and semantic matching over the user and assistant content of each trace, ranks results by relevance, and shows the top matches in the same trace table.
+
+- Type a query and press **Enter** to commit it to the URL.
+- Filters, time range, and column controls work the same as on the Traces page.
+- Bulk actions (Export, Add to Dataset, Add to Queue) are available only when you explicitly select rows.
+- Use the back button (or clear the input) to leave search and return to the unfiltered list.
+
+Search is forward-only: only traces indexed after the feature was rolled out are searchable.
+
 ## Filtering Traces
 
 Click the **Filters** button in the toolbar to open the filter panel. You can combine any number of filters to narrow your trace view.
