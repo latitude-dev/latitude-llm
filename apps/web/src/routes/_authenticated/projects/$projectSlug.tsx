@@ -1,7 +1,7 @@
 import { CopyableText } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { DatabaseIcon, LayersIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, LayersIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
@@ -37,6 +37,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     pathname === `/projects/${projectSlug}` ||
     pathname === `/projects/${projectSlug}/` ||
     pathname.startsWith(`/projects/${projectSlug}/traces`)
+  const isSearchActive = pathname.startsWith(`/projects/${projectSlug}/search`)
   const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
@@ -58,6 +59,13 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     >
       {({ collapsed }) => (
         <>
+          <NavItem
+            icon={SearchIcon}
+            label="Search"
+            to={`/projects/${projectSlug}/search`}
+            active={isSearchActive}
+            collapsed={collapsed}
+          />
           <NavItem
             icon={TextAlignStartIcon}
             label="Traces"

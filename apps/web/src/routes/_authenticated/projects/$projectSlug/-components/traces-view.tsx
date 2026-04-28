@@ -25,6 +25,7 @@ interface TracesViewProps {
   readonly onActiveTraceChange: (traceId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
   readonly visibleColumnIds: readonly TraceColumnId[]
+  readonly searchQuery?: string
 }
 
 export function TracesView({
@@ -43,8 +44,10 @@ export function TracesView({
   onActiveTraceChange,
   traceIdsRef,
   visibleColumnIds,
+  searchQuery,
 }: TracesViewProps) {
   const hasActiveFilters = Object.keys(filters).length > 0
+  const hasSearchQuery = !!searchQuery && searchQuery.length > 0
 
   const {
     data: traces,
@@ -54,11 +57,13 @@ export function TracesView({
     projectId,
     sorting,
     ...(hasActiveFilters ? { filters } : {}),
+    ...(hasSearchQuery ? { searchQuery } : {}),
   })
 
   const { data: traceMetrics, isLoading: metricsLoading } = useTraceMetrics({
     projectId,
     ...(hasActiveFilters ? { filters } : {}),
+    ...(hasSearchQuery ? { searchQuery } : {}),
   })
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
 
@@ -136,7 +141,13 @@ export function TracesView({
           sorting={sorting}
           defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
           onSortChange={onSortingChange}
-          blankSlate={hasActiveFilters ? "No traces match the current filters" : "No traces found"}
+          blankSlate={
+            hasSearchQuery
+              ? "No traces match the search query"
+              : hasActiveFilters
+                ? "No traces match the current filters"
+                : "No traces found"
+          }
           traceMetrics={traceMetrics}
           metricsLoading={metricsLoading}
         />
