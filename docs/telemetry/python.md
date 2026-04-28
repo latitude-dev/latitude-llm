@@ -90,10 +90,6 @@ latitude.shutdown()
 
 ## Existing OpenTelemetry Setup (Advanced)
 
-<Info>
-  Using a language other than TypeScript or Python? You can connect to Latitude from **any** OpenTelemetry-instrumented application. See the [OTLP Exporter](otel-exporter) guide.
-</Info>
-
 If your app already uses OpenTelemetry, add Latitude alongside your existing processors:
 
 ```python
@@ -112,6 +108,8 @@ register_latitude_instrumentations(
 ```
 
 `LatitudeSpanProcessor` only exports spans to Latitude. You still need LLM instrumentations to create those spans. Use `register_latitude_instrumentations()` or bring your own OTel-compatible LLM instrumentation.
+
+For examples of integrating with **Datadog**, **Sentry**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
 
 ## Public API Reference
 

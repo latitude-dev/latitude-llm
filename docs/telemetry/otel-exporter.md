@@ -176,6 +176,78 @@ span.SetAttributes(
 )
 ```
 
+## Existing Observability Stack
+
+Latitude works alongside your existing observability tools. Add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
+
+### With Datadog (TypeScript)
+
+```ts
+import tracer from "dd-trace"
+import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
+
+const ddTracer = tracer.init({ service: "my-app", env: "production" })
+const provider = new ddTracer.TracerProvider()
+
+provider.addSpanProcessor(
+  new LatitudeSpanProcessor(
+    process.env.LATITUDE_API_KEY!,
+    process.env.LATITUDE_PROJECT_SLUG!,
+  ),
+)
+
+provider.register()
+```
+
+### With Sentry (TypeScript)
+
+```ts
+import * as Sentry from "@sentry/node"
+import {
+  SentrySpanProcessor,
+  SentrySampler,
+  SentryPropagator,
+} from "@sentry/opentelemetry"
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+import {
+  LatitudeSpanProcessor,
+  registerLatitudeInstrumentations,
+} from "@latitude-data/telemetry"
+
+const sentryClient = Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  skipOpenTelemetrySetup: true,
+  tracesSampleRate: 1.0,
+})
+
+const provider = new NodeTracerProvider({
+  sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
+  spanProcessors: [
+    new SentrySpanProcessor(),
+    new LatitudeSpanProcessor(
+      process.env.LATITUDE_API_KEY!,
+      process.env.LATITUDE_PROJECT_SLUG!,
+    ),
+  ],
+})
+
+provider.register({
+  propagator: new SentryPropagator(),
+  contextManager: new Sentry.SentryContextManager(),
+})
+
+await registerLatitudeInstrumentations({
+  instrumentations: ["openai"],
+  tracerProvider: provider,
+})
+
+Sentry.validateOpenTelemetrySetup()
+```
+
+### Other Platforms
+
+For any observability platform that supports OpenTelemetry (Jaeger, Grafana Tempo, Honeycomb, etc.), the pattern is the same: configure an additional OTLP exporter pointed at `https://ingest.latitude.so/v1/traces` with the required `Authorization` and `X-Latitude-Project` headers alongside your existing exporter.
+
 ## Troubleshooting
 
 ### 401 Unauthorized
