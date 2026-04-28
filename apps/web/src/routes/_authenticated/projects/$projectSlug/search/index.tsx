@@ -30,7 +30,6 @@ import { useRouteProject } from "../-route-data.ts"
 import { AddToQueueModal } from "../annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
 import { SearchBlankSlate } from "./-components/search-blank-slate.tsx"
-import { SearchEmptyState } from "./-components/search-empty-state.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -82,16 +81,19 @@ function SearchPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount, isLoading: isTraceCountLoading } = useTracesCount({
+  const { totalCount: totalTraceCount } = useTracesCount({
     projectId: hasSearchQuery ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
     searchQuery: q,
   })
 
-  const showSearchEmptyState = hasSearchQuery && !isTraceCountLoading && totalTraceCount === 0
-
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
+  // Bulk actions only render for explicitly-picked rows. `mode: "all"` and
+  // `mode: "allExcept"` would resolve server-side against the unfiltered
+  // project, ignoring `searchQuery`, which would silently process more
+  // traces than the user sees in the UI.
+  const showBulkActions = bulkSelection?.mode === "selected"
 
   const onSortingChange = (next: { column: string; direction: SortDirection }) => {
     setSortBy(next.column)
@@ -250,7 +252,7 @@ function SearchPage() {
         </Layout.Actions>
       ) : null}
 
-      {hasSearchQuery && selectedCount > 0 ? (
+      {hasSearchQuery && showBulkActions ? (
         <div className="flex flex-row items-center gap-2 px-6">
           <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
             <Icon icon={DownloadIcon} size="sm" />
@@ -267,7 +269,7 @@ function SearchPage() {
         </div>
       ) : null}
 
-      {hasSearchQuery && !showSearchEmptyState ? (
+      {hasSearchQuery ? (
         <TracesView
           projectId={projectId}
           filters={filters}
@@ -288,9 +290,7 @@ function SearchPage() {
         />
       ) : null}
 
-      {showSearchEmptyState ? <SearchEmptyState /> : null}
-
-      {hasSearchQuery && !showSearchEmptyState && activeTraceId ? (
+      {hasSearchQuery && activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
             key={activeTraceId}
@@ -307,7 +307,7 @@ function SearchPage() {
         </Layout.Aside>
       ) : null}
 
-      {hasSearchQuery && bulkSelection ? (
+      {hasSearchQuery && showBulkActions && bulkSelection ? (
         <ExportConfirmationModal
           open={exportModalOpen}
           onOpenChange={setExportModalOpen}
@@ -318,7 +318,7 @@ function SearchPage() {
         />
       ) : null}
 
-      {hasSearchQuery && bulkSelection ? (
+      {hasSearchQuery && showBulkActions && bulkSelection ? (
         <AddToDatasetModal
           open={addToDatasetOpen}
           onOpenChange={setAddToDatasetOpen}
@@ -329,7 +329,7 @@ function SearchPage() {
         />
       ) : null}
 
-      {hasSearchQuery && bulkSelection ? (
+      {hasSearchQuery && showBulkActions && bulkSelection ? (
         <AddToQueueModal
           open={addToQueueOpen}
           onOpenChange={setAddToQueueOpen}
