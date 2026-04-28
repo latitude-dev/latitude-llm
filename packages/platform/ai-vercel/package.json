@@ -12,7 +12,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "5.0.0-beta.27",
+    "@ai-sdk/amazon-bedrock": "5.0.0-beta.41",
     "@aws-sdk/credential-providers": "3.1029.0",
     "@domain/ai": "workspace:*",
     "@platform/ai-latitude": "workspace:*",

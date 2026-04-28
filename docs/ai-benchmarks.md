@@ -219,15 +219,23 @@ Why it exists: without a reference, each benchmark run is an island — you see 
 Practical shape:
 
 - `baselines/<target>.json` is committed to git (no gitignore).
-- Contains `{ runAt, metrics, predictions }` — `predictions` is the full per-row list keyed by `id`.
+- Contains `{ runAt, metrics, perTactic, perPhase, fixtureSize, rowIdsHash, failures }`.
+  - `metrics` / `perTactic` / `perPhase` — the same numbers the TUI prints, frozen at the moment the baseline was accepted.
+  - `failures` — the per-row list of **failures only** (rows worth committing for diffing). A row is a failure when `predicted !== expected` (FP or FN), or when `phase` is `schema-mismatch` / `error` (verdict may match `expected` but the underlying call was unstable). Passing rows in stable phases are intentionally omitted to keep the file small.
+  - `fixtureSize` + `rowIdsHash` — a cheap fingerprint of the fixture composition (`rowIdsHash` is `sha256(sorted-ids)`). Used to detect when the mapper added or removed rows between baseline and current run, without having to commit the full ID list.
 - Baselines are only written by `--update-baseline`, never implicitly. The runner never "nudges" the baseline on its own — a human must explicitly accept the current state.
 - `--update-baseline` is rejected when `--sample` is set (sampled runs aren't a complete measurement).
 
 Diff semantics:
 
-- **flips** — rows where `predicted` or `phase` changed vs the baseline.
-- **newInCurrent** — row IDs present in the current run but not in the baseline (fixture grew — someone added a mapper source).
-- **missingFromCurrent** — row IDs in the baseline but gone from the current fixture (fixture shrunk — someone removed a source).
+The diff is a set-symmetric operation over committed failure rows, plus a fixture-composition check:
+
+- **addedFailures** — rows that fail in the current run but were not in the baseline failure list (regression, or new instability). Labeled `NEW` in the TUI flips view.
+- **removedFailures** — rows that were in the baseline failure list but are no longer failures in the current run (fix, or instability that resolved). Labeled `FIX`.
+- **changedFailures** — rows in both failure lists with a different `(predicted, phase)` tuple (e.g. FN in `llm-no-match` → FN in `schema-mismatch`). Labeled `CHG`.
+- **fixtureChanged** — boolean. True when `fixtureSize` differs or `rowIdsHash` differs between current and baseline. When true the TUI shows a banner: added/removed counts may include rows that simply appeared or disappeared from the fixture, not real verdict regressions; consult the mapper diff alongside the baseline diff.
+
+Passing rows that became different-phase passing rows (e.g. a true negative shifting from `llm-no-match` to `deterministic-no-match`) are intentionally invisible. The baseline does not commit per-row predictions for passing rows, so we cannot detect such transitions. They were weak signal anyway — the failure-set diff captures every change that affects verdict correctness.
 
 What the baseline is NOT:
 
@@ -239,28 +247,29 @@ The review-loop dynamic this enables:
 
 ```
 Edit prompt → benchmark:run
-  → TUI shows: 8 flips, F1 +0.6%
+  → TUI shows: +2 added, Δ1 changed, -6 removed failures vs baseline, F1 +0.6%
   → open inspector (Enter on each flip), audit one by one:
 
-     - 5 flips: previously FN → now TP
+     - 5 FIX (removed failures): previously FN → now TP
        (rows where expected=true: the flagger was missing them in the
         baseline — false negatives — and now catches them — true
         positives. Real jailbreaks that were slipping through now get
         flagged. Recall went up on these 5 rows. Net positive.)
 
-     - 2 flips: previously TN → now FP
+     - 2 NEW (added failures): previously passing → now FP
        (rows where expected=false: the flagger correctly ignored them
-        in the baseline — true negatives — and now wrongly flags them
-        — false positives. Two benign rows that used to pass quietly
-        now produce false alarms in the queue. Precision dropped on
-        these. Net negative, but narrow: acceptable tradeoff if the
-        5 TP gains above outweigh them.)
+        in the baseline — true negatives, not committed — and now
+        wrongly flags them — false positives, which appear as added
+        failures. Two benign rows that used to pass quietly now produce
+        false alarms in the queue. Precision dropped on these. Net
+        negative, but narrow: acceptable tradeoff if the 5 FIX gains
+        above outweigh them.)
 
-     - 1 flip: schema-mismatch → llm-match
-       (row where the LLM call used to return malformed output, got
-        recovered to matched=false, and is now returning a clean
-        structured response. Same verdict category, cleaner decision
-        phase. Neutral for P/R/F1 but a small pipeline win.)
+     - 1 FIX (removed failure): schema-mismatch → llm-match
+       (row where the LLM call used to return malformed output — a
+        committed failure since schema-mismatch is unstable — and now
+        returns a clean structured response with the correct verdict.
+        Pipeline win.)
 
   → accept: benchmark:run --update-baseline
   → commit prompt change + baseline.json in same PR
@@ -376,8 +385,11 @@ pnpm --filter @tools/ai-benchmarks benchmark:fetch flaggers:jailbreaking
 # 3. Run (stale check passes because the fetch refreshed the sidecar)
 pnpm --filter @tools/ai-benchmarks benchmark:run --only flaggers:jailbreaking
 
-# 4. Expect: some newInCurrent / missingFromCurrent in the baseline diff
-#    if row IDs changed. Inspect, accept, --update-baseline, commit.
+# 4. Expect: a "fixture changed" banner in the baseline diff if row IDs
+#    differ from the prior fixture (rowIdsHash mismatch). Added/removed
+#    failure counts may include rows that simply appeared or disappeared
+#    from the fixture, not real verdict regressions — read the mapper
+#    diff alongside. Inspect, accept, --update-baseline, commit.
 ```
 
 ### Adding a new target
