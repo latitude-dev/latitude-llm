@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-04-28
+
+End-to-end fix for OpenClaw 2026.4.25+. After a clean `npx -y install` and `openclaw gateway restart`, traces flow without manual intervention.
+
+### Breaking
+
+- **Minimum supported OpenClaw is now 2026.4.25.** The installer detects the version up-front (`openclaw --version`) and aborts with an upgrade message on older versions. Earlier OpenClaws either reject `hooks.allowConversationAccess` outright (≤ 2026.4.21) or have unverified hook-dispatch gating (2026.4.22 – 2026.4.24); supporting the entire range with portability shims would mean shipping known-broken behaviour. We'd rather fail loudly. Upgrade with `npm install -g openclaw@latest`.
+
+### Fixed
+
+- **Plugin discovery + the `installs.json` index now stay in sync.** 0.0.3 hand-placed files into `~/.openclaw/extensions/<name>/`, which the gateway's runtime discovery picked up — but OpenClaw's persisted `~/.openclaw/plugins/installs.json` wasn't refreshed, so `openclaw config validate` and every other CLI command warned `plugin not found: @latitude-data/openclaw-telemetry (stale config entry ignored)`. Replaced hand-placement with `openclaw plugins install <package-path> --force`. OpenClaw now owns placement, writes the install record, and creates the (initially disabled) `plugins.entries[id]` block — we layer config + hooks + `plugins.allow` on top.
+- **Hook dispatch is no longer blocked.** OpenClaw 2026.4.22+ added `hooks.allowConversationAccess` to the strict zod schema and made it the runtime gate for `llm_input` / `llm_output` / `before_tool_call` / `after_tool_call` / `agent_end` dispatch to non-bundled plugins. 0.0.3 only wrote `config.allowConversationAccess`, so on 2026.4.25 the gateway logged `[plugins] typed hook "..." blocked because non-bundled plugins must set plugins.entries.<id>.hooks.allowConversationAccess=true` for every event and our handlers never fired — zero traces. `setPluginEntry` now writes both: `config.allowConversationAccess` (payload-content gate, read by our runtime) and `hooks.allowConversationAccess` (dispatch gate, read by OpenClaw's runtime). Always coupled to the same source value.
+- **`plugins.allow` warning silenced.** OpenClaw warns at every gateway start when a non-bundled plugin auto-loads without provenance via `plugins.allow` or an install record. Going through `openclaw plugins install` clears the provenance side; the installer also auto-adds the plugin id to `plugins.allow` (running `npx install` is the trust signal). New `--no-trust` flag opts out — the warning will keep showing until the operator adds the id manually.
+- **`SCOPE_VERSION` no longer lies.** The hard-coded `"0.0.2"` in `otlp.ts` is gone; the version is now read at runtime from `package.json`, matching the pattern `cli.ts` uses for `--version`. Future bumps only touch `package.json`.
+
+### Removed
+
+- `src/install-files.ts` — superseded by `openclaw plugins install`. We never write to `~/.openclaw/extensions/` ourselves anymore.
+
+### Added
+
+- `src/openclaw-cli.ts` — shell-out wrapper with structured failure modes (`enoent` / `timeout` / `exit`), CalVer comparison, and `openclaw --version` parsing.
+- `--no-trust` install flag — skip auto-adding to `plugins.allow`. The README documents what changes when set.
+
 ## [0.0.3] - 2026-04-27
 
 ### Fixed

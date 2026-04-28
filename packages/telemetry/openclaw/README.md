@@ -4,22 +4,23 @@ OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) 
 
 ## Install
 
+Requires OpenClaw **2026.4.25 or newer** on PATH. Older versions are detected up-front and the installer aborts with an upgrade message.
+
 ```bash
 npx -y @latitude-data/openclaw-telemetry install
+openclaw gateway restart
 ```
 
 The installer prompts for your Latitude API key and project slug, then:
 
-1. Materializes the plugin's runtime files into `~/.openclaw/extensions/latitude-telemetry/` (where OpenClaw's plugin discovery scans).
-2. Writes the plugin entry to `~/.openclaw/openclaw.json` under `plugins.entries["@latitude-data/openclaw-telemetry"].config` — credentials, base URL, and the `allowConversationAccess` flag all live here.
+1. Verifies your OpenClaw version (aborts on `< 2026.4.25`).
+2. Hands plugin placement to OpenClaw via `openclaw plugins install <package-path> --force`. OpenClaw copies files into `~/.openclaw/extensions/<id>/`, writes the install record to `~/.openclaw/plugins/installs.json`, and creates the `plugins.entries[id]` block.
+3. Layers our config on top in `~/.openclaw/openclaw.json`:
+   - **`config.*`** — credentials, baseUrl, and `allowConversationAccess` (the payload-content gate the plugin's runtime reads).
+   - **`hooks.allowConversationAccess`** — the dispatch gate OpenClaw's runtime checks before forwarding LLM/tool/agent events to non-bundled plugins. Always mirrored to the same value as `config.allowConversationAccess`.
+4. Adds the plugin id to `plugins.allow` (running `npx install` is the trust signal). Pass `--no-trust` to opt out.
 
-Restart the OpenClaw gateway after install:
-
-```bash
-openclaw gateway restart
-```
-
-That's it. Traces show up at `https://console.latitude.so/projects/<your-slug>`.
+Traces show up at `https://console.latitude.so/projects/<your-slug>` once the gateway restarts.
 
 ### Install flags
 
@@ -30,9 +31,10 @@ That's it. Traces show up at `https://console.latitude.so/projects/<your-slug>`.
 | `--staging` | Target `https://staging.latitude.so` / `https://staging-ingest.latitude.so`. |
 | `--dev` | Target `http://localhost:3000` / `http://localhost:3002`. |
 | `--yes` / `--no-prompt` | Skip all prompts. Required for non-TTY / CI invocations. |
-| `--no-content` | Skip raw prompt/response/tool I/O capture. Spans still emit with timing, token usage, model name, and ids. |
+| `--no-content` | Skip raw prompt/response/tool I/O capture. Spans still emit with timing, token usage, model name, and ids. Mirrored into both `config.allowConversationAccess` and `hooks.allowConversationAccess`. |
+| `--no-trust` | Skip auto-adding the plugin id to `plugins.allow`. OpenClaw will keep printing `plugins.allow is empty` warnings until you add it manually. |
 
-Re-running `install` is idempotent — existing values are preserved.
+Re-running `install` is idempotent — credentials/baseUrl are overwritten from prompts, but hand-edited `enabled`, `debug`, and `allowConversationAccess` values in `openclaw.json` are preserved unless you pass the corresponding flag.
 
 ## Uninstall
 
@@ -40,7 +42,7 @@ Re-running `install` is idempotent — existing values are preserved.
 npx -y @latitude-data/openclaw-telemetry uninstall
 ```
 
-Shows a plan, asks for confirmation, then removes the plugin entry from `~/.openclaw/openclaw.json` and the materialized files at `~/.openclaw/extensions/latitude-telemetry/`. A backup of the settings file is saved at `openclaw.json.latitude-bak`.
+Shows a plan, asks for confirmation, then runs `openclaw plugins uninstall @latitude-data/openclaw-telemetry --force` (which removes files, the install record, the plugin entry, and the `plugins.allow` entry). Defensive cleanup follows for any leftover keys, with a backup at `openclaw.json.latitude-bak`.
 
 ## What gets sent
 
@@ -70,36 +72,59 @@ OpenClaw runs LLM hooks **fire-and-forget** (see [`src/plugins/hooks.ts`](https:
 
 ## Configuration reference
 
-The installer writes the plugin entry under `plugins.entries[id].config`. Every key is optional except `apiKey` and `project`. You can hand-edit `~/.openclaw/openclaw.json` to tweak:
+The installer writes two blocks to `plugins.entries["@latitude-data/openclaw-telemetry"]`:
 
-### `plugins.entries["@latitude-data/openclaw-telemetry"].config`
+### `.config` — read by the plugin's runtime
 
 | Key | Required | Default | Description |
 | --- | --- | --- | --- |
 | `apiKey` | yes | — | Bearer token for Latitude ingestion. |
 | `project` | yes | — | Slug of the project to route traces into. |
 | `baseUrl` | no | `https://ingest.latitude.so` | Override OTLP ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
-| `allowConversationAccess` | no | `false` | When `true`, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When `false`, emit only timing, token usage, model name, agent id, and structural ids — same span tree, scrubbed payloads. |
+| `allowConversationAccess` | no | `false` | When `true`, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When `false`, emit only timing, token usage, model name, agent id, and structural ids — same span tree, scrubbed payloads. **Must match `hooks.allowConversationAccess` below — see "the two flags".** |
 | `enabled` | no | `true` | Set to `false` to pause emission without uninstalling. |
 | `debug` | no | `false` | Log diagnostic lines to stderr (visible in the gateway log). |
 
+### `.hooks` — read by OpenClaw's runtime
+
+| Key | Required | Default | Description |
+| --- | --- | --- | --- |
+| `allowConversationAccess` | yes (on 2026.4.25+) | — | OpenClaw's hook dispatcher gates `llm_input` / `llm_output` / `before_tool_call` / `after_tool_call` / `agent_end` events on this. When `false` or absent, every typed hook is blocked and the plugin never sees an event — which means no traces, with the gateway log showing `[plugins] typed hook "..." blocked because non-bundled plugins must set plugins.entries.<id>.hooks.allowConversationAccess=true`. |
+
+### The two flags
+
+`hooks.allowConversationAccess` and `config.allowConversationAccess` mean different things:
+
+- **`hooks.*`** is the **dispatch gate**. `false` → OpenClaw never forwards events to us. No traces.
+- **`config.*`** is the **payload-content gate**. `false` → we emit spans normally but scrub message content from them. Structural-only telemetry.
+
+For *this* plugin, we always couple them — the installer writes both from the same source. If you hand-edit, set them to the same value:
+
+- **Both `true`**: full content capture (the default).
+- **Both `false`**: structural-only telemetry (set via `--no-content`).
+- Anything else is incoherent: `hooks: false + config: true` means dispatch is off and content gating is moot; `hooks: true + config: false` works but is what you'd get with both `false` plus extra ceremony.
+
 ### Environment variable fallbacks
 
-If a key isn't set in `config`, the runtime falls back to environment variables on the gateway process. `LATITUDE_API_KEY`, `LATITUDE_PROJECT`, `LATITUDE_BASE_URL`, `LATITUDE_DEBUG`, and `LATITUDE_OPENCLAW_ENABLED` are all read this way. The installer doesn't set them — pluginConfig is the canonical surface — but they're useful for kicking debug on/off without editing `openclaw.json`.
+If a `config.*` key isn't set, the runtime falls back to env vars on the gateway process: `LATITUDE_API_KEY`, `LATITUDE_PROJECT`, `LATITUDE_BASE_URL`, `LATITUDE_DEBUG`, `LATITUDE_OPENCLAW_ENABLED`. The installer doesn't set them — pluginConfig is the canonical surface — but they're useful for flipping `debug` without editing `openclaw.json`.
 
 ### Manual installation
 
-If the installer doesn't fit your setup, you need two things:
+If you can't run the installer, do exactly what it does:
 
-1. **The plugin files** under a directory OpenClaw discovers (`~/.openclaw/extensions/<name>/` or any path listed in `plugins.load.paths`). The directory must contain at minimum `openclaw.plugin.json` and the compiled `dist/plugin.js`. Easiest: copy them out of the installed `node_modules/@latitude-data/openclaw-telemetry/`.
-2. **The plugin entry** in `~/.openclaw/openclaw.json`:
+1. **Hand placement to OpenClaw** with `openclaw plugins install <path-to-extracted-package> --force`. This is what populates `~/.openclaw/extensions/`, writes the install record, and creates the (initially empty) `plugins.entries[id]` block. Don't hand-place files into the extensions directory — the persisted plugin index won't see them.
+2. **Add the config + hooks block** to `~/.openclaw/openclaw.json`:
 
 ```jsonc
 {
   "plugins": {
+    "allow": ["@latitude-data/openclaw-telemetry"],
     "entries": {
       "@latitude-data/openclaw-telemetry": {
         "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true
+        },
         "config": {
           "apiKey": "lat_xxx",
           "project": "my-openclaw-project",
@@ -111,21 +136,24 @@ If the installer doesn't fit your setup, you need two things:
 }
 ```
 
-Don't put `LATITUDE_*` keys at top-level `env` — OpenClaw's strict zod schema rejects them. Don't put `allowConversationAccess` under `hooks` either — that field is OpenClaw's strict reserved namespace and only accepts `allowPromptInjection` (older versions) or `allowPromptInjection` + `allowConversationAccess` (2026.4.22+). Our config bucket is `plugins.entries[id].config`, which is `record(string, unknown)` and accepted across all versions.
-
-After editing, run `openclaw config validate` — it should print `valid: true`. Then `openclaw gateway restart`.
+Run `openclaw config validate` — should print `valid: true`. Then `openclaw gateway restart`.
 
 ## Privacy
 
-By default we emit **structural telemetry only** — span tree, timings, token usage, model name, agent name, run/session ids — but **no prompt or response content**. You opt in to content capture by setting `allowConversationAccess: true` (the default the interactive installer writes).
+There are two defaults at play — keep them straight:
 
-When `allowConversationAccess` is on, every LLM call's full input messages, assistant output, system instructions, and tool I/O are attached to spans. Pass `--no-content` to the installer (or set the flag to `false` in `openclaw.json`) if you want telemetry without payloads.
+- **Installer default**: when you run `npx -y @latitude-data/openclaw-telemetry install` without `--no-content`, the installer writes `allowConversationAccess: true` to both the `hooks` and `config` blocks. **You get full content capture** — prompts, assistant responses, system instructions, tool I/O — shipped to Latitude alongside structural telemetry.
+- **Runtime default for absent keys**: if you hand-write `openclaw.json` and leave `allowConversationAccess` out entirely, `config.allowConversationAccess` falls back to `false` at the plugin's runtime (privacy-preserving) and `hooks.allowConversationAccess` falls back to OpenClaw's default (also `false`, which means dispatch is blocked and you get nothing). **Manual installs without those keys produce no traces, not "structural-only traces".**
 
-To pause emission entirely without uninstalling, set `LATITUDE_OPENCLAW_ENABLED=0` in the gateway environment.
+The installer always writes both keys to the same value, so the installer-driven path is unambiguous. The runtime-default trap only matters for hand-rolled configs.
+
+When you pass `--no-content` (or hand-edit both flags to `false`), we emit the same span tree but scrub the content attributes (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `gen_ai.tool.call.arguments`/`result`, the interaction's `user_prompt`). Timings, token usage, model name, agent name, ids, and the `latitude.captured.content: false` boolean still flow.
+
+To pause emission entirely without uninstalling, set `LATITUDE_OPENCLAW_ENABLED=0` in the gateway environment, or set `enabled: false` on the plugin entry in `openclaw.json`.
 
 ## Supported OpenClaw versions
 
-Requires OpenClaw **2026.3.0+** for the `llm_input` / `llm_output` hooks. Older versions lack these hooks and would only surface metadata via `model.usage` diagnostics — not enough for full trace fidelity.
+Requires OpenClaw **2026.4.25 or newer**. The installer detects the version up-front via `openclaw --version` and aborts with an upgrade message on older versions — supporting the full range with portability shims would mean shipping known-broken behaviour (≤ 2026.4.21 reject `hooks.allowConversationAccess` outright; 2026.4.22 – 2026.4.24 have unverified dispatch gating). Run `npm install -g openclaw@latest` to upgrade.
 
 ## How it fails
 

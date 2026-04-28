@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { arch, hostname, platform, release } from "node:os"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import type {
   LlmCallRecord,
   OtlpExportRequest,
@@ -11,7 +14,28 @@ import type {
 } from "./types.ts"
 
 const SCOPE_NAME = "@latitude-data/openclaw-telemetry"
-const SCOPE_VERSION = "0.0.2"
+
+/**
+ * Runtime-read package version, so OTLP `scope.version` and `service.version`
+ * always reflect what's actually installed. Read once at module load and
+ * cached. Falls back to `"unknown"` if the read fails (an exporter accepting
+ * any string is more tolerant than a stale hard-coded literal).
+ *
+ * Same import.meta.url + ../package.json pattern used by `cli.ts` for the
+ * `--version` flag — single source of truth in package.json.
+ */
+const SCOPE_VERSION = readScopeVersion()
+
+function readScopeVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const pkgPath = join(here, "..", "package.json")
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version?: string }
+    return pkg.version ?? "unknown"
+  } catch {
+    return "unknown"
+  }
+}
 
 interface BuildOptions {
   /**
