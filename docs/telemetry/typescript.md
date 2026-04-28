@@ -95,6 +95,10 @@ await latitude.shutdown()
 
 ## Existing OpenTelemetry Setup (Advanced)
 
+<Info>
+  Using a language other than TypeScript or Python? You can connect to Latitude from **any** OpenTelemetry-instrumented application. See the [OTLP Exporter](otel-exporter) guide.
+</Info>
+
 If your app already uses OpenTelemetry, add Latitude alongside your existing processors:
 
 ```ts
