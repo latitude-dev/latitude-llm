@@ -29,6 +29,7 @@ import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddToQueueModal } from "../annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
+import { SearchEmptyState } from "./-components/search-empty-state.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -80,11 +81,13 @@ function SearchPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount } = useTracesCount({
+  const { totalCount: totalTraceCount, isLoading: isTraceCountLoading } = useTracesCount({
     projectId: hasSearchQuery ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
     searchQuery: q,
   })
+
+  const showSearchEmptyState = hasSearchQuery && !isTraceCountLoading && totalTraceCount === 0
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
@@ -261,7 +264,7 @@ function SearchPage() {
         </div>
       ) : null}
 
-      {hasSearchQuery ? (
+      {hasSearchQuery && !showSearchEmptyState ? (
         <TracesView
           projectId={projectId}
           filters={filters}
@@ -282,7 +285,9 @@ function SearchPage() {
         />
       ) : null}
 
-      {hasSearchQuery && activeTraceId ? (
+      {showSearchEmptyState ? <SearchEmptyState /> : null}
+
+      {hasSearchQuery && !showSearchEmptyState && activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
             key={activeTraceId}
