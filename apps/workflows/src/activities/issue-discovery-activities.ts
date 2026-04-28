@@ -7,6 +7,8 @@ import {
   createIssueFromScoreUseCase,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
+  type FinalizeIssueDiscoveryInput,
+  finalizeIssueDiscoveryUseCase,
   type HybridSearchIssuesInput,
   hybridSearchIssuesUseCase,
   isEligibilityError,
@@ -23,7 +25,13 @@ import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  IssueDiscoveryLockRepositoryLive,
+  IssueRepositoryLive,
+  OutboxEventWriterLive,
+  ScoreRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
@@ -96,6 +104,25 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
         OrganizationId(input.organizationId),
       ),
       withAi(AIGenerateLive, getRedisClient()),
+      withTracing,
+    ),
+  )
+
+export const finalizeIssueDiscovery = async (input: FinalizeIssueDiscoveryInput) =>
+  Effect.runPromise(
+    finalizeIssueDiscoveryUseCase(input).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ScoreRepositoryLive,
+          IssueRepositoryLive,
+          OutboxEventWriterLive,
+          IssueDiscoveryLockRepositoryLive,
+        ),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
+      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
       withTracing,
     ),
   )

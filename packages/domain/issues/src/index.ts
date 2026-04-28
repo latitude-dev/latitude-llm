@@ -56,6 +56,11 @@ export {
   updateIssueCentroid,
 } from "./helpers.ts"
 export {
+  type IssueDiscoveryLockInput,
+  IssueDiscoveryLockRepository,
+  type IssueDiscoveryLockRepositoryShape,
+} from "./ports/issue-discovery-lock-repository.ts"
+export {
   type DeleteIssueProjectionInput,
   type HybridSearchInput,
   type IssueProjectionCandidate,
@@ -108,6 +113,12 @@ export {
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
 } from "./use-cases/embed-score-feedback.ts"
+export {
+  type FinalizeIssueDiscoveryError,
+  type FinalizeIssueDiscoveryInput,
+  type FinalizeIssueDiscoveryResult,
+  finalizeIssueDiscoveryUseCase,
+} from "./use-cases/finalize-issue-discovery.ts"
 export {
   type GeneratedIssueDetails,
   type GenerateIssueDetailsError,

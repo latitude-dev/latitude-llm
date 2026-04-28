@@ -8,7 +8,7 @@ const {
   hybridSearchIssues,
   rerankIssueCandidates,
   resolveMatchedIssue,
-  createIssueFromScore,
+  finalizeIssueDiscovery,
   assignScoreToIssue,
   syncIssueProjections,
   syncScoreAnalytics,
@@ -49,10 +49,11 @@ export const issueDiscoveryWorkflow = async (input: {
 
   const assignment =
     matchedIssue.issueId === null
-      ? await createIssueFromScore({
+      ? await finalizeIssueDiscovery({
           organizationId: input.organizationId,
           projectId: input.projectId,
           scoreId: input.scoreId,
+          feedback: embeddedScoreFeedback.feedback,
           normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
         })
       : await assignScoreToIssue({

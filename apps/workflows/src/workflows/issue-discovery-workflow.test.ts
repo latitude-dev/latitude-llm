@@ -56,8 +56,8 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         issueId: "issue-1",
       }
     }),
-    createIssueFromScore: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
-      callOrder.push("createIssueFromScore")
+    finalizeIssueDiscovery: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
         action: "created",
         issueId: "issue-new",
@@ -141,7 +141,7 @@ describe("issueDiscoveryWorkflow", () => {
       issueId: "issue-1",
       normalizedEmbedding: [0.6, 0.8],
     })
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.finalizeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
       organizationId: "org-1",
       scoreId: "score-1",
@@ -172,7 +172,7 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.hybridSearchIssues).not.toHaveBeenCalled()
     expect(mockActivities.rerankIssueCandidates).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).not.toHaveBeenCalled()
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.finalizeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
     expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
@@ -192,8 +192,8 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.finalizeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
         action: "created",
         issueId: "issue-new",
@@ -216,7 +216,7 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
+      "finalizeIssueDiscovery",
       "syncIssueProjections",
       "syncScoreAnalytics",
     ])
@@ -225,10 +225,11 @@ describe("issueDiscoveryWorkflow", () => {
       projectId: "proj-1",
       matchedIssueUuid: null,
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.finalizeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
@@ -241,8 +242,8 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.finalizeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
         action: "created",
         issueId: "issue-new",
@@ -265,7 +266,7 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
+      "finalizeIssueDiscovery",
       "syncIssueProjections",
       "syncScoreAnalytics",
     ])
@@ -274,10 +275,11 @@ describe("issueDiscoveryWorkflow", () => {
       projectId: "proj-1",
       matchedIssueUuid: "issue-1",
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.finalizeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()

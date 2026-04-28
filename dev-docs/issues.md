@@ -174,6 +174,7 @@ Execution rules:
 - `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
 - scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
 - `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
+- when initial workflow retrieval resolves to no known issue, the workflow must call the bounded locked finalization activity instead of creating an issue directly
 - `issues:refresh` runs after the configured throttle window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
@@ -181,9 +182,36 @@ Execution rules:
 - the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
 - after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
+- the no-match path is only provisional; before creating a new issue, finalization must acquire the project-scoped advisory transaction lock and re-run hybrid search, rerank, and Postgres candidate resolution
+- the finalization transaction must configure a bounded `idle_in_transaction_session_timeout` so Postgres releases the advisory lock by aborting the transaction if external finalization work exceeds the configured window
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
 - the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
 - resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
+
+### Bounded locked finalization
+
+Weaviate is a retrieval accelerator, not the write-side source of correctness. A newly created issue can be present in Postgres before its Weaviate projection is visible to another concurrent discovery workflow. Therefore a workflow-level no-match result is not sufficient authority to create a new issue.
+
+The no-match branch must enter `finalizeIssueDiscoveryUseCase`, which uses a project-scoped Postgres advisory transaction lock. The lock is coarse by design because concurrent brand-new issue discovery per project is expected to be low volume.
+
+Inside the locked transaction finalization must:
+
+1. re-fetch the score by id
+2. set a local `idle_in_transaction_session_timeout` for the transaction
+3. acquire the project-scoped advisory transaction lock
+4. re-run hybrid issue search against Weaviate using the same canonical feedback and normalized embedding
+5. re-run rerank and resolve the selected issue UUID against Postgres
+6. assign the score to the matched issue if the locked re-check now finds one
+7. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
+8. sync the issue projection before committing and releasing the lock
+
+This intentionally trades a short bounded transaction around external retrieval for correctness and implementation simplicity. The lock is not a table lock; it only blocks other finalizers that request the same advisory key. If finalization stalls while waiting on external work, Postgres aborts the idle transaction after the configured timeout and releases the advisory lock.
+
+The correctness invariant is:
+
+- project-level brand-new issue creation is serialized by the bounded advisory transaction lock
+- assignment to an existing issue remains row-safe through the issue row lock and conditional score ownership claim
+- Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows
 
 Concrete v1 mechanics worth carrying forward:
 
