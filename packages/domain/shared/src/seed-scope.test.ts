@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { CUID_LENGTH } from "./id.ts"
+import { CUID_LENGTH, OrganizationId, ProjectId } from "./id.ts"
 import { createSeedScope } from "./seed-scope.ts"
 
 const baseInput = {
-  organizationId: "org-test",
-  projectId: "project-test",
+  organizationId: OrganizationId("org-test"),
+  projectId: ProjectId("project-test"),
   timelineAnchor: new Date("2025-01-01T00:00:00.000Z"),
   queueAssigneeUserIds: ["user-test"] as const,
 }
@@ -43,8 +43,8 @@ describe("createSeedScope — derivation", () => {
   it("produces distinct ids for distinct projectIds", () => {
     // Critical for the demo flow: two demo projects under the same org must
     // not collide on trace/span/entity ids in ClickHouse / Postgres.
-    const projectA = createSeedScope({ ...baseInput, projectId: "project-a" })
-    const projectB = createSeedScope({ ...baseInput, projectId: "project-b" })
+    const projectA = createSeedScope({ ...baseInput, projectId: ProjectId("project-a") })
+    const projectB = createSeedScope({ ...baseInput, projectId: ProjectId("project-b") })
     expect(projectA.cuid("dataset:warranty")).not.toBe(projectB.cuid("dataset:warranty"))
     expect(projectA.traceHex("annotation", 0)).not.toBe(projectB.traceHex("annotation", 0))
   })

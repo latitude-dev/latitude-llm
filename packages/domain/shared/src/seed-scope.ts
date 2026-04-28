@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { CUID_LENGTH } from "./id.ts"
+import { CUID_LENGTH, type OrganizationId, type ProjectId } from "./id.ts"
 
 /**
  * Per-project seeding context.
@@ -29,8 +29,8 @@ import { CUID_LENGTH } from "./id.ts"
  *   per-call anchor.
  */
 export interface SeedScope {
-  readonly organizationId: string
-  readonly projectId: string
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
   readonly timelineAnchor: Date
   readonly queueAssigneeUserIds: readonly string[]
 
@@ -58,8 +58,8 @@ export interface SeedScopeOverrides {
 }
 
 export interface CreateSeedScopeInput {
-  readonly organizationId: string
-  readonly projectId: string
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
   readonly timelineAnchor: Date
   readonly queueAssigneeUserIds: readonly string[]
   readonly overrides?: SeedScopeOverrides
