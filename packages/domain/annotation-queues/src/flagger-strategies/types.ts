@@ -59,6 +59,18 @@ export interface QueueStrategy {
   readonly annotator?: FlaggerAnnotatorContext
 
   /**
+   * Display copy for deterministic-only strategies — name + description
+   * shown in the per-project flagger settings UI. LLM-capable strategies
+   * carry the same fields under `annotator`; this slot exists so
+   * deterministic-only strategies can be the source of truth for their own
+   * display text without needing the LLM-specific `instructions`.
+   */
+  readonly details?: {
+    readonly name: string
+    readonly description: string
+  }
+
+  /**
    * Slugs of strategies whose `matched` outcome makes this strategy non-applicable
    * for the same trace. When any listed suppressor matches deterministically, this
    * strategy is skipped entirely (no det check, no LLM enqueue) and the use-case

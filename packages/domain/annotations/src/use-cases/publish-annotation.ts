@@ -46,7 +46,7 @@ export const publishHumanAnnotationUseCase = Effect.fn("annotations.publishHuman
     } satisfies PublishAnnotationResult
   }
 
-  if (score.source !== "annotation" || score.annotatorId === null) {
+  if (score.source !== "annotation") {
     return {
       action: "not-human",
       score,

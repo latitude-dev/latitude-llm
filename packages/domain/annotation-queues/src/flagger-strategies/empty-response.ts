@@ -8,6 +8,11 @@ import type { DetectionResult, QueueStrategy } from "./types.ts"
  * an LLM.
  */
 export const emptyResponseStrategy: QueueStrategy = {
+  details: {
+    name: "Empty response",
+    description: "Flags empty, whitespace-only, or degenerate assistant responses without calling an LLM.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.outputMessages.length > 0
   },

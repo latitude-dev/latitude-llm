@@ -8,6 +8,11 @@ import type { DetectionResult, QueueStrategy } from "./types.ts"
  * text parts. Never calls an LLM.
  */
 export const outputSchemaValidationStrategy: QueueStrategy = {
+  details: {
+    name: "Output schema validation",
+    description: "Flags malformed or truncated structured output in assistant responses without calling an LLM.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.outputMessages.length > 0
   },
