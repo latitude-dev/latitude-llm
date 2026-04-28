@@ -71,7 +71,7 @@ export const FlaggerRepositoryLive = Layer.effect(
             )
         }),
 
-      provisionForProject: ({ projectId, slugs }) =>
+      saveManyForProject: ({ projectId, slugs }) =>
         Effect.gen(function* () {
           if (slugs.length === 0) {
             return [] as readonly Flagger[]
@@ -103,7 +103,7 @@ export const FlaggerRepositoryLive = Layer.effect(
                   .slice()
                   .sort((a, b) => a.slug.localeCompare(b.slug)),
               ),
-              Effect.mapError((cause) => new RepositoryError({ operation: "provisionForProject", cause })),
+              Effect.mapError((cause) => new RepositoryError({ operation: "saveManyForProject", cause })),
             )
         }),
 

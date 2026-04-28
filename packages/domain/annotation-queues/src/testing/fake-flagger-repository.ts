@@ -33,7 +33,7 @@ export const createFakeFlaggerRepository = (
         return flaggers.get(id) ?? null
       }),
 
-    provisionForProject: ({ projectId, slugs }) =>
+    saveManyForProject: ({ projectId, slugs }) =>
       Effect.gen(function* () {
         const sqlClient = yield* SqlClient
         const now = new Date()

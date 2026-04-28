@@ -1,5 +1,20 @@
 import type { TraceDetail } from "@domain/spans"
 
+export const FLAGGER_STRATEGY_SLUGS = [
+  "frustration",
+  "nsfw",
+  "refusal",
+  "laziness",
+  "jailbreaking",
+  "forgetting",
+  "trashing",
+  "tool-call-errors",
+  "output-schema-validation",
+  "empty-response",
+] as const
+
+export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
+
 /**
  * Result of deterministic detection phase.
  * - matched: deterministic match found; `feedback` is written to the score row directly.
@@ -26,6 +41,8 @@ export interface FlaggerAnnotatorContext {
   /** Reviewer guidance describing what belongs (and does not belong) in this category. */
   readonly instructions: string
 }
+
+export type FlaggerDisplayDetails = Pick<FlaggerAnnotatorContext, "name" | "description">
 
 /**
  * Per-flagger strategy contract.
@@ -65,10 +82,7 @@ export interface QueueStrategy {
    * deterministic-only strategies can be the source of truth for their own
    * display text without needing the LLM-specific `instructions`.
    */
-  readonly details?: {
-    readonly name: string
-    readonly description: string
-  }
+  readonly details?: FlaggerDisplayDetails
 
   /**
    * Slugs of strategies whose `matched` outcome makes this strategy non-applicable

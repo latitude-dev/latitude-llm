@@ -1,6 +1,7 @@
 import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Flagger } from "../entities/flagger.ts"
+import type { FlaggerSlug } from "../flagger-strategies/types.ts"
 
 export interface ListFlaggersByProjectInput {
   readonly projectId: ProjectId
@@ -11,9 +12,9 @@ export interface FindFlaggerByProjectAndSlugInput {
   readonly slug: string
 }
 
-export interface ProvisionFlaggersForProjectInput {
+export interface SaveFlaggersForProjectInput {
   readonly projectId: ProjectId
-  readonly slugs: readonly string[]
+  readonly slugs: readonly FlaggerSlug[]
 }
 
 export interface UpdateFlaggerInput {
@@ -37,9 +38,7 @@ export interface FlaggerRepositoryShape {
    * retries / re-seed. Returns the rows that were newly inserted (empty on a
    * second run).
    */
-  provisionForProject(
-    input: ProvisionFlaggersForProjectInput,
-  ): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
+  saveManyForProject(input: SaveFlaggersForProjectInput): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
   update(input: UpdateFlaggerInput): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
 }
 

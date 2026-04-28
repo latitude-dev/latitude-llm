@@ -1,5 +1,6 @@
 import { cuidSchema, flaggerIdSchema } from "@domain/shared"
 import { z } from "zod"
+import { FLAGGER_STRATEGY_SLUGS } from "../flagger-strategies/types.ts"
 
 // ---------------------------------------------------------------------------
 // Flagger entity
@@ -20,7 +21,7 @@ export const flaggerSchema = z.object({
   organizationId: cuidSchema,
   projectId: cuidSchema,
   /** Strategy slug from the registry (e.g. `"jailbreaking"`, `"nsfw"`, `"tool-call-errors"`). */
-  slug: z.string().min(1).max(64),
+  slug: z.enum(FLAGGER_STRATEGY_SLUGS),
   /** Gates BOTH the deterministic match path AND the LLM enqueue path. */
   enabled: z.boolean(),
   /**
