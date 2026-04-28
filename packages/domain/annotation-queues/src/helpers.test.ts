@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest"
 import {
   annotationQueueItemStatus,
   annotationQueueItemStatusRankFromTimestamps,
-  detectOutputSchemaValidationSystemQueue,
-  detectToolCallErrorsSystemQueue,
+  detectOutputSchemaValidationFlagger,
+  detectToolCallErrorsFlagger,
 } from "./helpers.ts"
 
 const d = (s: string) => new Date(s)
@@ -61,9 +61,9 @@ describe("annotationQueueItemStatusRankFromTimestamps", () => {
   })
 })
 
-describe("detectToolCallErrorsSystemQueue", () => {
+describe("detectToolCallErrorsFlagger", () => {
   it("matches failed tool result payloads and includes the tool name + error snippet", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { ok: false, error: "timeout" })]),
     )
 
@@ -71,7 +71,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches malformed tool interactions with empty tool_call id", () => {
-    const result = detectToolCallErrorsSystemQueue(makeTrace([assistantToolCall("")]))
+    const result = detectToolCallErrorsFlagger(makeTrace([assistantToolCall("")]))
 
     expect(result.matched).toBe(true)
     if (result.matched) {
@@ -81,15 +81,37 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("does not match healthy tool interactions", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { temp: 22, condition: "sunny" })]),
     )
 
     expect(result).toEqual({ matched: false })
   })
 
+  it("does not match expected tool 4xx responses", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-grep", "grep"),
+        toolResponse("call-grep", { ok: false, statusCode: 404, error: "No matches found" }),
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("still matches tool 5xx responses", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-weather"),
+        toolResponse("call-weather", { ok: false, statusCode: 503, error: "Service unavailable" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+  })
+
   it("matches duplicated tool call ids", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), assistantToolCall("call-weather", "lookup_weather")]),
     )
 
@@ -101,7 +123,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches tool calls with blank names after trimming", () => {
-    const result = detectToolCallErrorsSystemQueue(makeTrace([assistantToolCall("call-weather", "   ")]))
+    const result = detectToolCallErrorsFlagger(makeTrace([assistantToolCall("call-weather", "   ")]))
 
     expect(result.matched).toBe(true)
     if (result.matched) {
@@ -110,7 +132,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches tool responses that appear before any tool call", () => {
-    const result = detectToolCallErrorsSystemQueue(makeTrace([toolResponse("call-weather", { temp: 22 })]))
+    const result = detectToolCallErrorsFlagger(makeTrace([toolResponse("call-weather", { temp: 22 })]))
 
     expect(result.matched).toBe(true)
     if (result.matched) {
@@ -119,7 +141,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches tool responses with unknown tool call ids", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-hotels", { temp: 22 })]),
     )
 
@@ -130,7 +152,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches plain-string error responses and quotes the string as the snippet", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", "BookingUnavailableError: no rooms available"),
@@ -144,7 +166,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches stringified JSON responses with failure status", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", '{"status":"failed"}')]),
     )
 
@@ -155,7 +177,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches explicit isError true responses", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { isError: true })]),
     )
 
@@ -166,7 +188,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches explicit success false responses", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { success: false })]),
     )
 
@@ -174,7 +196,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches non-empty error object responses", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { error: { code: "timeout", message: "upstream timeout" } }),
@@ -188,7 +210,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches non-empty errors arrays", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { errors: [{ message: "timeout" }] }),
@@ -199,7 +221,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("matches nested array responses containing a failure", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", [{ ok: true }, { status: "error" }])]),
     )
 
@@ -207,7 +229,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("does not match blank string responses", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", "   ")]),
     )
 
@@ -215,7 +237,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("does not match responses with empty error fields", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { ok: true, error: "", errors: [], status: "success" }),
@@ -226,7 +248,7 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 
   it("does not match multiple healthy tool call / response pairs", () => {
-    const result = detectToolCallErrorsSystemQueue(
+    const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
         toolResponse("call-weather", { temp: 22 }),
@@ -239,15 +261,15 @@ describe("detectToolCallErrorsSystemQueue", () => {
   })
 })
 
-describe("detectOutputSchemaValidationSystemQueue", () => {
+describe("detectOutputSchemaValidationFlagger", () => {
   it("does not match when the assistant output is valid JSON", () => {
-    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"a": 1, "b": 2}')]))
+    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"a": 1, "b": 2}')]))
 
     expect(result).toEqual({ matched: false })
   })
 
   it("does not match when the assistant output is not JSON-looking", () => {
-    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText("Hello! The answer is 42.")]))
+    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText("Hello! The answer is 42.")]))
 
     expect(result).toEqual({ matched: false })
   })
@@ -255,7 +277,7 @@ describe("detectOutputSchemaValidationSystemQueue", () => {
   it("matches with the trailing-comma message when JSON is truncated after a comma", () => {
     // Order matters: the trailing-comma heuristic runs before JSON.parse so its
     // specific clustering message takes precedence over the generic parse-failure one.
-    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"a": 1,')]))
+    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"a": 1,')]))
 
     expect(result).toEqual({
       matched: true,
@@ -264,7 +286,7 @@ describe("detectOutputSchemaValidationSystemQueue", () => {
   })
 
   it("matches with the unclosed-string message when JSON is truncated mid-string", () => {
-    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText('{"msg": "hello')]))
+    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"msg": "hello')]))
 
     expect(result).toEqual({
       matched: true,
@@ -274,7 +296,7 @@ describe("detectOutputSchemaValidationSystemQueue", () => {
 
   it("ignores escaped quotes when detecting unclosed strings", () => {
     // The outer string is properly closed — the \" inside should not flip the balance.
-    const result = detectOutputSchemaValidationSystemQueue(
+    const result = detectOutputSchemaValidationFlagger(
       makeOutputTrace([assistantText('{"msg": "quoted \\"ok\\" value"}')]),
     )
 
@@ -282,7 +304,7 @@ describe("detectOutputSchemaValidationSystemQueue", () => {
   })
 
   it("falls back to the generic parse-failure message when JSON is malformed but not a truncation pattern", () => {
-    const result = detectOutputSchemaValidationSystemQueue(makeOutputTrace([assistantText("{not valid json}")]))
+    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText("{not valid json}")]))
 
     expect(result).toEqual({
       matched: true,

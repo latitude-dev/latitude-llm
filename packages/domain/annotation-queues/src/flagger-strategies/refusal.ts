@@ -240,6 +240,13 @@ function formatStageForPrompt(stage: ConversationStage, index: number): string {
 // ---------------------------------------------------------------------------
 
 export const refusalStrategy: QueueStrategy = {
+  annotator: {
+    name: "Refusal",
+    description: "The assistant refuses a request it should handle",
+    instructions:
+      "Use this queue when the assistant declines, deflects, or over-restricts even though the request is allowed and answerable within product policy and system capabilities. Do not use it when the refusal is correct because the request is unsafe, unsupported, or missing required context or permissions.",
+  },
+
   // jailbreaking / nsfw matched → assistant's refusal is justified, not a defect.
   suppressedBy: ["jailbreaking", "nsfw"],
 

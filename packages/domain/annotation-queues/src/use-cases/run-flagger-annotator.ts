@@ -9,17 +9,14 @@ import {
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import {
-  SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
-  SYSTEM_QUEUE_ANNOTATOR_MODEL,
-  SYSTEM_QUEUE_DEFINITIONS,
-} from "../constants.ts"
-import { systemQueueAnnotatorOutputSchema } from "./system-queue-annotator-contracts.ts"
+import { FLAGGER_ANNOTATOR_MAX_TOKENS, FLAGGER_ANNOTATOR_MODEL } from "../constants.ts"
+import { getQueueStrategy } from "../flagger-strategies/index.ts"
+import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
 
-export interface RunSystemQueueAnnotatorInput {
+export interface RunFlaggerAnnotatorInput {
   readonly organizationId: string
   readonly projectId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly traceId: string
   /**
    * Pre-generated score id for the draft annotation this LLM call will produce.
@@ -33,37 +30,37 @@ export interface RunSystemQueueAnnotatorInput {
   readonly scoreId: string
 }
 
-export interface RunSystemQueueAnnotatorResult {
+export interface RunFlaggerAnnotatorResult {
   readonly feedback: string
   readonly traceCreatedAt: string
 }
 
-export type RunSystemQueueAnnotatorError = RepositoryError | AIError | AICredentialError
+export type RunFlaggerAnnotatorError = RepositoryError | AIError | AICredentialError
 
 /**
  * Input for the pure annotator (no repository dependency).
  *
  * Callers that already hold a `TraceDetail` use this shape with
- * {@link annotateTraceForQueueUseCase}.
+ * {@link annotateTraceForFlaggerUseCase}.
  */
-export interface AnnotateTraceForQueueInput {
+export interface AnnotateTraceForFlaggerInput {
   readonly organizationId: string
   readonly projectId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly traceId: string
   readonly scoreId: string
   readonly trace: TraceDetail
 }
 
 const ANNOTATOR_SYSTEM_PROMPT_TEMPLATE = `
-You are the Annotation Writer for telemetry traces. Given a flagged trace and the queue it was flagged into, write a short, human-readable annotation describing the issue detected.
-The flag decision has already been made — your job is to draft the annotation, not to re-evaluate whether the trace belongs in the queue.
+You are the Annotation Writer for telemetry traces. Given a flagged trace and the flagger it matched, write a short, human-readable annotation describing the issue detected.
+The flag decision has already been made — your job is to draft the annotation, not to re-evaluate whether the trace belongs to this flagger.
 
-Queue (the trace was flagged into this queue):
-- Name: {queueName}
-- Description: {queueDescription}
-- Reviewer guidance for what belongs in this queue:
-{queueInstructions}
+Flagger (the trace matched this flagger):
+- Name: {flaggerName}
+- Description: {flaggerDescription}
+- Reviewer guidance for what belongs to this flagger:
+{flaggerInstructions}
 
 Format constraints:
 - Write ONE to TWO sentences maximum.
@@ -88,18 +85,19 @@ const SYSTEM_PROMPT_PREVIEW_MAX_CHARS = 600
 const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
-const buildAnnotatorSystemPrompt = (queueSlug: string): string => {
-  const queueDef = SYSTEM_QUEUE_DEFINITIONS.find((q) => q.slug === queueSlug)
+const buildAnnotatorSystemPrompt = (flaggerSlug: string): string => {
+  const strategy = getQueueStrategy(flaggerSlug)
+  const annotator = strategy?.annotator
 
-  if (!queueDef) {
-    return ANNOTATOR_SYSTEM_PROMPT_TEMPLATE.replace("{queueName}", queueSlug)
-      .replace("{queueDescription}", "System queue for pattern detection")
-      .replace("{queueInstructions}", "Review the conversation and provide feedback.")
+  if (!annotator) {
+    return ANNOTATOR_SYSTEM_PROMPT_TEMPLATE.replace("{flaggerName}", flaggerSlug)
+      .replace("{flaggerDescription}", "Flagger for pattern detection")
+      .replace("{flaggerInstructions}", "Review the conversation and provide feedback.")
   }
 
-  return ANNOTATOR_SYSTEM_PROMPT_TEMPLATE.replace("{queueName}", queueDef.name)
-    .replace("{queueDescription}", queueDef.description)
-    .replace("{queueInstructions}", queueDef.instructions)
+  return ANNOTATOR_SYSTEM_PROMPT_TEMPLATE.replace("{flaggerName}", annotator.name)
+    .replace("{flaggerDescription}", annotator.description)
+    .replace("{flaggerInstructions}", annotator.instructions)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -228,7 +226,7 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
   return lines.length > 0 ? lines.join("\n") : "<no conversation messages available>"
 }
 
-const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
+const loadTraceDetail = (input: RunFlaggerAnnotatorInput) =>
   Effect.gen(function* () {
     const traceRepository = yield* TraceRepository
 
@@ -244,15 +242,15 @@ const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
  *
  * Pure annotator — no repository dependency, no data loading. Callers that
  * already hold a `TraceDetail` (eval harnesses, experiment runners) use this
- * directly; production paths use {@link runSystemQueueAnnotatorUseCase}, which
+ * directly; production paths use {@link runFlaggerAnnotatorUseCase}, which
  * fetches the trace and delegates here.
  */
-export const annotateTraceForQueueUseCase = Effect.fn("annotationQueues.annotateTraceForQueue")(function* (
-  input: AnnotateTraceForQueueInput,
+export const annotateTraceForFlaggerUseCase = Effect.fn("annotationQueues.annotateTraceForFlagger")(function* (
+  input: AnnotateTraceForFlaggerInput,
 ) {
   const ai = yield* AI
 
-  const systemPrompt = buildAnnotatorSystemPrompt(input.queueSlug)
+  const systemPrompt = buildAnnotatorSystemPrompt(input.flaggerSlug)
 
   const conversationText =
     input.trace.allMessages.length > 0
@@ -279,17 +277,17 @@ ${conversationText}
 Return structured data with a single "feedback" field per the system instructions.`
 
   const result = yield* ai.generate({
-    ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
-    maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
+    ...FLAGGER_ANNOTATOR_MODEL,
+    maxTokens: FLAGGER_ANNOTATOR_MAX_TOKENS,
     system: systemPrompt,
     prompt,
-    schema: systemQueueAnnotatorOutputSchema,
+    schema: flaggerAnnotatorOutputSchema,
     telemetry: {
-      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.queueSystemDraft,
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemDraft],
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerDraft,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
-        { traceId: input.traceId, queueSlug: input.queueSlug, scoreId: input.scoreId },
+        { traceId: input.traceId, flaggerSlug: input.flaggerSlug, scoreId: input.scoreId },
       ),
     },
   })
@@ -304,16 +302,16 @@ Return structured data with a single "feedback" field per the system instruction
  * Load the trace via the repository, then draft its annotation.
  *
  * Production entry point — used by the Temporal activity in
- * `systemQueueFlaggerWorkflow` after a match.
+ * `flaggerWorkflow` after a match.
  */
-export const runSystemQueueAnnotatorUseCase = Effect.fn("annotationQueues.runSystemQueueAnnotator")(function* (
-  input: RunSystemQueueAnnotatorInput,
+export const runFlaggerAnnotatorUseCase = Effect.fn("annotationQueues.runFlaggerAnnotator")(function* (
+  input: RunFlaggerAnnotatorInput,
 ) {
-  yield* Effect.annotateCurrentSpan("queue.organizationId", input.organizationId)
-  yield* Effect.annotateCurrentSpan("queue.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("queue.traceId", input.traceId)
-  yield* Effect.annotateCurrentSpan("queue.queueSlug", input.queueSlug)
+  yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
+  yield* Effect.annotateCurrentSpan("flagger.flaggerSlug", input.flaggerSlug)
 
   const trace = yield* loadTraceDetail(input)
-  return yield* annotateTraceForQueueUseCase({ ...input, trace })
+  return yield* annotateTraceForFlaggerUseCase({ ...input, trace })
 })

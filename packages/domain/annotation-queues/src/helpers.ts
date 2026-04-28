@@ -5,16 +5,18 @@ type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
 const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
+const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
+const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
 
 const ERROR_SNIPPET_MAX_LENGTH = 160
 
-export type DeterministicSystemMatch =
+export type DeterministicFlaggerMatch =
   | { readonly matched: true; readonly feedback: string }
   | { readonly matched: false }
 
-const NO_MATCH: DeterministicSystemMatch = { matched: false }
+const NO_MATCH: DeterministicFlaggerMatch = { matched: false }
 
-const match = (feedback: string): DeterministicSystemMatch => ({ matched: true, feedback })
+const match = (feedback: string): DeterministicFlaggerMatch => ({ matched: true, feedback })
 
 function coalesceInstant(v: Date | string | null | undefined): Date | null {
   if (v == null) return null
@@ -23,7 +25,7 @@ function coalesceInstant(v: Date | string | null | undefined): Date | null {
 }
 
 /** Detects tool-call failures in the conversation and returns clusterable feedback on match. */
-export function detectToolCallErrorsSystemQueue(trace: TraceMessagesOnly): DeterministicSystemMatch {
+export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
   const toolNameById = new Map<string, string>()
 
   for (const message of trace.allMessages) {
@@ -71,6 +73,58 @@ function toNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null
 }
 
+function toHttpStatus(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value)) return value
+  if (typeof value !== "string") return null
+
+  const match = value.match(/\b([1-5]\d{2})\b/)
+  return match?.[1] ? Number(match[1]) : null
+}
+
+function isExpectedToolHttpStatus(value: unknown): boolean {
+  const status = toHttpStatus(value)
+  return status !== null && status >= EXPECTED_TOOL_HTTP_STATUS_MIN && status <= EXPECTED_TOOL_HTTP_STATUS_MAX
+}
+
+function responseIndicatesExpectedToolError(response: unknown): boolean {
+  if (typeof response === "string") {
+    const trimmed = response.trim()
+    if (trimmed === "") return false
+
+    try {
+      return responseIndicatesExpectedToolError(JSON.parse(trimmed))
+    } catch {
+      return isExpectedToolHttpStatus(trimmed)
+    }
+  }
+
+  if (Array.isArray(response)) {
+    return response.length > 0 && response.every(responseIndicatesExpectedToolError)
+  }
+
+  if (!isRecord(response)) return false
+
+  if (
+    isExpectedToolHttpStatus(response.status) ||
+    isExpectedToolHttpStatus(response.statusCode) ||
+    isExpectedToolHttpStatus(response.code)
+  ) {
+    return true
+  }
+
+  const error = response.error
+  if (isRecord(error)) {
+    return (
+      isExpectedToolHttpStatus(error.status) ||
+      isExpectedToolHttpStatus(error.statusCode) ||
+      isExpectedToolHttpStatus(error.code) ||
+      isExpectedToolHttpStatus(error.message)
+    )
+  }
+
+  return isExpectedToolHttpStatus(error) || isExpectedToolHttpStatus(response.message)
+}
+
 function truncate(s: string | null): string | null {
   if (!s) return null
   return s.length > ERROR_SNIPPET_MAX_LENGTH ? `${s.slice(0, ERROR_SNIPPET_MAX_LENGTH)}…` : s
@@ -109,6 +163,8 @@ function extractErrorSnippet(response: unknown): string | null {
 }
 
 function responseIndicatesFailure(response: unknown): boolean {
+  if (responseIndicatesExpectedToolError(response)) return false
+
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
@@ -150,7 +206,7 @@ function responseIndicatesFailure(response: unknown): boolean {
 }
 
 /** Detects malformed or truncated structured-output JSON in assistant text parts. */
-export function detectOutputSchemaValidationSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
+export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 
@@ -204,7 +260,7 @@ export function detectOutputSchemaValidationSystemQueue(trace: TraceDetail): Det
 }
 
 /** Detects empty or degenerate assistant responses, skipping intentional tool-call-only delegations. */
-export function detectEmptyResponseSystemQueue(trace: TraceDetail): DeterministicSystemMatch {
+export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
   for (const message of trace.outputMessages) {
     if (message.role !== "assistant") continue
 

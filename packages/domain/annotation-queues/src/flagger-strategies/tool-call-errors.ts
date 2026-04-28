@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { detectToolCallErrorsSystemQueue } from "../helpers.ts"
+import { detectToolCallErrorsFlagger } from "../helpers.ts"
 import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 /**
@@ -8,12 +8,17 @@ import type { DetectionResult, QueueStrategy } from "./types.ts"
  * explicitly-failed tool responses. Never calls an LLM.
  */
 export const toolCallErrorsStrategy: QueueStrategy = {
+  details: {
+    name: "Tool call errors",
+    description: "Flags malformed, duplicate, or explicitly failed tool responses without calling an LLM.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.allMessages.length > 0
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectToolCallErrorsSystemQueue(trace)
+    const result = detectToolCallErrorsFlagger(trace)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
   },
 }

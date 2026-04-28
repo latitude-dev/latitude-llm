@@ -41,15 +41,6 @@ export interface FindBySlugInput {
   readonly queueSlug: string
 }
 
-export interface FindSystemQueueBySlugInput {
-  readonly projectId: ProjectId
-  readonly queueSlug: string
-}
-
-export interface ListSystemQueuesInput {
-  readonly projectId: ProjectId
-}
-
 export interface ListLiveQueuesInput {
   readonly projectId: ProjectId
 }
@@ -69,18 +60,12 @@ export interface AnnotationQueueRepositoryShape {
     queueId: string
   }): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
   findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
-  listSystemQueuesByProject(
-    input: ListSystemQueuesInput,
-  ): Effect.Effect<readonly AnnotationQueue[], RepositoryError, SqlClient>
   /**
    * List all non-deleted live queues (queues with `settings.filter` present) for a project.
    */
   listLiveQueuesByProject(
     input: ListLiveQueuesInput,
   ): Effect.Effect<readonly AnnotationQueue[], RepositoryError, SqlClient>
-  findSystemQueueBySlugInProject(
-    input: FindSystemQueueBySlugInput,
-  ): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
   save(queue: SaveQueueInput): Effect.Effect<AnnotationQueue, RepositoryError, SqlClient>
   /**
    * Insert a queue if no queue with the same (organizationId, projectId, slug, deletedAt)

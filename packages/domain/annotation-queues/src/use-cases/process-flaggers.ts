@@ -1,5 +1,10 @@
 import type { QueuePublishError } from "@domain/queue"
-import { type ScoreDraftClosedError, type ScoreDraftUpdateConflictError, writeScoreUseCase } from "@domain/scores"
+import {
+  type ScoreDraftClosedError,
+  type ScoreDraftUpdateConflictError,
+  ScoreRepository,
+  writeScoreUseCase,
+} from "@domain/scores"
 import {
   type BadRequestError,
   deterministicSampling,
@@ -17,9 +22,9 @@ import {
   listQueueStrategySlugs,
   type QueueStrategy,
 } from "../flagger-strategies/index.ts"
-import { getProjectSystemQueuesUseCase, type SystemQueueCacheEntry } from "./get-project-system-queues.ts"
+import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
 
-export interface ProcessDeterministicFlaggersInput {
+export interface ProcessFlaggersInput {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
@@ -40,7 +45,8 @@ export type EnqueueFlaggerWorkflowStart = (args: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
+  readonly flaggerId: string
+  readonly flaggerSlug: string
   readonly reason: FlaggerEnqueueReason
 }) => Effect.Effect<void, QueuePublishError>
 
@@ -51,10 +57,10 @@ export type EnqueueFlaggerWorkflowStart = (args: {
  */
 export type CheckAmbiguousRateLimit = (args: {
   readonly organizationId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
 }) => Effect.Effect<boolean>
 
-export interface ProcessDeterministicFlaggersDeps {
+export interface ProcessFlaggersDeps {
   readonly enqueueWorkflowStart: EnqueueFlaggerWorkflowStart
   readonly checkAmbiguousRateLimit: CheckAmbiguousRateLimit
 }
@@ -73,12 +79,14 @@ export type DroppedReason =
   | "rate-limited"
   | "no-llm-capability"
   | "ambiguous-without-llm"
+  | "disabled"
+  | "missing-flagger"
 
-export interface ProcessDeterministicFlaggersResult {
+export interface ProcessFlaggersResult {
   readonly decisions: readonly StrategyDecision[]
 }
 
-export type ProcessDeterministicFlaggersError =
+export type ProcessFlaggersError =
   | RepositoryError
   | BadRequestError
   | ScoreDraftClosedError
@@ -88,101 +96,110 @@ export type ProcessDeterministicFlaggersError =
  * Runs the deterministic detection phase of every registered flagger strategy
  * against a single trace and dispatches the outcomes:
  *
- *   matched    → write a SYSTEM-authored score directly (issues discovery
- *                picks it up via ScoreCreated).
- *   no-match   → for LLM-capable strategies with a provisioned queue,
- *                apply per-strategy sampling. Sampled-in → enqueue
+ *   matched    → write a flagger-authored published score directly
+ *                (`source = "flagger"`, `sourceId = flagger.id`). Issue
+ *                discovery picks it up via the `ScoreCreated` fan-out.
+ *   no-match   → for LLM-capable strategies, apply per-strategy sampling
+ *                from the flagger row. Sampled-in → enqueue
  *                `start-flagger-workflow` (reason: "sampled").
  *   ambiguous  → for LLM-capable strategies, check per-{org,slug} rate limit.
  *                Under limit → enqueue `start-flagger-workflow` (reason: "ambiguous").
+ *
+ * The per-project flagger row also gates the entire strategy: when
+ * `flagger.enabled === false`, every branch short-circuits to a `disabled`
+ * dropped decision. A missing flagger row is treated defensively (logged,
+ * dropped) — provisioning runs on `ProjectCreated` so this only happens
+ * when the registry adds a strategy without a backfill.
  *
  * Per-strategy failures are isolated: a broken detector for one strategy does
  * not affect the rest. The outer caller (the worker) is expected to swallow
  * errors from the outer load step too — losing a trace's flaggers is
  * preferable to redelivering the whole job.
  */
-export const processDeterministicFlaggersUseCase = Effect.fn("annotationQueues.processDeterministicFlaggers")(
-  function* (input: ProcessDeterministicFlaggersInput, deps: ProcessDeterministicFlaggersDeps) {
-    yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
-    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("traceId", input.traceId)
+export const processFlaggersUseCase = Effect.fn("annotationQueues.processFlaggers")(function* (
+  input: ProcessFlaggersInput,
+  deps: ProcessFlaggersDeps,
+) {
+  yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("traceId", input.traceId)
 
-    const traceRepository = yield* TraceRepository
-    const trace = yield* traceRepository.findByTraceId({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      traceId: TraceId(input.traceId),
-    })
+  const traceRepository = yield* TraceRepository
+  const slugs = listQueueStrategySlugs()
 
-    const systemQueues = yield* getProjectSystemQueuesUseCase({
-      organizationId: input.organizationId,
-      projectId: ProjectId(input.projectId),
-    })
-    const queueBySlug = new Map(systemQueues.map((queue) => [queue.queueSlug, queue]))
+  const trace = yield* traceRepository.findByTraceId({
+    organizationId: OrganizationId(input.organizationId),
+    projectId: ProjectId(input.projectId),
+    traceId: TraceId(input.traceId),
+  })
 
-    const slugs = listQueueStrategySlugs()
-    const phase1Slugs: string[] = []
-    const phase2Slugs: string[] = []
-    for (const slug of slugs) {
-      const strategy = getQueueStrategy(slug)
-      if (strategy?.suppressedBy && strategy.suppressedBy.length > 0) {
-        phase2Slugs.push(slug)
-      } else {
-        phase1Slugs.push(slug)
-      }
+  const flaggers = yield* getProjectFlaggersUseCase({
+    organizationId: input.organizationId,
+    projectId: ProjectId(input.projectId),
+  })
+  const flaggerBySlug = new Map(flaggers.map((flagger) => [flagger.slug, flagger]))
+
+  const phase1Slugs: string[] = []
+  const phase2Slugs: string[] = []
+  for (const slug of slugs) {
+    const strategy = getQueueStrategy(slug)
+    if (strategy?.suppressedBy && strategy.suppressedBy.length > 0) {
+      phase2Slugs.push(slug)
+    } else {
+      phase1Slugs.push(slug)
     }
+  }
 
-    const runOne = (slug: string, suppressorMatchedSlugs: ReadonlySet<string>) =>
-      processOneStrategy({
-        slug,
-        trace,
-        systemQueue: queueBySlug.get(slug) ?? null,
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        traceId: input.traceId,
-        deps,
-        suppressorMatchedSlugs,
-      }).pipe(
-        Effect.catch((error) =>
-          Effect.gen(function* () {
-            yield* Effect.logError("Deterministic flagger strategy failed", {
-              slug,
-              organizationId: input.organizationId,
-              projectId: input.projectId,
-              traceId: input.traceId,
-              error,
-            })
-            return { slug, action: "failed" } satisfies StrategyDecision
-          }),
-        ),
-      )
+  const runOne = (slug: string, suppressorMatchedSlugs: ReadonlySet<string>) =>
+    processOneStrategy({
+      slug,
+      trace,
+      flagger: flaggerBySlug.get(slug) ?? null,
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      deps,
+      suppressorMatchedSlugs,
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.gen(function* () {
+          yield* Effect.logError("Flagger strategy failed", {
+            slug,
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traceId: input.traceId,
+            error,
+          })
+          return { slug, action: "failed" } satisfies StrategyDecision
+        }),
+      ),
+    )
 
-    const phase1Decisions = yield* Effect.forEach(phase1Slugs, (slug) => runOne(slug, EMPTY_SET), {
-      concurrency: "unbounded",
-    })
+  const phase1Decisions = yield* Effect.forEach(phase1Slugs, (slug) => runOne(slug, EMPTY_SET), {
+    concurrency: "unbounded",
+  })
 
-    const phase1MatchedSlugs = new Set(phase1Decisions.filter((d) => d.action === "matched-issue").map((d) => d.slug))
+  const phase1MatchedSlugs = new Set(phase1Decisions.filter((d) => d.action === "matched-issue").map((d) => d.slug))
 
-    const phase2Decisions = yield* Effect.forEach(phase2Slugs, (slug) => runOne(slug, phase1MatchedSlugs), {
-      concurrency: "unbounded",
-    })
+  const phase2Decisions = yield* Effect.forEach(phase2Slugs, (slug) => runOne(slug, phase1MatchedSlugs), {
+    concurrency: "unbounded",
+  })
 
-    return {
-      decisions: [...phase1Decisions, ...phase2Decisions],
-    } satisfies ProcessDeterministicFlaggersResult
-  },
-)
+  return {
+    decisions: [...phase1Decisions, ...phase2Decisions],
+  } satisfies ProcessFlaggersResult
+})
 
 const EMPTY_SET: ReadonlySet<string> = new Set()
 
 interface ProcessOneStrategyInput {
   readonly slug: string
   readonly trace: TraceDetail
-  readonly systemQueue: SystemQueueCacheEntry | null
+  readonly flagger: FlaggerCacheEntry | null
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly deps: ProcessDeterministicFlaggersDeps
+  readonly deps: ProcessFlaggersDeps
   readonly suppressorMatchedSlugs: ReadonlySet<string>
 }
 
@@ -191,6 +208,21 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
     const strategy = getQueueStrategy(input.slug)
     if (!strategy) {
       return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
+    }
+
+    const flagger = input.flagger
+    if (flagger === null) {
+      yield* Effect.logWarning("Missing flagger row for registered strategy — dropping", {
+        slug: input.slug,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        traceId: input.traceId,
+      })
+      return { slug: input.slug, action: "dropped", reason: "missing-flagger" } satisfies StrategyDecision
+    }
+
+    if (!flagger.enabled) {
+      return { slug: input.slug, action: "dropped", reason: "disabled" } satisfies StrategyDecision
     }
 
     if (strategy.suppressedBy) {
@@ -215,22 +247,41 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     switch (result.kind) {
       case "matched":
-        return yield* handleMatched(input, result.feedback)
+        return yield* handleMatched(input, flagger, result.feedback)
       case "no-match":
-        return yield* handleNoMatch(input, strategy)
+        return yield* handleNoMatch(input, flagger, strategy)
       case "ambiguous":
-        return yield* handleAmbiguous(input, strategy)
+        return yield* handleAmbiguous(input, flagger, strategy)
     }
   })
 
-const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
+const handleMatched = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, feedback: string) =>
   Effect.gen(function* () {
+    // BullMQ may redeliver the deterministic-flaggers job (bounded retries on
+    // transient failures). Without this guard a re-run of an already-matched
+    // strategy would write a second published score for the same
+    // (trace, flagger) and produce a duplicate downstream issue. The
+    // workflow-side LLM path is idempotent because `start-flagger-workflow`
+    // jobs are deduped by `flagger-start:${traceId}:${slug}` and
+    // `saveFlaggerAnnotationUseCase` upserts on the pre-generated `scoreId`
+    // forwarded by `draftAnnotate`; this is the deterministic equivalent.
+    const scoreRepository = yield* ScoreRepository
+    const existing = yield* scoreRepository.findFlaggerPublishedByTraceAndFlaggerId({
+      projectId: input.trace.projectId,
+      flaggerId: flagger.flaggerId,
+      traceId: input.trace.traceId,
+    })
+
+    if (existing !== null) {
+      return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
+    }
+
     const simulationId = input.trace.simulationId === "" ? null : input.trace.simulationId
 
     yield* writeScoreUseCase({
       projectId: input.trace.projectId,
-      source: "annotation",
-      sourceId: "SYSTEM",
+      source: "flagger",
+      sourceId: flagger.flaggerId,
       sessionId: input.trace.sessionId,
       traceId: input.trace.traceId,
       spanId: null,
@@ -248,16 +299,15 @@ const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
     return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
   })
 
-const handleNoMatch = (input: ProcessOneStrategyInput, strategy: QueueStrategy) =>
+const handleNoMatch = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: QueueStrategy) =>
   Effect.gen(function* () {
-    const systemQueue = input.systemQueue
-    if (!isLlmCapableStrategy(strategy) || !systemQueue) {
+    if (!isLlmCapableStrategy(strategy)) {
       return { slug: input.slug, action: "dropped", reason: "no-match" } satisfies StrategyDecision
     }
 
     const sampled = yield* Effect.promise(() =>
       deterministicSampling({
-        sampling: systemQueue.sampling,
+        sampling: flagger.sampling,
         keyParts: [input.organizationId, input.projectId, input.slug, input.traceId],
       }),
     )
@@ -270,16 +320,17 @@ const handleNoMatch = (input: ProcessOneStrategyInput, strategy: QueueStrategy) 
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
-      queueSlug: input.slug,
+      flaggerId: flagger.flaggerId,
+      flaggerSlug: input.slug,
       reason: "sampled",
     })
 
     return { slug: input.slug, action: "enqueued", reason: "sampled" } satisfies StrategyDecision
   })
 
-const handleAmbiguous = (input: ProcessOneStrategyInput, strategy: QueueStrategy) =>
+const handleAmbiguous = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: QueueStrategy) =>
   Effect.gen(function* () {
-    if (!isLlmCapableStrategy(strategy) || !input.systemQueue) {
+    if (!isLlmCapableStrategy(strategy)) {
       yield* Effect.logWarning("Ambiguous detection from non-LLM-capable strategy — dropping", {
         slug: input.slug,
         organizationId: input.organizationId,
@@ -290,7 +341,7 @@ const handleAmbiguous = (input: ProcessOneStrategyInput, strategy: QueueStrategy
 
     const allowed = yield* input.deps.checkAmbiguousRateLimit({
       organizationId: input.organizationId,
-      queueSlug: input.slug,
+      flaggerSlug: input.slug,
     })
 
     if (!allowed) {
@@ -301,7 +352,8 @@ const handleAmbiguous = (input: ProcessOneStrategyInput, strategy: QueueStrategy
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
-      queueSlug: input.slug,
+      flaggerId: flagger.flaggerId,
+      flaggerSlug: input.slug,
       reason: "ambiguous",
     })
 

@@ -43,11 +43,11 @@ export const warrantyEvalInFixture: LiveSeedFixtureDefinition = {
   sampling: {
     includeEvaluationIds: [SEED_EVALUATION_ID],
     excludeEvaluationIds: [SEED_COMBINATION_EVALUATION_ID, SEED_RETURNS_EVALUATION_ID, SEED_ACCESS_EVALUATION_ID],
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: [],
+  deterministicFlaggerMatches: [],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) => {
     const example = rng.pick(WARRANTY_SAFE_EXAMPLES)

@@ -1,14 +1,22 @@
 import { isManualQueue, isSystemQueue } from "@domain/annotation-queues"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
+import { queryCollectionOptions } from "@tanstack/query-db-collection"
+import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
+import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
+import { getQueryClient } from "../../lib/data/query-client.tsx"
 import {
   type AnnotationQueueRecord,
+  type FlaggerRecord,
   getAnnotationQueueByProject,
   listAnnotationQueuesByProject,
+  listFlaggersByProject,
+  updateFlagger,
 } from "./annotation-queues.functions.ts"
 
 const BATCH_SIZE = 50
+const queryClient = getQueryClient()
 
 export const annotationQueueQueryKey = (projectId: string, queueId: string) =>
   ["annotation-queue", projectId, queueId] as const
@@ -116,4 +124,74 @@ export function useAnnotationQueuesList(projectId: string) {
   }, [paginatedData])
 
   return { data, isLoading }
+}
+
+const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
+
+const makeProjectFlaggersCollection = (projectId: string) =>
+  createCollection(
+    queryCollectionOptions({
+      queryClient,
+      queryKey: flaggersQueryKey(projectId),
+      queryFn: async () => [...(await listFlaggersByProject({ data: { projectId } }))],
+      getKey: (item: FlaggerRecord) => item.id,
+      onUpdate: async ({ transaction }) => {
+        await Promise.all(
+          transaction.mutations.map((mutation) =>
+            updateFlagger({
+              data: {
+                projectId: mutation.modified.projectId,
+                slug: mutation.modified.slug,
+                enabled: mutation.modified.enabled,
+              },
+            }),
+          ),
+        )
+      },
+    }),
+  )
+
+type ProjectFlaggersCollection = ReturnType<typeof makeProjectFlaggersCollection>
+const projectFlaggersCollectionsCache: Record<string, ProjectFlaggersCollection> = {}
+
+const getProjectFlaggersCollection = (projectId: string): ProjectFlaggersCollection => {
+  if (!projectFlaggersCollectionsCache[projectId]) {
+    projectFlaggersCollectionsCache[projectId] = makeProjectFlaggersCollection(projectId)
+  }
+  return projectFlaggersCollectionsCache[projectId]
+}
+
+type FlaggersSource = { flagger: ProjectFlaggersCollection }
+type FlaggersContext = {
+  baseSchema: SchemaFromSource<FlaggersSource>
+  schema: SchemaFromSource<FlaggersSource>
+  fromSourceName: "flagger"
+  hasJoins: false
+}
+
+export function useProjectFlaggers<TContext extends Context = FlaggersContext>(
+  projectId: string,
+  queryFn?: (flaggers: QueryBuilder<FlaggersContext>) => QueryBuilder<TContext>,
+) {
+  const collection = getProjectFlaggersCollection(projectId)
+  return useLiveQuery<TContext>(
+    (query) => {
+      const flaggers = query.from({ flagger: collection })
+      if (queryFn) return queryFn(flaggers)
+      return flaggers as unknown as QueryBuilder<TContext>
+    },
+    [projectId],
+  )
+}
+
+export function updateFlaggerMutation(input: {
+  readonly projectId: string
+  readonly id: string
+  readonly slug: string
+  readonly enabled: boolean
+}) {
+  const collection = getProjectFlaggersCollection(input.projectId)
+  return collection.update(input.id, (draft) => {
+    draft.enabled = input.enabled
+  })
 }

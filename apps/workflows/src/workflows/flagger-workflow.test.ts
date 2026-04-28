@@ -6,17 +6,15 @@ const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
     runFlagger: vi.fn(async (): Promise<{ matched: boolean }> => ({ matched: false })),
     draftAnnotate: vi.fn(async () => ({
-      queueId: "queue-1",
       traceId: "trace-1",
       feedback: "Test feedback",
       traceCreatedAt: "2024-01-15T10:00:00.000Z",
       scoreId: "score-default",
     })),
-    persistAnnotation: vi.fn(async () => ({
-      queueId: "queue-1",
+    saveAnnotation: vi.fn(async () => ({
+      flaggerId: "flagger-1",
       traceId: "trace-1",
       draftAnnotationId: "draft-1",
-      wasCreated: true,
     })),
   }
 
@@ -28,9 +26,11 @@ vi.mock("@temporalio/workflow", () => ({
   proxyActivities: () => mockActivities,
 }))
 
-import { systemQueueFlaggerWorkflow } from "./system-queue-flagger-workflow.ts"
+import { flaggerWorkflow } from "./flagger-workflow.ts"
 
-describe("systemQueueFlaggerWorkflow", () => {
+const FLAGGER_ID = "flagger-1"
+
+describe("flaggerWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -38,16 +38,18 @@ describe("systemQueueFlaggerWorkflow", () => {
   it("returns not_matched when flagger returns matched=false", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: false })
 
-    const result = await systemQueueFlaggerWorkflow({
+    const result = await flaggerWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "empty-response",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "empty-response",
     })
 
     expect(result).toEqual({
       action: "not_matched",
-      queueSlug: "empty-response",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "empty-response",
       traceId: "trace-1",
       durationMs: expect.any(Number),
     })
@@ -57,42 +59,40 @@ describe("systemQueueFlaggerWorkflow", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "empty-response",
+      flaggerSlug: "empty-response",
     })
     expect(mockActivities.draftAnnotate).not.toHaveBeenCalled()
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
+    expect(mockActivities.saveAnnotation).not.toHaveBeenCalled()
   })
 
-  it("calls draftAnnotate and persistAnnotation when flagger returns matched=true", async () => {
+  it("calls draftAnnotate and saveAnnotation when flagger returns matched=true", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
-      queueId: "queue-123",
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-from-draft",
     })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
-      queueId: "queue-123",
+    mockActivities.saveAnnotation.mockResolvedValueOnce({
+      flaggerId: FLAGGER_ID,
       traceId: "trace-1",
       draftAnnotationId: "draft-456",
-      wasCreated: true,
     })
 
-    const result = await systemQueueFlaggerWorkflow({
+    const result = await flaggerWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "refusal",
     })
 
     expect(result).toEqual({
       action: "annotated",
-      queueSlug: "refusal",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "refusal",
       traceId: "trace-1",
-      queueId: "queue-123",
       draftAnnotationId: "draft-456",
-      wasCreated: true,
       durationMs: expect.any(Number),
     })
 
@@ -101,67 +101,29 @@ describe("systemQueueFlaggerWorkflow", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
+      flaggerSlug: "refusal",
     })
     expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
     expect(mockActivities.draftAnnotate).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
+      flaggerSlug: "refusal",
     })
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledTimes(1)
     // The scoreId emitted by draftAnnotate must flow verbatim into
-    // persistAnnotation so the LLM telemetry span and the persisted score row
+    // saveAnnotation so the LLM telemetry span and the persisted score row
     // share the same id (see PRD: "Identity strategy").
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
-      queueId: "queue-123",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "refusal",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-from-draft",
     })
-  })
-
-  it("returns annotated with wasCreated=false when persist returns existing draft", async () => {
-    mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
-    mockActivities.draftAnnotate.mockResolvedValueOnce({
-      queueId: "queue-123",
-      traceId: "trace-1",
-      feedback: "Generated feedback",
-      traceCreatedAt: TEST_TRACE_CREATED_AT,
-      scoreId: "score-existing",
-    })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
-      queueId: "queue-123",
-      traceId: "trace-1",
-      draftAnnotationId: "draft-existing",
-      wasCreated: false,
-    })
-
-    const result = await systemQueueFlaggerWorkflow({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-1",
-      queueSlug: "jailbreaking",
-    })
-
-    expect(result).toEqual({
-      action: "annotated",
-      queueSlug: "jailbreaking",
-      traceId: "trace-1",
-      queueId: "queue-123",
-      draftAnnotationId: "draft-existing",
-      wasCreated: false,
-      durationMs: expect.any(Number),
-    })
-
-    expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
-    expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
   })
 
   it("propagates draftAnnotate errors for Temporal retry", async () => {
@@ -169,85 +131,85 @@ describe("systemQueueFlaggerWorkflow", () => {
     mockActivities.draftAnnotate.mockRejectedValueOnce(new Error("Draft annotator failed"))
 
     await expect(
-      systemQueueFlaggerWorkflow({
+      flaggerWorkflow({
         organizationId: "org-1",
         projectId: "proj-1",
         traceId: "trace-1",
-        queueSlug: "frustration",
+        flaggerId: FLAGGER_ID,
+        flaggerSlug: "frustration",
       }),
     ).rejects.toThrow("Draft annotator failed")
 
     expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
     expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
+    expect(mockActivities.saveAnnotation).not.toHaveBeenCalled()
   })
 
-  it("propagates persistAnnotation errors for Temporal retry", async () => {
+  it("propagates saveAnnotation errors for Temporal retry", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
-      queueId: "queue-123",
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
-      scoreId: "score-persist-failure",
+      scoreId: "score-save-failure",
     })
-    mockActivities.persistAnnotation.mockRejectedValueOnce(new Error("Persist failed"))
+    mockActivities.saveAnnotation.mockRejectedValueOnce(new Error("Save failed"))
 
     await expect(
-      systemQueueFlaggerWorkflow({
+      flaggerWorkflow({
         organizationId: "org-1",
         projectId: "proj-1",
         traceId: "trace-1",
-        queueSlug: "frustration",
+        flaggerId: FLAGGER_ID,
+        flaggerSlug: "frustration",
       }),
-    ).rejects.toThrow("Persist failed")
+    ).rejects.toThrow("Save failed")
 
     expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
     expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledTimes(1)
   })
 
-  it("handles different queue slugs correctly", async () => {
+  it("handles different flagger slugs correctly", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
-      queueId: "queue-tool",
       traceId: "trace-1",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-tool",
     })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
-      queueId: "queue-tool",
+    mockActivities.saveAnnotation.mockResolvedValueOnce({
+      flaggerId: "flagger-tool",
       traceId: "trace-1",
       draftAnnotationId: "draft-tool",
-      wasCreated: true,
     })
 
-    await systemQueueFlaggerWorkflow({
+    await flaggerWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "tool-call-errors",
+      flaggerId: "flagger-tool",
+      flaggerSlug: "tool-call-errors",
     })
 
     expect(mockActivities.runFlagger).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "tool-call-errors",
+      flaggerSlug: "tool-call-errors",
     })
     expect(mockActivities.draftAnnotate).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "tool-call-errors",
+      flaggerSlug: "tool-call-errors",
     })
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "tool-call-errors",
-      queueId: "queue-tool",
+      flaggerId: "flagger-tool",
+      flaggerSlug: "tool-call-errors",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-tool",

@@ -417,13 +417,13 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         }),
 
-      findQueueDraftByTraceId: ({
+      findFlaggerPublishedByTraceAndFlaggerId: ({
         projectId,
-        queueId,
+        flaggerId,
         traceId,
       }: {
         readonly projectId: ProjectId
-        readonly queueId: string
+        readonly flaggerId: string
         readonly traceId: TraceId
       }) =>
         Effect.gen(function* () {
@@ -437,10 +437,10 @@ export const ScoreRepositoryLive = Layer.effect(
                   and(
                     eq(scores.organizationId, organizationId),
                     eq(scores.projectId, projectId),
-                    eq(scores.source, "annotation"),
-                    eq(scores.sourceId, queueId),
+                    eq(scores.source, "flagger"),
+                    eq(scores.sourceId, flaggerId),
                     eq(scores.traceId, traceId as string),
-                    isNotNull(scores.draftedAt),
+                    isNull(scores.draftedAt),
                   ),
                 )
                 .limit(1),

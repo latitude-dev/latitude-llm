@@ -1,5 +1,20 @@
 import type { TraceDetail } from "@domain/spans"
 
+export const FLAGGER_STRATEGY_SLUGS = [
+  "frustration",
+  "nsfw",
+  "refusal",
+  "laziness",
+  "jailbreaking",
+  "forgetting",
+  "trashing",
+  "tool-call-errors",
+  "output-schema-validation",
+  "empty-response",
+] as const
+
+export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
+
 /**
  * Result of deterministic detection phase.
  * - matched: deterministic match found; `feedback` is written to the score row directly.
@@ -12,11 +27,30 @@ export type DetectionResult =
   | { readonly kind: "ambiguous" }
 
 /**
- * Per-queue strategy contract for the system queue flagger.
- * Each queue slug can implement a mix of deterministic and LLM-based detection.
+ * Display + instructional copy for the LLM annotator prompt template.
  *
- * Strategies with LLM prompts (`buildSystemPrompt` + `buildPrompt`) back a provisioned
- * system queue; strategies without them are deterministic-only and never run LLM.
+ * LLM-capable strategies own this block instead of relying on a central
+ * registry of queue definitions: the strategy is the source of truth for
+ * what behavior it detects and what reviewers should look for.
+ */
+export interface FlaggerAnnotatorContext {
+  /** Human-readable name shown in the annotator prompt template. */
+  readonly name: string
+  /** One-sentence description of the issue category. */
+  readonly description: string
+  /** Reviewer guidance describing what belongs (and does not belong) in this category. */
+  readonly instructions: string
+}
+
+export type FlaggerDisplayDetails = Pick<FlaggerAnnotatorContext, "name" | "description">
+
+/**
+ * Per-flagger strategy contract.
+ * Each registered slug implements a mix of deterministic and LLM-based detection.
+ *
+ * Strategies with LLM prompts (`buildSystemPrompt` + `buildPrompt` + `annotator`)
+ * route ambiguous / sampled traces to the flagger workflow; strategies without
+ * them are deterministic-only and never run LLM.
  */
 export interface QueueStrategy {
   /** Check if the trace has the required context for this queue's detection */
@@ -35,6 +69,22 @@ export interface QueueStrategy {
   buildPrompt?(trace: TraceDetail): string
 
   /**
+   * Display copy used by the LLM annotator prompt template.
+   * Required for LLM-capable strategies; absent on deterministic-only ones
+   * (which never invoke the annotator).
+   */
+  readonly annotator?: FlaggerAnnotatorContext
+
+  /**
+   * Display copy for deterministic-only strategies — name + description
+   * shown in the per-project flagger settings UI. LLM-capable strategies
+   * carry the same fields under `annotator`; this slot exists so
+   * deterministic-only strategies can be the source of truth for their own
+   * display text without needing the LLM-specific `instructions`.
+   */
+  readonly details?: FlaggerDisplayDetails
+
+  /**
    * Slugs of strategies whose `matched` outcome makes this strategy non-applicable
    * for the same trace. When any listed suppressor matches deterministically, this
    * strategy is skipped entirely (no det check, no LLM enqueue) and the use-case
@@ -45,4 +95,14 @@ export interface QueueStrategy {
    * to keep the dependency graph acyclic.
    */
   readonly suppressedBy?: readonly string[]
+}
+
+/**
+ * Narrowed strategy shape guaranteed by the `isLlmCapableStrategy` type guard.
+ * Both LLM prompt builders and the annotator block are non-optional.
+ */
+export interface LlmCapableQueueStrategy extends QueueStrategy {
+  buildSystemPrompt(trace: TraceDetail): string
+  buildPrompt(trace: TraceDetail): string
+  readonly annotator: FlaggerAnnotatorContext
 }

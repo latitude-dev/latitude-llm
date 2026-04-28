@@ -92,30 +92,36 @@ interface TestPostgresContext {
  * Returns an object whose properties resolve lazily after beforeAll.
  */
 export function setupTestPostgres(): TestPostgresContext {
-  let pg: InMemoryPostgres
+  let pg: InMemoryPostgres | undefined
 
   beforeAll(async () => {
     pg = await createInMemoryPostgres()
   })
 
   afterAll(async () => {
+    if (!pg) return
     await closeInMemoryPostgres(pg)
   })
 
   return {
     get client() {
+      if (!pg) throw new Error("Postgres test database has not been initialized")
       return pg.client
     },
     get db() {
+      if (!pg) throw new Error("Postgres test database has not been initialized")
       return pg.db
     },
     get postgresDb() {
+      if (!pg) throw new Error("Postgres test database has not been initialized")
       return pg.postgresDb
     },
     get adminPostgresClient() {
+      if (!pg) throw new Error("Postgres test database has not been initialized")
       return pg.adminPostgresClient
     },
     get appPostgresClient() {
+      if (!pg) throw new Error("Postgres test database has not been initialized")
       return pg.appPostgresClient
     },
   }

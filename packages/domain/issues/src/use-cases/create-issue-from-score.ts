@@ -89,11 +89,7 @@ const buildNewIssueFromScore = ({
   })
 
   const source: IssueSource =
-    score.source === "annotation" && score.sourceId === "SYSTEM"
-      ? "flagger"
-      : score.source === "annotation"
-        ? "annotation"
-        : "custom"
+    score.source === "flagger" ? "flagger" : score.source === "annotation" ? "annotation" : "custom"
 
   return {
     id: generateId<"IssueId">(),

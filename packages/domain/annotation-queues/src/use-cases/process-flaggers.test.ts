@@ -6,6 +6,7 @@ import {
   CacheStore,
   ChSqlClient,
   ExternalUserId,
+  FlaggerId,
   OrganizationId,
   ProjectId,
   SessionId,
@@ -19,15 +20,16 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
-import type { AnnotationQueue } from "../entities/annotation-queue.ts"
-import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
-import { createFakeAnnotationQueueRepository } from "../testing/fake-annotation-queue-repository.ts"
+import type { Flagger } from "../entities/flagger.ts"
+import type { FlaggerSlug } from "../flagger-strategies/index.ts"
+import { FlaggerRepository } from "../ports/flagger-repository.ts"
+import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
   type CheckAmbiguousRateLimit,
   type EnqueueFlaggerWorkflowStart,
-  processDeterministicFlaggersUseCase,
+  processFlaggersUseCase,
   type StrategyDecision,
-} from "./process-deterministic-flaggers.ts"
+} from "./process-flaggers.ts"
 
 const ORG_ID = "a".repeat(24)
 const PROJECT_ID = "b".repeat(24)
@@ -73,20 +75,13 @@ const makeTraceDetail = (allMessages: TraceDetail["allMessages"]): TraceDetail =
   allMessages,
 })
 
-const makeSystemQueue = (slug: string, sampling: number): AnnotationQueue => ({
-  id: `${slug.padEnd(24, "x").slice(0, 24)}` as AnnotationQueue["id"],
-  organizationId: OrganizationId(ORG_ID),
-  projectId: ProjectId(PROJECT_ID),
-  system: true,
-  name: slug,
+const makeFlagger = (slug: FlaggerSlug, sampling: number, enabled = true): Flagger => ({
+  id: FlaggerId(`${slug.padEnd(24, "x").slice(0, 24)}`),
+  organizationId: ORG_ID,
+  projectId: PROJECT_ID,
   slug,
-  description: "",
-  instructions: "",
-  settings: { sampling },
-  assignees: [],
-  totalItems: 0,
-  completedItems: 0,
-  deletedAt: null,
+  enabled,
+  sampling,
   createdAt: new Date(),
   updatedAt: new Date(),
 })
@@ -99,7 +94,8 @@ const fakeCacheStore = Layer.succeed(CacheStore, {
 
 interface FakeDeps {
   readonly enqueued: Array<{
-    readonly queueSlug: string
+    readonly flaggerId: string
+    readonly flaggerSlug: string
     readonly reason: "sampled" | "ambiguous"
   }>
   readonly rateLimitAllowed: boolean
@@ -117,26 +113,24 @@ const makeFakeDeps = (rateLimitAllowed = true): FakeDeps => {
     deps: {
       enqueueWorkflowStart: (args) =>
         Effect.sync(() => {
-          enqueued.push({ queueSlug: args.queueSlug, reason: args.reason })
+          enqueued.push({ flaggerId: args.flaggerId, flaggerSlug: args.flaggerSlug, reason: args.reason })
         }),
       checkAmbiguousRateLimit: () => Effect.succeed(rateLimitAllowed),
     },
   }
 }
 
-const runUseCase = async (trace: TraceDetail, systemQueues: readonly AnnotationQueue[], deps: FakeDeps) => {
+const runUseCase = async (trace: TraceDetail, flaggers: readonly Flagger[], deps: FakeDeps) => {
   const { repository: traceRepo } = createFakeTraceRepository({
     findByTraceId: () => Effect.succeed(trace),
   })
-  const { repository: queueRepo } = createFakeAnnotationQueueRepository({
-    listSystemQueuesByProject: () => Effect.succeed(systemQueues),
-  })
+  const { repository: flaggerRepo } = createFakeFlaggerRepository(flaggers)
   const { repository: scoreRepo, scores } = createFakeScoreRepository()
   const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository()
 
   const layer = Layer.mergeAll(
     Layer.succeed(TraceRepository, traceRepo),
-    Layer.succeed(AnnotationQueueRepository, queueRepo),
+    Layer.succeed(FlaggerRepository, flaggerRepo),
     Layer.succeed(ScoreRepository, scoreRepo),
     Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepo),
     Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
@@ -146,10 +140,9 @@ const runUseCase = async (trace: TraceDetail, systemQueues: readonly AnnotationQ
   )
 
   const result = await Effect.runPromise(
-    processDeterministicFlaggersUseCase(
-      { organizationId: ORG_ID, projectId: PROJECT_ID, traceId: TRACE_ID },
-      deps.deps,
-    ).pipe(Effect.provide(layer)),
+    processFlaggersUseCase({ organizationId: ORG_ID, projectId: PROJECT_ID, traceId: TRACE_ID }, deps.deps).pipe(
+      Effect.provide(layer),
+    ),
   )
 
   return { result, scores }
@@ -158,16 +151,17 @@ const runUseCase = async (trace: TraceDetail, systemQueues: readonly AnnotationQ
 const decisionFor = (decisions: readonly StrategyDecision[], slug: string): StrategyDecision | undefined =>
   decisions.find((d) => d.slug === slug)
 
-describe("processDeterministicFlaggersUseCase", () => {
+describe("processFlaggersUseCase", () => {
   let deps: FakeDeps
 
   beforeEach(() => {
     deps = makeFakeDeps()
   })
 
-  it("writes a SYSTEM-authored score directly on deterministic match", async () => {
+  it("writes a flagger-authored score directly on deterministic match", async () => {
     const trace = makeTraceDetail([jailbreakMessage])
-    const { result, scores } = await runUseCase(trace, [makeSystemQueue("jailbreaking", 0)], deps)
+    const jailbreakFlagger = makeFlagger("jailbreaking", 0)
+    const { result, scores } = await runUseCase(trace, [jailbreakFlagger], deps)
 
     expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
       slug: "jailbreaking",
@@ -175,9 +169,56 @@ describe("processDeterministicFlaggersUseCase", () => {
     })
     const jailbreakScores = [...scores.values()].filter((score) => score.feedback.includes("Jailbreak"))
     expect(jailbreakScores).toHaveLength(1)
-    expect(jailbreakScores[0]?.sourceId).toBe("SYSTEM")
+    expect(jailbreakScores[0]?.source).toBe("flagger")
+    expect(jailbreakScores[0]?.sourceId).toBe(jailbreakFlagger.id)
     expect(jailbreakScores[0]?.draftedAt).toBeNull()
     expect(deps.enqueued).toEqual([])
+  })
+
+  it("does not duplicate the published score when re-run for an already-matched (trace, flagger)", async () => {
+    const trace = makeTraceDetail([jailbreakMessage])
+    const jailbreakFlagger = makeFlagger("jailbreaking", 0)
+
+    const first = await runUseCase(trace, [jailbreakFlagger], deps)
+    const before = [...first.scores.values()].filter((s) => s.source === "flagger").length
+
+    // Reuse the same fake repos via a second run that shares the score map.
+    // We can't reuse `runUseCase` directly because it instantiates fresh
+    // repos, so simulate the redeliver by invoking runUseCase a second time
+    // with the persisted score injected as the seed.
+    const { repository: traceRepo } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(trace),
+    })
+    const { repository: flaggerRepo } = createFakeFlaggerRepository([jailbreakFlagger])
+    const { repository: scoreRepo, scores } = createFakeScoreRepository()
+    for (const [id, score] of first.scores) {
+      scores.set(id, score)
+    }
+    const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository()
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(TraceRepository, traceRepo),
+      Layer.succeed(FlaggerRepository, flaggerRepo),
+      Layer.succeed(ScoreRepository, scoreRepo),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepo),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+      fakeCacheStore,
+    )
+
+    const result = await Effect.runPromise(
+      processFlaggersUseCase({ organizationId: ORG_ID, projectId: PROJECT_ID, traceId: TRACE_ID }, deps.deps).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "matched-issue",
+    })
+    const after = [...scores.values()].filter((s) => s.source === "flagger").length
+    expect(after).toBe(before)
   })
 
   it("enqueues the workflow with reason='ambiguous' when rate limit allows", async () => {
@@ -194,14 +235,19 @@ describe("processDeterministicFlaggersUseCase", () => {
       },
     ])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("jailbreaking", 0)], deps)
+    const jailbreakFlagger = makeFlagger("jailbreaking", 0)
+    const { result } = await runUseCase(trace, [jailbreakFlagger], deps)
 
     expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
       slug: "jailbreaking",
       action: "enqueued",
       reason: "ambiguous",
     })
-    expect(deps.enqueued).toContainEqual({ queueSlug: "jailbreaking", reason: "ambiguous" })
+    expect(deps.enqueued).toContainEqual({
+      flaggerId: jailbreakFlagger.id,
+      flaggerSlug: "jailbreaking",
+      reason: "ambiguous",
+    })
   })
 
   it("drops ambiguous when rate limit rejects", async () => {
@@ -218,7 +264,7 @@ describe("processDeterministicFlaggersUseCase", () => {
       },
     ])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("jailbreaking", 0)], deps)
+    const { result } = await runUseCase(trace, [makeFlagger("jailbreaking", 0)], deps)
 
     expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
       slug: "jailbreaking",
@@ -233,20 +279,25 @@ describe("processDeterministicFlaggersUseCase", () => {
     // With sampling=100, the deterministic no-match gets enqueued for LLM classification.
     const trace = makeTraceDetail([{ role: "user", parts: [{ type: "text", content: "Please help me with this." }] }])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("frustration", 100)], deps)
+    const frustrationFlagger = makeFlagger("frustration", 100)
+    const { result } = await runUseCase(trace, [frustrationFlagger], deps)
 
     expect(decisionFor(result.decisions, "frustration")).toEqual({
       slug: "frustration",
       action: "enqueued",
       reason: "sampled",
     })
-    expect(deps.enqueued).toContainEqual({ queueSlug: "frustration", reason: "sampled" })
+    expect(deps.enqueued).toContainEqual({
+      flaggerId: frustrationFlagger.id,
+      flaggerSlug: "frustration",
+      reason: "sampled",
+    })
   })
 
   it("drops no-match strategies when sampling=0", async () => {
     const trace = makeTraceDetail([{ role: "user", parts: [{ type: "text", content: "Hi." }] }])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("frustration", 0)], deps)
+    const { result } = await runUseCase(trace, [makeFlagger("frustration", 0)], deps)
 
     expect(decisionFor(result.decisions, "frustration")).toEqual({
       slug: "frustration",
@@ -264,11 +315,57 @@ describe("processDeterministicFlaggersUseCase", () => {
       { role: "assistant", parts: [{ type: "text", content: "Hello!" }] },
     ])
 
-    const { result } = await runUseCase(trace, [], deps)
+    const { result } = await runUseCase(trace, [makeFlagger("tool-call-errors", 0)], deps)
 
     const toolDecision = decisionFor(result.decisions, "tool-call-errors")
     expect(toolDecision?.action).toBe("dropped")
-    expect(deps.enqueued.filter((e) => e.queueSlug === "tool-call-errors")).toEqual([])
+    expect(deps.enqueued.filter((e) => e.flaggerSlug === "tool-call-errors")).toEqual([])
+  })
+
+  it("drops every branch when the flagger row is disabled", async () => {
+    const trace = makeTraceDetail([jailbreakMessage])
+    // disabled=false: deterministic match path normally fires for jailbreaking,
+    // but the disabled gate suppresses it entirely.
+    const { result, scores } = await runUseCase(trace, [makeFlagger("jailbreaking", 100, false)], deps)
+
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "disabled",
+    })
+    expect(scores.size).toBe(0)
+    expect(deps.enqueued).toEqual([])
+  })
+
+  it("does not enqueue an LLM workflow on the sampled (no-match) path when the flagger is disabled", async () => {
+    // Frustration is LLM-only (no deterministic detector) so a benign trace
+    // takes the no-match → sampling path. With sampling=100 it would always
+    // enqueue, so a missing enqueue here proves the disabled gate fires
+    // *before* the sampling decision.
+    const trace = makeTraceDetail([{ role: "user", parts: [{ type: "text", content: "Please help me with this." }] }])
+
+    const { result, scores } = await runUseCase(trace, [makeFlagger("frustration", 100, false)], deps)
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "disabled",
+    })
+    expect(scores.size).toBe(0)
+    expect(deps.enqueued.filter((e) => e.flaggerSlug === "frustration")).toEqual([])
+  })
+
+  it("drops with reason='missing-flagger' when no flagger row exists for a registered strategy", async () => {
+    const trace = makeTraceDetail([jailbreakMessage])
+    // Empty flagger list — the registry has jailbreaking but no provisioned row.
+    const { result } = await runUseCase(trace, [], deps)
+
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "missing-flagger",
+    })
+    expect(deps.enqueued).toEqual([])
   })
 
   describe("dependency-graph suppression", () => {
@@ -280,11 +377,7 @@ describe("processDeterministicFlaggersUseCase", () => {
         { role: "assistant", parts: [{ type: "text", content: "I can't help with that request." }] },
       ])
 
-      const { result } = await runUseCase(
-        trace,
-        [makeSystemQueue("jailbreaking", 0), makeSystemQueue("refusal", 0)],
-        deps,
-      )
+      const { result } = await runUseCase(trace, [makeFlagger("jailbreaking", 0), makeFlagger("refusal", 0)], deps)
 
       expect(decisionFor(result.decisions, "jailbreaking")?.action).toBe("matched-issue")
       expect(decisionFor(result.decisions, "refusal")).toEqual({
@@ -292,7 +385,7 @@ describe("processDeterministicFlaggersUseCase", () => {
         action: "suppressed",
         suppressedBy: "jailbreaking",
       })
-      expect(deps.enqueued.find((e) => e.queueSlug === "refusal")).toBeUndefined()
+      expect(deps.enqueued.find((e) => e.flaggerSlug === "refusal")).toBeUndefined()
     })
 
     it("does NOT suppress refusal/laziness/forgetting when empty-response matches", async () => {
@@ -306,7 +399,12 @@ describe("processDeterministicFlaggersUseCase", () => {
 
       const { result } = await runUseCase(
         trace,
-        [makeSystemQueue("refusal", 100), makeSystemQueue("laziness", 100), makeSystemQueue("forgetting", 100)],
+        [
+          makeFlagger("empty-response", 0),
+          makeFlagger("refusal", 100),
+          makeFlagger("laziness", 100),
+          makeFlagger("forgetting", 100),
+        ],
         deps,
       )
 
@@ -323,7 +421,7 @@ describe("processDeterministicFlaggersUseCase", () => {
         { role: "assistant", parts: [{ type: "text", content: "AI stands for artificial intelligence." }] },
       ])
 
-      const { result } = await runUseCase(trace, [makeSystemQueue("refusal", 100)], deps)
+      const { result } = await runUseCase(trace, [makeFlagger("refusal", 100)], deps)
 
       const refusal = decisionFor(result.decisions, "refusal")
       // Either enqueued (sampled / ambiguous) or dropped (sampled-out / no-match) —
@@ -359,7 +457,7 @@ describe("processDeterministicFlaggersUseCase", () => {
       },
     ])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("jailbreaking", 0)], failingDeps)
+    const { result } = await runUseCase(trace, [makeFlagger("jailbreaking", 0)], failingDeps)
 
     expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
       slug: "jailbreaking",
@@ -373,7 +471,7 @@ describe("processDeterministicFlaggersUseCase", () => {
     // The use case should return decisions for every slug without throwing.
     const trace = makeTraceDetail([])
 
-    const { result } = await runUseCase(trace, [makeSystemQueue("frustration", 100)], deps)
+    const { result } = await runUseCase(trace, [makeFlagger("frustration", 100)], deps)
 
     // All strategies resolved (no throw), with every decision having an action.
     expect(result.decisions.length).toBeGreaterThan(0)

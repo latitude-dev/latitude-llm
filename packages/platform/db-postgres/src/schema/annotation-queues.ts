@@ -8,7 +8,9 @@ export const annotationQueues = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
-    system: boolean("system").notNull().default(false), // true when the queue definition is provisioned by the system
+    // TODO(remove-sys-annot-queues): drop this column once dormant `system: true` rows
+    // (orphan system queues from before the flaggers refactor) are confirmed safe to delete.
+    system: boolean("system").notNull().default(false),
     name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
     slug: varchar("slug", { length: 140 }).notNull(), // unique queue slug within the project
     description: text("description").notNull(),
@@ -29,7 +31,6 @@ export const annotationQueues = latitudeSchema.table(
     unique("annotation_queues_unique_slug_per_project_idx")
       .on(t.organizationId, t.projectId, t.slug, t.deletedAt)
       .nullsNotDistinct(),
-    index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
 

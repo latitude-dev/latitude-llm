@@ -11,8 +11,8 @@ import {
   SEED_ANNOTATION_DEMO_SPAN_ID,
   SEED_ANNOTATION_DEMO_TRACE_ID,
   SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+  SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
   SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
-  SEED_ANNOTATION_QUEUE_SYSTEM_ID,
   SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   SEED_ANNOTATION_SPAN_IDS,
   SEED_ANNOTATION_TRACE_IDS,
@@ -64,9 +64,8 @@ function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string
   return seedTimestampDaysAgo(daysAgo, hour, minute)
 }
 
-function annotationSeedSourceId(sourceId: string): "UI" | "API" | "SYSTEM" {
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
-  if (sourceId === "system-signals") return "SYSTEM"
   return "API"
 }
 
@@ -431,7 +430,7 @@ const uiPolishAnalyticsRows = [
     trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
     span_id: SEED_ANNOTATION_DEMO_SPAN_ID,
     source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
+    source_id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
     simulation_id: "",
     issue_id: "",
     value: 0.25,
@@ -450,7 +449,7 @@ const uiPolishAnalyticsRows = [
     trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
     span_id: SEED_ANNOTATION_DEMO_SPAN_ID,
     source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
+    source_id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
     simulation_id: "",
     issue_id: "",
     value: 0.4,
@@ -469,7 +468,7 @@ const uiPolishAnalyticsRows = [
     trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
     span_id: "",
     source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
+    source_id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
     simulation_id: "",
     issue_id: "",
     value: 0.6,
@@ -488,7 +487,7 @@ const uiPolishAnalyticsRows = [
     trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
     span_id: SEED_ANNOTATION_DEMO_SPAN_ID,
     source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
+    source_id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
     simulation_id: "",
     issue_id: "",
     value: 0.92,
@@ -507,7 +506,7 @@ const uiPolishAnalyticsRows = [
     trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
     span_id: "",
     source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
+    source_id: SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
     simulation_id: "",
     issue_id: "",
     value: 0.85,

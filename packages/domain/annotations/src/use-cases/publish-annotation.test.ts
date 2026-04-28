@@ -174,7 +174,7 @@ describe("publishAnnotationUseCase", () => {
     expect(startedWorkflows).toHaveLength(0)
   })
 
-  it("returns BadRequestError for non-annotation score", async () => {
+  it("does not start workflow for non-annotation draft score", async () => {
     const customScore = {
       ...buildDraftAnnotationScore(),
       source: "custom",
@@ -183,9 +183,9 @@ describe("publishAnnotationUseCase", () => {
     } as Score
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     scores.set(customScore.id, customScore)
-    const { workflowStarter } = createWorkflowStarter()
+    const { workflowStarter, startedWorkflows } = createWorkflowStarter()
 
-    const exit = await Effect.runPromiseExit(
+    const result = await Effect.runPromise(
       publishHumanAnnotationUseCase({ scoreId: scoreCuid }).pipe(
         Effect.provide(
           Layer.mergeAll(
@@ -197,6 +197,41 @@ describe("publishAnnotationUseCase", () => {
       ),
     )
 
-    expect(exit._tag).toBe("Failure")
+    expect(result).toEqual({
+      action: "not-human",
+      score: customScore,
+    })
+    expect(startedWorkflows).toHaveLength(0)
+  })
+
+  it("does not start workflow for flagger draft score", async () => {
+    const flaggerScore = {
+      ...buildDraftAnnotationScore(),
+      source: "flagger",
+      sourceId: "flagger-frustration-000000",
+      annotatorId: null,
+      metadata: { rawFeedback: "Flagged as frustration" },
+    } as Score
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    scores.set(flaggerScore.id, flaggerScore)
+    const { workflowStarter, startedWorkflows } = createWorkflowStarter()
+
+    const result = await Effect.runPromise(
+      publishHumanAnnotationUseCase({ scoreId: scoreCuid }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(ScoreRepository, scoreRepository),
+            Layer.succeed(WorkflowStarter, workflowStarter),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) })),
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "not-human",
+      score: flaggerScore,
+    })
+    expect(startedWorkflows).toHaveLength(0)
   })
 })

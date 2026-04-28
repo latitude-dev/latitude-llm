@@ -1,6 +1,12 @@
-export const SCORE_SOURCES = ["evaluation", "annotation", "custom"] as const
+export const SCORE_SOURCES = ["evaluation", "annotation", "custom", "flagger"] as const
 
-export const ANNOTATION_SCORE_PARTIAL_SOURCE_IDS = ["UI", "API", "SYSTEM"] as const
+/**
+ * Sentinel `sourceId` values accepted on annotation-source scores.
+ *
+ * - `UI`: created from the web app annotation tool.
+ * - `API`: ingested via the public scores API.
+ */
+export const ANNOTATION_SCORE_PARTIAL_SOURCE_IDS = ["UI", "API"] as const
 
 export const SCORE_SOURCE_ID_MAX_LENGTH = 128
 

@@ -91,13 +91,14 @@ export interface ScoreRepositoryShape {
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /**
-   * Finds an existing queue-backed draft annotation by (queueId, traceId).
-   * Only returns draft annotations (draftedAt != null), never published rows.
-   * Used for idempotency in system queue annotate workflows.
+   * Finds an existing flagger-authored published score by (flaggerId, traceId).
+   * Only returns published scores (`draftedAt = null`) where
+   * `(source, sourceId) === ("flagger", <flaggerId>)`. Used to make the
+   * deterministic-match path idempotent under BullMQ retries.
    */
-  findQueueDraftByTraceId(input: {
+  findFlaggerPublishedByTraceAndFlaggerId(input: {
     readonly projectId: ProjectId
-    readonly queueId: string
+    readonly flaggerId: string
     readonly traceId: TraceId
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }

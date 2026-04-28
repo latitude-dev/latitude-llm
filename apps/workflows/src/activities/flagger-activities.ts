@@ -1,9 +1,9 @@
 import {
-  draftSystemQueueAnnotationUseCase,
-  persistSystemQueueAnnotationUseCase,
-  type RunSystemQueueFlaggerResult,
-  runSystemQueueFlaggerUseCase,
-  type SystemQueueAnnotateOutput,
+  draftFlaggerAnnotationUseCase,
+  type FlaggerAnnotateOutput,
+  type RunFlaggerResult,
+  runFlaggerUseCase,
+  saveFlaggerAnnotationUseCase,
 } from "@domain/annotation-queues"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
@@ -15,38 +15,31 @@ import {
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import {
-  AnnotationQueueItemRepositoryLive,
-  AnnotationQueueRepositoryLive,
-  OutboxEventWriterLive,
-  ScoreRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("workflows-flagger")
-const systemQueueLogger = createLogger("workflows-system-queue-flagger")
 
 export const runFlagger = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
-}): Promise<RunSystemQueueFlaggerResult> =>
+  readonly flaggerSlug: string
+}): Promise<RunFlaggerResult> =>
   Effect.runPromise(
-    runSystemQueueFlaggerUseCase(input).pipe(
+    runFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       withTracing,
       Effect.tap(() =>
         Effect.sync(() =>
-          logger.info("Ran system queue flagger", {
+          logger.info("Ran flagger", {
             organizationId: input.organizationId,
             projectId: input.projectId,
             traceId: input.traceId,
-            queueSlug: input.queueSlug,
+            flaggerSlug: input.flaggerSlug,
           }),
         ),
       ),
@@ -54,11 +47,10 @@ export const runFlagger = async (input: {
   )
 
 interface DraftAnnotateOutput {
-  readonly queueId: string
   readonly traceId: string
   readonly feedback: string
   readonly traceCreatedAt: string
-  /** Pre-generated score id; forwarded verbatim to `persistAnnotation`. */
+  /** Pre-generated score id; forwarded verbatim to `saveAnnotation`. */
   readonly scoreId: string
 }
 
@@ -66,11 +58,10 @@ export const draftAnnotate = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
 }): Promise<DraftAnnotateOutput> =>
   Effect.runPromise(
-    draftSystemQueueAnnotationUseCase(input).pipe(
-      withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+    draftFlaggerAnnotationUseCase(input).pipe(
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
         getClickhouseClient(),
@@ -80,11 +71,11 @@ export const draftAnnotate = async (input: {
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
-          systemQueueLogger.error("System queue draft annotate activity failed", {
+          logger.error("Flagger draft annotate activity failed", {
             organizationId: input.organizationId,
             projectId: input.projectId,
             traceId: input.traceId,
-            queueSlug: input.queueSlug,
+            flaggerSlug: input.flaggerSlug,
             error,
           })
         }),
@@ -92,25 +83,20 @@ export const draftAnnotate = async (input: {
     ),
   )
 
-export const persistAnnotation = async (input: {
+export const saveAnnotation = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
-  readonly queueSlug: string
-  readonly queueId: string
+  readonly flaggerId: string
+  readonly flaggerSlug: string
   readonly feedback: string
   readonly traceCreatedAt: string
   readonly scoreId: string
-}): Promise<SystemQueueAnnotateOutput> =>
+}): Promise<FlaggerAnnotateOutput> =>
   Effect.runPromise(
-    persistSystemQueueAnnotationUseCase(input).pipe(
+    saveFlaggerAnnotationUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(
-          ScoreRepositoryLive,
-          AnnotationQueueRepositoryLive,
-          AnnotationQueueItemRepositoryLive,
-          OutboxEventWriterLive,
-        ),
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -123,12 +109,12 @@ export const persistAnnotation = async (input: {
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
-          systemQueueLogger.error("System queue persist annotation activity failed", {
+          logger.error("Flagger save annotation activity failed", {
             organizationId: input.organizationId,
             projectId: input.projectId,
             traceId: input.traceId,
-            queueSlug: input.queueSlug,
-            queueId: input.queueId,
+            flaggerId: input.flaggerId,
+            flaggerSlug: input.flaggerSlug,
             error,
           })
         }),

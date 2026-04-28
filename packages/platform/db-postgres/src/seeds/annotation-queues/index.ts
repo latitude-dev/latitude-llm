@@ -1,4 +1,3 @@
-import { SYSTEM_QUEUE_DEFAULT_SAMPLING, SYSTEM_QUEUE_DEFINITIONS } from "@domain/annotation-queues"
 import {
   SEED_ADMIN_USER_ID,
   SEED_ANNOTATION_DEMO_TRACE_ID,
@@ -11,14 +10,12 @@ import {
   SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID,
   SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID,
   SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID,
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID,
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID,
   SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID,
   SEED_ANNOTATION_QUEUE_KITCHEN_SINK_ID,
   SEED_ANNOTATION_QUEUE_LIVE_ID,
   SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
-  SEED_ANNOTATION_QUEUE_SYSTEM_ID,
   SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   SEED_ANNOTATION_TRACE_IDS,
   SEED_MANUAL_QUEUE_ASSIGNEES,
@@ -35,17 +32,12 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 type AnnotationQueueRow = typeof annotationQueues.$inferInsert
 type AnnotationQueueItemRow = typeof annotationQueueItems.$inferInsert
 
-const frustrationQueueDefinition = SYSTEM_QUEUE_DEFINITIONS.find((definition) => definition.name === "Frustration")
-
-if (!frustrationQueueDefinition) {
-  throw new Error("Frustration system queue definition is missing.")
-}
-
 const staleQueueNames = [
   "Empty backlog (demo)",
   "All item statuses (demo)",
   "Review Edge Cases",
   "Refusal",
+  "Frustration",
   "Weekly quality sample",
 ] as const
 
@@ -123,23 +115,6 @@ const queueRows = [
     deletedAt: null,
     createdAt: queueDate(3, 8, 15),
     updatedAt: queueDate(3, 8, 15),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    system: true,
-    name: frustrationQueueDefinition.name,
-    slug: "frustration",
-    description: frustrationQueueDefinition.description,
-    instructions: frustrationQueueDefinition.instructions,
-    settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
-    assignees: [] as string[],
-    totalItems: 1,
-    completedItems: 0,
-    deletedAt: null,
-    createdAt: queueDate(5, 9),
-    updatedAt: queueDate(5, 9),
   },
   {
     id: SEED_ANNOTATION_QUEUE_LIVE_ID,
@@ -303,19 +278,6 @@ const queueItemRows = [
     reviewStartedAt: queueDate(3, 10),
     createdAt: queueDate(3, 9, 15),
     updatedAt: queueDate(3, 11),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
-    traceId: requiredTraceId(9),
-    traceCreatedAt: queueDate(6, 8),
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: queueDate(5, 10),
-    updatedAt: queueDate(5, 10),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID,

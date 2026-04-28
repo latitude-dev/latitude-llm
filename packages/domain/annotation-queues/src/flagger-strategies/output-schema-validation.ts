@@ -1,5 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
-import { detectOutputSchemaValidationSystemQueue } from "../helpers.ts"
+import { detectOutputSchemaValidationFlagger } from "../helpers.ts"
 import type { DetectionResult, QueueStrategy } from "./types.ts"
 
 /**
@@ -8,12 +8,17 @@ import type { DetectionResult, QueueStrategy } from "./types.ts"
  * text parts. Never calls an LLM.
  */
 export const outputSchemaValidationStrategy: QueueStrategy = {
+  details: {
+    name: "Output schema validation",
+    description: "Flags malformed or truncated structured output in assistant responses without calling an LLM.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.outputMessages.length > 0
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectOutputSchemaValidationSystemQueue(trace)
+    const result = detectOutputSchemaValidationFlagger(trace)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
   },
 }

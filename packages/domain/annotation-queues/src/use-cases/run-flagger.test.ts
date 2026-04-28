@@ -16,18 +16,18 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
-import { type RunSystemQueueFlaggerInput, runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
+import { FLAGGER_MODEL } from "../constants.ts"
+import { type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
 
-const INPUT: RunSystemQueueFlaggerInput = {
+const INPUT: RunFlaggerInput = {
   organizationId: "a".repeat(24),
   projectId: "b".repeat(24),
-  queueSlug: "jailbreaking",
+  flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
 }
 
 // Schema from the implementation - for testing default behavior
-const systemQueueFlaggerOutputSchema = z.object({
+const flaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
 })
 
@@ -68,7 +68,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
   }
 }
 
-describe("runSystemQueueFlaggerUseCase", () => {
+describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -96,7 +96,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -110,20 +110,20 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
-      ...SYSTEM_QUEUE_FLAGGER_MODEL,
+      ...FLAGGER_MODEL,
       maxTokens: 512,
       telemetry: {
-        spanName: "queue.system.classify",
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.queueSystemClassify],
+        spanName: "flagger.classify",
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
         metadata: {
           organizationId: INPUT.organizationId,
           projectId: INPUT.projectId,
           traceId: INPUT.traceId,
-          queueSlug: "jailbreaking",
+          flaggerSlug: "jailbreaking",
         },
       },
     })
-    // New queue-specific prompt format per system-queue-flagger redesign
+    // New queue-specific prompt format per flagger redesign
     expect(calls.generate[0].system).toContain("Jailbreaking")
     expect(calls.generate[0].system).toContain("INDIRECT PROMPT INJECTION")
     expect(calls.generate[0].system).toContain("manipulation")
@@ -133,7 +133,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
   })
 
   // Note: deterministic short-circuiting now happens in the `deterministic-flaggers`
-  // worker upstream of this use-case. By the time `runSystemQueueFlaggerUseCase` is
+  // worker upstream of this use-case. By the time `runFlaggerUseCase` is
   // invoked (via the Temporal activity), the trace was either sampled-in on no-match
   // or rate-limited through on ambiguous — so this layer always calls the LLM.
   // The deterministic behavior is covered by `process-deterministic-flaggers.test.ts`
@@ -149,7 +149,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "jailbreaking" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -191,7 +191,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -244,7 +244,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -286,7 +286,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "frustration" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "frustration" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -312,7 +312,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "resource-outliers" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "resource-outliers" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -336,7 +336,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "not-a-real-queue" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "not-a-real-queue" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -376,7 +376,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
     const exit = await Effect.runPromise(
       Effect.exit(
-        runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "refusal" }).pipe(
+        runFlaggerUseCase({ ...INPUT, flaggerSlug: "refusal" }).pipe(
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(TraceRepository, repository),
@@ -435,7 +435,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -478,7 +478,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -519,7 +519,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "laziness" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -568,7 +568,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "nsfw" }).pipe(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "nsfw" }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
@@ -589,17 +589,17 @@ describe("runSystemQueueFlaggerUseCase", () => {
 
   it("schema: empty object {} is parsed as matched=false via Zod default", () => {
     // Verify that the schema correctly applies the default(false) for missing matched field
-    const parsed = systemQueueFlaggerOutputSchema.parse({})
+    const parsed = flaggerOutputSchema.parse({})
     expect(parsed).toEqual({ matched: false })
   })
 
   it("schema: explicit matched=true is preserved", () => {
-    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: true })
+    const parsed = flaggerOutputSchema.parse({ matched: true })
     expect(parsed).toEqual({ matched: true })
   })
 
   it("schema: explicit matched=false is preserved", () => {
-    const parsed = systemQueueFlaggerOutputSchema.parse({ matched: false })
+    const parsed = flaggerOutputSchema.parse({ matched: false })
     expect(parsed).toEqual({ matched: false })
   })
 })
