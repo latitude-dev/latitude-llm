@@ -29,6 +29,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   name: "Token leakage in responses",
   description: "The assistant leaks API tokens in its response.",
   source: "annotation",
+  kind: "regular",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,

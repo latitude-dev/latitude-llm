@@ -17,7 +17,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type Issue, type IssueSource, IssueState } from "../entities/issue.ts"
+import { type Issue, type IssueKind, type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { type IssueProjectionCandidate, IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -86,6 +86,7 @@ export interface IssueListItem {
   readonly name: string
   readonly description: string
   readonly source: IssueSource
+  readonly kind: IssueKind
   readonly states: readonly string[]
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -557,6 +558,7 @@ export const listIssuesUseCase = (
         name: candidate.issue.name,
         description: candidate.issue.description,
         source: candidate.issue.source,
+        kind: candidate.issue.kind,
         states: candidate.lifecycleStates,
         createdAt: candidate.issue.createdAt,
         updatedAt: candidate.issue.updatedAt,

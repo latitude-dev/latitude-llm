@@ -36,6 +36,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   name: "Issue candidate",
   description: "Repeated assistant failure",
   source: "annotation",
+  kind: "regular",
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,

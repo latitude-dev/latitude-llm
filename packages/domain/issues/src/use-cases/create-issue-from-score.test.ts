@@ -187,27 +187,40 @@ describe("createIssueFromScoreUseCase", () => {
     expect(calls.generate).toHaveLength(1)
   })
 
-  describe("issue.source mapping", () => {
+  describe("issue source and kind mapping", () => {
     const cases = [
       {
         scoreSource: "annotation" as const,
         sourceId: "UI",
         expected: "annotation" as const,
+        draftedAt: null,
+        expectedKind: "regular" as const,
       },
       {
         scoreSource: "flagger" as const,
         sourceId: "ffffffffffffffffffffffff",
         expected: "flagger" as const,
+        draftedAt: null,
+        expectedKind: "regular" as const,
+      },
+      {
+        scoreSource: "flagger" as const,
+        sourceId: "ffffffffffffffffffffffff",
+        expected: "flagger" as const,
+        draftedAt: new Date("2026-03-30T10:30:00.000Z"),
+        expectedKind: "potential" as const,
       },
       {
         scoreSource: "custom" as const,
         sourceId: "api-source",
         expected: "custom" as const,
+        draftedAt: null,
+        expectedKind: "regular" as const,
       },
     ]
 
-    for (const { scoreSource, sourceId, expected } of cases) {
-      it(`derives issue.source = "${expected}" from score.source = "${scoreSource}"`, async () => {
+    for (const { scoreSource, sourceId, expected, draftedAt, expectedKind } of cases) {
+      it(`derives issue.source = "${expected}" and issue.kind = "${expectedKind}" from score.source = "${scoreSource}"`, async () => {
         const { layer: aiLayer } = createFakeAI({
           generate: createGenerateIssueDetails("name", "description"),
         })
@@ -219,6 +232,7 @@ describe("createIssueFromScoreUseCase", () => {
           ...baseScore,
           source: scoreSource,
           sourceId,
+          draftedAt,
           metadata: scoreSource === "custom" ? {} : { rawFeedback: baseScore.feedback },
         } as unknown as Score
         scores.set(sourceScore.id, sourceScore)
@@ -240,6 +254,7 @@ describe("createIssueFromScoreUseCase", () => {
         expect(result.action).toBe("created")
         const issue = issues.get(result.issueId)
         expect(issue?.source).toBe(expected)
+        expect(issue?.kind).toBe(expectedKind)
       })
     }
   })

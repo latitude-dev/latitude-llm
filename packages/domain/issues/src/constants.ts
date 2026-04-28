@@ -6,6 +6,8 @@ export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regres
 
 export const ISSUE_SOURCES = ["annotation", "custom", "flagger"] as const
 
+export const ISSUE_KINDS = ["regular", "potential"] as const
+
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**

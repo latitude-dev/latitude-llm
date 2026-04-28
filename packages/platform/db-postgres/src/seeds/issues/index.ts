@@ -212,6 +212,7 @@ function buildIssueRow(input: {
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
+    kind: "regular",
     centroid,
     clusteredAt: centroid.clusteredAt,
     escalatedAt: fixtureDates.escalatedAt,

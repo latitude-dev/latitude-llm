@@ -101,7 +101,7 @@ export const updateFlagger = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const flagger = await Effect.runPromise(
-      updateFlaggerUseCase({ projectId, slug: data.slug, enabled: data.enabled }).pipe(
+      updateFlaggerUseCase({ organizationId, projectId, slug: data.slug, enabled: data.enabled }).pipe(
         withPostgres(FlaggerRepositoryLive, client, orgId),
         withTracing,
       ),
