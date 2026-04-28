@@ -19,5 +19,19 @@ export class AdminUserRepository extends ServiceMap.Service<
      * on this precondition.
      */
     findById(userId: UserId): Effect.Effect<AdminUserDetails, NotFoundError | RepositoryError>
+    /**
+     * Resolve the Better Auth session token for an **active** session
+     * (`expires_at > now()`) that belongs to the given user. Used by
+     * the per-session Revoke flow to look up the credential
+     * server-side, so the token never has to round-trip through the
+     * client. Fails with `NotFoundError` when no such session exists
+     * — both "session id doesn't exist" and "session belongs to a
+     * different user" collapse into the same error so a probing
+     * caller can't distinguish the two.
+     */
+    findActiveSessionTokenForUser(
+      userId: UserId,
+      sessionId: string,
+    ): Effect.Effect<string, NotFoundError | RepositoryError>
   }
 >()("@domain/admin/AdminUserRepository") {}

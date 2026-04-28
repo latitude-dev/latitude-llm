@@ -18,6 +18,39 @@ export const adminUserMembershipSchema = z.object({
 })
 export type AdminUserMembership = z.infer<typeof adminUserMembershipSchema>
 
+/**
+ * Snapshot of a Better Auth session row for the backoffice Sessions
+ * panel. The shape mirrors the underlying table 1:1 except for
+ * `impersonatedByEmail`, which the repository resolves with a
+ * second-pass lookup so audit views can read "Carlos was impersonating
+ * this session" without a join in every consumer.
+ *
+ * The session **token** is intentionally NOT exposed here — it's a
+ * live authentication credential and surfacing it through the
+ * domain DTO would let it reach the wire payload, browser memory,
+ * and any consumer logging the result. The per-session Revoke flow
+ * resolves the token server-side at revoke time via
+ * {@link AdminUserRepository.findActiveSessionTokenForUser}.
+ */
+export const adminUserSessionSchema = z.object({
+  id: z.string(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  expiresAt: z.date(),
+  impersonatedByUserId: z.string().nullable(),
+  /**
+   * Email of the admin currently impersonating this session, when
+   * `impersonatedByUserId` is set and the admin row still exists.
+   * Resolved as a best-effort hint at fetch time — the audit trail of
+   * record lives on `AdminImpersonationStarted` events, not on this
+   * field.
+   */
+  impersonatedByEmail: z.string().nullable(),
+})
+export type AdminUserSession = z.infer<typeof adminUserSessionSchema>
+
 export const adminUserDetailsSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -25,6 +58,12 @@ export const adminUserDetailsSchema = z.object({
   image: z.string().nullable(),
   role: z.enum(["user", "admin"]),
   memberships: z.array(adminUserMembershipSchema),
+  /**
+   * Active sessions for this user (`expiresAt > now()` at the moment
+   * of the fetch). Sorted impersonation-first, then by `updatedAt`
+   * descending so the most-recently-active row reads at the top.
+   */
+  sessions: z.array(adminUserSessionSchema),
   createdAt: z.date(),
 })
 export type AdminUserDetails = z.infer<typeof adminUserDetailsSchema>

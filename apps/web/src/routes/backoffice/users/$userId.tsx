@@ -1,8 +1,13 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
+import { AtSignIcon, EyeIcon, LogOutIcon, ShieldCheckIcon } from "lucide-react"
 import type { AdminUserDetailsDto, AdminUserDetailsMembershipDto } from "../../../domains/admin/users.functions.ts"
 import { adminGetUser } from "../../../domains/admin/users.functions.ts"
+import { ChangeEmailButton } from "../-components/account-actions/change-email.tsx"
+import { PromoteDemoteStaffButton } from "../-components/account-actions/promote-demote.tsx"
+import { RevokeAllSessionsButton } from "../-components/account-actions/revoke-all-sessions.tsx"
+import { AccountActionRow, AccountActionsSection } from "../-components/account-actions/section.tsx"
 import {
   DashboardHero,
   DashboardSection,
@@ -11,6 +16,7 @@ import {
 } from "../-components/dashboard/index.ts"
 import { ImpersonateUserButton } from "../-components/impersonate-user-button.tsx"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
+import { SessionsPanel } from "../-components/sessions-panel.tsx"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 
 export const Route = createFileRoute("/backoffice/users/$userId")({
@@ -98,6 +104,39 @@ function BackofficeUserDetailPage() {
           <MembershipsGrid memberships={memberships} />
         )}
       </DashboardSection>
+
+      <SessionsPanel userId={user.id} userEmail={user.email} sessions={user.sessions} />
+
+      <AccountActionsSection>
+        <AccountActionRow
+          icon={EyeIcon}
+          title="Impersonate user"
+          description="Sign in as this user for support purposes. The impersonation banner shows on every page until you stop."
+          action={<ImpersonateUserButton userId={user.id} userEmail={user.email} />}
+        />
+        <AccountActionRow
+          icon={ShieldCheckIcon}
+          title={user.role === "admin" ? "Demote from staff" : "Promote to staff"}
+          description={
+            user.role === "admin"
+              ? "Revoke this user's platform-staff access. They keep their organization memberships."
+              : "Grant this user platform-staff access — backoffice + cross-org visibility + impersonation."
+          }
+          action={<PromoteDemoteStaffButton userId={user.id} userEmail={user.email} currentRole={user.role} />}
+        />
+        <AccountActionRow
+          icon={AtSignIcon}
+          title="Change email"
+          description="Update this user's primary login email. Useful for typo corrections at sign-up. Active sessions are not signed out."
+          action={<ChangeEmailButton userId={user.id} currentEmail={user.email} />}
+        />
+        <AccountActionRow
+          icon={LogOutIcon}
+          title="Revoke all sessions"
+          description="Sign this user out of every browser and device. They keep all their data and memberships."
+          action={<RevokeAllSessionsButton userId={user.id} userEmail={user.email} />}
+        />
+      </AccountActionsSection>
 
       <PropertiesStrip entries={propertyEntries} />
     </div>

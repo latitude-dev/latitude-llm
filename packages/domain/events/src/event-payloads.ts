@@ -148,4 +148,64 @@ export interface EventPayloads {
     readonly adminUserId: string
     readonly targetUserId: string
   }
+  /**
+   * Emitted when a platform admin changes another user's `users.role`
+   * via the backoffice ("Promote to staff" / "Demote from staff").
+   * `fromRole` and `toRole` are stored explicitly so audit queries
+   * don't have to reconstruct the transition from a delta on the
+   * users table — the row is mutable, so the historical snapshot
+   * lives in the event payload.
+   */
+  AdminUserRoleChanged: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly fromRole: "user" | "admin"
+    readonly toRole: "user" | "admin"
+  }
+  /**
+   * Emitted when a platform admin updates a user's primary email
+   * via the backoffice. Snapshot both addresses so audit queries
+   * can attribute future logins under the new email back to the
+   * admin who renamed the account. Issued via Better Auth's
+   * `adminUpdateUser` endpoint, which writes through the internal
+   * adapter — `emailVerified` is intentionally left untouched
+   * (admins routinely correct typos for users who already verified).
+   */
+  AdminUserEmailChanged: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly fromEmail: string
+    readonly toEmail: string
+  }
+  /**
+   * Emitted when a platform admin signs a user out of every active
+   * session ("Revoke all sessions" in the backoffice). `sessionCount`
+   * is captured at the moment of revocation as a best-effort hint —
+   * useful for audit queries like "did the admin actually log
+   * anybody out, or did the user have no active sessions anyway?"
+   * — and intentionally not used as a source of truth (Better Auth
+   * could roll up sessions between the listing call and the
+   * revocation).
+   */
+  AdminUserSessionsRevoked: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly sessionCount: number
+  }
+  /**
+   * Emitted when a platform admin signs a user out of a single
+   * session via the per-row Revoke button on the Sessions panel.
+   * The session row carries `sessionId` so audit consumers can
+   * cross-reference the snapshot the admin saw against the row that
+   * was deleted — useful when investigating "which device was
+   * disconnected, and from where?". The session token is
+   * intentionally NOT included on the event: the row is destroyed
+   * immediately and storing the token would needlessly persist a
+   * dead authentication credential in the audit log.
+   */
+  AdminUserSessionRevoked: {
+    readonly adminUserId: string
+    readonly targetUserId: string
+    readonly sessionId: string
+  }
 }
