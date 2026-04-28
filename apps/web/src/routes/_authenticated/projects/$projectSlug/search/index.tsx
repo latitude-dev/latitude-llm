@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { Button, Icon, Input, type SortDirection, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
@@ -39,79 +39,15 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sear
 function SearchPage() {
   const { projectSlug } = Route.useParams()
   const project = useRouteProject()
+  const projectId = project.id
 
   const [q, setQ] = useParamState("q", "")
   const hasSearchQuery = q.length > 0
 
-  return (
-    <Layout>
-      <Layout.Actions>
-        <Layout.ActionsRow className="justify-stretch">
-          <div className="relative flex w-full items-center gap-2">
-            {hasSearchQuery ? (
-              <Tooltip
-                asChild
-                trigger={
-                  <Button variant="ghost" size="sm" onClick={() => setQ("")} aria-label="Clear search">
-                    <Icon icon={ArrowLeftIcon} size="sm" />
-                  </Button>
-                }
-              >
-                Clear search
-              </Tooltip>
-            ) : null}
-            <SearchInput key={q} initialValue={q} onSubmit={setQ} />
-          </div>
-        </Layout.ActionsRow>
-      </Layout.Actions>
-
-      {hasSearchQuery ? <SearchResults projectId={project.id} projectSlug={projectSlug} searchQuery={q} /> : null}
-    </Layout>
-  )
-}
-
-function SearchInput({
-  initialValue,
-  onSubmit,
-}: {
-  readonly initialValue: string
-  readonly onSubmit: (value: string) => void
-}) {
-  const [draft, setDraft] = useState(initialValue)
-
-  return (
-    <div className="relative flex-1">
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-        <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-      </div>
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") return
-          event.preventDefault()
-          const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
-          onSubmit(next)
-        }}
-        placeholder="Search"
-        size="lg"
-        maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className="w-full pl-9"
-        autoFocus
-      />
-    </div>
-  )
-}
-
-function SearchResults({
-  projectId,
-  projectSlug,
-  searchQuery,
-}: {
-  readonly projectId: string
-  readonly projectSlug: string
-  readonly searchQuery: string
-}) {
+  // Results state — kept at the top level so the layout slots below
+  // (`Layout.Actions`, `Layout.Aside`, …) remain DIRECT children of `<Layout>`.
+  // `ListingLayout` discovers its panes via `Children.toArray`, which doesn't
+  // see through function components.
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
@@ -145,9 +81,9 @@ function SearchResults({
   const [exporting, setExporting] = useState(false)
 
   const { totalCount: totalTraceCount } = useTracesCount({
-    projectId,
+    projectId: hasSearchQuery ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
-    searchQuery,
+    searchQuery: q,
   })
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
@@ -225,7 +161,7 @@ function SearchResults({
   const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
 
   useHotkeys([
-    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev) },
+    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev), options: { enabled: hasSearchQuery } },
     {
       hotkey: "Escape",
       callback: closeTraceDrawer,
@@ -234,53 +170,77 @@ function SearchResults({
   ])
 
   return (
-    <>
-      <Layout.Actions className="pt-0">
-        <Layout.ActionsRow>
-          <Layout.ActionRowItem>
-            <TimeFilterDropdown
-              {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
-              {...(timeTo ? { startTimeTo: timeTo } : {})}
-              onChange={(from, to) => {
-                const next = { ...filters }
-                if (from || to) {
-                  const conditions = [
-                    ...(from ? [{ op: "gte" as const, value: from }] : []),
-                    ...(to ? [{ op: "lte" as const, value: to }] : []),
-                  ]
-                  next.startTime = conditions
-                } else {
-                  delete next.startTime
+    <Layout>
+      <Layout.Actions>
+        <Layout.ActionsRow className="justify-stretch">
+          <div className="relative flex w-full items-center gap-2">
+            {hasSearchQuery ? (
+              <Tooltip
+                asChild
+                trigger={
+                  <Button asChild variant="ghost" size="icon">
+                    <Link to="/projects/$projectSlug/search" params={{ projectSlug }} aria-label="Clear search">
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                    </Link>
+                  </Button>
                 }
-                setRawFilters(serializeFilters(next) ?? "")
-              }}
-            />
-            <ColumnsSelector
-              columns={TRACE_COLUMN_OPTIONS}
-              selectedColumnIds={visibleTraceColumnIds}
-              onChange={(nextColumnIds) =>
-                setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
-              }
-            />
-            <Button variant={filtersOpen ? "outline" : "ghost"} size="sm" onClick={() => setFiltersOpen(!filtersOpen)}>
-              <Icon icon={FilterIcon} size="sm" />
-              Filters
-              {hasActiveFilters ? (
-                <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
-                  {Object.keys(filters).length}
-                </span>
-              ) : null}
-            </Button>
-            {hasActiveFilters ? (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Clear all
-              </Button>
+              >
+                Clear search
+              </Tooltip>
             ) : null}
-          </Layout.ActionRowItem>
+            <SearchInput key={q} initialValue={q} onSubmit={setQ} />
+          </div>
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {selectedCount > 0 ? (
+      {hasSearchQuery ? (
+        <Layout.Actions className="pt-0">
+          <Layout.ActionsRow>
+            <Layout.ActionRowItem>
+              <TimeFilterDropdown
+                {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
+                {...(timeTo ? { startTimeTo: timeTo } : {})}
+                onChange={(from, to) => {
+                  const next = { ...filters }
+                  if (from || to) {
+                    const conditions = [
+                      ...(from ? [{ op: "gte" as const, value: from }] : []),
+                      ...(to ? [{ op: "lte" as const, value: to }] : []),
+                    ]
+                    next.startTime = conditions
+                  } else {
+                    delete next.startTime
+                  }
+                  setRawFilters(serializeFilters(next) ?? "")
+                }}
+              />
+              <ColumnsSelector
+                columns={TRACE_COLUMN_OPTIONS}
+                selectedColumnIds={visibleTraceColumnIds}
+                onChange={(nextColumnIds) =>
+                  setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
+                }
+              />
+              <Button variant={filtersOpen ? "outline" : "ghost"} size="sm" onClick={() => setFiltersOpen(!filtersOpen)}>
+                <Icon icon={FilterIcon} size="sm" />
+                Filters
+                {hasActiveFilters ? (
+                  <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
+                    {Object.keys(filters).length}
+                  </span>
+                ) : null}
+              </Button>
+              {hasActiveFilters ? (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Clear all
+                </Button>
+              ) : null}
+            </Layout.ActionRowItem>
+          </Layout.ActionsRow>
+        </Layout.Actions>
+      ) : null}
+
+      {hasSearchQuery && selectedCount > 0 ? (
         <div className="flex flex-row items-center gap-2 px-6">
           <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
             <Icon icon={DownloadIcon} size="sm" />
@@ -297,26 +257,28 @@ function SearchResults({
         </div>
       ) : null}
 
-      <TracesView
-        projectId={projectId}
-        filters={filters}
-        filtersOpen={filtersOpen}
-        activeTraceId={activeTraceId || undefined}
-        activeDrawerTab={traceDetailTab}
-        sorting={sorting}
-        onSortingChange={onSortingChange}
-        selectionState={selectionState}
-        onSelectionChange={setSelectionState}
-        totalTraceCount={totalTraceCount}
-        onFiltersChange={onFiltersChange}
-        onFiltersClose={() => setFiltersOpen(false)}
-        onActiveTraceChange={onActiveTraceChange}
-        traceIdsRef={traceIdsRef}
-        visibleColumnIds={visibleTraceColumnIds}
-        searchQuery={searchQuery}
-      />
+      {hasSearchQuery ? (
+        <TracesView
+          projectId={projectId}
+          filters={filters}
+          filtersOpen={filtersOpen}
+          activeTraceId={activeTraceId || undefined}
+          activeDrawerTab={traceDetailTab}
+          sorting={sorting}
+          onSortingChange={onSortingChange}
+          selectionState={selectionState}
+          onSelectionChange={setSelectionState}
+          totalTraceCount={totalTraceCount}
+          onFiltersChange={onFiltersChange}
+          onFiltersClose={() => setFiltersOpen(false)}
+          onActiveTraceChange={onActiveTraceChange}
+          traceIdsRef={traceIdsRef}
+          visibleColumnIds={visibleTraceColumnIds}
+          searchQuery={q}
+        />
+      ) : null}
 
-      {activeTraceId ? (
+      {hasSearchQuery && activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
             key={activeTraceId}
@@ -333,36 +295,73 @@ function SearchResults({
         </Layout.Aside>
       ) : null}
 
-      {bulkSelection ? (
-        <>
-          <ExportConfirmationModal
-            open={exportModalOpen}
-            onOpenChange={setExportModalOpen}
-            itemLabel="trace"
-            selectedCount={selectedCount}
-            onConfirm={() => void handleExportTraces()}
-            exporting={exporting}
-          />
-          <AddToDatasetModal
-            open={addToDatasetOpen}
-            onOpenChange={setAddToDatasetOpen}
-            projectId={projectId}
-            selection={bulkSelection}
-            selectedCount={selectedCount}
-            onSuccess={clearSelections}
-          />
-          <AddToQueueModal
-            open={addToQueueOpen}
-            onOpenChange={setAddToQueueOpen}
-            projectId={projectId}
-            projectSlug={projectSlug}
-            selection={bulkSelection}
-            selectedCount={selectedCount}
-            {...(hasActiveFilters ? { filters } : {})}
-            onSuccess={clearSelections}
-          />
-        </>
+      {hasSearchQuery && bulkSelection ? (
+        <ExportConfirmationModal
+          open={exportModalOpen}
+          onOpenChange={setExportModalOpen}
+          itemLabel="trace"
+          selectedCount={selectedCount}
+          onConfirm={() => void handleExportTraces()}
+          exporting={exporting}
+        />
       ) : null}
-    </>
+
+      {hasSearchQuery && bulkSelection ? (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          selection={bulkSelection}
+          selectedCount={selectedCount}
+          onSuccess={clearSelections}
+        />
+      ) : null}
+
+      {hasSearchQuery && bulkSelection ? (
+        <AddToQueueModal
+          open={addToQueueOpen}
+          onOpenChange={setAddToQueueOpen}
+          projectId={projectId}
+          projectSlug={projectSlug}
+          selection={bulkSelection}
+          selectedCount={selectedCount}
+          {...(hasActiveFilters ? { filters } : {})}
+          onSuccess={clearSelections}
+        />
+      ) : null}
+    </Layout>
+  )
+}
+
+function SearchInput({
+  initialValue,
+  onSubmit,
+}: {
+  readonly initialValue: string
+  readonly onSubmit: (value: string) => void
+}) {
+  const [draft, setDraft] = useState(initialValue)
+
+  return (
+    <div className="relative flex-1">
+      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+        <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
+      </div>
+      <Input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return
+          event.preventDefault()
+          const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
+          onSubmit(next)
+        }}
+        placeholder="Search"
+        size="lg"
+        maxLength={SEARCH_QUERY_MAX_LENGTH}
+        className="w-full pl-9"
+        autoFocus
+      />
+    </div>
   )
 }
