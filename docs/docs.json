@@ -146,6 +146,10 @@
       {
         "group": "Simulations",
         "pages": ["simulations/overview"]
+      },
+      {
+        "group": "Claude Code",
+        "pages": ["claude-code/claude-code"]
       }
     ]
   },
