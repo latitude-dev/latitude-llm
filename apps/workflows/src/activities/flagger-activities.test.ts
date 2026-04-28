@@ -6,20 +6,20 @@ const {
   draftFlaggerAnnotationUseCaseMock,
   loggerErrorMock,
   loggerInfoMock,
-  persistFlaggerAnnotationUseCaseMock,
   runFlaggerUseCaseMock,
+  saveFlaggerAnnotationUseCaseMock,
 } = vi.hoisted(() => ({
   draftFlaggerAnnotationUseCaseMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
-  persistFlaggerAnnotationUseCaseMock: vi.fn(),
   runFlaggerUseCaseMock: vi.fn(),
+  saveFlaggerAnnotationUseCaseMock: vi.fn(),
 }))
 
 vi.mock("@domain/annotation-queues", () => ({
   draftFlaggerAnnotationUseCase: draftFlaggerAnnotationUseCaseMock,
-  persistFlaggerAnnotationUseCase: persistFlaggerAnnotationUseCaseMock,
   runFlaggerUseCase: runFlaggerUseCaseMock,
+  saveFlaggerAnnotationUseCase: saveFlaggerAnnotationUseCaseMock,
 }))
 
 vi.mock("@platform/ai", () => ({

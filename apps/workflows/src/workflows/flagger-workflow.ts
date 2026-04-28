@@ -2,7 +2,7 @@ import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
-const { runFlagger, draftAnnotate, persistAnnotation } = proxyActivities<typeof activities>({
+const { runFlagger, draftAnnotate, saveAnnotation } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 seconds",
   retry: defaultActivityRetryPolicy,
 })
@@ -13,7 +13,7 @@ const { runFlagger, draftAnnotate, persistAnnotation } = proxyActivities<typeof 
  * Runs one async black-box flagger call for a specific trace and flagger.
  * When the flagger returns matched=true, the workflow proceeds to:
  * 1. Generate feedback via draftAnnotate (non-transactional LLM call)
- * 2. Persist a draft score via persistAnnotation (transactional)
+ * 2. Save a draft score via saveAnnotation (transactional)
  *
  * The workflow result distinguishes between:
  * - "annotated": matched and successfully wrote the draft score
@@ -51,7 +51,7 @@ export const flaggerWorkflow = async (input: {
       flaggerSlug: input.flaggerSlug,
     })
 
-    log.info("Flagger draft annotate completed, starting persist", {
+    log.info("Flagger draft annotate completed, starting save", {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
@@ -59,7 +59,7 @@ export const flaggerWorkflow = async (input: {
       flaggerSlug: input.flaggerSlug,
     })
 
-    const persistResult = await persistAnnotation({
+    const saveResult = await saveAnnotation({
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
@@ -70,14 +70,13 @@ export const flaggerWorkflow = async (input: {
       scoreId: draftResult.scoreId,
     })
 
-    log.info("Flagger persist annotation completed", {
+    log.info("Flagger save annotation completed", {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
       flaggerId: input.flaggerId,
       flaggerSlug: input.flaggerSlug,
-      draftAnnotationId: persistResult.draftAnnotationId,
-      wasCreated: persistResult.wasCreated,
+      draftAnnotationId: saveResult.draftAnnotationId,
     })
 
     return {
@@ -85,8 +84,7 @@ export const flaggerWorkflow = async (input: {
       flaggerId: input.flaggerId,
       flaggerSlug: input.flaggerSlug,
       traceId: input.traceId,
-      draftAnnotationId: persistResult.draftAnnotationId,
-      wasCreated: persistResult.wasCreated,
+      draftAnnotationId: saveResult.draftAnnotationId,
       durationMs: Date.now() - startTime,
     }
   }

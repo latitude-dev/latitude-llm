@@ -50,7 +50,7 @@ export type DraftFlaggerAnnotationError = BadRequestError | RepositoryError | Ru
 /**
  * Drafts a flagger annotation by running the annotator to generate feedback.
  * This is a non-transactional operation that only generates the feedback text.
- * The actual persistence is handled separately by `persistFlaggerAnnotationUseCase`.
+ * The actual persistence is handled separately by `saveFlaggerAnnotationUseCase`.
  *
  * This use case is idempotent — retrying with the same `(flaggerSlug, traceId)`
  * regenerates the same feedback (or similar, since LLM output may vary slightly).

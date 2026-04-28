@@ -107,7 +107,7 @@ The Temporal workflow is now **LLM-only**. The deterministic phase moved out int
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
-3. **`persistAnnotation`** (only when draft succeeds):
+3. **`saveAnnotation`** (only when draft succeeds):
    - delegates to `persistSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
    - creates queue item and draft annotation transactionally
    - handles idempotency (checks for existing drafts)
@@ -171,7 +171,7 @@ deterministic-flaggers:run (load trace once, fan out across all strategies in tw
    │                            ↓
    │                  systemQueueFlaggerWorkflow (Temporal, LLM-only)
    │                            ↓
-   │                  runFlagger → matched? → draftAnnotate → persistAnnotation
+   │                  runFlagger → matched? → draftAnnotate → saveAnnotation
    │                                                              ↓
    │                                            Queue item + draft annotation
    │
@@ -239,7 +239,7 @@ Because the deterministic phase is not gated by a queue sampling setting, every 
 
 - **Workflows**: `apps/workflows/src/workflows/`
   - `system-queue-flagger-workflow.ts` - Temporal workflow with flagger, draft, and persist activities (LLM-only after this refactor)
-  - `activities/index.ts` - `runFlagger`, `draftAnnotate`, and `persistAnnotation` activities
+  - `activities/index.ts` - `runFlagger`, `draftAnnotate`, and `saveAnnotation` activities
 
 - **Repository**: `packages/platform/db-postgres/src/repositories/annotation-queue-repository.ts`
   - `findSystemQueueBySlugInProject` - Slug-based lookup
@@ -316,7 +316,7 @@ Every project starts with these system-created manual queues:
   - `no-match` (LLM-capable + provisioned queue) → apply per-queue `settings.sampling`; sampled-in traces enqueue `start-flagger-workflow` (`reason: "sampled"`)
   - `ambiguous` (LLM-capable + provisioned queue) → check the per-`{org, slug}` Redis rate limit; under-limit traces enqueue `start-flagger-workflow` (`reason: "ambiguous"`)
 - `start-flagger-workflow` is a thin worker that calls `workflowStarter.start("systemQueueFlaggerWorkflow", …)` with bounded BullMQ retries so short Temporal outages don't replay the whole deterministic fan-out
-- the Temporal workflow is now LLM-only: `runFlagger` invokes the queue-specific LLM, then `draftAnnotate` + `persistAnnotation` create the queue item + draft annotation transactionally
+- the Temporal workflow is now LLM-only: `runFlagger` invokes the queue-specific LLM, then `draftAnnotate` + `saveAnnotation` create the queue item + draft annotation transactionally
 - per-strategy errors in the deterministic worker are caught at the slug boundary and recorded as `action: "failed"`; one broken detector cannot break the rest of the fan-out
 - system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user; setting `sampling = 0` disables only the no-match → LLM path (matched-deterministic still writes a score)
 

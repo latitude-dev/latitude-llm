@@ -1,9 +1,4 @@
-import {
-  type ScoreDraftClosedError,
-  type ScoreDraftUpdateConflictError,
-  ScoreRepository,
-  writeScoreUseCase,
-} from "@domain/scores"
+import { type ScoreDraftClosedError, type ScoreDraftUpdateConflictError, writeScoreUseCase } from "@domain/scores"
 import { BadRequestError, ProjectId, type RepositoryError, ScoreId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -26,35 +21,34 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
       }),
   })
 
-export interface PersistFlaggerAnnotationInput extends FlaggerAnnotateInput {
+export interface SaveFlaggerAnnotationInput extends FlaggerAnnotateInput {
   readonly feedback: string
   readonly traceCreatedAt: string
 }
 
-export type PersistFlaggerAnnotationError =
+export type SaveFlaggerAnnotationError =
   | BadRequestError
   | RepositoryError
   | ScoreDraftClosedError
   | ScoreDraftUpdateConflictError
 
 /**
- * Persists a flagger draft annotation. This is the transactional counterpart to
+ * Saves a flagger draft annotation. Transactional counterpart to
  * `draftFlaggerAnnotationUseCase`.
  *
- * Idempotency: a previous run of the workflow may have already inserted the
- * draft. We look up by `(traceId, flaggerId)` and short-circuit when we find
- * one — the workflow's `workflowId` (`flagger:${traceId}:${flaggerSlug}`)
- * already prevents concurrent attempts; this guards against retries that
- * regenerated the upstream score id.
+ * Multiple drafts per `(trace, flagger)` are allowed by design — issue
+ * discovery clusters them downstream — so this use case does not de-duplicate
+ * against existing drafts. Each call writes a new row with the upstream-
+ * generated `scoreId`.
  *
  * Flagger-authored drafts:
- * - Use `source = "flagger"` with `sourceId = flaggerId`
- * - Have `draftedAt != null` (draft status)
- * - Default to `passed = false`, `value = 0`, no anchor (conversation-level)
+ * - `source = "flagger"` with `sourceId = flaggerId`
+ * - `draftedAt != null` (draft status)
+ * - `passed = false`, `value = 0`, no anchor (conversation-level)
  * - Do NOT auto-publish (no `annotation-scores:publish` event)
  */
-export const persistFlaggerAnnotationUseCase = Effect.fn("annotationQueues.persistFlaggerAnnotation")(function* (
-  input: PersistFlaggerAnnotationInput,
+export const saveFlaggerAnnotationUseCase = Effect.fn("annotationQueues.saveFlaggerAnnotation")(function* (
+  input: SaveFlaggerAnnotationInput,
 ) {
   yield* Effect.annotateCurrentSpan("flagger.id", input.flaggerId)
   yield* Effect.annotateCurrentSpan("flagger.traceId", input.traceId)
@@ -64,23 +58,6 @@ export const persistFlaggerAnnotationUseCase = Effect.fn("annotationQueues.persi
   const projectId = ProjectId(parsedInput.projectId)
   const traceId = TraceId(parsedInput.traceId)
   const flaggerId = parsedInput.flaggerId
-
-  const scoreRepository = yield* ScoreRepository
-
-  const existingDraft = yield* scoreRepository.findFlaggerDraftByTraceAndFlaggerId({
-    projectId,
-    flaggerId,
-    traceId,
-  })
-
-  if (existingDraft !== null) {
-    return flaggerAnnotateOutputSchema.parse({
-      flaggerId,
-      traceId: parsedInput.traceId,
-      draftAnnotationId: existingDraft.id,
-      wasCreated: false,
-    }) as FlaggerAnnotateOutput
-  }
 
   const draft = yield* writeScoreUseCase({
     id: ScoreId(parsedInput.scoreId),
@@ -105,6 +82,5 @@ export const persistFlaggerAnnotationUseCase = Effect.fn("annotationQueues.persi
     flaggerId,
     traceId: parsedInput.traceId,
     draftAnnotationId: draft.id,
-    wasCreated: true,
   }) as FlaggerAnnotateOutput
 })

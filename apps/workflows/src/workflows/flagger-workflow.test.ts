@@ -11,11 +11,10 @@ const { mockActivities } = vi.hoisted(() => {
       traceCreatedAt: "2024-01-15T10:00:00.000Z",
       scoreId: "score-default",
     })),
-    persistAnnotation: vi.fn(async () => ({
+    saveAnnotation: vi.fn(async () => ({
       flaggerId: "flagger-1",
       traceId: "trace-1",
       draftAnnotationId: "draft-1",
-      wasCreated: true,
     })),
   }
 
@@ -63,10 +62,10 @@ describe("flaggerWorkflow", () => {
       flaggerSlug: "empty-response",
     })
     expect(mockActivities.draftAnnotate).not.toHaveBeenCalled()
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
+    expect(mockActivities.saveAnnotation).not.toHaveBeenCalled()
   })
 
-  it("calls draftAnnotate and persistAnnotation when flagger returns matched=true", async () => {
+  it("calls draftAnnotate and saveAnnotation when flagger returns matched=true", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
       traceId: "trace-1",
@@ -74,11 +73,10 @@ describe("flaggerWorkflow", () => {
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-from-draft",
     })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
+    mockActivities.saveAnnotation.mockResolvedValueOnce({
       flaggerId: FLAGGER_ID,
       traceId: "trace-1",
       draftAnnotationId: "draft-456",
-      wasCreated: true,
     })
 
     const result = await flaggerWorkflow({
@@ -95,7 +93,6 @@ describe("flaggerWorkflow", () => {
       flaggerSlug: "refusal",
       traceId: "trace-1",
       draftAnnotationId: "draft-456",
-      wasCreated: true,
       durationMs: expect.any(Number),
     })
 
@@ -113,11 +110,11 @@ describe("flaggerWorkflow", () => {
       traceId: "trace-1",
       flaggerSlug: "refusal",
     })
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledTimes(1)
     // The scoreId emitted by draftAnnotate must flow verbatim into
-    // persistAnnotation so the LLM telemetry span and the persisted score row
+    // saveAnnotation so the LLM telemetry span and the persisted score row
     // share the same id (see PRD: "Identity strategy").
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
@@ -127,44 +124,6 @@ describe("flaggerWorkflow", () => {
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-from-draft",
     })
-  })
-
-  it("returns annotated with wasCreated=false when persist returns existing draft", async () => {
-    mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
-    mockActivities.draftAnnotate.mockResolvedValueOnce({
-      traceId: "trace-1",
-      feedback: "Generated feedback",
-      traceCreatedAt: TEST_TRACE_CREATED_AT,
-      scoreId: "score-existing",
-    })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
-      flaggerId: FLAGGER_ID,
-      traceId: "trace-1",
-      draftAnnotationId: "draft-existing",
-      wasCreated: false,
-    })
-
-    const result = await flaggerWorkflow({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      traceId: "trace-1",
-      flaggerId: FLAGGER_ID,
-      flaggerSlug: "jailbreaking",
-    })
-
-    expect(result).toEqual({
-      action: "annotated",
-      flaggerId: FLAGGER_ID,
-      flaggerSlug: "jailbreaking",
-      traceId: "trace-1",
-      draftAnnotationId: "draft-existing",
-      wasCreated: false,
-      durationMs: expect.any(Number),
-    })
-
-    expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
-    expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
   })
 
   it("propagates draftAnnotate errors for Temporal retry", async () => {
@@ -183,18 +142,18 @@ describe("flaggerWorkflow", () => {
 
     expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
     expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).not.toHaveBeenCalled()
+    expect(mockActivities.saveAnnotation).not.toHaveBeenCalled()
   })
 
-  it("propagates persistAnnotation errors for Temporal retry", async () => {
+  it("propagates saveAnnotation errors for Temporal retry", async () => {
     mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
-      scoreId: "score-persist-failure",
+      scoreId: "score-save-failure",
     })
-    mockActivities.persistAnnotation.mockRejectedValueOnce(new Error("Persist failed"))
+    mockActivities.saveAnnotation.mockRejectedValueOnce(new Error("Save failed"))
 
     await expect(
       flaggerWorkflow({
@@ -204,11 +163,11 @@ describe("flaggerWorkflow", () => {
         flaggerId: FLAGGER_ID,
         flaggerSlug: "frustration",
       }),
-    ).rejects.toThrow("Persist failed")
+    ).rejects.toThrow("Save failed")
 
     expect(mockActivities.runFlagger).toHaveBeenCalledTimes(1)
     expect(mockActivities.draftAnnotate).toHaveBeenCalledTimes(1)
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledTimes(1)
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledTimes(1)
   })
 
   it("handles different flagger slugs correctly", async () => {
@@ -219,11 +178,10 @@ describe("flaggerWorkflow", () => {
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-tool",
     })
-    mockActivities.persistAnnotation.mockResolvedValueOnce({
+    mockActivities.saveAnnotation.mockResolvedValueOnce({
       flaggerId: "flagger-tool",
       traceId: "trace-1",
       draftAnnotationId: "draft-tool",
-      wasCreated: true,
     })
 
     await flaggerWorkflow({
@@ -246,7 +204,7 @@ describe("flaggerWorkflow", () => {
       traceId: "trace-1",
       flaggerSlug: "tool-call-errors",
     })
-    expect(mockActivities.persistAnnotation).toHaveBeenCalledWith({
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",

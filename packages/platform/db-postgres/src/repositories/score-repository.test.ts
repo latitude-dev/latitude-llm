@@ -624,12 +624,12 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(customSourcePage.items[0]?.sourceId).toBe("api-source")
   })
 
-  it("findFlaggerDraftByTraceAndFlaggerId finds existing flagger-authored draft", async () => {
+  it("findFlaggerPublishedByTraceAndFlaggerId finds existing flagger-authored published score", async () => {
     const organizationId = "qqqqqqqqqqqqqqqqqqqqqqqq"
     const flaggerId = "qqqqqqqqqqqqqqqqqqqqqqqq"
     const traceId = TraceId("tttttttttttttttttttttttttttttttt")
 
-    const draftScore = await Effect.runPromise(
+    const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
         source: "flagger",
@@ -637,16 +637,16 @@ describe("ScoreRepositoryLive + score use cases", () => {
         traceId: traceId,
         value: 0,
         passed: false,
-        feedback: "Flagger draft feedback",
-        metadata: { rawFeedback: "Flagger draft feedback" },
-        draftedAt: new Date("2026-03-24T16:00:00.000Z"),
+        feedback: "Flagger published feedback",
+        metadata: { rawFeedback: "Flagger published feedback" },
+        draftedAt: null,
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerDraftByTraceAndFlaggerId({
+        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
           projectId: annotationProjectId,
           flaggerId,
           traceId: traceId,
@@ -655,14 +655,14 @@ describe("ScoreRepositoryLive + score use cases", () => {
     )
 
     expect(found).not.toBeNull()
-    expect(found?.id).toBe(draftScore.id)
+    expect(found?.id).toBe(publishedScore.id)
     expect(found?.source).toBe("flagger")
     expect(found?.sourceId).toBe(flaggerId)
     expect(found?.traceId).toBe(traceId)
-    expect(found?.draftedAt).not.toBeNull()
+    expect(found?.draftedAt).toBeNull()
   })
 
-  it("findFlaggerDraftByTraceAndFlaggerId returns null when no draft exists", async () => {
+  it("findFlaggerPublishedByTraceAndFlaggerId returns null when no published score exists", async () => {
     const organizationId = "wwwwwwwwwwwwwwwwwwwwwwww"
     const flaggerId = "wwwwwwwwwwwwwwwwwwwwwwww"
     const traceId = TraceId("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
@@ -670,7 +670,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerDraftByTraceAndFlaggerId({
+        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
           projectId: annotationProjectId,
           flaggerId,
           traceId: traceId,
@@ -681,7 +681,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found).toBeNull()
   })
 
-  it("findFlaggerDraftByTraceAndFlaggerId excludes published flagger scores (draftedAt = null)", async () => {
+  it("findFlaggerPublishedByTraceAndFlaggerId excludes draft flagger scores (draftedAt != null)", async () => {
     const organizationId = "xxxxxxxxxxxxxxxxxxxxxxxx"
     const flaggerId = "xxxxxxxxxxxxxxxxxxxxxxxx"
     const traceId = TraceId("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
@@ -694,16 +694,16 @@ describe("ScoreRepositoryLive + score use cases", () => {
         traceId: traceId,
         value: 0,
         passed: false,
-        feedback: "Published flagger feedback",
-        metadata: { rawFeedback: "Published flagger feedback" },
-        draftedAt: null,
+        feedback: "Draft flagger feedback",
+        metadata: { rawFeedback: "Draft flagger feedback" },
+        draftedAt: new Date("2026-03-24T16:00:00.000Z"),
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerDraftByTraceAndFlaggerId({
+        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
           projectId: annotationProjectId,
           flaggerId,
           traceId: traceId,
@@ -714,14 +714,14 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found).toBeNull()
   })
 
-  it("findFlaggerDraftByTraceAndFlaggerId filters by flaggerId and traceId correctly", async () => {
+  it("findFlaggerPublishedByTraceAndFlaggerId filters by flaggerId and traceId correctly", async () => {
     const organizationId = "yyyyyyyyyyyyyyyyyyyyyyyy"
     const flaggerId1 = "f11111111111111111111111" // 24 chars (CUID length)
     const flaggerId2 = "f22222222222222222222222" // 24 chars
     const traceId1 = TraceId("t1111111111111111111111111111111") // 32 chars
     const traceId2 = TraceId("t2222222222222222222222222222222") // 32 chars
 
-    const draft1 = await Effect.runPromise(
+    const target = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
         source: "flagger",
@@ -729,9 +729,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
         traceId: traceId1,
         value: 0,
         passed: false,
-        feedback: "Draft 1",
-        metadata: { rawFeedback: "Draft 1" },
-        draftedAt: new Date("2026-03-24T17:00:00.000Z"),
+        feedback: "Target",
+        metadata: { rawFeedback: "Target" },
+        draftedAt: null,
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
@@ -743,9 +743,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
         traceId: traceId2,
         value: 0,
         passed: false,
-        feedback: "Draft 2 - different trace",
-        metadata: { rawFeedback: "Draft 2 - different trace" },
-        draftedAt: new Date("2026-03-24T17:00:00.000Z"),
+        feedback: "Same flagger, different trace",
+        metadata: { rawFeedback: "Same flagger, different trace" },
+        draftedAt: null,
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
@@ -757,16 +757,16 @@ describe("ScoreRepositoryLive + score use cases", () => {
         traceId: traceId1,
         value: 0,
         passed: false,
-        feedback: "Draft 3 - different flagger",
-        metadata: { rawFeedback: "Draft 3 - different flagger" },
-        draftedAt: new Date("2026-03-24T17:00:00.000Z"),
+        feedback: "Same trace, different flagger",
+        metadata: { rawFeedback: "Same trace, different flagger" },
+        draftedAt: null,
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerDraftByTraceAndFlaggerId({
+        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
           projectId: annotationProjectId,
           flaggerId: flaggerId1,
           traceId: traceId1,
@@ -775,7 +775,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     )
 
     expect(found).not.toBeNull()
-    expect(found?.id).toBe(draft1.id)
+    expect(found?.id).toBe(target.id)
     expect(found?.sourceId).toBe(flaggerId1)
     expect(found?.traceId).toBe(traceId1)
   })

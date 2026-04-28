@@ -91,17 +91,6 @@ export interface ScoreRepositoryShape {
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /**
-   * Finds an existing flagger-authored draft annotation by (flaggerId, traceId).
-   * Only returns draft annotations (`draftedAt != null`) where
-   * `(source, sourceId) === ("flagger", <flaggerId>)`. Used for idempotency in
-   * the flagger workflow's persist step.
-   */
-  findFlaggerDraftByTraceAndFlaggerId(input: {
-    readonly projectId: ProjectId
-    readonly flaggerId: string
-    readonly traceId: TraceId
-  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
-  /**
    * Finds an existing flagger-authored published score by (flaggerId, traceId).
    * Only returns published scores (`draftedAt = null`) where
    * `(source, sourceId) === ("flagger", <flaggerId>)`. Used to make the
