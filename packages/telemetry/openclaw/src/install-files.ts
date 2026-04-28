@@ -35,6 +35,15 @@ export function installPluginFiles(): { destination: string; entryPath: string }
   if (!existsSync(distSrc)) {
     throw new Error(`Cannot install: missing compiled dist at ${distSrc}.`)
   }
+  if (!existsSync(pkgSrc)) {
+    // package.json is now load-bearing for OpenClaw discovery (it carries
+    // `openclaw.extensions`), so missing it would silently regress to the
+    // "plugin not found" failure mode 0.0.3 was meant to fix. Match the
+    // other packaging-bug checks above and fail loudly instead.
+    throw new Error(
+      `Cannot install: missing package.json at ${pkgSrc}. This is a packaging bug — please file an issue.`,
+    )
+  }
 
   // Wipe and recreate so a re-install isn't polluted by a previous version's
   // files. Idempotent.
@@ -44,29 +53,43 @@ export function installPluginFiles(): { destination: string; entryPath: string }
   copyFileSync(manifestSrc, join(PLUGIN_INSTALL_DIR, "openclaw.plugin.json"))
   cpSync(distSrc, join(PLUGIN_INSTALL_DIR, "dist"), { recursive: true })
 
-  // Write a minimal package.json so anything that runs `require("./dist/plugin.js")`
-  // from a `type: module` context still resolves cleanly (we mirror the source
-  // package's `type` and `main` fields).
-  if (existsSync(pkgSrc)) {
-    const sourcePkg = JSON.parse(readFileSync(pkgSrc, "utf-8")) as {
-      name?: string
-      version?: string
-      type?: string
-      main?: string
-    }
-    const minimalPkg = {
-      name: sourcePkg.name,
-      version: sourcePkg.version,
-      type: sourcePkg.type ?? "module",
-      main: sourcePkg.main ?? "./dist/plugin.js",
-      private: true,
-    }
-    writeFileSync(join(PLUGIN_INSTALL_DIR, "package.json"), `${JSON.stringify(minimalPkg, null, 2)}\n`, "utf-8")
+  // Write a minimal package.json. Three fields matter for OpenClaw:
+  //   - `name`/`version` for diagnostics.
+  //   - `type: "module"` so node treats `dist/plugin.js` as ESM.
+  //   - `openclaw.extensions: [...]` — THIS is what OpenClaw's plugin
+  //     discovery uses to find the plugin entry file. The
+  //     `openclaw.plugin.json` manifest provides id + configSchema, but
+  //     discovery's `resolvePackageExtensionEntries` reads
+  //     `package.json["openclaw"].extensions`. Without this, discovery
+  //     falls through to looking for `index.{ts,js,mjs,cjs}` at the dir
+  //     root, doesn't find one, and skips us — which manifests as
+  //     "plugin not found" at gateway start.
+  const sourcePkg = JSON.parse(readFileSync(pkgSrc, "utf-8")) as {
+    name?: string
+    version?: string
+    type?: string
+    main?: string
+    openclaw?: { extensions?: string[] }
   }
+  const extensions = sourcePkg.openclaw?.extensions ?? ["./dist/plugin.js"]
+  const minimalPkg = {
+    name: sourcePkg.name,
+    version: sourcePkg.version,
+    type: sourcePkg.type ?? "module",
+    main: sourcePkg.main ?? "./dist/plugin.js",
+    private: true,
+    openclaw: { extensions },
+  }
+  writeFileSync(join(PLUGIN_INSTALL_DIR, "package.json"), `${JSON.stringify(minimalPkg, null, 2)}\n`, "utf-8")
 
+  // Derive the entry path from the resolved extensions rather than
+  // hard-coding it, so callers reading `entryPath` stay consistent if the
+  // package's openclaw.extensions ever points somewhere other than
+  // `./dist/plugin.js` (e.g. multi-entry plugins).
+  const primaryEntry = extensions[0] ?? "./dist/plugin.js"
   return {
     destination: PLUGIN_INSTALL_DIR,
-    entryPath: join(PLUGIN_INSTALL_DIR, "dist", "plugin.js"),
+    entryPath: resolve(PLUGIN_INSTALL_DIR, primaryEntry),
   }
 }
 

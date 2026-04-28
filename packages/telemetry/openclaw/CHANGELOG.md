@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-04-27
+
+### Fixed
+
+- **OpenClaw discovery now actually finds the plugin.** 0.0.2 shipped `openclaw.plugin.json` correctly (manifest with `id` + `configSchema`), but `package.json` was missing the `openclaw.extensions` field. OpenClaw's `resolvePackageExtensionEntries` reads `package.json["openclaw"].extensions` to know **where** the plugin entry lives — without it, discovery falls through to looking for `index.{ts,js,mjs,cjs}` at the directory root, doesn't find one, and skips us silently. The gateway then warns `plugin not found: @latitude-data/openclaw-telemetry (stale config entry ignored; remove it from plugins config)` even though everything else is in place. Now both the published `package.json` and the minimal `package.json` the installer writes into `~/.openclaw/extensions/latitude-telemetry/` declare `"openclaw": { "extensions": ["./dist/plugin.js"] }`. After re-running `install`, the gateway log lists `@latitude-data/openclaw-telemetry` in the ready-plugins line.
+
+### Added
+
+- `--version` / `-v` and `--help` / `-h` top-level flags on the CLI. Run `npx -y @latitude-data/openclaw-telemetry --version` to confirm which version is installed (or shadow-cached) on a given box.
+
 ## [0.0.2] - 2026-04-25
 
 End-to-end install fix. The 0.0.1 install path was broken in five places, all reported by an OpenClaw 2026.4.21 maintainer who tried it on a real install. Re-running `npx -y @latitude-data/openclaw-telemetry install` cleans up any leftover 0.0.1 keys.
