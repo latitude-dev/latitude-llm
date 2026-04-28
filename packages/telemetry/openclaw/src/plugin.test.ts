@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 import registerLatitudePlugin, { type OpenClawPluginApiLike } from "./plugin.ts"
-import type { RunRecord } from "./types.ts"
+import type { BuildResult } from "./span-builder.ts"
 
 function makeApi(): {
   api: OpenClawPluginApiLike
-  fire: (hookName: string, event: unknown, ctx: unknown) => Promise<void>
+  fire: (hookName: string, event: unknown, ctx: unknown) => Promise<unknown>
 } {
   const handlers = new Map<string, Array<(event: unknown, ctx: unknown) => unknown>>()
   const api: OpenClawPluginApiLike = {
@@ -14,8 +14,12 @@ function makeApi(): {
       handlers.set(hookName, list)
     },
   }
-  async function fire(hookName: string, event: unknown, ctx: unknown): Promise<void> {
-    for (const h of handlers.get(hookName) ?? []) await h(event, ctx)
+  async function fire(hookName: string, event: unknown, ctx: unknown): Promise<unknown> {
+    let lastReturn: unknown
+    for (const h of handlers.get(hookName) ?? []) {
+      lastReturn = await h(event, ctx)
+    }
+    return lastReturn
   }
   return { api, fire }
 }
@@ -37,23 +41,79 @@ describe("registerLatitudePlugin", () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it("reads creds from api.pluginConfig (the OpenClaw passes-config path)", () => {
+  it("reads creds from api.pluginConfig (OpenClaw passes-config path)", () => {
     const { api } = makeApi()
     api.pluginConfig = { apiKey: "k", project: "p", allowConversationAccess: true }
     const spy = vi.spyOn(api, "on")
     registerLatitudePlugin(api)
-    // Plugin enabled and registered hooks because pluginConfig provided creds.
     expect(spy).toHaveBeenCalled()
   })
 
-  it("builds a run from the full hook sequence and emits it", async () => {
-    const { api, fire } = makeApi()
-    const emitted: RunRecord[] = []
+  it("subscribes to all the granular paired hooks plus data feeds", () => {
+    const { api } = makeApi()
+    const spy = vi.spyOn(api, "on")
     registerLatitudePlugin(api, {
       config: {
         apiKey: "x",
         project: "p",
-        baseUrl: "http://localhost:0", // unreachable — fetch will fail silently via logger.warn
+        baseUrl: "http://localhost:0",
+        enabled: true,
+        debug: false,
+        allowConversationAccess: true,
+      },
+    })
+    const subscribed = new Set(spy.mock.calls.map((c) => c[0]))
+    for (const name of [
+      "before_agent_start",
+      "model_call_started",
+      "model_call_ended",
+      "before_tool_call",
+      "after_tool_call",
+      "before_compaction",
+      "after_compaction",
+      "subagent_spawned",
+      "subagent_ended",
+      "llm_input",
+      "llm_output",
+      "agent_end",
+    ]) {
+      expect(subscribed).toContain(name)
+    }
+  })
+
+  it("before_tool_call handler returns nothing (must not block tool dispatch)", async () => {
+    const { api, fire } = makeApi()
+    registerLatitudePlugin(api, {
+      config: {
+        apiKey: "x",
+        project: "p",
+        baseUrl: "http://localhost:0",
+        enabled: true,
+        debug: false,
+        allowConversationAccess: true,
+      },
+    })
+    // Open a run so the before_tool_call handler has somewhere to attach the span.
+    const ctx = { runId: "r-1", sessionId: "s-1", agentId: "router" }
+    await fire("before_agent_start", { prompt: "hi" }, ctx)
+    const ret = await fire(
+      "before_tool_call",
+      { toolName: "grep", params: { q: "x" }, runId: "r-1", toolCallId: "tc-1" },
+      ctx,
+    )
+    // Returning anything truthy (especially `{block: true}`) would block the
+    // tool. We must return undefined.
+    expect(ret).toBeUndefined()
+  })
+
+  it("builds the full span tree and emits it on agent_end", async () => {
+    const { api, fire } = makeApi()
+    const emitted: BuildResult[] = []
+    registerLatitudePlugin(api, {
+      config: {
+        apiKey: "x",
+        project: "p",
+        baseUrl: "http://localhost:0", // unreachable — fetch fails via logger.warn
         enabled: true,
         debug: false,
         allowConversationAccess: true,
@@ -63,6 +123,7 @@ describe("registerLatitudePlugin", () => {
 
     const ctx = { runId: "r-1", sessionId: "s-1", sessionKey: "sk-1", agentId: "router" }
 
+    await fire("before_agent_start", { prompt: "do thing" }, ctx)
     await fire(
       "llm_input",
       {
@@ -71,22 +132,28 @@ describe("registerLatitudePlugin", () => {
         provider: "openai",
         model: "gpt-5",
         systemPrompt: "sys",
-        prompt: "hi",
+        prompt: "do thing",
         historyMessages: [],
         imagesCount: 0,
       },
       ctx,
     )
+    await fire("model_call_started", { runId: "r-1", callId: "A", provider: "openai", model: "gpt-5" }, ctx)
+    await fire(
+      "model_call_ended",
+      { runId: "r-1", callId: "A", provider: "openai", model: "gpt-5", outcome: "completed", durationMs: 100 },
+      ctx,
+    )
     await fire("before_tool_call", { toolName: "grep", params: { q: "x" }, runId: "r-1", toolCallId: "tc-1" }, ctx)
     await fire(
       "after_tool_call",
-      {
-        toolName: "grep",
-        params: { q: "x" },
-        runId: "r-1",
-        toolCallId: "tc-1",
-        result: "1 match",
-      },
+      { toolName: "grep", params: { q: "x" }, runId: "r-1", toolCallId: "tc-1", result: "1 match" },
+      ctx,
+    )
+    await fire("model_call_started", { runId: "r-1", callId: "B", provider: "openai", model: "gpt-5" }, ctx)
+    await fire(
+      "model_call_ended",
+      { runId: "r-1", callId: "B", provider: "openai", model: "gpt-5", outcome: "completed", durationMs: 80 },
       ctx,
     )
     await fire(
@@ -96,6 +163,7 @@ describe("registerLatitudePlugin", () => {
         sessionId: "s-1",
         provider: "openai",
         model: "gpt-5",
+        resolvedRef: "openai/gpt-5",
         assistantTexts: ["done"],
         lastAssistant: { role: "assistant", content: "done" },
         usage: { input: 10, output: 2, total: 12 },
@@ -105,11 +173,10 @@ describe("registerLatitudePlugin", () => {
     await fire("agent_end", { messages: [], success: true, durationMs: 200 }, ctx)
 
     expect(emitted).toHaveLength(1)
-    const run = emitted[0]
-    if (!run) throw new Error("expected run")
-    expect(run.llmCalls).toHaveLength(1)
-    expect(run.llmCalls[0]?.toolCalls).toHaveLength(1)
-    expect(run.llmCalls[0]?.toolCalls[0]?.result).toBe("1 match")
-    expect(run.agentId).toBe("router")
+    const result = emitted[0]
+    if (!result) throw new Error("expected result")
+    const names = result.spans.map((s) => s.name).sort()
+    expect(names).toEqual(["agent", "model_call", "model_call", "tool_call:grep"])
+    // Two model_call spans, not one big llm_request.
   })
 })

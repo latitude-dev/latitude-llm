@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-04-29
+
+Span tree redesign. The plugin now emits spans that match the actual structure of an OpenClaw agent run instead of collapsing every generation + tool into a single fake `llm_request`. Existing dashboards keyed on `gen_ai.*` attribute names still work — span *names* changed, attribute *namespaces* didn't.
+
+### Changed (breaking, in trace shape)
+
+- **One `agent` span per run, with `model_call` / `tool_call` / `compaction` / `subagent` children.** The old shape had a single `interaction` (renamed from `agent`) with one `llm_request` covering the whole attempt and tool spans as siblings. That was wrong on two counts: `llm_input`/`llm_output` fire ONCE per attempt (not per generation), and an attempt is a sequence of generations interleaved with tool executions. The new shape:
+
+  ```
+  agent (root, traceId = hash(runId))
+  ├─ compaction         (0..1, rare; budget-triggered)
+  ├─ model_call         (1..N, one per provider API call)
+  ├─ tool_call: foo     (between model_calls; sibling of agent)
+  ├─ model_call
+  ├─ tool_call: bar
+  ├─ subagent           (0..N — nested child agent spans land underneath)
+  └─ model_call
+  ```
+
+  Tool spans are siblings of `agent`, not children of `model_call`, because tools run between generations — not during them.
+
+- **Span names follow OpenClaw's events, not OTel semantic-convention terms.** `agent` / `model_call` / `tool_call` / `compaction` / `subagent`. Attribute namespaces stay `gen_ai.*` and `openclaw.*`.
+
+- **Per-call attributes on `model_call` spans.** Each generation gets its own duration, outcome, error category, upstream request id hash, time-to-first-byte, request payload bytes, response stream bytes — straight from `model_call_started` / `model_call_ended` payloads.
+
+- **Per-call input messages on `model_call` spans via the snapshot trick.** `gen_ai.input.messages` on each `model_call` reflects what THAT generation actually saw — the rolling history evolves across the run as `before_tool_call` appends synthetic assistant `tool_call` parts and `after_tool_call` appends `tool` responses. Per-call output messages and per-call usage aren't surfaced by OpenClaw today (they're attempt-aggregate); those stay on the `agent` span only, with a README pointer to the upstream feature request.
+
+- **Subagent spans nest the child's full agent tree underneath via cross-runId trace propagation.** When `subagent_spawned` fires we register a `Map<childRunId, parentTraceId+subagentSpanId>` link. The child's `before_agent_start` consults the map, uses the parent's `traceId`, and parents the child agent under the parent's `subagent` span. Same trace, one waterfall across the spawn tree.
+
+### Added
+
+- New typed-hook subscriptions: `before_agent_start`, `model_call_started`, `model_call_ended`, `before_compaction`, `after_compaction`, `subagent_spawned`, `subagent_ended`.
+- Privacy gating implemented via `:gated` attribute key suffix. The OTLP encoder strips any attribute whose key ends in `:gated` when `allowConversationAccess === false` — uniform mechanism, no per-key conditional. Gated attributes: `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `user_prompt`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `before_compaction.messages`, `before_agent_start.{prompt,messages}`, `agent_end.messages`, and `openclaw.error.message` (error strings can leak prompt/response content).
+- Abandoned-span handling: any `model_call` / `tool_call` / `compaction` / `subagent` open at `agent_end` is force-closed with `outcome: "abandoned"` so trace gaps don't appear when an attempt errors mid-flight.
+
+### Removed
+
+- `src/turn-builder.ts` + `src/turn-builder.test.ts` — replaced by `src/span-builder.ts` / `src/span-builder.test.ts`. The state machine is fundamentally different (multiple open spans per run instead of a single `RunRecord` with `LlmCallRecord[]`).
+- Old `interaction` and `llm_request` span names — folded into `agent` and split per-generation as `model_call`.
+- `orphanTools` logic — no longer needed once tools are paired with proper before/after events. Still-open tools at agent_end now go through the abandoned-span path.
+
+### Notes for operators
+
+- Existing OpenClaw versions (≥ 2026.4.25) ship `model_call_started` / `model_call_ended` already; the minimum-version requirement is unchanged.
+- Codex/Claude-Code style backends will still show one `model_call` per attempt because their internal generations aren't surfaced to OpenClaw's selection layer. README now documents this. Filing the OpenClaw-side enhancement (per-call usage + assistantText on `model_call_ended`) is upstream and out of scope here.
+- The `before_tool_call` hook is a `runModifyingHook`. Plugin handler returns `undefined` (so OpenClaw dispatches the tool normally). New regression test verifies the return is `undefined`.
+
 ## [0.0.4] - 2026-04-28
 
 End-to-end fix for OpenClaw 2026.4.25+. After a clean `npx -y install` and `openclaw gateway restart`, traces flow without manual intervention.
