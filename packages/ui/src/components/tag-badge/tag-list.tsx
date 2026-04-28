@@ -8,21 +8,25 @@ const GAP_PX = 4
 
 export interface TagListProps {
   readonly tags: readonly string[]
+  readonly wrap?: boolean
 }
 
 /**
  * Renders a horizontal list of tag badges left-to-right.
  *
- * When the list overflows the container it truncates to the largest prefix that
- * fits alongside a "+N" overflow badge, so nothing is ever clipped or scrolled.
- * Hovering the overflow badge shows the full tag list in a tooltip.
+ * By default, when the list overflows the container it truncates to the largest
+ * prefix that fits alongside a "+N" overflow badge, so nothing is ever clipped
+ * or scrolled. Hovering the overflow badge shows the full tag list in a
+ * tooltip. When `wrap` is true, all tags are rendered and wrap onto new lines
+ * as needed instead of collapsing into "+N".
  */
-export const TagList = memo(function TagList({ tags }: TagListProps) {
+export const TagList = memo(function TagList({ tags, wrap = false }: TagListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [visibleCount, setVisibleCount] = useState(tags.length)
   const sorted = useMemo(() => [...tags].sort(), [tags])
 
   useLayoutEffect(() => {
+    if (wrap) return
     const container = containerRef.current
     if (!container) return
 
@@ -82,9 +86,20 @@ export const TagList = memo(function TagList({ tags }: TagListProps) {
     measure()
 
     return () => observer.disconnect()
-  }, [sorted])
+  }, [sorted, wrap])
 
   if (tags.length === 0) return null
+
+  if (wrap) {
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {sorted.map((tag) => (
+          <TagBadge key={tag} tag={tag} />
+        ))}
+      </div>
+    )
+  }
+
   const hasOverflow = visibleCount < sorted.length
   const hiddenTags = sorted.slice(visibleCount)
 

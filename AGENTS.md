@@ -11,6 +11,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 ## Repo-wide conventions
 
 - Organization-scoped Redis or cache keys must start with the organization prefix: `org:${organizationId}:...`. Put the org id first so tenancy is obvious and keyspaces stay consistently partitioned.
+- Never invoke `tsc` directly. Typechecking goes through `tsgo` via the package `typecheck` script — use `pnpm --filter <pkg> typecheck` for one package or `pnpm typecheck` for the whole workspace. `tsc` would diverge from CI.
 
 ## How to use this guide
 

@@ -150,11 +150,40 @@ export const emptyTraceMetrics = (): TraceMetrics => ({
   timeToFirstTokenNs: zeroRollup(),
 })
 
+/**
+ * Per-bucket aggregates for the traces histogram. Each bucket carries one value per supported
+ * `TraceHistogramMetric` so the frontend can swap which series it renders without refetching.
+ * Keep this in sync with `TRACE_HISTOGRAM_METRICS` and the columns selected in
+ * `TraceRepository.histogramByProjectId`.
+ */
 export interface TraceTimeHistogramBucket {
   /** Bucket start instant (UTC ISO string). */
   readonly bucketStart: string
   readonly traceCount: number
+  readonly costTotalMicrocentsSum: number
+  readonly durationNsMedian: number
+  readonly tokensTotalSum: number
+  readonly spanCountSum: number
+  readonly timeToFirstTokenNsMedian: number
 }
+
+/** Metric series the traces histogram can render. Order matches the metric cards above the chart. */
+export const TRACE_HISTOGRAM_METRICS = ["traces", "cost", "duration", "tokens", "ttft", "spans"] as const
+
+export type TraceHistogramMetric = (typeof TRACE_HISTOGRAM_METRICS)[number]
+
+export const isTraceHistogramMetric = (value: string): value is TraceHistogramMetric =>
+  (TRACE_HISTOGRAM_METRICS as readonly string[]).includes(value)
+
+export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHistogramBucket => ({
+  bucketStart,
+  traceCount: 0,
+  costTotalMicrocentsSum: 0,
+  durationNsMedian: 0,
+  tokensTotalSum: 0,
+  spanCountSum: 0,
+  timeToFirstTokenNsMedian: 0,
+})
 
 export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(
   "@domain/spans/TraceRepository",

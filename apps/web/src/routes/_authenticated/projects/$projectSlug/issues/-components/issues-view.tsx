@@ -172,16 +172,10 @@ export function IssuesView({
       ),
     },
     {
-      key: "tags",
-      header: "Tags",
-      width: 150,
-      render: (issue) => <TagList tags={issue.tags} />,
-    },
-    {
       key: "status",
       header: "Status",
-      width: 104,
-      minWidth: 104,
+      width: 110,
+      minWidth: 110,
       sortKey: "state",
       render: (issue) => {
         const primaryState = getPrimaryLifecycleState(issue.states)
@@ -191,6 +185,12 @@ export function IssuesView({
           </div>
         )
       },
+    },
+    {
+      key: "tags",
+      header: "Tags",
+      width: 150,
+      render: (issue) => <TagList tags={issue.tags} />,
     },
     {
       key: "trend",
