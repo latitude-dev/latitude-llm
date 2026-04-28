@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type FlaggerRecord, listFlaggersByProject, updateFlagger } from "./annotation-queues.functions.ts"
 
-export const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
+const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
 
 export function useProjectFlaggers(projectId: string) {
   return useQuery({
