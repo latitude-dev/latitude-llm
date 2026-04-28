@@ -174,6 +174,52 @@ describe("processFlaggersUseCase", () => {
     expect(deps.enqueued).toEqual([])
   })
 
+  it("does not duplicate the published score when re-run for an already-matched (trace, flagger)", async () => {
+    const trace = makeTraceDetail([jailbreakMessage])
+    const jailbreakFlagger = makeFlagger("jailbreaking", 0)
+
+    const first = await runUseCase(trace, [jailbreakFlagger], deps)
+    const before = [...first.scores.values()].filter((s) => s.source === "flagger").length
+
+    // Reuse the same fake repos via a second run that shares the score map.
+    // We can't reuse `runUseCase` directly because it instantiates fresh
+    // repos, so simulate the redeliver by invoking runUseCase a second time
+    // with the persisted score injected as the seed.
+    const { repository: traceRepo } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(trace),
+    })
+    const { repository: flaggerRepo } = createFakeFlaggerRepository([jailbreakFlagger])
+    const { repository: scoreRepo, scores } = createFakeScoreRepository()
+    for (const [id, score] of first.scores) {
+      scores.set(id, score)
+    }
+    const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository()
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(TraceRepository, traceRepo),
+      Layer.succeed(FlaggerRepository, flaggerRepo),
+      Layer.succeed(ScoreRepository, scoreRepo),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepo),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+      fakeCacheStore,
+    )
+
+    const result = await Effect.runPromise(
+      processFlaggersUseCase({ organizationId: ORG_ID, projectId: PROJECT_ID, traceId: TRACE_ID }, deps.deps).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "matched-issue",
+    })
+    const after = [...scores.values()].filter((s) => s.source === "flagger").length
+    expect(after).toBe(before)
+  })
+
   it("enqueues the workflow with reason='ambiguous' when rate limit allows", async () => {
     // Jailbreaking "ambiguous" path: suspicious-but-not-definitive snippets
     const trace = makeTraceDetail([

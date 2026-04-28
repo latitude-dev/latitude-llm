@@ -1,5 +1,10 @@
 import type { QueuePublishError } from "@domain/queue"
-import { type ScoreDraftClosedError, type ScoreDraftUpdateConflictError, writeScoreUseCase } from "@domain/scores"
+import {
+  type ScoreDraftClosedError,
+  type ScoreDraftUpdateConflictError,
+  ScoreRepository,
+  writeScoreUseCase,
+} from "@domain/scores"
 import {
   type BadRequestError,
   deterministicSampling,
@@ -252,6 +257,23 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
 const handleMatched = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, feedback: string) =>
   Effect.gen(function* () {
+    // BullMQ may redeliver the deterministic-flaggers job (bounded retries on
+    // transient failures). Without this guard a re-run of an already-matched
+    // strategy would write a second published score for the same
+    // (trace, flagger) and produce a duplicate downstream issue. The
+    // workflow-side LLM path is idempotent through `findFlaggerDraft…`; this
+    // is the deterministic equivalent.
+    const scoreRepository = yield* ScoreRepository
+    const existing = yield* scoreRepository.findFlaggerPublishedByTraceAndFlaggerId({
+      projectId: input.trace.projectId,
+      flaggerId: flagger.flaggerId,
+      traceId: input.trace.traceId,
+    })
+
+    if (existing !== null) {
+      return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
+    }
+
     const simulationId = input.trace.simulationId === "" ? null : input.trace.simulationId
 
     yield* writeScoreUseCase({
