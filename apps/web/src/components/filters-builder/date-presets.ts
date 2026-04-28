@@ -58,3 +58,9 @@ export function buildDateRangePresets(): readonly DateRangePickerPreset[] {
     range: buildPresetRange(preset.seconds),
   }))
 }
+
+export function getActivePresetLabel(startTimeFrom?: string, startTimeTo?: string): string | undefined {
+  const id = getActivePresetId(startTimeFrom, startTimeTo)
+  if (!id) return undefined
+  return TIME_PRESETS.find((preset) => preset.id === id)?.label
+}
