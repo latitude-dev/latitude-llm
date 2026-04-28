@@ -47,6 +47,9 @@ export const issueDiscoveryWorkflow = async (input: {
     matchedIssueUuid: retrieval.matchedIssueUuid,
   })
 
+  // finalizeIssueDiscovery syncs the issue projection internally before releasing its locks (the spec requires the
+  // projection to be visible to the next discovery run before the lock drops). The assign-existing path needs an
+  // explicit projection sync because assignScoreToIssue does not perform one.
   const assignment =
     matchedIssue.issueId === null
       ? await finalizeIssueDiscoveryWithLockRetry({
@@ -64,7 +67,9 @@ export const issueDiscoveryWorkflow = async (input: {
           normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
         })
 
-  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
+  if (matchedIssue.issueId !== null) {
+    await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
+  }
 
   await syncScoreAnalytics({
     organizationId: input.organizationId,

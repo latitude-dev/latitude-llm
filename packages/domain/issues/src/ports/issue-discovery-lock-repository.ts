@@ -6,6 +6,7 @@ export interface IssueDiscoveryLockInput {
   readonly organizationId: string
   readonly projectId: ProjectId
   readonly lockKey: string
+  readonly ttlMs: number
 }
 
 export interface IssueDiscoveryLockRepositoryShape {

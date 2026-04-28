@@ -3,10 +3,11 @@ import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
+import { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
 import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
@@ -205,5 +206,55 @@ describe("finalizeIssueDiscoveryUseCase", () => {
     expect(lockCalls[1]).toBe(`${organizationId}:${projectId}:project`)
     expect(fakeAi.calls.rerank).toHaveLength(0)
     expect(fakeAi.calls.generate).toHaveLength(1)
+  })
+
+  it("propagates IssueDiscoveryLockUnavailableError when the feedback lock cannot be acquired", async () => {
+    const score = makeScore()
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
+    const fakeAi = createFakeAI()
+
+    scores.set(score.id, score)
+
+    const exit = await Effect.runPromiseExit(
+      finalizeIssueDiscoveryUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(IssueDiscoveryLockRepository, {
+          withLock: (input) =>
+            Effect.fail(
+              new IssueDiscoveryLockUnavailableError({
+                projectId: input.projectId,
+                lockKey: input.lockKey,
+              }),
+            ),
+        }),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(exit._tag).toBe("Failure")
+    if (exit._tag === "Failure") {
+      const errOpt = Cause.findErrorOption(exit.cause)
+      expect(errOpt._tag).toBe("Some")
+      if (errOpt._tag === "Some") {
+        expect(errOpt.value).toBeInstanceOf(IssueDiscoveryLockUnavailableError)
+        expect((errOpt.value as IssueDiscoveryLockUnavailableError).lockKey).toMatch(/^feedback:annotation:UI:/)
+      }
+    }
+    expect(issues.size).toBe(0)
+    expect(scores.get(score.id)?.issueId).toBeNull()
+    expect(fakeAi.calls.rerank).toHaveLength(0)
+    expect(fakeAi.calls.generate).toHaveLength(0)
   })
 })

@@ -237,9 +237,9 @@ describe("issueDiscoveryWorkflow", () => {
       "rerankIssueCandidates",
       "resolveMatchedIssue",
       "finalizeIssueDiscovery",
-      "syncIssueProjections",
       "syncScoreAnalytics",
     ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -290,9 +290,9 @@ describe("issueDiscoveryWorkflow", () => {
       "rerankIssueCandidates",
       "resolveMatchedIssue",
       "finalizeIssueDiscovery",
-      "syncIssueProjections",
       "syncScoreAnalytics",
     ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
@@ -356,9 +356,9 @@ describe("issueDiscoveryWorkflow", () => {
       "finalizeIssueDiscovery",
       "sleep:2000",
       "finalizeIssueDiscovery",
-      "syncIssueProjections",
       "syncScoreAnalytics",
     ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
     expect(mockSleep).toHaveBeenCalledTimes(2)
   })
 })

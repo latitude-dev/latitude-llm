@@ -1,12 +1,8 @@
-import type { AI } from "@domain/ai"
-import type { OutboxEventWriter } from "@domain/events"
 import { ScoreRepository } from "@domain/scores"
-import { type CacheError, ProjectId, type RepositoryError, ScoreId, type SqlClient } from "@domain/shared"
+import { type CacheError, ProjectId, type RepositoryError, ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import type { CheckEligibilityError, IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
-import type { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
-import type { IssueRepository } from "../ports/issue-repository.ts"
 import type { AssignScoreToIssueError, AssignScoreToIssueResult } from "./assign-score-to-issue.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 import type { CreateIssueFromScoreError, CreateIssueFromScoreResult } from "./create-issue-from-score.ts"
@@ -34,6 +30,13 @@ export type FinalizeIssueDiscoveryError =
   | IssueDiscoveryLockUnavailableError
   | RepositoryError
 
+// The outer feedback lock wraps retrieval, AI generation, and the inner project-lock section, so it needs to outlive
+// the inner lock to prevent concurrent feedback duplicates from racing past it once it expires.
+const FEEDBACK_LOCK_TTL_MS = 180_000
+const PROJECT_LOCK_TTL_MS = 120_000
+
+// FNV-1a 32-bit hash. Hashing keeps Redis keys bounded; collisions only over-lock (different feedback texts under
+// the same source serialize together), which is safe — the project lock still gates issue creation.
 const hashLockComponent = (value: string) => {
   let hash = 0x811c9dc5
   for (let index = 0; index < value.length; index++) {
@@ -113,6 +116,7 @@ export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput
         organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),
         lockKey: buildFeedbackLockKey({ source: score.source, sourceId: score.sourceId, feedback: input.feedback }),
+        ttlMs: FEEDBACK_LOCK_TTL_MS,
       },
       Effect.gen(function* () {
         const feedbackMatchedIssueId = yield* findMatchedIssueId(input)
@@ -125,6 +129,7 @@ export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput
             organizationId: input.organizationId,
             projectId: ProjectId(input.projectId),
             lockKey: "project",
+            ttlMs: PROJECT_LOCK_TTL_MS,
           },
           Effect.gen(function* () {
             const projectMatchedIssueId = yield* findMatchedIssueId(input)
@@ -137,14 +142,4 @@ export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput
         )
       }),
     )
-  }).pipe(Effect.withSpan("issues.finalizeIssueDiscovery")) as Effect.Effect<
-    FinalizeIssueDiscoveryResult,
-    FinalizeIssueDiscoveryError,
-    | IssueDiscoveryLockRepository
-    | AI
-    | ScoreRepository
-    | OutboxEventWriter
-    | SqlClient
-    | IssueProjectionRepository
-    | IssueRepository
-  >
+  }).pipe(Effect.withSpan("issues.finalizeIssueDiscovery"))
