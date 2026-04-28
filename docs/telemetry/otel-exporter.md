@@ -186,8 +186,9 @@ Latitude works alongside your existing observability tools. Add `LatitudeSpanPro
 import tracer from "dd-trace"
 import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
 
-const ddTracer = tracer.init({ service: "my-app", env: "production" })
-const provider = new ddTracer.TracerProvider()
+tracer.init({ service: "my-app", env: "production" })
+
+const provider = new tracer.TracerProvider()
 
 provider.addSpanProcessor(
   new LatitudeSpanProcessor(
@@ -202,28 +203,20 @@ provider.register()
 ### With Sentry (TypeScript)
 
 ```ts
-import * as Sentry from "@sentry/node"
-import {
-  SentrySpanProcessor,
-  SentrySampler,
-  SentryPropagator,
-} from "@sentry/opentelemetry"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+import * as Sentry from "@sentry/node"
 import {
   LatitudeSpanProcessor,
   registerLatitudeInstrumentations,
 } from "@latitude-data/telemetry"
 
-const sentryClient = Sentry.init({
+Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  skipOpenTelemetrySetup: true,
   tracesSampleRate: 1.0,
 })
 
 const provider = new NodeTracerProvider({
-  sampler: sentryClient ? new SentrySampler(sentryClient) : undefined,
   spanProcessors: [
-    new SentrySpanProcessor(),
     new LatitudeSpanProcessor(
       process.env.LATITUDE_API_KEY!,
       process.env.LATITUDE_PROJECT_SLUG!,
@@ -231,17 +224,12 @@ const provider = new NodeTracerProvider({
   ],
 })
 
-provider.register({
-  propagator: new SentryPropagator(),
-  contextManager: new Sentry.SentryContextManager(),
-})
-
 await registerLatitudeInstrumentations({
   instrumentations: ["openai"],
   tracerProvider: provider,
 })
 
-Sentry.validateOpenTelemetrySetup()
+provider.register()
 ```
 
 ### Other Platforms
@@ -256,7 +244,7 @@ The `Authorization` header must use the `Bearer ` prefix (with a space). Double-
 
 ### 400 Bad Request — missing project header
 
-The `X-Latitude-Project` header is required on every request. Ensure the header name is exact (case-sensitive) and the value matches a project slug in the organization associated with your API key.
+The `X-Latitude-Project` header is required on every request. Ensure it is present and spelled correctly, and that the value matches a project slug in the organization associated with your API key.
 
 ### 202 but no traces visible
 

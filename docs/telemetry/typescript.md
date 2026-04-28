@@ -3,10 +3,6 @@ title: TypeScript SDK
 description: Full API reference for @latitude-data/telemetry, the TypeScript SDK for Latitude Telemetry.
 ---
 
-<Warning>
-  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
-</Warning>
-
 # TypeScript SDK
 
 Instrument your AI application and send traces to Latitude. Built on OpenTelemetry.
