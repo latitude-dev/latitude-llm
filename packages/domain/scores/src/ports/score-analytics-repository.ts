@@ -9,7 +9,7 @@ import type {
   SessionId,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
 // ---------------------------------------------------------------------------
@@ -246,7 +246,7 @@ export interface ScoreAnalyticsRepositoryShape {
   }): Effect.Effect<IssueTracePage, RepositoryError, ChSqlClient>
 }
 
-export class ScoreAnalyticsRepository extends ServiceMap.Service<
+export class ScoreAnalyticsRepository extends Context.Service<
   ScoreAnalyticsRepository,
   ScoreAnalyticsRepositoryShape
 >()("@domain/scores/ScoreAnalyticsRepository") {}

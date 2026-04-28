@@ -1,5 +1,5 @@
 import type { IssueId, NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 
 // Tiny read-only view of the issues domain so evaluations can depend on the
 // data it needs without importing `@domain/issues` directly and creating a
@@ -12,7 +12,7 @@ export interface EvaluationIssue {
   readonly description: string
 }
 
-export class EvaluationIssueRepository extends ServiceMap.Service<
+export class EvaluationIssueRepository extends Context.Service<
   EvaluationIssueRepository,
   {
     findById(id: IssueId): Effect.Effect<EvaluationIssue, NotFoundError | RepositoryError, SqlClient>

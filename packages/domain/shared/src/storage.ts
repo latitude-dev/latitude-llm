@@ -1,4 +1,4 @@
-import { Effect, ServiceMap } from "effect"
+import { Context, Effect } from "effect"
 import { StorageError } from "./errors.ts"
 import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
@@ -14,7 +14,7 @@ export interface StorageDiskPort {
   getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string>
 }
 
-export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()("@domain/shared/StorageDisk") {}
+export class StorageDisk extends Context.Service<StorageDisk, StorageDiskPort>()("@domain/shared/StorageDisk") {}
 
 type FolderNamespace = "datasetExports" | "datasets" | "exports" | "ingest" | "unknown"
 

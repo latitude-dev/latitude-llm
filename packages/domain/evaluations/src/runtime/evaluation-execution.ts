@@ -197,7 +197,7 @@ export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvalu
   yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
 
   const ai = yield* AI
-  const services = yield* Effect.services<never>()
+  const services = yield* Effect.context<never>()
 
   return yield* Effect.tryPromise({
     try: () =>

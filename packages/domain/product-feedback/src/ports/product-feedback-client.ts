@@ -1,4 +1,4 @@
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { ProductFeedbackError } from "../errors.ts"
 
 /**
@@ -22,6 +22,6 @@ export interface ProductFeedbackClientShape {
   writeAnnotation(input: ProductFeedbackAnnotationInput): Effect.Effect<void, ProductFeedbackError>
 }
 
-export class ProductFeedbackClient extends ServiceMap.Service<ProductFeedbackClient, ProductFeedbackClientShape>()(
+export class ProductFeedbackClient extends Context.Service<ProductFeedbackClient, ProductFeedbackClientShape>()(
   "@domain/product-feedback/ProductFeedbackClient",
 ) {}

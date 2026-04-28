@@ -1,5 +1,5 @@
 import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Dataset, DatasetVersion } from "../entities/dataset.ts"
 import type { DatasetNotFoundError } from "../errors.ts"
 
@@ -24,7 +24,7 @@ export interface DatasetListPage {
   readonly nextCursor?: DatasetListCursor
 }
 
-export class DatasetRepository extends ServiceMap.Service<
+export class DatasetRepository extends Context.Service<
   DatasetRepository,
   {
     create(args: {

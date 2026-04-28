@@ -1,4 +1,4 @@
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { CacheError } from "./errors.ts"
 
 export { CacheError } from "./errors.ts"
@@ -13,4 +13,4 @@ export interface CacheStoreShape {
   delete(key: string): Effect.Effect<void, CacheError>
 }
 
-export class CacheStore extends ServiceMap.Service<CacheStore, CacheStoreShape>()("@domain/shared/CacheStore") {}
+export class CacheStore extends Context.Service<CacheStore, CacheStoreShape>()("@domain/shared/CacheStore") {}

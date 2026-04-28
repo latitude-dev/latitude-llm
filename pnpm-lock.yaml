@@ -19,8 +19,8 @@ catalogs:
       specifier: 1.18.2
       version: 1.18.2
     '@effect/opentelemetry':
-      specifier: 4.0.0-beta.4
-      version: 4.0.0-beta.4
+      specifier: 4.0.0-beta.57
+      version: 4.0.0-beta.57
     '@hono/node-server':
       specifier: 1.19.13
       version: 1.19.13
@@ -70,8 +70,8 @@ catalogs:
       specifier: 1.0.0-beta.15-859cf75
       version: 1.0.0-beta.15-859cf75
     effect:
-      specifier: 4.0.0-beta.4
-      version: 4.0.0-beta.4
+      specifier: 4.0.0-beta.57
+      version: 4.0.0-beta.57
     fast-json-stable-stringify:
       specifier: 2.1.0
       version: 2.1.0
@@ -235,7 +235,7 @@ importers:
         version: link:../../packages/utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
         version: 4.12.15
@@ -308,7 +308,7 @@ importers:
         version: link:../../packages/utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
         version: 4.12.15
@@ -432,7 +432,7 @@ importers:
         version: 1.5.6(e309e8865594c68950383f559c190c50)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       lucide-react:
         specifier: ^1.8.0
         version: 1.9.0(react@19.2.5)
@@ -619,7 +619,7 @@ importers:
         version: 1.16.0(esbuild@0.27.7)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       fflate:
         specifier: ^0.8.2
         version: 0.8.2
@@ -716,7 +716,7 @@ importers:
         version: 1.16.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -779,7 +779,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -794,7 +794,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -830,7 +830,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -860,7 +860,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -888,7 +888,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -909,7 +909,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -928,7 +928,7 @@ importers:
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       react:
         specifier: 'catalog:'
         version: 19.2.5
@@ -980,7 +980,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -992,7 +992,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
 
   packages/domain/exports:
     dependencies:
@@ -1028,7 +1028,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1060,7 +1060,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1072,7 +1072,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1081,7 +1081,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
@@ -1100,7 +1100,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1112,7 +1112,7 @@ importers:
         version: link:../events
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -1134,7 +1134,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1153,7 +1153,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1193,7 +1193,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       protobufjs:
         specifier: 'catalog:'
         version: 7.5.5
@@ -1214,7 +1214,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1223,7 +1223,7 @@ importers:
     dependencies:
       '@effect/opentelemetry':
         specifier: 'catalog:'
-        version: 4.0.0-beta.4(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)
+        version: 4.0.0-beta.57(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.57)
       '@latitude-data/telemetry':
         specifier: workspace:*
         version: link:../telemetry/typescript
@@ -1253,7 +1253,7 @@ importers:
         version: link:../platform/env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
 
   packages/platform/ai:
     dependencies:
@@ -1268,7 +1268,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
 
   packages/platform/ai-latitude:
     dependencies:
@@ -1317,7 +1317,7 @@ importers:
         version: 7.0.0-beta.45(zod@4.3.6)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
 
   packages/platform/ai-voyage:
     dependencies:
@@ -1329,7 +1329,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       voyageai:
         specifier: 'catalog:'
         version: 0.2.1
@@ -1344,7 +1344,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       posthog-node:
         specifier: ^5.9.2
         version: 5.30.1(rxjs@7.8.2)
@@ -1372,7 +1372,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
     devDependencies:
       '@platform/testkit':
         specifier: workspace:*
@@ -1397,7 +1397,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       ioredis:
         specifier: 'catalog:'
         version: 5.10.1
@@ -1433,7 +1433,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -1524,7 +1524,7 @@ importers:
         version: 1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(@types/pg@8.16.0)(better-sqlite3@12.9.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.16.0)(zod@4.3.6)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       pg:
         specifier: 'catalog:'
         version: 8.16.0
@@ -1576,7 +1576,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       weaviate-client:
         specifier: 'catalog:'
         version: 3.11.0
@@ -1595,7 +1595,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       nodemailer:
         specifier: ^8.0.6
         version: 8.0.6
@@ -1614,7 +1614,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
 
   packages/platform/latitude-api:
     dependencies:
@@ -1629,7 +1629,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
@@ -1648,7 +1648,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1691,7 +1691,7 @@ importers:
         version: 5.76.2
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       ioredis:
         specifier: 'catalog:'
         version: 5.10.1
@@ -1722,7 +1722,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       flydrive:
         specifier: ^2.1.0
         version: 2.1.0(@aws-sdk/client-s3@3.1036.0)(@aws-sdk/s3-request-presigner@3.1036.0)
@@ -1753,7 +1753,7 @@ importers:
         version: 1.6.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
         version: 4.12.15
@@ -1783,7 +1783,7 @@ importers:
         version: 1.16.0(esbuild@0.27.7)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
     devDependencies:
       vitest:
         specifier: 'catalog:'
@@ -2120,7 +2120,7 @@ importers:
         version: 17.3.1
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       fast-json-stable-stringify:
         specifier: 'catalog:'
         version: 2.1.0
@@ -2160,7 +2160,7 @@ importers:
         version: link:../../packages/platform/ai-vercel
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       ink:
         specifier: ^6.3.1
         version: 6.8.0(@types/react@19.2.14)(react@19.2.5)
@@ -2212,7 +2212,7 @@ importers:
         version: link:../../packages/platform/env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -3128,8 +3128,8 @@ packages:
     resolution: {integrity: sha512-zpxi6rLCwst/cBQd7ElwDvt36Y6Jvz8v6bCLnNiOL6OXvdLmqjOFWyzWZdMh92vvBQA/aVKhfIAAOP3o4wKt0A==}
     hasBin: true
 
-  '@effect/opentelemetry@4.0.0-beta.4':
-    resolution: {integrity: sha512-G+u2cB4Vge/18cbsh0Cd9iuvm+RwGoerhaxlWiWGTFkpNYhEKRGhQaprJZ/g/F6gq34y7kMap6MnM5fnxCh07Q==}
+  '@effect/opentelemetry@4.0.0-beta.57':
+    resolution: {integrity: sha512-gdjZPEP0QQg4qmI1vd+443kheeQZKytrjJIzCJncy6ZEpyk/SfrqeStLqLXdTRcms3IB0ls0vOV7KNq7YmBRVA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@opentelemetry/api': 1.9.1
@@ -3140,7 +3140,7 @@ packages:
       '@opentelemetry/sdk-trace-node': ^2.0.0
       '@opentelemetry/sdk-trace-web': ^2.0.0
       '@opentelemetry/semantic-conventions': ^1.33.0
-      effect: ^4.0.0-beta.4
+      effect: ^4.0.0-beta.57
     peerDependenciesMeta:
       '@opentelemetry/api':
         optional: true
@@ -8304,8 +8304,8 @@ packages:
   echarts@6.0.0:
     resolution: {integrity: sha512-Tte/grDQRiETQP4xz3iZWSvoHrkCQtwqd6hs+mifXcjrCuo2iKWbajFObuLJVBlDIJlOzgQPd1hsaKt/3+OMkQ==}
 
-  effect@4.0.0-beta.4:
-    resolution: {integrity: sha512-oS7yB+gWK1JQDD15JlWh+rF9lfV04TDCN+ui2YOShMjyFPIWsuStaUYWGRmqjheP128NDr3mvMtU9+leEksqhw==}
+  effect@4.0.0-beta.57:
+    resolution: {integrity: sha512-rg32VgXnLKaPRs9tbRDaZ5jxmzNY7ojXt85gSHGUTwdlbWH5Ik+OCUY2q14TXliygPGoHwCAvNWS4bQJOqf00g==}
 
   ejs@3.1.10:
     resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
@@ -10958,8 +10958,9 @@ packages:
   toggle-selection@1.0.6:
     resolution: {integrity: sha512-BiZS+C1OS8g/q2RRbJmy59xpyghNBqrr6k5L/uKBGRsTfxmu3ffiRnd8mlGPUVayg8pvfi5urfnu8TU7DVOkLQ==}
 
-  toml@3.0.0:
-    resolution: {integrity: sha512-y/mWCZinnvxjTKYhJ+pYxwD0mRLVvOtdS2Awbgxln6iEnt4rk0yBxeSBHkGJcPucRiG0e55mwWp+g/05rsrd6w==}
+  toml@4.1.1:
+    resolution: {integrity: sha512-EBJnVBr3dTXdA89WVFoAIPUqkBjxPMwRqsfuo1r240tKFHXv3zgca4+NJib/h6TyvGF7vOawz0jGuryJCdNHrw==}
+    engines: {node: '>=20'}
 
   tough-cookie@6.0.1:
     resolution: {integrity: sha512-LktZQb3IeoUWB9lqR5EWTHgW/VTITCXg4D21M+lvybRVdylLrRMnqaIONLVb5mav8vM19m44HIcGq4qASeu2Qw==}
@@ -13329,10 +13330,10 @@ snapshots:
 
   '@effect/language-service@0.84.3': {}
 
-  '@effect/opentelemetry@4.0.0-beta.4(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.4)':
+  '@effect/opentelemetry@4.0.0-beta.57(@opentelemetry/api@1.9.1)(@opentelemetry/resources@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-node@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-web@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)(effect@4.0.0-beta.57)':
     dependencies:
       '@opentelemetry/semantic-conventions': 1.40.0
-      effect: 4.0.0-beta.4
+      effect: 4.0.0-beta.57
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
@@ -18482,7 +18483,7 @@ snapshots:
       tslib: 2.8.1
       zrender: 6.0.0
 
-  effect@4.0.0-beta.4:
+  effect@4.0.0-beta.57:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.7.0
@@ -18491,7 +18492,7 @@ snapshots:
       kubernetes-types: 1.30.0
       msgpackr: 1.11.10
       multipasta: 0.2.7
-      toml: 3.0.0
+      toml: 4.1.1
       uuid: 13.0.0
       yaml: 2.8.3
 
@@ -21820,7 +21821,7 @@ snapshots:
 
   toggle-selection@1.0.6: {}
 
-  toml@3.0.0: {}
+  toml@4.1.1: {}
 
   tough-cookie@6.0.1:
     dependencies:

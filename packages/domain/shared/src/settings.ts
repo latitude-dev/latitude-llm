@@ -1,4 +1,4 @@
-import { Effect, ServiceMap } from "effect"
+import { Context, Effect } from "effect"
 import { z } from "zod"
 import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
@@ -37,7 +37,7 @@ export function resolveSettingsCascade(input: {
 }
 
 // Future: evaluationId can be added here
-export class SettingsReader extends ServiceMap.Service<
+export class SettingsReader extends Context.Service<
   SettingsReader,
   {
     getOrganizationSettings: () => Effect.Effect<OrganizationSettings | null, RepositoryError, SqlClient>
