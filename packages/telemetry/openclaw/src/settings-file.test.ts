@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest"
 import {
+  addToPluginsAllow,
   migrateLegacyEntries,
   type OpenClawSettings,
   PLUGIN_ID,
+  removeFromPluginsAllow,
   removePluginEntry,
   setPluginEntry,
 } from "./settings-file.ts"
 
 describe("setPluginEntry", () => {
-  it("writes credentials under .config (not .hooks, not top-level env)", () => {
+  it("writes credentials under .config and dispatch gate under .hooks (mirrored)", () => {
     const settings: OpenClawSettings = {}
     setPluginEntry(settings, {
       apiKey: "k",
@@ -18,23 +20,34 @@ describe("setPluginEntry", () => {
       debug: false,
     })
 
-    const entry = settings.plugins?.entries?.[PLUGIN_ID] as
-      | { enabled?: boolean; config?: Record<string, unknown>; hooks?: unknown }
-      | undefined
-
-    // Strict zod compliance: nothing under hooks, nothing at top-level env.
-    expect(entry?.hooks).toBeUndefined()
-    expect((settings as { env?: unknown }).env).toBeUndefined()
-
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
     expect(entry?.enabled).toBe(true)
     expect(entry?.config?.apiKey).toBe("k")
     expect(entry?.config?.project).toBe("p")
     expect(entry?.config?.baseUrl).toBe("https://staging-ingest.latitude.so")
     expect(entry?.config?.allowConversationAccess).toBe(true)
+    // Hooks block must mirror config — that's what gates dispatch on
+    // OpenClaw 2026.4.25+.
+    expect(entry?.hooks?.allowConversationAccess).toBe(true)
+    // We don't write to top-level `env` (root schema rejects arbitrary keys).
+    expect((settings as { env?: unknown }).env).toBeUndefined()
+  })
+
+  it("mirrors allowConversationAccess: false into both config and hooks", () => {
+    const settings: OpenClawSettings = {}
+    setPluginEntry(settings, {
+      apiKey: "k",
+      project: "p",
+      baseUrl: undefined,
+      allowConversationAccess: false,
+    })
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
+    expect(entry?.config?.allowConversationAccess).toBe(false)
+    expect(entry?.hooks?.allowConversationAccess).toBe(false)
   })
 
   it("clears baseUrl when undefined (production install after a staging install)", () => {
-    const settings = {
+    const settings: OpenClawSettings = {
       plugins: {
         entries: {
           [PLUGIN_ID]: {
@@ -45,13 +58,13 @@ describe("setPluginEntry", () => {
       },
     }
     setPluginEntry(settings, { apiKey: "new-k", project: "new-p", baseUrl: undefined })
-    const config = settings.plugins.entries[PLUGIN_ID]?.config as Record<string, unknown>
-    expect(config.baseUrl).toBeUndefined()
-    expect(config.apiKey).toBe("new-k")
+    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config
+    expect(config?.baseUrl).toBeUndefined()
+    expect(config?.apiKey).toBe("new-k")
   })
 
   it("preserves unrelated fields on the existing plugin entry", () => {
-    const settings = {
+    const settings: OpenClawSettings = {
       plugins: {
         entries: {
           [PLUGIN_ID]: {
@@ -63,13 +76,30 @@ describe("setPluginEntry", () => {
       },
     }
     setPluginEntry(settings, { apiKey: "k", project: "p", baseUrl: undefined })
-    const entry = settings.plugins.entries[PLUGIN_ID] as {
+    const entry = settings.plugins?.entries?.[PLUGIN_ID] as {
       subagent?: { allowModelOverride?: boolean }
       config?: Record<string, unknown>
     }
     expect(entry.subagent?.allowModelOverride).toBe(true)
     expect(entry.config?.customField).toBe("keep me")
     expect(entry.config?.apiKey).toBe("k")
+  })
+
+  it("preserves an existing hooks.allowPromptInjection alongside the new allowConversationAccess", () => {
+    const settings: OpenClawSettings = {
+      plugins: {
+        entries: {
+          [PLUGIN_ID]: {
+            hooks: { allowPromptInjection: true },
+            config: { apiKey: "old", project: "old" },
+          },
+        },
+      },
+    }
+    setPluginEntry(settings, { apiKey: "new", project: "new", baseUrl: undefined })
+    const hooks = settings.plugins?.entries?.[PLUGIN_ID]?.hooks
+    expect(hooks?.allowPromptInjection).toBe(true)
+    expect(hooks?.allowConversationAccess).toBe(true)
   })
 
   it("preserves a hand-edited `enabled: false` across re-installs", () => {
@@ -115,7 +145,7 @@ describe("setPluginEntry", () => {
     expect(config.debug).toBe(true)
   })
 
-  it("preserves existing allowConversationAccess when not overridden", () => {
+  it("preserves existing allowConversationAccess when not overridden — and mirrors into hooks", () => {
     const settings: OpenClawSettings = {
       plugins: {
         entries: {
@@ -124,15 +154,19 @@ describe("setPluginEntry", () => {
       },
     }
     setPluginEntry(settings, { apiKey: "x", project: "y", baseUrl: undefined })
-    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config as Record<string, unknown>
-    expect(config.allowConversationAccess).toBe(false)
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
+    expect(entry?.config?.allowConversationAccess).toBe(false)
+    expect(entry?.hooks?.allowConversationAccess).toBe(false)
   })
 
-  it("explicit allowConversationAccess in patch overrides existing", () => {
+  it("explicit allowConversationAccess in patch overrides existing — both config and hooks update", () => {
     const settings: OpenClawSettings = {
       plugins: {
         entries: {
-          [PLUGIN_ID]: { config: { apiKey: "x", project: "y", allowConversationAccess: false } },
+          [PLUGIN_ID]: {
+            hooks: { allowConversationAccess: false },
+            config: { apiKey: "x", project: "y", allowConversationAccess: false },
+          },
         },
       },
     }
@@ -142,13 +176,57 @@ describe("setPluginEntry", () => {
       baseUrl: undefined,
       allowConversationAccess: true,
     })
-    const config = settings.plugins?.entries?.[PLUGIN_ID]?.config as Record<string, unknown>
-    expect(config.allowConversationAccess).toBe(true)
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
+    expect(entry?.config?.allowConversationAccess).toBe(true)
+    expect(entry?.hooks?.allowConversationAccess).toBe(true)
+  })
+})
+
+describe("addToPluginsAllow", () => {
+  it("adds the plugin id when missing", () => {
+    const settings: OpenClawSettings = {}
+    expect(addToPluginsAllow(settings)).toBe(true)
+    expect(settings.plugins?.allow).toEqual([PLUGIN_ID])
+  })
+
+  it("is idempotent when the id is already present", () => {
+    const settings: OpenClawSettings = { plugins: { allow: [PLUGIN_ID, "other"] } }
+    expect(addToPluginsAllow(settings)).toBe(false)
+    expect(settings.plugins?.allow).toEqual([PLUGIN_ID, "other"])
+  })
+
+  it("preserves other entries already in the allow list", () => {
+    const settings: OpenClawSettings = { plugins: { allow: ["foo", "bar"] } }
+    addToPluginsAllow(settings)
+    expect(settings.plugins?.allow).toEqual(["foo", "bar", PLUGIN_ID])
+  })
+})
+
+describe("removeFromPluginsAllow", () => {
+  it("removes only our id", () => {
+    const settings: OpenClawSettings = { plugins: { allow: ["foo", PLUGIN_ID, "bar"] } }
+    expect(removeFromPluginsAllow(settings)).toBe(true)
+    expect(settings.plugins?.allow).toEqual(["foo", "bar"])
+  })
+
+  it("returns false when nothing changes", () => {
+    const settings: OpenClawSettings = { plugins: { allow: ["foo"] } }
+    expect(removeFromPluginsAllow(settings)).toBe(false)
+    expect(settings.plugins?.allow).toEqual(["foo"])
+  })
+
+  it("returns false when allow is missing entirely", () => {
+    const settings: OpenClawSettings = {}
+    expect(removeFromPluginsAllow(settings)).toBe(false)
   })
 })
 
 describe("migrateLegacyEntries", () => {
-  it("strips hooks.allowConversationAccess written by the 0.0.1 installer", () => {
+  it("does NOT strip hooks.allowConversationAccess (it's load-bearing on 2026.4.25+)", () => {
+    // Regression guard: 0.0.2 used to strip this key here. On current OpenClaw
+    // versions the key is required, so the strip would break dispatch.
+    // setPluginEntry overwrites it with the right value anyway; the
+    // migration's only job now is the env sweep.
     const settings: OpenClawSettings = {
       plugins: {
         entries: {
@@ -159,25 +237,9 @@ describe("migrateLegacyEntries", () => {
         },
       },
     }
-    const { changed } = migrateLegacyEntries(settings)
-    expect(changed).toBe(true)
-    const entry = settings.plugins?.entries?.[PLUGIN_ID] as { hooks?: unknown }
-    expect(entry.hooks).toBeUndefined()
-  })
-
-  it("preserves hooks.allowPromptInjection (a real OpenClaw key) when present alongside our legacy key", () => {
-    const settings: OpenClawSettings = {
-      plugins: {
-        entries: {
-          [PLUGIN_ID]: {
-            hooks: { allowPromptInjection: true, allowConversationAccess: true },
-          },
-        },
-      },
-    }
     migrateLegacyEntries(settings)
-    const entry = settings.plugins?.entries?.[PLUGIN_ID] as { hooks?: { allowPromptInjection?: boolean } }
-    expect(entry.hooks?.allowPromptInjection).toBe(true)
+    const entry = settings.plugins?.entries?.[PLUGIN_ID]
+    expect(entry?.hooks?.allowConversationAccess).toBe(true)
   })
 
   it("strips top-level env.LATITUDE_* keys our 0.0.1 installer leaked", () => {
@@ -209,12 +271,12 @@ describe("migrateLegacyEntries", () => {
 
 describe("removePluginEntry", () => {
   it("removes the plugin entry and reports whether it changed anything", () => {
-    const settings = {
+    const settings: OpenClawSettings = {
       plugins: { entries: { [PLUGIN_ID]: { enabled: true }, "other-plugin": { enabled: true } } },
     }
     expect(removePluginEntry(settings)).toBe(true)
-    expect(PLUGIN_ID in settings.plugins.entries).toBe(false)
-    expect("other-plugin" in settings.plugins.entries).toBe(true)
+    expect(PLUGIN_ID in (settings.plugins?.entries ?? {})).toBe(false)
+    expect("other-plugin" in (settings.plugins?.entries ?? {})).toBe(true)
     expect(removePluginEntry(settings)).toBe(false)
   })
 })
