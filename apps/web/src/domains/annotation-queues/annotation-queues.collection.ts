@@ -1,197 +1,20 @@
-import { isManualQueue, isSystemQueue } from "@domain/annotation-queues"
-import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
-import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { getQueryClient } from "../../lib/data/query-client.tsx"
-import {
-  type AnnotationQueueRecord,
-  type FlaggerRecord,
-  getAnnotationQueueByProject,
-  listAnnotationQueuesByProject,
-  listFlaggersByProject,
-  updateFlagger,
-} from "./annotation-queues.functions.ts"
+import { useQuery } from "@tanstack/react-query"
+import { type FlaggerRecord, listFlaggersByProject, updateFlagger } from "./annotation-queues.functions.ts"
 
-const BATCH_SIZE = 50
-const queryClient = getQueryClient()
+export const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
 
-export const annotationQueueQueryKey = (projectId: string, queueId: string) =>
-  ["annotation-queue", projectId, queueId] as const
-
-export const ANNOTATION_QUEUES_DEFAULT_SORTING: InfiniteTableSorting = {
-  column: "pending",
-  direction: "desc",
-}
-
-function mapSortColumn(column: string): "createdAt" | "name" | "completedItems" | "pendingItems" {
-  if (column === "name") return "name"
-  if (column === "completed") return "completedItems"
-  if (column === "pending") return "pendingItems"
-  return "createdAt"
-}
-
-export function useAnnotationQueuesInfiniteScroll({
-  projectId,
-  sorting,
-}: {
-  readonly projectId: string
-  readonly sorting: InfiniteTableSorting
-}) {
-  const {
-    data: paginatedData,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["annotation-queues", projectId, sorting],
-    queryFn: async ({ pageParam }) => {
-      const result = await listAnnotationQueuesByProject({
-        data: {
-          projectId,
-          limit: BATCH_SIZE,
-          cursor: pageParam,
-          sortBy: mapSortColumn(sorting.column),
-          sortDirection: sorting.direction,
-        },
-      })
-      return result ?? { queues: [], hasMore: false }
-    },
-    initialPageParam: undefined as { sortValue: string; id: string } | undefined,
-    getNextPageParam: (lastPage) => lastPage?.nextCursor,
-    enabled: projectId.length > 0,
-  })
-
-  const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
-    () => ({
-      hasMore: hasNextPage,
-      isLoadingMore: isFetchingNextPage,
-      onLoadMore: fetchNextPage,
-    }),
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
-
-  const data: readonly AnnotationQueueRecord[] = useMemo(
-    () => paginatedData?.pages.flatMap((p) => p?.queues ?? []) ?? [],
-    [paginatedData],
-  )
-
-  return { data, isLoading, infiniteScroll }
-}
-
-export function useAnnotationQueue({
-  projectId,
-  queueId,
-  enabled = true,
-}: {
-  readonly projectId: string
-  readonly queueId: string
-  readonly enabled?: boolean
-}) {
+export function useProjectFlaggers(projectId: string) {
   return useQuery({
-    queryKey: annotationQueueQueryKey(projectId, queueId),
-    queryFn: () => getAnnotationQueueByProject({ data: { projectId, queueId } }),
-    enabled: enabled && projectId.length > 0 && queueId.length > 0,
-  })
-}
-
-export function useAnnotationQueuesList(projectId: string) {
-  const { data: paginatedData, isLoading } = useInfiniteQuery({
-    queryKey: ["annotation-queues-list", projectId],
-    queryFn: async ({ pageParam }) => {
-      const result = await listAnnotationQueuesByProject({
-        data: {
-          projectId,
-          limit: 100,
-          cursor: pageParam,
-          sortBy: "name",
-          sortDirection: "asc",
-        },
-      })
-      return result ?? { queues: [], hasMore: false }
-    },
-    initialPageParam: undefined as { sortValue: string; id: string } | undefined,
-    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    queryKey: flaggersQueryKey(projectId),
+    queryFn: () => listFlaggersByProject({ data: { projectId } }),
     enabled: projectId.length > 0,
   })
-
-  const data = useMemo(() => {
-    const allQueues = paginatedData?.pages.flatMap((p) => p?.queues ?? []) ?? []
-    return allQueues.filter((q) => !isSystemQueue(q) && isManualQueue(q.settings))
-  }, [paginatedData])
-
-  return { data, isLoading }
 }
 
-const flaggersQueryKey = (projectId: string) => ["flaggers", projectId] as const
-
-const makeProjectFlaggersCollection = (projectId: string) =>
-  createCollection(
-    queryCollectionOptions({
-      queryClient,
-      queryKey: flaggersQueryKey(projectId),
-      queryFn: async () => [...(await listFlaggersByProject({ data: { projectId } }))],
-      getKey: (item: FlaggerRecord) => item.id,
-      onUpdate: async ({ transaction }) => {
-        await Promise.all(
-          transaction.mutations.map((mutation) =>
-            updateFlagger({
-              data: {
-                projectId: mutation.modified.projectId,
-                slug: mutation.modified.slug,
-                enabled: mutation.modified.enabled,
-              },
-            }),
-          ),
-        )
-      },
-    }),
-  )
-
-type ProjectFlaggersCollection = ReturnType<typeof makeProjectFlaggersCollection>
-const projectFlaggersCollectionsCache: Record<string, ProjectFlaggersCollection> = {}
-
-const getProjectFlaggersCollection = (projectId: string): ProjectFlaggersCollection => {
-  if (!projectFlaggersCollectionsCache[projectId]) {
-    projectFlaggersCollectionsCache[projectId] = makeProjectFlaggersCollection(projectId)
-  }
-  return projectFlaggersCollectionsCache[projectId]
-}
-
-type FlaggersSource = { flagger: ProjectFlaggersCollection }
-type FlaggersContext = {
-  baseSchema: SchemaFromSource<FlaggersSource>
-  schema: SchemaFromSource<FlaggersSource>
-  fromSourceName: "flagger"
-  hasJoins: false
-}
-
-export function useProjectFlaggers<TContext extends Context = FlaggersContext>(
-  projectId: string,
-  queryFn?: (flaggers: QueryBuilder<FlaggersContext>) => QueryBuilder<TContext>,
-) {
-  const collection = getProjectFlaggersCollection(projectId)
-  return useLiveQuery<TContext>(
-    (query) => {
-      const flaggers = query.from({ flagger: collection })
-      if (queryFn) return queryFn(flaggers)
-      return flaggers as unknown as QueryBuilder<TContext>
-    },
-    [projectId],
-  )
-}
-
-export function updateFlaggerMutation(input: {
+export async function updateFlaggerMutation(input: {
   readonly projectId: string
-  readonly id: string
   readonly slug: string
   readonly enabled: boolean
-}) {
-  const collection = getProjectFlaggersCollection(input.projectId)
-  return collection.update(input.id, (draft) => {
-    draft.enabled = input.enabled
-  })
+}): Promise<FlaggerRecord | null> {
+  return updateFlagger({ data: input })
 }

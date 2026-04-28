@@ -1,8 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
-import { Link } from "@tanstack/react-router"
 import { SearchAlert } from "lucide-react"
 
-export function IssuesEmptyState({ projectSlug }: { projectSlug: string }) {
+export function IssuesEmptyState() {
   return (
     <div className="h-full w-full flex items-center justify-center p-8">
       <div className="max-w-lg flex flex-col items-center gap-6 text-center">
@@ -16,9 +15,7 @@ export function IssuesEmptyState({ projectSlug }: { projectSlug: string }) {
             traces to surface recurring problems here.
           </Text.H5>
         </div>
-        <Link to="/projects/$projectSlug/annotation-queues" params={{ projectSlug }}>
-          <Button>Go to annotation queues</Button>
-        </Link>
+        <Button disabled>Waiting for issue discovery</Button>
       </div>
     </div>
   )

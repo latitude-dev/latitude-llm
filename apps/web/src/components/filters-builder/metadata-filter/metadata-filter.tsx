@@ -1,7 +1,11 @@
 import { Button, Icon, Input } from "@repo/ui"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { MetadataEntry } from "./use-metadata-filter.ts"
+
+interface MetadataEntry {
+  readonly key: string
+  readonly value: string
+}
 
 interface MetadataFilterProps {
   readonly entries: readonly MetadataEntry[]
