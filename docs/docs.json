@@ -151,5 +151,10 @@
       "github": "https://github.com/latitude-dev/latitude-llm",
       "slack": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
     }
+  },
+  "integrations": {
+    "gtm": {
+      "tagId": "GTM-5NWGV24H"
+    }
   }
 }
