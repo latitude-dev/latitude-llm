@@ -240,11 +240,19 @@ async function applyChanges({
   allowConversationAccess,
   noTrust,
 }: ApplyParams): Promise<void> {
-  // 1. Hand placement off to OpenClaw. `openclaw plugins install <path>`
+  // 1. Take the backup BEFORE openclaw plugins install touches openclaw.json
+  //    so it represents the user's true pre-install state. `openclaw plugins
+  //    install` creates plugins.entries[id], so backing up after would lose
+  //    the original "no entry" state and make recovery harder if any later
+  //    step fails.
+  ensureSettingsDir()
+  backupSettings()
+
+  // 2. Hand placement off to OpenClaw. `openclaw plugins install <path>`
   //    copies our package into ~/.openclaw/extensions/<encoded-id>/, writes
   //    the install record into ~/.openclaw/plugins/installs.json, and
   //    creates a (disabled, configless) plugins.entries[id] in
-  //    openclaw.json. We layer config + hooks + allow on top in step 2.
+  //    openclaw.json. We layer config + hooks + allow on top in step 3.
   //    --force lets us overwrite an existing install (e.g. when re-running
   //    on top of a previous version).
   const packageRoot = resolvePackageRoot()
@@ -264,30 +272,28 @@ async function applyChanges({
   }
   installSpinner.stop("Plugin registered with OpenClaw")
 
-  // 2. Layer our config, hooks, and (optionally) plugins.allow on top of the
+  // 3. Layer our config, hooks, and (optionally) plugins.allow on top of the
   //    entry OpenClaw just created. We don't touch placement — that's
   //    OpenClaw's job — only the policy fields.
   const settingsSpinner = spinner()
   settingsSpinner.start("Updating openclaw.json")
-  ensureSettingsDir()
-  backupSettings()
   const settings = readSettings()
   // Sweep `LATITUDE_*` keys our 0.0.1 leaked under settings.env. Idempotent
   // when the keys aren't there.
   migrateLegacyEntries(settings)
 
-  // Decide allowConversationAccess for this install:
-  //   - explicit flag (true|false) wins
-  //   - else preserve whatever's already in openclaw.json
-  //   - else first-install default is `true` (matches the README's promise)
-  const existingConfig = (settings.plugins?.entries?.[PLUGIN_ID]?.config ?? {}) as Partial<LatitudePluginConfig>
-  const finalAllowConversationAccess = allowConversationAccess ?? existingConfig.allowConversationAccess ?? true
-
+  // Pass the install-flag tristate through verbatim — `setPluginEntry`
+  // resolves the final value by consulting (in order): the patch, the
+  // existing config block, the existing hooks block, then defaulting to
+  // `true`. Going through that resolver matters because a 0.0.1 install
+  // may have stored the flag only under hooks; if we pre-collapsed it
+  // here using existing config alone, we'd lose that signal and silently
+  // overwrite the user's intent.
   setPluginEntry(settings, {
     apiKey,
     project,
     baseUrl: envConfig.name === "production" ? undefined : envConfig.ingest,
-    allowConversationAccess: finalAllowConversationAccess,
+    allowConversationAccess,
     // `debug` is intentionally not passed — `setPluginEntry` preserves
     // hand-edited values; fresh installs leave the key absent (runtime
     // default is `false`).
@@ -391,7 +397,13 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
     if (isCancel(ok) || ok !== true) return onCancel()
   }
 
-  // 1. Hand uninstall to OpenClaw. It removes files, the install record,
+  // 1. Take the backup BEFORE openclaw plugins uninstall touches
+  //    openclaw.json so it represents the user's true pre-uninstall state
+  //    (entry + config + plugins.allow). Backing up after would capture
+  //    the already-stripped state, defeating the point of the backup.
+  backupSettings()
+
+  // 2. Hand uninstall to OpenClaw. It removes files, the install record,
   //    plugins.entries[id], plugins.allow, plugins.deny, plugins.load.paths
   //    — see src/plugins/uninstall.ts.
   const s = spinner()
@@ -412,13 +424,12 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
     s.stop("Plugin removed by OpenClaw")
   }
 
-  // 2. Defensive cleanup — `openclaw plugins uninstall` already strips the
+  // 3. Defensive cleanup — `openclaw plugins uninstall` already strips the
   //    entry and plugins.allow on success, but if it failed above (enoent
   //    / non-zero) we still want our state out of openclaw.json. These
   //    are all idempotent.
   const cleanupSpinner = spinner()
   cleanupSpinner.start("Reverting openclaw.json")
-  backupSettings()
   const post = readSettings()
   removePluginEntry(post)
   removeFromPluginsAllow(post)
