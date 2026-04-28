@@ -221,7 +221,11 @@ function SearchPage() {
                   setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
                 }
               />
-              <Button variant={filtersOpen ? "outline" : "ghost"} size="sm" onClick={() => setFiltersOpen(!filtersOpen)}>
+              <Button
+                variant={filtersOpen ? "outline" : "ghost"}
+                size="sm"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+              >
                 <Icon icon={FilterIcon} size="sm" />
                 Filters
                 {hasActiveFilters ? (
