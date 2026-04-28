@@ -115,6 +115,7 @@ export {
   type FlaggerRepositoryShape,
   type ListFlaggersByProjectInput,
   type ProvisionFlaggersForProjectInput,
+  type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
@@ -220,6 +221,11 @@ export {
   type UncompleteQueueItemInput,
   uncompleteQueueItemUseCase,
 } from "./use-cases/uncomplete-queue-item.ts"
+export {
+  type UpdateFlaggerError,
+  type UpdateFlaggerInput,
+  updateFlaggerUseCase,
+} from "./use-cases/update-flagger.ts"
 export {
   QueueNotFoundError,
   type UpdateQueueError,
