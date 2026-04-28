@@ -88,6 +88,28 @@ describe("detectToolCallErrorsFlagger", () => {
     expect(result).toEqual({ matched: false })
   })
 
+  it("does not match expected tool 4xx responses", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-grep", "grep"),
+        toolResponse("call-grep", { ok: false, statusCode: 404, error: "No matches found" }),
+      ]),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("still matches tool 5xx responses", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-weather"),
+        toolResponse("call-weather", { ok: false, statusCode: 503, error: "Service unavailable" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+  })
+
   it("matches duplicated tool call ids", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), assistantToolCall("call-weather", "lookup_weather")]),
