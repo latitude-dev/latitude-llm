@@ -2,8 +2,8 @@ import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
-  type IssueTrendSeries,
   type IssueTagsTimeRange,
+  type IssueTrendSeries,
   type IssueWindowMetric,
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
