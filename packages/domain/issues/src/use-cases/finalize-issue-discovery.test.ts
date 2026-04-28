@@ -146,9 +146,64 @@ describe("finalizeIssueDiscoveryUseCase", () => {
     expect(result).toEqual({ action: "assigned-existing", issueId: existingIssue.id })
     expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
     expect(issues.size).toBe(1)
-    expect(lockCalls).toEqual([`${projectId}:project`])
+    expect(lockCalls).toHaveLength(1)
+    expect(lockCalls[0]).toMatch(new RegExp(`^${projectId}:feedback:annotation:UI:`))
     expect(writtenEvents).toHaveLength(1)
     expect(fakeAi.calls.rerank).toHaveLength(1)
     expect(fakeAi.calls.generate).toHaveLength(0)
+  })
+
+  it("falls through to the project lock before creating a new issue", async () => {
+    const score = makeScore()
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
+    const lockCalls: string[] = []
+    const fakeAi = createFakeAI({
+      generate: (input) =>
+        Effect.succeed({
+          object: input.schema.parse({
+            name: "Token leakage in assistant responses",
+            description: "The assistant exposes secrets or tokens in its replies.",
+          }),
+          tokens: 10,
+          duration: 5,
+        }),
+    })
+
+    scores.set(score.id, score)
+
+    const result = await Effect.runPromise(
+      finalizeIssueDiscoveryUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(IssueDiscoveryLockRepository, {
+          withLock: (input, effect) =>
+            Effect.gen(function* () {
+              lockCalls.push(`${input.projectId}:${input.lockKey}`)
+              return yield* effect
+            }),
+        }),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result.action).toBe("created")
+    expect(scores.get(score.id)?.issueId).toBe(result.issueId)
+    expect(issues.size).toBe(1)
+    expect(lockCalls).toHaveLength(2)
+    expect(lockCalls[0]).toMatch(new RegExp(`^${projectId}:feedback:annotation:UI:`))
+    expect(lockCalls[1]).toBe(`${projectId}:project`)
+    expect(fakeAi.calls.rerank).toHaveLength(0)
+    expect(fakeAi.calls.generate).toHaveLength(1)
   })
 })

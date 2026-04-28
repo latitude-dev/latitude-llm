@@ -32,61 +32,105 @@ export type FinalizeIssueDiscoveryError =
   | CreateIssueFromScoreError
   | RepositoryError
 
+const hashLockComponent = (value: string) => {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0")
+}
+
+const buildFeedbackLockKey = (input: {
+  readonly source: string
+  readonly sourceId: string
+  readonly feedback: string
+}) => `feedback:${input.source}:${input.sourceId}:${hashLockComponent(input.feedback)}`
+
+const findMatchedIssueId = (input: FinalizeIssueDiscoveryInput) =>
+  Effect.gen(function* () {
+    const hybridSearch = yield* hybridSearchIssuesUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      query: input.feedback,
+      normalizedEmbedding: [...input.normalizedEmbedding],
+    })
+
+    const retrieval = yield* rerankIssueCandidatesUseCase({
+      query: input.feedback,
+      candidates: hybridSearch.candidates,
+    })
+
+    const matchedIssue = yield* resolveMatchedIssueUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      matchedIssueUuid: retrieval.matchedIssueUuid,
+    })
+
+    return matchedIssue.issueId
+  })
+
+const assignToIssue = (input: FinalizeIssueDiscoveryInput, issueId: string) =>
+  Effect.gen(function* () {
+    const assignment = yield* assignScoreToIssueUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      issueId,
+      normalizedEmbedding: input.normalizedEmbedding,
+    })
+
+    yield* syncIssueProjectionsUseCase({ organizationId: input.organizationId, issueId: assignment.issueId })
+    return assignment
+  })
+
+const createIssue = (input: FinalizeIssueDiscoveryInput) =>
+  Effect.gen(function* () {
+    const assignment = yield* createIssueFromScoreUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      normalizedEmbedding: input.normalizedEmbedding,
+    })
+
+    yield* syncIssueProjectionsUseCase({ organizationId: input.organizationId, issueId: assignment.issueId })
+    return assignment
+  })
+
 export const finalizeIssueDiscoveryUseCase = (input: FinalizeIssueDiscoveryInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
     const scoreRepository = yield* ScoreRepository
-    yield* scoreRepository.findById(ScoreId(input.scoreId))
+    const score = yield* scoreRepository.findById(ScoreId(input.scoreId))
     const lockRepository = yield* IssueDiscoveryLockRepository
 
     return yield* lockRepository.withLock(
       {
         projectId: ProjectId(input.projectId),
-        lockKey: "project",
+        lockKey: buildFeedbackLockKey({ source: score.source, sourceId: score.sourceId, feedback: input.feedback }),
       },
       Effect.gen(function* () {
-        const hybridSearch = yield* hybridSearchIssuesUseCase({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          query: input.feedback,
-          normalizedEmbedding: [...input.normalizedEmbedding],
-        })
-
-        const retrieval = yield* rerankIssueCandidatesUseCase({
-          query: input.feedback,
-          candidates: hybridSearch.candidates,
-        })
-
-        const matchedIssue = yield* resolveMatchedIssueUseCase({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          matchedIssueUuid: retrieval.matchedIssueUuid,
-        })
-
-        if (matchedIssue.issueId !== null) {
-          const assignment = yield* assignScoreToIssueUseCase({
-            organizationId: input.organizationId,
-            projectId: input.projectId,
-            scoreId: input.scoreId,
-            issueId: matchedIssue.issueId,
-            normalizedEmbedding: input.normalizedEmbedding,
-          })
-
-          yield* syncIssueProjectionsUseCase({ organizationId: input.organizationId, issueId: assignment.issueId })
-          return assignment
+        const feedbackMatchedIssueId = yield* findMatchedIssueId(input)
+        if (feedbackMatchedIssueId !== null) {
+          return yield* assignToIssue(input, feedbackMatchedIssueId)
         }
 
-        const assignment = yield* createIssueFromScoreUseCase({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          scoreId: input.scoreId,
-          normalizedEmbedding: input.normalizedEmbedding,
-        })
+        return yield* lockRepository.withLock(
+          {
+            projectId: ProjectId(input.projectId),
+            lockKey: "project",
+          },
+          Effect.gen(function* () {
+            const projectMatchedIssueId = yield* findMatchedIssueId(input)
+            if (projectMatchedIssueId !== null) {
+              return yield* assignToIssue(input, projectMatchedIssueId)
+            }
 
-        yield* syncIssueProjectionsUseCase({ organizationId: input.organizationId, issueId: assignment.issueId })
-        return assignment
+            return yield* createIssue(input)
+          }),
+        )
       }),
     )
   }).pipe(Effect.withSpan("issues.finalizeIssueDiscovery")) as Effect.Effect<
