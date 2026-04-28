@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { bootstrapSeedScope } from "@domain/shared/seeding"
 import { createWeaviateClient } from "../client.ts"
 import { allSeeders } from "./all.ts"
 import { runSeeders } from "./runner.ts"
@@ -13,7 +14,9 @@ const main = async () => {
   const client = await createWeaviateClient()
 
   try {
-    await import("effect").then(({ Effect }) => Effect.runPromise(runSeeders(allSeeders, { client })))
+    await import("effect").then(({ Effect }) =>
+      Effect.runPromise(runSeeders(allSeeders, { client, scope: bootstrapSeedScope })),
+    )
     console.log("Seed complete.")
   } catch (error) {
     console.error("Seed failed:", error)

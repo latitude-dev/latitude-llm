@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 import { ApiKeyRepository } from "@domain/api-keys"
 import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
+import { bootstrapSeedScope } from "@domain/shared/seeding"
 import { UserRepository } from "@domain/users"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
@@ -51,7 +52,7 @@ const main = async () => {
         project: yield* ProjectRepository,
         user: yield* UserRepository,
       }
-      return { db: client.db, repositories } as SeedContext
+      return { db: client.db, repositories, scope: bootstrapSeedScope } as SeedContext
     })
 
     const program = Effect.gen(function* () {

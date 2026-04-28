@@ -10,6 +10,7 @@ import {
 import { OutboxEventWriter } from "@domain/events"
 import { SqlClient } from "@domain/shared"
 import {
+  bootstrapSeedScope,
   type ChSqlClient,
   DatasetId,
   ExternalUserId,
@@ -104,7 +105,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
   beforeEach(async () => {
     seededTraceIds = await Effect.runPromise(
       runSpansSeed(
-        { client: ch.client },
+        { client: ch.client, scope: bootstrapSeedScope },
         {
           traceCount: 2,
           organizationId: ORG_ID,

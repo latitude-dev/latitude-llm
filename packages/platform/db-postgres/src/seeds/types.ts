@@ -2,6 +2,7 @@ import type { ApiKeyRepository } from "@domain/api-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
 import type { SqlClient } from "@domain/shared"
+import type { SeedScope } from "@domain/shared/seeding"
 import type { UserRepository } from "@domain/users"
 import { Data, type Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -17,6 +18,13 @@ export interface Repositories {
 export interface SeedContext {
   readonly db: PostgresDb
   readonly repositories: Repositories
+  /**
+   * Per-project seeding context. Each seeder resolves entity ids via
+   * `ctx.scope.cuid("...")` etc. so the same seeder body works for both
+   * the canonical bootstrap project (`pnpm seed`) and a demo project
+   * created at runtime via the backoffice. See {@link SeedScope}.
+   */
+  readonly scope: SeedScope
 }
 
 export class SeedError extends Data.TaggedError("SeedError")<{
