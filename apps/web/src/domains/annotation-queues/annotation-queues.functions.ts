@@ -70,21 +70,6 @@ const toAnnotationQueueRecord = (q: {
 
 export type AnnotationQueueRecord = ReturnType<typeof toAnnotationQueueRecord>
 
-const deterministicFlaggerDetails: Record<string, { readonly name: string; readonly description: string }> = {
-  "tool-call-errors": {
-    name: "Tool call errors",
-    description: "Flags malformed, duplicate, or explicitly failed tool responses without calling an LLM.",
-  },
-  "output-schema-validation": {
-    name: "Output schema validation",
-    description: "Flags malformed or truncated structured output in assistant responses without calling an LLM.",
-  },
-  "empty-response": {
-    name: "Empty response",
-    description: "Flags empty, whitespace-only, or degenerate assistant responses without calling an LLM.",
-  },
-}
-
 const humanizeSlug = (slug: string) => slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 
 const toFlaggerRecord = (flagger: {
@@ -98,8 +83,7 @@ const toFlaggerRecord = (flagger: {
   readonly updatedAt: Date
 }) => {
   const strategy = getQueueStrategy(flagger.slug)
-  const details =
-    strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : deterministicFlaggerDetails[flagger.slug]
+  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
 
   return {
     id: flagger.id,

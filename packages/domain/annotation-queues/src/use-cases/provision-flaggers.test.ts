@@ -50,20 +50,19 @@ describe("provisionFlaggersUseCase", () => {
     expect(flaggers.size).toBe(expectedSlugs.length)
   })
 
-  it("is idempotent — running twice yields the same set of rows", async () => {
-    const { layer } = createTestLayer()
+  it("is idempotent — a second run inserts nothing and returns no rows", async () => {
+    const { layer, flaggers } = createTestLayer()
 
     const first = await Effect.runPromise(
       provisionFlaggersUseCase({ organizationId: ORG_ID, projectId: PROJECT_ID }).pipe(Effect.provide(layer)),
     )
+    const sizeAfterFirst = flaggers.size
     const second = await Effect.runPromise(
       provisionFlaggersUseCase({ organizationId: ORG_ID, projectId: PROJECT_ID }).pipe(Effect.provide(layer)),
     )
 
-    expect(second).toHaveLength(first.length)
-    const firstIds = new Set(first.map((f) => f.id))
-    for (const row of second) {
-      expect(firstIds.has(row.id)).toBe(true)
-    }
+    expect(first).toHaveLength(listQueueStrategySlugs().length)
+    expect(second).toHaveLength(0)
+    expect(flaggers.size).toBe(sizeAfterFirst)
   })
 })

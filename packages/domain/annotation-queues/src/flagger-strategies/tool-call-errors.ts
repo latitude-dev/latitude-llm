@@ -8,6 +8,11 @@ import type { DetectionResult, QueueStrategy } from "./types.ts"
  * explicitly-failed tool responses. Never calls an LLM.
  */
 export const toolCallErrorsStrategy: QueueStrategy = {
+  details: {
+    name: "Tool call errors",
+    description: "Flags malformed, duplicate, or explicitly failed tool responses without calling an LLM.",
+  },
+
   hasRequiredContext(trace: TraceDetail): boolean {
     return trace.allMessages.length > 0
   },

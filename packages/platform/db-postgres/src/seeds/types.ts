@@ -4,7 +4,7 @@ import type { ProjectRepository } from "@domain/projects"
 import type { SqlClient } from "@domain/shared"
 import type { UserRepository } from "@domain/users"
 import { Data, type Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
+import type { PostgresClient, PostgresDb } from "../client.ts"
 
 export interface Repositories {
   readonly organization: OrganizationRepository["Service"]
@@ -16,6 +16,7 @@ export interface Repositories {
 
 export interface SeedContext {
   readonly db: PostgresDb
+  readonly client: PostgresClient
   readonly repositories: Repositories
 }
 

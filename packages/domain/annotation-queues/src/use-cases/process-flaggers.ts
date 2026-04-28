@@ -261,8 +261,10 @@ const handleMatched = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntr
     // transient failures). Without this guard a re-run of an already-matched
     // strategy would write a second published score for the same
     // (trace, flagger) and produce a duplicate downstream issue. The
-    // workflow-side LLM path is idempotent through `findFlaggerDraft…`; this
-    // is the deterministic equivalent.
+    // workflow-side LLM path is idempotent because `start-flagger-workflow`
+    // jobs are deduped by `flagger-start:${traceId}:${slug}` and
+    // `saveFlaggerAnnotationUseCase` upserts on the pre-generated `scoreId`
+    // forwarded by `draftAnnotate`; this is the deterministic equivalent.
     const scoreRepository = yield* ScoreRepository
     const existing = yield* scoreRepository.findFlaggerPublishedByTraceAndFlaggerId({
       projectId: input.trace.projectId,

@@ -1,4 +1,4 @@
-import { FlaggerId, generateId } from "@domain/shared"
+import { FlaggerId, generateId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { FLAGGER_DEFAULT_SAMPLING } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
@@ -33,9 +33,11 @@ export const createFakeFlaggerRepository = (
         return flaggers.get(id) ?? null
       }),
 
-    provisionForProject: ({ organizationId, projectId, slugs }) =>
-      Effect.sync(() => {
+    provisionForProject: ({ projectId, slugs }) =>
+      Effect.gen(function* () {
+        const sqlClient = yield* SqlClient
         const now = new Date()
+        const inserted: Flagger[] = []
         for (const slug of slugs) {
           const key = keyFor(projectId, slug)
           if (indexByProjectSlug.has(key)) continue
@@ -43,7 +45,7 @@ export const createFakeFlaggerRepository = (
           const id = FlaggerId(generateId())
           const flagger: Flagger = {
             id,
-            organizationId,
+            organizationId: sqlClient.organizationId,
             projectId,
             slug,
             enabled: FLAGGER_DEFAULT_ENABLED,
@@ -53,11 +55,9 @@ export const createFakeFlaggerRepository = (
           }
           flaggers.set(id, flagger)
           indexByProjectSlug.set(key, id)
+          inserted.push(flagger)
         }
-
-        return [...flaggers.values()]
-          .filter((f) => f.projectId === projectId && slugs.includes(f.slug))
-          .sort((a, b) => a.slug.localeCompare(b.slug))
+        return inserted.sort((a, b) => a.slug.localeCompare(b.slug))
       }),
 
     update: ({ projectId, slug, enabled }) =>

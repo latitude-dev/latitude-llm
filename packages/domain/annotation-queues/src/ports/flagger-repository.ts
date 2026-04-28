@@ -12,7 +12,6 @@ export interface FindFlaggerByProjectAndSlugInput {
 }
 
 export interface ProvisionFlaggersForProjectInput {
-  readonly organizationId: string
   readonly projectId: ProjectId
   readonly slugs: readonly string[]
 }
@@ -30,10 +29,13 @@ export interface FlaggerRepositoryShape {
     input: FindFlaggerByProjectAndSlugInput,
   ): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
   /**
-   * Idempotently insert one row per `(organizationId, projectId, slug)` with default
-   * `enabled = true`, `sampling = FLAGGER_DEFAULT_SAMPLING`. Conflicts on the unique
-   * `(organization_id, project_id, slug)` index are ignored. Returns the resulting
-   * rows for the requested slugs (existing + newly inserted).
+   * Insert one row per `(projectId, slug)` (org id comes from the bound
+   * `SqlClient`) with default `enabled = true`, `sampling =
+   * FLAGGER_DEFAULT_SAMPLING`. Conflicts on the unique
+   * `(organization_id, project_id, slug)` index are ignored — provisioning
+   * runs once per project on `ProjectCreated`, so conflicts only happen on
+   * retries / re-seed. Returns the rows that were newly inserted (empty on a
+   * second run).
    */
   provisionForProject(
     input: ProvisionFlaggersForProjectInput,

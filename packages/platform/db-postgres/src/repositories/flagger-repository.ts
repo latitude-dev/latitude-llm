@@ -7,7 +7,7 @@ import {
   flaggerSchema,
 } from "@domain/annotation-queues"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { flaggers } from "../schema/flaggers.ts"
@@ -78,7 +78,7 @@ export const FlaggerRepositoryLive = Layer.effect(
           }
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-          yield* sqlClient
+          return yield* sqlClient
             .query((db, organizationId) =>
               db
                 .insert(flaggers)
@@ -93,29 +93,16 @@ export const FlaggerRepositoryLive = Layer.effect(
                 )
                 .onConflictDoNothing({
                   target: [flaggers.organizationId, flaggers.projectId, flaggers.slug],
-                }),
+                })
+                .returning(),
             )
             .pipe(
-              Effect.asVoid,
-              Effect.mapError((cause) => new RepositoryError({ operation: "provisionForProject", cause })),
-            )
-
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(flaggers)
-                .where(
-                  and(
-                    eq(flaggers.organizationId, organizationId),
-                    eq(flaggers.projectId, projectId),
-                    inArray(flaggers.slug, [...slugs]),
-                  ),
-                )
-                .orderBy(asc(flaggers.slug)),
-            )
-            .pipe(
-              Effect.map((rows) => rows.map(toDomainFlagger)),
+              Effect.map((rows) =>
+                rows
+                  .map(toDomainFlagger)
+                  .slice()
+                  .sort((a, b) => a.slug.localeCompare(b.slug)),
+              ),
               Effect.mapError((cause) => new RepositoryError({ operation: "provisionForProject", cause })),
             )
         }),
