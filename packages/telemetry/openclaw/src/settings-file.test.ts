@@ -200,6 +200,15 @@ describe("addToPluginsAllow", () => {
     addToPluginsAllow(settings)
     expect(settings.plugins?.allow).toEqual(["foo", "bar", PLUGIN_ID])
   })
+
+  it("treats a hand-edited non-array allow as empty (defensive)", () => {
+    // openclaw.json is user-editable; if someone wrote `"allow": "foo"`
+    // instead of `"allow": ["foo"]`, we must not spread the string into
+    // characters. Replace the bad value with a clean single-element array.
+    const settings = { plugins: { allow: "wrong" as unknown as string[] } } as OpenClawSettings
+    expect(addToPluginsAllow(settings)).toBe(true)
+    expect(settings.plugins?.allow).toEqual([PLUGIN_ID])
+  })
 })
 
 describe("removeFromPluginsAllow", () => {

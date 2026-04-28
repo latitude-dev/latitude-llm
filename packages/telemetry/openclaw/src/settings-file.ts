@@ -208,10 +208,15 @@ export function removePluginEntry(settings: OpenClawSettings): boolean {
  * plugin auto-loads without provenance via `plugins.allow` or an install
  * record. We get one warning cleared by going through `openclaw plugins
  * install` (provenance) and the other by adding ourselves to allow.
+ *
+ * Defensive against hand-edited non-array values: if `plugins.allow` is
+ * present but not an array (e.g. someone wrote a string), we replace it
+ * with a single-element array rather than spreading the bad value.
  */
 export function addToPluginsAllow(settings: OpenClawSettings): boolean {
   const plugins = settings.plugins ?? {}
-  const allow = plugins.allow ?? []
+  const existing = plugins.allow
+  const allow = Array.isArray(existing) ? existing : []
   if (allow.includes(PLUGIN_ID)) return false
   plugins.allow = [...allow, PLUGIN_ID]
   settings.plugins = plugins
