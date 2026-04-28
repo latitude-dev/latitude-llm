@@ -136,6 +136,7 @@ export {
   type ListIssuesInput,
   type ListIssuesResult,
   listIssuesUseCase,
+  TAG_AGGREGATION_FALLBACK_DAYS,
 } from "./use-cases/list-issues.ts"
 export {
   type RefreshIssueDetailsError,

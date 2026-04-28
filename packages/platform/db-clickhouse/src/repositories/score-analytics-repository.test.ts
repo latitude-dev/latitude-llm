@@ -505,12 +505,20 @@ describe("ScoreAnalyticsRepository", () => {
       ])
     })
 
+    // The default seed rows use created_at / start_time = "2026-03-15 12:00:00.000",
+    // so any time range that includes mid-March 2026 picks them up.
+    const seedWindow = {
+      from: new Date("2026-03-01T00:00:00.000Z"),
+      to: new Date("2026-04-01T00:00:00.000Z"),
+    }
+
     it("returns the union of trace-level tags grouped by issue, scoped to org/project", async () => {
       const result = await runCh(
         repo.aggregateTagsByIssues({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: seedWindow,
         }),
       )
 
@@ -522,8 +530,30 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns empty for no issue ids", async () => {
       const result = await runCh(
-        repo.aggregateTagsByIssues({ organizationId: ORG_ID, projectId: PROJECT_ID, issueIds: [] }),
+        repo.aggregateTagsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [],
+          timeRange: seedWindow,
+        }),
       )
+      expect(result).toEqual([])
+    })
+
+    it("excludes scores and traces outside the configured time range", async () => {
+      // Tighten the window to skip the seeded mid-March data entirely.
+      const result = await runCh(
+        repo.aggregateTagsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: {
+            from: new Date("2026-04-01T00:00:00.000Z"),
+            to: new Date("2026-04-30T00:00:00.000Z"),
+          },
+        }),
+      )
+
       expect(result).toEqual([])
     })
   })
