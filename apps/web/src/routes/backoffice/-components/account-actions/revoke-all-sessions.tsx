@@ -17,10 +17,9 @@ interface RevokeAllSessionsButtonProps {
  * remediation for "I think someone else got into my account". The
  * single-confirm shape mirrors Impersonate.
  *
- * On success we `router.invalidate()` so the loader re-runs. The
- * Sessions panel (when it lands in commit 6) will repaint empty;
- * for now the toast is the only visible feedback, which is fine
- * because the action is a fire-and-forget remediation.
+ * On success we `router.invalidate()` so the loader re-runs and
+ * the Sessions panel below repaints empty; the toast carries the
+ * actual count of sessions revoked.
  */
 export function RevokeAllSessionsButton({ userId, userEmail }: RevokeAllSessionsButtonProps) {
   const { toast } = useToast()
