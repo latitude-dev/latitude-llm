@@ -34,7 +34,7 @@ export function AccountActionsSection({ children }: { children: ReactNode }) {
             Account actions
           </Text.H6>
           <Text.H6 color="foregroundMuted">
-            Mutations on this user — impersonation, role changes, sign-outs, ban.
+            Mutations on this user — impersonation, role changes, email, sign-outs.
           </Text.H6>
         </div>
         <Icon
