@@ -1,10 +1,9 @@
-import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Popover, PopoverAnchor, PopoverContent, type SortDirection, toast, Tooltip } from "@repo/ui"
+import type { FilterCondition, FilterSet } from "@domain/shared"
+import { Button, cn, Icon, Popover, PopoverAnchor, PopoverContent, type SortDirection, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, LayersIcon } from "lucide-react"
 import { useRef, useState } from "react"
-import { getInValues, setFieldConditions } from "../../../../../components/filters-builder/utils.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -34,9 +33,28 @@ import { SearchFilterPanel } from "./-components/search-filter-panel.tsx"
 import { SearchFilterPills } from "./-components/search-filter-pills.tsx"
 import { SearchInput } from "./-components/search-input.tsx"
 
+const TRIGGER_INPUT_HEIGHT_PX = 40
+
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/search/")({
   component: SearchPage,
 })
+
+/**
+ * Drops fields whose conditions are all empty so always-rendered editors
+ * don't pollute the URL when their values are cleared.
+ */
+function cleanFilters(filters: FilterSet): FilterSet {
+  const cleaned: Record<string, FilterCondition[]> = {}
+  for (const [field, conditions] of Object.entries(filters)) {
+    const valid = conditions.filter((cond) => {
+      if (Array.isArray(cond.value)) return cond.value.length > 0
+      if (typeof cond.value === "string") return cond.value.trim().length > 0
+      return cond.value !== undefined && cond.value !== null
+    })
+    if (valid.length > 0) cleaned[field] = valid
+  }
+  return cleaned
+}
 
 function SearchPage() {
   const { projectSlug } = Route.useParams()
@@ -67,7 +85,8 @@ function SearchPage() {
   })
 
   const traceIdsRef = useRef<string[]>([])
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const triggerInputRef = useRef<HTMLInputElement>(null)
+  const panelInputRef = useRef<HTMLInputElement>(null)
 
   const filters = parseFilters(rawFilters || undefined)
   const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
@@ -80,12 +99,14 @@ function SearchPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  // Panel state — `draftFilters` is the in-progress edit while the panel is
-  // open, snapshotted from `filters` on open and committed back to the URL on
-  // close. Filter edits only hit the URL on close so the table doesn't refetch
-  // mid-edit.
+  // Panel state — `draftFilters` and `draftQuery` are the in-progress edits
+  // while the panel is open, snapshotted from `filters` / `q` on open and
+  // committed back to the URL on close. The trigger input and the panel
+  // input both render `draftQuery`; the panel hosts the focused copy when
+  // open while the trigger stays invisible behind the popover.
   const [panelOpen, setPanelOpen] = useState(false)
   const [draftFilters, setDraftFilters] = useState<FilterSet>(filters)
+  const [draftQuery, setDraftQuery] = useState(q)
 
   const { totalCount: totalTraceCount, isLoading: isTraceCountLoading } = useTracesCount({
     projectId: hasSearchQuery ? projectId : "",
@@ -107,12 +128,13 @@ function SearchPage() {
   }
 
   const commitFilters = (next: FilterSet) => {
-    setRawFilters(serializeFilters(next) ?? "")
+    setRawFilters(serializeFilters(cleanFilters(next)) ?? "")
   }
 
   const openPanel = () => {
     if (panelOpen) return
     setDraftFilters(filters)
+    setDraftQuery(q)
     setPanelOpen(true)
   }
 
@@ -123,30 +145,27 @@ function SearchPage() {
   }
 
   const focusSearchInput = () => {
-    searchInputRef.current?.focus()
+    if (panelOpen) {
+      panelInputRef.current?.focus()
+    } else {
+      triggerInputRef.current?.focus()
+    }
   }
 
   const onSearchSubmit = (next: string) => {
+    setPanelOpen(false)
     setQ(next)
-    applyAndClosePanel()
+    commitFilters(draftFilters)
   }
 
-  const onTagAccepted = (tag: string) => {
+  const removePillFromDraft = (field: string) => {
     setDraftFilters((prev) => {
-      const existing = getInValues(prev, "tags")
-      if (existing.includes(tag)) return prev
-      return setFieldConditions(prev, "tags", [{ op: "in", value: [...existing, tag] }])
+      if (field === "metadata") {
+        return Object.fromEntries(Object.entries(prev).filter(([key]) => !key.startsWith("metadata.")))
+      }
+      const { [field]: _removed, ...rest } = prev
+      return rest
     })
-  }
-
-  const removePill = (field: string) => {
-    if (field === "metadata") {
-      const next = Object.fromEntries(Object.entries(filters).filter(([key]) => !key.startsWith("metadata.")))
-      commitFilters(next)
-      return
-    }
-    const { [field]: _removed, ...rest } = filters
-    commitFilters(rest)
   }
 
   const closeTraceDrawer = () => {
@@ -229,7 +248,7 @@ function SearchPage() {
     },
   ])
 
-  const activeTags = getInValues(draftFilters, "tags")
+  const triggerHiddenClass = cn({ "opacity-0 pointer-events-none": panelOpen })
 
   return (
     <>
@@ -237,7 +256,7 @@ function SearchPage() {
         <button
           type="button"
           aria-label="Close filter panel"
-          className="fixed inset-0 z-40 bg-background/50"
+          className="fixed inset-0 z-40 cursor-default bg-background/50"
           onClick={applyAndClosePanel}
         />
       ) : null}
@@ -252,67 +271,63 @@ function SearchPage() {
             }}
           >
             <PopoverAnchor asChild>
-              <div className="flex flex-col gap-3">
-                <Layout.ActionsRow className="justify-stretch">
-                  <div className="relative flex w-full items-center gap-2">
-                    {hasSearchQuery ? (
-                      <Tooltip
-                        asChild
-                        trigger={
-                          <Button asChild variant="ghost" size="icon">
-                            <Link
-                              to="/projects/$projectSlug/search"
-                              params={{ projectSlug }}
-                              aria-label="Clear search"
-                            >
-                              <Icon icon={ArrowLeftIcon} size="sm" />
-                            </Link>
-                          </Button>
-                        }
-                      >
-                        Clear search
-                      </Tooltip>
-                    ) : null}
-                    <SearchInput
-                      key={q}
-                      initialValue={q}
-                      onSubmit={onSearchSubmit}
-                      onFocus={openPanel}
-                      inputRef={searchInputRef}
-                      projectId={projectId}
-                      excludeTags={activeTags}
-                      onTagAccepted={onTagAccepted}
-                    />
-                  </div>
-                </Layout.ActionsRow>
-
-                {hasActiveFilters && !panelOpen ? (
-                  <Layout.ActionsRow>
-                    <SearchFilterPills
-                      filters={filters}
-                      onRemove={removePill}
-                      onPillClick={() => focusSearchInput()}
-                      onClearAll={() => commitFilters({})}
-                    />
-                  </Layout.ActionsRow>
-                ) : null}
+              <div className={cn("flex min-w-0 flex-row items-center justify-between gap-2", triggerHiddenClass)}>
+                <div className="relative flex w-full items-center gap-2">
+                  {hasSearchQuery ? (
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <Button asChild variant="ghost" size="icon">
+                          <Link to="/projects/$projectSlug/search" params={{ projectSlug }} aria-label="Clear search">
+                            <Icon icon={ArrowLeftIcon} size="sm" />
+                          </Link>
+                        </Button>
+                      }
+                    >
+                      Clear search
+                    </Tooltip>
+                  ) : null}
+                  <SearchInput
+                    key={q}
+                    value={panelOpen ? draftQuery : q}
+                    onChange={(next) => {
+                      if (!panelOpen) setQ(next)
+                      setDraftQuery(next)
+                    }}
+                    onSubmit={onSearchSubmit}
+                    onFocus={openPanel}
+                    inputRef={triggerInputRef}
+                  />
+                </div>
               </div>
             </PopoverAnchor>
 
             <PopoverContent
-              align="start"
               side="bottom"
-              sideOffset={4}
-              className="w-[var(--radix-popover-trigger-width)] min-w-[600px] max-w-[900px] p-0"
-              onOpenAutoFocus={(event) => event.preventDefault()}
+              align="start"
+              sideOffset={-TRIGGER_INPUT_HEIGHT_PX}
+              style={{ width: "var(--radix-popover-trigger-width)" }}
+              className="max-w-[900px] p-0"
+              onCloseAutoFocus={(event) => event.preventDefault()}
             >
               <SearchFilterPanel
                 projectId={projectId}
                 filters={draftFilters}
                 onFiltersChange={setDraftFilters}
+                onPillRemove={removePillFromDraft}
+                query={draftQuery}
+                onQueryChange={setDraftQuery}
+                onQuerySubmit={onSearchSubmit}
+                inputRef={panelInputRef}
               />
             </PopoverContent>
           </Popover>
+
+          {hasActiveFilters ? (
+            <Layout.ActionsRow className={triggerHiddenClass}>
+              <SearchFilterPills filters={filters} />
+            </Layout.ActionsRow>
+          ) : null}
         </Layout.Actions>
 
         {!hasSearchQuery ? <SearchBlankSlate /> : null}

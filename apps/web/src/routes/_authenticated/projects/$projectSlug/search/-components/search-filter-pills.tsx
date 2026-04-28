@@ -1,19 +1,18 @@
 import type { FilterSet } from "@domain/shared"
 import { TRACE_FILTER_FIELDS } from "@domain/shared"
-import { Button, Icon } from "@repo/ui"
-import { XIcon } from "lucide-react"
+import { cn, Icon } from "@repo/ui"
+import { CornerDownLeftIcon, XIcon } from "lucide-react"
+import { type KeyboardEvent, useState } from "react"
 import { getActivePresetLabel } from "../../../../../../components/filters-builder/date-presets.ts"
 import { getInValues, getRangeValues, getTextFilterValue } from "../../../../../../components/filters-builder/utils.ts"
 
 interface SearchFilterPillsProps {
   readonly filters: FilterSet
-  readonly onRemove: (field: string) => void
-  readonly onPillClick?: () => void
-  readonly onClearAll?: () => void
+  readonly interactive?: boolean
+  readonly onRemove?: (field: string) => void
 }
 
 const FIELD_LABEL: Record<string, string> = Object.fromEntries(TRACE_FILTER_FIELDS.map((f) => [f.field, f.label]))
-
 const FIELD_TYPE: Record<string, string> = Object.fromEntries(TRACE_FILTER_FIELDS.map((f) => [f.field, f.type]))
 
 function summarizeRange(min: number | undefined, max: number | undefined): string {
@@ -38,10 +37,7 @@ function summarizeFilter(filters: FilterSet, field: string): string {
   }
 
   const type = FIELD_TYPE[field]
-  if (type === "text") {
-    const value = getTextFilterValue(filters, field)
-    return value
-  }
+  if (type === "text") return getTextFilterValue(filters, field)
   if (type === "multiSelect") {
     const values = getInValues(filters, field)
     if (values.length === 0) return ""
@@ -112,59 +108,83 @@ function buildPillEntries(filters: FilterSet): PillEntry[] {
   return entries
 }
 
-export function SearchFilterPills({ filters, onRemove, onPillClick, onClearAll }: SearchFilterPillsProps) {
+export function SearchFilterPills({ filters, interactive = false, onRemove }: SearchFilterPillsProps) {
   const entries = buildPillEntries(filters)
   if (entries.length === 0) return null
 
   return (
     <div className="flex flex-row flex-wrap items-center gap-2">
-      {entries.map((entry) => (
-        <FilterPill
-          key={entry.key}
-          label={entry.label}
-          summary={entry.summary}
-          {...(onPillClick ? { onClick: onPillClick } : {})}
-          onRemove={() => onRemove(entry.field)}
-        />
-      ))}
-      {onClearAll ? (
-        <Button variant="ghost" size="sm" onClick={onClearAll}>
-          Clear all
-        </Button>
-      ) : null}
+      {entries.map((entry) =>
+        interactive && onRemove ? (
+          <InteractivePill
+            key={entry.key}
+            label={entry.label}
+            summary={entry.summary}
+            onRemove={() => onRemove(entry.field)}
+          />
+        ) : (
+          <StaticPill key={entry.key} label={entry.label} summary={entry.summary} />
+        ),
+      )}
     </div>
   )
 }
 
-function FilterPill({
+function StaticPill({ label, summary }: { readonly label: string; readonly summary: string }) {
+  return (
+    <div className="inline-flex max-h-6 items-center gap-1 rounded-md border border-muted-foreground/10 bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+      <span className="whitespace-nowrap font-semibold">{label}</span>
+      {summary ? <span className="whitespace-nowrap opacity-70">{summary}</span> : null}
+    </div>
+  )
+}
+
+function InteractivePill({
   label,
   summary,
-  onClick,
   onRemove,
 }: {
   readonly label: string
   readonly summary: string
-  readonly onClick?: () => void
   readonly onRemove: () => void
 }) {
+  const [focused, setFocused] = useState(false)
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "Enter" || event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault()
+      onRemove()
+      return
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      const target = event.currentTarget
+      const sibling =
+        event.key === "ArrowLeft"
+          ? (target.previousElementSibling as HTMLElement | null)
+          : (target.nextElementSibling as HTMLElement | null)
+      if (sibling && sibling.tagName === "BUTTON") {
+        event.preventDefault()
+        sibling.focus()
+      }
+    }
+  }
+
   return (
-    <div className="inline-flex max-h-6 items-center rounded-md border border-muted-foreground/10 bg-muted text-xs text-muted-foreground">
-      <button
-        type="button"
-        onClick={() => onClick?.()}
-        className="flex h-full items-center gap-1 rounded-l-md py-0.5 pl-2 pr-1 hover:bg-muted/70"
-      >
-        <span className="whitespace-nowrap font-semibold">{label}</span>
-        {summary ? <span className="whitespace-nowrap opacity-70">{summary}</span> : null}
-      </button>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${label} filter`}
-        className="flex h-full items-center rounded-r-md py-0.5 pl-0.5 pr-1.5 opacity-70 hover:bg-muted/70 hover:opacity-100"
-      >
-        <Icon icon={XIcon} size="xs" />
-      </button>
-    </div>
+    <button
+      type="button"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onClick={onRemove}
+      onKeyDown={handleKeyDown}
+      aria-label={`Remove ${label} filter`}
+      className={cn(
+        "inline-flex max-h-6 items-center gap-1 rounded-md border border-muted-foreground/10 bg-muted px-2 py-0.5 text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "hover:bg-muted/70",
+      )}
+    >
+      <span className="whitespace-nowrap font-semibold">{label}</span>
+      {summary ? <span className="whitespace-nowrap opacity-70">{summary}</span> : null}
+      <Icon icon={focused ? CornerDownLeftIcon : XIcon} size="xs" />
+    </button>
   )
 }
