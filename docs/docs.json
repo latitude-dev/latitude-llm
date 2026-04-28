@@ -69,6 +69,7 @@
           "telemetry/otel-exporter",
           "telemetry/typescript",
           "telemetry/python",
+          "telemetry/claude-code",
           {
             "group": "Providers",
             "pages": [
