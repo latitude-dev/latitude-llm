@@ -173,6 +173,26 @@ const resolveTrendTimeRange = (input: {
   }
 }
 
+// Tag aggregation needs an explicit time bound to keep CH scans on `scores`
+// and `traces` partition-pruned (see aggregateTagsByIssues impl). If the
+// operator selected a range we honor it; otherwise we fall back to ~30 days,
+// which captures effectively all currently-relevant tags while still pinning
+// the scan to a small number of monthly partitions.
+const TAG_AGGREGATION_FALLBACK_DAYS = 30
+
+const resolveTagsTimeRange = (input: {
+  readonly timeRange: ScoreAnalyticsTimeRange | undefined
+  readonly now: Date
+}): ScoreAnalyticsTimeRange => {
+  if (input.timeRange?.from || input.timeRange?.to) {
+    return input.timeRange
+  }
+  const to = input.now
+  const from = new Date(to)
+  from.setUTCDate(from.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
+  return { from, to }
+}
+
 const toScoreAnalyticsTimeRange = (
   timeRange: z.infer<typeof issuesTimeRangeSchema> | undefined,
 ): ScoreAnalyticsTimeRange | undefined => {
@@ -488,6 +508,7 @@ export const listIssuesUseCase = (
       now,
     })
     const trendScaffold = buildBucketScaffold(trendTimeRange)
+    const tagsTimeRange = resolveTagsTimeRange({ timeRange: selectedTimeRange, now })
 
     const [evaluationPage, trendSeries, tagsAggregates] = yield* Effect.all([
       pageIssueIds.length === 0
@@ -519,6 +540,7 @@ export const listIssuesUseCase = (
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
             issueIds: pageIssueIds,
+            timeRange: tagsTimeRange,
           }),
     ])
 

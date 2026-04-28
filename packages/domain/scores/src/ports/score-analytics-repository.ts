@@ -191,10 +191,13 @@ export interface ScoreAnalyticsRepositoryShape {
   }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
 
   // -- Issue tag aggregation across affected traces --------------------------
+  // `timeRange` is required to keep the underlying scans partition-bounded
+  // (see implementation comment for context).
   aggregateTagsByIssues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly issueIds: readonly IssueId[]
+    readonly timeRange: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueTagsAggregate[], RepositoryError, ChSqlClient>
 

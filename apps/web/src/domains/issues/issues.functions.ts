@@ -370,6 +370,11 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         trendFrom.setUTCHours(0, 0, 0, 0)
         const trendScaffold = buildBucketScaffold({ from: trendFrom, to: trendTo })
 
+        // Match the listIssuesUseCase tag-aggregation window so the drawer
+        // and the table show a consistent set of tags for the same issue.
+        const tagsFrom = new Date(now)
+        tagsFrom.setUTCDate(tagsFrom.getUTCDate() - 30)
+
         const [occurrences, trend, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
           scoreAnalyticsRepository.aggregateByIssues({
             organizationId: orgId,
@@ -394,6 +399,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             organizationId: orgId,
             projectId,
             issueIds: [issue.id],
+            timeRange: { from: tagsFrom, to: now },
           }),
           resolveSettings({ projectId }),
         ])
