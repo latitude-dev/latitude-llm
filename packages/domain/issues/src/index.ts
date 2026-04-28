@@ -34,6 +34,7 @@ export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
+  IssueDiscoveryLockUnavailableError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
   isEligibilityError,
@@ -55,6 +56,11 @@ export {
   type UpdateIssueCentroidInput,
   updateIssueCentroid,
 } from "./helpers.ts"
+export {
+  type IssueDiscoveryLockInput,
+  IssueDiscoveryLockRepository,
+  type IssueDiscoveryLockRepositoryShape,
+} from "./ports/issue-discovery-lock-repository.ts"
 export {
   type DeleteIssueProjectionInput,
   type HybridSearchInput,
@@ -108,6 +114,12 @@ export {
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
 } from "./use-cases/embed-score-feedback.ts"
+export {
+  type FinalizeIssueDiscoveryError,
+  type FinalizeIssueDiscoveryInput,
+  type FinalizeIssueDiscoveryResult,
+  finalizeIssueDiscoveryUseCase,
+} from "./use-cases/finalize-issue-discovery.ts"
 export {
   type GeneratedIssueDetails,
   type GenerateIssueDetailsError,

@@ -18,6 +18,7 @@ export {
   checkEligibility,
   createIssueFromScore,
   embedScoreFeedback,
+  finalizeIssueDiscovery,
   hybridSearchIssues,
   rerankIssueCandidates,
   resolveMatchedIssue,

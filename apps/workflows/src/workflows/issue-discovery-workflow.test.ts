@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, mockActivities } = vi.hoisted(() => {
+const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
   const callOrder: string[] = []
   type MockRetrievalResult = {
     matchedIssueUuid: string | null
@@ -21,6 +21,14 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     action: "created" | "assigned-existing" | "already-assigned"
     issueId: string
   }
+  type MockFinalizeResult =
+    | {
+        status: "finalized"
+        assignment: MockAssignmentResult
+      }
+    | {
+        status: "lock-unavailable"
+      }
 
   const mockActivities = {
     checkEligibility: vi.fn<() => Promise<MockEligibilityResult>>(async () => {
@@ -56,11 +64,14 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         issueId: "issue-1",
       }
     }),
-    createIssueFromScore: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
-      callOrder.push("createIssueFromScore")
+    finalizeIssueDiscovery: vi.fn<() => Promise<MockFinalizeResult>>(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "finalized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     }),
     assignScoreToIssue: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
@@ -78,14 +89,20 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     }),
   }
 
+  const mockSleep = vi.fn(async (durationMs: number) => {
+    callOrder.push(`sleep:${durationMs}`)
+  })
+
   return {
     callOrder,
     mockActivities,
+    mockSleep,
   }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   proxyActivities: () => mockActivities,
+  sleep: mockSleep,
 }))
 
 import { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
@@ -141,7 +158,7 @@ describe("issueDiscoveryWorkflow", () => {
       issueId: "issue-1",
       normalizedEmbedding: [0.6, 0.8],
     })
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.finalizeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
       organizationId: "org-1",
       scoreId: "score-1",
@@ -172,7 +189,7 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.hybridSearchIssues).not.toHaveBeenCalled()
     expect(mockActivities.rerankIssueCandidates).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).not.toHaveBeenCalled()
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.finalizeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
     expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
@@ -192,11 +209,14 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.finalizeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "finalized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     })
 
@@ -216,19 +236,20 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
-      "syncIssueProjections",
+      "finalizeIssueDiscovery",
       "syncScoreAnalytics",
     ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       matchedIssueUuid: null,
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.finalizeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
@@ -241,11 +262,14 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.finalizeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("finalizeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "finalized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     })
 
@@ -265,21 +289,76 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
-      "syncIssueProjections",
+      "finalizeIssueDiscovery",
       "syncScoreAnalytics",
     ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       matchedIssueUuid: "issue-1",
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.finalizeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
+  })
+
+  it("retries finalization lock contention with workflow sleeps", async () => {
+    mockActivities.resolveMatchedIssue.mockImplementationOnce(async () => {
+      callOrder.push("resolveMatchedIssue")
+      return {
+        issueId: null,
+      }
+    })
+    mockActivities.finalizeIssueDiscovery
+      .mockImplementationOnce(async () => {
+        callOrder.push("finalizeIssueDiscovery")
+        return { status: "lock-unavailable" as const }
+      })
+      .mockImplementationOnce(async () => {
+        callOrder.push("finalizeIssueDiscovery")
+        return { status: "lock-unavailable" as const }
+      })
+      .mockImplementationOnce(async () => {
+        callOrder.push("finalizeIssueDiscovery")
+        return {
+          status: "finalized" as const,
+          assignment: {
+            action: "assigned-existing" as const,
+            issueId: "issue-1",
+          },
+        }
+      })
+
+    const result = await issueDiscoveryWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+    })
+
+    expect(result).toEqual({
+      action: "assigned-existing",
+      issueId: "issue-1",
+    })
+    expect(callOrder).toEqual([
+      "checkEligibility",
+      "embedScoreFeedback",
+      "hybridSearchIssues",
+      "rerankIssueCandidates",
+      "resolveMatchedIssue",
+      "finalizeIssueDiscovery",
+      "sleep:1000",
+      "finalizeIssueDiscovery",
+      "sleep:2000",
+      "finalizeIssueDiscovery",
+      "syncScoreAnalytics",
+    ])
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
+    expect(mockSleep).toHaveBeenCalledTimes(2)
   })
 })
