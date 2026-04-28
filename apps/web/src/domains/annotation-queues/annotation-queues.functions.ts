@@ -4,7 +4,6 @@ import {
   type AnnotationQueueSettings,
   createQueueUseCase,
   deleteQueueUseCase,
-  evictProjectFlaggersUseCase,
   FlaggerRepository,
   getQueueStrategy,
   isLlmCapableStrategy,
@@ -157,14 +156,8 @@ export const updateFlagger = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const flagger = await Effect.runPromise(
-      updateFlaggerUseCase({ projectId, slug: data.slug, enabled: data.enabled }).pipe(
+      updateFlaggerUseCase({ organizationId, projectId, slug: data.slug, enabled: data.enabled }).pipe(
         withPostgres(FlaggerRepositoryLive, client, orgId),
-        withTracing,
-      ),
-    )
-
-    await Effect.runPromise(
-      evictProjectFlaggersUseCase({ organizationId, projectId }).pipe(
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
