@@ -337,6 +337,24 @@ describe("processFlaggersUseCase", () => {
     expect(deps.enqueued).toEqual([])
   })
 
+  it("does not enqueue an LLM workflow on the sampled (no-match) path when the flagger is disabled", async () => {
+    // Frustration is LLM-only (no deterministic detector) so a benign trace
+    // takes the no-match → sampling path. With sampling=100 it would always
+    // enqueue, so a missing enqueue here proves the disabled gate fires
+    // *before* the sampling decision.
+    const trace = makeTraceDetail([{ role: "user", parts: [{ type: "text", content: "Please help me with this." }] }])
+
+    const { result, scores } = await runUseCase(trace, [makeFlagger("frustration", 100, false)], deps)
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "disabled",
+    })
+    expect(scores.size).toBe(0)
+    expect(deps.enqueued.filter((e) => e.flaggerSlug === "frustration")).toEqual([])
+  })
+
   it("drops with reason='missing-flagger' when no flagger row exists for a registered strategy", async () => {
     const trace = makeTraceDetail([jailbreakMessage])
     // Empty flagger list — the registry has jailbreaking but no provisioned row.
