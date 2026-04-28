@@ -1,4 +1,4 @@
-import { IssueDiscoveryLockRepository } from "@domain/issues"
+import { IssueDiscoveryLockRepository, IssueDiscoveryLockUnavailableError } from "@domain/issues"
 import { SqlClient, type SqlClientShape } from "@domain/shared"
 import { sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -26,9 +26,24 @@ export const IssueDiscoveryLockRepositoryLive = Layer.effect(
                   sql`select set_config('idle_in_transaction_session_timeout', ${String(FINALIZATION_IDLE_TIMEOUT_MS)}, true)`,
                 ),
               )
-              yield* transactionClient.query((db) =>
-                db.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`),
-              )
+              yield* transactionClient
+                .query((db) =>
+                  db.execute<{ acquired: boolean }>(
+                    sql`select pg_try_advisory_xact_lock(hashtextextended(${lockKey}, 0)) as acquired`,
+                  ),
+                )
+                .pipe(
+                  Effect.flatMap((result) => {
+                    if (result.rows[0]?.acquired === true) return Effect.void
+
+                    return Effect.fail(
+                      new IssueDiscoveryLockUnavailableError({
+                        projectId: input.projectId,
+                        lockKey: input.lockKey,
+                      }),
+                    )
+                  }),
+                )
 
               return yield* effect
             }),

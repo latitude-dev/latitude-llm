@@ -3,7 +3,7 @@ import type { OutboxEventWriter } from "@domain/events"
 import { ScoreRepository } from "@domain/scores"
 import { ProjectId, type RepositoryError, ScoreId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { CheckEligibilityError } from "../errors.ts"
+import type { CheckEligibilityError, IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
 import type { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import type { IssueRepository } from "../ports/issue-repository.ts"
@@ -30,6 +30,7 @@ export type FinalizeIssueDiscoveryError =
   | AssignScoreToIssueError
   | CheckEligibilityError
   | CreateIssueFromScoreError
+  | IssueDiscoveryLockUnavailableError
   | RepositoryError
 
 const hashLockComponent = (value: string) => {

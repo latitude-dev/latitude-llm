@@ -1,4 +1,4 @@
-import { proxyActivities } from "@temporalio/workflow"
+import { proxyActivities, sleep } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -49,7 +49,7 @@ export const issueDiscoveryWorkflow = async (input: {
 
   const assignment =
     matchedIssue.issueId === null
-      ? await finalizeIssueDiscovery({
+      ? await finalizeIssueDiscoveryWithLockRetry({
           organizationId: input.organizationId,
           projectId: input.projectId,
           scoreId: input.scoreId,
@@ -72,4 +72,24 @@ export const issueDiscoveryWorkflow = async (input: {
   })
 
   return { action: assignment.action, issueId: assignment.issueId }
+}
+
+const FINALIZE_LOCK_RETRY_MAX_ATTEMPTS = 18
+const FINALIZE_LOCK_RETRY_INITIAL_DELAY_MS = 1_000
+const FINALIZE_LOCK_RETRY_MAX_DELAY_MS = 30_000
+
+const getFinalizeLockRetryDelayMs = (attempt: number) =>
+  Math.min(FINALIZE_LOCK_RETRY_INITIAL_DELAY_MS * 2 ** (attempt - 1), FINALIZE_LOCK_RETRY_MAX_DELAY_MS)
+
+const finalizeIssueDiscoveryWithLockRetry = async (input: Parameters<typeof finalizeIssueDiscovery>[0]) => {
+  for (let attempt = 1; attempt <= FINALIZE_LOCK_RETRY_MAX_ATTEMPTS; attempt++) {
+    const result = await finalizeIssueDiscovery(input)
+    if (result.status === "finalized") return result.assignment
+
+    if (attempt < FINALIZE_LOCK_RETRY_MAX_ATTEMPTS) {
+      await sleep(getFinalizeLockRetryDelayMs(attempt))
+    }
+  }
+
+  throw new Error("Issue discovery finalization lock remained unavailable after workflow retries")
 }

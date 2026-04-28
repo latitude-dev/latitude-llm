@@ -85,6 +85,14 @@ export class IssueNotFoundForAssignmentError extends Data.TaggedError("IssueNotF
   readonly httpMessage = "Issue not found for assignment"
 }
 
+export class IssueDiscoveryLockUnavailableError extends Data.TaggedError("IssueDiscoveryLockUnavailableError")<{
+  readonly projectId: string
+  readonly lockKey: string
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "Issue discovery finalization lock is currently unavailable"
+}
+
 const eligibilityErrors = [
   ScoreNotFoundForDiscoveryError,
   ScoreDiscoveryOrganizationMismatchError,

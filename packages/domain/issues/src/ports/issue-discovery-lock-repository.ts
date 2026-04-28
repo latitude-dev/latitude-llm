@@ -1,5 +1,6 @@
 import type { ConcurrentSqlTransactionError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
+import type { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 
 export interface IssueDiscoveryLockInput {
   readonly projectId: ProjectId
@@ -10,7 +11,11 @@ export interface IssueDiscoveryLockRepositoryShape {
   withLock<A, E, R>(
     input: IssueDiscoveryLockInput,
     effect: Effect.Effect<A, E, R>,
-  ): Effect.Effect<A, E | RepositoryError | ConcurrentSqlTransactionError, R | SqlClient>
+  ): Effect.Effect<
+    A,
+    E | IssueDiscoveryLockUnavailableError | RepositoryError | ConcurrentSqlTransactionError,
+    R | SqlClient
+  >
 }
 
 export class IssueDiscoveryLockRepository extends ServiceMap.Service<

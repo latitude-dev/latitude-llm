@@ -34,6 +34,7 @@ export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
+  IssueDiscoveryLockUnavailableError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
   isEligibilityError,

@@ -11,6 +11,7 @@ import {
   finalizeIssueDiscoveryUseCase,
   type HybridSearchIssuesInput,
   hybridSearchIssuesUseCase,
+  IssueDiscoveryLockUnavailableError,
   isEligibilityError,
   type RerankIssueCandidatesInput,
   type ResolveMatchedIssueInput,
@@ -124,6 +125,16 @@ export const finalizeIssueDiscovery = async (input: FinalizeIssueDiscoveryInput)
       withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
       withTracing,
+      Effect.match({
+        onFailure: (error) => {
+          if (error instanceof IssueDiscoveryLockUnavailableError) {
+            return { status: "lock-unavailable" as const }
+          }
+
+          throw error
+        },
+        onSuccess: (assignment) => ({ status: "finalized" as const, assignment }),
+      }),
     ),
   )
 
