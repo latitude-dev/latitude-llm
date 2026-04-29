@@ -9,17 +9,23 @@ import { cn } from "../../../utils/cn.ts"
  *
  * `not-prose` opts the block out of Tailwind Typography so the look is the
  * same whether the shell renders inside a `prose` wrapper or standalone.
+ *
+ * `controls` overlays absolutely-positioned UI (typically a `<CodeBlockControls />`)
+ * on the top-right of the block. When set, the `<pre>` is wrapped in a
+ * `relative` container so the controls anchor correctly.
  */
 export function CodeBlockShell({
   children,
   contentType,
   className,
+  controls,
 }: {
   readonly children: ReactNode
   readonly contentType?: string | undefined
   readonly className?: string | undefined
+  readonly controls?: ReactNode | undefined
 }) {
-  return (
+  const pre = (
     <pre
       {...(contentType ? { "data-content-type": contentType } : {})}
       className={cn(
@@ -29,5 +35,14 @@ export function CodeBlockShell({
     >
       {children}
     </pre>
+  )
+
+  if (!controls) return pre
+
+  return (
+    <div className="relative">
+      {pre}
+      {controls}
+    </div>
   )
 }

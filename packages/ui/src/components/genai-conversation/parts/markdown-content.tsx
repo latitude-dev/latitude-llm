@@ -1,11 +1,12 @@
 import { isJsonBlock, LARGE_MARKDOWN_CONTENT_THRESHOLD, prettifyCompactJson } from "@repo/utils"
-import { use, useMemo, useState } from "react"
+import { isValidElement, type ReactNode, use, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { Button } from "../../button/button.tsx"
+import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { Text } from "../../text/text.tsx"
 import { TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
@@ -25,10 +26,39 @@ const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
 // `readonly` tuples (no covariance through `as const`).
 const rehypeHighlightPlugin: [typeof rehypeHighlight, { detect: false }] = [rehypeHighlight, { detect: false }]
 
+// rehype-highlight rewrites the text inside a code fence into nested
+// `<span>`s, so the original source string isn't a single child anymore. Walk
+// the React tree to recover it for copy/expand controls.
+function extractText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return ""
+  if (typeof node === "string" || typeof node === "number") return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join("")
+  if (isValidElement(node)) {
+    const props = node.props as { children?: ReactNode }
+    return extractText(props.children)
+  }
+  return ""
+}
+
+function extractCodeFenceLanguage(node: ReactNode): string | undefined {
+  if (!isValidElement(node)) return undefined
+  const className = (node.props as { className?: string }).className ?? ""
+  const match = /language-(\w+)/.exec(className)
+  return match?.[1]
+}
+
 // Route Markdown code fences through the same shell as JsonContent so whole-
 // part JSON and inline ```...``` blocks share one visual treatment.
 const markdownComponents: Components = {
-  pre: ({ children }) => <CodeBlockShell>{children}</CodeBlockShell>,
+  pre: ({ children }) => {
+    const content = extractText(children)
+    const language = extractCodeFenceLanguage(children)
+    return (
+      <CodeBlockShell controls={<CodeBlockControls content={content} {...(language ? { language } : {})} />}>
+        {children}
+      </CodeBlockShell>
+    )
+  },
 }
 export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
 

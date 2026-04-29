@@ -35,6 +35,10 @@ export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { CheckboxInput, type CheckboxInputProps } from "./components/checkbox/checkbox-input.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"
 export {
+  CodeBlockControls,
+  type CodeBlockControlsProps,
+} from "./components/code-block/code-block-controls.tsx"
+export {
   Combobox,
   ComboboxChip,
   ComboboxChips,
