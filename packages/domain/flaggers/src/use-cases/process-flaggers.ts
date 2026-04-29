@@ -1,10 +1,5 @@
 import type { QueuePublishError } from "@domain/queue"
-import {
-  type ScoreDraftClosedError,
-  type ScoreDraftUpdateConflictError,
-  ScoreRepository,
-  writeScoreUseCase,
-} from "@domain/scores"
+import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@domain/scores"
 import {
   type BadRequestError,
   deterministicSampling,
@@ -23,6 +18,7 @@ import {
   listFlaggerStrategySlugs,
 } from "../flagger-strategies/index.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
+import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
 
 export interface ProcessFlaggersInput {
   readonly organizationId: string
@@ -227,35 +223,14 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
 const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
   Effect.gen(function* () {
-    const scoreRepository = yield* ScoreRepository
-    const existing = yield* scoreRepository.findPublishedSystemAnnotationByTraceAndFeedback({
-      projectId: input.trace.projectId,
-      traceId: input.trace.traceId,
-      feedback,
-    })
-
-    if (existing !== null) {
-      return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
-    }
-
     const simulationId = input.trace.simulationId === "" ? null : input.trace.simulationId
 
-    yield* writeScoreUseCase({
+    yield* upsertFlaggerAnnotationScore({
       projectId: input.trace.projectId,
-      source: "annotation",
-      sourceId: "SYSTEM",
-      sessionId: input.trace.sessionId,
       traceId: input.trace.traceId,
-      spanId: null,
+      sessionId: input.trace.sessionId,
       simulationId,
-      issueId: null,
-      annotatorId: null,
-      value: 0,
-      passed: false,
       feedback,
-      metadata: { rawFeedback: feedback },
-      error: null,
-      draftedAt: null,
     })
 
     return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision
