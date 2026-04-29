@@ -56,6 +56,22 @@ describe("buildTraceSearchDocument", () => {
     expect(document.searchText).not.toContain("not searchable")
   })
 
+  it("excludes reasoning parts from the indexed text", async () => {
+    const document = await build([
+      textMessage("user", "user question"),
+      {
+        role: "assistant",
+        parts: [
+          { type: "reasoning", content: "secret chain of thought tokens" },
+          { type: "text", content: "final answer" },
+        ],
+      } as GenAIMessage,
+    ])
+
+    expect(document.searchText).toBe("user question final answer")
+    expect(document.searchText).not.toContain("secret chain of thought")
+  })
+
   it("keeps the beginning and end when the conversation exceeds the cap", async () => {
     const head = "h".repeat(TRACE_SEARCH_DOCUMENT_MAX_LENGTH / 2)
     const middle = "m".repeat(1_000)

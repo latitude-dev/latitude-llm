@@ -25,10 +25,6 @@ function formatGenAIPart(part: GenAIPart): string {
   switch (part.type) {
     case "text":
       return typeof part.content === "string" ? part.content : ""
-    case "reasoning": {
-      const c = part.content
-      return typeof c === "string" && c.trim() !== "" ? c : ""
-    }
     case "blob": {
       if (part.modality === "image") return "[IMAGE]"
       if (part.modality === "video") return "[VIDEO]"
@@ -42,9 +38,10 @@ function formatGenAIPart(part: GenAIPart): string {
     case "tool_call":
       return `[TOOL CALL: ${part.name}]`
     default:
-      // Skip unsearchable part types such as tool_call_response, and any
+      // Skip unsearchable part types (reasoning, tool_call_response) and any
       // unknown variants, rather than emitting placeholder tokens that only
-      // add embedding noise.
+      // add embedding noise. Reasoning content in particular can be large and
+      // has low search value — paying Voyage to embed it isn't worth it.
       return ""
   }
 }
