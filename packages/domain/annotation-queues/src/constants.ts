@@ -53,7 +53,7 @@ export const MAX_SNIPPET_EXCERPT_LENGTH = 300
 
 export const SYSTEM_QUEUE_FLAGGER_MODEL = {
   provider: "amazon-bedrock",
-  model: "amazon.nova-lite-v1:0",
+  model: "amazon.nova-2-lite-v1:0",
   temperature: 0,
 } as const
 
@@ -61,7 +61,7 @@ export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 512
 
 export const SYSTEM_QUEUE_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
-  model: "amazon.nova-lite-v1:0",
+  model: "amazon.nova-2-lite-v1:0",
   temperature: 0.2,
 } as const
 

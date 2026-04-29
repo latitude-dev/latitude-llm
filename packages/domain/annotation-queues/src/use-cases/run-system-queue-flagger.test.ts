@@ -428,7 +428,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
         Effect.fail(
           new AIError({
             message:
-              "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): No object generated: response did not match schema.",
+              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
             cause: sdkError,
           }),
         ),
@@ -471,7 +471,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
         Effect.fail(
           new AIError({
             message:
-              "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): No object generated: response did not match schema.",
+              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
             cause: new Error("No object generated: response did not match schema."),
           }),
         ),

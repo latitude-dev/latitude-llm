@@ -150,7 +150,7 @@ export function createEcs(
     }`,
   })
 
-  // Cross-region inference profiles (e.g. eu.amazon.nova-lite-v1:0) and direct foundation
+  // Cross-region inference profiles (e.g. eu.amazon.nova-2-lite-v1:0) and direct foundation
   // model IDs both require InvokeModel on inference-profile and foundation-model ARNs.
   // Read actions are required for inference profile discovery per AWS Bedrock docs.
   // @see https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-prereq.html

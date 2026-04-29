@@ -79,7 +79,7 @@ describe("flagger activities", () => {
 
   it("propagates AI errors for retry", async () => {
     const providerError = new AIError({
-      message: "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): Bedrock throttled the request.",
+      message: "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): Bedrock throttled the request.",
       cause: null,
     })
     runSystemQueueFlaggerUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
