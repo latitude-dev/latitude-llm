@@ -8,6 +8,11 @@ export const GEPA_MAX_TOKENS = 100_000_000
 
 export const GEPA_MAX_STAGNATION = 10
 
+// Number of failure trajectories sampled per reflection round. Higher values
+// give the proposer broader context per iteration at the cost of more input
+// tokens; lower values run faster but see less of the failure surface.
+export const GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE = 5
+
 export const GEPA_BATCH_SIZE = 10
 
 export const GEPA_RPC_METHODS = {
@@ -16,8 +21,10 @@ export const GEPA_RPC_METHODS = {
   propose: "gepa_propose",
 } as const
 
+// Opus 4.7 not working:
+// https://github.com/vercel/ai/issues/14773
 export const GEPA_PROPOSER_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-opus-4-7",
-  reasoning: "xhigh",
+  model: "anthropic.claude-opus-4-6-v1",
+  reasoning: "high",
 } as const

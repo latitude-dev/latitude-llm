@@ -11,14 +11,28 @@ export interface CostSnapshot {
 
 export interface BaselineSnapshot {
   readonly present: boolean
-  readonly flips: number
-  readonly newInCurrent: number
-  readonly missingFromCurrent: number
+  readonly addedFailures: number
+  readonly removedFailures: number
+  readonly changedFailures: number
+  readonly fixtureChanged: boolean
 }
 
 export interface InspectableRow {
   readonly row: FixtureRow
   readonly prediction: Prediction
+}
+
+export type FlipKind = "added" | "removed" | "changed"
+
+export interface InspectableFlip extends InspectableRow {
+  readonly kind: FlipKind
+  /**
+   * The baseline-side state for this row, when there is one. Absent for
+   * `kind: "added"` (the row did not appear in the baseline failure list).
+   * Present for `kind: "removed"` (was a baseline failure, now passing) and
+   * `kind: "changed"` (still a failure, but predicted/phase shifted).
+   */
+  readonly previous?: { predicted: boolean; phase: Prediction["phase"] }
 }
 
 /**
@@ -36,5 +50,5 @@ export interface ReportData {
   readonly cost: CostSnapshot
   readonly baseline: BaselineSnapshot
   readonly failedRows: readonly InspectableRow[]
-  readonly flippedRows: readonly InspectableRow[]
+  readonly flippedRows: readonly InspectableFlip[]
 }

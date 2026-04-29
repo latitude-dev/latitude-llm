@@ -1,21 +1,55 @@
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { classifyTraceForQueueUseCase, SYSTEM_QUEUE_FLAGGER_MODEL } from "@domain/annotation-queues"
+import { classifyTraceForQueueUseCase, type QueueStrategy, SYSTEM_QUEUE_FLAGGER_MODEL } from "@domain/annotation-queues"
 import { mapJailbreakBench } from "../mappers/jailbreakbench.ts"
 import type { FixtureRow } from "../types.ts"
 import { fixtureRowToTraceDetail } from "./adapter.ts"
 import { BENCHMARK_ORG_ID, BENCHMARK_PROJECT_ID } from "./benchmark-identity.ts"
 
+// Workspace root, resolved from this file's location. Used to compute paths
+// to source files outside the benchmark package (e.g. the strategy `.ts`
+// files the optimizer mutates). Four `..` because this file lives at
+// `tools/ai-benchmarks/src/runner/targets.ts`.
+const WORKSPACE_ROOT = fileURLToPath(new URL("../../../..", import.meta.url))
+const ANNOTATION_QUEUES_PKG = join(WORKSPACE_ROOT, "packages/domain/annotation-queues")
+const flaggerStrategyFilePath = (queueSlug: string): string =>
+  join(ANNOTATION_QUEUES_PKG, "src/flagger-strategies", `${queueSlug}.ts`)
+const ANNOTATION_QUEUES_PACKAGE_JSON = join(ANNOTATION_QUEUES_PKG, "package.json")
+
+/**
+ * Optimization config for a `ts-module` candidate (e.g. flagger strategies).
+ * The optimizer compiles the file at `strategyFilePath`, dynamic-imports it,
+ * and reads `exportName` to obtain a `QueueStrategy` shape.
+ */
+export interface TsModuleOptimizationConfig {
+  readonly candidateKind: "ts-module"
+  readonly strategyFilePath: string
+  readonly packageJsonPath: string
+  readonly queueSlug: string
+  readonly exportName: string
+}
+
 /**
  * Descriptor for one benchmark target. Adding a new target (e.g.
  * `flaggers:refusal`, later `annotator`) is a new entry here plus its mapper.
+ *
+ * `optimization` is the optimizer registry hook: targets that opt in declare
+ * what kind of candidate they expose (`ts-module` for flagger strategies,
+ * `text-template` planned for future annotators) plus the per-kind metadata
+ * the optimizer needs. `benchmark:run` ignores this field; only
+ * `benchmark:optimize` reads it.
  */
 export interface BenchmarkTarget {
   readonly id: string
   readonly mapper: () => Promise<FixtureRow[]>
   readonly mapperSourcePath: string
-  readonly classify: (row: FixtureRow) => ReturnType<typeof classifyTraceForQueueUseCase>
+  readonly classify: (
+    row: FixtureRow,
+    strategyOverride?: QueueStrategy,
+  ) => ReturnType<typeof classifyTraceForQueueUseCase>
   readonly provider: string
   readonly modelId: string
+  readonly optimization?: TsModuleOptimizationConfig
 }
 
 // Every flagger target follows the shape `flaggers:<queueSlug>`. The
@@ -28,6 +62,10 @@ interface FlaggerDef {
   readonly mapperSourcePath: string
 }
 
+// Flagger files export `<camelCaseSlug>Strategy`. e.g. `jailbreaking` →
+// `jailbreakingStrategy`, `tool-call-errors` → `toolCallErrorsStrategy`.
+const camelCaseSlug = (slug: string): string => slug.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+
 // Pricing + provenance for flagger benchmarks come from the same constant
 // the production flagger uses (`SYSTEM_QUEUE_FLAGGER_MODEL`). If production
 // swaps the model, the benchmark reports update automatically — no manual
@@ -36,16 +74,24 @@ const flaggerTarget = ({ queueSlug, mapper, mapperSourcePath }: FlaggerDef): Ben
   id: `flaggers:${queueSlug}`,
   mapper,
   mapperSourcePath,
-  classify: (row) =>
+  classify: (row, strategyOverride) =>
     classifyTraceForQueueUseCase({
       organizationId: BENCHMARK_ORG_ID,
       projectId: BENCHMARK_PROJECT_ID,
       traceId: row.id,
       queueSlug,
       trace: fixtureRowToTraceDetail(row),
+      ...(strategyOverride ? { strategyOverride } : {}),
     }),
   provider: SYSTEM_QUEUE_FLAGGER_MODEL.provider,
   modelId: SYSTEM_QUEUE_FLAGGER_MODEL.model,
+  optimization: {
+    candidateKind: "ts-module",
+    strategyFilePath: flaggerStrategyFilePath(queueSlug),
+    packageJsonPath: ANNOTATION_QUEUES_PACKAGE_JSON,
+    queueSlug,
+    exportName: `${camelCaseSlug(queueSlug)}Strategy`,
+  },
 })
 
 export const TARGETS: readonly BenchmarkTarget[] = [
