@@ -16,29 +16,35 @@ export interface Config {
 const DEFAULT_BASE_URL = "https://ingest.latitude.so"
 
 /**
- * Build a `Config` from OpenClaw's per-plugin config bucket plus environment
- * variables. The plugin SDK passes `api.pluginConfig` (the user's
- * `plugins.entries[id].config` block) to the registration function — that's
- * the primary source. Env vars are kept as a fallback so existing deployments
- * with `LATITUDE_*` already exported in the gateway environment keep working,
- * and so that `LATITUDE_DEBUG=1` can be flipped without editing openclaw.json.
+ * Build a `Config` from OpenClaw's per-plugin config bucket. The plugin SDK
+ * passes `api.pluginConfig` (the user's `plugins.entries[id].config` block)
+ * to the registration function — that's the only source.
+ *
+ * Earlier 0.0.x versions also fell back to environment variables when keys
+ * were missing from pluginConfig. That fallback is gone deliberately:
+ * OpenClaw 2026.4.25's `openclaw plugins install` runs a static-analysis
+ * security scan that flags any runtime source combining environment-variable
+ * access with a network-send call (we have `fetch(` in postTraces). With
+ * the fallback our bundled runtime tripped the scanner. The installer
+ * writes credentials to `plugins.entries[id].config` anyway, so the
+ * fallback was polish-not-feature — its removal also gives a cleaner
+ * privacy story (the runtime can't pick up credentials the operator
+ * didn't put in openclaw.json).
+ *
+ * For dev-time testing with debug logs, set `config.debug = true` in
+ * openclaw.json directly.
  */
-export function loadConfig(
-  pluginConfig: Record<string, unknown> | undefined = undefined,
-  env: NodeJS.ProcessEnv = process.env,
-): Config {
+export function loadConfig(pluginConfig: Record<string, unknown> | undefined = undefined): Config {
   const fromOpts = pluginConfig ?? {}
 
-  const apiKey = pickString(fromOpts.apiKey) ?? env.LATITUDE_API_KEY ?? ""
-  const project = pickString(fromOpts.project) ?? env.LATITUDE_PROJECT ?? ""
-  const baseUrl = pickString(fromOpts.baseUrl) ?? env.LATITUDE_BASE_URL ?? DEFAULT_BASE_URL
+  const apiKey = pickString(fromOpts.apiKey) ?? ""
+  const project = pickString(fromOpts.project) ?? ""
+  const baseUrl = pickString(fromOpts.baseUrl) ?? DEFAULT_BASE_URL
 
-  const debug = pickBool(fromOpts.debug) ?? env.LATITUDE_DEBUG === "1"
+  const debug = pickBool(fromOpts.debug) ?? false
   const allowConversationAccess = pickBool(fromOpts.allowConversationAccess) ?? false
 
-  // Allow either env var or pluginConfig to disable. Falsy `enabled: false` in
-  // pluginConfig wins; otherwise we require both api key and project.
-  const explicitlyDisabled = pickBool(fromOpts.enabled) === false || (env.LATITUDE_OPENCLAW_ENABLED ?? "1") === "0"
+  const explicitlyDisabled = pickBool(fromOpts.enabled) === false
   const hasCreds = apiKey !== "" && project !== ""
 
   return {
