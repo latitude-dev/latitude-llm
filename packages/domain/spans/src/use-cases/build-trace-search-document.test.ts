@@ -79,7 +79,7 @@ describe("buildTraceSearchDocument", () => {
 
     const document = await build([textMessage("user", `${head}${middle}${tail}`)])
 
-    expect(TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS).toBe(16_000)
+    expect(TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS).toBe(5_000)
     expect(document.searchText).toHaveLength(TRACE_SEARCH_DOCUMENT_MAX_LENGTH)
     expect(document.searchText).toContain("[... trace search omitted middle ...]")
     expect(document.searchText.startsWith("h".repeat(100))).toBe(true)

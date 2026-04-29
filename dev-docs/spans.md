@@ -92,10 +92,10 @@ Search-document construction rules:
 - preserve the order of `TraceDetail.allMessages`
 - do not prepend the root span name to the indexed text; store `root_span_name` only as separate trace-search metadata
 - format searchable non-text parts as lightweight placeholders where useful, such as `[IMAGE]`, `[FILE:<id>]`, and `[TOOL CALL: <name>]`
-- skip unsearchable/noisy parts such as tool-call responses
+- skip unsearchable/noisy parts such as tool-call responses, and reasoning parts (large, low search value, not worth the embedding cost)
 
-The trace-search document is normalized before storage and embedding. The local cap is expressed as an estimated token cap using `TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4`; the default cap is `TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 16_000`, producing `TRACE_SEARCH_DOCUMENT_MAX_LENGTH = 64_000` characters.
+The trace-search document is normalized before storage and embedding. The local cap is expressed as an estimated token cap using `TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4`; the default cap is `TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 5_000`, producing `TRACE_SEARCH_DOCUMENT_MAX_LENGTH = 20_000` characters.
 
 When the normalized conversation exceeds that cap, truncation keeps both ends of the conversation: the initial half of the cap, an omission marker, and the final half of the cap. The middle is omitted. This preserves the setup and final outcome of long conversations while keeping budget accounting predictable.
 
-Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `233.8M` tokens daily, `1.61B` weekly, and `7B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$840/org/month` worst-case ceiling before plan-specific budgets replace the defaults.
+Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
