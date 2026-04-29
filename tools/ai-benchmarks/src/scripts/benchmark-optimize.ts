@@ -4,7 +4,7 @@ import { dirname, join } from "node:path"
 import { createInterface } from "node:readline/promises"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
-import type { QueueStrategy } from "@domain/annotation-queues"
+import type { FlaggerStrategy } from "@domain/flaggers"
 import {
   hashOptimizationCandidateText,
   type OptimizationCandidate,
@@ -279,7 +279,7 @@ const main = async (): Promise<void> => {
     const row = rowsById.get(input.example.id)
     if (row === undefined) throw new Error(`evaluate: unknown row ${input.example.id}`)
 
-    let strategy: QueueStrategy
+    let strategy: FlaggerStrategy
     try {
       const loaded = await loadFlaggerCandidate({
         hash: input.candidate.hash,
@@ -852,7 +852,7 @@ const renderConversation = (row: FixtureRow): string => {
 }
 
 const evaluateRow = async (input: {
-  readonly strategy: QueueStrategy
+  readonly strategy: FlaggerStrategy
   readonly row: FixtureRow
   readonly target: BenchmarkTarget
 }): Promise<RowEvaluation> => {
@@ -885,7 +885,7 @@ const evaluateRow = async (input: {
   // purpose of letting the proposer tune the regex layer.
   const detect = input.strategy.detectDeterministically
   if (typeof detect === "function") {
-    let det: ReturnType<NonNullable<QueueStrategy["detectDeterministically"]>>
+    let det: ReturnType<NonNullable<FlaggerStrategy["detectDeterministically"]>>
     try {
       det = await callStrategyMethodWithTimeout({
         method: "detectDeterministically",

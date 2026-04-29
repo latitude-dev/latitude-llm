@@ -277,7 +277,7 @@ export const runStaticSafetyScan = (input: {
     return {
       ok: false,
       stage: "static-scan",
-      reason: `Required export "${input.exportName}" not found. The strategy file must export const ${input.exportName}: QueueStrategy = { ... }.`,
+      reason: `Required export "${input.exportName}" not found. The strategy file must export const ${input.exportName}: FlaggerStrategy = { ... }.`,
     }
   }
 
@@ -295,7 +295,7 @@ export const runStaticSafetyScan = (input: {
     return {
       ok: false,
       stage: "static-scan",
-      reason: `Export "${input.exportName}" is missing required methods: ${missing.join(", ")}. All four QueueStrategy methods (${REQUIRED_METHOD_NAMES.join(", ")}) must be present.`,
+      reason: `Export "${input.exportName}" is missing required methods: ${missing.join(", ")}. All four FlaggerStrategy methods (${REQUIRED_METHOD_NAMES.join(", ")}) must be present.`,
     }
   }
 

@@ -1,5 +1,5 @@
 import { dirname } from "node:path"
-import type { QueueStrategy } from "@domain/annotation-queues"
+import type { FlaggerStrategy } from "@domain/flaggers"
 import esbuild from "esbuild"
 import { type PackageContext, runStaticSafetyScan, type ScanReject, sniffRegexDosRisk } from "./safety-scan.ts"
 
@@ -22,7 +22,7 @@ const REQUIRED_METHOD_NAMES = [
 ] as const
 
 interface LoadedCandidate {
-  readonly shape: QueueStrategy
+  readonly shape: FlaggerStrategy
   readonly cleanup: () => Promise<void>
 }
 
@@ -148,7 +148,7 @@ const compileAndImport = async (input: LoadCandidateInput): Promise<LoadedCandid
   }
 
   return {
-    shape: shape as unknown as QueueStrategy,
+    shape: shape as unknown as FlaggerStrategy,
     cleanup: async () => {
       // v1: no-op. The data: URL has no resource to release; the module is
       // GC'd when no references remain (cache holds the only reference,

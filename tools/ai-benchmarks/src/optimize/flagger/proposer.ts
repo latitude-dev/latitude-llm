@@ -80,7 +80,7 @@ const flaggerProposerOutputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Complete new TypeScript source for the strategy file. No markdown fences. The file must export the named QueueStrategy with all four methods.",
+      "Complete new TypeScript source for the strategy file. No markdown fences. The file must export the named FlaggerStrategy with all four methods.",
     ),
 })
 
@@ -139,12 +139,12 @@ You receive:
 You must return reasoning and a complete replacement file per the output schema.
 
 The file you return MUST:
-- Export "${input.exportName}: QueueStrategy" with four methods: hasRequiredContext, detectDeterministically, buildSystemPrompt, buildPrompt.
+- Export "${input.exportName}: FlaggerStrategy" with four methods: hasRequiredContext, detectDeterministically, buildSystemPrompt, buildPrompt.
 - Compile as valid TypeScript with no markdown fences in the output.
 - Only import from modules already declared in the strategy package's package.json (workspace modules under @domain/*, @repo/*, and any npm package the package already depends on). Relative imports must stay inside the flagger-strategies directory.
 - Avoid any of: process.*, globalThis writes, eval, Function constructor, dynamic import(), require(), child_process, fs, net, vm, or any node:* builtin.
 - NEVER use catastrophic-backtracking regex. This is a HARD constraint and the single biggest risk for this strategy file. Forbidden: nested unbounded quantifiers — any \`*\` or \`+\` quantified group whose body itself contains another unbounded quantifier on overlapping characters. Patterns that ALL hang Node's regex engine on adversarial input and are auto-rejected by the static scan: (a+)+, (.*)*, (.+)*, (\\w+)+, (\\S*)*, (\\d*)*, (.|\\s)*. They block the event loop synchronously — the per-method 5s timeout cannot interrupt sync regex hangs — so a single bad pattern freezes the entire run, not just one row. If you need repeated matching, use a single quantifier on a non-overlapping character class (e.g. [a-z]+ instead of (\\w+)+), bound the inner repetition (e.g. \\w{1,32} instead of \\w+), or split the match into multiple anchored passes. The trace text is adversarial (real jailbreak attempts) — assume any pattern that CAN be exploited WILL be.
-- Keep the strategy compatible with the QueueStrategy interface contract.
+- Keep the strategy compatible with the FlaggerStrategy interface contract.
 
 You may freely:
 - Restructure helpers, rename internal functions, replace regex with a different deterministic check inside detectDeterministically, rewrite the system prompt, change the suspicious-snippet extractor, etc. — as long as the four exported methods remain present.
@@ -223,7 +223,7 @@ const buildUserPrompt = (input: FlaggerProposerInput): string => {
   const capPct = ((currentBytes / input.maxBytes) * 100).toFixed(0)
   const sections: string[] = [
     `Target: flaggers:${input.queueSlug}`,
-    `Required export: ${input.exportName} (QueueStrategy)`,
+    `Required export: ${input.exportName} (FlaggerStrategy)`,
     "",
     "Size budget:",
     `- Current file: ${currentBytes} chars (${baselinePct}% of baseline, ${capPct}% of cap).`,
