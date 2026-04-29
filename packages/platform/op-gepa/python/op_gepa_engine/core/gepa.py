@@ -51,12 +51,12 @@ class GepaOptimizeParams(Model):
     trainset: list[Example]
     valset: list[Example]
     budget: Budget
-    reflectionMinibatchSize: int | None
+    reflectionSize: int | None
 
 
 class GepaStopReason(StrEnum):
-    TIME_BUDGET = "time_budget"
-    TOKENS_BUDGET = "tokens_budget"
+    TIME = "time"
+    TOKENS = "tokens"
     STAGNATION = "stagnation"
     COMPLETED = "completed"
 
@@ -64,6 +64,16 @@ class GepaStopReason(StrEnum):
 class GepaOptimizeResult(Model):
     optimized: System
     stopReason: GepaStopReason
+    # Total main-loop iterations the engine entered. Includes iterations
+    # skipped before reaching propose_new_texts (e.g. all-perfect subsamples,
+    # merge-only iterations) — useful for diagnosing premature stagnation
+    # when the visible propose count is small.
+    totalIterations: int
+    # Number of accepted candidates added to the pool, derived from
+    # `result.num_candidates - 1` (subtract the seed). Together with
+    # `totalIterations` this lets the caller see how many iterations were
+    # silently skipped without ever calling our propose adapter.
+    proposeCalls: int
 
 
 class GepaEvaluateParams(Model):
@@ -88,29 +98,48 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
     loop = asyncio.get_running_loop()
 
     # TODO: Stoppers are checked only after a full iteration, we should stop the algorithm early on!
+    #
+    # Budget values come straight from the caller. ENGINE_MAX_* constants
+    # are FALLBACKS for when the field is absent (or 0/falsy), not ceilings —
+    # the caller (TS gepa-optimizer.ts) already supplies its own defaults via
+    # `?? GEPA_MAX_*`, and Zod validates positive integers, so a double-clamp
+    # here just silently overrides explicit caller intent (e.g. a higher
+    # `--budget-stagnation`).
     timeout_stopper = TrackingStopper(
-        GepaStopReason.TIME_BUDGET,
-        TimeoutStopCondition(timeout_seconds=min(params.budget.time or ENGINE_MAX_TIME, ENGINE_MAX_TIME)),
+        GepaStopReason.TIME,
+        TimeoutStopCondition(timeout_seconds=params.budget.time or ENGINE_MAX_TIME),
     )
-    usage_inner = UsageStopCondition(max_usage=min(params.budget.tokens or ENGINE_MAX_TOKENS, ENGINE_MAX_TOKENS))
-    usage_stopper = TrackingStopper(GepaStopReason.TOKENS_BUDGET, usage_inner)
+    usage_inner = UsageStopCondition(max_usage=params.budget.tokens or ENGINE_MAX_TOKENS)
+    usage_stopper = TrackingStopper(GepaStopReason.TOKENS, usage_inner)
     stagnation_stopper = TrackingStopper(
         GepaStopReason.STAGNATION,
-        NoImprovementStopper(max_iterations_without_improvement=params.budget.stagnation or ENGINE_MAX_STAGNATION),
+        NoImprovementStopper(
+            max_iterations_without_improvement=params.budget.stagnation or ENGINE_MAX_STAGNATION,
+        ),
     )
+    # Counts every main-loop iteration the engine enters. Always returns
+    # False so it never stops the run; placed at the end of CompositeStopper
+    # so it still gets called every loop top (any() short-circuits on the
+    # first True, but our real stoppers are checked first and only one of
+    # them ever returns True). Caller subtracts proposeCalls from this to
+    # see how many iterations were silently skipped (gepa's
+    # skip_perfect_score path, merge-only iterations, etc.).
+    iteration_counter = IterationCounter()
 
     run_optimize = partial[GEPAResult[Output, str]](
         optimize,
         seed=env.LAT_GEPA_SEED,
         adapter=LatitudeAdapter(server, usage_inner),
-        stop_callbacks=CompositeStopper(timeout_stopper, usage_stopper, stagnation_stopper, mode="any"),
+        stop_callbacks=CompositeStopper(
+            timeout_stopper, usage_stopper, stagnation_stopper, iteration_counter, mode="any"
+        ),
         seed_candidate=params.baseline,
         trainset=params.trainset,
         valset=params.valset,
         candidate_selection_strategy="pareto",
         frontier_type="instance",
         batch_sampler="epoch_shuffled",
-        reflection_minibatch_size=params.reflectionMinibatchSize or ENGINE_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+        reflection_minibatch_size=params.reflectionSize or ENGINE_DEFAULT_REFLECTION_MINIBATCH_SIZE,
         module_selector="round_robin",
         use_merge=True,
         max_merge_invocations=5,
@@ -139,7 +168,14 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         GepaStopReason.COMPLETED,
     )
 
-    return GepaOptimizeResult(optimized=result.best_candidate, stopReason=stop_reason)
+    return GepaOptimizeResult(
+        optimized=result.best_candidate,
+        stopReason=stop_reason,
+        totalIterations=iteration_counter.iterations,
+        # Subtract the seed candidate; remaining entries in the pool are
+        # the ones GEPA actually accepted from a propose_new_texts call.
+        proposeCalls=max(0, len(result.candidates) - 1),
+    )
 
 
 def register_gepa_handlers(server: RpcServer) -> None:
@@ -166,11 +202,11 @@ class TrackingStopper(StopperProtocol):
     which condition ended the run. Relies on `CompositeStopper(mode="any")`
     short-circuiting — only the first triggered stopper sets `triggered=True`."""
 
-    reason: "GepaStopReason"
+    reason: GepaStopReason
     inner: StopperProtocol
     triggered: bool
 
-    def __init__(self, reason: "GepaStopReason", inner: StopperProtocol):
+    def __init__(self, reason: GepaStopReason, inner: StopperProtocol):
         self.reason = reason
         self.inner = inner
         self.triggered = False
@@ -179,6 +215,28 @@ class TrackingStopper(StopperProtocol):
         if self.inner(gepa_state):
             self.triggered = True
             return True
+        return False
+
+
+class IterationCounter(StopperProtocol):
+    """Counts main-loop iterations without ever stopping the run.
+
+    Plugged into the `CompositeStopper` so it gets invoked at every loop
+    top alongside the real stoppers. Always returns False so the run is
+    only ended by the time / tokens / stagnation stoppers; the count
+    reflects every iteration the engine actually entered, including ones
+    skipped before propose_new_texts (gepa's `skip_perfect_score` path,
+    merge-only iterations). Subtract the accepted-candidate count from
+    this on the caller side to see silent-skip iterations.
+    """
+
+    iterations: int
+
+    def __init__(self):
+        self.iterations = 0
+
+    def __call__(self, gepa_state: GEPAState[Output, str]) -> bool:
+        self.iterations += 1
         return False
 
 

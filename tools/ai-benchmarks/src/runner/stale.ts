@@ -7,13 +7,28 @@ interface FixtureMeta {
 }
 
 /**
- * Hash the mapper source file. Any change in the mapper's code — swapping
- * sources, bumping a pinned SHA, tweaking the label rule — flips the hash,
- * which is how `benchmark:run` detects a stale fixture.
+ * Hash the mapper source files. Any change in any file — swapping sources,
+ * bumping a pinned SHA, tweaking the label rule — flips the hash, which is
+ * how `benchmark:run` detects a stale fixture.
+ *
+ * Multi-file targets (a queue-level orchestrator that delegates to per-source
+ * mappers in a subfolder) pass every file the fixture depends on. Files are
+ * hashed in sorted-path order so the digest is independent of array order.
  */
-export async function hashMapperFile(mapperAbsolutePath: string): Promise<string> {
-  const contents = await readFile(mapperAbsolutePath)
-  return createHash("sha256").update(contents).digest("hex")
+export async function hashMapperFiles(mapperAbsolutePaths: readonly string[]): Promise<string> {
+  if (mapperAbsolutePaths.length === 0) {
+    throw new Error("hashMapperFiles requires at least one path")
+  }
+  const sorted = [...mapperAbsolutePaths].sort()
+  const hash = createHash("sha256")
+  for (const path of sorted) {
+    const contents = await readFile(path)
+    hash.update(path)
+    hash.update("\0")
+    hash.update(contents)
+    hash.update("\0")
+  }
+  return hash.digest("hex")
 }
 
 export async function writeFixtureMeta(metaPath: string, meta: FixtureMeta): Promise<void> {

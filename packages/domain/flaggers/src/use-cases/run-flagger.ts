@@ -97,9 +97,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .generate({
       ...FLAGGER_MODEL,
       maxTokens: FLAGGER_MAX_TOKENS,
-      // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
       system: strategy.buildSystemPrompt!(input.trace),
-      // biome-ignore lint/style/noNonNullAssertion: isLlmCapableStrategy guarantees these are defined
       prompt: strategy.buildPrompt!(input.trace),
       schema: flaggerOutputSchema,
       telemetry: {

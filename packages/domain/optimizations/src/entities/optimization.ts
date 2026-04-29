@@ -8,7 +8,7 @@ export const optimizationBudgetSchema = z.object({
 
 export type OptimizationBudget = z.infer<typeof optimizationBudgetSchema>
 
-export const optimizationStopReasonSchema = z.enum(["time_budget", "tokens_budget", "stagnation", "completed"])
+export const optimizationStopReasonSchema = z.enum(["time", "tokens", "stagnation", "completed"])
 
 export type OptimizationStopReason = z.infer<typeof optimizationStopReasonSchema>
 
@@ -56,6 +56,20 @@ export type OptimizationEvaluationResult = z.infer<typeof optimizationEvaluation
 export const optimizationResultSchema = z.object({
   optimizedCandidate: optimizationCandidateSchema,
   stopReason: optimizationStopReasonSchema.optional(),
+  /**
+   * Total main-loop iterations the optimizer engine actually entered.
+   * For GEPA this includes iterations skipped before any propose call
+   * (e.g. all-perfect subsamples under `skip_perfect_score`, merge-only
+   * iterations) — useful for diagnosing premature stagnation when the
+   * visible propose count is small.
+   */
+  totalIterations: z.number().int().nonnegative().optional(),
+  /**
+   * Number of accepted candidates produced from a propose call. Together
+   * with `totalIterations` this lets the caller compute silent-skip
+   * iterations (totalIterations - proposeCalls).
+   */
+  proposeCalls: z.number().int().nonnegative().optional(),
 })
 
 export type OptimizationResult = z.infer<typeof optimizationResultSchema>

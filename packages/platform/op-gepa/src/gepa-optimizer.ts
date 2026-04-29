@@ -11,7 +11,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { GepaClient } from "./client.ts"
 import {
-  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+  GEPA_DEFAULT_REFLECTION_SIZE,
   GEPA_MAX_STAGNATION,
   GEPA_MAX_TIME,
   GEPA_MAX_TOKENS,
@@ -48,14 +48,16 @@ const optimizeParamsSchema = z.object({
     tokens: z.number().int().positive().optional(),
     stagnation: z.number().int().positive().optional(),
   }),
-  reflectionMinibatchSize: z.number().int().positive(),
+  reflectionSize: z.number().int().positive(),
 })
 
-const stopReasonSchema = z.enum(["time_budget", "tokens_budget", "stagnation", "completed"])
+const stopReasonSchema = z.enum(["time", "tokens", "stagnation", "completed"])
 
 const optimizeResultSchema = z.object({
   optimized: systemSchema,
   stopReason: stopReasonSchema,
+  totalIterations: z.number().int().nonnegative(),
+  proposeCalls: z.number().int().nonnegative(),
 })
 
 const evaluateParamsSchema = z.object({
@@ -239,7 +241,7 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
               tokens: input.budget?.tokens ?? GEPA_MAX_TOKENS,
               stagnation: input.budget?.stagnation ?? GEPA_MAX_STAGNATION,
             },
-            reflectionMinibatchSize: input.reflectionMinibatchSize ?? GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+            reflectionSize: input.reflectionSize ?? GEPA_DEFAULT_REFLECTION_SIZE,
           },
           optimizeResultSchema,
         ),
@@ -264,6 +266,8 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
         componentId: input.baselineCandidate.componentId,
       }),
       stopReason: result.stopReason,
+      totalIterations: result.totalIterations,
+      proposeCalls: result.proposeCalls,
     }
   }),
 } satisfies OptimizerShape)

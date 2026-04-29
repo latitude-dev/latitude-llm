@@ -1,6 +1,6 @@
 import { Box, Text } from "ink"
 import { useEffect, useState } from "react"
-import { formatCostUsd, formatPercent } from "../../ui/format.ts"
+import { formatCostUsd } from "../../ui/format.ts"
 import type { IterationRecord } from "../audit-trail.ts"
 import type { CostBreakdown } from "../cost-meter.ts"
 
@@ -16,6 +16,14 @@ import type { CostBreakdown } from "../cost-meter.ts"
  * recorded — reduces the up-front empty-table noise on cold starts.
  */
 
+export type BenchmarkingPhase =
+  | { readonly kind: "fetching-fixture" }
+  | { readonly kind: "checking-freshness" }
+  | { readonly kind: "loading-fixture" }
+  | { readonly kind: "classifying"; readonly rowsDone: number; readonly rowsTotal: number }
+  | { readonly kind: "computing-metrics" }
+  | { readonly kind: "writing-baseline" }
+
 export type Activity =
   | { readonly kind: "starting" }
   | {
@@ -29,7 +37,11 @@ export type Activity =
       readonly phase: "preparing" | "calling" | "received" | "hashing"
       readonly attemptStartedAtMs: number
     }
-  | { readonly kind: "measuring"; readonly label: string; readonly rowsDone: number; readonly rowsTotal: number }
+  | {
+      readonly kind: "benchmarking"
+      readonly label: string
+      readonly phase: BenchmarkingPhase
+    }
   | { readonly kind: "done"; readonly message: string }
 
 export interface RecentEvent {
@@ -172,13 +184,13 @@ const ActivityLine = ({
       </Box>
     )
   }
-  if (activity.kind === "measuring") {
+  if (activity.kind === "benchmarking") {
     return (
       <Box>
-        <Text color="green">{spinner} </Text>
-        <Text>
-          final measurement ({activity.label}) · {activity.rowsDone}/{activity.rowsTotal}
-        </Text>
+        <Text color="cyan">{spinner} </Text>
+        <Text>{activity.label}</Text>
+        <Text> · </Text>
+        <Text color="gray">{formatBenchmarkingPhase(activity.phase)}</Text>
       </Box>
     )
   }
@@ -188,6 +200,23 @@ const ActivityLine = ({
       <Text>{activity.message}</Text>
     </Box>
   )
+}
+
+const formatBenchmarkingPhase = (phase: BenchmarkingPhase): string => {
+  switch (phase.kind) {
+    case "fetching-fixture":
+      return "fetching dataset (first run for this target)"
+    case "checking-freshness":
+      return "checking fixture freshness"
+    case "loading-fixture":
+      return "loading fixture"
+    case "classifying":
+      return `classified ${phase.rowsDone}/${phase.rowsTotal} rows`
+    case "computing-metrics":
+      return "computing metrics"
+    case "writing-baseline":
+      return "writing baseline"
+  }
 }
 
 const IterationTable = ({ rows }: { readonly rows: readonly IterationRecord[] }) => (
@@ -254,7 +283,3 @@ const formatLocalTime = (atMs: number): string => {
   const d = new Date(atMs)
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`
 }
-
-// Minimal usage of formatPercent to keep import; iteration-row column may
-// surface train F1 in a follow-up.
-void formatPercent

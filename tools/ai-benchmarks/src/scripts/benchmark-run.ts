@@ -1,34 +1,12 @@
-import { readFile, stat } from "node:fs/promises"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
-import { Effect } from "effect"
 import { render } from "ink"
 import { Listr } from "listr2"
 import { createElement } from "react"
-import {
-  type Baseline,
-  type BaselineDiff,
-  diffAgainstBaseline,
-  hashRowIds,
-  readBaseline,
-  selectFailures,
-  writeBaseline,
-} from "../runner/baseline.ts"
-import { computeMetrics, computeMetricsBy, countByPhase, type Prediction } from "../runner/metrics.ts"
-import { computeCost } from "../runner/pricing.ts"
-import { runTarget } from "../runner/run.ts"
-import { stratifiedSample } from "../runner/sample.ts"
-import { checkFixtureFreshness, hashMapperFile } from "../runner/stale.ts"
+import { runBenchmark } from "../runner/benchmark.ts"
 import { type BenchmarkTarget, resolveTargets, targetPath } from "../runner/targets.ts"
-import { type FixtureRow, fixtureRowSchema } from "../types.ts"
 import { formatCostUsd, formatPercent } from "../ui/format.ts"
 import { Report } from "../ui/Report.tsx"
-import type { InspectableFlip, InspectableRow, ReportData } from "../ui/types.ts"
-
-const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..")
-const FIXTURES_ROOT = join(PKG_ROOT, "fixtures")
-const BASELINES_ROOT = join(PKG_ROOT, "baselines")
+import type { ReportData } from "../ui/types.ts"
 
 interface RunOneOptions {
   readonly sample: number | undefined
@@ -39,7 +17,6 @@ interface RunOneOptions {
 }
 
 interface ListrCtx {
-  rows?: readonly FixtureRow[]
   report?: ReportData
 }
 
@@ -51,218 +28,58 @@ function parseCsv(value: string | undefined): string[] | undefined {
     .filter((s) => s.length > 0)
 }
 
-async function loadFixture(target: BenchmarkTarget): Promise<readonly FixtureRow[]> {
-  const path = join(FIXTURES_ROOT, `${targetPath(target.id)}.jsonl`)
-  try {
-    await stat(path)
-  } catch {
-    throw new Error(
-      `fixture missing for ${target.id}: ${path}\nrun: pnpm --filter @tools/ai-benchmarks benchmark:fetch ${target.id}`,
-    )
-  }
-  const raw = await readFile(path, "utf8")
-  const lines = raw.split("\n").filter((l) => l.trim().length > 0)
-  return lines.map((line, i) => {
-    const parsed = fixtureRowSchema.safeParse(JSON.parse(line))
-    if (!parsed.success) {
-      throw new Error(`fixture ${target.id} line ${i + 1} failed schema: ${parsed.error.message}`)
-    }
-    return parsed.data
-  })
-}
-
-async function enforceFreshness(target: BenchmarkTarget, staleOk: boolean): Promise<void> {
-  const metaPath = join(FIXTURES_ROOT, `${targetPath(target.id)}.meta.json`)
-  const currentHash = await hashMapperFile(target.mapperSourcePath)
-  const check = await checkFixtureFreshness(metaPath, currentHash)
-  if (check.status === "fresh") return
-  if (staleOk) return // warning was enough; listr2 task title already shows status
-  const hint = `run: pnpm --filter @tools/ai-benchmarks benchmark:fetch ${target.id}`
-  if (check.status === "no-meta") {
-    throw new Error(`[${target.id}] no fixture meta found. ${hint}  (or pass --stale-ok)`)
-  }
-  throw new Error(
-    `[${target.id}] fixture is stale vs current mapper (recorded ${check.recordedHash?.slice(0, 12)} ≠ current ${check.expectedHash.slice(0, 12)}). ${hint}  (or pass --stale-ok)`,
-  )
-}
-
 /**
- * Drive one target's benchmark via a listr2 task tree. Each task updates its
- * own title so the terminal shows progress. On the final task the aggregated
- * ReportData is attached to ctx for the caller to hand off to the ink TUI.
+ * Drive one target's benchmark via a single listr2 task that subscribes to
+ * runBenchmark's onPhase callback and updates its title as work progresses.
+ * The aggregated ReportData lands on ctx for the caller to hand off to ink.
  */
 function makeListr(target: BenchmarkTarget, options: RunOneOptions): Listr<ListrCtx> {
   return new Listr<ListrCtx>(
     [
       {
-        title: `[${target.id}] check fixture freshness`,
-        task: async () => {
-          await enforceFreshness(target, options.staleOk)
-        },
-      },
-      {
-        title: `[${target.id}] load fixture`,
+        title: `[${target.id}] starting`,
         task: async (ctx, task) => {
-          const full = await loadFixture(target)
-          const rows = options.sample !== undefined ? stratifiedSample(full, options.sample, options.seed) : full
-          ctx.rows = rows
-          task.title = `[${target.id}] loaded ${rows.length} rows${options.sample !== undefined ? ` (sample of ${full.length})` : ""}`
-        },
-      },
-      {
-        title: `[${target.id}] classify rows`,
-        task: async (ctx, task) => {
-          if (ctx.rows === undefined) throw new Error("rows missing — previous task failed silently?")
-          const rows = ctx.rows
-          const total = rows.length
-          const runResult = await Effect.runPromise(
-            runTarget(target, rows, {
-              ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
-              onProgress: (done) => {
-                task.title = `[${target.id}] classified ${done}/${total} rows`
-              },
-            }),
-          )
-
-          const predictions = runResult.outcomes.map((o) => o.prediction)
-          const metrics = computeMetrics(predictions)
-          const perTactic = computeMetricsBy(predictions, (p) => {
-            const tacticLike = p.tags.find((t) =>
-              ["persona-aim", "fictional-framing", "adversarial-suffix", "jbb-benign", "jbb-harmful-direct"].includes(
-                t,
-              ),
-            )
-            return (tacticLike ?? "other") as string
-          })
-          const perPhase = countByPhase(predictions)
-          const cost = computeCost(target.provider, target.modelId, runResult.usage)
-
-          const sampled = options.sample !== undefined
-          const baselinePath = join(BASELINES_ROOT, `${targetPath(target.id)}.json`)
-          const currentFailures = selectFailures(predictions)
-          const currentRowIdsHash = hashRowIds(predictions.map((p) => p.id))
-          let baselinePresent = false
-          let diff: BaselineDiff | null = null
-
-          if (!sampled) {
-            const baseline = await readBaseline(baselinePath)
-            if (baseline !== null) {
-              baselinePresent = true
-              diff = diffAgainstBaseline({
-                currentFailures,
-                currentFixtureSize: total,
-                currentRowIdsHash,
-                baseline,
-              })
-            }
-            if (options.updateBaseline) {
-              const next: Baseline = {
-                runAt: new Date().toISOString(),
-                metrics,
-                perTactic,
-                perPhase,
-                fixtureSize: total,
-                rowIdsHash: currentRowIdsHash,
-                failures: currentFailures,
+          ctx.report = await runBenchmark(target, {
+            ...options,
+            onPhase: (phase) => {
+              switch (phase.kind) {
+                case "fetching-fixture":
+                  task.title = `[${target.id}] fetching dataset (no local fixture yet)`
+                  break
+                case "fixture-fetched":
+                  task.title = `[${target.id}] fetched ${phase.rowsTotal} rows`
+                  break
+                case "checking-freshness":
+                  task.title = `[${target.id}] checking fixture freshness`
+                  break
+                case "loading-fixture":
+                  task.title = `[${target.id}] loading fixture`
+                  break
+                case "fixture-loaded":
+                  task.title = `[${target.id}] loaded ${phase.rowsTotal} rows${phase.sampledFrom !== null ? ` (sample of ${phase.sampledFrom})` : ""}`
+                  break
+                case "classifying":
+                  task.title = `[${target.id}] classified ${phase.rowsDone}/${phase.rowsTotal} rows`
+                  break
+                case "computing-metrics":
+                  task.title = `[${target.id}] computing metrics`
+                  break
+                case "writing-baseline":
+                  task.title = `[${target.id}] writing baseline`
+                  break
+                case "done": {
+                  const { metrics, totalRows, cost } = phase.report
+                  task.title = `[${target.id}] classified ${totalRows}/${totalRows} rows — f1=${formatPercent(metrics.f1)} · ${formatCostUsd(cost.totalUsd)}`
+                  break
+                }
               }
-              await writeBaseline(baselinePath, next)
-            }
-          }
-
-          const rowsById = new Map(rows.map((r) => [r.id, r]))
-          const predictionsById = new Map(predictions.map((p) => [p.id, p]))
-
-          const failedRows: InspectableRow[] = predictions
-            .filter((p) => p.predicted !== p.expected)
-            .map((p) => {
-              const row = rowsById.get(p.id)
-              if (row === undefined) throw new Error(`missing row ${p.id}`)
-              return { row, prediction: p }
-            })
-
-          const flippedRows: InspectableFlip[] = diff === null ? [] : buildFlips(diff, rowsById, predictionsById)
-
-          ctx.report = {
-            targetId: target.id,
-            sampled,
-            sampleSize: options.sample,
-            totalRows: total,
-            metrics,
-            perTactic,
-            perPhase,
-            cost,
-            baseline: {
-              present: baselinePresent,
-              addedFailures: diff?.addedFailures.length ?? 0,
-              removedFailures: diff?.removedFailures.length ?? 0,
-              changedFailures: diff?.changedFailures.length ?? 0,
-              fixtureChanged: diff?.fixtureChanged ?? false,
             },
-            failedRows,
-            flippedRows,
-          }
-
-          task.title = `[${target.id}] classified ${total}/${total} rows — f1=${formatPercent(metrics.f1)} · ${formatCostUsd(cost.totalUsd)}`
+          })
         },
       },
     ],
     { concurrent: false, rendererOptions: { collapseSubtasks: false } },
   )
-}
-
-/**
- * Order the diff into a single browseable list for the TUI flip view.
- * Added (regressions) first, then changed, then removed (fixes), so a
- * reviewer reads the worst news at the top.
- */
-function buildFlips(
-  diff: BaselineDiff,
-  rowsById: ReadonlyMap<string, FixtureRow>,
-  predictionsById: ReadonlyMap<string, Prediction>,
-): InspectableFlip[] {
-  const pickRow = (id: string): FixtureRow => {
-    const row = rowsById.get(id)
-    if (row === undefined) throw new Error(`missing row ${id}`)
-    return row
-  }
-  const pickPrediction = (id: string) => {
-    const prediction = predictionsById.get(id)
-    if (prediction === undefined) throw new Error(`missing prediction ${id}`)
-    return prediction
-  }
-
-  const added: InspectableFlip[] = diff.addedFailures.map((f) => ({
-    kind: "added",
-    row: pickRow(f.id),
-    prediction: pickPrediction(f.id),
-  }))
-
-  const changed: InspectableFlip[] = diff.changedFailures.map((c) => ({
-    kind: "changed",
-    row: pickRow(c.id),
-    prediction: pickPrediction(c.id),
-    previous: { predicted: c.was.predicted, phase: c.was.phase },
-  }))
-
-  // `removed` rows are baseline failures that no longer fail in the current
-  // run. Their current prediction is a passing one; we still surface it so
-  // the reviewer sees the new (correct) phase next to the baseline state.
-  // Skip rows whose IDs left the fixture entirely — `diffAgainstBaseline`
-  // pushes those into `removedFailures` too (any baseline ID absent from
-  // the current run's failure set), but they have no current row or
-  // prediction to display, so attempting to look them up would crash. The
-  // `fixtureChanged` banner already accounts for this case at the report
-  // level.
-  const removed: InspectableFlip[] = diff.removedFailures
-    .filter((f) => rowsById.has(f.id) && predictionsById.has(f.id))
-    .map((f) => ({
-      kind: "removed",
-      row: pickRow(f.id),
-      prediction: pickPrediction(f.id),
-      previous: { predicted: f.predicted, phase: f.phase },
-    }))
-
-  return [...added, ...changed, ...removed]
 }
 
 /**
