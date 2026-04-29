@@ -163,6 +163,7 @@ export class SpanBuilder {
       endMs: undefined,
       attrs: {
         ...flattenCtx(ctx),
+        ...latitudeAttrs(ctx),
         "openclaw.run.id": runId,
         // before_agent_start payload — gated content fields go via `gated.*`
         // attribute keys so the OTLP layer can scrub them without a parallel
@@ -235,7 +236,7 @@ export class SpanBuilder {
     })
   }
 
-  onModelCallStarted(evt: OpenClawModelCallStartedEvent, _ctx: OpenClawAgentContext): void {
+  onModelCallStarted(evt: OpenClawModelCallStartedEvent, ctx: OpenClawAgentContext): void {
     const run = this.runs.get(evt.runId)
     if (!run) return
     const span: SpanRecord = {
@@ -246,6 +247,7 @@ export class SpanBuilder {
       startMs: Date.now(),
       endMs: undefined,
       attrs: {
+        ...latitudeAttrs(ctx),
         "openclaw.run.id": evt.runId,
         "openclaw.call.id": evt.callId,
         "gen_ai.system": evt.provider,
@@ -293,7 +295,7 @@ export class SpanBuilder {
    * The plugin-side handler enforces a void return; this method's signature
    * already returns `void`.
    */
-  onBeforeToolCall(evt: OpenClawBeforeToolCallEvent, _ctx: OpenClawAgentContext): void {
+  onBeforeToolCall(evt: OpenClawBeforeToolCallEvent, ctx: OpenClawAgentContext): void {
     if (!evt.runId) return
     const run = this.runs.get(evt.runId)
     if (!run) return
@@ -307,6 +309,7 @@ export class SpanBuilder {
       startMs: Date.now(),
       endMs: undefined,
       attrs: {
+        ...latitudeAttrs(ctx),
         "openclaw.run.id": evt.runId,
         "gen_ai.tool.name": evt.toolName,
         "gen_ai.tool.call.id": toolCallId,
@@ -377,6 +380,7 @@ export class SpanBuilder {
       startMs: Date.now(),
       endMs: undefined,
       attrs: {
+        ...latitudeAttrs(ctx),
         "openclaw.run.id": runId,
         "openclaw.compaction.message_count.before": evt.messageCount,
         "openclaw.compaction.session_file": evt.sessionFile,
@@ -421,6 +425,12 @@ export class SpanBuilder {
       startMs: Date.now(),
       endMs: undefined,
       attrs: {
+        // The subagent span lives inside the parent's trace — tags +
+        // metadata reflect the parent's ctx (which agent/channel/trigger
+        // is doing the spawning), not the child's. The child's `agent` span
+        // (opened later by the child run's before_agent_start) carries
+        // its OWN ctx.
+        ...latitudeAttrs(ctx),
         "openclaw.parent.run.id": parentRunId,
         "openclaw.run.id": evt.runId,
         "openclaw.subagent.child_session_key": evt.childSessionKey,
@@ -602,8 +612,53 @@ function flattenCtx(ctx: OpenClawAgentContext): AttrInput {
     "openclaw.message.provider": ctx.messageProvider,
     "openclaw.trigger": ctx.trigger,
     "openclaw.channel.id": ctx.channelId,
+    "openclaw.cron.job.id": ctx.jobId,
     "openclaw.model.provider.id": ctx.modelProviderId,
     "openclaw.model.id": ctx.modelId,
+  }
+}
+
+/**
+ * Build `latitude.tags` and `latitude.metadata` attrs from the hook context.
+ * The OTLP encoder JSON-stringifies arrays/objects, which is the encoding
+ * Latitude's resolver expects:
+ *
+ *   - `latitude.tags` is a JSON-encoded string array (`fromJsonStringArray`
+ *     in domain/spans/src/otlp/resolvers/enrichment.ts).
+ *   - `latitude.metadata` is a JSON-encoded string object (`fromJsonString`).
+ *
+ * Tags = the agent id, the channel id, and the trigger. When trigger is
+ * `cron`, the tag becomes `cron:<jobId>` so dashboards can pivot on the
+ * specific cron job. Each tag is conditionally included so absent ctx
+ * fields don't produce empty entries.
+ *
+ * Metadata = every ctx field that's set, namespaced under `openclaw.*` so
+ * it can't collide with metadata keys other plugins might emit.
+ */
+function latitudeAttrs(ctx: OpenClawAgentContext): AttrInput {
+  const tags: string[] = []
+  if (ctx.agentId) tags.push(ctx.agentId)
+  if (ctx.channelId) tags.push(ctx.channelId)
+  if (ctx.trigger) {
+    tags.push(ctx.trigger === "cron" && ctx.jobId ? `cron:${ctx.jobId}` : ctx.trigger)
+  }
+
+  const metadata: Record<string, string> = {}
+  if (ctx.runId) metadata["openclaw.run.id"] = ctx.runId
+  if (ctx.sessionId) metadata["openclaw.session.id"] = ctx.sessionId
+  if (ctx.sessionKey) metadata["openclaw.session.key"] = ctx.sessionKey
+  if (ctx.agentId) metadata["openclaw.agent.id"] = ctx.agentId
+  if (ctx.workspaceDir) metadata["openclaw.workspace.dir"] = ctx.workspaceDir
+  if (ctx.channelId) metadata["openclaw.channel.id"] = ctx.channelId
+  if (ctx.messageProvider) metadata["openclaw.message.provider"] = ctx.messageProvider
+  if (ctx.trigger) metadata["openclaw.trigger"] = ctx.trigger
+  if (ctx.jobId) metadata["openclaw.cron.job.id"] = ctx.jobId
+  if (ctx.modelProviderId) metadata["openclaw.model.provider.id"] = ctx.modelProviderId
+  if (ctx.modelId) metadata["openclaw.model.id"] = ctx.modelId
+
+  return {
+    "latitude.tags": tags.length > 0 ? tags : undefined,
+    "latitude.metadata": Object.keys(metadata).length > 0 ? metadata : undefined,
   }
 }
 

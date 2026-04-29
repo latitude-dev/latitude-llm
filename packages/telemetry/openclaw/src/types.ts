@@ -58,6 +58,12 @@ export interface OpenClawAgentContext {
   messageProvider?: string
   trigger?: string
   channelId?: string
+  /**
+   * Set only when `trigger === "cron"`. The cron job's id from the user's
+   * `~/.openclaw/openclaw.json` cron config (e.g. `"morning-briefing"`).
+   * OpenClaw's `buildAgentHookContext` spreads this conditionally.
+   */
+  jobId?: string
   trace?: unknown
 }
 

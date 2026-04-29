@@ -173,4 +173,27 @@ describe("buildOtlpRequest", () => {
     const traceIds = new Set(spans.map((s) => s.traceId))
     expect(traceIds.size).toBe(1)
   })
+
+  it("encodes latitude.tags as a JSON-stringified string array (resolver contract)", () => {
+    // The resolver in domain/spans/src/otlp/resolvers/enrichment.ts reads
+    // `latitude.tags` via `fromJsonStringArray` — that helper expects a
+    // `stringValue` containing JSON like `'["a","b"]'`. Verify the OTLP
+    // encoder produces that shape (rather than the OTel-native `arrayValue`).
+    const result = makeAgentResult()
+    const agent = result.spans[0]
+    if (!agent) throw new Error("expected agent span")
+    agent.attrs["latitude.tags"] = ["personal", "telegram", "user"]
+    agent.attrs["latitude.metadata"] = { "openclaw.agent.id": "personal" }
+
+    const req = buildOtlpRequest(result, { allowConversationAccess: true })
+    const encoded = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+    const tagsAttr = encoded?.attributes.find((a) => a.key === "latitude.tags")
+    const metaAttr = encoded?.attributes.find((a) => a.key === "latitude.metadata")
+
+    // Both must be `stringValue` containing JSON.
+    expect(tagsAttr?.value.stringValue).toBe('["personal","telegram","user"]')
+    expect(metaAttr?.value.stringValue).toBe('{"openclaw.agent.id":"personal"}')
+    // And NOT the OTel `arrayValue` form — the resolver wouldn't pick that up.
+    expect(tagsAttr?.value.arrayValue).toBeUndefined()
+  })
 })

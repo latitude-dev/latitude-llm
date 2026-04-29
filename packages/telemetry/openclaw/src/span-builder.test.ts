@@ -83,6 +83,102 @@ function findAllSpans(result: BuildResult | undefined, name: string): SpanRecord
   return result?.spans.filter((s) => s.name === name) ?? []
 }
 
+describe("SpanBuilder latitude.tags and latitude.metadata", () => {
+  it("emits latitude.tags = [agentId, channelId, trigger] on the agent span", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart({}, ctx({ agentId: "personal", channelId: "telegram", trigger: "user" }))
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx({ trigger: "user" }))
+    const agent = findSpan(result, "agent")
+    expect(agent?.attrs["latitude.tags"]).toEqual(["personal", "telegram", "user"])
+  })
+
+  it("formats cron triggers as `cron:<jobId>`", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart(
+      {},
+      ctx({ agentId: "personal", channelId: "telegram", trigger: "cron", jobId: "morning-briefing" }),
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx({ trigger: "cron", jobId: "morning-briefing" }))
+    const agent = findSpan(result, "agent")
+    expect(agent?.attrs["latitude.tags"]).toEqual(["personal", "telegram", "cron:morning-briefing"])
+  })
+
+  it("falls back to bare `cron` when trigger is cron but jobId is missing", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart({}, ctx({ trigger: "cron" }))
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx({ trigger: "cron" }))
+    const agent = findSpan(result, "agent")
+    const tags = agent?.attrs["latitude.tags"] as string[]
+    expect(tags).toContain("cron")
+    expect(tags).not.toContain("cron:undefined")
+  })
+
+  it("omits latitude.tags entirely when ctx has no agentId/channelId/trigger", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart(
+      {},
+      // Strip out the tag-source fields. We still need runId to open a run.
+      { runId: "run-1", sessionId: "s-1" },
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, { runId: "run-1" })
+    const agent = findSpan(result, "agent")
+    expect(agent?.attrs["latitude.tags"]).toBeUndefined()
+  })
+
+  it("emits latitude.metadata as a flat string-map of openclaw.* fields", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart(
+      {},
+      ctx({
+        agentId: "personal",
+        channelId: "telegram",
+        trigger: "cron",
+        jobId: "morning-briefing",
+        messageProvider: "telegram",
+        modelProviderId: "openai-codex",
+        modelId: "gpt-5.4",
+        workspaceDir: "/home/sans/.openclaw/workspaces/personal",
+      }),
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx())
+    const agent = findSpan(result, "agent")
+    const meta = agent?.attrs["latitude.metadata"] as Record<string, string>
+    expect(meta["openclaw.run.id"]).toBe("run-1")
+    expect(meta["openclaw.session.id"]).toBe("s-1")
+    expect(meta["openclaw.agent.id"]).toBe("personal")
+    expect(meta["openclaw.channel.id"]).toBe("telegram")
+    expect(meta["openclaw.trigger"]).toBe("cron")
+    expect(meta["openclaw.cron.job.id"]).toBe("morning-briefing")
+    expect(meta["openclaw.message.provider"]).toBe("telegram")
+    expect(meta["openclaw.model.provider.id"]).toBe("openai-codex")
+    expect(meta["openclaw.model.id"]).toBe("gpt-5.4")
+    expect(meta["openclaw.workspace.dir"]).toBe("/home/sans/.openclaw/workspaces/personal")
+  })
+
+  it("propagates tags + metadata to model_call and tool_call spans (every span gets them)", () => {
+    const b = new SpanBuilder()
+    const fullCtx = ctx({ agentId: "personal", channelId: "telegram", trigger: "user" })
+    b.onBeforeAgentStart({}, fullCtx)
+    b.onModelCallStarted({ runId: "run-1", callId: "A", provider: "openai", model: "gpt-5" }, fullCtx)
+    b.onModelCallEnded(
+      { runId: "run-1", callId: "A", provider: "openai", model: "gpt-5", outcome: "completed" },
+      fullCtx,
+    )
+    b.onBeforeToolCall({ toolName: "grep", params: { q: "x" }, runId: "run-1", toolCallId: "tc-1" }, fullCtx)
+    b.onAfterToolCall(
+      { toolName: "grep", params: { q: "x" }, runId: "run-1", toolCallId: "tc-1", result: "match" },
+      fullCtx,
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, fullCtx)
+
+    const expectedTags = ["personal", "telegram", "user"]
+    for (const span of result?.spans ?? []) {
+      expect(span.attrs["latitude.tags"]).toEqual(expectedTags)
+      expect((span.attrs["latitude.metadata"] as Record<string, string>)["openclaw.agent.id"]).toBe("personal")
+    }
+  })
+})
+
 describe("SpanBuilder.onAgentEnd", () => {
   it("opens an agent span on before_agent_start and closes on agent_end", () => {
     const b = new SpanBuilder()
