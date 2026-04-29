@@ -10,12 +10,14 @@ import { Tooltip } from "../tooltip/tooltip.tsx"
 type CopyableTextSize = "sm" | "default"
 
 /** Badge `muted`-like pill; size maps to padding + icon scale. */
-const SIZE_CONFIG: Record<CopyableTextSize, { paddingClass: string; iconSize: IconSize }> = {
+const SIZE_CONFIG: Record<CopyableTextSize, { roundedClass: string; paddingClass: string; iconSize: IconSize }> = {
   sm: {
+    roundedClass: "rounded-md",
     paddingClass: "gap-1 px-1.5 py-0.5",
     iconSize: "xs",
   },
   default: {
+    roundedClass: "rounded-xl",
     paddingClass: "gap-2 px-2.5 py-1.5",
     iconSize: "sm",
   },
@@ -67,9 +69,10 @@ export function CopyableText({
       type="button"
       onClick={handleCopy}
       className={cn(
-        "inline-flex w-fit max-w-full shrink-0 items-center self-start rounded-md cursor-pointer transition-colors",
-        "border border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80",
+        "inline-flex w-fit max-w-full shrink-0 items-center self-start rounded-xl cursor-pointer transition-colors",
+        "border bg-secondary text-muted-foreground hover:bg-muted",
         config.paddingClass,
+        config.roundedClass,
         ellipsis && "min-w-0",
       )}
     >
