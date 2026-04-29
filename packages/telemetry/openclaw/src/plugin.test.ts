@@ -32,8 +32,12 @@ function makeApi(): {
  * asserting on `emitted`.
  */
 async function flush(): Promise<void> {
-  // Two awaits is enough — first drains the queueMicrotask body, second
-  // drains anything that body queues (e.g. postTraces' Promise chain).
+  // Two awaits is enough here: the first lets the queueMicrotask-scheduled
+  // finalize run, and the second lets any additional microtasks queued by
+  // that finalize run before assertions. This does not wait for unrelated
+  // async work that resumes only after timers, I/O, or fetch resolve —
+  // postTraces awaits fetch, so its completion is not guaranteed by this
+  // helper, and tests must not depend on it.
   await Promise.resolve()
   await Promise.resolve()
 }
