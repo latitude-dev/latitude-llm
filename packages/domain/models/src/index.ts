@@ -33,6 +33,7 @@ export {
   parseModelsDevData,
 } from "./entities/model.ts"
 
+export { PROVIDER_ALIASES, resolveProviderName } from "./provider-aliases.ts"
 export {
   costBreakdownKey,
   estimateCost,

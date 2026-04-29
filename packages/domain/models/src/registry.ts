@@ -11,29 +11,9 @@ import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cos
 import { computeCostBreakdown, estimateTotalCost } from "./entities/cost.ts"
 import type { Model, ModelPricing } from "./entities/model.ts"
 import { parseModelsDevData } from "./entities/model.ts"
+import { resolveProviderName } from "./provider-aliases.ts"
 
 let cachedModels: Model[] | null = null
-
-/**
- * Maps well-known provider identifiers to their models.dev equivalents.
- *
- * Providers whose internal names differ from the models.dev convention
- * are mapped here. Unknown providers pass through unchanged.
- */
-const PROVIDER_ALIASES: Record<string, string> = {
-  amazon_bedrock: "amazon-bedrock",
-  google_vertex: "google-vertex",
-  anthropic_vertex: "anthropic-vertex",
-}
-
-// Vercel AI SDK appends transport-style suffixes like `.responses` and `.chat`
-// to provider ids. Strip them so pricing lookup resolves to the base provider.
-const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
-
-function resolveProviderName(provider: string): string {
-  const stripped = provider.replace(VERCEL_PROVIDER_SUFFIX, "")
-  return PROVIDER_ALIASES[stripped] ?? stripped
-}
 
 /**
  * Bedrock regional inference profiles prepend a geography prefix
