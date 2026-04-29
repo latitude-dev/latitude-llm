@@ -39,7 +39,7 @@ import { unassignIssuesOnDocumentsDeleted } from './unassignIssuesOnDocumentsDel
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
   commitCreated: [],
-  commitPublished: [],
+  commitPublished: [clearDocumentGetDataCache],
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [clearDocumentGetDataCache],

@@ -1,13 +1,15 @@
+import { HEAD_COMMIT } from '@latitude-data/constants'
 import { cache } from '../../cache'
 import { getDataCacheKey } from '../../services/documents/getDataCacheKey'
 import {
+  CommitPublishedEvent,
   DocumentCreatedEvent,
   DocumentsDeletedEvent,
   EventHandler,
 } from '../events'
 
 export const clearDocumentGetDataCache: EventHandler<
-  DocumentCreatedEvent | DocumentsDeletedEvent
+  DocumentCreatedEvent | DocumentsDeletedEvent | CommitPublishedEvent
 > = async ({ data: event }) => {
   try {
     const cacheClient = await cache()
@@ -29,6 +31,23 @@ export const clearDocumentGetDataCache: EventHandler<
           documentPath: path,
         }),
       )
+      if (keys.length > 0) await cacheClient.del(...keys)
+    } else if (event.type === 'commitPublished') {
+      const { workspaceId, commit, changedDocuments } = event.data
+      const keys = changedDocuments.flatMap((doc) => [
+        getDataCacheKey({
+          workspaceId,
+          projectId: commit.projectId,
+          commitUuid: HEAD_COMMIT,
+          documentPath: doc.path,
+        }),
+        getDataCacheKey({
+          workspaceId,
+          projectId: commit.projectId,
+          commitUuid: commit.uuid,
+          documentPath: doc.path,
+        }),
+      ])
       if (keys.length > 0) await cacheClient.del(...keys)
     }
   } catch (_error) {
