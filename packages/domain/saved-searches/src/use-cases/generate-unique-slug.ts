@@ -20,16 +20,16 @@ export const generateUniqueSlug = Effect.fn("savedSearches.generateUniqueSlug")(
 
   const repo = yield* SavedSearchRepository
 
-  let candidate = baseSlug
-  for (let i = 1; i <= SAVED_SEARCH_SLUG_COLLISION_LIMIT; i++) {
+  for (let i = 0; i <= SAVED_SEARCH_SLUG_COLLISION_LIMIT; i++) {
+    const candidate =
+      i === 0 ? baseSlug : `${baseSlug.slice(0, SAVED_SEARCH_SLUG_MAX_LENGTH - `-${i}`.length)}-${i}`
+
     const exists = yield* repo.existsBySlug({
       projectId: args.projectId,
       slug: candidate,
       ...(args.excludeId ? { excludeId: args.excludeId } : {}),
     })
     if (!exists) return candidate
-    const suffix = `-${i}`
-    candidate = `${baseSlug.slice(0, SAVED_SEARCH_SLUG_MAX_LENGTH - suffix.length)}${suffix}`
   }
 
   return yield* new InvalidSavedSearchNameError({
