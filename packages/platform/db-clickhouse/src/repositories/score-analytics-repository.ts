@@ -595,16 +595,57 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         }),
 
       // -- aggregateTagsByIssues ---------------------------------------------
-      aggregateTagsByIssues: ({ organizationId, projectId, issueIds, options }) =>
+      // Performance shape (read carefully before relaxing the bounds):
+      //   * `scores` is partitioned by `toYYYYMM(created_at)` and PK is
+      //     `(org, project, created_at)`. `issue_id` is NOT in the sort key,
+      //     so without a `created_at` filter `WHERE issue_id IN (...)` does
+      //     a full scan of every monthly partition for the (org, project) —
+      //     a year-old project means ~12 partitions × millions of rows.
+      //   * `traces` is partitioned by `toYYYYMM(min_start_time)` with a
+      //     `minmax` skip index on `min_start_time`; PK is `(org, project)`,
+      //     sparse — `trace_id IN (...)` alone still scans every (org,
+      //     project) granule of history because the PK can't position by
+      //     trace_id. A `min_start_time` filter prunes partitions hard.
+      //   * The `timeRange` argument is therefore REQUIRED — both subqueries
+      //     filter on it. The use-case picks the bound (typically a 30d
+      //     fallback if the operator hasn't selected one).
+      //   * `LIMIT N BY issue_id` further caps the per-issue trace sample so
+      //     a single noisy issue can't blow up the join.
+      //
+      // TODO(perf): long-term this should be served by a dedicated per-issue
+      // tags aggregating MV (insert-time work, O(1) read). Open questions
+      // before building it: (a) which side denormalizes — `tags` onto
+      // `scores`, or `issue_id` onto `spans`/`traces`? (b) how to handle
+      // async issue clustering (an issue id is assigned after a score row
+      // already exists), (c) backfill plan for historical data. Discussed
+      // in PR #2893 review threads.
+      aggregateTagsByIssues: ({ organizationId, projectId, issueIds, timeRange, options }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (issueIds.length === 0) return []
+
+          // The IssueTagsTimeRange type guarantees `from`; `to` is optional and
+          // only emitted when present.
+          const scoresClauses = [
+            "created_at >= toDateTime64({tags_scores_from:String}, 3, 'UTC')",
+            ...(timeRange.to ? ["created_at <= toDateTime64({tags_scores_to:String}, 3, 'UTC')"] : []),
+          ]
+          const tracesClauses = [
+            "min_start_time >= toDateTime64({tags_traces_from:String}, 3, 'UTC')",
+            ...(timeRange.to ? ["min_start_time <= toDateTime64({tags_traces_to:String}, 3, 'UTC')"] : []),
+          ]
+          const timeParams: Record<string, unknown> = {
+            tags_scores_from: toClickHouseDateTime64(timeRange.from),
+            tags_traces_from: toClickHouseDateTime64(timeRange.from),
+          }
+          if (timeRange.to) {
+            timeParams.tags_scores_to = toClickHouseDateTime64(timeRange.to)
+            timeParams.tags_traces_to = toClickHouseDateTime64(timeRange.to)
+          }
+
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                // Sample the most-recent traces per issue (LIMIT N BY issue_id) so a noisy
-                // issue with tens of thousands of traces doesn't pull every trace row just
-                // to compute a tag union — tag distributions converge quickly.
                 query: `WITH issue_traces AS (
                         SELECT issue_id, trace_id
                         FROM (
@@ -613,6 +654,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                           WHERE ${scopeClause(options)}
                             AND issue_id IN ({issueIds:Array(String)})
                             AND trace_id != ''
+                            AND ${scoresClauses.join(" AND ")}
                           GROUP BY issue_id, trace_id
                           ORDER BY issue_id, last_seen_at DESC
                           LIMIT {tracesPerIssue:UInt32} BY issue_id
@@ -624,6 +666,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND trace_id IN (SELECT trace_id FROM issue_traces)
+                          AND ${tracesClauses.join(" AND ")}
                         GROUP BY trace_id
                       )
                       SELECT
@@ -636,6 +679,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                   ...scopeParams(organizationId, projectId),
                   issueIds: Array.from(issueIds) as string[],
                   tracesPerIssue: ISSUE_TAG_TRACE_SAMPLE_LIMIT,
+                  ...timeParams,
                 },
                 format: "JSONEachRow",
               })

@@ -41,6 +41,7 @@ export {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
   type IssueTagsAggregate,
+  type IssueTagsTimeRange,
   type IssueTracePage,
   type IssueTraceSummary,
   type IssueTrendSeries,
