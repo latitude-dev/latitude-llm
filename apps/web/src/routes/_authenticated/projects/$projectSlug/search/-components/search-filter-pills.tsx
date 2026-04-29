@@ -1,15 +1,19 @@
 import type { FilterSet } from "@domain/shared"
 import { TRACE_FILTER_FIELDS } from "@domain/shared"
 import { cn, Icon } from "@repo/ui"
-import { CornerDownLeftIcon, XIcon } from "lucide-react"
-import { type KeyboardEvent, useState } from "react"
+import { DeleteIcon, XIcon } from "lucide-react"
+import { type KeyboardEvent, useEffect, useRef, useState } from "react"
 import { getActivePresetLabel } from "../../../../../../components/filters-builder/date-presets.ts"
 import { getInValues, getRangeValues, getTextFilterValue } from "../../../../../../components/filters-builder/utils.ts"
 
 interface SearchFilterPillsProps {
   readonly filters: FilterSet
-  readonly interactive?: boolean
-  readonly onRemove?: (field: string) => void
+  readonly onRemove: (field: string) => void
+  readonly onEdit: (field: string, anchor: HTMLElement) => void
+  /** Optional fallback target focus moves to when the last chip is removed. */
+  readonly fallbackFocusRef?: { readonly current: HTMLElement | null }
+  /** Called when ArrowUp is pressed on a focused chip. */
+  readonly onArrowUp?: () => void
 }
 
 const FIELD_LABEL: Record<string, string> = Object.fromEntries(TRACE_FILTER_FIELDS.map((f) => [f.field, f.label]))
@@ -108,52 +112,73 @@ function buildPillEntries(filters: FilterSet): PillEntry[] {
   return entries
 }
 
-export function SearchFilterPills({ filters, interactive = false, onRemove }: SearchFilterPillsProps) {
+export function SearchFilterPills({ filters, onRemove, onEdit, fallbackFocusRef, onArrowUp }: SearchFilterPillsProps) {
   const entries = buildPillEntries(filters)
-  if (entries.length === 0) return null
+  const chipRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
+  const [pendingFocus, setPendingFocus] = useState<string | "fallback" | null>(null)
+
+  // TODO(frontend-use-effect-policy): focus management after a chip is removed.
+  // We need to find the new chip occupying the removed slot (or the fallback
+  // target) AFTER React re-renders the chip list, so this is a sync effect.
+  useEffect(() => {
+    if (!pendingFocus) return
+    if (pendingFocus === "fallback") {
+      fallbackFocusRef?.current?.focus()
+    } else {
+      chipRefs.current.get(pendingFocus)?.focus()
+    }
+    setPendingFocus(null)
+  }, [pendingFocus, fallbackFocusRef])
+
+  const handleRemove = (idx: number, field: string) => {
+    const next = entries[idx + 1]?.field ?? entries[idx - 1]?.field ?? null
+    onRemove(field)
+    setPendingFocus(next ?? "fallback")
+  }
 
   return (
-    <div className="flex flex-row flex-wrap items-center gap-2">
-      {entries.map((entry) =>
-        interactive && onRemove ? (
-          <InteractivePill
-            key={entry.key}
-            label={entry.label}
-            summary={entry.summary}
-            onRemove={() => onRemove(entry.field)}
-          />
-        ) : (
-          <StaticPill key={entry.key} label={entry.label} summary={entry.summary} />
-        ),
-      )}
-    </div>
+    <>
+      {entries.map((entry, idx) => (
+        <Chip
+          key={entry.key}
+          field={entry.field}
+          label={entry.label}
+          summary={entry.summary}
+          chipRef={(el) => {
+            if (el) chipRefs.current.set(entry.field, el)
+            else chipRefs.current.delete(entry.field)
+          }}
+          onClick={(target) => onEdit(entry.field, target)}
+          onRemove={() => handleRemove(idx, entry.field)}
+          {...(onArrowUp ? { onArrowUp } : {})}
+        />
+      ))}
+    </>
   )
 }
 
-function StaticPill({ label, summary }: { readonly label: string; readonly summary: string }) {
-  return (
-    <div className="inline-flex max-h-6 items-center gap-1 rounded-md border border-muted-foreground/10 bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-      <span className="whitespace-nowrap font-semibold">{label}</span>
-      {summary ? <span className="whitespace-nowrap opacity-70">{summary}</span> : null}
-    </div>
-  )
-}
-
-function InteractivePill({
-  label,
-  summary,
-  onRemove,
-}: {
+interface ChipProps {
+  readonly field: string
   readonly label: string
   readonly summary: string
+  readonly chipRef: (el: HTMLButtonElement | null) => void
+  readonly onClick: (target: HTMLElement) => void
   readonly onRemove: () => void
-}) {
+  readonly onArrowUp?: () => void
+}
+
+function Chip({ field, label, summary, chipRef, onClick, onRemove, onArrowUp }: ChipProps) {
   const [focused, setFocused] = useState(false)
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === "Enter" || event.key === "Backspace" || event.key === "Delete") {
+    if (event.key === "Backspace" || event.key === "Delete") {
       event.preventDefault()
       onRemove()
+      return
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      onClick(event.currentTarget)
       return
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -162,21 +187,35 @@ function InteractivePill({
         event.key === "ArrowLeft"
           ? (target.previousElementSibling as HTMLElement | null)
           : (target.nextElementSibling as HTMLElement | null)
-      if (sibling && sibling.tagName === "BUTTON") {
+      if (sibling && (sibling.tagName === "BUTTON" || sibling.hasAttribute("data-add-filter-button"))) {
         event.preventDefault()
         sibling.focus()
       }
+      return
+    }
+    if (event.key === "ArrowUp" && onArrowUp) {
+      event.preventDefault()
+      onArrowUp()
     }
   }
 
   return (
     <button
+      ref={chipRef}
       type="button"
+      data-chip-field={field}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      onClick={onRemove}
+      onClick={(event) => {
+        const target = event.target as HTMLElement
+        if (target.closest("[data-chip-remove]")) {
+          onRemove()
+          return
+        }
+        onClick(event.currentTarget)
+      }}
       onKeyDown={handleKeyDown}
-      aria-label={`Remove ${label} filter`}
+      aria-label={`Edit ${label} filter — Backspace to remove`}
       className={cn(
         "inline-flex max-h-6 items-center gap-1 rounded-md border border-muted-foreground/10 bg-muted px-2 py-0.5 text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         "hover:bg-muted/70",
@@ -184,7 +223,9 @@ function InteractivePill({
     >
       <span className="whitespace-nowrap font-semibold">{label}</span>
       {summary ? <span className="whitespace-nowrap opacity-70">{summary}</span> : null}
-      <Icon icon={focused ? CornerDownLeftIcon : XIcon} size="xs" />
+      <span data-chip-remove aria-hidden className="flex items-center">
+        <Icon icon={focused ? DeleteIcon : XIcon} size="xs" />
+      </span>
     </button>
   )
 }
