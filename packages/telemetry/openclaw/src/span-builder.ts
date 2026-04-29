@@ -164,6 +164,7 @@ export class SpanBuilder {
       attrs: {
         ...flattenCtx(ctx),
         ...latitudeAttrs(ctx),
+        ...sessionAttrs(ctx),
         "openclaw.run.id": runId,
         // before_agent_start payload — gated content fields go via `gated.*`
         // attribute keys so the OTLP layer can scrub them without a parallel
@@ -248,6 +249,7 @@ export class SpanBuilder {
       endMs: undefined,
       attrs: {
         ...latitudeAttrs(ctx),
+        ...sessionAttrs(ctx),
         "openclaw.run.id": evt.runId,
         "openclaw.call.id": evt.callId,
         "gen_ai.system": evt.provider,
@@ -310,6 +312,7 @@ export class SpanBuilder {
       endMs: undefined,
       attrs: {
         ...latitudeAttrs(ctx),
+        ...sessionAttrs(ctx),
         "openclaw.run.id": evt.runId,
         "gen_ai.tool.name": evt.toolName,
         "gen_ai.tool.call.id": toolCallId,
@@ -381,6 +384,7 @@ export class SpanBuilder {
       endMs: undefined,
       attrs: {
         ...latitudeAttrs(ctx),
+        ...sessionAttrs(ctx),
         "openclaw.run.id": runId,
         "openclaw.compaction.message_count.before": evt.messageCount,
         "openclaw.compaction.session_file": evt.sessionFile,
@@ -431,6 +435,7 @@ export class SpanBuilder {
         // (opened later by the child run's before_agent_start) carries
         // its OWN ctx.
         ...latitudeAttrs(ctx),
+        ...sessionAttrs(ctx),
         "openclaw.parent.run.id": parentRunId,
         "openclaw.run.id": evt.runId,
         "openclaw.subagent.child_session_key": evt.childSessionKey,
@@ -615,6 +620,22 @@ function flattenCtx(ctx: OpenClawAgentContext): AttrInput {
     "openclaw.cron.job.id": ctx.jobId,
     "openclaw.model.provider.id": ctx.modelProviderId,
     "openclaw.model.id": ctx.modelId,
+  }
+}
+
+/**
+ * Mirror OpenClaw's session id onto the OTEL-standard keys Latitude's
+ * resolver looks for. `gen_ai.session.id` and `session.id` are both in
+ * `sessionIdCandidates` (domain/spans/src/otlp/resolvers/identity.ts), so
+ * traces can be grouped by session in the Latitude UI without an
+ * openclaw-specific code path. Emitted on every span, not just `agent`,
+ * so child spans (model_call / tool_call / etc.) inherit the same grouping.
+ */
+function sessionAttrs(ctx: OpenClawAgentContext): AttrInput {
+  if (!ctx.sessionId) return {}
+  return {
+    "session.id": ctx.sessionId,
+    "gen_ai.session.id": ctx.sessionId,
   }
 }
 

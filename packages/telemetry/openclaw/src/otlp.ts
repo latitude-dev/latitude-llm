@@ -1,12 +1,32 @@
-import { readFileSync } from "node:fs"
 import { arch, hostname, platform, release } from "node:os"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import type { AttrValue, BuildResult, SpanRecord } from "./span-builder.ts"
 import type { OtlpExportRequest, OtlpKeyValue, OtlpResourceSpans, OtlpSpan } from "./types.ts"
 
 const SCOPE_NAME = "@latitude-data/openclaw-telemetry"
-const SCOPE_VERSION = readScopeVersion()
+
+/**
+ * Build-time-baked package version.
+ *
+ * `__SCOPE_VERSION__` is replaced at bundle time by tsdown's `define` (see
+ * `tsdown.config.ts`) with a string literal of `package.json`'s `version`,
+ * so the released bundle ships a constant — no runtime file read.
+ *
+ * Earlier versions read `package.json` at runtime via `readFileSync` to keep
+ * one source of truth for the version. That tripped OpenClaw 2026.4.26's
+ * `plugins.code_safety` scanner with a "potential-exfiltration: File read
+ * combined with network send" warning (we have `fetch(` in `client.ts`).
+ * Build-time bake preserves the single source of truth (the build reads
+ * `package.json` and inlines the value) while keeping the runtime free of
+ * `node:fs`.
+ *
+ * The `typeof` check is a runtime fallback for environments where the
+ * `define` substitution didn't run — chiefly vitest, which executes the
+ * source files directly without going through the build. `typeof` of an
+ * undeclared identifier returns `"undefined"` rather than throwing, which
+ * keeps tests working.
+ */
+declare const __SCOPE_VERSION__: string
+const SCOPE_VERSION = typeof __SCOPE_VERSION__ === "string" ? __SCOPE_VERSION__ : "0.0.0-dev"
 
 interface BuildOptions {
   /**
@@ -122,24 +142,5 @@ function safeJson(value: unknown): string {
     return JSON.stringify(value)
   } catch {
     return ""
-  }
-}
-
-/**
- * Runtime-read package version, so OTLP `scope.version` and `service.version`
- * always reflect what's actually installed. Read once at module load and
- * cached. Falls back to `"unknown"` if the read fails.
- *
- * Same import.meta.url + ../package.json pattern used by `cli.ts` for the
- * `--version` flag — single source of truth in package.json.
- */
-function readScopeVersion(): string {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url))
-    const pkgPath = join(here, "..", "package.json")
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version?: string }
-    return pkg.version ?? "unknown"
-  } catch {
-    return "unknown"
   }
 }

@@ -179,23 +179,60 @@ export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts:
   )
 
   // ─── Trace flush ────────────────────────────────────────────────────────
-
+  //
+  // Why we defer the finalize by one microtask tick instead of finalizing
+  // synchronously inside the agent_end handler: OpenClaw 2026.4.26+ has TWO
+  // hook fire-orders depending on which runtime the agent uses, and the
+  // selection.runtime path (used by the codex / embedded ACPX agents) fires
+  // events in this order:
+  //
+  //     llm_input → ...model_calls / tool_calls... → agent_end → llm_output
+  //
+  // The cli-runner.runtime path (used by the claude-code agent) fires the
+  // reverse — `llm_output` BEFORE `agent_end` — and only when the assistant
+  // emitted a non-empty text part.
+  //
+  // If we finalize on agent_end synchronously, the run is deleted and the OTLP
+  // batch is shipped before `llm_output` (under selection.runtime) gets a
+  // chance to enrich the agent span with `gen_ai.output.messages`,
+  // `gen_ai.response.model`, `openclaw.resolved.ref`, `openclaw.harness.id`,
+  // and the entire `gen_ai.usage.*` block. The `onLlmOutput` handler then
+  // bails on `if (!run) return` cleanly (no error, no warning), and every
+  // attribute that lives on the `llm_output` event is silently dropped.
+  //
+  // Deferring with `queueMicrotask` is order-agnostic: in either path, both
+  // hook handlers run synchronously in the current microtask round and write
+  // to the still-alive run; the queued finalize fires after both have
+  // completed and serializes a fully-enriched batch. Subagents go through
+  // exactly the same `onAgentEnd` path so they benefit automatically.
+  //
+  // We don't use `setTimeout(0)` because the +1 macrotask of latency isn't
+  // meaningful here, and `queueMicrotask` is more reliable on process exit
+  // (microtasks drain before exit; macrotasks may not). If a future OpenClaw
+  // ever introduces an `await` between `agent_end` dispatch and `llm_output`
+  // dispatch, we'll need to switch to `setTimeout(0)`.
   api.on(
     "agent_end",
     wrap<OpenClawAgentEndEvent>("agent_end", (evt, ctx) => {
-      const result = builder.onAgentEnd(evt, ctx)
-      if (!result) {
-        logger.debug("agent_end fired without a matching run in flight")
-        return
-      }
-      opts.onEmit?.(result)
-      const payload = buildOtlpRequest(result, { allowConversationAccess: config.allowConversationAccess })
-      void postTraces({
-        baseUrl: config.baseUrl,
-        apiKey: config.apiKey,
-        project: config.project,
-        payload,
-        logger,
+      queueMicrotask(() => {
+        try {
+          const result = builder.onAgentEnd(evt, ctx)
+          if (!result) {
+            logger.debug("agent_end fired without a matching run in flight")
+            return
+          }
+          opts.onEmit?.(result)
+          const payload = buildOtlpRequest(result, { allowConversationAccess: config.allowConversationAccess })
+          void postTraces({
+            baseUrl: config.baseUrl,
+            apiKey: config.apiKey,
+            project: config.project,
+            payload,
+            logger,
+          })
+        } catch (err) {
+          logger.warn(`agent_end finalize failed: ${String(err)}`)
+        }
       })
     }),
   )

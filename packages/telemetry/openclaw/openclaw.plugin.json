@@ -2,7 +2,7 @@
   "id": "@latitude-data/openclaw-telemetry",
   "name": "Latitude Telemetry",
   "description": "Streams every OpenClaw agent run to Latitude as OTLP traces — full prompt, message history, assistant output, tool I/O, token usage, and agent name.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "configSchema": {
     "type": "object",
     "additionalProperties": true,

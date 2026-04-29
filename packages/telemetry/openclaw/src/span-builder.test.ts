@@ -177,6 +177,46 @@ describe("SpanBuilder latitude.tags and latitude.metadata", () => {
       expect((span.attrs["latitude.metadata"] as Record<string, string>)["openclaw.agent.id"]).toBe("personal")
     }
   })
+
+  it("mirrors openclaw.session.id to session.id and gen_ai.session.id on every span", () => {
+    // session.id and gen_ai.session.id are in `sessionIdCandidates`
+    // (domain/spans/src/otlp/resolvers/identity.ts). Mirroring lets Latitude's
+    // resolver pick up the OpenClaw session for grouping without an
+    // openclaw-specific code path.
+    const b = new SpanBuilder()
+    const fullCtx = ctx({ agentId: "personal", trigger: "user" })
+    b.onBeforeAgentStart({}, fullCtx)
+    b.onModelCallStarted({ runId: "run-1", callId: "A", provider: "openai", model: "gpt-5" }, fullCtx)
+    b.onModelCallEnded(
+      { runId: "run-1", callId: "A", provider: "openai", model: "gpt-5", outcome: "completed" },
+      fullCtx,
+    )
+    b.onBeforeToolCall({ toolName: "grep", params: { q: "x" }, runId: "run-1", toolCallId: "tc-1" }, fullCtx)
+    b.onAfterToolCall(
+      { toolName: "grep", params: { q: "x" }, runId: "run-1", toolCallId: "tc-1", result: "match" },
+      fullCtx,
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, fullCtx)
+
+    for (const span of result?.spans ?? []) {
+      expect(span.attrs["session.id"]).toBe("s-1")
+      expect(span.attrs["gen_ai.session.id"]).toBe("s-1")
+      // The openclaw-namespaced original is still emitted (kept for any
+      // existing tooling that filtered on it).
+      if (span.name === "agent") {
+        expect(span.attrs["openclaw.session.id"]).toBe("s-1")
+      }
+    }
+  })
+
+  it("omits session.id mirrors when ctx has no sessionId", () => {
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart({}, { runId: "run-1", agentId: "x" })
+    const result = b.onAgentEnd({ messages: [], success: true }, { runId: "run-1" })
+    const agent = findSpan(result, "agent")
+    expect(agent?.attrs["session.id"]).toBeUndefined()
+    expect(agent?.attrs["gen_ai.session.id"]).toBeUndefined()
+  })
 })
 
 describe("SpanBuilder.onAgentEnd", () => {

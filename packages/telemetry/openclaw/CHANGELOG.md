@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-04-29
+
+Captures every `llm_output` event regardless of OpenClaw's hook fire order, mirrors `openclaw.session.id` onto the OTEL-standard session attrs Latitude's resolver looks for, and clears OpenClaw 2026.4.26's `potential-exfiltration` audit warning.
+
+### Fixed
+
+- **`llm_output` enrichment is no longer dropped on the `selection.runtime` path.** OpenClaw 2026.4.26+ has two hook fire orders: `cli-runner.runtime` (used by the `claude-code` agent) fires `llm_output → agent_end`, and `selection.runtime` (used by `openai-codex` / embedded ACPX agents) fires `agent_end → llm_output`. The 0.0.6 plugin finalized the run synchronously inside `agent_end`, deleting the run and shipping the OTLP batch before `selection.runtime`'s late `llm_output` could enrich the agent span. Every `llm_output`-only attribute — `gen_ai.output.messages`, `gen_ai.response.model`, `openclaw.resolved.ref`, `openclaw.harness.id`, and the entire `gen_ai.usage.*` block (input / output / cache_read / cache_creation / total tokens) — was silently lost. `onLlmOutput`'s `if (!run) return` was a clean no-op, so there was no error, no warning, no signal anything was wrong. The fix defers finalization by one microtask via `queueMicrotask`: both hook handlers in the same dispatch round write to the still-alive run, the deferred finalize runs after both, and the OTLP batch ships fully enriched. Order-agnostic — works identically for either path. Subagents go through the same `onAgentEnd` code path so they're fixed automatically.
+- **`gen_ai.usage.cache_creation_input_tokens` is now resolved by Latitude.** The resolver's `cacheCreateCandidates` only looked for the dot-separated `gen_ai.usage.cache_creation.input_tokens`; we emit the underscore form (matching what Anthropic-style OTel exporters use). Cache-write tokens silently dropped at resolve time. Resolver now picks up both spellings (`packages/domain/spans/src/otlp/resolvers/usage/tokens.ts`).
+
+### Added
+
+- **`session.id` and `gen_ai.session.id` mirrored from `openclaw.session.id` on every span.** Both are in `sessionIdCandidates` (`domain/spans/src/otlp/resolvers/identity.ts`) — `session.id` is the OpenInference / OTEL standard and the first candidate the resolver tries, `gen_ai.session.id` is the proposed OTEL GenAI semconv key. With the mirror in place, traces can be grouped by OpenClaw session in the Latitude UI without any openclaw-specific resolver path. Emitted on `agent`, `model_call`, `tool_call`, `compaction`, and `subagent` spans so child spans inherit the same grouping.
+- **Regression tests for both hook fire orders + the no-`llm_output` path + subagent ordering.** `plugin.test.ts` now exercises the cli-runner order (`llm_output` before `agent_end`), the selection.runtime order (`agent_end` before `llm_output`), the no-`llm_output` path (cli-runner skips it when `assistantText.length === 0`), and a parent-spawning-subagent flow under the selection.runtime order. The selection-path tests fire both hooks in the same sync round via a `fireSameRound` helper that mirrors how the real OpenClaw dispatcher kicks off `runAgentEnd(...).catch()` and `runLlmOutput(...).catch()` without an `await` between them.
+
+### Changed (build path)
+
+- **`SCOPE_VERSION` is baked at build time instead of read at runtime.** 0.0.6 read `package.json` via `readFileSync` to populate the OTLP `scope.version` and `service.version` attributes — that paired `node:fs` with `fetch(` in the bundled plugin and tripped OpenClaw 2026.4.26's `plugins.code_safety` scanner with a "potential-exfiltration: File read combined with network send" warning. The version is now substituted at bundle time via tsdown's `define` (`__SCOPE_VERSION__` → string literal of `package.json`'s `version`). Single source of truth (`package.json`) preserved, runtime bundle now has zero `node:fs` imports, and the audit warning is gone.
+
+### Documentation
+
+- **README pins the install spec to an exact version.** OpenClaw 2026.4.26's `openclaw security audit --deep` warns about unpinned plugin install specs for supply-chain stability. The README now uses `openclaw plugins install @latitude-data/openclaw-telemetry@0.0.7` instead of the bare package name and notes the policy.
+
 ## [0.0.6] - 2026-04-29
 
 Re-publish of the never-shipped 0.0.5 with two install-blocking fixes: the runtime no longer reads `process.env`, and the CLI is no longer in this package. Both were tripping OpenClaw 2026.4.25's `openclaw plugins install` security scan (the `env-harvesting` rule flagged the env-read + `fetch` combo in the runtime, and the `dangerous-exec` rule flagged the CLI's `child_process.spawn` call). The runtime ships clean now; the one-shot installer is moving to a separate `@latitude-data/openclaw-telemetry-cli` package and will land in a follow-up.
