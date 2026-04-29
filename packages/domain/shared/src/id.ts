@@ -49,6 +49,7 @@ export type SimulationId = Id<"SimulationId">
 export type AnnotationQueueId = Id<"AnnotationQueueId">
 export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
 export type FlaggerId = Id<"FlaggerId">
+export type SavedSearchId = Id<"SavedSearchId">
 
 // Telemetry-related IDs
 export type TraceId = Id<"TraceId">
@@ -71,6 +72,7 @@ export const SimulationId = (value: string): SimulationId => value as Simulation
 export const AnnotationQueueId = (value: string): AnnotationQueueId => value as AnnotationQueueId
 export const AnnotationQueueItemId = (value: string): AnnotationQueueItemId => value as AnnotationQueueItemId
 export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
+export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
@@ -94,6 +96,7 @@ export const annotationQueueIdSchema = cuidSchema.transform(AnnotationQueueId)
 export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueItemId)
 export const flaggerIdSchema = cuidSchema.transform(FlaggerId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
+export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
 
 // The telemetry-related IDs have custom length constraints
 export const SESSION_ID_LENGTH = 128
