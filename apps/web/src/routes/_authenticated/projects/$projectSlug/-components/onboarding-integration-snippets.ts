@@ -1179,3 +1179,17 @@ export function getCodingAgentTelemetryPrompt(params: {
     `Target this Latitude project: id \`${projectId}\`, slug \`${projectSlug}\` — use the variable names from the docs so traces land here. Use a Latitude API key from Settings; never commit secrets.`,
   ].join("\n")
 }
+
+export type CodingMachineAgentId = "claude-code" | "openclaw"
+
+export function getCodingMachineTelemetryInstallCommand(agent: CodingMachineAgentId): string {
+  return agent === "claude-code"
+    ? "npx -y @latitude-data/claude-code-telemetry install"
+    : "npx -y @latitude-data/openclaw-telemetry install"
+}
+
+export function getCodingMachineInstallDescription(agent: CodingMachineAgentId): string {
+  return agent === "claude-code"
+    ? "Run the command in your terminal and follow the instructions. Telemetry will be set up for Claude Code in the CLI, IDE, and Desktop app."
+    : "Run the command in your terminal and follow the instructions. The installer updates ~/.openclaw/openclaw.json with the Latitude plugin. Restart the OpenClaw gateway afterward: openclaw gateway restart."
+}

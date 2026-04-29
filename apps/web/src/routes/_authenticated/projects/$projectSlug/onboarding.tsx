@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/onbo
 })
 
 function ProjectOnboardingPage() {
+  const { projectSlug } = Route.useParams()
   const project = useRouteProject()
   const navigate = Route.useNavigate()
 
@@ -14,9 +15,10 @@ function ProjectOnboardingPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       <OnboardingFlow
         projectId={project.id}
+        projectSlug={project.slug}
         onOpenProjectTraces={async (targetProjectId) => {
           if (targetProjectId !== project.id) return
-          await navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
+          await navigate({ to: "/projects/$projectSlug", params: { projectSlug } })
         }}
       />
     </div>

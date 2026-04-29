@@ -1,11 +1,26 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { Bot, Braces, ChevronLeft, ChevronRight, FileCode2, Radio, Terminal } from "lucide-react"
+import {
+  Bot,
+  Braces,
+  ChevronLeft,
+  ChevronRight,
+  FileCode2,
+  Radio,
+  Shell,
+  SquareDashedBottomCode,
+  Terminal,
+} from "lucide-react"
 import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import {
+  type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
+  getCodingMachineInstallDescription,
+  getCodingMachineTelemetryInstallCommand,
   getEnvBlock,
   getInstallLine,
   getOnboardingSnippet,
@@ -15,6 +30,8 @@ import {
 } from "./onboarding-integration-snippets.ts"
 
 type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
+type OnboardingStep = "role" | "stack" | "telemetry"
+type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 
@@ -22,6 +39,31 @@ const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
   { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
 ] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
+
+const CODING_MACHINE_AGENT_TAB_OPTIONS = [
+  { id: "claude-code" as const, label: "Claude Code", icon: <Bot className="h-4 w-4" /> },
+  { id: "openclaw" as const, label: "OpenClaw", icon: <Shell className="h-4 w-4" /> },
+] as const satisfies ReadonlyArray<{ id: CodingMachineAgentId; label: string; icon: ReactNode }>
+
+const STACK_CHOICE_OPTIONS: ReadonlyArray<{
+  readonly id: StackChoice
+  readonly title: string
+  readonly description: string
+  readonly Icon: typeof Bot
+}> = [
+  {
+    id: "coding-agent-machine",
+    title: "Coding agent",
+    description: "Receive traces and monitor issues in your Claude Code or OpenClaw agent",
+    Icon: Bot,
+  },
+  {
+    id: "production-agent",
+    title: "Production agent traces",
+    description: "Set up Latitude directly in your project running on any available provider",
+    Icon: SquareDashedBottomCode,
+  },
+]
 
 interface ProviderEntry {
   readonly id: OnboardingProviderId
@@ -197,13 +239,17 @@ function SdkIntegrationInstructions({
 
 export function OnboardingFlow({
   projectId,
+  projectSlug,
   onOpenProjectTraces,
 }: {
   readonly projectId: string
+  readonly projectSlug: string
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
-  const [step, setStep] = useState<"role" | "provider">("role")
+  const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
+  const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
+  const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
   )
@@ -214,7 +260,16 @@ export function OnboardingFlow({
     (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
     [projectId],
   )
-  const slugForSnippets = project?.slug?.trim() ? project.slug : "your-project-slug"
+  const { data: apiKeysList } = useApiKeysCollection()
+
+  const resolvedProjectSlug = project?.slug?.trim() || projectSlug.trim()
+  const slugForSnippets = resolvedProjectSlug || "your-project-slug"
+  const projectSlugForCopy = resolvedProjectSlug
+
+  const defaultApiKeyToken = useMemo(() => {
+    const keys = apiKeysList ?? []
+    return keys.find((k) => k.name === DEFAULT_API_KEY_NAME)?.token ?? null
+  }, [apiKeysList])
 
   const codingAgentPrompt = useMemo(
     () =>
@@ -256,6 +311,10 @@ export function OnboardingFlow({
   const [traceReceived, setTraceReceived] = useState(false)
   const pollTimeoutRef = useRef<number | undefined>(undefined)
   const redirectTimeoutRef = useRef<number | undefined>(undefined)
+  const projectIdRef = useRef(projectId)
+  const onOpenProjectTracesRef = useRef(onOpenProjectTraces)
+  projectIdRef.current = projectId
+  onOpenProjectTracesRef.current = onOpenProjectTraces
 
   useMountEffect(() => {
     let cancelled = false
@@ -274,12 +333,14 @@ export function OnboardingFlow({
     const poll = async () => {
       if (cancelled) return
       try {
-        const count = await countTracesByProject({ data: { projectId } })
+        const count = await countTracesByProject({
+          data: { projectId: projectIdRef.current, pollNonce: Date.now() },
+        })
         if (cancelled) return
         if (count > 0) {
           setTraceReceived(true)
           redirectTimeoutRef.current = window.setTimeout(() => {
-            if (!cancelled) void onOpenProjectTraces(projectId)
+            if (!cancelled) void onOpenProjectTracesRef.current(projectIdRef.current)
           }, 3000)
           return
         }
@@ -344,11 +405,67 @@ export function OnboardingFlow({
                 })}
               </div>
               <div>
-                <Button onClick={() => setStep("provider")}>Next</Button>
+                <Button onClick={() => setStep("stack")}>Next</Button>
               </div>
             </div>
           </div>
-        ) : (
+        ) : step === "stack" ? (
+          <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
+            <div className="flex w-full flex-col gap-8">
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-8">
+                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H2 weight="medium">Select your stack</Text.H2>
+                  <Text.H4 color="foregroundMuted">What do you want to monitor with Latitude?</Text.H4>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {STACK_CHOICE_OPTIONS.map((option) => {
+                  const selected = stackChoice === option.id
+                  const StackIcon = option.Icon
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`flex w-full flex-row items-start justify-between gap-4 rounded-lg border p-4 text-left ${selected ? "border-primary bg-accent/20" : "border-border"}`}
+                      onClick={() => setStackChoice(option.id)}
+                    >
+                      <div className="flex min-w-0 flex-1 flex-row items-start gap-4">
+                        <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+                          <StackIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+                          <Text.H4 weight="medium">{option.title}</Text.H4>
+                          <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
+                        </div>
+                      </div>
+                      <div className="pt-1">
+                        <Checkbox checked={selected} />
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={() => setStep("role")}>
+                  Back
+                </Button>
+                <Button
+                  disabled={stackChoice === null}
+                  onClick={() => {
+                    if (stackChoice === null) return
+                    if (stackChoice === "production-agent") setTelemetrySetupMode("manual")
+                    setStep("telemetry")
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : stackChoice === "production-agent" ? (
           <div className="mx-auto w-full max-w-[560px]">
             <div className="flex w-full flex-col gap-6">
               <div className="flex flex-col gap-4">
@@ -359,25 +476,32 @@ export function OnboardingFlow({
                 </div>
                 <div className="flex flex-col gap-2">
                   <Text.H2 weight="medium">
-                    {traceReceived ? "Trace received. Redirecting…" : "Waiting for traces"}
+                    {traceReceived ? "Trace received. Redirecting…" : "Set up your first project"}
                   </Text.H2>
-                  <Text.H4 color="foregroundMuted">Set up Latitude in your project and start sending traces</Text.H4>
+                  <Text.H4 color="foregroundMuted">
+                    {traceReceived ? "Taking you to your traces…" : "Initiate your first project on Latitude"}
+                  </Text.H4>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
-                <Text.H5M>Set up telemetry</Text.H5M>
+                <Text.H5M>Installation method</Text.H5M>
                 <Tabs
                   options={SETUP_MODE_TAB_OPTIONS}
                   active={telemetrySetupMode}
                   onSelect={(id) => setTelemetrySetupMode(id)}
+                  size="sm"
+                  variant="bordered"
                 />
               </div>
 
               {telemetrySetupMode === "coding-agent" ? (
                 <div className="flex flex-col gap-2">
                   <Text.H5M>Prompt</Text.H5M>
-                  <Text.H5 color="foregroundMuted">Send this prompt to your coding agent of choice.</Text.H5>
+                  <Text.H5 color="foregroundMuted">
+                    Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set
+                    up Latitude telemetry in your project.
+                  </Text.H5>
                   <CodeBlock value={codingAgentPrompt} copyable />
                 </div>
               ) : (
@@ -428,7 +552,86 @@ export function OnboardingFlow({
               )}
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("role")}>
+                <Button variant="outline" onClick={() => setStep("stack")}>
+                  Back
+                </Button>
+                <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
+                  Skip for now
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto w-full max-w-[560px]">
+            <div className="flex w-full flex-col gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-8 overflow-hidden rounded-md">
+                  <Suspense fallback={<div className="h-8 w-8 shrink-0" aria-hidden />}>
+                    <OnboardingWaitingLottie />
+                  </Suspense>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H2 weight="medium">
+                    {traceReceived ? "Trace received. Redirecting…" : "Install the plugin"}
+                  </Text.H2>
+                  <Text.H4 color="foregroundMuted">
+                    {traceReceived
+                      ? "Taking you to your traces…"
+                      : "Set up Latitude telemetry for your agent in one command"}
+                  </Text.H4>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Text.H5M>Select your agent</Text.H5M>
+                <Tabs
+                  options={CODING_MACHINE_AGENT_TAB_OPTIONS}
+                  active={codingMachineAgent}
+                  onSelect={(id) => setCodingMachineAgent(id)}
+                  size="sm"
+                  variant="bordered"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Text.H5M>Install the plugin to your machine</Text.H5M>
+                <Text.H5 color="foregroundMuted">{getCodingMachineInstallDescription(codingMachineAgent)}</Text.H5>
+                <CodeBlock value={getCodingMachineTelemetryInstallCommand(codingMachineAgent)} copyable />
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Text.H5M>Latitude API key</Text.H5M>
+                  <Text.H5 color="foregroundMuted">
+                    Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>) — paste when the
+                    installer asks for your API key.
+                  </Text.H5>
+                  {defaultApiKeyToken ? (
+                    <CodeBlock value={defaultApiKeyToken} copyable />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">
+                      No key with that name yet. Create one under Settings → API Keys (you can name it{" "}
+                      <code className="text-xs">{DEFAULT_API_KEY_NAME}</code>).
+                    </Text.H5>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H5M>Project slug</Text.H5M>
+                  <Text.H5 color="foregroundMuted">
+                    Use this value when the installer asks for your Latitude project.
+                  </Text.H5>
+                  {projectSlugForCopy ? (
+                    <CodeBlock value={projectSlugForCopy} copyable />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">
+                      Project slug is not ready yet. Wait a moment or open project settings, then refresh this page.
+                    </Text.H5>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={() => setStep("stack")}>
                   Back
                 </Button>
                 <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>

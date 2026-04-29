@@ -165,6 +165,8 @@ export const countTracesByProject = createServerFn({ method: "GET" })
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
+      /** Ignored by the handler; optional so clients can bust HTTP caches on polling reads. */
+      pollNonce: z.number().optional(),
     }),
   )
   .handler(async ({ data }): Promise<number> => {
