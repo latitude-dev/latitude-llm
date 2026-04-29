@@ -86,4 +86,30 @@ describe("buildTraceSearchDocument", () => {
     expect(document.searchText.endsWith("t".repeat(100))).toBe(true)
     expect(document.searchText).not.toContain("m".repeat(100))
   })
+
+  it("replaces unpaired UTF-16 surrogates so ClickHouse JSON insert is safe", async () => {
+    // Lone high surrogate (\uD83D) and lone low surrogate (\uDE00) inside text.
+    // Without sanitization these would propagate into the JSONEachRow payload
+    // and ClickHouse rejects them with "missing second part of surrogate pair".
+    const document = await build([textMessage("user", "before \uD83D middle \uDE00 after")])
+
+    expect(hasLoneSurrogate(document.searchText)).toBe(false)
+    expect(document.searchText).toContain("before")
+    expect(document.searchText).toContain("after")
+  })
+
+  it("does not leave a lone surrogate when truncation splits a surrogate pair", async () => {
+    // Each "😀" is a surrogate pair (\uD83D\uDE00 — two UTF-16 code units).
+    // The truncateMiddle head/tail slices land on odd offsets given the
+    // marker length, so an emoji-only input forces both cuts to fall mid-pair.
+    const oversized = "😀".repeat(TRACE_SEARCH_DOCUMENT_MAX_LENGTH)
+    const document = await build([textMessage("user", oversized)])
+
+    expect(document.searchText.length).toBeLessThanOrEqual(TRACE_SEARCH_DOCUMENT_MAX_LENGTH)
+    expect(hasLoneSurrogate(document.searchText)).toBe(false)
+  })
 })
+
+function hasLoneSurrogate(text: string): boolean {
+  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text)
+}

@@ -90,11 +90,21 @@ function truncateMiddle(text: string): string {
   return `${text.slice(0, headLength)}${marker}${text.slice(-tailLength)}`
 }
 
+// JS strings are UTF-16 and may contain unpaired surrogates — either from
+// malformed input or from a code-unit slice that split a surrogate pair.
+// ClickHouse's strict JSON parser rejects them ("missing second part of
+// surrogate pair"), so we replace any lone surrogate with U+FFFD before
+// the document leaves this module.
+function stripLoneSurrogates(text: string): string {
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
+}
+
 /**
  * Normalizes text for search indexing:
  * - Trims whitespace
  * - Collapses multiple whitespace characters
  * - Truncates oversized conversations by keeping the beginning and end
+ * - Replaces unpaired UTF-16 surrogates so ClickHouse JSON insert won't reject
  */
 function normalizeSearchText(text: string): string {
   // Trim and collapse whitespace
@@ -103,7 +113,7 @@ function normalizeSearchText(text: string): string {
     .replace(/\s+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
 
-  return truncateMiddle(normalized)
+  return stripLoneSurrogates(truncateMiddle(normalized))
 }
 
 /**
