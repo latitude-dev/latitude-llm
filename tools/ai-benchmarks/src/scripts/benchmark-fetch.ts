@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { hashMapperFile, writeFixtureMeta } from "../runner/stale.ts"
+import { hashMapperFiles, writeFixtureMeta } from "../runner/stale.ts"
 import { TARGETS, TARGETS_BY_ID, targetPath } from "../runner/targets.ts"
 
 // CLI entry: `pnpm --filter @tools/ai-benchmarks benchmark:fetch <target-id>`
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const jsonl = `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`
   await writeFile(jsonlPath, jsonl)
 
-  const mapperHash = await hashMapperFile(target.mapperSourcePath)
+  const mapperHash = await hashMapperFiles(target.mapperSourcePaths)
   await writeFixtureMeta(metaPath, { mapperHash, generatedAt: new Date().toISOString() })
 
   const positives = rows.filter((r) => r.expected.matched).length

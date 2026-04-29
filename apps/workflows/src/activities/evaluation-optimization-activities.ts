@@ -24,7 +24,7 @@ import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import {
   buildGepaProposalPrompt,
-  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+  GEPA_DEFAULT_REFLECTION_SIZE,
   GEPA_PROPOSER_MODEL,
   GEPA_PROPOSER_SYSTEM_PROMPT,
   GepaOptimizerLive,
@@ -168,8 +168,8 @@ export const optimizeEvaluationDraft = (input: {
       // dataset row before we declare the search exhausted, regardless of how
       // the minibatch size is configured. Floored at 10 to keep the engine
       // from giving up on tiny clusters where the math collapses.
-      const reflectionMinibatchSize = GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE
-      const stagnation = Math.max(10, Math.ceil(ALIGNMENT_CURATED_DATASET_MAX_ROWS / reflectionMinibatchSize))
+      const reflectionSize = GEPA_DEFAULT_REFLECTION_SIZE
+      const stagnation = Math.max(10, Math.ceil(ALIGNMENT_CURATED_DATASET_MAX_ROWS / reflectionSize))
 
       const optimized = yield* optimizer.optimize({
         baselineCandidate: {
@@ -178,7 +178,7 @@ export const optimizeEvaluationDraft = (input: {
           hash: input.draft.evaluationHash,
         },
         dataset,
-        reflectionMinibatchSize,
+        reflectionSize,
         budget: {
           stagnation,
         },

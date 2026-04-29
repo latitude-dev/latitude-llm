@@ -106,7 +106,7 @@ Deliberately minimal. Only `trace.messages` varies per row in any meaningful way
 
 ### Mapper
 
-A function that fetches upstream data at a pinned revision, translates each row into our queue's definition, and emits `FixtureRow[]`. Example: [`mapJailbreakBench`](../tools/ai-benchmarks/src/mappers/jailbreakbench.ts) pulls from three JailbreakBench attack methods (JBC/manual, PAIR, GCG) plus the JBB-Behaviors CSVs, relabels them against our jailbreaking queue definition (manipulation tactic required, not just harmful topic), and returns ~937 rows.
+A function that fetches upstream data at a pinned revision, translates each row into our queue's definition, and emits `FixtureRow[]`. Per-source mappers live under `tools/ai-benchmarks/src/mappers/<queue>/` and are composed by a queue-level orchestrator at `mappers/<queue>.ts`. Example: [`mapJailbreakBench`](../tools/ai-benchmarks/src/mappers/jailbreak/jailbreakbench.ts) pulls from three JailbreakBench attack methods (JBC/manual, PAIR, GCG) plus the JBB-Behaviors CSVs, relabels them against our jailbreaking queue definition (manipulation tactic required, not just harmful topic), and returns ~937 rows.
 
 Mappers are where **label translation** happens — upstream's labels almost never map 1:1 to our queue definitions. A direct harmful prompt in JBB-Behaviors is a jailbreak by JailbreakBench's criterion but explicitly *not* a jailbreak by ours (no manipulation tactic). Mappers encode those translations.
 
@@ -279,7 +279,7 @@ Reviewer sees diff of baselines/<target>.json. Every row change is visible.
 
 ## CLI
 
-Two entry points live under `src/scripts/`, wired as pnpm scripts.
+Three entry points live under `src/scripts/`, wired as pnpm scripts.
 
 ### `benchmark:fetch`
 
@@ -315,6 +315,17 @@ For each selected target the runner:
 4. Aggregates metrics, computes baseline diff (unless sampled), assembles the `ReportData`.
 5. Renders the ink TUI. User navigates failed rows / baseline flips with arrows, inspects with Enter, quits with `q`.
 6. Prints a one-line persistent summary to stdout after the TUI exits, so scrollback retains the numbers.
+
+### `benchmark:report`
+
+```bash
+pnpm --filter @tools/ai-benchmarks benchmark:report <target-id>
+```
+
+Diagnostic report for fixture composition and — when a baseline exists — failure distribution by tag. Bins rows by `compliance:` / `safety:` / `model:` / `tactic:` tag prefixes, surfaces things the TUI doesn't show grouped (positive/negative class balance, FN concentration on a particular `compliance:` value, FP concentration on `safety:unsafe-contrast`). Read-only: no LLM calls, no cost. Useful in two spots:
+
+- After `benchmark:fetch`, before paying for a run — sanity-check class balance and per-tag distribution.
+- After `benchmark:run --update-baseline` — see where FN and FP are concentrated, decide whether low recall is a flagger problem or a fixture-labeling problem.
 
 ### Metrics reported
 
@@ -377,7 +388,7 @@ The PR's baseline diff is the reviewable record of which rows' predictions chang
 
 ```bash
 # 1. Edit the mapper to point at a new revision
-$EDITOR tools/ai-benchmarks/src/mappers/jailbreakbench.ts   # e.g. bump HF_DATASET_REVISION
+$EDITOR tools/ai-benchmarks/src/mappers/jailbreak/jailbreakbench.ts   # e.g. bump HF_DATASET_REVISION
 
 # 2. Regenerate the fixture
 pnpm --filter @tools/ai-benchmarks benchmark:fetch flaggers:jailbreaking
@@ -400,7 +411,7 @@ Two files:
 2. An entry in `TARGETS` at `tools/ai-benchmarks/src/runner/targets.ts`. For a new flagger, use the `flaggerTarget` factory with its queue slug:
    ```ts
    flaggerTarget({
-     queueSlug: "refusal",
+     flaggerSlug: "refusal",
      mapper: mapOrBench,
      mapperSourcePath: fileURLToPath(new URL("../mappers/or-bench.ts", import.meta.url)),
    })
@@ -413,6 +424,17 @@ For the annotator (once added) or other non-flagger targets, define a new `Bench
 ## Data sources per target
 
 Not every flagger has equal public data to draw from. Some are well-covered by academic benchmarks; others have almost nothing and depend on Latitude-internal curation. This table is the reference map.
+
+**Curation status — fixture shipped:**
+
+- [x] `flaggers:jailbreaking` — JailbreakBench attack artifacts (JBC + PAIR + GCG) + JBB-Behaviors soft & hard negatives (~937 rows)
+- [x] `flaggers:refusal` — XSTest v2 model completions, 3 splits (gpt4, llama2orig, mistralinstruct; ~1,300 rows)
+- [ ] `flaggers:nsfw` — public sources identified (REDDIX-NET, distilbert NSFW training data); mapper not yet written
+- [ ] `flaggers:frustration` — no public source on-target; depends on Latitude dogfood curation
+- [ ] `flaggers:forgetting` — no public source on-target; depends on Latitude dogfood curation
+- [ ] `flaggers:laziness` — no public source on-target; depends on Latitude dogfood curation
+- [ ] `flaggers:trashing` — no public source; entirely internal dogfood
+- [ ] `annotator` — Phase 4, different problem shape (LLM-as-judge over free-form feedback text)
 
 | Flagger target | Public coverage | Primary public sources | Latitude curation effort |
 | --- | --- | --- | --- |
@@ -536,7 +558,7 @@ The LLM judges here aren't invented for the eval run — they're **the monitors 
 Three design choices in the v1 harness keep forward compatibility so the evolution above is mechanical, not a rewrite:
 
 - **The `FixtureRow` shape aligns with what a Latitude dataset export could provide** (`trace` + structured label + provenance). No upstream rework needed when the Latitude mapper arrives.
-- **Fetching is pluggable.** `mappers/jailbreakbench.ts` today, `mappers/latitude.ts` later, same runner contract.
+- **Fetching is pluggable.** `mappers/<queue>/<source>.ts` today (JailbreakBench, XSTest), `mappers/<queue>/latitude.ts` later, same runner contract.
 - **The runner is indifferent to `source` provenance.** `FixtureRow.source` is metadata for reports, not a runner precondition.
 
 Nothing in v1 blocks the vision. Nothing in the vision requires rewriting v1.
@@ -554,6 +576,63 @@ Nothing in v1 blocks the vision. Nothing in the vision requires rewriting v1.
 **Shell-escaping glob selectors.** `--only flaggers:*` gets expanded by bash. Quote it: `--only 'flaggers:*'`.
 
 **Sampled runs not being comparable.** `--sample 30` produces metrics over 30 rows, not a full-fixture measurement. The runner refuses `--update-baseline` when sampling, and the TUI says "sample mode — baseline comparison disabled". Don't treat a sampled run's F1 as comparable to the baseline's.
+
+## Public dataset sources per flagger
+The intent is not to use these as-is but to sample + relabel against our queue definitions. An example "jailbreak attempted but the assistant handled it cleanly" might be labeled matched: true by us (the queue flags the trace when there's a clear manipulation tactic) even if the upstream dataset marks it "safe model behavior".
+
+## Coverage at a glance
+Where each queue's golden dataset will come from. "Curation effort" reflects how much of the work is hand-labeling Latitude dogfood traces vs. relabelling public benchmarks.
+| Flagger | Public coverage | Primary public sources | Latitude curation effort |
+| --- | --- | --- | --- |
+| jailbreaking | Strong | JailbreakBench, Lakera PINT, OR-Bench, TeleAI-Safety | Low — supplement with tool-output / indirect-injection examples from our traces |
+| refusal | Strong | OR-Bench, XSTest, PHTest, JailbreakBench benign split | Low — supplement with dogfood-domain refusals |
+| nsfw | Moderate | REDDIX-NET, distilbert-nsfw-text-classifier training data | Medium — hand-curate neutral-topic negatives (anatomy, sex-ed, literature) that off-the-shelf sets lack |
+| frustration | Weak | IEMOCAP, MELD, DeepDialogue (all adjacent — acted / non-agent dialogue) | High — LLM-agent frustration ("you keep getting it wrong") is not in any public corpus |
+| forgetting | Weak | BABILong, MRCR, NeedleInAHaystack | High — upstream measures model retrieval from long context, not "assistant lost track of an earlier user request" |
+| laziness | None on-target | Syco-bench, SycEval, Sandbagging evals (all adjacent) | Very high — fixtures primarily synthesised or drawn from dogfood |
+| trashing | None | — | Entirely internal — no public labeled agent-loop benchmark exists; pull from real dogfood traces and synthesise negatives by truncating productive traces |
+
+
+### `jailbreaking`
+JailbreakBench (JBB-Behaviors) — 100 misuse + 100 benign behaviors, 10 OpenAI-policy categories. MIT-licensed, publishable in fixtures. Ideal for the "clear jailbreak" tier. https://jailbreakbench.github.io/
+Lakera PINT Benchmark — 3,007 English inputs across public and proprietary attacks, explicitly includes hard negatives (benign prompts that look injection-like). The hard-negative split is especially valuable for measuring false-positive rate. https://github.com/lakeraai/pint-benchmark
+TeleAI-Safety — 342 curated samples across 12 risk categories, fine-grained labels. Good for ambiguous middle-ground examples. https://arxiv.org/pdf/2512.05485
+WildChat / LMSYS-Chat-1M sampled — real user jailbreak attempts in the wild. Distribution-accurate but licence is restrictive (research-only; not for checked-in fixtures). Use in a private bucket if we use them at all.
+
+### `refusal`
+OR-Bench — 80,000 over-refusal prompts across 10 categories, plus a 1,000-prompt hard subset and 600 toxic prompts to sanity-check that the model still refuses genuinely unsafe requests. Publishable. https://github.com/justincui03/or-bench
+XSTest — 250 prompts, largely solved by current SOTA models, but useful as a sanity baseline ("the flagger had better not flag these") at the easy tier.
+PHTest — smaller pseudo-harmful set; useful for adversarial edge cases.
+JailbreakBench's 100 benign behaviors also serve as "should-not-refuse" negatives.
+
+### `frustration`
+No single perfect dataset. Candidates:
+
+IEMOCAP — 7,311 utterances with explicit "frustrated" emotion label. Acted, not in-the-wild, so transfer is imperfect. Public research licence.
+MELD — 13,690 sentences from Friends with 7 emotion tags. No explicit "frustration" label (maps to anger/disgust).
+DeepDialogue — 40k multi-turn dialogues with 20 emotion labels. Better for trajectory signal (frustration across turns), which is what the flagger actually looks at.
+Latitude internal is likely the best source here. Frustration in LLM-agent contexts ("why did you do that, that's not what I asked" across 3 turns) doesn't match acted emotional speech well.
+### `forgetting`
+Closer to a memory / long-context problem than emotion. Candidates:
+
+BABILong — 128k-token needle-in-a-haystack benchmark across QA1-QA5 tasks. Flags model context degradation but isn't quite what our flagger detects (we flag assistant forgetting within a normal conversation, not a retrieval task).
+Multi-Round Co-Reference Resolution (MRCR) — multi-turn dialogue where the model has to recall an earlier utterance. Close to our definition.
+LongBench, Context Rot (Chroma) — auxiliary.
+Likely best source: synthesized examples where we take a real dogfood conversation and splice in a contradiction 5 turns later.
+
+### `laziness`
+Syco-bench, SycEval — adjacent (sycophancy overlaps with "agree and disengage" laziness) but not exact. https://www.syco-bench.com/
+Sandbagging Evaluations (Anthropic/Apollo) — strategic underperformance. Even more adjacent; mostly research-interesting. https://arxiv.org/abs/2406.07358
+No good public dataset for "assistant punted on a request with shallow work". This queue is probably the most dependent on internal curation from dogfood traces.
+### `nsfw`
+REDDIX-NET — thousands of NSFW Reddit posts labeled across 6 behavioral classes. Good for "classic NSFW" positives. Licence: research-only.
+Eliasalbouzidi/distilbert-nsfw-text-classifier training data — 190k labeled "safe" / "nsfw" examples. Size useful for negatives; labels are coarse.
+NSFW Reddit-derived datasets — various public splits; licence varies.
+For negatives (text that mentions sexual topics neutrally — anatomy, sex-ed, literature) we likely need to hand-curate; off-the-shelf NSFW datasets tend to be precision-biased and won't have these.
+
+### `trashing` (tool cycling without progress)
+No direct benchmark exists. The closest signal comes from agent-failure research (UC Berkeley multi-agent failure study; "agents stuck in loops" qualitative reports). None is a labeled dataset.
+This queue must be seeded almost entirely from internal dogfood traces. Synthesize additional negatives by taking real traces and truncating them at step 4, 6, 10 to verify the flagger doesn't fire on "still working productively".
 
 ## Related files
 

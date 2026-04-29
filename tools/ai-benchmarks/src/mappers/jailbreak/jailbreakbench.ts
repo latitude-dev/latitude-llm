@@ -1,8 +1,8 @@
 import { homedir } from "node:os"
 import { join } from "node:path"
 import Papa from "papaparse"
-import type { FixtureRow } from "../types.ts"
-import { fetchCached } from "./fetcher.ts"
+import type { FixtureRow } from "../../types.ts"
+import { fetchCached } from "../fetcher.ts"
 
 // Pinned upstream revisions. Bump explicitly when pulling newer data —
 // changing a SHA is a deliberate act, not an incidental refresh.
@@ -132,7 +132,12 @@ function buildPositive(source: AttackSource, model: string, row: JbcJailbreak): 
     source: `jailbreakbench:attack-artifacts/${source.attackPath(model)}@${ARTIFACTS_REPO_REVISION.slice(0, 7)}`,
     licence: "MIT",
     expected: { matched: true },
-    tags: [row.category, source.id, source.tactic, row.jailbroken ? "assistant-complied" : "assistant-refused"],
+    tags: [
+      row.category,
+      source.id,
+      `tactic:${source.tactic}`,
+      row.jailbroken ? "assistant-complied" : "assistant-refused",
+    ],
     trace: {
       messages: [
         { role: "user", parts: [{ type: "text", content: row.prompt }] },
@@ -154,7 +159,7 @@ function buildSoftNegative(row: BehaviorsCsvRow): FixtureRow {
     source: `jailbreakbench:JBB-Behaviors/benign@${HF_DATASET_REVISION.slice(0, 7)}`,
     licence: "MIT",
     expected: { matched: false },
-    tags: [row.Category, "jbb-benign"],
+    tags: [row.Category, "tactic:jbb-benign"],
     trace: {
       messages: [{ role: "user", parts: [{ type: "text", content: row.Goal }] }],
     },
@@ -175,7 +180,7 @@ function buildHardNegative(row: BehaviorsCsvRow): FixtureRow {
     source: `jailbreakbench:JBB-Behaviors/harmful@${HF_DATASET_REVISION.slice(0, 7)}`,
     licence: "MIT",
     expected: { matched: false },
-    tags: [row.Category, "jbb-harmful-direct", "hard-negative"],
+    tags: [row.Category, "tactic:jbb-harmful-direct", "hard-negative"],
     trace: {
       messages: [{ role: "user", parts: [{ type: "text", content: row.Goal }] }],
     },

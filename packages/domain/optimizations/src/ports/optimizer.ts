@@ -36,9 +36,9 @@ export interface OptimizeCandidateInput {
    * through to GEPA's `reflection_minibatch_size`). Higher values give the
    * proposer broader context per iteration at the cost of more input
    * tokens; lower values run faster but see less of the failure surface.
-   * Defaults to `GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE` when omitted.
+   * Defaults to `GEPA_DEFAULT_REFLECTION_SIZE` when omitted.
    */
-  readonly reflectionMinibatchSize?: number
+  readonly reflectionSize?: number
   readonly evaluate: (input: OptimizeEvaluationInput) => Promise<OptimizationEvaluationResult>
   readonly propose: (input: OptimizeProposalInput) => Promise<OptimizationCandidate>
   readonly abortSignal?: AbortSignal

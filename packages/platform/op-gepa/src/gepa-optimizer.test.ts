@@ -72,6 +72,8 @@ vi.mock("./client.ts", () => {
           "evaluation-script": proposed.script,
         },
         stopReason: "completed" as const,
+        totalIterations: 1,
+        proposeCalls: 1,
       }
     }
   }
@@ -162,6 +164,8 @@ describe("GepaOptimizerLive", () => {
         hash: "hash-optimized",
       },
       stopReason: "completed",
+      totalIterations: 1,
+      proposeCalls: 1,
     })
     expect(clientState.started).toBe(1)
     expect(clientState.stopped).toBe(1)

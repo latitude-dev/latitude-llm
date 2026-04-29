@@ -13,10 +13,13 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
-    "benchmark:fetch": "node --import tsx src/scripts/benchmark-fetch.ts",
-    "benchmark:run": "node --import tsx src/scripts/benchmark-run.ts",
-    "benchmark:optimize": "node --import tsx src/scripts/benchmark-optimize.ts",
-    "benchmark:optimize:review": "node --import tsx src/scripts/benchmark-optimize-review.ts"
+    "with-env": "node --env-file-if-exists=../../.env.development --import tsx",
+    "benchmark:fetch": "pnpm with-env src/scripts/benchmark-fetch.ts",
+    "benchmark:run": "pnpm with-env src/scripts/benchmark-run.ts",
+    "benchmark:report": "pnpm with-env src/scripts/benchmark-report.ts",
+    "benchmark:optimize": "pnpm with-env src/scripts/benchmark-optimize.ts",
+    "benchmark:optimize:review": "pnpm with-env src/scripts/benchmark-optimize-review.ts",
+    "probe:anthropic": "pnpm with-env src/scripts/probe-anthropic.ts"
   },
   "dependencies": {
     "@domain/ai": "workspace:*",

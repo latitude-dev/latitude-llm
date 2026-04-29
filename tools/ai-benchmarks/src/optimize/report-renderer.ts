@@ -36,8 +36,8 @@ interface ReportInput {
 }
 
 const STOP_REASON_LABEL: Record<OptimizationStopReason, string> = {
-  time_budget: "time budget reached",
-  tokens_budget: "tokens budget reached",
+  time: "time budget reached",
+  tokens: "tokens budget reached",
   stagnation: "stagnation (no improvement)",
   completed: "optimizer exhausted candidate pool",
 }
