@@ -63,6 +63,7 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   nvidia: NvidiaIcon,
   "ollama-cloud": OllamaIcon,
   openai: OpenaiIcon,
+  "openai-codex": OpenaiIcon,
   opencode: OpencodeIcon,
   "opencode-go": OpencodeIcon,
   openrouter: OpenrouterIcon,
