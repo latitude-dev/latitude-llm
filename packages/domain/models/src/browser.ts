@@ -31,3 +31,4 @@ export {
   modelPricingSchema,
   modelSchema,
 } from "./entities/model.ts"
+export { PROVIDER_ALIASES, resolveProviderName } from "./provider-aliases.ts"
