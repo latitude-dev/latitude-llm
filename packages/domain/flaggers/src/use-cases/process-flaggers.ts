@@ -112,7 +112,7 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
     }
   }
 
-  const runOne = (slug: string, suppressorMatchedSlugs: ReadonlySet<string>) =>
+  const runOne = (slug: string, suppressorTriggeredSlugs: ReadonlySet<string>) =>
     processOneStrategy({
       slug,
       trace,
@@ -121,7 +121,7 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
       projectId: input.projectId,
       traceId: input.traceId,
       deps,
-      suppressorMatchedSlugs,
+      suppressorTriggeredSlugs,
     }).pipe(
       Effect.catch((error) =>
         Effect.gen(function* () {
@@ -141,9 +141,9 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
     concurrency: "unbounded",
   })
 
-  const phase1MatchedSlugs = new Set(phase1Decisions.filter((d) => d.action === "matched-issue").map((d) => d.slug))
+  const phase1SuppressorSlugs = new Set(phase1Decisions.filter(isSuppressingDecision).map((decision) => decision.slug))
 
-  const phase2Decisions = yield* Effect.forEach(phase2Slugs, (slug) => runOne(slug, phase1MatchedSlugs), {
+  const phase2Decisions = yield* Effect.forEach(phase2Slugs, (slug) => runOne(slug, phase1SuppressorSlugs), {
     concurrency: "unbounded",
   })
 
@@ -154,6 +154,14 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
 
 const EMPTY_SET: ReadonlySet<string> = new Set()
 
+const isSuppressingDecision = (decision: StrategyDecision): boolean => {
+  if (decision.action === "matched-issue") return true
+  if (decision.action === "enqueued" && decision.reason === "ambiguous") return true
+  if (decision.action !== "dropped") return false
+
+  return decision.reason === "rate-limited" || decision.reason === "ambiguous-without-llm"
+}
+
 interface ProcessOneStrategyInput {
   readonly slug: string
   readonly trace: TraceDetail
@@ -162,7 +170,7 @@ interface ProcessOneStrategyInput {
   readonly projectId: string
   readonly traceId: string
   readonly deps: ProcessFlaggersDeps
-  readonly suppressorMatchedSlugs: ReadonlySet<string>
+  readonly suppressorTriggeredSlugs: ReadonlySet<string>
 }
 
 const processOneStrategy = (input: ProcessOneStrategyInput) =>
@@ -189,7 +197,7 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     if (strategy.suppressedBy) {
       for (const suppressor of strategy.suppressedBy) {
-        if (input.suppressorMatchedSlugs.has(suppressor)) {
+        if (input.suppressorTriggeredSlugs.has(suppressor)) {
           return {
             slug: input.slug,
             action: "suppressed",

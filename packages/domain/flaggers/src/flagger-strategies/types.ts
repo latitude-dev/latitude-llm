@@ -42,12 +42,11 @@ export interface FlaggerStrategy {
   readonly details?: FlaggerDisplayDetails
 
   /**
-   * Slugs of strategies whose `matched` outcome makes this strategy non-applicable
-   * for the same trace. When any listed suppressor matches deterministically, this
-   * strategy is skipped entirely (no det check, no LLM enqueue) and the use-case
-   * emits a `suppressed` decision tagged with the suppressor.
+   * Slugs of strategies whose deterministic `matched` or `ambiguous` outcome makes
+   * this strategy non-applicable for the same trace. When any listed suppressor
+   * triggers, this strategy is skipped entirely (no det check, no LLM enqueue) and
+   * the use-case emits a `suppressed` decision tagged with the suppressor.
    *
-   * Only `matched` (not `ambiguous`) suppresses, so suppression stays high-precision.
    * Strategies listed here MUST run in phase 1 (i.e. have no `suppressedBy` themselves)
    * to keep the dependency graph acyclic.
    */
