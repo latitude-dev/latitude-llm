@@ -104,14 +104,14 @@ openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config
 
 ### Structural-only telemetry (no content capture)
 
-If you want trace metadata (timings, token usage, model name, agent name, ids) without the prompt/response content, set both `allowConversationAccess` keys to `false`:
+If you want trace metadata (timings, token usage, model name, agent name, ids) without the prompt/response content, keep `hooks.allowConversationAccess` at `true` (so OpenClaw still dispatches events to us) and set only `config.allowConversationAccess` to `false`:
 
 ```bash
 openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.allowConversationAccess' false
-openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].hooks.allowConversationAccess' false
+openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].hooks.allowConversationAccess' true
 ```
 
-The plugin still emits the full span tree; just the content attributes (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, tool args/results) are scrubbed. Each span carries a `latitude.captured.content: false` boolean so the gate state is visible in the Latitude UI.
+Setting `hooks.allowConversationAccess=false` would block dispatch entirely — see [The two flags](#the-two-flags). The plugin still emits the full span tree; just the content attributes (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, tool args/results) are scrubbed. Each span carries a `latitude.captured.content: false` boolean so the gate state is visible in the Latitude UI.
 
 ## Uninstall
 
