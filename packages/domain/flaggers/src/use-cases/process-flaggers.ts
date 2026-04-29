@@ -178,12 +178,6 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     const flagger = input.flagger
     if (flagger === null) {
-      yield* Effect.logWarning("Missing flagger row for registered strategy — dropping", {
-        slug: input.slug,
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        traceId: input.traceId,
-      })
       return { slug: input.slug, action: "dropped", reason: "missing-flagger" } satisfies StrategyDecision
     }
 
@@ -268,11 +262,6 @@ const handleNoMatch = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntr
 const handleAmbiguous = (input: ProcessOneStrategyInput, flagger: FlaggerCacheEntry, strategy: FlaggerStrategy) =>
   Effect.gen(function* () {
     if (!isLlmCapableStrategy(strategy)) {
-      yield* Effect.logWarning("Ambiguous detection from non-LLM-capable strategy — dropping", {
-        slug: input.slug,
-        organizationId: input.organizationId,
-        traceId: input.traceId,
-      })
       return { slug: input.slug, action: "dropped", reason: "ambiguous-without-llm" } satisfies StrategyDecision
     }
 
