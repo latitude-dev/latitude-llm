@@ -15,7 +15,7 @@ export function SpansTab({
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
-  const { data: spans } = useSpansByTraceCollection(traceId)
+  const { data: spans, isLoading } = useSpansByTraceCollection(traceId)
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -50,7 +50,7 @@ export function SpansTab({
     setIsMinimized((prev) => !prev)
   }
 
-  if (!spans) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
         <Text.H5 color="foregroundMuted">Loading spans...</Text.H5>
@@ -58,7 +58,7 @@ export function SpansTab({
     )
   }
 
-  if (spans.length === 0) {
+  if (!spans || spans.length === 0) {
     return (
       <div className="flex items-center justify-center py-6">
         <Text.H5 color="foregroundMuted">No spans found</Text.H5>
