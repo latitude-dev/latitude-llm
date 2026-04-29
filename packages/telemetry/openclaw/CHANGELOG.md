@@ -7,9 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.5] - 2026-04-29
+## [0.0.6] - 2026-04-29
 
-Span tree redesign. The plugin now emits spans that match the actual structure of an OpenClaw agent run instead of collapsing every generation + tool into a single fake `llm_request`. Existing dashboards keyed on `gen_ai.*` attribute names still work — span *names* changed, attribute *namespaces* didn't.
+Re-publish of the never-shipped 0.0.5 with two install-blocking fixes: the runtime no longer reads `process.env`, and the CLI is no longer in this package. Both were tripping OpenClaw 2026.4.25's `openclaw plugins install` security scan (the `env-harvesting` rule flagged the env-read + `fetch` combo in the runtime, and the `dangerous-exec` rule flagged the CLI's `child_process.spawn` call). The runtime ships clean now; the one-shot installer is moving to a separate `@latitude-data/openclaw-telemetry-cli` package and will land in a follow-up.
+
+This release otherwise inherits everything that was queued for 0.0.5 — the span tree redesign, per-call attributes on `model_call`, subagent trace propagation, `latitude.tags` / `latitude.metadata` enrichment, and the privacy `:gated` attribute mechanism.
+
+### Changed (install path)
+
+- **`process.env` fallback removed from `loadConfig`.** `loadConfig` now reads only the per-plugin config bucket OpenClaw passes via `api.pluginConfig` (i.e. the user's `plugins.entries[id].config` block). Earlier 0.0.x versions also fell back to env vars when keys were missing — the OpenClaw 2026.4.25 install scanner flags any runtime source that combines `process.env` reads with a network-send call (we have `fetch(` in `postTraces`), so the fallback was tripping installs even though the installer always wrote credentials to the config bucket anyway. For dev-time testing, set `config.debug = true` in `openclaw.json` directly.
+- **The `latitude-openclaw` CLI is no longer in this package.** Installation is now a manual flow: `openclaw plugins install @latitude-data/openclaw-telemetry`, then five `openclaw config set` calls (or one hand-edit of `openclaw.json`), then `openclaw gateway restart`. The README documents both. A one-shot installer is coming back as a separate package — `npx -y @latitude-data/openclaw-telemetry-cli install` — that doesn't go through `openclaw plugins install` and so isn't subject to the install-time scanner. Tracking that work in the follow-up to this PR.
+
+### Removed
+
+- `bin` field, `./cli` export entry, and `@clack/prompts` + `picocolors` dependencies from `package.json`. `cli.ts` from the bundle entry list. The package now publishes only `dist/plugin.js` + `dist/plugin.d.ts` + `openclaw.plugin.json`.
+- `process.env` read in `loadConfig` (and the surrounding fallback comment, rewritten to avoid the literal string the scanner regex matches on in source).
+
+### Added
+
+- Regression test that grep-asserts no `process.env` appears in any runtime `src/*.ts` file. Same shape as the intercept-module guard in `claude-code-telemetry`.
+
+### Span tree redesign (carried over from the queued 0.0.5)
+
+The plugin now emits spans that match the actual structure of an OpenClaw agent run instead of collapsing every generation + tool into a single fake `llm_request`. Existing dashboards keyed on `gen_ai.*` attribute names still work — span *names* changed, attribute *namespaces* didn't.
 
 ### Changed (breaking, in trace shape)
 
@@ -41,6 +61,7 @@ Span tree redesign. The plugin now emits spans that match the actual structure o
 - New typed-hook subscriptions: `before_agent_start`, `model_call_started`, `model_call_ended`, `before_compaction`, `after_compaction`, `subagent_spawned`, `subagent_ended`.
 - Privacy gating implemented via `:gated` attribute key suffix. The OTLP encoder strips any attribute whose key ends in `:gated` when `allowConversationAccess === false` — uniform mechanism, no per-key conditional. Gated attributes: `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `user_prompt`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `before_compaction.messages`, `before_agent_start.{prompt,messages}`, `agent_end.messages`, and `openclaw.error.message` (error strings can leak prompt/response content).
 - Abandoned-span handling: any `model_call` / `tool_call` / `compaction` / `subagent` open at `agent_end` is force-closed with `outcome: "abandoned"` so trace gaps don't appear when an attempt errors mid-flight.
+- `latitude.tags` and `latitude.metadata` enrichment attributes on every emitted span. Tags is a JSON-encoded string array; metadata is a JSON-encoded string object. Both are populated from per-run state and surface in the Latitude UI for filtering and grouping. Empty values are omitted so spans stay compact.
 
 ### Removed
 

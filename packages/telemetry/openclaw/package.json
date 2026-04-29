@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/openclaw-telemetry",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "OpenClaw plugin that streams LLM calls, tool executions, and agent runs to Latitude as OTLP traces",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -22,9 +22,6 @@
     "dist",
     "openclaw.plugin.json"
   ],
-  "bin": {
-    "latitude-openclaw": "./dist/cli.js"
-  },
   "main": "./dist/plugin.js",
   "types": "./dist/plugin.d.ts",
   "openclaw": {
@@ -38,10 +35,6 @@
     "./plugin": {
       "types": "./dist/plugin.d.ts",
       "default": "./dist/plugin.js"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "default": "./dist/cli.js"
     }
   },
   "scripts": {
@@ -50,10 +43,6 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.2.0",
-    "picocolors": "^1.1.1"
   },
   "peerDependencies": {
     "typescript": "^6.0.3"
