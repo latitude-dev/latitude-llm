@@ -23,25 +23,21 @@ Latitude gives you a closed-loop system for monitoring, evaluating, and improvin
 
 Every feature in Latitude feeds the next. Observability captures interactions. Evaluations score them. Failed scores surface issues. Issues generate new evaluations. Human annotations keep evaluations calibrated. Simulations prevent regressions before they reach production.
 
-<Frame>
-  <img src="/images/getting-started/how-latitude-works.png" alt="How Latitude Works: the continuous improvement cycle for AI agent reliability" />
-</Frame>
-
 The result is a continuous improvement cycle where your agents get better with every interaction.
 
 ## Key Concepts
 
-| Concept | What It Is |
-| --- | --- |
-| **Span** | A single unit of work captured by telemetry (an LLM call, a tool invocation, etc.) |
-| **Trace** | A complete interaction from start to finish, composed of one or more spans |
-| **Session** | A multi-turn conversation between a user and your agent, composed of related traces |
-| **Score** | A quantitative verdict on a trace: normalized between 0 and 1, with pass/fail and feedback |
-| **Evaluation** | A script that automatically produces scores from your agent's interactions |
-| **Issue** | A named failure pattern discovered by grouping similar failed scores |
-| **Annotation** | A human review of a trace, producing a score through Latitude's review workflow |
-| **Annotation Queue** | A managed review backlog that routes traces to human reviewers |
-| **Simulation** | A test run of your agent against scenarios, evaluated locally or in CI |
+| Concept              | What It Is                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| **Span**             | A single unit of work captured by telemetry (an LLM call, a tool invocation, etc.)         |
+| **Trace**            | A complete interaction from start to finish, composed of one or more spans                 |
+| **Session**          | A multi-turn conversation between a user and your agent, composed of related traces        |
+| **Score**            | A quantitative verdict on a trace: normalized between 0 and 1, with pass/fail and feedback |
+| **Evaluation**       | A script that automatically produces scores from your agent's interactions                 |
+| **Issue**            | A named failure pattern discovered by grouping similar failed scores                       |
+| **Annotation**       | A human review of a trace, producing a score through Latitude's review workflow            |
+| **Annotation Queue** | A managed review backlog that routes traces to human reviewers                             |
+| **Simulation**       | A test run of your agent against scenarios, evaluated locally or in CI                     |
 
 ## Next Steps
 
