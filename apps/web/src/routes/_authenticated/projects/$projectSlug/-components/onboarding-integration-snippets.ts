@@ -1,35 +1,47 @@
 /**
- * Snippets aligned with `main` branch `packages/telemetry` READMEs and `python/examples` / `typescript/examples`.
- * TypeScript supports the nine `InstrumentationType` values from `@latitude-data/telemetry`.
- * Extra providers match Python examples under `packages/telemetry/python/examples` on `main`.
+ * Snippets aligned with public telemetry docs:
+ * https://latitude-monitoring.mintlify.app/telemetry/overview
+ * Provider pages under /telemetry/providers/* and frameworks under /telemetry/frameworks/*
+ * OTLP exporter: https://latitude-monitoring.mintlify.app/telemetry/otel-exporter
+ *
+ * Extra providers (Gemini, Groq, …) match the Mintlify docs nav and
+ * `packages/telemetry/python/examples` on main (Python SDK); TypeScript auto-instrumentation
+ * for those SDKs is not in `@latitude-data/telemetry` yet — use the Python tab or OpenTelemetry.
  */
 
 export type SdkLanguage = "typescript" | "python"
 
+/** Telemetry providers + frameworks (Mintlify nav order, then frameworks). */
 export type OnboardingProviderId =
   | "openai"
-  | "azure-openai"
   | "anthropic"
   | "gemini"
+  | "azure-openai"
   | "bedrock"
-  | "vertexai"
-  | "cohere"
-  | "togetherai"
   | "aiplatform"
-  | "langchain"
-  | "llamaindex"
+  | "vertexai"
   | "groq"
   | "mistral"
-  | "litellm"
   | "ollama"
+  | "cohere"
+  | "togetherai"
+  | "litellm"
   | "replicate"
   | "sagemaker"
   | "watsonx"
   | "aleph-alpha"
   | "transformers"
-  | "crewai"
-  | "haystack"
-  | "dspy"
+  | "vercel-ai-sdk"
+  | "langchain"
+  | "llamaindex"
+
+export type TsPackageManager = "npm" | "pnpm" | "yarn" | "bun"
+
+export type PyPackageManager = "pip" | "uv" | "poetry"
+
+export const TS_PACKAGE_MANAGERS: ReadonlyArray<TsPackageManager> = ["npm", "pnpm", "yarn", "bun"]
+
+export const PY_PACKAGE_MANAGERS: ReadonlyArray<PyPackageManager> = ["pip", "uv", "poetry"]
 
 interface OnboardingProviderSnippetConfig {
   readonly id: OnboardingProviderId
@@ -37,851 +49,985 @@ interface OnboardingProviderSnippetConfig {
   readonly supportsPython: boolean
 }
 
-function q(projectSlug: string): string {
-  return JSON.stringify(projectSlug)
-}
-
 const crossTsPy = { supportsTypescript: true, supportsPython: true } as const
+const tsOnly = { supportsTypescript: true, supportsPython: false } as const
 const pyOnly = { supportsTypescript: false, supportsPython: true } as const
 
 export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, OnboardingProviderSnippetConfig> = {
   openai: { id: "openai", ...crossTsPy },
-  "azure-openai": { id: "azure-openai", ...crossTsPy },
   anthropic: { id: "anthropic", ...crossTsPy },
   gemini: { id: "gemini", ...pyOnly },
+  "azure-openai": { id: "azure-openai", ...crossTsPy },
   bedrock: { id: "bedrock", ...crossTsPy },
-  vertexai: { id: "vertexai", ...crossTsPy },
-  cohere: { id: "cohere", ...crossTsPy },
-  togetherai: { id: "togetherai", ...crossTsPy },
   aiplatform: { id: "aiplatform", ...crossTsPy },
-  langchain: { id: "langchain", ...crossTsPy },
-  llamaindex: { id: "llamaindex", ...crossTsPy },
+  vertexai: { id: "vertexai", ...crossTsPy },
   groq: { id: "groq", ...pyOnly },
   mistral: { id: "mistral", ...pyOnly },
-  litellm: { id: "litellm", ...pyOnly },
   ollama: { id: "ollama", ...pyOnly },
+  cohere: { id: "cohere", ...crossTsPy },
+  togetherai: { id: "togetherai", ...crossTsPy },
+  litellm: { id: "litellm", ...pyOnly },
   replicate: { id: "replicate", ...pyOnly },
   sagemaker: { id: "sagemaker", ...pyOnly },
   watsonx: { id: "watsonx", ...pyOnly },
   "aleph-alpha": { id: "aleph-alpha", ...pyOnly },
   transformers: { id: "transformers", ...pyOnly },
-  crewai: { id: "crewai", ...pyOnly },
-  haystack: { id: "haystack", ...pyOnly },
-  dspy: { id: "dspy", ...pyOnly },
+  "vercel-ai-sdk": { id: "vercel-ai-sdk", ...tsOnly },
+  langchain: { id: "langchain", ...crossTsPy },
+  llamaindex: { id: "llamaindex", ...crossTsPy },
 }
 
-export function getOnboardingSnippet(id: OnboardingProviderId, lang: SdkLanguage, projectSlug: string): string | null {
+export function getLatitudeTelemetryTsInstallCommand(pm: TsPackageManager): string {
+  switch (pm) {
+    case "npm":
+      return "npm install @latitude-data/telemetry"
+    case "pnpm":
+      return "pnpm add @latitude-data/telemetry"
+    case "yarn":
+      return "yarn add @latitude-data/telemetry"
+    case "bun":
+      return "bun add @latitude-data/telemetry"
+  }
+}
+
+export function getLatitudeTelemetryPyInstallCommand(pm: PyPackageManager): string {
+  switch (pm) {
+    case "pip":
+      return "pip install latitude-telemetry"
+    case "uv":
+      return "uv add latitude-telemetry"
+    case "poetry":
+      return "poetry add latitude-telemetry"
+  }
+}
+
+function tsInstallPackages(pm: TsPackageManager, packages: string): string {
+  const pkgs = packages.trim()
+  switch (pm) {
+    case "npm":
+      return `npm install ${pkgs}`
+    case "pnpm":
+      return `pnpm add ${pkgs}`
+    case "yarn":
+      return `yarn add ${pkgs}`
+    case "bun":
+      return `bun add ${pkgs}`
+  }
+}
+
+function pyInstallPackages(pm: PyPackageManager, packages: string): string {
+  const pkgs = packages.trim()
+  switch (pm) {
+    case "pip":
+      return `pip install ${pkgs}`
+    case "uv":
+      return `uv add ${pkgs}`
+    case "poetry":
+      return `poetry add ${pkgs}`
+  }
+}
+
+/** Extra packages beyond `@latitude-data/telemetry` / `latitude-telemetry` (docs install them separately). */
+export function getProviderSdkTsInstallCommand(id: OnboardingProviderId, pm: TsPackageManager): string | null {
+  const map: Partial<Record<OnboardingProviderId, string>> = {
+    openai: "openai",
+    anthropic: "@anthropic-ai/sdk",
+    bedrock: "@aws-sdk/client-bedrock-runtime",
+    cohere: "cohere-ai",
+    togetherai: "together-ai",
+    vertexai: "@google-cloud/vertexai",
+    aiplatform: "@google-cloud/aiplatform",
+    "azure-openai": "openai",
+    "vercel-ai-sdk": "ai @ai-sdk/openai",
+    langchain: "@langchain/openai @langchain/core",
+    llamaindex: "llamaindex @llamaindex/openai @llamaindex/workflow",
+  }
+  const pkgs = map[id]
+  return pkgs ? tsInstallPackages(pm, pkgs) : null
+}
+
+export function getProviderSdkPyInstallCommand(id: OnboardingProviderId, pm: PyPackageManager): string | null {
+  const map: Partial<Record<OnboardingProviderId, string>> = {
+    openai: "openai",
+    anthropic: "anthropic",
+    gemini: "google-genai",
+    bedrock: "boto3",
+    cohere: "cohere",
+    togetherai: "together",
+    vertexai: "google-cloud-aiplatform",
+    aiplatform: "google-cloud-aiplatform",
+    "azure-openai": "openai",
+    groq: "groq",
+    mistral: "mistralai",
+    ollama: "ollama",
+    litellm: "litellm",
+    replicate: "replicate",
+    sagemaker: "boto3",
+    watsonx: "ibm-watsonx-ai",
+    "aleph-alpha": "aleph-alpha-client",
+    transformers: "transformers torch",
+    langchain: "langchain-openai langchain-core",
+    llamaindex: "llama-index",
+  }
+  const pkgs = map[id]
+  return pkgs ? pyInstallPackages(pm, pkgs) : null
+}
+
+export function getOnboardingSnippet(id: OnboardingProviderId, lang: SdkLanguage, _projectSlug: string): string | null {
   const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[id]
   if (lang === "typescript" && !cfg.supportsTypescript) return null
   if (lang === "python" && !cfg.supportsPython) return null
 
-  const s = q(projectSlug)
   switch (id) {
     case "openai":
-      return lang === "typescript" ? tsOpenai(s) : pyOpenai(s)
-    case "azure-openai":
-      return lang === "typescript" ? tsAzure(s) : pyAzure(s)
+      return lang === "typescript" ? snippetTsOpenai() : snippetPyOpenai()
     case "anthropic":
-      return lang === "typescript" ? tsAnthropic(s) : pyAnthropic(s)
+      return lang === "typescript" ? snippetTsAnthropic() : snippetPyAnthropic()
     case "gemini":
-      return pyGemini(s)
+      return lang === "python" ? snippetPyGemini() : null
     case "bedrock":
-      return lang === "typescript" ? tsBedrock(s) : pyBedrock(s)
-    case "vertexai":
-      return lang === "typescript" ? tsVertex(s) : pyVertex(s)
+      return lang === "typescript" ? snippetTsBedrock() : snippetPyBedrock()
     case "cohere":
-      return lang === "typescript" ? tsCohere(s) : pyCohere(s)
+      return lang === "typescript" ? snippetTsCohere() : snippetPyCohere()
     case "togetherai":
-      return lang === "typescript" ? tsTogether(s) : pyTogether(s)
+      return lang === "typescript" ? snippetTsTogether() : snippetPyTogether()
+    case "vertexai":
+      return lang === "typescript" ? snippetTsVertex() : snippetPyVertex()
     case "aiplatform":
-      return lang === "typescript" ? tsAiplatform(s) : pyAiplatform(s)
-    case "langchain":
-      return lang === "typescript" ? tsLangchain(s) : pyLangchain(s)
-    case "llamaindex":
-      return lang === "typescript" ? tsLlamaindex(s) : pyLlamaindex(s)
+      return lang === "typescript" ? snippetTsAiplatform() : snippetPyAiplatform()
+    case "azure-openai":
+      return lang === "typescript" ? snippetTsAzureOpenai() : snippetPyAzureOpenai()
     case "groq":
-      return pyGroq(s)
+      return lang === "python" ? snippetPyGroq() : null
     case "mistral":
-      return pyMistral(s)
-    case "litellm":
-      return pyLitellm(s)
+      return lang === "python" ? snippetPyMistral() : null
     case "ollama":
-      return pyOllama(s)
+      return lang === "python" ? snippetPyOllama() : null
+    case "litellm":
+      return lang === "python" ? snippetPyLitellm() : null
     case "replicate":
-      return pyReplicate(s)
+      return lang === "python" ? snippetPyReplicate() : null
     case "sagemaker":
-      return pySagemaker(s)
+      return lang === "python" ? snippetPySagemaker() : null
     case "watsonx":
-      return pyWatsonx(s)
+      return lang === "python" ? snippetPyWatsonx() : null
     case "aleph-alpha":
-      return pyAlephAlpha(s)
+      return lang === "python" ? snippetPyAlephAlpha() : null
     case "transformers":
-      return pyTransformers(s)
-    case "crewai":
-      return pyCrewai(s)
-    case "haystack":
-      return pyHaystack(s)
-    case "dspy":
-      return pyDspy(s)
+      return lang === "python" ? snippetPyTransformers() : null
+    case "vercel-ai-sdk":
+      return snippetTsVercelAiSdk()
+    case "langchain":
+      return lang === "typescript" ? snippetTsLangchain() : snippetPyLangchain()
+    case "llamaindex":
+      return lang === "typescript" ? snippetTsLlamaindex() : snippetPyLlamaindex()
     default:
       return null
   }
 }
 
-function tsOpenai(s: string) {
-  return `import OpenAI from "openai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
+function snippetTsOpenai() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import OpenAI from "openai"
 
 const latitude = initLatitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
 })
 
-async function main() {
-  await latitude.ready
-  const client = new OpenAI()
-  await capture(
-    "chat",
-    async () => {
-      const res = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Hello!" }],
-      })
-      return res.choices[0]?.message?.content
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
+await latitude.ready
 
-main().catch(console.error)
-`
-}
+const openai = new OpenAI()
 
-function pyOpenai(s: string) {
-  return `import os
-from openai import OpenAI
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["openai"],
-)
-
-@capture("chat", {"session_id": "example"})
-def main() -> str:
-    client = OpenAI()
-    r = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Hello!"}],
-    )
-    return r.choices[0].message.content
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsAzure(s: string) {
-  return `import { AzureOpenAI } from "openai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["openai"],
-})
-
-async function main() {
-  await latitude.ready
-  const client = new AzureOpenAI({
-    apiKey: process.env.AZURE_OPENAI_API_KEY,
-    apiVersion: "2024-02-01",
-    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+await capture("generate-support-reply", async () => {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: "Hello" }],
   })
-  const deployment = process.env.AZURE_OPENAI_DEPLOYMENT ?? "gpt-4o-mini"
-  await capture(
-    "azure-chat",
-    async () => {
-      const res = await client.chat.completions.create({
-        model: deployment,
-        messages: [{ role: "user", content: "Hello!" }],
-      })
-      return res.choices[0]?.message?.content
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
+  return completion.choices[0].message.content
+})
 
-main().catch(console.error)
+await latitude.shutdown()
 `
 }
 
-function pyAzure(s: string) {
+function snippetPyOpenai() {
   return `import os
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import init_latitude, capture
+from openai import OpenAI
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
 )
 
-from openai import AzureOpenAI
+client = OpenAI()
 
-@capture("azure-chat", {"session_id": "example"})
-def main() -> str:
-    client = AzureOpenAI(
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        api_version="2024-02-01",
-        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+def generate_support_reply():
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello"}],
     )
-    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
-    r = client.chat.completions.create(
-        model=deployment,
-        messages=[{"role": "user", "content": "Hello!"}],
-    )
-    return r.choices[0].message.content
+    return completion.choices[0].message.content
 
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
+capture("generate-support-reply", generate_support_reply)
+
+latitude["shutdown"]()
 `
 }
 
-function tsAnthropic(s: string) {
-  return `import Anthropic from "@anthropic-ai/sdk"
-import { capture, initLatitude } from "@latitude-data/telemetry"
+function snippetTsAnthropic() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import Anthropic from "@anthropic-ai/sdk"
 
 const latitude = initLatitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["anthropic"],
 })
 
-async function main() {
-  await latitude.ready
-  const client = new Anthropic()
-  await capture(
-    "anthropic-chat",
-    async () => {
-      const res = await client.messages.create({
-        model: "claude-3-5-haiku-latest",
-        max_tokens: 256,
-        messages: [{ role: "user", content: "Hello!" }],
-      })
-      const block = res.content[0]
-      return block?.type === "text" ? block.text : ""
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
+await latitude.ready
 
-main().catch(console.error)
+const client = new Anthropic()
+
+await capture("generate-reply", async () => {
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: "Hello" }],
+  })
+  return message.content[0].text
+})
+
+await latitude.shutdown()
 `
 }
 
-function pyAnthropic(s: string) {
+function snippetPyAnthropic() {
   return `import os
+from latitude_telemetry import init_latitude, capture
 from anthropic import Anthropic
-from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["anthropic"],
 )
 
-@capture("anthropic-chat", {"session_id": "example"})
-def main() -> str:
-    client = Anthropic()
-    r = client.messages.create(
-        model="claude-3-5-haiku-latest",
-        max_tokens=256,
-        messages=[{"role": "user", "content": "Hello!"}],
-    )
-    return r.content[0].text
+client = Anthropic()
 
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
+def generate_reply():
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+    return message.content[0].text
+
+capture("generate-reply", generate_reply)
+
+latitude["shutdown"]()
 `
 }
 
-function pyGemini(s: string) {
-  return `import os
-from latitude_telemetry import capture, init_latitude
+function snippetTsBedrock() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["bedrock"],
+})
+
+await latitude.ready
+
+const client = new BedrockRuntimeClient({ region: "us-east-1" })
+
+await capture("generate-reply", async () => {
+  const command = new InvokeModelCommand({
+    modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+    contentType: "application/json",
+    body: JSON.stringify({
+      anthropic_version: "bedrock-2023-05-31",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: "Hello" }],
+    }),
+  })
+  const response = await client.send(command)
+  return JSON.parse(new TextDecoder().decode(response.body))
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyBedrock() {
+  return `import json
+import os
+from latitude_telemetry import init_latitude, capture
+import boto3
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["bedrock"],
+)
+
+client = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+def generate_reply():
+    response = client.invoke_model(
+        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        contentType="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "Hello"}],
+        }),
+    )
+    return json.loads(response["body"].read())
+
+capture("generate-reply", generate_reply)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsCohere() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { CohereClient } from "cohere-ai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["cohere"],
+})
+
+await latitude.ready
+
+const client = new CohereClient({ token: process.env.COHERE_API_KEY! })
+
+await capture("generate-reply", async () => {
+  const response = await client.chat({
+    model: "command-a-03-2025",
+    message: "Hello",
+  })
+  return response.text
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyCohere() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+import cohere
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["cohere"],
+)
+
+client = cohere.Client()
+
+def generate_reply():
+    response = client.chat(
+        model="command-a-03-2025",
+        message="Hello",
+    )
+    return response.text
+
+capture("generate-reply", generate_reply)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsTogether() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import Together from "together-ai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["togetherai"],
+})
+
+await latitude.ready
+
+const client = new Together()
+
+await capture("generate-reply", async () => {
+  const response = await client.chat.completions.create({
+    model: "meta-llama/Llama-3-70b-chat-hf",
+    messages: [{ role: "user", content: "Hello" }],
+  })
+  return response.choices[0].message.content
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyTogether() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+from together import Together
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["togetherai"],
+)
+
+client = Together()
+
+def generate_reply():
+    response = client.chat.completions.create(
+        model="meta-llama/Llama-3-70b-chat-hf",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+    return response.choices[0].message.content
+
+capture("generate-reply", generate_reply)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsVertex() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { VertexAI } from "@google-cloud/vertexai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["vertexai"],
+})
+
+await latitude.ready
+
+const vertexAI = new VertexAI({
+  project: process.env.GCP_PROJECT_ID!,
+  location: "us-central1",
+})
+const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+await capture("generate-reply", async () => {
+  const result = await model.generateContent("Hello")
+  return result.response.candidates?.[0].content.parts[0].text
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyVertex() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["vertexai"],
+)
+
+vertexai.init(project=os.environ["GCP_PROJECT_ID"], location="us-central1")
+model = GenerativeModel("gemini-1.5-flash")
+
+def generate_reply():
+    response = model.generate_content("Hello")
+    return response.text
+
+capture("generate-reply", generate_reply)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsAiplatform() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { PredictionServiceClient } from "@google-cloud/aiplatform"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["aiplatform"],
+})
+
+await latitude.ready
+
+const client = new PredictionServiceClient()
+
+await capture("generate-prediction", async () => {
+  const [response] = await client.predict({
+    endpoint: \`projects/\${process.env.GCP_PROJECT_ID}/locations/us-central1/publishers/google/models/text-bison\`,
+    instances: [{ content: "Hello" }],
+    parameters: { temperature: 0.2, maxOutputTokens: 256 },
+  })
+  return response.predictions
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyAiplatform() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+from google.cloud import aiplatform
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["aiplatform"],
+)
+
+aiplatform.init(project=os.environ["GCP_PROJECT_ID"], location="us-central1")
+
+def generate_prediction():
+    model = aiplatform.TextGenerationModel.from_pretrained("text-bison")
+    response = model.predict("Hello", temperature=0.2, max_output_tokens=256)
+    return response.text
+
+capture("generate-prediction", generate_prediction)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsAzureOpenai() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { AzureOpenAI } from "openai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
+
+await latitude.ready
+
+const client = new AzureOpenAI({
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  apiVersion: "2024-02-01",
+})
+
+await capture("generate-support-reply", async () => {
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: "Hello" }],
+  })
+  return completion.choices[0].message.content
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyAzureOpenai() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+from openai import AzureOpenAI
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["openai"],
+)
+
+client = AzureOpenAI(
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    api_version="2024-02-01",
+)
+
+def generate_support_reply():
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+    return completion.choices[0].message.content
+
+capture("generate-support-reply", generate_support_reply)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsVercelAiSdk() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+})
+
+await latitude.ready
+
+await capture("generate-support-reply", async () => {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    prompt: "Hello",
+    experimental_telemetry: {
+      isEnabled: true,
+    },
+  })
+  return text
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetTsLangchain() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { ChatOpenAI } from "@langchain/openai"
+import { HumanMessage } from "@langchain/core/messages"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["langchain"],
+})
+
+await latitude.ready
+
+const llm = new ChatOpenAI({ modelName: "gpt-4o" })
+
+await capture("langchain-query", async () => {
+  const response = await llm.invoke([new HumanMessage("Hello")])
+  return response.content
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyLangchain() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["langchain"],
+)
+
+llm = ChatOpenAI(model="gpt-4o")
+
+def langchain_query():
+    response = llm.invoke([HumanMessage(content="Hello")])
+    return response.content
+
+capture("langchain-query", langchain_query)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetTsLlamaindex() {
+  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+import { Settings } from "llamaindex"
+import { openai } from "@llamaindex/openai"
+import { agent } from "@llamaindex/workflow"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["llamaindex"],
+})
+
+await latitude.ready
+
+Settings.llm = openai({ model: "gpt-4o" })
+const myAgent = agent({ tools: [] })
+
+await capture("llamaindex-query", async () => {
+  const response = await myAgent.run("Hello")
+  return response
+})
+
+await latitude.shutdown()
+`
+}
+
+function snippetPyLlamaindex() {
+  return `import os
+from latitude_telemetry import init_latitude, capture
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["llamaindex"],
+)
+
+documents = SimpleDirectoryReader("data").load_data()
+index = VectorStoreIndex.from_documents(documents)
+query_engine = index.as_query_engine()
+
+def llamaindex_query():
+    response = query_engine.query("What is this document about?")
+    return str(response)
+
+capture("llamaindex-query", llamaindex_query)
+
+latitude["shutdown"]()
+`
+}
+
+function snippetPyGemini() {
+  return `import os
+
+from latitude_telemetry import capture, init_latitude
+
+# Initialize telemetry before importing google.genai so instrumentation can patch it.
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["google_generativeai"],
 )
 
 from google import genai
 
-@capture("gemini-chat", {"session_id": "example"})
-def main() -> str:
+
+@capture("gemini-completion", {"session_id": "example"})
+def main():
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     response = client.models.generate_content(
         model="gemini-2.0-flash",
-        contents="Hello!",
+        contents="Hello",
     )
     return response.text
 
+
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function tsBedrock(s: string) {
-  return `import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["bedrock"],
-})
-
-async function main() {
-  await latitude.ready
-  const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION ?? "us-east-1" })
-  await capture(
-    "bedrock-chat",
-    async () => {
-      const res = await client.send(
-        new ConverseCommand({
-          modelId: "anthropic.claude-3-haiku-20240307-v1:0",
-          messages: [{ role: "user", content: [{ text: "Hello!" }] }],
-          inferenceConfig: { maxTokens: 256 },
-        }),
-      )
-      return res.output?.message?.content?.[0].text ?? ""
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyBedrock(s: string) {
+function snippetPyGroq() {
   return `import os
-import boto3
+
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["bedrock"],
-)
-
-@capture("bedrock-chat", {"session_id": "example"})
-def main() -> str:
-    client = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
-    r = client.converse(
-        modelId="anthropic.claude-3-haiku-20240307-v1:0",
-        messages=[{"role": "user", "content": [{"text": "Hello!"}]}],
-        inferenceConfig={"maxTokens": 256},
-    )
-    return r["output"]["message"]["content"][0]["text"]
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsVertex(s: string) {
-  return `import { VertexAI } from "@google-cloud/vertexai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["vertexai"],
-})
-
-async function main() {
-  await latitude.ready
-  const vertex = new VertexAI({
-    project: process.env.GOOGLE_CLOUD_PROJECT!,
-    location: "us-central1",
-  })
-  const model = vertex.getGenerativeModel({ model: "gemini-1.5-flash" })
-  await capture(
-    "vertex-chat",
-    async () => {
-      const res = await model.generateContent("Hello!")
-      return res.response.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyVertex(s: string) {
-  return `import os
-import vertexai
-from vertexai.generative_models import GenerativeModel
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["vertexai"],
-)
-
-@capture("vertex-chat", {"session_id": "example"})
-def main() -> str:
-    vertexai.init(project=os.environ["GOOGLE_CLOUD_PROJECT"], location="us-central1")
-    model = GenerativeModel("gemini-1.5-flash")
-    return model.generate_content("Hello!").text
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsCohere(s: string) {
-  return `import { CohereClient } from "cohere-ai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["cohere"],
-})
-
-async function main() {
-  await latitude.ready
-  const client = new CohereClient({ token: process.env.COHERE_API_KEY })
-  await capture(
-    "cohere-chat",
-    async () => {
-      const res = await client.chat({ model: "command-r", message: "Hello!", maxTokens: 256 })
-      return res.text
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyCohere(s: string) {
-  return `import os
-import cohere
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["cohere"],
-)
-
-@capture("cohere-chat", {"session_id": "example"})
-def main() -> str:
-    client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
-    r = client.chat(model="command-r", message="Hello!", max_tokens=256)
-    return r.text
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsTogether(s: string) {
-  return `import Together from "together-ai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["togetherai"],
-})
-
-async function main() {
-  await latitude.ready
-  const client = new Together()
-  await capture(
-    "together-chat",
-    async () => {
-      const res = await client.chat.completions.create({
-        model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
-        messages: [{ role: "user", content: "Hello!" }],
-        max_tokens: 256,
-      })
-      return res.choices[0]?.message?.content
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyTogether(s: string) {
-  return `import os
-from together import Together
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["togetherai"],
-)
-
-@capture("together-chat", {"session_id": "example"})
-def main() -> str:
-    client = Together()
-    r = client.chat.completions.create(
-        model="meta-llama/Llama-3.2-3B-Instruct-Turbo",
-        messages=[{"role": "user", "content": "Hello!"}],
-        max_tokens=256,
-    )
-    return r.choices[0].message.content
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsAiplatform(s: string) {
-  return `import { initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["aiplatform"],
-})
-
-async function main() {
-  await latitude.ready
-  // Use @google-cloud/aiplatform — supported calls are traced automatically.
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyAiplatform(s: string) {
-  return `import os
-from latitude_telemetry import init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["aiplatform"],
-)
-
-if __name__ == "__main__":
-    # Use google.cloud.aiplatform clients — supported calls are traced automatically.
-    latitude["flush"]()
-`
-}
-
-function tsLangchain(s: string) {
-  return `import { HumanMessage } from "@langchain/core/messages"
-import { ChatOpenAI } from "@langchain/openai"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["langchain"],
-})
-
-async function main() {
-  await latitude.ready
-  const model = new ChatOpenAI({ modelName: "gpt-4o-mini", maxTokens: 256 })
-  await capture(
-    "langchain-chat",
-    async () => {
-      const res = await model.invoke([new HumanMessage("Hello!")])
-      return String(res.content)
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyLangchain(s: string) {
-  return `import os
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["langchain"],
-)
-
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
-
-@capture("langchain-chat", {"session_id": "example"})
-def main() -> str:
-    model = ChatOpenAI(model="gpt-4o-mini", max_tokens=256)
-    r = model.invoke([HumanMessage(content="Hello!")])
-    return str(r.content)
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function tsLlamaindex(s: string) {
-  return `import { OpenAI } from "llamaindex"
-import { capture, initLatitude } from "@latitude-data/telemetry"
-
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: ${s},
-  instrumentations: ["llamaindex"],
-})
-
-async function main() {
-  await latitude.ready
-  const llm = new OpenAI({ model: "gpt-4o-mini", maxTokens: 256 })
-  await capture(
-    "llamaindex-chat",
-    async () => {
-      const res = await llm.complete({ prompt: "Hello!" })
-      return res.text
-    },
-    { sessionId: "example" },
-  )
-  await latitude.flush()
-}
-
-main().catch(console.error)
-`
-}
-
-function pyLlamaindex(s: string) {
-  return `import os
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["llamaindex"],
-)
-
-from llama_index.llms.openai import OpenAI
-
-@capture("llamaindex-chat", {"session_id": "example"})
-def main() -> str:
-    llm = OpenAI(model="gpt-4o-mini", max_tokens=256)
-    return llm.complete("Hello!").text
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function pyGroq(s: string) {
-  return `import os
-from groq import Groq
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["groq"],
 )
 
-@capture("groq-chat", {"session_id": "example"})
-def main() -> str:
+from groq import Groq
+
+
+@capture("groq-completion", {"session_id": "example"})
+def main():
     client = Groq()
-    r = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": "Hello!"}],
+        messages=[{"role": "user", "content": "Hello"}],
         max_tokens=50,
     )
-    return r.choices[0].message.content
+    return response.choices[0].message.content
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyMistral(s: string) {
+function snippetPyMistral() {
   return `import os
+
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["mistralai"],
 )
 
 from mistralai import Mistral
 from mistralai.models import UserMessage
 
-@capture("mistral-chat", {"session_id": "example"})
-def main() -> str:
+
+@capture("mistral-completion", {"session_id": "example"})
+def main():
     client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
-    r = client.chat.complete(
+    response = client.chat.complete(
         model="mistral-small-latest",
-        messages=[UserMessage(role="user", content="Hello!")],
+        messages=[UserMessage(role="user", content="Hello")],
         max_tokens=50,
     )
-    return r.choices[0].message.content
+    return response.choices[0].message.content
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyLitellm(s: string) {
+function snippetPyOllama() {
   return `import os
-import litellm
-from latitude_telemetry import capture, init_latitude
 
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["litellm"],
-)
-
-@capture("litellm-chat", {"session_id": "example"})
-def main() -> str:
-    r = litellm.completion(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Hello!"}],
-        max_tokens=50,
-    )
-    return r.choices[0].message.content
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function pyOllama(s: string) {
-  return `import os
 import ollama
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["ollama"],
 )
 
-@capture("ollama-chat", {"session_id": "example"})
-def main() -> str:
-    r = ollama.chat(
+
+@capture("ollama-completion", {"session_id": "example"})
+def main():
+    response = ollama.chat(
         model="llama3.2",
-        messages=[{"role": "user", "content": "Hello!"}],
+        messages=[{"role": "user", "content": "Hello"}],
     )
-    return r["message"]["content"]
+    return response["message"]["content"]
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyReplicate(s: string) {
+function snippetPyLitellm() {
   return `import os
+
+import litellm
+from latitude_telemetry import capture, init_latitude
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["litellm"],
+)
+
+
+@capture("litellm-completion", {"session_id": "example"})
+def main():
+    response = litellm.completion(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "Hello"}],
+        max_tokens=50,
+    )
+    return response.choices[0].message.content
+
+
+if __name__ == "__main__":
+    main()
+    latitude["shutdown"]()
+`
+}
+
+function snippetPyReplicate() {
+  return `import os
+
 import replicate
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["replicate"],
 )
 
+
 @capture("replicate-run", {"session_id": "example"})
-def main() -> str:
-    out = replicate.run(
+def main():
+    output = replicate.run(
         "meta/meta-llama-3-8b-instruct",
-        input={"prompt": "Hello!", "max_tokens": 50},
+        input={"prompt": "Hello", "max_tokens": 50},
     )
-    return "".join(out)
+    return "".join(output)
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pySagemaker(s: string) {
+function snippetPySagemaker() {
   return `import json
 import os
+
 import boto3
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["sagemaker"],
 )
 
+
 @capture("sagemaker-invoke", {"session_id": "example"})
-def main() -> str:
-    client = boto3.client("sagemaker-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
-    payload = json.dumps({"inputs": "Hello!", "parameters": {"max_new_tokens": 50}})
-    r = client.invoke_endpoint(
+def main():
+    client = boto3.client(
+        "sagemaker-runtime",
+        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+    )
+    payload = json.dumps(
+        {
+            "inputs": "Hello",
+            "parameters": {"max_new_tokens": 50},
+        }
+    )
+    response = client.invoke_endpoint(
         EndpointName=os.environ["SAGEMAKER_ENDPOINT_NAME"],
         ContentType="application/json",
         Body=payload,
     )
-    return json.loads(r["Body"].read().decode())
+    result = json.loads(response["Body"].read().decode())
+    return result[0]["generated_text"]
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyWatsonx(s: string) {
+function snippetPyWatsonx() {
   return `import os
+
 from ibm_watsonx_ai.foundation_models import Model
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["watsonx"],
 )
 
-@capture("watsonx-chat", {"session_id": "example"})
-def main() -> str:
+
+@capture("watsonx-generate", {"session_id": "example"})
+def main():
     model = Model(
         model_id="ibm/granite-13b-chat-v2",
         credentials={
@@ -890,202 +1036,134 @@ def main() -> str:
         },
         project_id=os.environ["WATSONX_PROJECT_ID"],
     )
-    return model.generate_text(prompt="Hello!", params={GenParams.MAX_NEW_TOKENS: 50})
+    return model.generate_text(
+        prompt="Hello",
+        params={GenParams.MAX_NEW_TOKENS: 50},
+    )
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyAlephAlpha(s: string) {
+function snippetPyAlephAlpha() {
   return `import os
+
 from aleph_alpha_client import Client, CompletionRequest, Prompt
 from latitude_telemetry import capture, init_latitude
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["aleph_alpha"],
 )
 
-@capture("aleph-alpha", {"session_id": "example"})
-def main() -> str:
+
+@capture("aleph-alpha-complete", {"session_id": "example"})
+def main():
     client = Client(token=os.environ["ALEPH_ALPHA_API_KEY"])
-    req = CompletionRequest(
-        prompt=Prompt.from_text("Hello!"),
+    request = CompletionRequest(
+        prompt=Prompt.from_text("Hello:"),
         maximum_tokens=50,
     )
-    r = client.complete(req, model="luminous-base")
-    return r.completions[0].completion
+    response = client.complete(request, model="luminous-base")
+    return response.completions[0].completion
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyTransformers(s: string) {
+function snippetPyTransformers() {
   return `import os
-from transformers import pipeline
+
 from latitude_telemetry import capture, init_latitude
+from transformers import pipeline
 
 latitude = init_latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["transformers"],
 )
 
-@capture("transformers", {"session_id": "example"})
-def main() -> str:
-    gen = pipeline("text-generation", model="gpt2", max_new_tokens=50)
-    r = gen("Hello!")
-    return r[0]["generated_text"]
 
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function pyCrewai(s: string) {
-  return `import os
-from crewai import Agent, Crew, Task
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["crewai", "openai"],
-)
-
-@capture("crewai", {"session_id": "example"})
-def main() -> str:
-    agent = Agent(
-        role="Assistant",
-        goal="Reply briefly",
-        backstory="You answer in one short sentence.",
-        verbose=False,
+@capture("transformers-generate", {"session_id": "example"})
+def main():
+    generator = pipeline(
+        "text-generation",
+        model="gpt2",
+        max_new_tokens=50,
     )
-    task = Task(description="Say hello.", expected_output="A greeting.", agent=agent)
-    crew = Crew(agents=[agent], tasks=[task], verbose=False)
-    return str(crew.kickoff().raw)
+    result = generator("Hello:")
+    return result[0]["generated_text"]
+
 
 if __name__ == "__main__":
     main()
-    latitude["flush"]()
+    latitude["shutdown"]()
 `
 }
 
-function pyHaystack(s: string) {
-  return `import os
-from haystack import Pipeline
-from haystack.components.builders import PromptBuilder
-from haystack.components.generators import OpenAIGenerator
-from latitude_telemetry import capture, init_latitude
+const OTLP_TRACES_ENDPOINT = "https://ingest.latitude.so/v1/traces"
 
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["haystack"],
-)
-
-@capture("haystack", {"session_id": "example"})
-def main() -> str:
-    pipe = Pipeline()
-    pipe.add_component("prompt_builder", PromptBuilder(template="{{query}}"))
-    pipe.add_component("llm", OpenAIGenerator(model="gpt-4o-mini"))
-    pipe.connect("prompt_builder", "llm")
-    r = pipe.run({"prompt_builder": {"query": "Hello!"}})
-    return r["llm"]["replies"][0]
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-function pyDspy(s: string) {
-  return `import os
-from latitude_telemetry import capture, init_latitude
-
-latitude = init_latitude(
-    api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=${s},
-    instrumentations=["dspy"],
-)
-
-import dspy
-
-class Hello(dspy.Signature):
-    """Short reply."""
-    q: str = dspy.InputField()
-    a: str = dspy.OutputField()
-
-@capture("dspy", {"session_id": "example"})
-def main() -> str:
-    dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"))
-    pred = dspy.Predict(Hello)
-    return pred(q="Hello!").a
-
-if __name__ == "__main__":
-    main()
-    latitude["flush"]()
-`
-}
-
-export function getInstallLine(id: OnboardingProviderId, lang: SdkLanguage): string {
-  const lines: Record<OnboardingProviderId, { npm: string; pip: string }> = {
-    openai: { npm: "npm install openai @latitude-data/telemetry", pip: "pip install openai latitude-telemetry" },
-    "azure-openai": {
-      npm: "npm install openai @latitude-data/telemetry",
-      pip: "pip install openai latitude-telemetry",
-    },
-    anthropic: {
-      npm: "npm install @anthropic-ai/sdk @latitude-data/telemetry",
-      pip: "pip install anthropic latitude-telemetry",
-    },
-    gemini: { npm: "", pip: "pip install google-genai latitude-telemetry" },
-    bedrock: {
-      npm: "npm install @aws-sdk/client-bedrock-runtime @latitude-data/telemetry",
-      pip: "pip install boto3 latitude-telemetry",
-    },
-    vertexai: {
-      npm: "npm install @google-cloud/vertexai @latitude-data/telemetry",
-      pip: "pip install google-cloud-aiplatform latitude-telemetry",
-    },
-    cohere: { npm: "npm install cohere-ai @latitude-data/telemetry", pip: "pip install cohere latitude-telemetry" },
-    togetherai: {
-      npm: "npm install together-ai @latitude-data/telemetry",
-      pip: "pip install together latitude-telemetry",
-    },
-    aiplatform: {
-      npm: "npm install @google-cloud/aiplatform @latitude-data/telemetry",
-      pip: "pip install google-cloud-aiplatform latitude-telemetry",
-    },
-    langchain: {
-      npm: "npm install langchain @langchain/openai @latitude-data/telemetry",
-      pip: "pip install langchain-core langchain-openai latitude-telemetry",
-    },
-    llamaindex: {
-      npm: "npm install llamaindex @latitude-data/telemetry",
-      pip: "pip install llama-index llama-index-llms-openai latitude-telemetry",
-    },
-    groq: { npm: "", pip: "pip install groq latitude-telemetry" },
-    mistral: { npm: "", pip: "pip install mistralai latitude-telemetry" },
-    litellm: { npm: "", pip: "pip install litellm latitude-telemetry" },
-    ollama: { npm: "", pip: "pip install ollama latitude-telemetry" },
-    replicate: { npm: "", pip: "pip install replicate latitude-telemetry" },
-    sagemaker: { npm: "", pip: "pip install boto3 latitude-telemetry" },
-    watsonx: { npm: "", pip: "pip install ibm-watsonx-ai latitude-telemetry" },
-    "aleph-alpha": { npm: "", pip: "pip install aleph-alpha-client latitude-telemetry" },
-    transformers: { npm: "", pip: "pip install transformers torch latitude-telemetry" },
-    crewai: { npm: "", pip: "pip install crewai latitude-telemetry" },
-    haystack: { npm: "", pip: "pip install haystack-ai latitude-telemetry" },
-    dspy: { npm: "", pip: "pip install dspy latitude-telemetry" },
+function sdkEnvExtras(id: OnboardingProviderId): string {
+  switch (id) {
+    case "openai":
+      return "OPENAI_API_KEY=sk-..."
+    case "azure-openai":
+      return `AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=...`
+    case "anthropic":
+      return "ANTHROPIC_API_KEY=sk-ant-..."
+    case "gemini":
+      return "GEMINI_API_KEY=..."
+    case "bedrock":
+      return `AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1`
+    case "cohere":
+      return "COHERE_API_KEY=..."
+    case "togetherai":
+      return "TOGETHER_API_KEY=..."
+    case "vertexai":
+      return "GCP_PROJECT_ID=..."
+    case "aiplatform":
+      return "GCP_PROJECT_ID=..."
+    case "groq":
+      return "GROQ_API_KEY=..."
+    case "mistral":
+      return "MISTRAL_API_KEY=..."
+    case "ollama":
+      return "OLLAMA_HOST=http://localhost:11434"
+    case "litellm":
+      return "OPENAI_API_KEY=sk-..."
+    case "replicate":
+      return "REPLICATE_API_TOKEN=r8_..."
+    case "sagemaker":
+      return `AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1
+SAGEMAKER_ENDPOINT_NAME=...`
+    case "watsonx":
+      return `WATSONX_API_KEY=...
+WATSONX_PROJECT_ID=...
+WATSONX_URL=https://us-south.ml.cloud.ibm.com`
+    case "aleph-alpha":
+      return "ALEPH_ALPHA_API_KEY=..."
+    case "transformers":
+      return "HF_TOKEN=hf_..."
+    case "vercel-ai-sdk":
+      return "OPENAI_API_KEY=sk-..."
+    case "langchain":
+    case "llamaindex":
+      return "OPENAI_API_KEY=sk-..."
+    default:
+      return ""
   }
-  const row = lines[id]
-  return lang === "typescript" ? row.npm : row.pip
 }
 
 export function getEnvBlock(id: OnboardingProviderId, mode: "sdk" | "opentelemetry", projectSlug: string): string {
@@ -1093,81 +1171,28 @@ export function getEnvBlock(id: OnboardingProviderId, mode: "sdk" | "opentelemet
   const commonSdk = `LATITUDE_API_KEY=your-api-key
 ${slugLine}`
 
-  const otelByProvider: Record<OnboardingProviderId, string> = {
-    openai: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    "azure-openai": `${commonSdk}
-AZURE_OPENAI_ENDPOINT=https://...
-AZURE_OPENAI_API_KEY=...`,
-    anthropic: `${commonSdk}
-ANTHROPIC_API_KEY=sk-ant-...`,
-    gemini: `${commonSdk}
-GEMINI_API_KEY=...`,
-    bedrock: `${commonSdk}
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-east-1`,
-    vertexai: `${commonSdk}
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
-GOOGLE_CLOUD_PROJECT=...`,
-    cohere: `${commonSdk}
-COHERE_API_KEY=...`,
-    togetherai: `${commonSdk}
-TOGETHER_API_KEY=...`,
-    aiplatform: `${commonSdk}
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
-GOOGLE_CLOUD_PROJECT=...`,
-    langchain: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    llamaindex: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    groq: `${commonSdk}
-GROQ_API_KEY=...`,
-    mistral: `${commonSdk}
-MISTRAL_API_KEY=...`,
-    litellm: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    ollama: `${commonSdk}
-OLLAMA_HOST=http://localhost:11434`,
-    replicate: `${commonSdk}
-REPLICATE_API_TOKEN=r8_...`,
-    sagemaker: `${commonSdk}
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-east-1
-SAGEMAKER_ENDPOINT_NAME=...`,
-    watsonx: `${commonSdk}
-WATSONX_API_KEY=...
-WATSONX_PROJECT_ID=...
-WATSONX_URL=https://us-south.ml.cloud.ibm.com`,
-    "aleph-alpha": `${commonSdk}
-ALEPH_ALPHA_API_KEY=...`,
-    transformers: `${commonSdk}
-HF_TOKEN=hf_...`,
-    crewai: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    haystack: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-    dspy: `${commonSdk}
-OPENAI_API_KEY=sk-...`,
-  }
-
   if (mode === "sdk") {
-    return otelByProvider[id]
+    const extra = sdkEnvExtras(id)
+    return extra ? `${commonSdk}\n${extra}` : commonSdk
   }
 
-  return `${commonSdk}
+  const headers = `Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=${projectSlug}`
+  const otel = `# OTLP over HTTP (see https://latitude-monitoring.mintlify.app/telemetry/otel-exporter)
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${OTLP_TRACES_ENDPOINT}"
+OTEL_EXPORTER_OTLP_TRACES_HEADERS="${headers}"
 
-# Route LLM spans to Latitude via OTLP (see Latitude docs for endpoint and headers).
-# Use your existing OpenTelemetry TracerProvider and add LatitudeSpanProcessor, or
-# configure an OTLP exporter pointed at the Latitude ingest URL.`
+# In OTEL_EXPORTER_OTLP_TRACES_HEADERS the Authorization value must include the Bearer prefix (see public OTLP docs).
+${commonSdk}`
+
+  const extra = sdkEnvExtras(id)
+  return extra ? `${otel}\n\n# Your app still needs provider credentials, for example:\n${extra}` : otel
 }
 
-/** v2 telemetry overview — primary doc for coding agents wiring Latitude. */
-const LATITUDE_DOCS_TELEMETRY_V2_OVERVIEW = "https://docs.latitude.so/v2/telemetry/overview"
+const LATITUDE_DOCS_TELEMETRY_OVERVIEW = "https://latitude-monitoring.mintlify.app/telemetry/overview"
+const LATITUDE_DOCS_TELEMETRY_OTEL = "https://latitude-monitoring.mintlify.app/telemetry/otel-exporter"
 
 /**
- * Short paste for coding agents: v2 telemetry docs, concrete project id (and slug for env), repo-aware setup.
+ * Short paste for coding agents: public telemetry docs, concrete project id (and slug for env), repo-aware setup.
  */
 export function getCodingAgentTelemetryPrompt(params: {
   readonly projectId: string
@@ -1175,8 +1200,8 @@ export function getCodingAgentTelemetryPrompt(params: {
 }): string {
   const { projectId, projectSlug } = params
   return [
-    `Read ${LATITUDE_DOCS_TELEMETRY_V2_OVERVIEW} first, then implement Latitude telemetry in this repository per the documentation (env vars, SDK or OpenTelemetry, and whichever LLM providers you find in the code).`,
-    `Target this Latitude project: id \`${projectId}\`, slug \`${projectSlug}\` — use the variable names from the docs so traces land here. Use a Latitude API key from Settings; never commit secrets.`,
+    `Read ${LATITUDE_DOCS_TELEMETRY_OVERVIEW} and ${LATITUDE_DOCS_TELEMETRY_OTEL} first, then implement Latitude telemetry in this repository per the documentation (env vars, TypeScript/Python SDK for your LLM provider, or OTLP to ${OTLP_TRACES_ENDPOINT}).`,
+    `Target this Latitude project: id \`${projectId}\`, slug \`${projectSlug}\` — set LATITUDE_PROJECT_SLUG (and X-Latitude-Project for OTLP) accordingly. Use a Latitude API key from Settings; never commit secrets.`,
   ].join("\n")
 }
 

@@ -1,5 +1,5 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
+import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -22,11 +22,18 @@ import {
   getCodingMachineInstallDescription,
   getCodingMachineTelemetryInstallCommand,
   getEnvBlock,
-  getInstallLine,
+  getLatitudeTelemetryPyInstallCommand,
+  getLatitudeTelemetryTsInstallCommand,
   getOnboardingSnippet,
+  getProviderSdkPyInstallCommand,
+  getProviderSdkTsInstallCommand,
   ONBOARDING_PROVIDER_SNIPPET_CONFIG,
   type OnboardingProviderId,
+  PY_PACKAGE_MANAGERS,
+  type PyPackageManager,
   type SdkLanguage,
+  TS_PACKAGE_MANAGERS,
+  type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
 type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
@@ -192,58 +199,153 @@ function OnboardingPreviewImage({
 
 const OnboardingWaitingLottie = lazy(() => import("./onboarding-waiting-lottie.tsx"))
 
-/** Order matches `packages/telemetry` on `main`: TS SDK + Python examples. */
+/** Order matches Mintlify telemetry providers nav, then frameworks (see telemetry/overview). */
 const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "openai", name: "OpenAI", icon: "openai" },
-  { id: "azure-openai", name: "Azure OpenAI", icon: "azure" },
   { id: "anthropic", name: "Anthropic", icon: "anthropic" },
-  { id: "gemini", name: "Gemini (Google GenAI)", icon: "google" },
+  { id: "gemini", name: "Gemini", icon: "google" },
+  { id: "azure-openai", name: "Azure OpenAI", icon: "azure" },
   { id: "bedrock", name: "Amazon Bedrock", icon: "amazon-bedrock" },
-  { id: "vertexai", name: "Vertex AI", icon: "google-vertex" },
-  { id: "cohere", name: "Cohere", icon: "cohere" },
-  { id: "togetherai", name: "Together AI", icon: "togetherai" },
   { id: "aiplatform", name: "Google AI Platform", icon: "google" },
-  { id: "langchain", name: "LangChain", icon: "generic" },
-  { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
+  { id: "vertexai", name: "Vertex AI", icon: "google-vertex" },
   { id: "groq", name: "Groq", icon: "groq" },
   { id: "mistral", name: "Mistral", icon: "mistral" },
-  { id: "litellm", name: "LiteLLM", icon: "generic" },
   { id: "ollama", name: "Ollama", icon: "llama" },
-  { id: "replicate", name: "Replicate", icon: "huggingface" },
-  { id: "sagemaker", name: "AWS SageMaker", icon: "amazon-bedrock" },
-  { id: "watsonx", name: "IBM watsonx.ai", icon: "generic" },
+  { id: "cohere", name: "Cohere", icon: "cohere" },
+  { id: "togetherai", name: "Together AI", icon: "togetherai" },
+  { id: "litellm", name: "LiteLLM", icon: "generic" },
+  { id: "replicate", name: "Replicate", icon: "generic" },
+  { id: "sagemaker", name: "SageMaker", icon: "amazon-bedrock" },
+  { id: "watsonx", name: "watsonx.ai", icon: "generic" },
   { id: "aleph-alpha", name: "Aleph Alpha", icon: "generic" },
-  { id: "transformers", name: "Hugging Face Transformers", icon: "huggingface" },
-  { id: "crewai", name: "CrewAI", icon: "generic" },
-  { id: "haystack", name: "Haystack", icon: "generic" },
-  { id: "dspy", name: "DSPy", icon: "generic" },
+  { id: "transformers", name: "Transformers", icon: "huggingface" },
+  { id: "vercel-ai-sdk", name: "Vercel AI SDK", icon: "vercel" },
+  { id: "langchain", name: "LangChain", icon: "generic" },
+  { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
 ]
+
+/** Figma-style package manager chips (Latitude Sandbox command pattern). */
+function PackageManagerChips<T extends string>({
+  options,
+  active,
+  onSelect,
+}: {
+  readonly options: ReadonlyArray<T>
+  readonly active: T
+  readonly onSelect: (id: T) => void
+}) {
+  return (
+    <div className="flex flex-row flex-wrap gap-1">
+      {options.map((id) => {
+        const selected = active === id
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onSelect(id)}
+            className={`h-6 cursor-pointer rounded-md border px-2 text-xs font-medium transition-colors ${selected ? "border-primary/30 bg-primary-muted text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+          >
+            {id}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * One install command with its own chip row; `active*` / `onSelect*` are shared across
+ * Latitude SDK + provider fields so both stay in sync (same package manager everywhere).
+ */
+function InstallCommandField({
+  command,
+  isTs,
+  tsPm,
+  pyPm,
+  onSelectTs,
+  onSelectPy,
+}: {
+  readonly command: string
+  readonly isTs: boolean
+  readonly tsPm: TsPackageManager
+  readonly pyPm: PyPackageManager
+  readonly onSelectTs: (pm: TsPackageManager) => void
+  readonly onSelectPy: (pm: PyPackageManager) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2">
+      <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-2">
+        {isTs ? (
+          <PackageManagerChips options={TS_PACKAGE_MANAGERS} active={tsPm} onSelect={onSelectTs} />
+        ) : (
+          <PackageManagerChips options={PY_PACKAGE_MANAGERS} active={pyPm} onSelect={onSelectPy} />
+        )}
+        <div className="ml-auto shrink-0">
+          <CopyButton value={command} tooltip="Copy" size="sm" />
+        </div>
+      </div>
+      <div className="min-w-0 overflow-hidden rounded-lg bg-muted">
+        <CodeBlock value={command} copyable={false} className="rounded-lg bg-muted" />
+      </div>
+    </div>
+  )
+}
 
 function SdkIntegrationInstructions({
   selectedProviderId,
+  providerDisplayName,
   lang,
   slugForSnippets,
 }: {
   readonly selectedProviderId: OnboardingProviderId
+  readonly providerDisplayName: string
   readonly lang: SdkLanguage
   readonly slugForSnippets: string
 }) {
-  const install = getInstallLine(selectedProviderId, lang)
+  const [tsPm, setTsPm] = useState<TsPackageManager>("npm")
+  const [pyPm, setPyPm] = useState<PyPackageManager>("pip")
+
   const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets)
 
+  const isTs = lang === "typescript"
+  const latInstall = isTs ? getLatitudeTelemetryTsInstallCommand(tsPm) : getLatitudeTelemetryPyInstallCommand(pyPm)
+  const sdkInstall = isTs
+    ? getProviderSdkTsInstallCommand(selectedProviderId, tsPm)
+    : getProviderSdkPyInstallCommand(selectedProviderId, pyPm)
+
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Text.H5M>Install</Text.H5M>
-        {install ? (
-          <CodeBlock value={install} copyable />
-        ) : (
-          <Text.H5 color="foregroundMuted">
-            No install line is configured for this language. See <code className="text-xs">packages/telemetry</code> on
-            the main branch.
-          </Text.H5>
-        )}
+        <Text.H5 color="foregroundMuted">
+          Follow these instructions to integrate Latitude telemetry into an application that uses {providerDisplayName}.
+        </Text.H5>
       </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5 color="foregroundMuted">Latitude SDK</Text.H5>
+        <InstallCommandField
+          command={latInstall}
+          isTs={isTs}
+          tsPm={tsPm}
+          pyPm={pyPm}
+          onSelectTs={setTsPm}
+          onSelectPy={setPyPm}
+        />
+      </div>
+      {sdkInstall ? (
+        <div className="flex flex-col gap-2">
+          <Text.H5 color="foregroundMuted">Provider / framework packages</Text.H5>
+          <InstallCommandField
+            command={sdkInstall}
+            isTs={isTs}
+            tsPm={tsPm}
+            pyPm={pyPm}
+            onSelectTs={setTsPm}
+            onSelectPy={setPyPm}
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <Text.H5M>Environment variables</Text.H5M>
@@ -256,11 +358,11 @@ function SdkIntegrationInstructions({
 
       {snippet ? (
         <div className="flex flex-col gap-2">
-          <Text.H5M>Minimal integration</Text.H5M>
+          <Text.H5M>Initialize and use</Text.H5M>
           <CodeBlock value={snippet} copyable />
         </div>
       ) : null}
-    </>
+    </div>
   )
 }
 
@@ -571,15 +673,26 @@ export function OnboardingFlow({
                     <div className="flex flex-col gap-2">
                       <Text.H5M>Environment variables</Text.H5M>
                       <Text.H5 color="foregroundMuted">
-                        Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
-                        processor or point your OTLP exporter at Latitude ingest—see{" "}
-                        <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
+                        Latitude accepts standard OTLP over HTTP at{" "}
+                        <code className="text-xs">https://ingest.latitude.so/v1/traces</code> with{" "}
+                        <code className="text-xs">Authorization: Bearer …</code> and{" "}
+                        <code className="text-xs">X-Latitude-Project</code> (see{" "}
+                        <a
+                          className="text-primary underline-offset-2 hover:underline"
+                          href="https://latitude-monitoring.mintlify.app/telemetry/otel-exporter"
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          OpenTelemetry exporter
+                        </a>
+                        ). Prefer the Latitude SDK when you can; use OTLP for other languages or existing OTel stacks.
                       </Text.H5>
                       <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
                     </div>
                   ) : (
                     <SdkIntegrationInstructions
                       selectedProviderId={selectedProvider.id}
+                      providerDisplayName={selectedProvider.name}
                       lang={integrationPanel === "typescript" ? "typescript" : "python"}
                       slugForSnippets={slugForSnippets}
                     />
