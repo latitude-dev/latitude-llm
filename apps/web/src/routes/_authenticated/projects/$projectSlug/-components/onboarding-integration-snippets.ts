@@ -1177,7 +1177,7 @@ ${slugLine}`
 }
 
 const LATITUDE_DOCS_TELEMETRY_OVERVIEW = "https://docs.latitude.so/telemetry/overview"
-export const LATITUDE_DOCS_TELEMETRY_OTEL = "https://docs.latitude.so/telemetry/otel-exporter"
+const LATITUDE_DOCS_TELEMETRY_OTEL = "https://docs.latitude.so/telemetry/otel-exporter"
 
 /** Language SDK examples aligned with https://docs.latitude.so/telemetry/otel-exporter (cURL is separate in the UI). */
 export type OtelExporterLanguageId = "go" | "java" | "ruby" | "dotnet"

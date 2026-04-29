@@ -29,7 +29,6 @@ import {
   getOtelExporterLanguageSnippet,
   getProviderSdkPyInstallCommand,
   getProviderSdkTsInstallCommand,
-  LATITUDE_DOCS_TELEMETRY_OTEL,
   ONBOARDING_PROVIDER_SNIPPET_CONFIG,
   type OnboardingProviderId,
   OTEL_EXPORTER_LANGUAGE_OPTIONS,

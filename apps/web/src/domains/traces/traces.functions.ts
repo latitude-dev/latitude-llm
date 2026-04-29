@@ -170,6 +170,8 @@ export const countTracesByProject = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<number> => {
+    // `pollNonce` is only for clients to vary the serialized input (cache bust on polls); not passed to CH.
+    void data.pollNonce
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
