@@ -968,9 +968,12 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
                   endTimeUnixNano: "1710590501000000000",
                   attributes: [
                     str("ai.operationId", operationId),
-                    str("ai.prompt", JSON.stringify({
-                      messages: [{ role: "user", content: [{ type: "text", text: "Describe the weather." }] }],
-                    })),
+                    str(
+                      "ai.prompt",
+                      JSON.stringify({
+                        messages: [{ role: "user", content: [{ type: "text", text: "Describe the weather." }] }],
+                      }),
+                    ),
                     str("ai.response.object", JSON.stringify(responseObject)),
                   ],
                   status: { code: 1 },
@@ -989,11 +992,13 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
   ])("%s surfaces ai.response.object as assistant output", (operationId) => {
     const obj = { city: "Barcelona", temperature: 22 }
     const spans = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
-    const span = spans[0]!
+    const span = spans[0]
+    expect(span).toBeDefined()
 
-    expect(span.outputMessages).toHaveLength(1)
-    const assistant = span.outputMessages[0]!
-    expect(assistant.role).toBe("assistant")
+    expect(span?.outputMessages).toHaveLength(1)
+    const assistant = span?.outputMessages[0]
+    expect(assistant).toBeDefined()
+    expect(assistant?.role).toBe("assistant")
     const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
     const textPart = parts.find((p) => p.type === "text")
     expect(textPart).toBeDefined()
