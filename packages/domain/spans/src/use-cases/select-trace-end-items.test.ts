@@ -69,7 +69,7 @@ describe("selectTraceEndItemsUseCase", () => {
               status: [],
             },
           },
-          "system-queue:queue-a": {
+          "flagger:queue-a": {
             sampling: 100,
           },
         },
@@ -91,7 +91,7 @@ describe("selectTraceEndItemsUseCase", () => {
         selected: true,
         reason: "selected",
       },
-      "system-queue:queue-a": {
+      "flagger:queue-a": {
         selected: true,
         reason: "selected",
       },

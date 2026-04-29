@@ -24,11 +24,11 @@ export const outputSchemaFixture: LiveSeedFixtureDefinition = {
   description:
     "Low-cost non-support trace that should deterministically match the Output Schema Validation system queue.",
   sampling: {
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: ["output-schema-validation"],
+  deterministicFlaggerMatches: ["output-schema-validation"],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) =>
     createSingleTraceCase({

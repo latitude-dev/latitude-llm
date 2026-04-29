@@ -2,8 +2,8 @@ import {
   AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT,
   type CheckAmbiguousRateLimit,
   type EnqueueFlaggerWorkflowStart,
-  processDeterministicFlaggersUseCase,
-} from "@domain/annotation-queues"
+  processFlaggersUseCase,
+} from "@domain/flaggers"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { checkRedisRateLimit, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
@@ -14,7 +14,7 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
-  AnnotationQueueRepositoryLive,
+  FlaggerRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
@@ -54,14 +54,14 @@ const buildLogContext = (payload: RunPayload) => ({
   traceId: payload.traceId,
 })
 
-const rateLimitKey = (organizationId: string, queueSlug: string) =>
-  `org:${organizationId}:ratelimit:flagger-ambiguous:${queueSlug}`
+const rateLimitKey = (organizationId: string, flaggerSlug: string) =>
+  `org:${organizationId}:ratelimit:flagger-ambiguous:${flaggerSlug}`
 
 const makeRateLimitChecker =
   (redisClient: RedisClient): CheckAmbiguousRateLimit =>
-  ({ organizationId, queueSlug }) =>
+  ({ organizationId, flaggerSlug }) =>
     checkRedisRateLimit(redisClient, {
-      key: rateLimitKey(organizationId, queueSlug),
+      key: rateLimitKey(organizationId, flaggerSlug),
       maxRequests: AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT.maxRequests,
       windowSeconds: AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT.windowSeconds,
     }).pipe(Effect.map((result) => result.allowed))
@@ -77,11 +77,12 @@ const makeEnqueueWorkflowStart =
           organizationId: args.organizationId,
           projectId: args.projectId,
           traceId: args.traceId,
-          queueSlug: args.queueSlug,
+          flaggerId: args.flaggerId,
+          flaggerSlug: args.flaggerSlug,
           reason: args.reason,
         },
         {
-          dedupeKey: `flagger-start:${args.traceId}:${args.queueSlug}`,
+          dedupeKey: `flagger-start:${args.traceId}:${args.flaggerSlug}`,
           // Bounded exponential retry at the BullMQ layer absorbs short Temporal
           // outages. Delays: 2s, 4s, 8s — total ~14s before the job fails.
           attempts: 4,
@@ -100,7 +101,8 @@ const makeEnqueueWorkflowStart =
             error,
             organizationId: args.organizationId,
             traceId: args.traceId,
-            queueSlug: args.queueSlug,
+            flaggerId: args.flaggerId,
+            flaggerSlug: args.flaggerSlug,
             reason: args.reason,
           }),
         ),
@@ -126,9 +128,9 @@ export const createDeterministicFlaggersWorker = ({
 
   consumer.subscribe(QUEUE, {
     run: (payload: RunPayload) =>
-      processDeterministicFlaggersUseCase(payload, deps).pipe(
+      processFlaggersUseCase(payload, deps).pipe(
         withPostgres(
-          Layer.mergeAll(AnnotationQueueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
+          Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),

@@ -5,7 +5,7 @@ export type SamplingPlan = {
   readonly includeEvaluationIds?: readonly string[]
   readonly excludeEvaluationIds?: readonly string[]
   readonly liveQueueSample?: boolean
-  readonly systemQueueSamples?: Readonly<Record<string, boolean>>
+  readonly flaggerSamples?: Readonly<Record<string, boolean>>
 }
 
 export type LiveSeedGeneratedCaseTrace = {
@@ -42,7 +42,7 @@ export type LiveSeedFixtureDefinition = {
   readonly key: string
   readonly description: string
   readonly sampling: SamplingPlan
-  readonly deterministicSystemMatches: readonly string[]
+  readonly deterministicFlaggerMatches: readonly string[]
   readonly llmSystemIntents: readonly string[]
   readonly generateCase: (context: FixtureGenerationContext) => LiveSeedGeneratedCase
 }

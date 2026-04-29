@@ -44,11 +44,11 @@ export const combinationEvalAndLiveQueueInFixture: LiveSeedFixtureDefinition = {
     includeEvaluationIds: [SEED_COMBINATION_EVALUATION_ID],
     excludeEvaluationIds: [SEED_EVALUATION_ID, SEED_RETURNS_EVALUATION_ID, SEED_ACCESS_EVALUATION_ID],
     liveQueueSample: true,
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: [],
+  deterministicFlaggerMatches: [],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) => {
     const example = rng.pick(COMBINATION_RISK_EXAMPLES)

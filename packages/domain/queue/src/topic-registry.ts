@@ -181,7 +181,8 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
-      readonly queueSlug: string
+      readonly flaggerId: string
+      readonly flaggerSlug: string
       readonly reason: "sampled" | "ambiguous"
     }
   }>(),

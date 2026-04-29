@@ -25,6 +25,7 @@
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",
+    "@domain/flaggers": "workspace:*",
     "@domain/product-feedback": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",

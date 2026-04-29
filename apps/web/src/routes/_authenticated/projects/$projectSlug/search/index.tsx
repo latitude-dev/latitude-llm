@@ -2,7 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { Button, Icon, Input, type SortDirection, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, SearchIcon } from "lucide-react"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
@@ -27,7 +27,6 @@ import {
 } from "../-components/trace-page-state.ts"
 import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
-import { AddToQueueModal } from "../annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
 import { SearchBlankSlate } from "./-components/search-blank-slate.tsx"
 
@@ -77,7 +76,6 @@ function SearchPage() {
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [addToQueueOpen, setAddToQueueOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -262,10 +260,6 @@ function SearchPage() {
             <Icon icon={DatabaseIcon} size="sm" />
             Add to Dataset ({selectedCount})
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
-            <Icon icon={LayersIcon} size="sm" />
-            Add to Annotation Queue ({selectedCount})
-          </Button>
         </div>
       ) : null}
 
@@ -325,19 +319,6 @@ function SearchPage() {
           projectId={projectId}
           selection={bulkSelection}
           selectedCount={selectedCount}
-          onSuccess={clearSelections}
-        />
-      ) : null}
-
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
-        <AddToQueueModal
-          open={addToQueueOpen}
-          onOpenChange={setAddToQueueOpen}
-          projectId={projectId}
-          projectSlug={projectSlug}
-          selection={bulkSelection}
-          selectedCount={selectedCount}
-          {...(hasActiveFilters ? { filters } : {})}
           onSuccess={clearSelections}
         />
       ) : null}

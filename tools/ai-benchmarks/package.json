@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
-    "@domain/annotation-queues": "workspace:*",
+    "@domain/flaggers": "workspace:*",
     "@domain/models": "workspace:*",
     "@domain/optimizations": "workspace:*",
     "@domain/shared": "workspace:*",

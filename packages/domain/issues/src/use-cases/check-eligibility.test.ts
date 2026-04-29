@@ -65,7 +65,7 @@ describe("checkEligibilityUseCase", () => {
     await expect(runEligibility(null)).rejects.toMatchObject({ _tag: "ScoreNotFoundForDiscoveryError" })
   })
 
-  it("rejects drafted scores", async () => {
+  it("rejects drafted human-authored annotation scores", async () => {
     await expect(runEligibility(makeScore({ draftedAt: new Date("2026-03-31T01:00:00.000Z") }))).rejects.toMatchObject({
       _tag: "DraftScoreNotEligibleForDiscoveryError",
     })

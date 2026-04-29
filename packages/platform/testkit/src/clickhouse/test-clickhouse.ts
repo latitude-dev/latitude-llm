@@ -139,7 +139,7 @@ interface TestClickHouseContext {
  * Returns an object whose `client` property resolves lazily after beforeAll.
  */
 export function setupTestClickHouse(): TestClickHouseContext {
-  let ch: TestClickHouse
+  let ch: TestClickHouse | undefined
 
   beforeAll(() => {
     ch = createTestClickHouse()
@@ -147,15 +147,18 @@ export function setupTestClickHouse(): TestClickHouseContext {
   })
 
   beforeEach(() => {
+    if (!ch) return
     truncateClickHouseTables(ch)
   })
 
   afterAll(() => {
+    if (!ch) return
     ch.cleanup()
   })
 
   return {
     get client() {
+      if (!ch) throw new Error("ClickHouse test database has not been initialized")
       return ch.client
     },
   }

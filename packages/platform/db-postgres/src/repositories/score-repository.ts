@@ -417,14 +417,14 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         }),
 
-      findQueueDraftByTraceId: ({
+      findPublishedSystemAnnotationByTraceAndFeedback: ({
         projectId,
-        queueId,
         traceId,
+        feedback,
       }: {
         readonly projectId: ProjectId
-        readonly queueId: string
         readonly traceId: TraceId
+        readonly feedback: string
       }) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()
@@ -438,9 +438,10 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.organizationId, organizationId),
                     eq(scores.projectId, projectId),
                     eq(scores.source, "annotation"),
-                    eq(scores.sourceId, queueId),
+                    eq(scores.sourceId, "SYSTEM"),
                     eq(scores.traceId, traceId as string),
-                    isNotNull(scores.draftedAt),
+                    eq(scores.feedback, feedback),
+                    isNull(scores.draftedAt),
                   ),
                 )
                 .limit(1),

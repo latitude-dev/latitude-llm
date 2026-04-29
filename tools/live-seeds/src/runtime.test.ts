@@ -1,5 +1,6 @@
 import type { AnnotationQueue } from "@domain/annotation-queues"
 import type { Evaluation } from "@domain/evaluations"
+import type { Flagger } from "@domain/flaggers"
 import {
   SEED_ACCESS_EVALUATION_ID,
   SEED_API_KEY_TOKEN,
@@ -31,7 +32,7 @@ const defaultRunContext: SeedRunContext = {
   projectId: SEED_PROJECT_ID,
   projectSlug: SEED_PROJECT_SLUG,
   apiKeyToken: SEED_API_KEY_TOKEN,
-  systemQueuesOnly: false,
+  flaggersOnly: false,
 }
 
 function createSeedTargets(): SeedTargets {
@@ -59,27 +60,31 @@ function createSeedTargets(): SeedTargets {
       slug: "high-cost-traces",
       settings: { sampling: 25 },
     } as unknown as AnnotationQueue,
-    systemQueuesBySlug: {
+    flaggersBySlug: {
       frustration: {
-        id: "system-frustration",
+        id: "flagger-frustration-000000",
         slug: "frustration",
-        settings: { sampling: 10 },
-      } as unknown as AnnotationQueue,
+        enabled: true,
+        sampling: 10,
+      } as unknown as Flagger,
       "tool-call-errors": {
-        id: "system-tool-call-errors",
+        id: "flagger-tool-call-errors",
         slug: "tool-call-errors",
-        settings: { sampling: 100 },
-      } as unknown as AnnotationQueue,
+        enabled: true,
+        sampling: 100,
+      } as unknown as Flagger,
       "empty-response": {
-        id: "system-empty-response",
+        id: "flagger-empty-response-0",
         slug: "empty-response",
-        settings: { sampling: 100 },
-      } as unknown as AnnotationQueue,
+        enabled: true,
+        sampling: 100,
+      } as unknown as Flagger,
       "output-schema-validation": {
-        id: "system-output-schema",
+        id: "flagger-output-schema-00",
         slug: "output-schema-validation",
-        settings: { sampling: 100 },
-      } as unknown as AnnotationQueue,
+        enabled: true,
+        sampling: 100,
+      } as unknown as Flagger,
     },
   }
 }
@@ -110,7 +115,7 @@ function createEmptyPreview() {
       [SEED_ACCESS_EVALUATION_ID]: false,
     },
     liveQueue: false,
-    systemQueuesBySlug: {
+    flaggersBySlug: {
       frustration: false,
       "tool-call-errors": false,
       "empty-response": false,
@@ -218,7 +223,7 @@ describe("buildLiveSeedRunPlan", () => {
     for (const contextTrace of contextTraces) {
       expect(Object.values(contextTrace.samples.evaluationsById).every((sampled) => !sampled)).toBe(true)
       expect(contextTrace.samples.liveQueue).toBe(false)
-      expect(contextTrace.samples.systemQueuesBySlug.frustration).toBe(false)
+      expect(contextTrace.samples.flaggersBySlug.frustration).toBe(false)
     }
   })
 })

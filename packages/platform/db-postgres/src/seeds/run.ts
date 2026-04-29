@@ -51,7 +51,7 @@ const main = async () => {
         project: yield* ProjectRepository,
         user: yield* UserRepository,
       }
-      return { db: client.db, repositories } as SeedContext
+      return { db: client.db, client, repositories } as SeedContext
     })
 
     const program = Effect.gen(function* () {

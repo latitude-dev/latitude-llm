@@ -3,7 +3,7 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
+import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
@@ -33,7 +33,6 @@ import {
 import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
-import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
@@ -81,7 +80,6 @@ function ProjectPage() {
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [addToQueueOpen, setAddToQueueOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -321,10 +319,6 @@ function ProjectPage() {
             <Icon icon={DatabaseIcon} size="sm" />
             Add to Dataset ({selectedCount})
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
-            <Icon icon={LayersIcon} size="sm" />
-            Add to Annotation Queue ({selectedCount})
-          </Button>
         </div>
       )}
 
@@ -371,16 +365,6 @@ function ProjectPage() {
             projectId={currentProject.id}
             selection={bulkSelection}
             selectedCount={selectedCount}
-            onSuccess={clearSelections}
-          />
-          <AddToQueueModal
-            open={addToQueueOpen}
-            onOpenChange={setAddToQueueOpen}
-            projectId={currentProject.id}
-            projectSlug={projectSlug}
-            selection={bulkSelection}
-            selectedCount={selectedCount}
-            {...(hasActiveFilters ? { filters } : {})}
             onSuccess={clearSelections}
           />
         </>

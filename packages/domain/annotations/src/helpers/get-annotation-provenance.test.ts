@@ -15,12 +15,12 @@ describe("getAnnotationProvenance", () => {
     expect(getAnnotationProvenance({ sourceId: "API", annotatorId: null })).toBe("api")
   })
 
-  it('returns "agent" when annotatorId is null and sourceId is "SYSTEM"', () => {
-    expect(getAnnotationProvenance({ sourceId: "SYSTEM", annotatorId: null })).toBe("agent")
+  it('returns "agent" when annotatorId is null and sourceId is a cuid (queue-id case)', () => {
+    expect(getAnnotationProvenance({ sourceId: CUID, annotatorId: null })).toBe("agent")
   })
 
-  it('returns "agent" when annotatorId is null and sourceId is a cuid (legacy queue-id case)', () => {
-    expect(getAnnotationProvenance({ sourceId: CUID, annotatorId: null })).toBe("agent")
+  it('returns "agent" when annotatorId is null and sourceId is "SYSTEM"', () => {
+    expect(getAnnotationProvenance({ sourceId: "SYSTEM", annotatorId: null })).toBe("agent")
   })
 
   it('returns null when annotatorId is null and sourceId is the "UI" sentinel (no human is attached)', () => {

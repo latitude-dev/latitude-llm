@@ -4,9 +4,8 @@ import {
   AnnotationQueueRepository,
   type AnnotationQueueRepositoryShape,
   annotationQueueSchema,
-  evictProjectSystemQueuesUseCase,
 } from "@domain/annotation-queues"
-import { ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -139,12 +138,6 @@ const tailToCursor = (sortBy: AnnotationQueueListSortBy, tail: typeof annotation
   } as const
 }
 
-const evictSystemQueueCache = (queue: Pick<AnnotationQueue, "organizationId" | "projectId">) =>
-  evictProjectSystemQueuesUseCase({
-    organizationId: queue.organizationId,
-    projectId: ProjectId(queue.projectId),
-  })
-
 export const AnnotationQueueRepositoryLive = Layer.effect(
   AnnotationQueueRepository,
   Effect.gen(function* () {
@@ -263,36 +256,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             )
         }),
 
-      listSystemQueuesByProject: ({ projectId }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(annotationQueues)
-                .where(
-                  and(
-                    eq(annotationQueues.organizationId, organizationId),
-                    eq(annotationQueues.projectId, projectId),
-                    eq(annotationQueues.system, true),
-                    isNull(annotationQueues.deletedAt),
-                  ),
-                )
-                .orderBy(annotationQueues.createdAt),
-            )
-            .pipe(
-              Effect.map((rows) => rows.map(toDomainQueue)),
-              Effect.mapError(
-                (cause) =>
-                  new RepositoryError({
-                    operation: "listSystemQueuesByProject",
-                    cause,
-                  }),
-              ),
-            )
-        }),
-
       listLiveQueuesByProject: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -317,39 +280,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                 (cause) =>
                   new RepositoryError({
                     operation: "listLiveQueuesByProject",
-                    cause,
-                  }),
-              ),
-            )
-        }),
-
-      findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select()
-                .from(annotationQueues)
-                .where(
-                  and(
-                    eq(annotationQueues.organizationId, organizationId),
-                    eq(annotationQueues.projectId, projectId),
-                    eq(annotationQueues.system, true),
-                    eq(annotationQueues.slug, queueSlug),
-                  ),
-                )
-                .limit(1),
-            )
-            .pipe(
-              Effect.map((rows) => {
-                const row = rows[0]
-                return row !== undefined ? toDomainQueue(row) : null
-              }),
-              Effect.mapError(
-                (cause) =>
-                  new RepositoryError({
-                    operation: "findSystemQueueBySlugInProject",
                     cause,
                   }),
               ),
@@ -400,7 +330,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => toDomainQueue(rows[0])),
               Effect.mapError((cause) => new RepositoryError({ operation: "save", cause })),
-              Effect.tap((saved) => evictSystemQueueCache(saved)),
             )
         }),
 
@@ -441,7 +370,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((result) => result.length > 0),
               Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
-              Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
             )
         }),
 
@@ -487,7 +415,6 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                       cause,
                     }),
               ),
-              Effect.tap((queue) => evictSystemQueueCache(queue)),
             )
         }),
 
