@@ -9,6 +9,7 @@ import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateIssueDetailsError } from "./generate-issue-details.ts"
 import { generateIssueDetailsUseCase } from "./generate-issue-details.ts"
+import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface CreateIssueFromScoreInput {
   readonly organizationId: string
@@ -134,7 +135,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
 
     const sqlClient = yield* SqlClient
 
-    return yield* sqlClient.transaction(
+    const assignment = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const issueRepository = yield* IssueRepository
         const scoreRepository = yield* ScoreRepository
@@ -185,6 +186,15 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         } satisfies CreateIssueFromScoreResult
       }),
     )
+
+    if (assignment.action === "created") {
+      yield* syncIssueProjectionsUseCase({
+        organizationId: input.organizationId,
+        issueId: assignment.issueId,
+      })
+    }
+
+    return assignment
   }).pipe(Effect.withSpan("issues.createIssueFromScore")) as Effect.Effect<
     CreateIssueFromScoreResult,
     CreateIssueFromScoreError

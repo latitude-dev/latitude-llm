@@ -1,13 +1,16 @@
 import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { IssueId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { type CacheError, IssueId, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
+import { ISSUE_UPDATE_LOCK_KEY, ISSUE_UPDATE_LOCK_TTL_SECONDS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
-import type { CheckEligibilityError } from "../errors.ts"
+import type { CheckEligibilityError, IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { IssueNotFoundForAssignmentError, ScoreAlreadyOwnedByIssueError } from "../errors.ts"
 import { updateIssueCentroid } from "../helpers.ts"
+import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
+import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface AssignScoreToIssueInput {
   readonly organizationId: string
@@ -19,11 +22,13 @@ export interface AssignScoreToIssueInput {
 
 export type AssignScoreToIssueResult = {
   readonly issueId: string
-  readonly action: "assigned-existing" | "already-assigned"
+  readonly action: "assigned" | "already-assigned"
 }
 
 export type AssignScoreToIssueError =
+  | CacheError
   | CheckEligibilityError
+  | IssueDiscoveryLockUnavailableError
   | IssueNotFoundForAssignmentError
   | RepositoryError
   | ScoreAlreadyOwnedByIssueError
@@ -104,6 +109,7 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
     yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const sqlClient = yield* SqlClient
+    const lockRepository = yield* IssueDiscoveryLockRepository
     const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
 
     if (scoreResult.action === "already-assigned") {
@@ -115,68 +121,87 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
 
     const score = scoreResult.score
 
-    return yield* sqlClient.transaction(
+    return yield* lockRepository.withLock(
+      {
+        organizationId: input.organizationId,
+        projectId: ProjectId(input.projectId),
+        lockKey: ISSUE_UPDATE_LOCK_KEY(input.issueId),
+        ttlSeconds: ISSUE_UPDATE_LOCK_TTL_SECONDS,
+      },
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
-        const outboxEventWriter = yield* OutboxEventWriter
-        const scoreRepository = yield* ScoreRepository
-        const issue = yield* issueRepository
-          .findByIdForUpdate(IssueId(input.issueId))
-          .pipe(
-            Effect.catchTag("NotFoundError", () =>
-              Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
-            ),
-          )
+        const assignment = yield* sqlClient.transaction(
+          Effect.gen(function* () {
+            const issueRepository = yield* IssueRepository
+            const outboxEventWriter = yield* OutboxEventWriter
+            const scoreRepository = yield* ScoreRepository
+            const issue = yield* issueRepository
+              .findByIdForUpdate(IssueId(input.issueId))
+              .pipe(
+                Effect.catchTag("NotFoundError", () =>
+                  Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
+                ),
+              )
 
-        if (issue.projectId !== score.projectId) {
-          return yield* new IssueNotFoundForAssignmentError({ issueId: input.issueId })
-        }
+            if (issue.projectId !== score.projectId) {
+              return yield* new IssueNotFoundForAssignmentError({ issueId: input.issueId })
+            }
 
-        const assignedAt = new Date()
-        const updatedIssue = buildIssueWithAssignedScore({
-          issue,
-          score,
-          normalizedEmbedding: input.normalizedEmbedding,
-          assignedAt,
-        })
+            const assignedAt = new Date()
+            const updatedIssue = buildIssueWithAssignedScore({
+              issue,
+              score,
+              normalizedEmbedding: input.normalizedEmbedding,
+              assignedAt,
+            })
 
-        const claimed = yield* scoreRepository.assignIssueIfUnowned({
-          scoreId: score.id,
-          issueId: issue.id,
-          updatedAt: assignedAt,
-        })
+            const claimed = yield* scoreRepository.assignIssueIfUnowned({
+              scoreId: score.id,
+              issueId: issue.id,
+              updatedAt: assignedAt,
+            })
 
-        if (!claimed) {
-          const currentScore = yield* scoreRepository
-            .findById(score.id)
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-          if (currentScore && currentScore.issueId !== null) {
+            if (!claimed) {
+              const currentScore = yield* scoreRepository
+                .findById(score.id)
+                .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+              if (currentScore && currentScore.issueId !== null) {
+                return {
+                  action: "already-assigned",
+                  issueId: currentScore.issueId,
+                } satisfies AssignScoreToIssueResult
+              }
+
+              return yield* new ScoreAlreadyOwnedByIssueError({ scoreId: score.id })
+            }
+
+            yield* issueRepository.save(updatedIssue)
+            yield* outboxEventWriter.write({
+              eventName: "ScoreAssignedToIssue",
+              aggregateType: "score",
+              aggregateId: score.id,
+              organizationId: score.organizationId,
+              payload: {
+                organizationId: score.organizationId,
+                projectId: score.projectId,
+                issueId: issue.id,
+              },
+            })
+
             return {
-              action: "already-assigned",
-              issueId: currentScore.issueId,
+              action: "assigned",
+              issueId: issue.id,
             } satisfies AssignScoreToIssueResult
-          }
+          }),
+        )
 
-          return yield* new ScoreAlreadyOwnedByIssueError({ scoreId: score.id })
+        if (assignment.action === "assigned") {
+          yield* syncIssueProjectionsUseCase({
+            organizationId: input.organizationId,
+            issueId: assignment.issueId,
+          })
         }
 
-        yield* issueRepository.save(updatedIssue)
-        yield* outboxEventWriter.write({
-          eventName: "ScoreAssignedToIssue",
-          aggregateType: "score",
-          aggregateId: score.id,
-          organizationId: score.organizationId,
-          payload: {
-            organizationId: score.organizationId,
-            projectId: score.projectId,
-            issueId: issue.id,
-          },
-        })
-
-        return {
-          action: "assigned-existing",
-          issueId: issue.id,
-        } satisfies AssignScoreToIssueResult
+        return assignment
       }),
     )
   }).pipe(Effect.withSpan("issues.assignScoreToIssue")) as Effect.Effect<

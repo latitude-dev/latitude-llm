@@ -1053,6 +1053,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -1413,6 +1416,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../domain/issues
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared

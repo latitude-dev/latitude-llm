@@ -50,12 +50,20 @@
       "linter": {
         "rules": {
           "style": {
+            "noNonNullAssertion": "off",
             "noRestrictedImports": {
               "level": "error",
               "options": {
                 "patterns": [
                   {
-                    "group": ["./test/*", "./testing/*", "../test/*", "../testing/*", "../../test/*", "../../testing/*"],
+                    "group": [
+                      "./test/*",
+                      "./testing/*",
+                      "../test/*",
+                      "../testing/*",
+                      "../../test/*",
+                      "../../testing/*"
+                    ],
                     "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
                   }
                 ]
