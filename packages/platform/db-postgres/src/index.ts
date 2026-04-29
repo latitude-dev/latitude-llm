@@ -42,6 +42,7 @@ export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
+export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

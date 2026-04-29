@@ -25,3 +25,9 @@ export {
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"
+export {
+  type SeedDemoProjectActivityInput,
+  seedDemoProjectClickHouseActivity,
+  seedDemoProjectPostgresActivity,
+  seedDemoProjectWeaviateActivity,
+} from "./seed-demo-project-activities.ts"

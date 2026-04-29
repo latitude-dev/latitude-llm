@@ -1,5 +1,6 @@
 import { OutboxEventWriter } from "@domain/events"
 import { createProject, ProjectRepository } from "@domain/projects"
+import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import {
   ConflictError,
   generateId,
@@ -121,14 +122,53 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
     })
   }
 
-  return yield* writeDemoProjectRow({
+  const queueAssigneeUserId = pickedMember.user.id as UserId
+  const result = yield* writeDemoProjectRow({
     organizationId: input.organizationId,
     actorAdminUserId: input.actorAdminUserId,
     trimmedName,
     trimmedSlug,
-    queueAssigneeUserId: pickedMember.user.id as UserId,
+    queueAssigneeUserId,
   })
+
+  // Kick off the seed workflow. We start AFTER the project row + audit
+  // event have committed so a transient Temporal failure doesn't leave a
+  // ghost project with no audit trail. The workflow id is namespaced by
+  // the project id, which gives us a free idempotency guard — re-issuing
+  // the same start (e.g. from a retried server-fn call) lands on the
+  // existing handle instead of double-running the seed.
+  const workflowStarter = yield* WorkflowStarter
+  yield* startSeedDemoProjectWorkflow(workflowStarter, {
+    organizationId: input.organizationId,
+    projectId: result.projectId,
+    queueAssigneeUserIds: [queueAssigneeUserId],
+    timelineAnchorIso: new Date().toISOString(),
+  })
+
+  return result
 })
+
+const startSeedDemoProjectWorkflow = (
+  workflowStarter: WorkflowStarterShape,
+  input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly queueAssigneeUserIds: readonly UserId[]
+    readonly timelineAnchorIso: string
+  },
+) =>
+  workflowStarter.start(
+    "seedDemoProjectWorkflow",
+    {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      queueAssigneeUserIds: input.queueAssigneeUserIds,
+      timelineAnchorIso: input.timelineAnchorIso,
+    },
+    {
+      workflowId: `admin:seed-demo-project:${input.projectId}`,
+    },
+  )
 
 /**
  * Inner step that runs under a transaction so the project row + audit

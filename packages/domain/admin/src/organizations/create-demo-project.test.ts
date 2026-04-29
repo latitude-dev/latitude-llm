@@ -1,5 +1,6 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type Project, ProjectRepository } from "@domain/projects"
+import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type OrganizationId, ProjectId, SqlClient, type UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -52,10 +53,17 @@ const mkProject = (id: string, name: string): AdminOrganizationProject => ({
   createdAt: new Date("2024-01-01"),
 })
 
+interface StartedWorkflow {
+  readonly name: string
+  readonly input: unknown
+  readonly options: unknown
+}
+
 interface FakeWorld {
   readonly outbox: OutboxWriteEvent[]
   readonly savedProjects: Project[]
   readonly existingSlugs: Set<string>
+  readonly workflows: StartedWorkflow[]
 }
 
 const buildLayer = (org: AdminOrganizationDetails) => {
@@ -63,6 +71,7 @@ const buildLayer = (org: AdminOrganizationDetails) => {
     outbox: [],
     savedProjects: [],
     existingSlugs: new Set<string>(),
+    workflows: [],
   }
 
   const adminRepo = Layer.succeed(AdminOrganizationRepository, {
@@ -88,7 +97,16 @@ const buildLayer = (org: AdminOrganizationDetails) => {
 
   const sqlClient = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))
 
-  return { layer: Layer.mergeAll(adminRepo, projectRepo, outbox, sqlClient), world }
+  const workflowStarter: WorkflowStarterShape = {
+    start: (name, input, options) =>
+      Effect.sync(() => {
+        world.workflows.push({ name, input, options })
+      }),
+    signalWithStart: () => Effect.void,
+  }
+  const workflowStarterLayer = Layer.succeed(WorkflowStarter, workflowStarter)
+
+  return { layer: Layer.mergeAll(adminRepo, projectRepo, outbox, sqlClient, workflowStarterLayer), world }
 }
 
 describe("createDemoProjectUseCase", () => {
@@ -131,6 +149,19 @@ describe("createDemoProjectUseCase", () => {
       organizationId: ORG_ID,
       projectId: saved.id,
       projectName: "My Demo Project",
+    })
+
+    // Seed workflow kicked off with the picked assignee + a workflow id
+    // namespaced by the new project's id.
+    expect(world.workflows).toHaveLength(1)
+    const wf = world.workflows[0]
+    if (!wf) throw new Error("no workflow")
+    expect(wf.name).toBe("seedDemoProjectWorkflow")
+    expect(wf.options).toMatchObject({ workflowId: `admin:seed-demo-project:${saved.id}` })
+    expect(wf.input).toMatchObject({
+      organizationId: ORG_ID,
+      projectId: saved.id,
+      queueAssigneeUserIds: [result.queueAssigneeUserId],
     })
   })
 

@@ -39,6 +39,12 @@ const _registry = {
     readonly traceId: string
     readonly queueSlug: string
   }>(),
+  seedDemoProjectWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly queueAssigneeUserIds: readonly string[]
+    readonly timelineAnchorIso: string
+  }>(),
 }
 
 export type WorkflowRegistry = typeof _registry

@@ -9,4 +9,5 @@ export {
   type RefreshEvaluationAlignmentWorkflowResult,
   refreshEvaluationAlignmentWorkflow,
 } from "./refresh-evaluation-alignment-workflow.ts"
+export { type SeedDemoProjectWorkflowInput, seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
 export { systemQueueFlaggerWorkflow } from "./system-queue-flagger-workflow.ts"

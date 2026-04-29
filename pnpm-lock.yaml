@@ -780,6 +780,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../projects
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
