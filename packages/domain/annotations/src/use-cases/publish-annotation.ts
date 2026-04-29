@@ -1,18 +1,17 @@
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
-import type { AnnotationScore, Score } from "@domain/scores"
+import type { AnnotationScore } from "@domain/scores"
 import { ScoreRepository } from "@domain/scores"
-import type { NotFoundError, RepositoryError, ScoreId } from "@domain/shared"
+import { BadRequestError, type NotFoundError, type RepositoryError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 
 export interface PublishAnnotationInput {
   readonly scoreId: ScoreId
 }
 
-export type PublishAnnotationError = RepositoryError | NotFoundError
+export type PublishAnnotationError = RepositoryError | BadRequestError | NotFoundError
 
 export type PublishAnnotationResult =
   | { readonly action: "already-published"; readonly score: AnnotationScore }
-  | { readonly action: "not-human"; readonly score: Score }
   | { readonly action: "workflow-started"; readonly scoreId: ScoreId }
 
 const startPublishAnnotationWorkflow = (
@@ -47,9 +46,15 @@ export const publishHumanAnnotationUseCase = Effect.fn("annotations.publishHuman
   }
 
   if (score.source !== "annotation") {
+    return yield* new BadRequestError({
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+    })
+  }
+
+  if (score.annotatorId === null) {
     return {
       action: "not-human",
-      score,
+      score: score as AnnotationScore,
     }
   }
 

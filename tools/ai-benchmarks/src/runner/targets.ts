@@ -1,6 +1,6 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { classifyTraceForFlaggerUseCase, FLAGGER_MODEL, type QueueStrategy } from "@domain/annotation-queues"
+import { classifyTraceForFlaggerUseCase, FLAGGER_MODEL, type FlaggerStrategy } from "@domain/flaggers"
 import { mapJailbreakBench } from "../mappers/jailbreakbench.ts"
 import type { FixtureRow } from "../types.ts"
 import { fixtureRowToTraceDetail } from "./adapter.ts"
@@ -11,15 +11,15 @@ import { BENCHMARK_ORG_ID, BENCHMARK_PROJECT_ID } from "./benchmark-identity.ts"
 // files the optimizer mutates). Four `..` because this file lives at
 // `tools/ai-benchmarks/src/runner/targets.ts`.
 const WORKSPACE_ROOT = fileURLToPath(new URL("../../../..", import.meta.url))
-const ANNOTATION_QUEUES_PKG = join(WORKSPACE_ROOT, "packages/domain/annotation-queues")
+const FLAGGERS_PKG = join(WORKSPACE_ROOT, "packages/domain/flaggers")
 const flaggerStrategyFilePath = (queueSlug: string): string =>
-  join(ANNOTATION_QUEUES_PKG, "src/flagger-strategies", `${queueSlug}.ts`)
-const ANNOTATION_QUEUES_PACKAGE_JSON = join(ANNOTATION_QUEUES_PKG, "package.json")
+  join(FLAGGERS_PKG, "src/flagger-strategies", `${queueSlug}.ts`)
+const FLAGGERS_PACKAGE_JSON = join(FLAGGERS_PKG, "package.json")
 
 /**
  * Optimization config for a `ts-module` candidate (e.g. flagger strategies).
  * The optimizer compiles the file at `strategyFilePath`, dynamic-imports it,
- * and reads `exportName` to obtain a `QueueStrategy` shape.
+ * and reads `exportName` to obtain a `FlaggerStrategy` shape.
  */
 export interface TsModuleOptimizationConfig {
   readonly candidateKind: "ts-module"
@@ -45,7 +45,7 @@ export interface BenchmarkTarget {
   readonly mapperSourcePath: string
   readonly classify: (
     row: FixtureRow,
-    strategyOverride?: QueueStrategy,
+    strategyOverride?: FlaggerStrategy,
   ) => ReturnType<typeof classifyTraceForFlaggerUseCase>
   readonly provider: string
   readonly modelId: string
@@ -88,7 +88,7 @@ const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): B
   optimization: {
     candidateKind: "ts-module",
     strategyFilePath: flaggerStrategyFilePath(flaggerSlug),
-    packageJsonPath: ANNOTATION_QUEUES_PACKAGE_JSON,
+    packageJsonPath: FLAGGERS_PACKAGE_JSON,
     queueSlug: flaggerSlug,
     exportName: `${camelCaseSlug(flaggerSlug)}Strategy`,
   },

@@ -20,7 +20,7 @@ import {
   type TraceRecord,
 } from "./traces.functions.ts"
 
-export const traceDetailQueryKey = (projectId: string, traceId: string) => ["traceDetail", projectId, traceId] as const
+const traceDetailQueryKey = (projectId: string, traceId: string) => ["traceDetail", projectId, traceId] as const
 
 const BATCH_SIZE = 50
 

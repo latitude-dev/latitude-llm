@@ -5,7 +5,7 @@ import {
   FlaggerRepository,
   type FlaggerRepositoryShape,
   flaggerSchema,
-} from "@domain/annotation-queues"
+} from "@domain/flaggers"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"

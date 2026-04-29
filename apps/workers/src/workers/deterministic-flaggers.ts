@@ -3,7 +3,7 @@ import {
   type CheckAmbiguousRateLimit,
   type EnqueueFlaggerWorkflowStart,
   processFlaggersUseCase,
-} from "@domain/annotation-queues"
+} from "@domain/flaggers"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { checkRedisRateLimit, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"

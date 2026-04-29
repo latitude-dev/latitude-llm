@@ -13,10 +13,10 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/evaluations": "workspace:*",
+    "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/optimizations": "workspace:*",
     "@domain/queue": "workspace:*",

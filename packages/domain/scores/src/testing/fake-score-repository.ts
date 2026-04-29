@@ -66,14 +66,15 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
     listByIssueId: () => Effect.succeed(EMPTY_PAGE),
-    findFlaggerPublishedByTraceAndFlaggerId: ({ projectId, flaggerId, traceId }) =>
+    findPublishedSystemAnnotationByTraceAndFeedback: ({ projectId, traceId, feedback }) =>
       Effect.succeed(
         [...scores.values()].find(
           (score) =>
             score.projectId === projectId &&
-            score.source === "flagger" &&
-            score.sourceId === flaggerId &&
+            score.source === "annotation" &&
+            score.sourceId === "SYSTEM" &&
             score.traceId === traceId &&
+            score.feedback === feedback &&
             score.draftedAt === null,
         ) ?? null,
       ),

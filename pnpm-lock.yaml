@@ -325,9 +325,6 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -343,6 +340,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../packages/domain/flaggers
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -539,6 +539,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../packages/domain/flaggers
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -642,15 +645,15 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../packages/domain/flaggers
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -804,9 +807,6 @@ importers:
 
   packages/domain/annotation-queues:
     dependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../ai
       '@domain/annotations':
         specifier: workspace:*
         version: link:../annotations
@@ -825,9 +825,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
-      '@repo/utils':
-        specifier: workspace:*
-        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -999,6 +996,36 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
+  packages/domain/flaggers:
+    dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1483,6 +1510,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../domain/flaggers
       '@domain/issues':
         specifier: workspace:*
         version: link:../../domain/issues
@@ -2140,9 +2170,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
-      '@domain/annotation-queues':
+      '@domain/flaggers':
         specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
+        version: link:../../packages/domain/flaggers
       '@domain/models':
         specifier: workspace:*
         version: link:../../packages/domain/models
@@ -2210,6 +2240,9 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../packages/domain/flaggers
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects

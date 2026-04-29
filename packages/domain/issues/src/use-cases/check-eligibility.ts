@@ -42,11 +42,7 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
       return yield* new ScoreDiscoveryProjectMismatchError({ scoreId: input.scoreId })
     }
 
-    // Flagger-authored drafts are admitted: they cluster into "potential
-    // issues" upstream of human review. Human-authored drafts (any other
-    // source) still skip discovery — they only contribute when the human
-    // publishes them.
-    if (score.draftedAt !== null && score.source !== "flagger") {
+    if (score.draftedAt !== null) {
       return yield* new DraftScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
     }
 

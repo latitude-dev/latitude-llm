@@ -1,6 +1,5 @@
 import { type Score, ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { FlaggerId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
@@ -70,17 +69,6 @@ describe("checkEligibilityUseCase", () => {
     await expect(runEligibility(makeScore({ draftedAt: new Date("2026-03-31T01:00:00.000Z") }))).rejects.toMatchObject({
       _tag: "DraftScoreNotEligibleForDiscoveryError",
     })
-  })
-
-  it("admits drafted flagger-authored scores", async () => {
-    const flaggerDraft = makeScore({
-      source: "flagger",
-      sourceId: FlaggerId("ffffffffffffffffffffffff"),
-      metadata: { rawFeedback: "Refusal-style behavior detected" },
-      draftedAt: new Date("2026-03-31T01:00:00.000Z"),
-    })
-    const result = await runEligibility(flaggerDraft)
-    expect(result).toEqual(flaggerDraft)
   })
 
   it("rejects errored scores", async () => {

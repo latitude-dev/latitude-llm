@@ -6,7 +6,7 @@ const USER_ID = "u".repeat(24)
 
 describe("getAnnotationProvenance", () => {
   it('returns "human" whenever annotatorId is set, regardless of sourceId', () => {
-    for (const sourceId of ["UI", "API", CUID, "random"]) {
+    for (const sourceId of ["UI", "API", "SYSTEM", CUID, "random"]) {
       expect(getAnnotationProvenance({ sourceId, annotatorId: USER_ID })).toBe("human")
     }
   })
@@ -17,6 +17,10 @@ describe("getAnnotationProvenance", () => {
 
   it('returns "agent" when annotatorId is null and sourceId is a cuid (queue-id case)', () => {
     expect(getAnnotationProvenance({ sourceId: CUID, annotatorId: null })).toBe("agent")
+  })
+
+  it('returns "agent" when annotatorId is null and sourceId is "SYSTEM"', () => {
+    expect(getAnnotationProvenance({ sourceId: "SYSTEM", annotatorId: null })).toBe("agent")
   })
 
   it('returns null when annotatorId is null and sourceId is the "UI" sentinel (no human is attached)', () => {

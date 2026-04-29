@@ -195,11 +195,6 @@ describe("createIssueFromScoreUseCase", () => {
         expected: "annotation" as const,
       },
       {
-        scoreSource: "flagger" as const,
-        sourceId: "ffffffffffffffffffffffff",
-        expected: "flagger" as const,
-      },
-      {
         scoreSource: "custom" as const,
         sourceId: "api-source",
         expected: "custom" as const,

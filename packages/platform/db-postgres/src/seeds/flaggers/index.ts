@@ -1,4 +1,4 @@
-import { provisionFlaggersUseCase } from "@domain/annotation-queues"
+import { provisionFlaggersUseCase } from "@domain/flaggers"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { SEED_LATITUDE_TELEMETRY_PROJECT_ID, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared/seeding"
 import { Effect, Layer } from "effect"

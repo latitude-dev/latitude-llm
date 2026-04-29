@@ -624,16 +624,15 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(customSourcePage.items[0]?.sourceId).toBe("api-source")
   })
 
-  it("findFlaggerPublishedByTraceAndFlaggerId finds existing flagger-authored published score", async () => {
+  it("findPublishedSystemAnnotationByTraceAndFeedback finds existing system annotation score", async () => {
     const organizationId = "qqqqqqqqqqqqqqqqqqqqqqqq"
-    const flaggerId = "qqqqqqqqqqqqqqqqqqqqqqqq"
     const traceId = TraceId("tttttttttttttttttttttttttttttttt")
 
     const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source: "flagger",
-        sourceId: flaggerId,
+        source: "annotation",
+        sourceId: "SYSTEM",
         traceId: traceId,
         value: 0,
         passed: false,
@@ -646,34 +645,33 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
+        return yield* repository.findPublishedSystemAnnotationByTraceAndFeedback({
           projectId: annotationProjectId,
-          flaggerId,
           traceId: traceId,
+          feedback: "Flagger published feedback",
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
     expect(found).not.toBeNull()
     expect(found?.id).toBe(publishedScore.id)
-    expect(found?.source).toBe("flagger")
-    expect(found?.sourceId).toBe(flaggerId)
+    expect(found?.source).toBe("annotation")
+    expect(found?.sourceId).toBe("SYSTEM")
     expect(found?.traceId).toBe(traceId)
     expect(found?.draftedAt).toBeNull()
   })
 
-  it("findFlaggerPublishedByTraceAndFlaggerId returns null when no published score exists", async () => {
+  it("findPublishedSystemAnnotationByTraceAndFeedback returns null when no published score exists", async () => {
     const organizationId = "wwwwwwwwwwwwwwwwwwwwwwww"
-    const flaggerId = "wwwwwwwwwwwwwwwwwwwwwwww"
     const traceId = TraceId("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
 
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
+        return yield* repository.findPublishedSystemAnnotationByTraceAndFeedback({
           projectId: annotationProjectId,
-          flaggerId,
           traceId: traceId,
+          feedback: "Missing feedback",
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
@@ -681,16 +679,15 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found).toBeNull()
   })
 
-  it("findFlaggerPublishedByTraceAndFlaggerId excludes draft flagger scores (draftedAt != null)", async () => {
+  it("findPublishedSystemAnnotationByTraceAndFeedback excludes draft system annotation scores", async () => {
     const organizationId = "xxxxxxxxxxxxxxxxxxxxxxxx"
-    const flaggerId = "xxxxxxxxxxxxxxxxxxxxxxxx"
     const traceId = TraceId("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
 
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source: "flagger",
-        sourceId: flaggerId,
+        source: "annotation",
+        sourceId: "SYSTEM",
         traceId: traceId,
         value: 0,
         passed: false,
@@ -703,10 +700,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
+        return yield* repository.findPublishedSystemAnnotationByTraceAndFeedback({
           projectId: annotationProjectId,
-          flaggerId,
           traceId: traceId,
+          feedback: "Draft flagger feedback",
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
@@ -714,18 +711,16 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found).toBeNull()
   })
 
-  it("findFlaggerPublishedByTraceAndFlaggerId filters by flaggerId and traceId correctly", async () => {
+  it("findPublishedSystemAnnotationByTraceAndFeedback filters by feedback and traceId correctly", async () => {
     const organizationId = "yyyyyyyyyyyyyyyyyyyyyyyy"
-    const flaggerId1 = "f11111111111111111111111" // 24 chars (CUID length)
-    const flaggerId2 = "f22222222222222222222222" // 24 chars
     const traceId1 = TraceId("t1111111111111111111111111111111") // 32 chars
     const traceId2 = TraceId("t2222222222222222222222222222222") // 32 chars
 
     const target = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source: "flagger",
-        sourceId: flaggerId1,
+        source: "annotation",
+        sourceId: "SYSTEM",
         traceId: traceId1,
         value: 0,
         passed: false,
@@ -738,8 +733,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source: "flagger",
-        sourceId: flaggerId1,
+        source: "annotation",
+        sourceId: "SYSTEM",
         traceId: traceId2,
         value: 0,
         passed: false,
@@ -752,8 +747,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source: "flagger",
-        sourceId: flaggerId2,
+        source: "annotation",
+        sourceId: "SYSTEM",
         traceId: traceId1,
         value: 0,
         passed: false,
@@ -766,17 +761,17 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const found = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.findFlaggerPublishedByTraceAndFlaggerId({
+        return yield* repository.findPublishedSystemAnnotationByTraceAndFeedback({
           projectId: annotationProjectId,
-          flaggerId: flaggerId1,
           traceId: traceId1,
+          feedback: "Target",
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
     expect(found).not.toBeNull()
     expect(found?.id).toBe(target.id)
-    expect(found?.sourceId).toBe(flaggerId1)
+    expect(found?.sourceId).toBe("SYSTEM")
     expect(found?.traceId).toBe(traceId1)
   })
 })

@@ -7,7 +7,6 @@ import {
   baseScoreSchema,
   customScoreSchema,
   evaluationScoreSchema,
-  flaggerScoreSchema,
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
@@ -55,11 +54,6 @@ export const writeScoreInputSchema = z.discriminatedUnion("source", [
     source: customScoreSchema.shape.source,
     sourceId: customScoreSchema.shape.sourceId,
     metadata: customScoreSchema.shape.metadata,
-  }),
-  baseWriteScoreInputSchema.extend({
-    source: flaggerScoreSchema.shape.source,
-    sourceId: flaggerScoreSchema.shape.sourceId,
-    metadata: flaggerScoreSchema.shape.metadata,
   }),
 ])
 export type WriteScoreInput = z.input<typeof writeScoreInputSchema>

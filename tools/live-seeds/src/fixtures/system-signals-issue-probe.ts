@@ -10,8 +10,8 @@ import { toolCallErrorFixture } from "./tool-call-error.ts"
  * `empty-response` by `instanceIndex`, so running with `--count-per-fixture 9`
  * (or any multiple of 3) produces a balanced distribution. Every generated
  * trace is expected to hit the trace-end inline matcher, write a published
- * `source = "flagger"` score with `sourceId = flagger.id`, and surface as an
- * issue via the `issues:discovery` pipeline.
+ * `source = "annotation"` score with `sourceId = "SYSTEM"`, and surface as
+ * an issue via the `issues:discovery` pipeline.
  */
 const DETECTOR_FIXTURES = [toolCallErrorFixture, outputSchemaFixture, emptyResponseFixture] as const
 

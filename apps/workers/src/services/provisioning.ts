@@ -1,4 +1,4 @@
-import { provisionFlaggersUseCase } from "@domain/annotation-queues"
+import { provisionFlaggersUseCase } from "@domain/flaggers"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { FlaggerRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"

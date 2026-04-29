@@ -1,5 +1,6 @@
-import type { AnnotationQueue, Flagger } from "@domain/annotation-queues"
+import type { AnnotationQueue } from "@domain/annotation-queues"
 import type { Evaluation } from "@domain/evaluations"
+import type { Flagger } from "@domain/flaggers"
 import {
   SEED_ACCESS_EVALUATION_ID,
   SEED_API_KEY_TOKEN,

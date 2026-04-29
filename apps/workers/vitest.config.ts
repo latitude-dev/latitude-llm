@@ -1,14 +1,12 @@
 import base from "../../vitest.config.ts"
+import { PGLITE_HOOK_TIMEOUT_MS } from "../../packages/vitest-config/index.ts"
 import { defineConfig, mergeConfig } from "vitest/config"
-
-/** PGlite + Drizzle migrations can exceed the default 10s under parallel turbo runs. */
-const pgliteHookTimeoutMs = 60_000
 
 export default mergeConfig(
   base,
   defineConfig({
     test: {
-      hookTimeout: pgliteHookTimeoutMs,
+      hookTimeout: PGLITE_HOOK_TIMEOUT_MS,
       onConsoleLog: () => false,
     },
   }),

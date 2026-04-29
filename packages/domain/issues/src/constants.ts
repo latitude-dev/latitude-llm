@@ -4,7 +4,7 @@ export const ISSUE_NAME_MAX_LENGTH = 128
 
 export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
-export const ISSUE_SOURCES = ["annotation", "custom", "flagger"] as const
+export const ISSUE_SOURCES = ["annotation", "custom"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
 
@@ -49,7 +49,6 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
   annotation: 1.0,
   evaluation: 0.8,
   custom: 0.8,
-  flagger: 1.0,
 } as const
 
 // ---------------------------------------------------------------------------

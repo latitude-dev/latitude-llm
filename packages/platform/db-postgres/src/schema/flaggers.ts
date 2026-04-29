@@ -1,3 +1,4 @@
+import type { FlaggerSlug } from "@domain/flaggers"
 import { boolean, index, integer, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
 
@@ -7,14 +8,8 @@ export const flaggers = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    /** Strategy slug from the registry (e.g. "jailbreaking", "nsfw", "tool-call-errors"). */
-    slug: varchar("slug", { length: 64 }).notNull(),
-    /** Gates BOTH the deterministic match path AND the LLM enqueue path. */
+    slug: varchar("slug", { length: 64 }).$type<FlaggerSlug>().notNull(),
     enabled: boolean("enabled").notNull().default(true),
-    /**
-     * Percentage in [0, 100]. Only consulted by LLM-capable strategies on `no-match`
-     * (deterministic-only strategies ignore this field).
-     */
     sampling: integer("sampling").notNull().default(10),
     ...timestamps(),
   },

@@ -35,6 +35,7 @@
     "@domain/evaluations": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",

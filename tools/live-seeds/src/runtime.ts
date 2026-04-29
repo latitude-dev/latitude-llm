@@ -1,13 +1,7 @@
 import { createHash, randomUUID } from "node:crypto"
-import {
-  type AnnotationQueue,
-  AnnotationQueueRepository,
-  type Flagger,
-  FlaggerRepository,
-  LIVE_QUEUE_DEFAULT_SAMPLING,
-  provisionFlaggersUseCase,
-} from "@domain/annotation-queues"
+import { type AnnotationQueue, AnnotationQueueRepository, LIVE_QUEUE_DEFAULT_SAMPLING } from "@domain/annotation-queues"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
+import { type Flagger, FlaggerRepository, provisionFlaggersUseCase } from "@domain/flaggers"
 import { createProject, ProjectRepository } from "@domain/projects"
 import { deterministicSampling, type OrganizationId, type ProjectId } from "@domain/shared"
 import {

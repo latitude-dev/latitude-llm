@@ -27,7 +27,7 @@ export interface AnnotationScoreResponse {
 }
 
 export namespace AnnotationScoreResponse {
-    export type SourceId = "UI" | "API" | string;
+    export type SourceId = "UI" | "API" | "SYSTEM" | string;
 
     export interface Metadata {
         rawFeedback: string;

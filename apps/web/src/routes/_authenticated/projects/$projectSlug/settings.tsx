@@ -13,11 +13,8 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
-import {
-  updateFlaggerMutation,
-  useProjectFlaggers,
-} from "../../../../domains/annotation-queues/annotation-queues.collection.ts"
-import type { FlaggerRecord } from "../../../../domains/annotation-queues/annotation-queues.functions.ts"
+import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
+import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
@@ -32,7 +29,6 @@ function ProjectSettingsPage() {
   const { toast } = useToast()
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
-  const [savingFlaggerSlug, setSavingFlaggerSlug] = useState<string | null>(null)
   const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const { data: project } = useProjectsCollection(
@@ -87,8 +83,6 @@ function ProjectSettingsPage() {
       render: (flagger) => (
         <Switch
           checked={flagger.enabled}
-          loading={savingFlaggerSlug === flagger.slug}
-          disabled={savingFlaggerSlug !== null && savingFlaggerSlug !== flagger.slug}
           onCheckedChange={(checked) => void handleFlaggerEnabledChange(flagger, checked)}
           aria-label={`Toggle ${flagger.name}`}
         />
@@ -135,9 +129,6 @@ function ProjectSettingsPage() {
   }
 
   const handleFlaggerEnabledChange = async (flagger: FlaggerRecord, checked: boolean) => {
-    if (savingFlaggerSlug) return
-
-    setSavingFlaggerSlug(flagger.slug)
     try {
       const transaction = updateFlaggerMutation({
         projectId: currentProject.id,
@@ -149,8 +140,6 @@ function ProjectSettingsPage() {
       toast({ description: checked ? "Flagger enabled" : "Flagger disabled" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
-    } finally {
-      setSavingFlaggerSlug(null)
     }
   }
 

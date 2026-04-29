@@ -13,7 +13,6 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   ChSqlClient,
   EvaluationId,
-  FlaggerId,
   IssueId,
   NotFoundError,
   OrganizationId,
@@ -515,74 +514,7 @@ describe("discoverIssueUseCase", () => {
     expect(startedWorkflows).toHaveLength(0)
   })
 
-  it("admits a flagger-authored draft and starts the discovery workflow", async () => {
-    // Draft scores from human annotations are still skipped by check-eligibility,
-    // but flagger drafts (source = "flagger") are admitted so they can cluster
-    // into "potential issues" upstream of any human review.
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository()
-    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
-    const fakeAi = createFakeAI({
-      embed: () => Effect.succeed({ embedding: makeEmbedding() }),
-    })
-    const { workflowStarter, startedWorkflows } = createWorkflowStarter()
-    const flaggerDraft = makeScore({
-      source: "flagger",
-      sourceId: FlaggerId("ffffffffffffffffffffffff"),
-      metadata: { rawFeedback: "Refusal-style behavior detected" },
-      draftedAt: new Date("2026-03-30T10:30:00.000Z"),
-    })
-    scores.set(flaggerDraft.id, flaggerDraft)
-
-    const result = await Effect.runPromise(
-      discoverIssueUseCase({
-        organizationId,
-        projectId,
-        scoreId: flaggerDraft.id,
-        issueId: null,
-      }).pipe(
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(
-          EvaluationRepository,
-          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
-        ),
-        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
-        Effect.provide(fakeAi.layer),
-        Effect.provideService(WorkflowStarter, workflowStarter),
-        Effect.provide(createPassthroughSqlClient(organizationId)),
-        Effect.provide(createPassthroughChSqlClient(organizationId)),
-      ),
-    )
-
-    expect(result).toEqual({
-      action: "workflow-started",
-      workflow: "issueDiscoveryWorkflow",
-      scoreId: flaggerDraft.id,
-    })
-    expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
-    expect(startedWorkflows).toEqual([
-      {
-        workflow: "issueDiscoveryWorkflow",
-        input: {
-          organizationId,
-          projectId,
-          scoreId: flaggerDraft.id,
-        },
-        options: {
-          workflowId: `issues:discovery:${flaggerDraft.id}`,
-        },
-      },
-    ])
-  })
-
   it("skips a human-authored draft (source = annotation) and does not start any workflow", async () => {
-    // Regression guard for the eligibility carve-out: only flagger drafts
-    // bypass the draft gate. Human annotation drafts must still be ignored.
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository } = createFakeIssueRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()

@@ -16,7 +16,7 @@ const {
   saveFlaggerAnnotationUseCaseMock: vi.fn(),
 }))
 
-vi.mock("@domain/annotation-queues", () => ({
+vi.mock("@domain/flaggers", () => ({
   draftFlaggerAnnotationUseCase: draftFlaggerAnnotationUseCaseMock,
   runFlaggerUseCase: runFlaggerUseCaseMock,
   saveFlaggerAnnotationUseCase: saveFlaggerAnnotationUseCaseMock,

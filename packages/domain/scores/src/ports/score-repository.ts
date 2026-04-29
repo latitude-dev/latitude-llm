@@ -90,16 +90,10 @@ export interface ScoreRepositoryShape {
     readonly issueId: IssueId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
-  /**
-   * Finds an existing flagger-authored published score by (flaggerId, traceId).
-   * Only returns published scores (`draftedAt = null`) where
-   * `(source, sourceId) === ("flagger", <flaggerId>)`. Used to make the
-   * deterministic-match path idempotent under BullMQ retries.
-   */
-  findFlaggerPublishedByTraceAndFlaggerId(input: {
+  findPublishedSystemAnnotationByTraceAndFeedback(input: {
     readonly projectId: ProjectId
-    readonly flaggerId: string
     readonly traceId: TraceId
+    readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }
 

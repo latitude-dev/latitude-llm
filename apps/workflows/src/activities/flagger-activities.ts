@@ -4,7 +4,7 @@ import {
   type RunFlaggerResult,
   runFlaggerUseCase,
   saveFlaggerAnnotationUseCase,
-} from "@domain/annotation-queues"
+} from "@domain/flaggers"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
@@ -50,7 +50,8 @@ interface DraftAnnotateOutput {
   readonly traceId: string
   readonly feedback: string
   readonly traceCreatedAt: string
-  /** Pre-generated score id; forwarded verbatim to `saveAnnotation`. */
+  readonly sessionId: string | null
+  readonly simulationId: string | null
   readonly scoreId: string
 }
 
@@ -91,6 +92,8 @@ export const saveAnnotation = async (input: {
   readonly flaggerSlug: string
   readonly feedback: string
   readonly traceCreatedAt: string
+  readonly sessionId?: string | null
+  readonly simulationId?: string | null
   readonly scoreId: string
 }): Promise<FlaggerAnnotateOutput> =>
   Effect.runPromise(
