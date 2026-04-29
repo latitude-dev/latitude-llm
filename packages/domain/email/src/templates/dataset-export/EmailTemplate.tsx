@@ -35,6 +35,6 @@ export function DatasetExportEmail({ datasetName, downloadUrl, recipientName = "
 
 DatasetExportEmail.PreviewProps = {
   datasetName: "My Traces",
-  downloadUrl: "https://app.latitude.so/downloads/export-abc123",
+  downloadUrl: "https://console.latitude.so/downloads/export-abc123",
   recipientName: "Alex",
 } satisfies DatasetExportEmailProps
