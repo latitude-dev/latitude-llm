@@ -4,6 +4,7 @@
  * Top-level spans:
  *   ai.prompt           — JSON object with { system?: string, messages: [...] }
  *   ai.response.text    — plain text string (assistant output)
+ *   ai.response.object  — JSON string of a structured object (generateObject output)
  *   ai.response.toolCalls — JSON string of tool call objects
  *
  * Call-level spans:
