@@ -4,6 +4,7 @@
  * Top-level spans:
  *   ai.prompt           — JSON object with { system?: string, messages: [...] }
  *   ai.response.text    — plain text string (assistant output)
+ *   ai.response.object  — JSON string of a structured object (generateObject output)
  *   ai.response.toolCalls — JSON string of tool call objects
  *
  * Call-level spans:
@@ -92,10 +93,12 @@ function parseInputFromCallLevel(attrs: readonly OtlpKeyValue[]): {
 
 function parseOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   const text = rawStringAttr(attrs, "ai.response.text")
+  const objectJson = rawStringAttr(attrs, "ai.response.object")
   const toolCallsJson = rawStringAttr(attrs, "ai.response.toolCalls")
 
   const contentParts: object[] = []
   if (text) contentParts.push({ type: "text", text })
+  else if (objectJson) contentParts.push({ type: "text", text: objectJson })
   if (toolCallsJson) {
     const toolCalls = parseJsonSafe(toolCallsJson)
     if (Array.isArray(toolCalls)) {

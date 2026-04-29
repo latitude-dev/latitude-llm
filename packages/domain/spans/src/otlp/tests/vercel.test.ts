@@ -949,6 +949,63 @@ describe("Vercel AI SDK duplicate usage normalization", () => {
   })
 })
 
+describe("Vercel AI SDK streamObject / generateObject output", () => {
+  function buildObjectSpan(operationId: string, responseObject: object): OtlpExportTraceServiceRequest {
+    return {
+      resourceSpans: [
+        {
+          resource: { attributes: [str("service.name", SERVICE_NAME)] },
+          scopeSpans: [
+            {
+              scope: { name: SCOPE_NAME, version: SCOPE_VERSION },
+              spans: [
+                {
+                  traceId: TRACE_ID,
+                  spanId: "f0f0f0f0f0f00001",
+                  name: operationId,
+                  kind: 1,
+                  startTimeUnixNano: "1710590500000000000",
+                  endTimeUnixNano: "1710590501000000000",
+                  attributes: [
+                    str("ai.operationId", operationId),
+                    str(
+                      "ai.prompt",
+                      JSON.stringify({
+                        messages: [{ role: "user", content: [{ type: "text", text: "Describe the weather." }] }],
+                      }),
+                    ),
+                    str("ai.response.object", JSON.stringify(responseObject)),
+                  ],
+                  status: { code: 1 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  it.each([
+    ["ai.streamObject"],
+    ["ai.generateObject"],
+  ])("%s surfaces ai.response.object as assistant output", (operationId) => {
+    const obj = { city: "Barcelona", temperature: 22 }
+    const spans = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
+    const span = spans[0]
+    expect(span).toBeDefined()
+
+    expect(span?.outputMessages).toHaveLength(1)
+    const assistant = span?.outputMessages[0]
+    expect(assistant).toBeDefined()
+    expect(assistant?.role).toBe("assistant")
+    const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
+    const textPart = parts.find((p) => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect((textPart as { content: string }).content).toContain("Barcelona")
+  })
+})
+
 describe("Vercel AI SDK top-level prompt fallback", () => {
   it("treats ai.prompt.prompt as a user input message when ai.prompt.messages is absent", () => {
     const spans = transformOtlpToSpans(
