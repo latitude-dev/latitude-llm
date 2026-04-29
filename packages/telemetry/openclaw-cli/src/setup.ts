@@ -21,6 +21,7 @@ import {
   setPluginEntry,
   writeSettings,
 } from "./settings-file.ts"
+import { readCliVersion } from "./version.ts"
 
 /**
  * The runtime version this CLI installs. Lockstep with the runtime — bump
@@ -101,19 +102,40 @@ interface InstallFlags {
   yes?: boolean
 }
 
+/**
+ * Flags that take a value (either `--key=value` or `--key value`). Bare
+ * `--key` is reserved for booleans and shouldn't consume the next argv
+ * token as its value — operators expect `--no-content` next to `--yes`
+ * to mean two booleans, not "no-content takes the value `--yes`".
+ */
+const VALUE_FLAGS = new Set(["api-key", "project", "openclaw-dir"])
+
 export function parseFlags(argv: string[]): {
   subcommand: string | undefined
   flags: Record<string, string | boolean>
 } {
   const [subcommand, ...rest] = argv
   const flags: Record<string, string | boolean> = {}
-  for (const arg of rest) {
-    if (!arg.startsWith("--")) continue
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i]
+    if (!arg || !arg.startsWith("--")) continue
     const eq = arg.indexOf("=")
     if (eq >= 0) {
       flags[arg.slice(2, eq)] = arg.slice(eq + 1)
+      continue
+    }
+    const key = arg.slice(2)
+    const next = rest[i + 1]
+    // Space-separated form (`--key value`): only consume the next token
+    // when the key is in VALUE_FLAGS and the next token isn't itself a
+    // flag. This matches the standard convention everyone expects from
+    // CLIs, while keeping bare boolean flags from accidentally swallowing
+    // adjacent flags as values.
+    if (VALUE_FLAGS.has(key) && next !== undefined && !next.startsWith("--")) {
+      flags[key] = next
+      i += 1
     } else {
-      flags[arg.slice(2)] = true
+      flags[key] = true
     }
   }
   return { subcommand, flags }
@@ -391,6 +413,17 @@ async function applyChanges({
   //    entry OpenClaw just created. Atomic write — temp + rename — combined
   //    with the .latitude-bak backup means a SIGTERM mid-write can never
   //    leave openclaw.json in a half-serialized state.
+  //
+  // Snapshot the post-`openclaw plugins install` state for rollback. The
+  // pre-install backup at `.latitude-bak` covers the typical case where
+  // openclaw.json existed before our flow, but `backupSettings` is a no-op
+  // when there's no source file to copy — that's fresh installs (no prior
+  // openclaw.json). For those, the post-install state captured here is the
+  // valid rollback target: it reflects exactly what `openclaw plugins
+  // install` produced, which is always schema-valid (a disabled
+  // plugins.entries[id] block + whatever else OpenClaw bootstrapped).
+  const postInstallSnapshot = readSettings(paths.settingsPath)
+
   const settingsSpinner = spinner()
   settingsSpinner.start("Updating openclaw.json")
   const settings = readSettings(paths.settingsPath)
@@ -428,19 +461,53 @@ async function applyChanges({
   })
   if (!validateResult.ok || isInvalidConfigPayload(validateResult.stdout)) {
     validateSpinner.stop("openclaw config validate failed")
-    const restored = restoreBackup(paths.settingsPath, paths.settingsBackupPath)
+    const rollback = rollbackSettings(paths, postInstallSnapshot)
     const detail =
       validateResult.ok === false
         ? validateResult.stderr.trim() || validateResult.stdout.trim() || `exit code ${validateResult.code}`
         : validateResult.stdout.trim() || "config validate reported invalid config"
-    throw new Error(
-      `openclaw config validate reported a problem after our changes:\n  ${detail}\n` +
-        (restored
-          ? `Backup restored from ${paths.settingsBackupPath} — your config is back to the pre-install state.`
-          : `Backup at ${paths.settingsBackupPath} could not be restored automatically; restore it manually.`),
-    )
+    throw new Error(`openclaw config validate reported a problem after our changes:\n  ${detail}\n${rollback}`)
   }
   validateSpinner.stop("Config valid")
+}
+
+/**
+ * Two-tier rollback for validation failures:
+ *
+ *   1. If `.latitude-bak` exists (typical case — operator had openclaw.json
+ *      before this flow), restore from it. That's the user's true
+ *      pre-install state.
+ *   2. If `.latitude-bak` doesn't exist (fresh install — no openclaw.json
+ *      pre-flow, so `backupSettings` no-op'd), write `postInstallSnapshot`
+ *      back. That's the state immediately after `openclaw plugins install`
+ *      and before any of our config layering — schema-valid, just a
+ *      disabled plugin entry. Operator can re-run install or run
+ *      `openclaw plugins uninstall` to fully revert OpenClaw's bookkeeping.
+ *
+ * Returns the human-readable recovery line to append to the thrown error.
+ */
+function rollbackSettings(paths: SettingsPaths, postInstallSnapshot: OpenClawSettings): string {
+  if (existsSync(paths.settingsBackupPath)) {
+    const restored = restoreBackup(paths.settingsPath, paths.settingsBackupPath)
+    return restored
+      ? `Backup restored from ${paths.settingsBackupPath} — your config is back to the pre-install state.`
+      : `Backup at ${paths.settingsBackupPath} could not be restored automatically; restore it manually.`
+  }
+  // Fresh-install path: write the post-install snapshot back. Atomic, same
+  // as the install write.
+  try {
+    writeSettings(paths.settingsPath, postInstallSnapshot)
+    return (
+      `${paths.settingsPath} rolled back to the post-\`openclaw plugins install\` state ` +
+      `(plugin entry exists but disabled). Run \`openclaw plugins uninstall ${PLUGIN_ID} --force\` ` +
+      "to fully revert if you don't intend to retry."
+    )
+  } catch (err) {
+    return (
+      `Couldn't roll back ${paths.settingsPath} (${String(err)}). ` +
+      `Run \`openclaw plugins uninstall ${PLUGIN_ID} --force\` and inspect the file manually.`
+    )
+  }
 }
 
 /** Best-effort detection of `{"valid": false, ...}` in the validate output. */
@@ -505,8 +572,7 @@ async function ensureRuntimeOnNpm(): Promise<void> {
     const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(5_000) })
     if (res.status === 404) {
       cancel(
-        `CLI ${process.env.npm_package_version ?? "(this version)"} expects ` +
-          `${RUNTIME_PACKAGE_NAME}@${RUNTIME_VERSION} but npm doesn't have that exact version. ` +
+        `CLI ${readCliVersion()} expects ${RUNTIME_PACKAGE_NAME}@${RUNTIME_VERSION} but npm doesn't have that exact version. ` +
           `Upgrade the CLI: npm install -g @latitude-data/openclaw-telemetry-cli@latest`,
       )
       process.exit(1)
@@ -624,7 +690,18 @@ export async function runUninstall(flags: UninstallFlags = {}): Promise<void> {
   ]
   note(plan.join("\n"), "Plan")
 
-  if (!flags.noPrompt && process.stdin.isTTY === true) {
+  if (!flags.noPrompt) {
+    if (process.stdin.isTTY !== true) {
+      // Symmetric with `runFlagDrivenInstall` requiring --api-key/--project
+      // when non-TTY: there's no way for the operator to confirm a
+      // destructive uninstall in a piped/CI invocation, so we refuse rather
+      // than silently going ahead. `npx -y ...-cli uninstall` accidentally
+      // landing inside a CI script otherwise wipes the plugin without any
+      // confirming signal.
+      throw new Error(
+        "Non-interactive uninstall requires --yes / --no-prompt to confirm. Re-run with --yes to bypass the prompt explicitly.",
+      )
+    }
     const ok = await confirm({ message: "Proceed?", initialValue: true })
     if (isCancel(ok) || ok !== true) return onCancel()
   }

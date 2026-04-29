@@ -21,6 +21,48 @@ describe("parseFlags", () => {
     const { flags } = parseFlags(["install", "extra-arg", "--yes"])
     expect(flags.yes).toBe(true)
   })
+
+  it("supports `--key value` (space-separated) for known value-taking flags", () => {
+    // Standard CLI convention — operators expect `--api-key lat_xxx`,
+    // `--openclaw-dir /tmp/x`, and `--project foo` to work alongside the
+    // `--key=value` form. Boolean flags are never consumed as values.
+    const cases: Array<[string[], Record<string, unknown>]> = [
+      [["install", "--api-key", "lat_xxx"], { "api-key": "lat_xxx" }],
+      [["install", "--project", "my-proj"], { project: "my-proj" }],
+      [["install", "--openclaw-dir", "/tmp/x"], { "openclaw-dir": "/tmp/x" }],
+    ]
+    for (const [argv, expected] of cases) {
+      const { flags } = parseFlags(argv)
+      for (const [k, v] of Object.entries(expected)) {
+        expect(flags[k]).toBe(v)
+      }
+    }
+  })
+
+  it("doesn't consume an adjacent flag as a value (--no-content --yes stays two booleans)", () => {
+    const { flags } = parseFlags(["install", "--no-content", "--yes"])
+    expect(flags["no-content"]).toBe(true)
+    expect(flags.yes).toBe(true)
+  })
+
+  it("treats a value-flag at end-of-argv (no following token) as boolean true", () => {
+    // Defensive: if someone runs `--api-key` with no following value, we
+    // don't crash trying to read undefined as the value — we just treat
+    // it as a flag. Downstream `normalizeInstallFlags` then drops it
+    // (boolean → not a string).
+    const { flags } = parseFlags(["install", "--api-key"])
+    expect(flags["api-key"]).toBe(true)
+  })
+
+  it("doesn't consume the next flag as the value of a value-taking flag (--api-key --project)", () => {
+    // Edge case: `--api-key --project foo` should NOT bind --api-key to
+    // "--project" as a literal string. The parser sees `--project` next
+    // and treats `--api-key` as boolean true; `--project foo` then binds
+    // normally.
+    const { flags } = parseFlags(["install", "--api-key", "--project", "foo"])
+    expect(flags["api-key"]).toBe(true)
+    expect(flags.project).toBe("foo")
+  })
 })
 
 describe("normalizeInstallFlags", () => {

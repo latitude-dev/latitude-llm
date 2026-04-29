@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { normalizeInstallFlags, normalizeUninstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
+import { readCliVersion } from "./version.ts"
 
 const USAGE = `usage: latitude-openclaw <command> [options]
 
@@ -34,24 +32,12 @@ uninstall options:
   --yes / --no-prompt   Skip the confirmation prompt
 `
 
-function readVersion(): string {
-  // dist/cli.js → ../package.json
-  const here = dirname(fileURLToPath(import.meta.url))
-  const pkgPath = join(here, "..", "package.json")
-  try {
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version?: string }
-    return pkg.version ?? "unknown"
-  } catch {
-    return "unknown"
-  }
-}
-
 async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   // Top-level --version / --help are handled before parseFlags so users can
   // type them as the first arg without hitting the "unknown subcommand" path.
   if (argv[0] === "--version" || argv[0] === "-v") {
-    process.stdout.write(`${readVersion()}\n`)
+    process.stdout.write(`${readCliVersion()}\n`)
     return
   }
   if (argv[0] === "--help" || argv[0] === "-h") {

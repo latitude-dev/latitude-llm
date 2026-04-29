@@ -82,7 +82,7 @@ Output includes the resolved config dir, the exact `openclaw plugins install` co
 
 The CLI resolves the OpenClaw config directory in this order, stopping at the first match:
 
-1. **`--openclaw-dir <path>`** flag (absolute, or relative to cwd).
+1. **`--openclaw-dir=<path>`** flag (absolute, or relative to cwd; the space-separated form `--openclaw-dir <path>` works too).
 2. **`OPENCLAW_HOME`** env var (absolute, or relative to cwd).
 3. **`./openclaw.json`** in the current working directory → use cwd.
 4. **`~/.openclaw`** (default).
