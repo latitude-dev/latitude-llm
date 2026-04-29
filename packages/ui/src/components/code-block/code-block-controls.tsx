@@ -47,12 +47,7 @@ function HighlightedTokens({ content, language }: { readonly content: string; re
   )
 }
 
-export function CodeBlockControls({
-  content,
-  language,
-  copyable = true,
-  expandable = true,
-}: CodeBlockControlsProps) {
+export function CodeBlockControls({ content, language, copyable = true, expandable = true }: CodeBlockControlsProps) {
   const [open, setOpen] = useState(false)
 
   const isJson = useMemo(() => language === "json" || isJsonBlock(content), [content, language])
