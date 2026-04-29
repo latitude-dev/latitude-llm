@@ -24,6 +24,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
   amazon_bedrock: "amazon-bedrock",
   google_vertex: "google-vertex",
   anthropic_vertex: "anthropic-vertex",
+  "openai-codex": "openai",
 }
 
 // Vercel AI SDK appends transport-style suffixes like `.responses` and `.chat`

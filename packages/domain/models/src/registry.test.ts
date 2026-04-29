@@ -186,6 +186,13 @@ describe("getCostSpec", () => {
     const result = getCostSpec("unknown-provider", "model")
     expect(result.costImplemented).toBe(false)
   })
+
+  it("resolves openai-codex provider to openai for pricing lookup", () => {
+    const codex = getCostSpec("openai-codex", "gpt-5-codex")
+    const openai = getCostSpec("openai", "gpt-5-codex")
+    expect(codex.costImplemented).toBe(true)
+    expect(codex).toEqual(openai)
+  })
 })
 
 describe("estimateCost", () => {
