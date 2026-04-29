@@ -45,7 +45,7 @@ Scores come from three sources:
 2. **Annotations**: human review verdicts from your team
 3. **Custom**: scores you submit from your own code via the API
 
-Your project starts with default annotation queues that automatically flag common problems like jailbreaking, refusals, frustration, and tool call errors. Check the **Annotation Queues** page to see if any traces have been flagged for review.
+Your project starts with default **flaggers** that automatically flag common problems like jailbreaking, refusals, frustration, and tool call errors. Flagger matches surface as annotation scores on traces and feed into issue discovery. You can manage which flaggers are enabled from your project settings.
 
 ## Step 5: Review an Annotation Queue
 

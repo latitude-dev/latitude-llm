@@ -73,7 +73,7 @@ Once a trace is considered complete, Latitude automatically:
 
 - Runs matching evaluations against it
 - Checks if it should be added to any live annotation queues
-- Classifies it against system annotation queues
+- Runs the project's flaggers to classify it against common failure categories
 
 ## Filtering and Search
 
