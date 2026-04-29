@@ -19,7 +19,7 @@ import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
 
 function JsonBlock({ value }: { readonly value: unknown }) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
-  return <CodeBlock value={formatted} copyable className="bg-secondary" />
+  return <CodeBlock value={formatted} className="bg-secondary" />
 }
 
 const METRIC_FILTER_FIELD: Readonly<Record<TraceOutlierMetric, string>> = {

@@ -1,7 +1,8 @@
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, ScanSearchIcon, WrenchIcon, XIcon } from "lucide-react"
-import { useId, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import { cn } from "../../../utils/cn.ts"
 import { Button } from "../../button/button.tsx"
+import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { CopyButton } from "../../copy-button/index.tsx"
 import { Text } from "../../text/text.tsx"
 import { Tooltip } from "../../tooltip/tooltip.tsx"
@@ -39,6 +40,9 @@ export function ToolCallBlock({
   const isError = result?.isError === true
 
   const toggleOpen = () => setOpen((prev) => !prev)
+
+  const argsContent = useMemo(() => formatJson(call.arguments), [call.arguments])
+  const resultContent = useMemo(() => (result ? formatJson(result.response) : ""), [result])
 
   return (
     <div
@@ -95,19 +99,23 @@ export function ToolCallBlock({
       </div>
 
       <div id={panelId} className={cn("flex min-w-0 flex-col", !open && "hidden")}>
-        <pre className="max-w-full overflow-auto border-y border-border bg-muted p-3 text-xs">
-          {formatJson(call.arguments)}
-        </pre>
+        <div className="relative">
+          <pre className="max-w-full overflow-auto border-y border-border bg-muted p-3 text-xs">{argsContent}</pre>
+          <CodeBlockControls content={argsContent} language="json" />
+        </div>
         {result && (
           <div className="flex min-w-0 flex-col p-3">
-            <pre
-              className={cn("max-w-full overflow-auto rounded-lg p-3 text-xs", {
-                "bg-muted": !isError,
-                "bg-destructive-muted": isError,
-              })}
-            >
-              {formatJson(result.response)}
-            </pre>
+            <div className="relative">
+              <pre
+                className={cn("max-w-full overflow-auto rounded-lg p-3 text-xs", {
+                  "bg-muted": !isError,
+                  "bg-destructive-muted": isError,
+                })}
+              >
+                {resultContent}
+              </pre>
+              <CodeBlockControls content={resultContent} language="json" />
+            </div>
           </div>
         )}
       </div>
