@@ -2,16 +2,21 @@ import { postTraces } from "./client.ts"
 import { type Config, loadConfig } from "./config.ts"
 import { createLogger, type Logger } from "./logger.ts"
 import { buildOtlpRequest } from "./otlp.ts"
-import { TurnBuilder } from "./turn-builder.ts"
+import { type BuildResult, SpanBuilder } from "./span-builder.ts"
 import type {
+  OpenClawAfterCompactionEvent,
   OpenClawAfterToolCallEvent,
   OpenClawAgentContext,
   OpenClawAgentEndEvent,
+  OpenClawBeforeAgentStartEvent,
+  OpenClawBeforeCompactionEvent,
   OpenClawBeforeToolCallEvent,
   OpenClawLlmInputEvent,
   OpenClawLlmOutputEvent,
-  OpenClawSessionStartEvent,
-  RunRecord,
+  OpenClawModelCallEndedEvent,
+  OpenClawModelCallStartedEvent,
+  OpenClawSubagentEndedEvent,
+  OpenClawSubagentSpawnedEvent,
 } from "./types.ts"
 
 /**
@@ -44,18 +49,20 @@ export interface RegisterOptions {
    * Hook to observe the emitted run right before it's posted. Used by tests;
    * not a stable public API.
    */
-  onEmit?: (run: RunRecord) => void
+  onEmit?: (result: BuildResult) => void
 }
 
 /**
  * Register the Latitude plugin against an OpenClaw plugin API. OpenClaw calls
- * this once at plugin activation; we wire up `llm_input`, `llm_output`, tool
- * and lifecycle hooks to stream traces to Latitude.
+ * this once at plugin activation; we wire up the granular paired hooks
+ * (model_call_started/_ended, before_/after_tool_call, before_/after_compaction,
+ * subagent_spawned/_ended, before_agent_start/agent_end) plus the
+ * data-only feeds (llm_input/llm_output) that enrich the agent span.
  *
- * Every handler is fire-and-forget on OpenClaw's side (see
- * `src/plugins/hooks.ts` — runLlmInput/runLlmOutput are documented as
- * parallel and wrapped with `.catch()` at the call site in attempt.ts), so
- * nothing we do here can slow the agent loop.
+ * Every typed hook on OpenClaw's side fires fire-and-forget for non-modifying
+ * hooks; before_tool_call is a `runModifyingHook` where returning anything
+ * other than undefined blocks the tool call. Our handler returns nothing —
+ * keep it that way.
  */
 export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts: RegisterOptions = {}): void {
   // Source of truth: OpenClaw passes the user's `plugins.entries[id].config`
@@ -73,53 +80,116 @@ export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts:
     `enabled: project=${config.project} base=${config.baseUrl} allowConversationAccess=${config.allowConversationAccess}`,
   )
 
-  const builder = new TurnBuilder()
+  const builder = new SpanBuilder()
 
-  api.on("session_start", (evt, ctx) => {
-    builder.onSessionStart(evt as OpenClawSessionStartEvent, ctx as OpenClawAgentContext)
-  })
-
-  api.on("llm_input", (evt, ctx) => {
-    try {
-      builder.onLlmInput(evt as OpenClawLlmInputEvent, ctx as OpenClawAgentContext)
-    } catch (err) {
-      logger.warn(`llm_input handler failed: ${String(err)}`)
+  // Helper: wrap a void-returning hook handler with try/catch + cast.
+  const wrap = <E>(
+    name: string,
+    fn: (evt: E, ctx: OpenClawAgentContext) => void,
+  ): ((evt: unknown, ctx: unknown) => void) => {
+    return (evt, ctx) => {
+      try {
+        fn(evt as E, ctx as OpenClawAgentContext)
+      } catch (err) {
+        logger.warn(`${name} handler failed: ${String(err)}`)
+      }
     }
-  })
+  }
 
-  api.on("before_tool_call", (evt, ctx) => {
-    try {
-      builder.onBeforeToolCall(evt as OpenClawBeforeToolCallEvent, ctx as OpenClawAgentContext)
-    } catch (err) {
-      logger.warn(`before_tool_call handler failed: ${String(err)}`)
-    }
-  })
+  // ─── Span boundaries ────────────────────────────────────────────────────
 
-  api.on("after_tool_call", (evt, ctx) => {
-    try {
-      builder.onAfterToolCall(evt as OpenClawAfterToolCallEvent, ctx as OpenClawAgentContext)
-    } catch (err) {
-      logger.warn(`after_tool_call handler failed: ${String(err)}`)
-    }
-  })
+  api.on(
+    "before_agent_start",
+    wrap<OpenClawBeforeAgentStartEvent>("before_agent_start", (evt, ctx) => {
+      builder.onBeforeAgentStart(evt, ctx)
+    }),
+  )
 
-  api.on("llm_output", (evt, ctx) => {
-    try {
-      builder.onLlmOutput(evt as OpenClawLlmOutputEvent, ctx as OpenClawAgentContext)
-    } catch (err) {
-      logger.warn(`llm_output handler failed: ${String(err)}`)
-    }
-  })
+  api.on(
+    "model_call_started",
+    wrap<OpenClawModelCallStartedEvent>("model_call_started", (evt, ctx) => {
+      builder.onModelCallStarted(evt, ctx)
+    }),
+  )
+  api.on(
+    "model_call_ended",
+    wrap<OpenClawModelCallEndedEvent>("model_call_ended", (evt, ctx) => {
+      builder.onModelCallEnded(evt, ctx)
+    }),
+  )
 
-  api.on("agent_end", (evt, ctx) => {
-    try {
-      const run = builder.onAgentEnd(evt as OpenClawAgentEndEvent, ctx as OpenClawAgentContext)
-      if (!run) {
+  // before_tool_call is a `runModifyingHook` — returning {block: true} from
+  // any plugin handler blocks the tool. We return nothing (void) so OpenClaw
+  // dispatches normally. The `wrap` helper preserves that void return.
+  api.on(
+    "before_tool_call",
+    wrap<OpenClawBeforeToolCallEvent>("before_tool_call", (evt, ctx) => {
+      builder.onBeforeToolCall(evt, ctx)
+    }),
+  )
+  api.on(
+    "after_tool_call",
+    wrap<OpenClawAfterToolCallEvent>("after_tool_call", (evt, ctx) => {
+      builder.onAfterToolCall(evt, ctx)
+    }),
+  )
+
+  api.on(
+    "before_compaction",
+    wrap<OpenClawBeforeCompactionEvent>("before_compaction", (evt, ctx) => {
+      builder.onBeforeCompaction(evt, ctx)
+    }),
+  )
+  api.on(
+    "after_compaction",
+    wrap<OpenClawAfterCompactionEvent>("after_compaction", (evt, ctx) => {
+      builder.onAfterCompaction(evt, ctx)
+    }),
+  )
+
+  api.on(
+    "subagent_spawned",
+    wrap<OpenClawSubagentSpawnedEvent>("subagent_spawned", (evt, ctx) => {
+      builder.onSubagentSpawned(evt, ctx)
+    }),
+  )
+  api.on(
+    "subagent_ended",
+    wrap<OpenClawSubagentEndedEvent>("subagent_ended", (evt, ctx) => {
+      builder.onSubagentEnded(evt, ctx)
+    }),
+  )
+
+  // ─── Data-only feeds ────────────────────────────────────────────────────
+  // These DON'T open or close spans. They enrich the open `agent` span with
+  // attempt-aggregate content + token usage, and seed the rolling history
+  // snapshot used by per-call `model_call.input.messages`.
+
+  api.on(
+    "llm_input",
+    wrap<OpenClawLlmInputEvent>("llm_input", (evt, ctx) => {
+      builder.onLlmInput(evt, ctx)
+    }),
+  )
+  api.on(
+    "llm_output",
+    wrap<OpenClawLlmOutputEvent>("llm_output", (evt, ctx) => {
+      builder.onLlmOutput(evt, ctx)
+    }),
+  )
+
+  // ─── Trace flush ────────────────────────────────────────────────────────
+
+  api.on(
+    "agent_end",
+    wrap<OpenClawAgentEndEvent>("agent_end", (evt, ctx) => {
+      const result = builder.onAgentEnd(evt, ctx)
+      if (!result) {
         logger.debug("agent_end fired without a matching run in flight")
         return
       }
-      opts.onEmit?.(run)
-      const payload = buildOtlpRequest(run, { allowConversationAccess: config.allowConversationAccess })
+      opts.onEmit?.(result)
+      const payload = buildOtlpRequest(result, { allowConversationAccess: config.allowConversationAccess })
       void postTraces({
         baseUrl: config.baseUrl,
         apiKey: config.apiKey,
@@ -127,8 +197,6 @@ export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts:
         payload,
         logger,
       })
-    } catch (err) {
-      logger.warn(`agent_end handler failed: ${String(err)}`)
-    }
-  })
+    }),
+  )
 }

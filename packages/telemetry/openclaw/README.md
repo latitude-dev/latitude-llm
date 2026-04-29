@@ -46,29 +46,55 @@ Shows a plan, asks for confirmation, then runs `openclaw plugins uninstall @lati
 
 ## What gets sent
 
-For each agent run, the plugin emits one trace with three span kinds:
+For each agent run, the plugin emits one trace shaped like the actual run:
 
-- **`interaction`** — the agent run. Carries `openclaw.session.key`, `openclaw.agent.id`, `openclaw.agent.name`, aggregated token usage across all LLM calls, run duration, success/error status, and the first user prompt.
-- **`llm_request`** — one per LLM call. Carries provider, request/response model, `gen_ai.system_instructions`, `gen_ai.input.messages` (full history + current prompt), `gen_ai.output.messages` (assistant text + tool_call parts), and full token usage (input/output/cache_read/cache_creation/total) — under both canonical `gen_ai.*` keys and legacy aliases.
-- **`tool_execution`** — one per tool call. Canonical `gen_ai.tool.*` attributes: `name`, `call.id`, `call.arguments`, `call.result`. Failures set `error.type`, `error.message`, and OTel status code 2.
+```
+agent (root, traceId = hash(runId))
+├─ compaction         (0..1, rare; budget-triggered)
+├─ model_call         (1..N, one per provider API call)
+├─ tool_call: foo     (between model_calls; sibling of agent)
+├─ model_call
+├─ tool_call: bar
+├─ subagent           (0..N — the child's full agent tree nests under here)
+│   └─ agent
+│       ├─ model_call
+│       └─ tool_call: ...
+└─ model_call         (final)
+```
 
-Every span carries `openclaw.agent.id` and `openclaw.agent.name`. Multi-agent OpenClaw setups (sub-agents) naturally produce spans tagged with the invoking agent's id, letting you filter and group by agent in the Latitude UI.
+Five span kinds:
 
-All spans share the run id and trace id so they group together.
+- **`agent`** — root of the run. Carries `openclaw.session.key`, `openclaw.agent.id`, `openclaw.agent.name`, aggregated token usage across all generations, run duration, success/error status, the first user prompt, and the full final message list. This is where attempt-aggregate `gen_ai.*` lands.
+- **`model_call`** — one per actual provider API call inside the run. Carries provider, request/response model, `openclaw.api`, `openclaw.transport`, per-call duration, outcome, error category, time-to-first-byte, request payload bytes, response stream bytes, upstream request id hash, and `gen_ai.input.messages` snapshotted at the moment that generation started. Per-call output messages and per-call token usage aren't surfaced by OpenClaw today (attempt-aggregate only); those stay on `agent`.
+- **`tool_call:<name>`** — one per tool invocation. Canonical `gen_ai.tool.*` attributes: `name`, `call.id`, `call.arguments`, `call.result`. Sibling of `agent`, NOT child of `model_call` — tools run between generations, not during them.
+- **`compaction`** — rare; fires when OpenClaw hits the message budget mid-run. Records before/after message counts and the compacted-out count.
+- **`subagent`** — one per child run spawned by this agent. The child's entire `agent` subtree (its own `model_call`s, `tool_call`s, even further-nested `subagent`s) parents itself underneath via cross-runId trace propagation, so a spawn tree is one waterfall in one trace.
+
+Every span carries `openclaw.agent.id` and `openclaw.agent.name`. Multi-agent setups produce spans tagged with the invoking agent's id, letting you filter and group by agent in the Latitude UI.
+
+All spans share the same `traceId` so they group as one trace per agent run (and one trace per spawn tree, by virtue of the subagent linkage).
+
+### Backend caveat: Codex / Claude-Code-style providers
+
+OpenClaw's `model_call_started` / `model_call_ended` hooks fire from its `selection` layer, which wraps the agent's `streamFn` invocation. For "agentic" backends (Codex, Claude Code) the inner generations happen inside the backend's own loop and don't surface as separate `model_call` events. Result: a Codex-backed run shows ONE `model_call` per attempt instead of N. Anthropic and OpenAI direct don't have this issue. The fix is upstream in OpenClaw — out of scope for this plugin.
 
 ## How it works
 
-OpenClaw ships typed plugin hooks that fire per-LLM-call with the complete payload (`src/plugins/hook-types.ts` in the OpenClaw source). We subscribe to:
+We subscribe to OpenClaw's typed plugin hooks (`src/plugins/hook-types.ts` upstream). The model is "one span per paired before/after (or start/end) event":
 
-- `llm_input` — full system prompt, prompt text, history messages, provider, model.
-- `llm_output` — assistant text, last assistant message, full token usage (input/output/cacheRead/cacheWrite/total), resolved provider/model ref.
-- `before_tool_call` / `after_tool_call` — tool name, arguments, result, error, duration.
-- `agent_end` — run completion signal. This is when we build the OTLP trace and POST it.
-- `session_start` — currently a no-op; reserved for future session-level metadata.
+| Span | Start hook | End hook |
+| --- | --- | --- |
+| `agent` | `before_agent_start` | `agent_end` |
+| `model_call` | `model_call_started` | `model_call_ended` |
+| `tool_call` | `before_tool_call` | `after_tool_call` |
+| `compaction` | `before_compaction` | `after_compaction` |
+| `subagent` | `subagent_spawned` | `subagent_ended` |
 
-OpenClaw runs LLM hooks **fire-and-forget** (see [`src/plugins/hooks.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugins/hooks.ts) — `runLlmInput`/`runLlmOutput` are documented as parallel, and the call site in [`src/agents/pi-embedded-runner/run/attempt.ts`](https://github.com/openclaw/openclaw/blob/main/src/agents/pi-embedded-runner/run/attempt.ts) wraps them with `void hookRunner.run*(...).catch(...)`). Our handlers can never slow down the agent loop.
+Two more hooks (`llm_input`, `llm_output`) are subscribed to for **content only** — they don't open or close spans, they just enrich the `agent` span with attempt-aggregate data and seed the rolling history snapshot used by per-call `model_call.gen_ai.input.messages`.
 
-**No runtime wrapping.** Unlike existing third-party OpenClaw observability plugins that try to monkey-patch `@mariozechner/pi-ai` (and run into jiti's CJS/ESM module isolation), we stay inside the supported plugin API. The hooks give us everything, at lower risk of breaking on OpenClaw updates.
+The hook system runs handlers fire-and-forget (see [`src/plugins/hooks.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugins/hooks.ts) upstream), so nothing we do here can slow the agent loop. The one exception is `before_tool_call`, which is a `runModifyingHook` — our handler returns `undefined` so OpenClaw dispatches the tool normally. Returning anything else (e.g. `{block: true}`) would block every tool call.
+
+**No runtime wrapping.** Unlike third-party OpenClaw observability plugins that try to monkey-patch `@mariozechner/pi-ai` (and run into jiti's CJS/ESM module isolation), we stay inside the supported plugin API. The hooks give us everything, at lower risk of breaking on OpenClaw updates.
 
 ## Configuration reference
 
