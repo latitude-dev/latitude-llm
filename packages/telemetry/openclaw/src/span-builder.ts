@@ -1,4 +1,11 @@
 import { createHash, randomUUID } from "node:crypto"
+import {
+  assistantMessageFromOutput,
+  type Message,
+  normalizeMessages,
+  systemInstructionsParts,
+  userMessageFromPrompt,
+} from "./messages.ts"
 import type {
   OpenClawAfterCompactionEvent,
   OpenClawAfterToolCallEvent,
@@ -73,8 +80,13 @@ type AttrInput = Record<string, AttrValue>
 interface RunState {
   /** Trace root span (the `agent`). */
   agent: SpanRecord
-  /** Working snapshot of conversation history — see "the snapshot trick" in PR #2986. */
-  history: unknown[]
+  /**
+   * Working snapshot of conversation history in the parts-based GenAI shape
+   * Latitude's parser expects. Provider-specific shapes from `llm_input` get
+   * normalized once on entry; tool_call / tool_call_response parts appended
+   * during the run are already in the right shape.
+   */
+  history: Message[]
   /** Open per-call spans, keyed on the OpenClaw `callId` from `model_call_started`. */
   openModelCalls: Map<string, SpanRecord>
   /** Open tool spans, keyed on `toolCallId`. */
@@ -94,12 +106,21 @@ interface RunState {
  * child's `before_agent_start` fires, we use those values so the child's
  * entire span subtree lands inside the parent's trace. Outlives the parent's
  * RunState because the child's `agent_end` may arrive after the parent's.
+ *
+ * `createdAt` is used by the `evictStaleSubagentLinks` sweep to drop entries
+ * whose child runs never reached `agent_end` (gateway crash mid-spawn,
+ * plugin reload, etc.). Without the sweep the map grows unbounded over the
+ * lifetime of a long-running OpenClaw process.
  */
 interface SubagentLink {
   traceId: string
   /** Span id of the parent's `subagent` span — used as parentSpanId for the child's root. */
   subagentSpanId: string
+  createdAt: number
 }
+
+const SUBAGENT_LINK_TTL_MS = 60 * 60 * 1000 // 1 hour
+const SUBAGENT_LINK_MAX = 1000
 
 export interface BuildResult {
   /** Run id this batch belongs to. */
@@ -145,9 +166,10 @@ export class SpanBuilder {
         "openclaw.run.id": runId,
         // before_agent_start payload — gated content fields go via `gated.*`
         // attribute keys so the OTLP layer can scrub them without a parallel
-        // boolean check.
+        // boolean check. Messages get normalized to parts-shape; `prompt` is
+        // a plain string (for the user-prompt convenience attribute).
         "before_agent_start.prompt:gated": evt.prompt,
-        "before_agent_start.messages:gated": evt.messages,
+        "before_agent_start.messages:gated": evt.messages ? normalizeMessages(evt.messages) : undefined,
       },
     }
 
@@ -166,27 +188,34 @@ export class SpanBuilder {
    * Enrich the open `agent` span with content + identity from the LLM input.
    * Also seeds the rolling history snapshot used by per-call `model_call`
    * input attributes.
+   *
+   * Provider-specific message shapes get normalized into the parts-based
+   * GenAI format here — that's the contract Latitude's downstream parser
+   * expects on `gen_ai.input.messages` and `gen_ai.system_instructions`.
    */
   onLlmInput(evt: OpenClawLlmInputEvent, ctx: OpenClawAgentContext): void {
     const run = this.runs.get(ctx.runId ?? evt.runId)
     if (!run) return
+
+    const normalizedHistory = normalizeMessages(evt.historyMessages)
+    const inputMessages: Message[] = [...normalizedHistory]
+    if (evt.prompt) inputMessages.push(userMessageFromPrompt(evt.prompt))
+
     Object.assign(run.agent.attrs, {
-      "gen_ai.system_instructions:gated": evt.systemPrompt,
+      "gen_ai.system_instructions:gated": evt.systemPrompt ? systemInstructionsParts(evt.systemPrompt) : undefined,
       "user_prompt:gated": evt.prompt,
-      "gen_ai.input.messages:gated": evt.historyMessages,
+      "gen_ai.input.messages:gated": inputMessages,
       "openclaw.images.count": evt.imagesCount,
       "gen_ai.request.model": evt.model,
       "gen_ai.system": evt.provider,
       "openclaw.provider": evt.provider,
     })
-    // Seed the rolling history. The per-call model_call_started will copy
-    // the snapshot at the time it fires; subsequent before_tool_call /
-    // after_tool_call events append to the same array so the next
-    // model_call captures the post-tool state.
-    run.history = [...evt.historyMessages]
-    if (evt.prompt) {
-      run.history.push({ role: "user", parts: [{ type: "text", content: evt.prompt }] })
-    }
+    // Seed the rolling history with the normalized form. The per-call
+    // model_call_started will copy the snapshot at the time it fires;
+    // subsequent before_tool_call / after_tool_call events append to the
+    // same array (already in parts shape) so the next model_call captures
+    // the post-tool state.
+    run.history = inputMessages
   }
 
   /**
@@ -196,9 +225,9 @@ export class SpanBuilder {
   onLlmOutput(evt: OpenClawLlmOutputEvent, ctx: OpenClawAgentContext): void {
     const run = this.runs.get(ctx.runId ?? evt.runId)
     if (!run) return
-    const outputMessages = evt.lastAssistant !== undefined ? [evt.lastAssistant] : evt.assistantTexts
+    const assistantMessage = assistantMessageFromOutput(evt.assistantTexts, evt.lastAssistant)
     Object.assign(run.agent.attrs, {
-      "gen_ai.output.messages:gated": outputMessages,
+      "gen_ai.output.messages:gated": [assistantMessage],
       "openclaw.resolved.ref": evt.resolvedRef,
       "openclaw.harness.id": evt.harnessId,
       "gen_ai.response.model": evt.model,
@@ -299,10 +328,21 @@ export class SpanBuilder {
     const run = this.runs.get(evt.runId)
     if (!run) return
 
-    const toolCallId = evt.toolCallId ?? this.findOpenToolCallByName(run, evt.toolName)
-    if (!toolCallId) return
-    const span = run.openToolCalls.get(toolCallId)
+    // Match priority:
+    //   1. Direct id lookup — the happy path.
+    //   2. Name-match fallback — if `evt.toolCallId` is missing OR refers to
+    //      an id we didn't open (e.g. before_tool_call elided it and we
+    //      synthesised one, then after_tool_call provided the real one).
+    //
+    // Without the id-mismatch fallback, the open span would never close
+    // and would get force-closed as `abandoned` at agent_end.
+    let resolvedId: string | undefined =
+      evt.toolCallId && run.openToolCalls.has(evt.toolCallId) ? evt.toolCallId : undefined
+    if (!resolvedId) resolvedId = this.findOpenToolCallByName(run, evt.toolName)
+    if (!resolvedId) return
+    const span = run.openToolCalls.get(resolvedId)
     if (!span) return
+    const toolCallId: string = resolvedId
 
     span.endMs = Date.now()
     const isError = Boolean(evt.error)
@@ -340,7 +380,7 @@ export class SpanBuilder {
         "openclaw.run.id": runId,
         "openclaw.compaction.message_count.before": evt.messageCount,
         "openclaw.compaction.session_file": evt.sessionFile,
-        "before_compaction.messages:gated": evt.messages,
+        "before_compaction.messages:gated": evt.messages ? normalizeMessages(evt.messages) : undefined,
       },
     }
     run.openCompaction = span
@@ -398,9 +438,11 @@ export class SpanBuilder {
       },
     }
     parent.childSubagentSpans.set(evt.runId, span)
+    this.evictStaleSubagentLinks()
     this.subagentLinks.set(evt.runId, {
       traceId: parent.agent.traceId,
       subagentSpanId: span.spanId,
+      createdAt: Date.now(),
     })
   }
 
@@ -456,7 +498,7 @@ export class SpanBuilder {
       "openclaw.duration_ms": evt.durationMs,
       "openclaw.run.success": evt.success,
       "openclaw.error.message:gated": evt.error,
-      "agent_end.messages:gated": evt.messages,
+      "agent_end.messages:gated": normalizeMessages(evt.messages),
     })
 
     // Anything still open at agent_end didn't get a proper close event.
@@ -499,11 +541,49 @@ export class SpanBuilder {
     this.subagentLinks.delete(runId)
   }
 
+  /** Test-only: how many cross-run subagent links we're holding. */
+  subagentLinkCount(): number {
+    return this.subagentLinks.size
+  }
+
+  /**
+   * Drop any subagent links whose child run never reached `agent_end`. Called
+   * before every `subagent_spawned` insert so the map stays bounded even when
+   * children crash mid-spawn or the plugin reloads.
+   *
+   * Two passes: TTL eviction (anything older than `SUBAGENT_LINK_TTL_MS`),
+   * then a hard size cap (when we're past `SUBAGENT_LINK_MAX`, drop the
+   * oldest until we're under).
+   */
+  private evictStaleSubagentLinks(): void {
+    const now = Date.now()
+    for (const [runId, link] of this.subagentLinks) {
+      if (now - link.createdAt > SUBAGENT_LINK_TTL_MS) {
+        this.subagentLinks.delete(runId)
+      }
+    }
+    if (this.subagentLinks.size <= SUBAGENT_LINK_MAX) return
+    const sorted = Array.from(this.subagentLinks.entries()).sort((a, b) => a[1].createdAt - b[1].createdAt)
+    const toRemove = this.subagentLinks.size - SUBAGENT_LINK_MAX
+    for (let i = 0; i < toRemove; i++) {
+      const entry = sorted[i]
+      if (entry) this.subagentLinks.delete(entry[0])
+    }
+  }
+
   private findOpenToolCallByName(run: RunState, toolName: string): string | undefined {
     // Defensive: OpenClaw versions that elide toolCallId on after_tool_call
-    // can be matched by name + still-open status.
-    for (const [id, span] of run.openToolCalls) {
-      if (span.name === `tool_call:${toolName}`) return id
+    // can be matched by name + still-open status. When multiple in-flight
+    // tool calls share a name, prefer the MOST RECENTLY opened — Maps
+    // preserve insertion order, so iterating in reverse picks the latest.
+    // (LIFO matches typical agent runtimes that issue tools sequentially.)
+    const target = `tool_call:${toolName}`
+    const entries = Array.from(run.openToolCalls.entries())
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i]
+      if (!entry) continue
+      const [id, span] = entry
+      if (span.name === target) return id
     }
     return undefined
   }

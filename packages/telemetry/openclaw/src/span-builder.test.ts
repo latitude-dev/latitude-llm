@@ -198,12 +198,20 @@ describe("SpanBuilder llm_input/llm_output (data-only)", () => {
     const result = b.onAgentEnd({ messages: [], success: true }, ctx())
 
     const agent = findSpan(result, "agent")
-    expect(agent?.attrs["gen_ai.system_instructions:gated"]).toBe("be helpful")
+    // System instructions are normalized to the parts-shape Latitude's parser
+    // expects — `[{type: "text", content: ...}]`, not a raw string.
+    expect(agent?.attrs["gen_ai.system_instructions:gated"]).toEqual([{ type: "text", content: "be helpful" }])
     expect(agent?.attrs["user_prompt:gated"]).toBe("hi")
     expect(agent?.attrs["gen_ai.usage.input_tokens"]).toBe(100)
     expect(agent?.attrs["gen_ai.usage.output_tokens"]).toBe(20)
     expect(agent?.attrs["gen_ai.usage.total_tokens"]).toBe(120)
     expect(agent?.attrs["openclaw.resolved.ref"]).toBe("openai/gpt-5")
+
+    // gen_ai.input.messages and gen_ai.output.messages must be in parts shape.
+    const inputMessages = agent?.attrs["gen_ai.input.messages:gated"] as Array<{ role: string; parts: unknown[] }>
+    expect(inputMessages.every((m) => Array.isArray(m.parts))).toBe(true)
+    const outputMessages = agent?.attrs["gen_ai.output.messages:gated"] as Array<{ role: string; parts: unknown[] }>
+    expect(outputMessages.every((m) => Array.isArray(m.parts))).toBe(true)
   })
 
   it("seeds the rolling history snapshot from llm_input", () => {
@@ -295,6 +303,40 @@ describe("SpanBuilder subagent linkage", () => {
     expect(subagent?.outcome).toBe("ok")
   })
 
+  it("evicts stale subagent links so the map stays bounded across orphaned spawns", () => {
+    // Simulate what happens when many child runs never reach agent_end —
+    // gateway crash mid-spawn, plugin reload, etc. Each spawned subagent
+    // registers a link entry. The link entry gets cleaned up only when the
+    // child's `agent_end` fires (via `onAgentEnd`) — without it, the map
+    // would grow unbounded.
+    //
+    // We verify the eviction sweep by overriding Date.now between spawns
+    // so the first batch is "old enough" to be evicted.
+    const b = new SpanBuilder()
+    const realNow = Date.now
+    const FIXED_OLD = 1_000_000_000
+    Date.now = () => FIXED_OLD
+
+    // Spawn a parent agent + 3 subagents at t=0.
+    b.onBeforeAgentStart({}, ctx({ runId: "parent" }))
+    for (const childId of ["c1", "c2", "c3"]) {
+      b.onSubagentSpawned(
+        { runId: childId, childSessionKey: `sk-${childId}`, agentId: "child" },
+        ctx({ runId: "parent" }),
+      )
+    }
+    expect(b.subagentLinkCount()).toBe(3)
+
+    // Jump well past the TTL and spawn one more — eviction sweep runs on
+    // insert and drops the stale ones.
+    Date.now = () => FIXED_OLD + 2 * 60 * 60 * 1000 // +2 hours
+    b.onSubagentSpawned({ runId: "c4", childSessionKey: "sk-c4", agentId: "child" }, ctx({ runId: "parent" }))
+    // Only the new entry should remain — the three old ones are gone.
+    expect(b.subagentLinkCount()).toBe(1)
+
+    Date.now = realNow
+  })
+
   it("marks subagent error outcome correctly", () => {
     const b = new SpanBuilder()
     b.onBeforeAgentStart({}, ctx({ runId: "parent" }))
@@ -363,5 +405,52 @@ describe("SpanBuilder tool_call lifecycle", () => {
     const tool = findSpan(result, "tool_call:crash")
     expect(tool?.outcome).toBe("error")
     expect(tool?.errorMessage).toBe("boom")
+  })
+
+  it("falls back to name-matching when before/after_tool_call ids don't match", () => {
+    // before_tool_call had no toolCallId → we synthesized one. after_tool_call
+    // provides a real id (different). Without the fallback, the span would
+    // never close.
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart({}, ctx())
+    b.onBeforeToolCall({ toolName: "search", params: { q: "x" }, runId: "run-1" }, ctx())
+    b.onAfterToolCall(
+      { toolName: "search", params: { q: "x" }, runId: "run-1", toolCallId: "real-id-from-provider", result: "found" },
+      ctx(),
+    )
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx())
+
+    const tool = findSpan(result, "tool_call:search")
+    expect(tool?.outcome).toBe("ok")
+    expect(tool?.attrs["gen_ai.tool.call.result:gated"]).toBe("found")
+    // The span should be closed (not abandoned).
+    expect(tool?.attrs["openclaw.outcome"]).not.toBe("abandoned")
+  })
+
+  it("matches the most-recently-opened tool when multiple in-flight share a name", () => {
+    // Two in-flight calls with the same toolName, no ids on either side —
+    // when the first after_tool_call arrives without an id, we should close
+    // the most recently opened span (LIFO), not the first one in insertion
+    // order.
+    const b = new SpanBuilder()
+    b.onBeforeAgentStart({}, ctx())
+    b.onBeforeToolCall({ toolName: "search", params: { q: "first" }, runId: "run-1" }, ctx())
+    b.onBeforeToolCall({ toolName: "search", params: { q: "second" }, runId: "run-1" }, ctx())
+    // First completion lacks id — should close the SECOND span (the latest).
+    b.onAfterToolCall({ toolName: "search", params: { q: "second" }, runId: "run-1", result: "second-result" }, ctx())
+    // Second completion lacks id — should close the FIRST span (now the only open one).
+    b.onAfterToolCall({ toolName: "search", params: { q: "first" }, runId: "run-1", result: "first-result" }, ctx())
+    const result = b.onAgentEnd({ messages: [], success: true }, ctx())
+
+    const tools = findAllSpans(result, "tool_call:search")
+    expect(tools).toHaveLength(2)
+    // Both closed (neither abandoned).
+    expect(tools.every((t) => t.attrs["openclaw.outcome"] !== "abandoned")).toBe(true)
+    // Order matters: the second-opened span should have got the second-result.
+    // Find the one whose params.q is "second" — its result should be "second-result".
+    const second = tools.find((t) => (t.attrs["gen_ai.tool.call.arguments:gated"] as { q: string }).q === "second")
+    expect(second?.attrs["gen_ai.tool.call.result:gated"]).toBe("second-result")
+    const first = tools.find((t) => (t.attrs["gen_ai.tool.call.arguments:gated"] as { q: string }).q === "first")
+    expect(first?.attrs["gen_ai.tool.call.result:gated"]).toBe("first-result")
   })
 })
