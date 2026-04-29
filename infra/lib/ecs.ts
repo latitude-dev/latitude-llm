@@ -199,36 +199,43 @@ export function createEcs(
     )
     taskDefinitions[serviceConfig.name] = taskDef
 
-    const ecsService = new aws.ecs.Service(`${name}-${serviceConfig.name}`, {
-      cluster: cluster.arn,
-      taskDefinition: taskDef.arn,
-      desiredCount: serviceConfig.desiredCount,
-      launchType: "FARGATE",
-      networkConfiguration: {
-        subnets: privateSubnets.map((s) => s.id),
-        securityGroups: [securityGroup.id],
-        assignPublicIp: false,
+    const ecsService = new aws.ecs.Service(
+      `${name}-${serviceConfig.name}`,
+      {
+        cluster: cluster.arn,
+        taskDefinition: taskDef.arn,
+        desiredCount: serviceConfig.desiredCount,
+        launchType: "FARGATE",
+        networkConfiguration: {
+          subnets: privateSubnets.map((s) => s.id),
+          securityGroups: [securityGroup.id],
+          assignPublicIp: false,
+        },
+        loadBalancers: serviceConfig.port
+          ? Object.entries(albTargetGroupArns)
+              .filter(([key]) => {
+                if (serviceConfig.name === "workers") return key === "bullBoard"
+                return key === serviceConfig.name
+              })
+              .map(([_, arn]) => ({
+                targetGroupArn: arn,
+                containerName: serviceConfig.name,
+                containerPort: serviceConfig.port!,
+              }))
+          : undefined,
+        deploymentController: {
+          type: "ECS",
+        },
+        tags: {
+          Name: `${name}-${serviceConfig.name}`,
+          Environment: config.name,
+        },
       },
-      loadBalancers: serviceConfig.port
-        ? Object.entries(albTargetGroupArns)
-            .filter(([key]) => {
-              if (serviceConfig.name === "workers") return key === "bullBoard"
-              return key === serviceConfig.name
-            })
-            .map(([_, arn]) => ({
-              targetGroupArn: arn,
-              containerName: serviceConfig.name,
-              containerPort: serviceConfig.port!,
-            }))
-        : undefined,
-      deploymentController: {
-        type: "ECS",
-      },
-      tags: {
-        Name: `${name}-${serviceConfig.name}`,
-        Environment: config.name,
-      },
-    })
+      // CD registers new task definition revisions on every deploy. Without
+      // this, `pulumi refresh` pulls the live revision into state and the next
+      // `pulumi up` rolls services back to the revision Pulumi last created.
+      { ignoreChanges: ["taskDefinition"] },
+    )
     services[serviceConfig.name] = ecsService
 
     if (config.name === "production" && serviceConfig.maxCount > serviceConfig.minCount) {
