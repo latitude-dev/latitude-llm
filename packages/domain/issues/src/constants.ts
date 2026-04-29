@@ -4,7 +4,7 @@ export const ISSUE_NAME_MAX_LENGTH = 128
 
 export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
-export const ISSUE_SOURCES = ["annotation", "custom"] as const
+export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
 

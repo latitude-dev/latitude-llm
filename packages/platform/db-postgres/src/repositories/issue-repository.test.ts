@@ -148,6 +148,23 @@ describe("IssueRepositoryLive", () => {
     )
   })
 
+  it("persists and reads flagger-sourced issues", async () => {
+    const flaggerIssue = makeIssue({
+      source: "flagger",
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        yield* repository.save(flaggerIssue)
+
+        const found = yield* repository.findById(flaggerIssue.id)
+
+        expect(found.source).toBe("flagger")
+      }).pipe(makeProvider(database)),
+    )
+  })
+
   it("returns NotFoundError when an issue does not exist", async () => {
     await expect(
       Effect.runPromise(

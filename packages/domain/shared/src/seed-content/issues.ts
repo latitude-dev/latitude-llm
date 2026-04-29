@@ -34,7 +34,7 @@ export type SeedIssueFixture = {
   readonly uuid: string
   readonly name: string
   readonly description: string
-  readonly source: "annotation" | "custom"
+  readonly source: "annotation" | "flagger" | "custom"
   readonly createdDaysAgo: number
   readonly clusteredDaysAgo: number
   readonly updatedDaysAgo: number
@@ -166,7 +166,7 @@ const baseIssueFixtures: SeedIssueFixture[] = [
       "After an internal tool call fails, the assistant frequently returns an empty or placeholder response instead " +
       "of acknowledging the error or asking the customer to retry. The pattern is detected automatically on every " +
       "trace, so this issue is monitored without a separate evaluation.",
-    source: "annotation",
+    source: "flagger",
     createdDaysAgo: 18,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,

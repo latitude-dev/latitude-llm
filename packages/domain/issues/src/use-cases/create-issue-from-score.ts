@@ -88,7 +88,8 @@ const buildNewIssueFromScore = ({
     timestamp: assignedAt,
   })
 
-  const source: IssueSource = score.source === "annotation" ? "annotation" : "custom"
+  const source: IssueSource =
+    score.source === "annotation" ? (score.sourceId === "SYSTEM" ? "flagger" : "annotation") : "custom"
 
   return {
     id: generateId<"IssueId">(),
