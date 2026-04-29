@@ -12,8 +12,15 @@ export const TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS = 60 * 60
 // Trace Search Constants
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Maximum length of searchable text content before truncation. */
-export const TRACE_SEARCH_DOCUMENT_MAX_LENGTH = 20_000
+/** Character-to-token estimate used for trace-search embedding budget enforcement. */
+export const TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4
+
+/** Maximum estimated tokens of searchable conversation text before truncation. */
+export const TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 16_000
+
+/** Maximum length of searchable conversation text before truncation. */
+export const TRACE_SEARCH_DOCUMENT_MAX_LENGTH =
+  TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS * TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE
 
 /**
  * Retention window for embeddings. Enforced via ClickHouse TTL on the
@@ -43,21 +50,21 @@ export const TRACE_SEARCH_EMBEDDING_MIN_LENGTH = 100
  * rolling windows (daily, weekly, monthly) — a trace is embedded only if all
  * three budgets can absorb its estimated tokens.
  *
- * Today's numbers target a "Pro" plan profile at voyage-4-large + 20k-char
+ * Today's numbers target a "Pro" plan profile at voyage-4-large + 16k-token
  * truncation:
  *
- *  - Monthly 500M tokens → ~$60/org in worst-case Voyage spend.
- *  - Weekly 115M tokens  → one burst week can't exhaust the monthly budget.
- *  - Daily 16.7M tokens  → one burst day can't exhaust the weekly budget.
+ *  - Monthly 7B tokens    → ~$840/org in worst-case Voyage spend.
+ *  - Weekly 1.61B tokens  → one burst week can't exhaust the monthly budget.
+ *  - Daily 233.8M tokens  → one burst day can't exhaust the weekly budget.
  *
  * When subscription plans land, `EmbedBudgetResolver` will resolve
  * per-plan values at the org boundary instead of using these constants
  * directly. Any caller that needs the limit for a given org goes through the
  * resolver, not these constants.
  */
-export const TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS = 16_700_000
-export const TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS = 115_000_000
-export const TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS = 500_000_000
+export const TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS = 233_800_000
+export const TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS = 1_610_000_000
+export const TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS = 7_000_000_000
 
 /**
  * Embedding model for trace semantic search (Voyage).

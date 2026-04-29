@@ -3,10 +3,10 @@ import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
-  SpanRepository,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
   TRACE_SEARCH_EMBEDDING_MODEL,
+  TraceRepository,
   TraceSearchBudget,
   TraceSearchRepository,
 } from "@domain/spans"
@@ -15,7 +15,7 @@ import { AIEmbedLive } from "@platform/ai-voyage"
 import type { RedisClient } from "@platform/cache-redis"
 import { EmbedBudgetResolverLive, RedisCacheStoreLive, TraceSearchBudgetLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
-import { SpanRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getRedisClient } from "../clients.ts"
@@ -62,15 +62,15 @@ const generateEmbedding = (searchText: string): Effect.Effect<readonly number[],
 
 /**
  * Process a trace search refresh task:
- * 1. Load span messages for the trace
- * 2. Build the search document (excludes system prompts)
+ * 1. Load canonical conversation messages for the trace
+ * 2. Build the search document (conversation only, excludes system prompts)
  * 3. Upsert the lexical document
  * 4. Check semantic eligibility
  * 5. If eligible and changed, generate embedding and upsert
  */
 const processRefreshTrace = (payload: RefreshTracePayload) =>
   Effect.gen(function* () {
-    const spanRepo = yield* SpanRepository
+    const traceRepo = yield* TraceRepository
     const traceSearchRepo = yield* TraceSearchRepository
 
     const organizationId = payload.organizationId
@@ -78,35 +78,26 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const traceId = payload.traceId
     const startTime = new Date(payload.startTime)
 
-    // 1. Load span messages for the trace. Bound start_time to a [-1m, +1d]
-    // window around the root span so partition pruning + the
-    // (org, project, start_time) primary key on `spans` kick in — otherwise
-    // the dedupe step has to scan every monthly partition for the org.
-    const startTimeFrom = new Date(startTime.getTime() - 60 * 1000)
-    const startTimeTo = new Date(startTime.getTime() + 24 * 60 * 60 * 1000)
-    const spanMessages = yield* spanRepo.findMessagesForTrace({
+    // 1. Load the canonical conversation for the trace. This preserves the
+    // same chronological de-duplicated message list shown in the trace detail
+    // drawer, instead of rebuilding from span inputs that can repeat context.
+    const traceDetail = yield* traceRepo.findByTraceId({
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
       traceId: TraceId(traceId),
-      startTimeFrom,
-      startTimeTo,
     })
 
-    if (spanMessages.length === 0) {
-      logger.info(`No span messages found for trace ${traceId}, skipping search indexing`)
+    if (traceDetail.allMessages.length === 0) {
+      logger.info(`No conversation messages found for trace ${traceId}, skipping search indexing`)
       return
     }
 
     // 2. Build the search document
-    const inputMessages = spanMessages.flatMap((sm) => sm.inputMessages)
-    const outputMessages = spanMessages.flatMap((sm) => sm.outputMessages)
-
     const searchDocument = yield* buildTraceSearchDocument({
       traceId,
       startTime,
       rootSpanName: payload.rootSpanName,
-      inputMessages,
-      outputMessages,
+      messages: traceDetail.allMessages,
     })
 
     // 3. Upsert the lexical document
@@ -214,7 +205,7 @@ export const createTraceSearchWorker = ({ consumer, clickhouseClient, redisClien
     refreshTrace: (payload) =>
       processRefreshTrace(payload as RefreshTracePayload).pipe(
         withClickHouse(
-          Layer.mergeAll(SpanRepositoryLive, TraceSearchRepositoryLive),
+          Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive),
           chClient,
           OrganizationId(payload.organizationId),
         ),
