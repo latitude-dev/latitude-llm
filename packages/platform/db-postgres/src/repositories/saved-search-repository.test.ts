@@ -292,6 +292,7 @@ describe("SavedSearchRepositoryLive", () => {
         const repo = yield* SavedSearchRepository
         return yield* repo.update({
           id: created.id,
+          projectId: PROJECT_ID,
           name: "Failures",
           slug: "failures",
           query: "really failed",
@@ -306,6 +307,51 @@ describe("SavedSearchRepositoryLive", () => {
     expect(updated.query).toBe("really failed")
     expect(updated.filterSet).toEqual({ duration: [{ op: "gte", value: 1000 }] })
     expect(updated.assignedUserId).toBe(ASSIGNEE_USER_ID)
+  })
+
+  it("returns DuplicateSavedSearchSlugError when update renames a row to an existing slug", async () => {
+    const existing = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.create({
+          projectId: PROJECT_ID,
+          slug: "existing-slug",
+          name: "Existing",
+          query: "a",
+          filterSet: {},
+          assignedUserId: null,
+          createdByUserId: CREATOR_USER_ID,
+        })
+      }),
+    )
+
+    const created = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.create({
+          projectId: PROJECT_ID,
+          slug: "other-slug",
+          name: "Other",
+          query: "b",
+          filterSet: {},
+          assignedUserId: null,
+          createdByUserId: CREATOR_USER_ID,
+        })
+      }),
+    )
+
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* SavedSearchRepository
+          return yield* repo.update({
+            id: created.id,
+            projectId: PROJECT_ID,
+            slug: existing.slug,
+          })
+        }),
+      ),
+    ).rejects.toBeInstanceOf(DuplicateSavedSearchSlugError)
   })
 
   it("returns SavedSearchNotFoundError on update of soft-deleted row", async () => {

@@ -20,6 +20,8 @@ export interface CreateSavedSearchRepoInput {
 
 export interface UpdateSavedSearchRepoInput {
   readonly id: SavedSearchId
+  /** Used only to surface a meaningful `projectId` on `DuplicateSavedSearchSlugError`. */
+  readonly projectId: ProjectId
   readonly slug?: string
   readonly name?: string
   readonly query?: string | null

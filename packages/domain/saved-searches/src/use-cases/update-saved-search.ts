@@ -73,6 +73,7 @@ export const updateSavedSearch = Effect.fn("savedSearches.updateSavedSearch")(fu
 
   return yield* repo.update({
     id: input.id,
+    projectId: current.projectId,
     ...(nameChanged ? { name: nextName } : {}),
     ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
     ...(queryChanged ? { query: nextQuery } : {}),

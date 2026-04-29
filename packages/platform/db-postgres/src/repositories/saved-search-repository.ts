@@ -207,7 +207,7 @@ export const SavedSearchRepositoryLive = Layer.effect(
             .pipe(
               Effect.catchTag("RepositoryError", (error) =>
                 args.slug !== undefined
-                  ? mapSlugViolation(error, { projectId: "", slug: slugForError })
+                  ? mapSlugViolation(error, { projectId: args.projectId, slug: slugForError })
                   : Effect.fail(error),
               ),
             )
