@@ -1185,11 +1185,11 @@ export type CodingMachineAgentId = "claude-code" | "openclaw"
 export function getCodingMachineTelemetryInstallCommand(agent: CodingMachineAgentId): string {
   return agent === "claude-code"
     ? "npx -y @latitude-data/claude-code-telemetry install"
-    : "npx -y @latitude-data/openclaw-telemetry install"
+    : ["npx -y @latitude-data/openclaw-telemetry install", "openclaw gateway restart"].join("\n")
 }
 
 export function getCodingMachineInstallDescription(agent: CodingMachineAgentId): string {
   return agent === "claude-code"
     ? "Run the command in your terminal and follow the instructions. Telemetry will be set up for Claude Code in the CLI, IDE, and Desktop app."
-    : "Run the command in your terminal and follow the instructions. The installer updates ~/.openclaw/openclaw.json with the Latitude plugin. Restart the OpenClaw gateway afterward: openclaw gateway restart."
+    : "Run the install command in your terminal and follow the prompts, then run the gateway restart command so the plugin loads."
 }

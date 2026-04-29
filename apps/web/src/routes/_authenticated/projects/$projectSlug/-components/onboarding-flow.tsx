@@ -1,6 +1,7 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import type { LucideIcon } from "lucide-react"
 import {
   Bot,
   Braces,
@@ -8,7 +9,6 @@ import {
   ChevronRight,
   FileCode2,
   Radio,
-  Shell,
   SquareDashedBottomCode,
   Terminal,
 } from "lucide-react"
@@ -40,28 +40,55 @@ const SETUP_MODE_TAB_OPTIONS = [
   { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
 ] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
 
+const ONBOARDING_CLAUDE_CODE_LOGO_SRC = "/onboarding/claude-code-logo.png"
+const ONBOARDING_OPENCLAW_LOGO_SRC = "/onboarding/openclaw-logo.png"
+
+function OnboardingCodingAgentTabIcon({ src }: { readonly src: string }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      width={16}
+      height={16}
+      decoding="async"
+      className="h-4 w-4 shrink-0 rounded-sm object-contain"
+      aria-hidden
+    />
+  )
+}
+
 const CODING_MACHINE_AGENT_TAB_OPTIONS = [
-  { id: "claude-code" as const, label: "Claude Code", icon: <Bot className="h-4 w-4" /> },
-  { id: "openclaw" as const, label: "OpenClaw", icon: <Shell className="h-4 w-4" /> },
+  {
+    id: "claude-code" as const,
+    label: "Claude Code",
+    icon: <OnboardingCodingAgentTabIcon src={ONBOARDING_CLAUDE_CODE_LOGO_SRC} />,
+  },
+  {
+    id: "openclaw" as const,
+    label: "OpenClaw",
+    icon: <OnboardingCodingAgentTabIcon src={ONBOARDING_OPENCLAW_LOGO_SRC} />,
+  },
 ] as const satisfies ReadonlyArray<{ id: CodingMachineAgentId; label: string; icon: ReactNode }>
 
 const STACK_CHOICE_OPTIONS: ReadonlyArray<{
   readonly id: StackChoice
   readonly title: string
   readonly description: string
-  readonly Icon: typeof Bot
+  readonly leading:
+    | { readonly type: "logo"; readonly src: string }
+    | { readonly type: "icon"; readonly Icon: LucideIcon }
 }> = [
   {
     id: "coding-agent-machine",
     title: "Coding agent",
     description: "Receive traces and monitor issues in your Claude Code or OpenClaw agent",
-    Icon: Bot,
+    leading: { type: "logo", src: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
   },
   {
     id: "production-agent",
     title: "Production agent traces",
     description: "Set up Latitude directly in your project running on any available provider",
-    Icon: SquareDashedBottomCode,
+    leading: { type: "icon", Icon: SquareDashedBottomCode },
   },
 ]
 
@@ -370,7 +397,7 @@ export function OnboardingFlow({
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
-      <div className="flex h-full min-h-0 w-1/2 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-r border-border px-24 pt-24 pb-32">
+      <div className="flex h-full min-h-0 w-1/2 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-r border-border px-24 pt-24 pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
           <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
             <div className="flex w-full flex-col gap-8">
@@ -424,7 +451,6 @@ export function OnboardingFlow({
               <div className="flex flex-col gap-3">
                 {STACK_CHOICE_OPTIONS.map((option) => {
                   const selected = stackChoice === option.id
-                  const StackIcon = option.Icon
                   return (
                     <button
                       key={option.id}
@@ -433,8 +459,18 @@ export function OnboardingFlow({
                       onClick={() => setStackChoice(option.id)}
                     >
                       <div className="flex min-w-0 flex-1 flex-row items-start gap-4">
-                        <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-                          <StackIcon className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-lg border border-border bg-card p-2">
+                          {option.leading.type === "logo" ? (
+                            <img
+                              src={option.leading.src}
+                              alt=""
+                              decoding="async"
+                              className="max-h-12 w-full max-w-full object-contain"
+                              aria-hidden
+                            />
+                          ) : (
+                            <option.leading.Icon className="h-6 w-6 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
                           <Text.H4 weight="medium">{option.title}</Text.H4>
@@ -644,7 +680,7 @@ export function OnboardingFlow({
       </div>
 
       <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24">
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24 [scrollbar-gutter:stable]">
           {step === "role" ? (
             <div className="flex h-fit w-full flex-col items-center gap-4">
               <OnboardingPreviewImage
