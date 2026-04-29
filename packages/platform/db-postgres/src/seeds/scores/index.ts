@@ -14,6 +14,7 @@ import {
   SEED_COMBINATION_EVALUATION_ID,
   SEED_COMBINATION_ISSUE_ID,
   SEED_EVALUATION_ID,
+  SEED_EXTRA_ISSUE_IDS,
   SEED_FLAGGER_ISSUE_ID,
   SEED_GENERATE_ISSUE_ID,
   SEED_INSTALLATION_ISSUE_ID,
@@ -76,8 +77,14 @@ function remapFixtureIssueId(literalIssueId: string, scope: SeedScope): string {
       return IssueId(scope.cuid("issue:installation"))
     case SEED_FLAGGER_ISSUE_ID:
       return IssueId(scope.cuid("issue:flagger"))
-    default:
+    default: {
+      // Long-tail extras: SEED_EXTRA_ISSUE_IDS[i] → "issue:extra:${i}".
+      const extraIndex = SEED_EXTRA_ISSUE_IDS.indexOf(literalIssueId as (typeof SEED_EXTRA_ISSUE_IDS)[number])
+      if (extraIndex >= 0) {
+        return IssueId(scope.cuid(`issue:extra:${extraIndex}`))
+      }
       throw new Error(`Unmapped fixture issueId literal: ${literalIssueId}`)
+    }
   }
 }
 

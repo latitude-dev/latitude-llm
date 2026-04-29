@@ -1,4 +1,4 @@
-import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared/seeding"
+import { SEED_API_KEY_ID, type SeedScope, TraceId } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
@@ -8,14 +8,14 @@ import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts
 const TRACE_COUNT = 2000
 const BATCH_SIZE = 500
 
-const defaultSpansSeedConfig = (): TraceConfig => {
+const defaultSpansSeedConfig = (scope: SeedScope): TraceConfig => {
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
   return {
     traceCount: TRACE_COUNT,
     timeWindow: { from: thirtyDaysAgo, to: now },
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
+    organizationId: scope.organizationId,
+    projectId: scope.projectId,
     apiKeyId: SEED_API_KEY_ID,
   }
 }
@@ -28,7 +28,7 @@ export const runSpansSeed = (
 ): Effect.Effect<readonly TraceId[], unknown> =>
   Effect.gen(function* () {
     const quiet = overrides?.quiet ?? false
-    const config: TraceConfig = { ...defaultSpansSeedConfig(), ...overrides }
+    const config: TraceConfig = { ...defaultSpansSeedConfig(ctx.scope), ...overrides }
 
     const allSpans = generateAllSpans(config)
     const traceIds = [...new Set(allSpans.map((s) => s.trace_id))].map((id) => TraceId(id))
