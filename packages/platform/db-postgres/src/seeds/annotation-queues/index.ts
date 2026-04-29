@@ -1,4 +1,3 @@
-import { SYSTEM_QUEUE_DEFAULT_SAMPLING, SYSTEM_QUEUE_DEFINITIONS } from "@domain/annotation-queues"
 import { AnnotationQueueId, AnnotationQueueItemId } from "@domain/shared"
 import { SEED_ADMIN_USER_ID, SEED_OWNER_USER_ID, type SeedScope, seedDateDaysAgo } from "@domain/shared/seeding"
 import { and, eq, inArray, isNull } from "drizzle-orm"
@@ -9,17 +8,14 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 type AnnotationQueueRow = typeof annotationQueues.$inferInsert
 type AnnotationQueueItemRow = typeof annotationQueueItems.$inferInsert
 
-const frustrationQueueDefinition = (() => {
-  const definition = SYSTEM_QUEUE_DEFINITIONS.find((d) => d.name === "Frustration")
-  if (!definition) {
-    throw new Error("Frustration system queue definition is missing.")
-  }
-  return definition
-})()
-
+// Stale queue names left from older seed runs that we want the bootstrap
+// seeder to clear out when re-running. The system "Frustration" queue is
+// included here because main's PR #2896 replaced system annotation queues
+// with per-project flaggers (now seeded via `flaggers/index.ts`).
 const staleQueueNames = [
   "Empty backlog (demo)",
   "All item statuses (demo)",
+  "Frustration",
   "Review Edge Cases",
   "Refusal",
   "Weekly quality sample",
@@ -94,23 +90,6 @@ function buildQueueRows(scope: SeedScope) {
       updatedAt: queueDate(3, 8, 15),
     },
     {
-      id: AnnotationQueueId(scope.cuid("queue:system")),
-      organizationId: scope.organizationId,
-      projectId: scope.projectId,
-      system: true,
-      name: frustrationQueueDefinition.name,
-      slug: "frustration",
-      description: frustrationQueueDefinition.description,
-      instructions: frustrationQueueDefinition.instructions,
-      settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
-      assignees: [] as string[],
-      totalItems: 1,
-      completedItems: 0,
-      deletedAt: null,
-      createdAt: queueDate(5, 9),
-      updatedAt: queueDate(5, 9),
-    },
-    {
       id: AnnotationQueueId(scope.cuid("queue:live")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
@@ -160,7 +139,6 @@ function buildQueueItemRows(scope: SeedScope) {
   const queueWarrantyId = AnnotationQueueId(scope.cuid("queue:warranty"))
   const queueCombinationId = AnnotationQueueId(scope.cuid("queue:combination"))
   const queueLogisticsId = AnnotationQueueId(scope.cuid("queue:logistics"))
-  const queueSystemId = AnnotationQueueId(scope.cuid("queue:system"))
   const queueLiveId = AnnotationQueueId(scope.cuid("queue:live"))
   const queueKitchenSinkId = AnnotationQueueId(scope.cuid("queue:kitchen-sink"))
 
@@ -283,19 +261,6 @@ function buildQueueItemRows(scope: SeedScope) {
       reviewStartedAt: queueDate(3, 10),
       createdAt: queueDate(3, 9, 15),
       updatedAt: queueDate(3, 11),
-    },
-    {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:system:pending")),
-      organizationId: scope.organizationId,
-      projectId: scope.projectId,
-      queueId: queueSystemId,
-      traceId: scope.traceHex("annotation", 9),
-      traceCreatedAt: queueDate(6, 8),
-      completedAt: null,
-      completedBy: null,
-      reviewStartedAt: null,
-      createdAt: queueDate(5, 10),
-      updatedAt: queueDate(5, 10),
     },
     {
       id: AnnotationQueueItemId(scope.cuid("queue-item:live:pending")),

@@ -330,7 +330,7 @@ describe("runTraceEndJob", () => {
 })
 
 describe("runTraceEndJob", () => {
-  it("selects and applies live evaluations, live queues, and system queues", async () => {
+  it("selects and applies live evaluations, live queues, and enqueues deterministic flaggers", async () => {
     await insertTraceRows([makeTraceRow()])
     await pg.db.insert(issues).values([makeIssueRow()])
     await pg.db.insert(evaluations).values([
@@ -363,18 +363,6 @@ describe("runTraceEndJob", () => {
         system: false,
         filter: { tags: [{ op: "in", value: ["annotation"] }] },
         sampling: 100,
-      }),
-      makeQueueRow({
-        id: "s".repeat(24),
-        slug: "system-selected",
-        system: true,
-        sampling: 100,
-      }),
-      makeQueueRow({
-        id: "u".repeat(24),
-        slug: "system-sampled-out",
-        system: true,
-        sampling: 0,
       }),
     ])
     await pg.db.insert(scores).values([makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })])
@@ -512,13 +500,6 @@ describe("createRunHandler", () => {
         slug: "live-selected",
         system: false,
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        sampling: 100,
-        projectId,
-      }),
-      makeQueueRow({
-        id: "n".repeat(24),
-        slug: "system-selected",
-        system: true,
         sampling: 100,
         projectId,
       }),

@@ -2,6 +2,7 @@ import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
+import { flaggerSeeders } from "./flaggers/index.ts"
 import { issueSeeders } from "./issues/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
 import { projectSeeders } from "./projects/index.ts"
@@ -27,6 +28,7 @@ export const contentSeeders: readonly Seeder[] = [
   ...simulationSeeders,
   ...scoreSeeders,
   ...annotationQueueSeeders,
+  ...flaggerSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildOtlpRequest } from "./otlp.ts"
-import type { OtlpKeyValue, RunRecord } from "./types.ts"
+import type { BuildResult, SpanRecord } from "./span-builder.ts"
+import type { OtlpKeyValue } from "./types.ts"
 
 function attrMap(attrs: OtlpKeyValue[]): Record<string, string> {
   const out: Record<string, string> = {}
@@ -8,263 +9,191 @@ function attrMap(attrs: OtlpKeyValue[]): Record<string, string> {
     if (value.stringValue !== undefined) out[key] = value.stringValue
     else if (value.intValue !== undefined) out[key] = value.intValue
     else if (value.boolValue !== undefined) out[key] = String(value.boolValue)
+    else if (value.doubleValue !== undefined) out[key] = String(value.doubleValue)
   }
   return out
 }
 
-function sampleRun(overrides: Partial<RunRecord> = {}): RunRecord {
-  return {
-    runId: "run-1",
-    sessionId: "s-1",
-    sessionKey: "sk-1",
-    agentId: "router-agent",
-    workspaceDir: "/w",
-    messageProvider: "chat",
-    trigger: "message",
-    channelId: "ch-1",
-    modelProviderId: "openai",
-    modelId: "gpt-5",
+function findSpanByName(req: ReturnType<typeof buildOtlpRequest>, name: string) {
+  return req.resourceSpans[0]?.scopeSpans[0]?.spans.find((s) => s.name === name)
+}
+
+function makeAgentResult(): BuildResult {
+  const traceId = "a".repeat(32)
+  const agentSpanId = "1".repeat(16)
+  const callSpanId = "2".repeat(16)
+  const toolSpanId = "3".repeat(16)
+  const agent: SpanRecord = {
+    spanId: agentSpanId,
+    traceId,
+    parentSpanId: "",
+    name: "agent",
     startMs: 1_000,
     endMs: 1_500,
-    success: true,
-    error: undefined,
-    llmCalls: [
-      {
-        runId: "run-1",
-        sessionId: "s-1",
-        sessionKey: "sk-1",
-        agentId: "router-agent",
-        provider: "openai",
-        requestModel: "gpt-5",
-        responseModel: "gpt-5-2026-04-01",
-        resolvedRef: "openai/gpt-5",
-        systemPrompt: "you are helpful",
-        prompt: "hello",
-        historyMessages: [
-          { role: "user", content: "prior question" },
-          { role: "assistant", content: "prior answer" },
-        ],
-        imagesCount: 0,
-        assistantTexts: ["hi"],
-        lastAssistant: { role: "assistant", content: "hi" },
-        usage: { input: 42, output: 7, cacheRead: 3, cacheWrite: 1, total: 49 },
-        startMs: 1_100,
-        endMs: 1_400,
-        error: undefined,
-        toolCalls: [
-          {
-            toolCallId: "tc-1",
-            toolName: "read_file",
-            params: { path: "/x" },
-            result: { content: "data" },
-            error: undefined,
-            startMs: 1_200,
-            endMs: 1_250,
-            durationMs: 50,
-            agentId: "router-agent",
-          },
-        ],
-      },
-    ],
-    orphanTools: [],
-    ...overrides,
+    outcome: "ok",
+    attrs: {
+      "openclaw.run.id": "run-1",
+      "openclaw.agent.id": "router",
+      "openclaw.agent.name": "router",
+      "openclaw.run.success": true,
+      "openclaw.duration_ms": 500,
+      "gen_ai.system_instructions:gated": "be helpful",
+      "user_prompt:gated": "hello",
+      "gen_ai.input.messages:gated": [{ role: "user", content: "hello" }],
+      "gen_ai.output.messages:gated": [{ role: "assistant", content: "hi" }],
+      "gen_ai.usage.input_tokens": 10,
+      "gen_ai.usage.output_tokens": 5,
+      "gen_ai.usage.total_tokens": 15,
+      "agent_end.messages:gated": [{ role: "user", content: "hello" }],
+    },
   }
+  const modelCall: SpanRecord = {
+    spanId: callSpanId,
+    traceId,
+    parentSpanId: agentSpanId,
+    name: "model_call",
+    startMs: 1_100,
+    endMs: 1_400,
+    outcome: "ok",
+    attrs: {
+      "openclaw.run.id": "run-1",
+      "openclaw.call.id": "call-A",
+      "gen_ai.request.model": "gpt-5",
+      "openclaw.duration_ms": 300,
+      "openclaw.outcome": "completed",
+      "gen_ai.input.messages:gated": [{ role: "user", content: "hello" }],
+    },
+  }
+  const tool: SpanRecord = {
+    spanId: toolSpanId,
+    traceId,
+    parentSpanId: agentSpanId,
+    name: "tool_call:grep",
+    startMs: 1_200,
+    endMs: 1_250,
+    outcome: "ok",
+    attrs: {
+      "openclaw.run.id": "run-1",
+      "gen_ai.tool.name": "grep",
+      "gen_ai.tool.call.id": "tc-1",
+      "gen_ai.tool.call.arguments:gated": { q: "x" },
+      "gen_ai.tool.call.result:gated": "match",
+      "openclaw.duration_ms": 50,
+    },
+  }
+  return { runId: "run-1", spans: [agent, modelCall, tool] }
 }
 
 describe("buildOtlpRequest", () => {
-  it("emits an interaction + llm_request + tool_execution span tree", () => {
-    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
+  it("emits the agent + model_call + tool_call tree with correct parent-child links", () => {
+    const req = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: true })
     const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
     expect(spans).toHaveLength(3)
-    const [interaction, llm, tool] = spans
-
-    expect(interaction?.name).toBe("interaction")
-    expect(interaction?.parentSpanId).toBe("")
-    expect(llm?.name).toBe("llm_request")
-    expect(llm?.parentSpanId).toBe(interaction?.spanId)
-    expect(tool?.name).toBe("tool:read_file")
-    expect(tool?.parentSpanId).toBe(interaction?.spanId)
-    expect(tool?.traceId).toBe(interaction?.traceId)
+    const agent = spans.find((s) => s.name === "agent")
+    const modelCall = spans.find((s) => s.name === "model_call")
+    const tool = spans.find((s) => s.name === "tool_call:grep")
+    expect(agent?.parentSpanId).toBe("")
+    // Both model_call AND tool_call are children of agent (siblings).
+    expect(modelCall?.parentSpanId).toBe(agent?.spanId)
+    expect(tool?.parentSpanId).toBe(agent?.spanId)
   })
 
-  it("tags every span with the agent name", () => {
-    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
-    const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
-    for (const s of spans) {
-      const attrs = attrMap(s.attributes)
-      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
-      expect(attrs["openclaw.agent.name"]).toBe("router-agent")
+  it("strips :gated suffix from kept attribute keys when access is on", () => {
+    const req = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: true })
+    const agent = findSpanByName(req, "agent")
+    const attrs = attrMap(agent?.attributes ?? [])
+    // `:gated` keys appear under their canonical name
+    expect(attrs["gen_ai.system_instructions"]).toBe("be helpful")
+    expect(attrs.user_prompt).toBe("hello")
+    expect(attrs["gen_ai.input.messages"]).toBeDefined()
+    expect(attrs["gen_ai.output.messages"]).toBeDefined()
+    // …and NOT under the `:gated` form.
+    expect(attrs["gen_ai.system_instructions:gated"]).toBeUndefined()
+  })
+
+  it("scrubs all :gated attributes when allowConversationAccess is false", () => {
+    const req = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: false })
+    const agent = findSpanByName(req, "agent")
+    const tool = findSpanByName(req, "tool_call:grep")
+    const modelCall = findSpanByName(req, "model_call")
+    const agentAttrs = attrMap(agent?.attributes ?? [])
+    const toolAttrs = attrMap(tool?.attributes ?? [])
+    const callAttrs = attrMap(modelCall?.attributes ?? [])
+
+    // Content gone everywhere.
+    expect(agentAttrs["gen_ai.system_instructions"]).toBeUndefined()
+    expect(agentAttrs.user_prompt).toBeUndefined()
+    expect(agentAttrs["gen_ai.input.messages"]).toBeUndefined()
+    expect(agentAttrs["gen_ai.output.messages"]).toBeUndefined()
+    expect(toolAttrs["gen_ai.tool.call.arguments"]).toBeUndefined()
+    expect(toolAttrs["gen_ai.tool.call.result"]).toBeUndefined()
+    expect(callAttrs["gen_ai.input.messages"]).toBeUndefined()
+
+    // Structural attrs still present.
+    expect(agentAttrs["openclaw.agent.id"]).toBe("router")
+    expect(agentAttrs["openclaw.run.id"]).toBe("run-1")
+    expect(agentAttrs["gen_ai.usage.input_tokens"]).toBe("10")
+    expect(toolAttrs["gen_ai.tool.name"]).toBe("grep")
+    expect(callAttrs["gen_ai.request.model"]).toBe("gpt-5")
+  })
+
+  it("emits latitude.captured.content on every span, mirroring the gate state", () => {
+    const reqOn = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: true })
+    const reqOff = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: false })
+    for (const s of reqOn.resourceSpans[0]?.scopeSpans[0]?.spans ?? []) {
+      expect(attrMap(s.attributes)["latitude.captured.content"]).toBe("true")
+    }
+    for (const s of reqOff.resourceSpans[0]?.scopeSpans[0]?.spans ?? []) {
+      expect(attrMap(s.attributes)["latitude.captured.content"]).toBe("false")
     }
   })
 
-  it("captures everything on the llm_request span", () => {
-    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
-    const llm = req.resourceSpans[0]?.scopeSpans[0]?.spans[1]
-    const attrs = attrMap(llm?.attributes ?? [])
-
-    expect(attrs.span_type ?? attrs["span.type"]).toBe("llm_request")
-    expect(attrs["gen_ai.system"]).toBe("openai")
-    expect(attrs["gen_ai.request.model"]).toBe("gpt-5")
-    expect(attrs["gen_ai.response.model"]).toBe("gpt-5-2026-04-01")
-    expect(attrs["openclaw.resolved.ref"]).toBe("openai/gpt-5")
-    expect(attrs["gen_ai.usage.input_tokens"]).toBe("42")
-    expect(attrs["gen_ai.usage.output_tokens"]).toBe("7")
-    expect(attrs["gen_ai.usage.cache_read_input_tokens"]).toBe("3")
-    expect(attrs["gen_ai.usage.cache_creation_input_tokens"]).toBe("1")
-    expect(attrs["gen_ai.usage.total_tokens"]).toBe("49")
-    expect(attrs["openclaw.session.key"]).toBe("sk-1")
-    expect(attrs["openclaw.run.id"]).toBe("run-1")
-    expect(attrs.llm_request_captured ?? attrs["llm_request.captured"]).toBe("true")
-
-    const system = JSON.parse(attrs["gen_ai.system_instructions"] ?? "[]") as Array<{
-      type: string
-      content: string
-    }>
-    expect(system[0]?.content).toBe("you are helpful")
-
-    const input = JSON.parse(attrs["gen_ai.input.messages"] ?? "[]") as Array<{
-      role: string
-      parts: Array<{ type: string; content?: string }>
-    }>
-    // History (2) + current user prompt (1).
-    expect(input).toHaveLength(3)
-    expect(input[2]?.role).toBe("user")
-    expect(input[2]?.parts[0]?.content).toBe("hello")
-
-    const output = JSON.parse(attrs["gen_ai.output.messages"] ?? "[]") as Array<{
-      role: string
-      parts: Array<{ type: string; content?: string; name?: string }>
-    }>
-    expect(output[0]?.role).toBe("assistant")
-    // text part + tool_call part invoked during this call.
-    expect(output[0]?.parts.some((p) => p.type === "text" && p.content === "hi")).toBe(true)
-    expect(output[0]?.parts.some((p) => p.type === "tool_call" && p.name === "read_file")).toBe(true)
+  it("uses status code 1 for ok and 2 for error", () => {
+    const result = makeAgentResult()
+    const baseTool = result.spans[2]
+    if (!baseTool) throw new Error("expected base tool span")
+    const errSpan: SpanRecord = {
+      ...baseTool,
+      spanId: "f".repeat(16),
+      name: "tool_call:fail",
+      outcome: "error",
+      errorMessage: "boom",
+    }
+    result.spans.push(errSpan)
+    const req = buildOtlpRequest(result, { allowConversationAccess: true })
+    const ok = findSpanByName(req, "tool_call:grep")
+    const err = findSpanByName(req, "tool_call:fail")
+    expect(ok?.status.code).toBe(1)
+    expect(err?.status.code).toBe(2)
   })
 
-  it("captures tool arguments and results on the tool span", () => {
-    const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: true })
-    const tool = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
-    const attrs = attrMap(tool?.attributes ?? [])
-    expect(attrs["gen_ai.tool.name"]).toBe("read_file")
-    expect(attrs["gen_ai.tool.call.id"]).toBe("tc-1")
-    expect(JSON.parse(attrs["gen_ai.tool.call.arguments"] ?? "{}")).toEqual({ path: "/x" })
-    expect(JSON.parse(attrs["gen_ai.tool.call.result"] ?? "{}")).toEqual({ content: "data" })
-    expect(attrs.success).toBe("true")
-    expect(attrs["tool.duration_ms"]).toBe("50")
-  })
-
-  it("aggregates token usage across multiple LLM calls on the interaction span", () => {
-    const run = sampleRun()
-    const firstCall = run.llmCalls[0]
-    if (!firstCall) throw new Error("expected a first call")
-    run.llmCalls.push({
-      ...firstCall,
-      usage: { input: 8, output: 2, total: 10 },
-      toolCalls: [],
-    })
-    const req = buildOtlpRequest(run, { allowConversationAccess: true })
-    const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
-    const attrs = attrMap(interaction?.attributes ?? [])
-    expect(attrs["gen_ai.usage.input_tokens"]).toBe("50")
-    expect(attrs["gen_ai.usage.output_tokens"]).toBe("9")
-    expect(attrs["gen_ai.usage.total_tokens"]).toBe("59")
-    expect(attrs["interaction.call_count"]).toBe("2")
-  })
-
-  it("marks tool error spans with status code 2", () => {
-    const run = sampleRun()
-    const tool = run.llmCalls[0]?.toolCalls[0]
-    if (!tool) throw new Error("expected a tool call")
-    tool.error = "boom"
-    tool.result = undefined
-    const req = buildOtlpRequest(run, { allowConversationAccess: true })
-    const toolSpan = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
-    expect(toolSpan?.status.code).toBe(2)
-    const attrs = attrMap(toolSpan?.attributes ?? [])
-    expect(attrs["error.message"]).toBe("boom")
-    expect(attrs.success).toBe("false")
-  })
-
-  it("marks failed runs with interaction status code 2", () => {
-    const run = sampleRun({ success: false, error: "run failed" })
-    const req = buildOtlpRequest(run, { allowConversationAccess: true })
-    const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
-    expect(interaction?.status.code).toBe(2)
-    const attrs = attrMap(interaction?.attributes ?? [])
-    expect(attrs["openclaw.run.error"]).toBe("run failed")
-    expect(attrs["openclaw.run.success"]).toBe("false")
-  })
-
-  it("emits orphan tool spans parented on the interaction", () => {
-    const run = sampleRun()
-    run.orphanTools.push({
-      toolCallId: "tc-orphan",
-      toolName: "drift",
-      params: { q: 1 },
-      result: "ok",
-      error: undefined,
-      startMs: 1_000,
-      endMs: 1_050,
-      durationMs: 50,
-      agentId: "router-agent",
-    })
-    const req = buildOtlpRequest(run, { allowConversationAccess: true })
+  it("preserves traceId across all spans in the result", () => {
+    const req = buildOtlpRequest(makeAgentResult(), { allowConversationAccess: true })
     const spans = req.resourceSpans[0]?.scopeSpans[0]?.spans ?? []
-    const orphan = spans.find((s) => s.name === "tool:drift")
-    expect(orphan).toBeDefined()
-    expect(orphan?.parentSpanId).toBe(spans[0]?.spanId)
+    const traceIds = new Set(spans.map((s) => s.traceId))
+    expect(traceIds.size).toBe(1)
   })
 
-  describe("when allowConversationAccess is false", () => {
-    it("scrubs content attributes from llm_request spans", () => {
-      const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: false })
-      const llm = req.resourceSpans[0]?.scopeSpans[0]?.spans[1]
-      const attrs = attrMap(llm?.attributes ?? [])
+  it("encodes latitude.tags as a JSON-stringified string array (resolver contract)", () => {
+    // The resolver in domain/spans/src/otlp/resolvers/enrichment.ts reads
+    // `latitude.tags` via `fromJsonStringArray` — that helper expects a
+    // `stringValue` containing JSON like `'["a","b"]'`. Verify the OTLP
+    // encoder produces that shape (rather than the OTel-native `arrayValue`).
+    const result = makeAgentResult()
+    const agent = result.spans[0]
+    if (!agent) throw new Error("expected agent span")
+    agent.attrs["latitude.tags"] = ["personal", "telegram", "user"]
+    agent.attrs["latitude.metadata"] = { "openclaw.agent.id": "personal" }
 
-      // Content gone.
-      expect(attrs["gen_ai.system_instructions"]).toBeUndefined()
-      expect(attrs["gen_ai.input.messages"]).toBeUndefined()
-      expect(attrs["gen_ai.output.messages"]).toBeUndefined()
+    const req = buildOtlpRequest(result, { allowConversationAccess: true })
+    const encoded = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+    const tagsAttr = encoded?.attributes.find((a) => a.key === "latitude.tags")
+    const metaAttr = encoded?.attributes.find((a) => a.key === "latitude.metadata")
 
-      // Structural / numeric attrs still present.
-      expect(attrs["gen_ai.request.model"]).toBe("gpt-5")
-      expect(attrs["gen_ai.usage.input_tokens"]).toBe("42")
-      expect(attrs["gen_ai.usage.total_tokens"]).toBe("49")
-      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
-      expect(attrs["openclaw.run.id"]).toBe("run-1")
-      expect(attrs["latitude.captured.content"]).toBe("false")
-    })
-
-    it("scrubs tool args + result but keeps name/id/duration/error/agent", () => {
-      const run = sampleRun()
-      const tool = run.llmCalls[0]?.toolCalls[0]
-      if (!tool) throw new Error("expected a tool call")
-      tool.error = undefined
-      const req = buildOtlpRequest(run, { allowConversationAccess: false })
-      const toolSpan = req.resourceSpans[0]?.scopeSpans[0]?.spans[2]
-      const attrs = attrMap(toolSpan?.attributes ?? [])
-
-      // Content gone.
-      expect(attrs["gen_ai.tool.call.arguments"]).toBeUndefined()
-      expect(attrs["gen_ai.tool.call.result"]).toBeUndefined()
-
-      // Structural still present.
-      expect(attrs["gen_ai.tool.name"]).toBe("read_file")
-      expect(attrs["gen_ai.tool.call.id"]).toBe("tc-1")
-      expect(attrs["tool.duration_ms"]).toBe("50")
-      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
-      expect(attrs["latitude.captured.content"]).toBe("false")
-    })
-
-    it("scrubs user_prompt from interaction span but keeps token/agent attrs", () => {
-      const req = buildOtlpRequest(sampleRun(), { allowConversationAccess: false })
-      const interaction = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
-      const attrs = attrMap(interaction?.attributes ?? [])
-
-      expect(attrs.user_prompt).toBeUndefined()
-      expect(attrs["gen_ai.usage.total_tokens"]).toBe("49")
-      expect(attrs["openclaw.agent.id"]).toBe("router-agent")
-      expect(attrs["latitude.captured.content"]).toBe("false")
-    })
+    // Both must be `stringValue` containing JSON.
+    expect(tagsAttr?.value.stringValue).toBe('["personal","telegram","user"]')
+    expect(metaAttr?.value.stringValue).toBe('{"openclaw.agent.id":"personal"}')
+    // And NOT the OTel `arrayValue` form — the resolver wouldn't pick that up.
+    expect(tagsAttr?.value.arrayValue).toBeUndefined()
   })
 })

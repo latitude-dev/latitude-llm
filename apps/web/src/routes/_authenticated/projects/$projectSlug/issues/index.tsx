@@ -301,7 +301,7 @@ function IssuesPage() {
     return (
       <Layout>
         <Layout.Content>
-          <IssuesEmptyState projectSlug={projectSlug} />
+          <IssuesEmptyState />
         </Layout.Content>
       </Layout>
     )

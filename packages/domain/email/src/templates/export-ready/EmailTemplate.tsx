@@ -35,6 +35,6 @@ export function ExportReadyEmail({ exportName, downloadUrl, recipientName = "the
 
 ExportReadyEmail.PreviewProps = {
   exportName: "Project Traces",
-  downloadUrl: "https://app.latitude.so/downloads/export-abc123",
+  downloadUrl: "https://console.latitude.so/downloads/export-abc123",
   recipientName: "Alex",
 } satisfies ExportReadyEmailProps

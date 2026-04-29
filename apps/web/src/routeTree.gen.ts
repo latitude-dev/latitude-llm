@@ -39,13 +39,10 @@ import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
+import { Route as AuthenticatedProjectsProjectSlugSearchIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/search/index'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
-import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
-import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
-import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId/index'
-import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -208,6 +205,12 @@ const AuthenticatedProjectsProjectSlugSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugSearchIndexRoute =
+  AuthenticatedProjectsProjectSlugSearchIndexRouteImport.update({
+    id: '/search/',
+    path: '/search/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugIssuesIndexRoute =
   AuthenticatedProjectsProjectSlugIssuesIndexRouteImport.update({
     id: '/issues/',
@@ -220,42 +223,12 @@ const AuthenticatedProjectsProjectSlugDatasetsIndexRoute =
     path: '/datasets/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute =
-  AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport.update({
-    id: '/annotation-queues/',
-    path: '/annotation-queues/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
 const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport.update({
     id: '/datasets/$datasetId',
     path: '/datasets/$datasetId',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute =
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport.update({
-    id: '/annotation-queues/$queueId',
-    path: '/annotation-queues/$queueId',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
-const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute =
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport.update(
-    {
-      id: '/',
-      path: '/',
-      getParentRoute: () =>
-        AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute,
-    } as any,
-  )
-const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute =
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport.update(
-    {
-      id: '/items/$itemId',
-      path: '/items/$itemId',
-      getParentRoute: () =>
-        AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute,
-    } as any,
-  )
 
 export interface FileRoutesByFullPath {
   '/backoffice': typeof BackofficeRouteRouteWithChildren
@@ -287,13 +260,10 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
-  '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
-  '/projects/$projectSlug/annotation-queues/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
-  '/projects/$projectSlug/annotation-queues/$queueId/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
-  '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
+  '/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -322,11 +292,9 @@ export interface FileRoutesByTo {
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
-  '/projects/$projectSlug/annotation-queues': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
-  '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
-  '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
+  '/projects/$projectSlug/search': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -360,13 +328,10 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
-  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
-  '/_authenticated/projects/$projectSlug/annotation-queues/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/_authenticated/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
-  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
-  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
+  '/_authenticated/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -400,13 +365,10 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug/'
-    | '/projects/$projectSlug/annotation-queues/$queueId'
     | '/projects/$projectSlug/datasets/$datasetId'
-    | '/projects/$projectSlug/annotation-queues/'
     | '/projects/$projectSlug/datasets/'
     | '/projects/$projectSlug/issues/'
-    | '/projects/$projectSlug/annotation-queues/$queueId/'
-    | '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
+    | '/projects/$projectSlug/search/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -435,11 +397,9 @@ export interface FileRouteTypes {
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
-    | '/projects/$projectSlug/annotation-queues'
     | '/projects/$projectSlug/datasets'
     | '/projects/$projectSlug/issues'
-    | '/projects/$projectSlug/annotation-queues/$queueId'
-    | '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
+    | '/projects/$projectSlug/search'
   id:
     | '__root__'
     | '/backoffice'
@@ -472,13 +432,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/_authenticated/projects/$projectSlug/'
-    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
-    | '/_authenticated/projects/$projectSlug/annotation-queues/'
     | '/_authenticated/projects/$projectSlug/datasets/'
     | '/_authenticated/projects/$projectSlug/issues/'
-    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/'
-    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
+    | '/_authenticated/projects/$projectSlug/search/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -708,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/search/': {
+      id: '/_authenticated/projects/$projectSlug/search/'
+      path: '/search'
+      fullPath: '/projects/$projectSlug/search/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSearchIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/issues/': {
       id: '/_authenticated/projects/$projectSlug/issues/'
       path: '/issues'
@@ -722,40 +686,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
-    '/_authenticated/projects/$projectSlug/annotation-queues/': {
-      id: '/_authenticated/projects/$projectSlug/annotation-queues/'
-      path: '/annotation-queues'
-      fullPath: '/projects/$projectSlug/annotation-queues/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
     '/_authenticated/projects/$projectSlug/datasets/$datasetId': {
       id: '/_authenticated/projects/$projectSlug/datasets/$datasetId'
       path: '/datasets/$datasetId'
       fullPath: '/projects/$projectSlug/datasets/$datasetId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
-    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': {
-      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
-      path: '/annotation-queues/$queueId'
-      fullPath: '/projects/$projectSlug/annotation-queues/$queueId'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
-    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/': {
-      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/'
-      path: '/'
-      fullPath: '/projects/$projectSlug/annotation-queues/$queueId/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute
-    }
-    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': {
-      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
-      path: '/items/$itemId'
-      fullPath: '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute
     }
   }
 }
@@ -818,32 +754,13 @@ const AuthenticatedSettingsRouteWithChildren =
     AuthenticatedSettingsRouteChildren,
   )
 
-interface AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren {
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
-}
-
-const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren: AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren =
-  {
-    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute:
-      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute,
-    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute:
-      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute,
-  }
-
-const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren =
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute._addFileChildren(
-    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren,
-  )
-
 interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
-  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
-  AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   AuthenticatedProjectsProjectSlugDatasetsIndexRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   AuthenticatedProjectsProjectSlugIssuesIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
+  AuthenticatedProjectsProjectSlugSearchIndexRoute: typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
 }
 
 const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjectSlugRouteChildren =
@@ -852,16 +769,14 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugSettingsRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:
       AuthenticatedProjectsProjectSlugIndexRoute,
-    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute:
-      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren,
     AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute:
       AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute,
-    AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute:
-      AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute,
     AuthenticatedProjectsProjectSlugDatasetsIndexRoute:
       AuthenticatedProjectsProjectSlugDatasetsIndexRoute,
     AuthenticatedProjectsProjectSlugIssuesIndexRoute:
       AuthenticatedProjectsProjectSlugIssuesIndexRoute,
+    AuthenticatedProjectsProjectSlugSearchIndexRoute:
+      AuthenticatedProjectsProjectSlugSearchIndexRoute,
   }
 
 const AuthenticatedProjectsProjectSlugRouteWithChildren =

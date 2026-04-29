@@ -252,6 +252,29 @@ type TraceDetailRow = TraceListRow & {
   system_instructions: string
 }
 
+/**
+ * Per-bucket aggregations for the histogram, computed over the trace-deduped subquery
+ * (`SELECT ${LIST_SELECT} ... GROUP BY trace_id`). One row per bucket; columns mirror the
+ * fields exposed on `TraceTimeHistogramBucket`. Sums use plain `sum`; medians use
+ * `quantileTDigest(0.5)` (TTFT also gates on `> 0` to ignore the sentinel).
+ */
+const HISTOGRAM_BUCKET_SELECT = `count() AS trace_count,
+  sum(cost_total_microcents) AS cost_sum,
+  quantileTDigest(0.5)(duration_ns) AS duration_median,
+  sum(tokens_total) AS tokens_sum,
+  sum(span_count) AS span_sum,
+  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median`
+
+type TraceHistogramBucketRow = {
+  bucket_start: string
+  trace_count: string
+  cost_sum: string
+  duration_median: string
+  tokens_sum: string
+  span_sum: string
+  ttft_median: string
+}
+
 const parseMessages = (json: string): GenAIMessage[] => {
   if (!json) return []
   try {
@@ -351,6 +374,17 @@ const toTtftRollup = (row: TraceMetricsRow) => ({
   avg: finiteOrZero(row.ttft_avg),
   median: finiteOrZero(row.ttft_median),
   sum: finiteOrZero(row.ttft_sum),
+})
+
+const toHistogramBucket = (row: TraceHistogramBucketRow): TraceTimeHistogramBucket => ({
+  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+  traceCount: Number(row.trace_count),
+  costTotalMicrocentsSum: Number(row.cost_sum),
+  durationNsMedian: Number(row.duration_median),
+  tokensTotalSum: Number(row.tokens_sum),
+  spanCountSum: Number(row.span_sum),
+  // TTFT is gated on `> 0`, so empty buckets return `nan` from the aggregate — coerce to 0.
+  timeToFirstTokenNsMedian: finiteOrZero(row.ttft_median),
 })
 
 const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
@@ -1126,7 +1160,7 @@ export const TraceRepositoryLive = Layer.effect(
                             intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                             'UTC'
                           ) AS bucket_start,
-                          count() AS trace_count
+                          ${HISTOGRAM_BUCKET_SELECT}
                         FROM (
                           SELECT ${LIST_SELECT}
                           FROM traces
@@ -1148,15 +1182,10 @@ export const TraceRepositoryLive = Layer.effect(
                   },
                   format: "JSONEachRow",
                 })
-                return result.json<{ bucket_start: string; trace_count: string }>()
+                return result.json<TraceHistogramBucketRow>()
               })
               .pipe(
-                Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
-                  rows.map((row) => ({
-                    bucketStart: parseCHDate(row.bucket_start).toISOString(),
-                    traceCount: Number(row.trace_count),
-                  })),
-                ),
+                Effect.map((rows): readonly TraceTimeHistogramBucket[] => rows.map(toHistogramBucket)),
                 Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
               )
           }
@@ -1169,7 +1198,7 @@ export const TraceRepositoryLive = Layer.effect(
                           intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                           'UTC'
                         ) AS bucket_start,
-                        count() AS trace_count
+                        ${HISTOGRAM_BUCKET_SELECT}
                       FROM (
                         SELECT ${LIST_SELECT}
                         FROM traces
@@ -1189,15 +1218,10 @@ export const TraceRepositoryLive = Layer.effect(
                 },
                 format: "JSONEachRow",
               })
-              return result.json<{ bucket_start: string; trace_count: string }>()
+              return result.json<TraceHistogramBucketRow>()
             })
             .pipe(
-              Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
-                rows.map((row) => ({
-                  bucketStart: parseCHDate(row.bucket_start).toISOString(),
-                  traceCount: Number(row.trace_count),
-                })),
-              ),
+              Effect.map((rows): readonly TraceTimeHistogramBucket[] => rows.map(toHistogramBucket)),
               Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
             )
         }),

@@ -37,5 +37,5 @@ export function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLink
 
 SignupMagicLinkEmail.PreviewProps = {
   userName: "Alex",
-  magicLinkUrl: "https://app.latitude.so/api/auth/magic-link/verify?token=signup-preview",
+  magicLinkUrl: "https://console.latitude.so/api/auth/magic-link/verify?token=signup-preview",
 } satisfies SignupMagicLinkEmailProps

@@ -3,9 +3,14 @@ import { z } from "zod"
 export const optimizationBudgetSchema = z.object({
   time: z.number().int().positive().optional(),
   tokens: z.number().int().positive().optional(),
+  stagnation: z.number().int().positive().optional(),
 })
 
 export type OptimizationBudget = z.infer<typeof optimizationBudgetSchema>
+
+export const optimizationStopReasonSchema = z.enum(["time_budget", "tokens_budget", "stagnation", "completed"])
+
+export type OptimizationStopReason = z.infer<typeof optimizationStopReasonSchema>
 
 export const optimizationExampleSchema = z.object({
   id: z.string().min(1),
@@ -50,6 +55,7 @@ export type OptimizationEvaluationResult = z.infer<typeof optimizationEvaluation
 
 export const optimizationResultSchema = z.object({
   optimizedCandidate: optimizationCandidateSchema,
+  stopReason: optimizationStopReasonSchema.optional(),
 })
 
 export type OptimizationResult = z.infer<typeof optimizationResultSchema>

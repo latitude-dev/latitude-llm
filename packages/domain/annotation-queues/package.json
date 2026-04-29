@@ -16,14 +16,12 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/ai": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
-    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },

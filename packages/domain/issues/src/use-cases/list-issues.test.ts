@@ -136,7 +136,7 @@ const createScoreAnalyticsRepository = (input: {
   const aggregateInputs: unknown[] = []
   const histogramInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
   const trendInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
-  const tagsInputs: Array<{ issueIds: readonly string[] }> = []
+  const tagsInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date | undefined }> = []
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: () => Effect.die("Unexpected existsById"),
@@ -153,9 +153,9 @@ const createScoreAnalyticsRepository = (input: {
         aggregateInputs.push(aggregateInput)
         return input.fullHistoryOccurrences.filter((occurrence) => aggregateInput.issueIds.includes(occurrence.issueId))
       }),
-    aggregateTagsByIssues: ({ issueIds }) =>
+    aggregateTagsByIssues: ({ issueIds, timeRange }) =>
       Effect.sync(() => {
-        tagsInputs.push({ issueIds })
+        tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
         return (input.tagsAggregates ?? []).filter((entry) => issueIds.includes(entry.issueId))
       }),
     trendByIssue: () => Effect.die("Unexpected trendByIssue"),
@@ -535,10 +535,55 @@ describe("listIssuesUseCase", () => {
       ),
     )
 
-    expect(tagsInputs).toEqual([{ issueIds: [taggedIssue.id, untaggedIssue.id] }])
+    // No operator-selected time range → fallback ~30 days ending at `now`.
+    expect(tagsInputs).toHaveLength(1)
+    expect(tagsInputs[0]?.issueIds).toEqual([taggedIssue.id, untaggedIssue.id])
+    expect(tagsInputs[0]?.to?.toISOString()).toBe(now.toISOString())
+    const expectedFrom = new Date(now)
+    expectedFrom.setUTCDate(expectedFrom.getUTCDate() - 30)
+    expect(tagsInputs[0]?.from?.toISOString()).toBe(expectedFrom.toISOString())
+
     const tagsByIssueId = new Map(result.items.map((item) => [item.id, item.tags] as const))
     expect(tagsByIssueId.get(taggedIssue.id)).toEqual(["checkout", "billing"])
     expect(tagsByIssueId.get(untaggedIssue.id)).toEqual([])
+  })
+
+  it("honors the operator-selected time range when aggregating tags", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const issue = makeIssue({ id: IssueId("a".repeat(24)), uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository, tagsInputs } = createScoreAnalyticsRepository({
+      windowMetrics: [makeWindowMetric({ issueId: issue.id })],
+      fullHistoryOccurrences: [makeOccurrence({ issueId: issue.id })],
+    })
+    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+
+    const selectedFrom = new Date("2026-04-01T00:00:00.000Z")
+    const selectedTo = new Date("2026-04-08T23:59:59.999Z")
+
+    await Effect.runPromise(
+      listIssuesUseCase({
+        organizationId,
+        projectId,
+        now,
+        timeRange: { from: selectedFrom, to: selectedTo },
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+          ),
+        ),
+      ),
+    )
+
+    expect(tagsInputs[0]?.from?.toISOString()).toBe(selectedFrom.toISOString())
+    expect(tagsInputs[0]?.to?.toISOString()).toBe(selectedTo.toISOString())
   })
 
   describe("analytics histogram time range", () => {

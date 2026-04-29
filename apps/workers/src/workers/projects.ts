@@ -6,7 +6,7 @@ import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, with
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
-import { provisionSystemQueues } from "../services/provisioning.ts"
+import { provisionFlaggers } from "../services/provisioning.ts"
 
 const logger = createLogger("projects")
 
@@ -28,7 +28,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
         const startTime = Date.now()
 
         const results = yield* Effect.promise(() =>
-          provisionSystemQueues({
+          provisionFlaggers({
             organizationId: payload.organizationId,
             projectId: payload.projectId,
           }),
@@ -38,8 +38,8 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           organizationId: payload.organizationId,
           projectId: payload.projectId,
           durationMs: Date.now() - startTime,
-          queuesProvisioned: results.length,
-          results: results.map((r) => r.queueSlug),
+          flaggersProvisioned: results.length,
+          results: results.map((r) => r.slug),
         })
       }).pipe(withTracing),
 

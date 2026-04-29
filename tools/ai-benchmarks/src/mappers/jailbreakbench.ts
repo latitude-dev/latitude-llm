@@ -14,7 +14,7 @@ const ALL_TARGET_MODELS = ["gpt-3.5-turbo-1106", "gpt-4-0125-preview", "llama-2-
 
 // The three attack methods we sample from the JailbreakBench artifacts repo.
 // Each exercises a different slice of our flagger's jailbreak taxonomy
-// (see run-system-queue-flagger.ts > JAILBREAK_SYSTEM_PROMPT for categories).
+// (see run-flagger.ts > JAILBREAK_SYSTEM_PROMPT for categories).
 //
 // - JBC / manual — human-written persona roleplay. 100 goals × 1 template
 //   (the AIM / Machiavelli "amoral character" prompt). All 100 positives
@@ -193,7 +193,7 @@ function buildHardNegative(row: BehaviorsCsvRow): FixtureRow {
  *
  * Positives are pulled from three attack methods in the JailbreakBench
  * artifacts repo, each exercising a different tactic in our flagger's
- * taxonomy (see run-system-queue-flagger.ts > JAILBREAK_SYSTEM_PROMPT):
+ * taxonomy (see run-flagger.ts > JAILBREAK_SYSTEM_PROMPT):
  *
  *   - **JBC / manual** — human-written persona roleplay (AIM / Machiavelli
  *     template). ROLE / PERSONA ATTACKS. Deduped to 1 target model since

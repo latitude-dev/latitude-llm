@@ -5,7 +5,7 @@ import type { SqlClient } from "@domain/shared"
 import type { SeedScope } from "@domain/shared/seeding"
 import type { UserRepository } from "@domain/users"
 import { Data, type Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
+import type { PostgresClient, PostgresDb } from "../client.ts"
 
 export interface Repositories {
   readonly organization: OrganizationRepository["Service"]
@@ -17,6 +17,7 @@ export interface Repositories {
 
 export interface SeedContext {
   readonly db: PostgresDb
+  readonly client: PostgresClient
   readonly repositories: Repositories
   /**
    * Per-project seeding context. Each seeder resolves entity ids via

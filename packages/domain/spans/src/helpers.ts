@@ -1,6 +1,6 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
 
-import type { TraceTimeHistogramBucket } from "./ports/trace-repository.ts"
+import { emptyTraceTimeHistogramBucket, type TraceTimeHistogramBucket } from "./ports/trace-repository.ts"
 
 const DEFAULT_RANGE_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -165,20 +165,31 @@ export function denseTraceTimeHistogramBuckets(
   const first = alignUnixSecondsToHistogramBucket(startSec, bs)
   const last = alignUnixSecondsToHistogramBucket(endSec, bs)
 
-  const counts = new Map<number, number>()
+  // ClickHouse already groups by aligned `bucket_start`, so sparse rows are unique by key in
+  // practice; key-aligning here is a defensive fold against malformed input. Additive fields
+  // (count, sums) combine cleanly. Medians cannot be re-derived from two pre-computed medians,
+  // so we take the max as a safe upper bound rather than producing a meaningless sum.
+  const buckets = new Map<number, TraceTimeHistogramBucket>()
   for (const b of sparse ?? []) {
     const t = Date.parse(b.bucketStart)
     if (!Number.isFinite(t)) continue
     const key = alignUnixSecondsToHistogramBucket(Math.floor(t / 1000), bs)
-    counts.set(key, (counts.get(key) ?? 0) + b.traceCount)
+    const prev = buckets.get(key) ?? emptyTraceTimeHistogramBucket(new Date(key * 1000).toISOString())
+    buckets.set(key, {
+      bucketStart: prev.bucketStart,
+      traceCount: prev.traceCount + b.traceCount,
+      costTotalMicrocentsSum: prev.costTotalMicrocentsSum + b.costTotalMicrocentsSum,
+      durationNsMedian: Math.max(prev.durationNsMedian, b.durationNsMedian),
+      tokensTotalSum: prev.tokensTotalSum + b.tokensTotalSum,
+      spanCountSum: prev.spanCountSum + b.spanCountSum,
+      timeToFirstTokenNsMedian: Math.max(prev.timeToFirstTokenNsMedian, b.timeToFirstTokenNsMedian),
+    })
   }
 
   const out: TraceTimeHistogramBucket[] = []
   for (let u = first; u <= last; u += bs) {
-    out.push({
-      bucketStart: new Date(u * 1000).toISOString(),
-      traceCount: counts.get(u) ?? 0,
-    })
+    const iso = new Date(u * 1000).toISOString()
+    out.push(buckets.get(u) ?? emptyTraceTimeHistogramBucket(iso))
   }
   return out
 }

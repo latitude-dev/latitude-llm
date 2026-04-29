@@ -31,9 +31,8 @@ function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string
   return seedTimestampDaysAgo(daysAgo, hour, minute)
 }
 
-function annotationSeedSourceId(sourceId: string): "UI" | "API" | "SYSTEM" {
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
-  if (sourceId === "system-signals") return "SYSTEM"
   return "API"
 }
 
@@ -89,7 +88,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
   const queueWarrantyId = scope.cuid("queue:warranty")
   const queueCombinationId = scope.cuid("queue:combination")
   const queueLogisticsId = scope.cuid("queue:logistics")
-  const queueSystemId = scope.cuid("queue:system")
+  const queueKitchenSinkId = scope.cuid("queue:kitchen-sink")
 
   const issueWarrantyFab = IssueId(scope.cuid("issue:warranty-fab"))
   const issueCombination = IssueId(scope.cuid("issue:combination"))
@@ -454,7 +453,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       trace_id: annotationDemoTraceId,
       span_id: annotationDemoSpanId,
       source: "annotation",
-      source_id: queueSystemId,
+      source_id: queueKitchenSinkId,
       simulation_id: "",
       issue_id: "",
       value: 0.25,
@@ -473,7 +472,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       trace_id: annotationDemoTraceId,
       span_id: annotationDemoSpanId,
       source: "annotation",
-      source_id: queueSystemId,
+      source_id: queueKitchenSinkId,
       simulation_id: "",
       issue_id: "",
       value: 0.4,
@@ -492,7 +491,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       trace_id: annotationDemoTraceId,
       span_id: "",
       source: "annotation",
-      source_id: queueSystemId,
+      source_id: queueKitchenSinkId,
       simulation_id: "",
       issue_id: "",
       value: 0.6,
@@ -511,7 +510,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       trace_id: annotationDemoTraceId,
       span_id: annotationDemoSpanId,
       source: "annotation",
-      source_id: queueSystemId,
+      source_id: queueKitchenSinkId,
       simulation_id: "",
       issue_id: "",
       value: 0.92,
@@ -530,7 +529,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       trace_id: annotationDemoTraceId,
       span_id: "",
       source: "annotation",
-      source_id: queueSystemId,
+      source_id: queueKitchenSinkId,
       simulation_id: "",
       issue_id: "",
       value: 0.85,

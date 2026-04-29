@@ -52,7 +52,7 @@ const main = async () => {
         project: yield* ProjectRepository,
         user: yield* UserRepository,
       }
-      return { db: client.db, repositories, scope: bootstrapSeedScope } as SeedContext
+      return { db: client.db, client, repositories, scope: bootstrapSeedScope } as SeedContext
     })
 
     const program = Effect.gen(function* () {

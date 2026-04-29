@@ -47,6 +47,38 @@ export interface OtlpExportRequest {
 // surface is large and version-skew risk across OpenClaw minor releases is
 // lower when we depend only on the event-shape subset we actually read.
 
+export interface OpenClawAgentContext {
+  runId?: string
+  agentId?: string
+  sessionKey?: string
+  sessionId?: string
+  workspaceDir?: string
+  modelProviderId?: string
+  modelId?: string
+  messageProvider?: string
+  trigger?: string
+  channelId?: string
+  /**
+   * Set only when `trigger === "cron"`. The cron job's id from the user's
+   * `~/.openclaw/openclaw.json` cron config (e.g. `"morning-briefing"`).
+   * OpenClaw's `buildAgentHookContext` spreads this conditionally.
+   */
+  jobId?: string
+  trace?: unknown
+}
+
+export interface OpenClawBeforeAgentStartEvent {
+  prompt?: string
+  messages?: unknown[]
+}
+
+export interface OpenClawAgentEndEvent {
+  messages: unknown[]
+  success: boolean
+  error?: string
+  durationMs?: number
+}
+
 export interface OpenClawLlmInputEvent {
   runId: string
   sessionId: string
@@ -72,23 +104,33 @@ export interface OpenClawLlmOutputEvent {
   provider: string
   model: string
   resolvedRef?: string
+  harnessId?: string
   assistantTexts: string[]
   lastAssistant?: unknown
   usage?: OpenClawLlmUsage
 }
 
-export interface OpenClawAgentContext {
-  runId?: string
-  agentId?: string
-  sessionKey?: string
+/** One per actual provider API call inside an agent attempt. */
+export interface OpenClawModelCallStartedEvent {
+  runId: string
+  callId: string
   sessionId?: string
-  workspaceDir?: string
-  modelProviderId?: string
-  modelId?: string
-  messageProvider?: string
-  trigger?: string
-  channelId?: string
-  trace?: unknown
+  sessionKey?: string
+  provider: string
+  model: string
+  api?: string
+  transport?: string
+}
+
+export interface OpenClawModelCallEndedEvent extends OpenClawModelCallStartedEvent {
+  durationMs?: number
+  outcome: "completed" | "error"
+  errorCategory?: string
+  failureKind?: string
+  requestPayloadBytes?: number
+  responseStreamBytes?: number
+  timeToFirstByteMs?: number
+  upstreamRequestIdHash?: string
 }
 
 export interface OpenClawBeforeToolCallEvent {
@@ -108,75 +150,41 @@ export interface OpenClawAfterToolCallEvent {
   durationMs?: number
 }
 
-export interface OpenClawAgentEndEvent {
-  messages: unknown[]
-  success: boolean
+export interface OpenClawBeforeCompactionEvent {
+  messageCount: number
+  messages?: unknown[]
+  sessionFile?: string
+}
+
+export interface OpenClawAfterCompactionEvent {
+  messageCount: number
+  compactedCount: number
+  tokenCount?: number
+  sessionFile?: string
+}
+
+export interface OpenClawSubagentSpawnedEvent {
+  runId: string
+  childSessionKey: string
+  agentId: string
+  label?: string
+  mode?: "run" | "session"
+  threadRequested?: boolean
+  requester?: {
+    channel?: string
+    accountId?: string
+    to?: string
+    threadId?: string | number
+  }
+}
+
+export interface OpenClawSubagentEndedEvent {
+  runId?: string
+  targetSessionKey?: string
+  targetKind?: string
+  reason?: string
+  outcome?: string
   error?: string
-  durationMs?: number
-}
-
-export interface OpenClawSessionStartEvent {
-  sessionId: string
-  sessionKey?: string
-  resumedFrom?: string
-}
-
-// ─── In-memory state shapes ─────────────────────────────────────────────────
-
-export interface LlmCallRecord {
-  runId: string
-  sessionId: string
-  sessionKey: string | undefined
-  agentId: string | undefined
-  provider: string
-  requestModel: string
-  responseModel: string | undefined
-  resolvedRef: string | undefined
-  systemPrompt: string | undefined
-  prompt: string
-  historyMessages: unknown[]
-  imagesCount: number
-  assistantTexts: string[]
-  lastAssistant: unknown
-  usage: OpenClawLlmUsage | undefined
-  startMs: number
-  endMs: number | undefined
-  error: string | undefined
-  toolCalls: ToolCallRecord[]
-}
-
-export interface ToolCallRecord {
-  toolCallId: string
-  toolName: string
-  params: Record<string, unknown>
-  result: unknown
-  error: string | undefined
-  startMs: number
-  endMs: number | undefined
-  durationMs: number | undefined
-  agentId: string | undefined
-}
-
-export interface RunRecord {
-  runId: string
-  sessionId: string | undefined
-  sessionKey: string | undefined
-  agentId: string | undefined
-  workspaceDir: string | undefined
-  messageProvider: string | undefined
-  trigger: string | undefined
-  channelId: string | undefined
-  modelProviderId: string | undefined
-  modelId: string | undefined
-  startMs: number
-  endMs: number | undefined
-  success: boolean | undefined
-  error: string | undefined
-  llmCalls: LlmCallRecord[]
-  /**
-   * Tool calls queued by `before_tool_call` but not yet matched to an `llm_call`
-   * because the most recent `llm_output` has already closed the call for this
-   * runId. Retained so `after_tool_call` can still complete the record.
-   */
-  orphanTools: ToolCallRecord[]
+  sendFarewell?: boolean
+  accountId?: string
 }

@@ -634,10 +634,17 @@ describe("TraceRepository", () => {
       // All four agree on the same 3-trace result set (hybrid, lexical-only,
       // semantic-only — the antiparallel noise row is below the floor).
       const histogramCount = histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)
+      const histogramSpanSum = histogram.reduce((sum, bucket) => sum + bucket.spanCountSum, 0)
+      const histogramTokenSum = histogram.reduce((sum, bucket) => sum + bucket.tokensTotalSum, 0)
+      const histogramCostSum = histogram.reduce((sum, bucket) => sum + bucket.costTotalMicrocentsSum, 0)
       expect(page.items).toHaveLength(3)
       expect(count).toBe(3)
       expect(metrics.spanCount.sum).toBe(3)
       expect(histogramCount).toBe(3)
+      // Per-bucket sums collapse back to the project-wide sums computed by aggregateMetricsByProjectId.
+      expect(histogramSpanSum).toBe(metrics.spanCount.sum)
+      expect(histogramTokenSum).toBe(metrics.tokensTotal.sum)
+      expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)
     })
   })
 })

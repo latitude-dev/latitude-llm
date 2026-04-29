@@ -182,6 +182,15 @@ export function createDnsRecords(
 
   // SPF and DKIM records for production email domain
   if (config.name === "production") {
+    records.docsV1Cname = new aws.route53.Record(`${name}-docs-v1-cname`, {
+      zoneId: hostedZoneId,
+      name: "docs-v1.latitude.so",
+      type: "CNAME",
+      records: ["cname.mintlify-dns.com"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
     // SPF record for notifications.latitude.so
     records.notificationsSpf = new aws.route53.Record(`${name}-notifications-spf`, {
       zoneId: hostedZoneId,

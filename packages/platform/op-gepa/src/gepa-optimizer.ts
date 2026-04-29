@@ -10,11 +10,17 @@ import {
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { GepaClient } from "./client.ts"
-import { GEPA_MAX_TIME, GEPA_MAX_TOKENS, GEPA_RPC_METHODS } from "./constants.ts"
+import {
+  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+  GEPA_MAX_STAGNATION,
+  GEPA_MAX_TIME,
+  GEPA_MAX_TOKENS,
+  GEPA_RPC_METHODS,
+} from "./constants.ts"
 import { JsonRpcResponseError } from "./protocol.ts"
 
 const componentSchema = z.string().min(1)
-const scriptSchema = z.string().min(1)
+const scriptSchema = z.string().min(1) // <script hash>
 const systemSchema = z.record(componentSchema, scriptSchema)
 
 const partialExampleSchema = z.object({
@@ -40,11 +46,16 @@ const optimizeParamsSchema = z.object({
   budget: z.object({
     time: z.number().int().positive().optional(),
     tokens: z.number().int().positive().optional(),
+    stagnation: z.number().int().positive().optional(),
   }),
+  reflectionMinibatchSize: z.number().int().positive(),
 })
+
+const stopReasonSchema = z.enum(["time_budget", "tokens_budget", "stagnation", "completed"])
 
 const optimizeResultSchema = z.object({
   optimized: systemSchema,
+  stopReason: stopReasonSchema,
 })
 
 const evaluateParamsSchema = z.object({
@@ -226,7 +237,9 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
             budget: {
               time: input.budget?.time ?? GEPA_MAX_TIME,
               tokens: input.budget?.tokens ?? GEPA_MAX_TOKENS,
+              stagnation: input.budget?.stagnation ?? GEPA_MAX_STAGNATION,
             },
+            reflectionMinibatchSize: input.reflectionMinibatchSize ?? GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
           },
           optimizeResultSchema,
         ),
@@ -250,6 +263,7 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
         system: result.optimized,
         componentId: input.baselineCandidate.componentId,
       }),
+      stopReason: result.stopReason,
     }
   }),
 } satisfies OptimizerShape)

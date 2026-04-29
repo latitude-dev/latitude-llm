@@ -1,10 +1,8 @@
-import { STATUS_OPTIONS, TRACE_FILTER_FIELDS } from "@domain/shared"
+import { TRACE_FILTER_FIELDS } from "@domain/shared"
 import type { FilterMode } from "./multi-select-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
 
-export { STATUS_OPTIONS }
-
-export const TEXT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "text").map((f) => ({
+const TEXT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "text").map((f) => ({
   field: f.field,
   label: f.label,
   placeholder: f.placeholder ?? "Enter value...",

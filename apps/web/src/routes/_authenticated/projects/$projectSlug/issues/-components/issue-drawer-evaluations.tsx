@@ -279,9 +279,7 @@ export function IssueDrawerEvaluations({
         <Icon icon={ShieldCheckIcon} size="md" color="foregroundMuted" />
         <div className="flex min-w-0 flex-col gap-1">
           <Text.H5M>Automatically monitored</Text.H5M>
-          <Text.H6 color="foregroundMuted">
-            This issue is already monitored on every trace, so a separate evaluation is not needed.
-          </Text.H6>
+          <Text.H6 color="foregroundMuted">This issue is automatically monitored by the system</Text.H6>
         </div>
       </div>
     )
@@ -403,7 +401,8 @@ export function IssueDrawerEvaluations({
         ) : null}
         {hiddenEvaluationCount > 0 ? (
           <Text.H6 className="self-center text-center" color="foregroundMuted">
-            {hiddenEvaluationCount} other evaluation{hiddenEvaluationCount === 1 ? "" : "s"} hidden from this view
+            {hiddenEvaluationCount} other evaluation
+            {hiddenEvaluationCount === 1 ? "" : "s"} hidden from this view
           </Text.H6>
         ) : null}
       </div>

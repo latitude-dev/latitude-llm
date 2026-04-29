@@ -2,7 +2,7 @@ import { Box, Text, useApp, useInput } from "ink"
 import { useMemo, useState } from "react"
 import { classifySlice, falsePositiveRate, type Metrics, type Prediction } from "../runner/metrics.ts"
 import { formatCostUsd, formatPercent, truncate } from "./format.ts"
-import type { InspectableRow, ReportData } from "./types.ts"
+import type { FlipKind, InspectableFlip, InspectableRow, ReportData } from "./types.ts"
 
 const PAGE_SIZE = 25
 
@@ -13,6 +13,18 @@ const PHASE_COLOR: Record<Prediction["phase"], string> = {
   "llm-no-match": "cyan",
   "schema-mismatch": "yellow",
   error: "red",
+}
+
+const FLIP_LABEL: Record<FlipKind, string> = {
+  added: "NEW",
+  changed: "CHG",
+  removed: "FIX",
+}
+
+const FLIP_COLOR: Record<FlipKind, string> = {
+  added: "red",
+  changed: "yellow",
+  removed: "green",
 }
 
 interface SummaryProps {
@@ -64,13 +76,21 @@ function Summary({ data, selectedIdx, mode, onToggleMode: _onToggleMode }: Summa
         </Text>
         {data.sampled ? (
           <Text color="yellow">sample mode — baseline comparison disabled</Text>
+        ) : data.baseline.present ? (
+          <Box flexDirection="column">
+            <Text dimColor>
+              baseline: <Text color="red">+{data.baseline.addedFailures}</Text>{" "}
+              <Text color="yellow">Δ{data.baseline.changedFailures}</Text>{" "}
+              <Text color="green">-{data.baseline.removedFailures}</Text> failures
+            </Text>
+            {data.baseline.fixtureChanged ? (
+              <Text color="yellow">
+                fixture changed since baseline — inspect mapper diff; some flips may reflect new/removed rows
+              </Text>
+            ) : null}
+          </Box>
         ) : (
-          <Text dimColor>
-            baseline:{" "}
-            {data.baseline.present
-              ? `${data.baseline.flips} flips, +${data.baseline.newInCurrent} new, -${data.baseline.missingFromCurrent} missing`
-              : "(no baseline yet — pass --update-baseline to create one)"}
-          </Text>
+          <Text dimColor>baseline: (none yet — pass --update-baseline to create one)</Text>
         )}
       </Box>
 
@@ -99,7 +119,7 @@ function Summary({ data, selectedIdx, mode, onToggleMode: _onToggleMode }: Summa
             return (
               <Text key={row.prediction.id}>
                 {isSelected ? <Text color="cyan">▶ </Text> : <Text>{"  "}</Text>}
-                <Text color={PHASE_COLOR[row.prediction.phase]}>{labelForRow(row, mode).padEnd(4)}</Text>
+                <Text color={colorForRow(row, mode)}>{labelForRow(row, mode).padEnd(4)}</Text>
                 <Text dimColor> [{row.prediction.phase.padEnd(22)}]</Text>
                 <Text>
                   {"  "}
@@ -119,9 +139,18 @@ function Summary({ data, selectedIdx, mode, onToggleMode: _onToggleMode }: Summa
   )
 }
 
-function labelForRow(row: InspectableRow, mode: "failed" | "flipped"): string {
-  if (mode === "flipped") return "FLIP"
+function isFlip(row: InspectableRow | InspectableFlip): row is InspectableFlip {
+  return "kind" in row
+}
+
+function labelForRow(row: InspectableRow | InspectableFlip, mode: "failed" | "flipped"): string {
+  if (mode === "flipped" && isFlip(row)) return FLIP_LABEL[row.kind]
   return row.prediction.expected ? "FN" : "FP"
+}
+
+function colorForRow(row: InspectableRow | InspectableFlip, mode: "failed" | "flipped"): string {
+  if (mode === "flipped" && isFlip(row)) return FLIP_COLOR[row.kind]
+  return PHASE_COLOR[row.prediction.phase]
 }
 
 /**
@@ -140,12 +169,23 @@ function renderSliceMetrics(m: Metrics): string {
   return `p=${formatPercent(m.precision).padEnd(6)} r=${formatPercent(m.recall).padEnd(6)} f1=${formatPercent(m.f1).padEnd(6)}`
 }
 
-function Inspector({ row }: { row: InspectableRow }) {
+function Inspector({ row }: { row: InspectableRow | InspectableFlip }) {
+  const flip = isFlip(row) ? row : null
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
       <Text bold color="cyan">
         {row.prediction.id}
       </Text>
+      {flip !== null ? (
+        <Text>
+          flip <Text color={FLIP_COLOR[flip.kind]}>[{FLIP_LABEL[flip.kind]}]</Text>
+          {flip.previous !== undefined ? (
+            <Text dimColor>
+              {"  "}was: predicted={String(flip.previous.predicted)} [{flip.previous.phase}]
+            </Text>
+          ) : null}
+        </Text>
+      ) : null}
       <Text>
         expected: <Text bold>{String(row.prediction.expected)}</Text>
         {"  "}predicted: <Text bold>{String(row.prediction.predicted)}</Text>
@@ -190,9 +230,14 @@ export function Report({ data }: { data: ReportData }) {
   const { exit } = useApp()
   const [mode, setMode] = useState<"failed" | "flipped">("failed")
   const [selectedIdx, setSelectedIdx] = useState(0)
-  const [view, setView] = useState<{ kind: "summary" } | { kind: "inspect"; row: InspectableRow }>({ kind: "summary" })
+  const [view, setView] = useState<{ kind: "summary" } | { kind: "inspect"; row: InspectableRow | InspectableFlip }>({
+    kind: "summary",
+  })
 
-  const activeList = useMemo(() => (mode === "failed" ? data.failedRows : data.flippedRows), [mode, data])
+  const activeList = useMemo<readonly (InspectableRow | InspectableFlip)[]>(
+    () => (mode === "failed" ? data.failedRows : data.flippedRows),
+    [mode, data],
+  )
 
   useInput((input, key) => {
     if (input === "q") {

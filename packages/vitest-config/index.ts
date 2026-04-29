@@ -34,6 +34,8 @@ const findAndLoadEnvTest = () => {
 
 findAndLoadEnvTest()
 
+export const PGLITE_HOOK_TIMEOUT_MS = 30_000
+
 export default defineConfig({
   test: {
     globals: true,

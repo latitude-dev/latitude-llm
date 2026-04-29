@@ -391,6 +391,11 @@ jobs:
             --service web \
             --release-version "$RELEASE" \
             --minified-path-prefix "/app/apps/web/.output/server"
+          # datadog-ci only globs **/*.js, but nitro emits .mjs and node loads
+          # those at runtime. Mirror the upload for .mjs.map so Datadog can
+          # symbolicate frames keyed at .mjs paths too.
+          node apps/web/scripts/upload-mjs-sourcemaps.mjs \
+            apps/web/.output/server web "$RELEASE" "/app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \
@@ -758,6 +763,11 @@ jobs:
             --service web \
             --release-version "$RELEASE" \
             --minified-path-prefix "/app/apps/web/.output/server"
+          # datadog-ci only globs **/*.js, but nitro emits .mjs and node loads
+          # those at runtime. Mirror the upload for .mjs.map so Datadog can
+          # symbolicate frames keyed at .mjs paths too.
+          node apps/web/scripts/upload-mjs-sourcemaps.mjs \
+            apps/web/.output/server web "$RELEASE" "/app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \

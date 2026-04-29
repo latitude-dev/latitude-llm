@@ -33,11 +33,12 @@ const _registry = {
     readonly scoreId: string
     readonly preEnrichedFeedback?: string
   }>(),
-  systemQueueFlaggerWorkflow: input<{
+  flaggerWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
-    readonly queueSlug: string
+    readonly flaggerId: string
+    readonly flaggerSlug: string
   }>(),
   seedDemoProjectWorkflow: input<{
     readonly organizationId: string

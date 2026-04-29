@@ -39,9 +39,8 @@ function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
   return seedDateDaysAgo(daysAgo, hour, minute)
 }
 
-function annotationSeedSourceId(sourceId: string): "UI" | "API" | "SYSTEM" {
+function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
-  if (sourceId === "system-signals") return "SYSTEM"
   return "API"
 }
 
@@ -106,7 +105,7 @@ function buildAllScoreRows(scope: SeedScope) {
   const queueWarrantyId = scope.cuid("queue:warranty")
   const queueCombinationId = scope.cuid("queue:combination")
   const queueLogisticsId = scope.cuid("queue:logistics")
-  const queueSystemId = scope.cuid("queue:system")
+  const queueKitchenSinkId = scope.cuid("queue:kitchen-sink")
 
   const issueWarrantyFab = IssueId(scope.cuid("issue:warranty-fab"))
   const issueCombination = IssueId(scope.cuid("issue:combination"))
@@ -611,7 +610,7 @@ function buildAllScoreRows(scope: SeedScope) {
       traceId: annotationDemoTraceId,
       spanId: annotationDemoSpanId,
       source: "annotation" as const,
-      sourceId: queueSystemId,
+      sourceId: queueKitchenSinkId,
       simulationId: null,
       issueId: null,
       annotatorId: null,
@@ -642,7 +641,7 @@ function buildAllScoreRows(scope: SeedScope) {
       traceId: annotationDemoTraceId,
       spanId: annotationDemoSpanId,
       source: "annotation" as const,
-      sourceId: queueSystemId,
+      sourceId: queueKitchenSinkId,
       simulationId: null,
       issueId: null,
       annotatorId: null,
@@ -667,7 +666,7 @@ function buildAllScoreRows(scope: SeedScope) {
       traceId: annotationDemoTraceId,
       spanId: null,
       source: "annotation" as const,
-      sourceId: queueSystemId,
+      sourceId: queueKitchenSinkId,
       simulationId: null,
       issueId: null,
       annotatorId: null,
@@ -692,7 +691,7 @@ function buildAllScoreRows(scope: SeedScope) {
       traceId: annotationDemoTraceId,
       spanId: annotationDemoSpanId,
       source: "annotation" as const,
-      sourceId: queueSystemId,
+      sourceId: queueKitchenSinkId,
       simulationId: null,
       issueId: null,
       annotatorId: null,
@@ -717,7 +716,7 @@ function buildAllScoreRows(scope: SeedScope) {
       traceId: annotationDemoTraceId,
       spanId: null,
       source: "annotation" as const,
-      sourceId: queueSystemId,
+      sourceId: queueKitchenSinkId,
       simulationId: null,
       issueId: null,
       annotatorId: null,

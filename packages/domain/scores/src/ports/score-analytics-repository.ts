@@ -100,6 +100,16 @@ export interface IssueTagsAggregate {
   readonly tags: readonly string[]
 }
 
+/**
+ * Time range used when aggregating issue tags. A lower bound is required
+ * (not just allowed) so the CH scans on `scores` and `traces` always have a
+ * partition-pruning predicate — see `aggregateTagsByIssues` for context.
+ */
+export interface IssueTagsTimeRange {
+  readonly from: Date
+  readonly to?: Date
+}
+
 /** Grouped issue trend result for batched chart reads. */
 export interface IssueTrendSeries {
   readonly issueId: IssueId
@@ -191,10 +201,13 @@ export interface ScoreAnalyticsRepositoryShape {
   }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
 
   // -- Issue tag aggregation across affected traces --------------------------
+  // `timeRange.from` is required to keep the underlying scans partition-bounded
+  // (see implementation comment for context). `to` defaults to "now".
   aggregateTagsByIssues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly issueIds: readonly IssueId[]
+    readonly timeRange: IssueTagsTimeRange
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueTagsAggregate[], RepositoryError, ChSqlClient>
 

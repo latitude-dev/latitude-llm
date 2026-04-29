@@ -4,7 +4,7 @@ export const ISSUE_NAME_MAX_LENGTH = 128
 
 export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
-export const ISSUE_SOURCES = ["annotation", "custom", "flagger"] as const
+export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
 
@@ -114,3 +114,46 @@ export const ISSUE_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
  * becomes visible in the main Issues UI.
  */
 export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
+
+// ---------------------------------------------------------------------------
+// Discovery serialization locks
+// ---------------------------------------------------------------------------
+
+/**
+ * TTL for the outer feedback-scoped serialization lock. Wraps retrieval, AI
+ * generation, and the inner project-lock section. Sized to match the
+ * activity `startToCloseTimeout` so the lock outlives any single activity
+ * run; if a worker dies, Redis auto-deletion never strands the key.
+ */
+export const ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS = 300
+
+/**
+ * TTL for the inner project-scoped serialization lock. Serializes brand-new
+ * issue creation per project while a prior worker is still writing the
+ * Postgres row and the Weaviate projection. Matches the activity timeout.
+ */
+export const ISSUE_DISCOVERY_PROJECT_LOCK_TTL_SECONDS = 300
+
+/** Inner project-scoped serialization lock key. */
+export const ISSUE_DISCOVERY_PROJECT_LOCK_KEY = "project"
+
+/**
+ * Outer feedback-scoped serialization lock key. Takes the SHA-256 hex digest
+ * of the canonical feedback string. Hashing serializes identical feedback
+ * across all sources without leaking the feedback into Redis keys.
+ */
+export const ISSUE_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${hash}`
+
+// ---------------------------------------------------------------------------
+// Issue update lock
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-issue serialization lock key. Wraps the assign-score-to-issue Postgres
+ * transaction (centroid recompute) and the subsequent Weaviate projection
+ * sync so concurrent writers to the same issue do not race on the projection.
+ */
+export const ISSUE_UPDATE_LOCK_KEY = (issueId: string) => `issue:${issueId}`
+
+/** TTL for the per-issue update serialization lock. Matches the activity timeout. */
+export const ISSUE_UPDATE_LOCK_TTL_SECONDS = 300

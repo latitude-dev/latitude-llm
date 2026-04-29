@@ -97,11 +97,10 @@ Important state timestamps:
 The `source` field records the provenance of the **first score** that created the issue. It is immutable for the lifetime of the issue.
 
 ```typescript
-type IssueSource = "annotation" | "custom" | "flagger";
+type IssueSource = "annotation" | "custom";
 ```
 
-- `"flagger"` — the issue was born from a deterministic system-queue flagger match (e.g. `tool-call-errors`, `output-schema-validation`, `empty-response`). The creating score carries `source: "annotation"`, `sourceId: "SYSTEM"`.
-- `"annotation"` — the issue was born from a human annotation (UI, API) or from a published system-queue draft that a human confirmed. The creating score carries `source: "annotation"` with `sourceId` equal to `"UI"`, `"API"`, or a queue CUID.
+- `"annotation"` — the issue was born from a human annotation (UI, API), a published queue annotation, or a flagger-authored annotation. The creating score carries `source: "annotation"` with `sourceId` equal to `"UI"`, `"API"`, `"SYSTEM"`, or a queue CUID.
 - `"custom"` — the issue was born from a custom score pushed through the API. The creating score carries `source: "custom"`.
 
 > **Note**: `"evaluation"` is intentionally excluded. Evaluation scores are always linked to an existing issue at creation time; they never spawn a brand-new issue.
@@ -110,9 +109,6 @@ The derivation rule applied at issue creation time:
 
 ```typescript
 const deriveIssueSource = (score: Score): IssueSource => {
-  if (score.source === "annotation" && score.sourceId === "SYSTEM") {
-    return "flagger";
-  }
   if (score.source === "annotation") {
     return "annotation";
   }
@@ -174,6 +170,7 @@ Execution rules:
 - `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
 - scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
 - `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
+- when initial workflow retrieval resolves to no known issue, the workflow must call the bounded locked serialization activity instead of creating an issue directly
 - `issues:refresh` runs after the configured throttle window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
@@ -181,9 +178,40 @@ Execution rules:
 - the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
 - after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
+- the no-match path is only provisional; before creating a new issue, serialization must first acquire a feedback-scoped Redis lock and re-run hybrid search, rerank, and Postgres candidate resolution
+- if the feedback-scoped re-check still finds no issue, serialization must acquire the project-scoped Redis lock and re-run retrieval again before creating
+- each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
 - the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
 - resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
+
+### Bounded locked serialization
+
+Weaviate is a retrieval accelerator, not the write-side source of correctness. A newly created issue can be present in Postgres before its Weaviate projection is visible to another concurrent discovery workflow. Therefore a workflow-level no-match result is not sufficient authority to create a new issue.
+
+The no-match branch must enter `serializeIssueDiscoveryUseCase`, which uses layered Redis locks. A feedback-scoped lock serializes identical feedback strings from the same score source/source id, reducing deterministic-flagger herds before external retrieval work. A project-scoped lock serializes brand-new issue creation attempts for the project, so differently worded but semantically duplicate no-match workflows do not create concurrently while Weaviate projections catch up.
+
+Inside locked serialization must:
+
+1. re-fetch the score by id
+2. acquire the feedback-scoped Redis lock
+3. re-run hybrid issue search against Weaviate using the same canonical feedback and normalized embedding
+4. re-run rerank and resolve the selected issue UUID against Postgres
+5. assign the score to the matched issue if the locked re-check now finds one
+6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank/Postgres resolution check
+7. assign to the project-lock match if one is found
+8. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
+9. sync the issue projection before releasing the locks
+
+This intentionally moves the long external retrieval/rerank/generation section outside Postgres transactions. Lock acquisition must use Redis `SET ... NX EX`; if the key is already held, serialization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. Redis lock keys must be organization-prefixed (`org:${organizationId}:...`) and released with token comparison so one worker cannot release another worker's lock after TTL expiry.
+
+The correctness invariant is:
+
+- the feedback-scoped lock is acquired before the project-scoped lock to reduce deterministic-flagger herds
+- contended workers retry instead of waiting on Postgres or holding database transactions
+- project-level brand-new issue creation is serialized by the Redis project lock
+- assignment to an existing issue remains row-safe through the issue row lock and conditional score ownership claim
+- Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows
 
 Concrete v1 mechanics worth carrying forward:
 

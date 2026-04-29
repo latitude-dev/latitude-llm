@@ -3,10 +3,6 @@ title: Python SDK
 description: Full API reference for latitude-telemetry, the Python SDK for Latitude Telemetry.
 ---
 
-<Warning>
-  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
-</Warning>
-
 # Python SDK
 
 Instrument your AI application and send traces to Latitude. Built on OpenTelemetry.
@@ -109,6 +105,8 @@ register_latitude_instrumentations(
 
 `LatitudeSpanProcessor` only exports spans to Latitude. You still need LLM instrumentations to create those spans. Use `register_latitude_instrumentations()` or bring your own OTel-compatible LLM instrumentation.
 
+For examples of integrating with **Datadog**, **Sentry**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
+
 ## Public API Reference
 
 ```python
@@ -192,6 +190,7 @@ class LatitudeSpanProcessor:
 @dataclass
 class LatitudeSpanProcessorOptions:
     disable_redact: bool = False
+    redact: RedactSpanProcessorOptions | None = None
     disable_batch: bool = False
     disable_smart_filter: bool = False
     should_export_span: Callable[[ReadableSpan], bool] | None = None

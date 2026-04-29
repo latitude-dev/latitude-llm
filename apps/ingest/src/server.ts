@@ -1,12 +1,13 @@
 import { serve } from "@hono/node-server"
 import { httpInstrumentationMiddleware as otel } from "@hono/otel"
+import { waitForRedisClientReady } from "@platform/cache-redis"
 import { parseEnv } from "@platform/env"
 import { createLogger, initializeObservability, shutdownObservability, withTracing } from "@repo/observability"
 import { isHttpError, LatitudeObservabilityTestError, toHttpResponse } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { getQueuePublisher } from "./clients.ts"
+import { getQueuePublisher, getRedisClient } from "./clients.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
@@ -40,6 +41,9 @@ const start = async () => {
   })
 
   registerRoutes({ app })
+
+  await waitForRedisClientReady(getRedisClient())
+  await getQueuePublisher()
 
   const server = serve(
     {

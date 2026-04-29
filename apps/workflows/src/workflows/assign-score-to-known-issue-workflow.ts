@@ -1,10 +1,9 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { runWithLockRetry } from "./lock-retry.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
-const { embedScoreFeedback, assignScoreToIssue, syncIssueProjections, syncScoreAnalytics } = proxyActivities<
-  typeof activities
->({
+const { embedScoreFeedback, assignScoreToIssue, syncScoreAnalytics } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
   retry: defaultActivityRetryPolicy,
 })
@@ -21,23 +20,20 @@ export const assignScoreToKnownIssueWorkflow = async (input: {
     scoreId: input.scoreId,
   })
 
-  const assignment = await assignScoreToIssue({
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    scoreId: input.scoreId,
-    issueId: input.issueId,
-    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-  })
-
-  await syncIssueProjections({
-    organizationId: input.organizationId,
-    issueId: assignment.issueId,
-  })
+  const result = await runWithLockRetry(() =>
+    assignScoreToIssue({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      issueId: input.issueId,
+      normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+    }),
+  )
 
   await syncScoreAnalytics({
     organizationId: input.organizationId,
     scoreId: input.scoreId,
   })
 
-  return { action: assignment.action, issueId: assignment.issueId }
+  return { action: result.assignment.action, issueId: result.assignment.issueId }
 }

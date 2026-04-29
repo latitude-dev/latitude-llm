@@ -17,6 +17,8 @@ export {
   ISSUE_REFRESH_THROTTLE_MS,
   ISSUE_SOURCES,
   ISSUE_STATES,
+  ISSUE_UPDATE_LOCK_KEY,
+  ISSUE_UPDATE_LOCK_TTL_SECONDS,
   MIN_OCCURRENCES_FOR_VISIBILITY,
   NEW_ISSUE_AGE_DAYS,
 } from "./constants.ts"
@@ -34,6 +36,7 @@ export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
+  IssueDiscoveryLockUnavailableError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
   isEligibilityError,
@@ -55,6 +58,11 @@ export {
   type UpdateIssueCentroidInput,
   updateIssueCentroid,
 } from "./helpers.ts"
+export {
+  type IssueDiscoveryLockInput,
+  IssueDiscoveryLockRepository,
+  type IssueDiscoveryLockRepositoryShape,
+} from "./ports/issue-discovery-lock-repository.ts"
 export {
   type DeleteIssueProjectionInput,
   type HybridSearchInput,
@@ -136,6 +144,7 @@ export {
   type ListIssuesInput,
   type ListIssuesResult,
   listIssuesUseCase,
+  TAG_AGGREGATION_FALLBACK_DAYS,
 } from "./use-cases/list-issues.ts"
 export {
   type RefreshIssueDetailsError,
@@ -159,4 +168,10 @@ export {
   type ResolveMatchedIssueInput,
   resolveMatchedIssueUseCase,
 } from "./use-cases/resolve-matched-issue.ts"
+export {
+  type SerializeIssueDiscoveryError,
+  type SerializeIssueDiscoveryInput,
+  type SerializeIssueDiscoveryResult,
+  serializeIssueDiscoveryUseCase,
+} from "./use-cases/serialize-issue-discovery.ts"
 export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"

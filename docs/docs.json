@@ -66,6 +66,10 @@
         "group": "Telemetry",
         "pages": [
           "telemetry/overview",
+          "telemetry/otel-exporter",
+          "telemetry/typescript",
+          "telemetry/python",
+          "telemetry/claude-code",
           {
             "group": "Providers",
             "pages": [
@@ -143,6 +147,10 @@
       {
         "group": "Simulations",
         "pages": ["simulations/overview"]
+      },
+      {
+        "group": "Claude Code",
+        "pages": ["claude-code/claude-code"]
       }
     ]
   },
@@ -150,6 +158,11 @@
     "socials": {
       "github": "https://github.com/latitude-dev/latitude-llm",
       "slack": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
+    }
+  },
+  "integrations": {
+    "gtm": {
+      "tagId": "GTM-5NWGV24H"
     }
   }
 }

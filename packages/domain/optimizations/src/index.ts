@@ -6,6 +6,7 @@ export {
   type OptimizationEvaluationResult,
   type OptimizationExample,
   type OptimizationResult,
+  type OptimizationStopReason,
   type OptimizationTrajectory,
   optimizationBudgetSchema,
   optimizationCandidateSchema,
@@ -13,6 +14,7 @@ export {
   optimizationEvaluationResultSchema,
   optimizationExampleSchema,
   optimizationResultSchema,
+  optimizationStopReasonSchema,
   optimizationTrajectorySchema,
 } from "./entities/optimization.ts"
 export {

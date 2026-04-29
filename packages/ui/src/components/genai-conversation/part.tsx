@@ -1,6 +1,7 @@
 import { CheckIcon, FileIcon, LinkIcon, TerminalIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import type { GenAIPart } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
+import { CodeBlockControls } from "../code-block/code-block-controls.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
@@ -127,6 +128,7 @@ export function Part({
       ) : (
         <CheckIcon className="w-3.5 h-3.5 text-success" />
       )
+      const responseContent = formatJson(response)
 
       return (
         <CollapsibleBlock
@@ -135,21 +137,29 @@ export function Part({
           variant={isError ? "destructive" : "default"}
           statusIcon={statusIcon}
         >
-          <pre className={cn("overflow-auto rounded-lg p-3 text-xs", isError ? "bg-destructive-muted" : "bg-muted")}>
-            {formatJson(response)}
-          </pre>
+          <div className="relative">
+            <pre className={cn("overflow-auto rounded-lg p-3 text-xs", isError ? "bg-destructive-muted" : "bg-muted")}>
+              {responseContent}
+            </pre>
+            <CodeBlockControls content={responseContent} language="json" />
+          </div>
         </CollapsibleBlock>
       )
     }
 
-    default:
+    default: {
+      const fallbackContent = JSON.stringify(part, null, 2)
       return (
         <CollapsibleBlock
           icon={<FileIcon className="w-3.5 h-3.5" />}
           label={<Text.Mono size="h6">{part.type}</Text.Mono>}
         >
-          <pre className="overflow-auto rounded-lg bg-muted p-3 text-xs">{JSON.stringify(part, null, 2)}</pre>
+          <div className="relative">
+            <pre className="overflow-auto rounded-lg bg-muted p-3 text-xs">{fallbackContent}</pre>
+            <CodeBlockControls content={fallbackContent} language="json" />
+          </div>
         </CollapsibleBlock>
       )
+    }
   }
 }

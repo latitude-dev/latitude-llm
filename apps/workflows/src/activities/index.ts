@@ -12,7 +12,7 @@ export {
   persistEvaluationAlignmentResult,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
-export { draftAnnotate, persistAnnotation, runFlagger } from "./flagger-activities.ts"
+export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
 export {
   assignScoreToIssue,
   checkEligibility,
@@ -21,6 +21,7 @@ export {
   hybridSearchIssues,
   rerankIssueCandidates,
   resolveMatchedIssue,
+  serializeIssueDiscovery,
   syncIssueProjections,
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"

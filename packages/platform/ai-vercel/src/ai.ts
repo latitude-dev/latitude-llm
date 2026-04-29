@@ -223,63 +223,70 @@ export const createProviderModel = (
 export const AIGenerateLive = Layer.effect(
   AIGenerate,
   Effect.gen(function* () {
+    const generate = Effect.fn("ai.generate")(function* <T>(input: GenerateInput<T>) {
+      yield* Effect.annotateCurrentSpan("ai.provider", input.provider)
+      yield* Effect.annotateCurrentSpan("ai.model", input.model)
+      if (input.telemetry?.spanName !== undefined) {
+        yield* Effect.annotateCurrentSpan("ai.telemetry.span_name", input.telemetry.spanName)
+      }
+
+      const providerModel = yield* createProviderModel(input.provider, input.model)
+
+      return yield* Effect.tryPromise({
+        try: async () => {
+          const execute = async () => {
+            const startTime = performance.now()
+            const providerOptions = normalizeProviderOptions(input.providerOptions)
+
+            const call: GenerateTextCall = {
+              model: providerModel,
+              system: input.system,
+              prompt: input.prompt,
+              output: Output.object({ schema: input.schema }),
+              reasoning: input.reasoning ?? "provider-default",
+              maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+              ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
+              ...(input.topP !== undefined ? { topP: input.topP } : {}),
+              ...(input.topK !== undefined ? { topK: input.topK } : {}),
+              ...(input.presencePenalty !== undefined ? { presencePenalty: input.presencePenalty } : {}),
+              ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
+              ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
+              ...(input.seed !== undefined ? { seed: input.seed } : {}),
+              ...(providerOptions !== undefined ? { providerOptions } : {}),
+              experimental_telemetry: {
+                isEnabled: true,
+                tracer: latitudeTracer,
+              },
+            }
+
+            const result = await generateText(call)
+            const usage = result.usage
+
+            return {
+              object: result.output,
+              tokens: usage?.totalTokens ?? 0,
+              tokenUsage: {
+                input: usage?.inputTokens ?? 0,
+                output: usage?.outputTokens ?? 0,
+                ...(usage?.reasoningTokens !== undefined ? { reasoning: usage.reasoningTokens } : {}),
+                ...(usage?.cachedInputTokens !== undefined ? { cacheRead: usage.cachedInputTokens } : {}),
+              },
+              duration: Math.round((performance.now() - startTime) * 1_000_000),
+            } satisfies GenerateResult<T>
+          }
+
+          return await runWithAiTelemetry(input.telemetry, execute)
+        },
+        catch: (error) =>
+          new AIError({
+            message: `AI generation failed (${input.provider}/${input.model}): ${formatGenerateError(error)}`,
+            cause: error,
+          }),
+      })
+    })
+
     return {
-      generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
-        Effect.gen(function* () {
-          const providerModel = yield* createProviderModel(input.provider, input.model)
-
-          return yield* Effect.tryPromise({
-            try: async () => {
-              const execute = async () => {
-                const startTime = performance.now()
-                const providerOptions = normalizeProviderOptions(input.providerOptions)
-
-                const call: GenerateTextCall = {
-                  model: providerModel,
-                  system: input.system,
-                  prompt: input.prompt,
-                  output: Output.object({ schema: input.schema }),
-                  reasoning: input.reasoning ?? "provider-default",
-                  maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-                  ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
-                  ...(input.topP !== undefined ? { topP: input.topP } : {}),
-                  ...(input.topK !== undefined ? { topK: input.topK } : {}),
-                  ...(input.presencePenalty !== undefined ? { presencePenalty: input.presencePenalty } : {}),
-                  ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
-                  ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
-                  ...(input.seed !== undefined ? { seed: input.seed } : {}),
-                  ...(providerOptions !== undefined ? { providerOptions } : {}),
-                  experimental_telemetry: {
-                    isEnabled: true,
-                    tracer: latitudeTracer,
-                  },
-                }
-
-                const result = await generateText(call)
-                const usage = result.usage
-
-                return {
-                  object: result.output,
-                  tokens: usage?.totalTokens ?? 0,
-                  tokenUsage: {
-                    input: usage?.inputTokens ?? 0,
-                    output: usage?.outputTokens ?? 0,
-                    ...(usage?.reasoningTokens !== undefined ? { reasoning: usage.reasoningTokens } : {}),
-                    ...(usage?.cachedInputTokens !== undefined ? { cacheRead: usage.cachedInputTokens } : {}),
-                  },
-                  duration: Math.round((performance.now() - startTime) * 1_000_000),
-                } satisfies GenerateResult<T>
-              }
-
-              return await runWithAiTelemetry(input.telemetry, execute)
-            },
-            catch: (error) =>
-              new AIError({
-                message: `AI generation failed (${input.provider}/${input.model}): ${formatGenerateError(error)}`,
-                cause: error,
-              }),
-          })
-        }),
+      generate,
     } satisfies AIGenerateShape
   }),
 )

@@ -3,23 +3,23 @@ import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
-  draftSystemQueueAnnotationUseCaseMock,
+  draftFlaggerAnnotationUseCaseMock,
   loggerErrorMock,
   loggerInfoMock,
-  persistSystemQueueAnnotationUseCaseMock,
-  runSystemQueueFlaggerUseCaseMock,
+  runFlaggerUseCaseMock,
+  saveFlaggerAnnotationUseCaseMock,
 } = vi.hoisted(() => ({
-  draftSystemQueueAnnotationUseCaseMock: vi.fn(),
+  draftFlaggerAnnotationUseCaseMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
-  persistSystemQueueAnnotationUseCaseMock: vi.fn(),
-  runSystemQueueFlaggerUseCaseMock: vi.fn(),
+  runFlaggerUseCaseMock: vi.fn(),
+  saveFlaggerAnnotationUseCaseMock: vi.fn(),
 }))
 
-vi.mock("@domain/annotation-queues", () => ({
-  draftSystemQueueAnnotationUseCase: draftSystemQueueAnnotationUseCaseMock,
-  persistSystemQueueAnnotationUseCase: persistSystemQueueAnnotationUseCaseMock,
-  runSystemQueueFlaggerUseCase: runSystemQueueFlaggerUseCaseMock,
+vi.mock("@domain/flaggers", () => ({
+  draftFlaggerAnnotationUseCase: draftFlaggerAnnotationUseCaseMock,
+  runFlaggerUseCase: runFlaggerUseCaseMock,
+  saveFlaggerAnnotationUseCase: saveFlaggerAnnotationUseCaseMock,
 }))
 
 vi.mock("@platform/ai", () => ({
@@ -64,13 +64,13 @@ describe("flagger activities", () => {
   })
 
   it("returns flagger result on success", async () => {
-    runSystemQueueFlaggerUseCaseMock.mockReturnValueOnce(Effect.succeed({ matched: true }))
+    runFlaggerUseCaseMock.mockReturnValueOnce(Effect.succeed({ matched: true }))
 
     const result = await runFlagger({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
+      flaggerSlug: "refusal",
     })
 
     expect(result).toEqual({ matched: true })
@@ -79,16 +79,16 @@ describe("flagger activities", () => {
 
   it("propagates AI errors for retry", async () => {
     const providerError = new AIError({
-      message: "AI generation failed (amazon-bedrock/amazon.nova-lite-v1:0): Bedrock throttled the request.",
+      message: "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): Bedrock throttled the request.",
       cause: null,
     })
-    runSystemQueueFlaggerUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
+    runFlaggerUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
 
     const error = await runFlagger({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "refusal",
+      flaggerSlug: "refusal",
     }).catch((thrown) => thrown)
 
     expect(error).toBe(providerError)
@@ -99,13 +99,13 @@ describe("flagger activities", () => {
       message: "AI generation failed",
       cause: null,
     })
-    draftSystemQueueAnnotationUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
+    draftFlaggerAnnotationUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
 
     const error = await draftAnnotate({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
-      queueSlug: "frustration",
+      flaggerSlug: "frustration",
     }).catch((thrown) => thrown)
 
     expect(error).toBe(providerError)

@@ -1,34 +1,51 @@
-import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
-import type {
-  LlmCallRecord,
-  OtlpExportRequest,
-  OtlpKeyValue,
-  OtlpResourceSpans,
-  OtlpSpan,
-  RunRecord,
-  ToolCallRecord,
-} from "./types.ts"
+import type { AttrValue, BuildResult, SpanRecord } from "./span-builder.ts"
+import type { OtlpExportRequest, OtlpKeyValue, OtlpResourceSpans, OtlpSpan } from "./types.ts"
 
 const SCOPE_NAME = "@latitude-data/openclaw-telemetry"
-const SCOPE_VERSION = "0.0.2"
+
+/**
+ * Build-time-baked package version.
+ *
+ * `__SCOPE_VERSION__` is replaced at bundle time by tsdown's `define` (see
+ * `tsdown.config.ts`) with a string literal of `package.json`'s `version`,
+ * so the released bundle ships a constant — no runtime file read.
+ *
+ * Earlier versions read `package.json` at runtime via `readFileSync` to keep
+ * one source of truth for the version. That tripped OpenClaw 2026.4.26's
+ * `plugins.code_safety` scanner with a "potential-exfiltration: File read
+ * combined with network send" warning (we have `fetch(` in `client.ts`).
+ * Build-time bake preserves the single source of truth (the build reads
+ * `package.json` and inlines the value) while keeping the runtime free of
+ * `node:fs`.
+ *
+ * The `typeof` check is a runtime fallback for environments where the
+ * `define` substitution didn't run — chiefly vitest, which executes the
+ * source files directly without going through the build. `typeof` of an
+ * undeclared identifier returns `"undefined"` rather than throwing, which
+ * keeps tests working.
+ */
+declare const __SCOPE_VERSION__: string
+const SCOPE_VERSION = typeof __SCOPE_VERSION__ === "string" ? __SCOPE_VERSION__ : "0.0.0-dev"
 
 interface BuildOptions {
   /**
-   * When false, content attributes are scrubbed from spans:
-   *   - `user_prompt` (interaction)
-   *   - `gen_ai.system_instructions`, `gen_ai.input.messages`,
-   *     `gen_ai.output.messages` (llm_request)
-   *   - `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result` (tool_execution)
-   * Timing, token usage, model name, ids, agent name, and counts are
-   * always emitted regardless of this flag.
+   * When false, attributes whose key ends in `:gated` are scrubbed from
+   * spans before export — that's `gen_ai.input.messages`,
+   * `gen_ai.output.messages`, `gen_ai.system_instructions`, `user_prompt`,
+   * `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`,
+   * `before_compaction.messages`, `before_agent_start.{prompt,messages}`,
+   * `agent_end.messages`, and `openclaw.error.message` (the last because
+   * error strings can leak prompt/response content). Timing, token usage,
+   * model name, ids, agent name, durations, byte counts, and the
+   * `latitude.captured.content` boolean are always emitted.
    */
   allowConversationAccess: boolean
 }
 
 /** Build an OTLP export request for a single completed agent run. */
-export function buildOtlpRequest(run: RunRecord, options: BuildOptions): OtlpExportRequest {
-  const spans = buildRunSpans(run, options)
+export function buildOtlpRequest(result: BuildResult, options: BuildOptions): OtlpExportRequest {
+  const spans = result.spans.map((span) => toOtlpSpan(span, options))
   const rs: OtlpResourceSpans = {
     resource: { attributes: resourceAttrs() },
     scopeSpans: [{ scope: { name: SCOPE_NAME, version: SCOPE_VERSION }, spans }],
@@ -36,347 +53,61 @@ export function buildOtlpRequest(run: RunRecord, options: BuildOptions): OtlpExp
   return { resourceSpans: [rs] }
 }
 
-function buildRunSpans(run: RunRecord, options: BuildOptions): OtlpSpan[] {
-  const traceId = hashHex(`${run.sessionId ?? "session"}:${run.runId}`, 32)
-  const interactionSpanId = hashHex(`${traceId}:run`, 16)
-  const out: OtlpSpan[] = [buildInteractionSpan(traceId, interactionSpanId, run, options)]
+// ─── SpanRecord → OtlpSpan ─────────────────────────────────────────────────
 
-  run.llmCalls.forEach((call, idx) => {
-    const callSpanId = hashHex(`${traceId}:call:${idx}`, 16)
-    out.push(buildLlmSpan(traceId, interactionSpanId, callSpanId, call, idx, run, options))
-    // Tool spans are siblings of the llm_request, parented on the interaction
-    // span so the run timeline renders as: llm → tool → llm → tool → ...
-    call.toolCalls.forEach((tool, tIdx) => {
-      const toolSpanId = hashHex(`${traceId}:call:${idx}:tool:${tIdx}`, 16)
-      out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run, options))
-    })
-  })
-  run.orphanTools.forEach((tool, idx) => {
-    const toolSpanId = hashHex(`${traceId}:orphan-tool:${idx}`, 16)
-    out.push(buildToolSpan(traceId, interactionSpanId, toolSpanId, tool, run, options))
-  })
+function toOtlpSpan(span: SpanRecord, options: BuildOptions): OtlpSpan {
+  const startNs = msToNs(span.startMs)
+  const endNs = msToNs(span.endMs ?? span.startMs)
 
-  return out
-}
+  const attrs: OtlpKeyValue[] = []
+  for (const [rawKey, value] of Object.entries(span.attrs)) {
+    if (value === undefined || value === null) continue
+    const isGated = rawKey.endsWith(":gated")
+    if (isGated && !options.allowConversationAccess) continue
+    const key = isGated ? rawKey.slice(0, -":gated".length) : rawKey
+    const kv = encodeAttr(key, value)
+    if (kv !== undefined) attrs.push(kv)
+  }
 
-function buildInteractionSpan(traceId: string, spanId: string, run: RunRecord, options: BuildOptions): OtlpSpan {
-  const startNs = msToNs(run.startMs)
-  const endNs = msToNs(run.endMs ?? run.startMs)
-  const totalTools = run.llmCalls.reduce((sum, c) => sum + c.toolCalls.length, 0) + run.orphanTools.length
-  const totalUsage = aggregateUsage(run.llmCalls)
+  // Always emit the gate state so operators can see it in the UI without
+  // needing to grep the original config.
+  attrs.push(bool("latitude.captured.content", options.allowConversationAccess))
+  // Mirror duration into the canonical name as well, when present.
+  if (span.endMs !== undefined) {
+    attrs.push(int("openclaw.duration_ms.computed", Math.max(0, span.endMs - span.startMs)))
+  }
 
+  const statusCode = span.outcome === "error" ? 2 : 1
   return {
-    traceId,
-    spanId,
-    parentSpanId: "",
-    name: "interaction",
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    name: span.name,
+    // OTel SpanKind: 1 = INTERNAL. None of agent/model_call/tool_call/
+    // compaction/subagent map cleanly to CLIENT/SERVER/PRODUCER/CONSUMER —
+    // OpenClaw is the source-of-truth runtime for all of them.
     kind: 1,
     startTimeUnixNano: startNs,
     endTimeUnixNano: endNs,
-    attributes: stripUndef([
-      str("span.type", "interaction"),
-      str("interaction.kind", "agent_run"),
-      str("openclaw.run.id", run.runId),
-      run.sessionId ? str("openclaw.session.id", run.sessionId) : undefined,
-      run.sessionId ? str("session.id", run.sessionId) : undefined,
-      run.sessionKey ? str("openclaw.session.key", run.sessionKey) : undefined,
-      run.agentId ? str("openclaw.agent.id", run.agentId) : undefined,
-      run.agentId ? str("openclaw.agent.name", run.agentId) : undefined,
-      run.workspaceDir ? str("openclaw.workspace.dir", run.workspaceDir) : undefined,
-      run.messageProvider ? str("openclaw.message.provider", run.messageProvider) : undefined,
-      run.channelId ? str("openclaw.channel.id", run.channelId) : undefined,
-      run.trigger ? str("openclaw.trigger", run.trigger) : undefined,
-      run.modelProviderId ? str("openclaw.model.provider.id", run.modelProviderId) : undefined,
-      run.modelId ? str("openclaw.model.id", run.modelId) : undefined,
-      int("interaction.duration_ms", durationMs(run.startMs, run.endMs)),
-      int("interaction.call_count", run.llmCalls.length),
-      int("interaction.tool_call_count", totalTools),
-      run.success !== undefined ? bool("openclaw.run.success", run.success) : undefined,
-      run.error ? str("openclaw.run.error", run.error) : undefined,
-      totalUsage.input !== undefined ? int("gen_ai.usage.input_tokens", totalUsage.input) : undefined,
-      totalUsage.output !== undefined ? int("gen_ai.usage.output_tokens", totalUsage.output) : undefined,
-      totalUsage.cacheRead !== undefined
-        ? int("gen_ai.usage.cache_read_input_tokens", totalUsage.cacheRead)
-        : undefined,
-      totalUsage.cacheWrite !== undefined
-        ? int("gen_ai.usage.cache_creation_input_tokens", totalUsage.cacheWrite)
-        : undefined,
-      totalUsage.total !== undefined ? int("gen_ai.usage.total_tokens", totalUsage.total) : undefined,
-      // Surface the first user prompt so the Latitude UI has something
-      // recognisable in the interaction list — only when the operator opted
-      // in to conversation capture.
-      options.allowConversationAccess && run.llmCalls[0]?.prompt
-        ? str("user_prompt", run.llmCalls[0].prompt)
-        : undefined,
-      bool("latitude.captured.content", options.allowConversationAccess),
-    ]),
-    status: { code: run.success === false ? 2 : 1 },
+    attributes: attrs,
+    status: { code: statusCode },
   }
 }
 
-function buildLlmSpan(
-  traceId: string,
-  parentSpanId: string,
-  spanId: string,
-  call: LlmCallRecord,
-  callIdx: number,
-  run: RunRecord,
-  options: BuildOptions,
-): OtlpSpan {
-  const startNs = msToNs(call.startMs)
-  const endNs = msToNs(call.endMs ?? call.startMs)
-
-  const captureContent = options.allowConversationAccess
-  const inputMessages = captureContent ? buildInputMessages(call) : undefined
-  const outputMessages = captureContent ? buildOutputMessages(call) : undefined
-  const systemInstructions =
-    captureContent && call.systemPrompt ? JSON.stringify([{ type: "text", content: call.systemPrompt }]) : undefined
-
-  return {
-    traceId,
-    spanId,
-    parentSpanId,
-    name: "llm_request",
-    kind: 3,
-    startTimeUnixNano: startNs,
-    endTimeUnixNano: endNs,
-    attributes: stripUndef([
-      str("span.type", "llm_request"),
-      str("gen_ai.operation.name", "chat"),
-      str("llm_request.context", "interaction"),
-      int("llm_request.call_index", callIdx),
-      // Provider/model — capture every variant OpenClaw exposes so consumers
-      // can filter on whichever form they already use.
-      str("gen_ai.system", call.provider),
-      str("openclaw.provider", call.provider),
-      str("gen_ai.request.model", call.requestModel),
-      str("model", call.requestModel),
-      call.responseModel ? str("gen_ai.response.model", call.responseModel) : undefined,
-      call.resolvedRef ? str("openclaw.resolved.ref", call.resolvedRef) : undefined,
-      // Identity — the agent name tag the user specifically asked for is here
-      // under both canonical and convenience keys.
-      run.sessionId ? str("session.id", run.sessionId) : undefined,
-      run.sessionKey ? str("openclaw.session.key", run.sessionKey) : undefined,
-      str("openclaw.run.id", call.runId),
-      call.agentId ? str("openclaw.agent.id", call.agentId) : undefined,
-      call.agentId ? str("openclaw.agent.name", call.agentId) : undefined,
-      // Token usage — input / output / cache / total, in both gen_ai.* and
-      // legacy aliases for backwards compatibility with existing dashboards.
-      call.usage?.input !== undefined ? int("gen_ai.usage.input_tokens", call.usage.input) : undefined,
-      call.usage?.input !== undefined ? int("input_tokens", call.usage.input) : undefined,
-      call.usage?.output !== undefined ? int("gen_ai.usage.output_tokens", call.usage.output) : undefined,
-      call.usage?.output !== undefined ? int("output_tokens", call.usage.output) : undefined,
-      call.usage?.cacheRead !== undefined
-        ? int("gen_ai.usage.cache_read_input_tokens", call.usage.cacheRead)
-        : undefined,
-      call.usage?.cacheRead !== undefined ? int("cache_read_tokens", call.usage.cacheRead) : undefined,
-      call.usage?.cacheWrite !== undefined
-        ? int("gen_ai.usage.cache_creation_input_tokens", call.usage.cacheWrite)
-        : undefined,
-      call.usage?.cacheWrite !== undefined ? int("cache_creation_tokens", call.usage.cacheWrite) : undefined,
-      call.usage?.total !== undefined ? int("gen_ai.usage.total_tokens", call.usage.total) : undefined,
-      // Content — system prompt + full message arrays. Gated on
-      // allowConversationAccess. Even when off, we emit the structural
-      // attributes above (model, tokens, ids, agent name).
-      systemInstructions ? str("gen_ai.system_instructions", systemInstructions) : undefined,
-      inputMessages ? str("gen_ai.input.messages", JSON.stringify(inputMessages)) : undefined,
-      outputMessages ? str("gen_ai.output.messages", JSON.stringify(outputMessages)) : undefined,
-      bool("latitude.captured.content", captureContent),
-      // Misc signals.
-      int("openclaw.images.count", call.imagesCount),
-      int("llm_request.tool_call_count", call.toolCalls.length),
-      int("llm_request.duration_ms", durationMs(call.startMs, call.endMs)),
-      call.error ? str("error.type", "llm_error") : undefined,
-      call.error ? str("error.message", call.error) : undefined,
-      str("success", call.error ? "false" : "true"),
-      str("llm_request.captured", "true"),
-    ]),
-    status: { code: call.error ? 2 : 1 },
+function encodeAttr(key: string, value: AttrValue): OtlpKeyValue | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === "string") return str(key, value)
+  if (typeof value === "boolean") return bool(key, value)
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? int(key, value) : { key, value: { doubleValue: value } }
   }
+  // Arrays + objects → JSON string. The Latitude UI parses the gen_ai.* keys
+  // as JSON; anything else lands as opaque string and is queryable as a
+  // contains-substring filter.
+  return str(key, safeJson(value))
 }
 
-function buildToolSpan(
-  traceId: string,
-  parentSpanId: string,
-  spanId: string,
-  tool: ToolCallRecord,
-  run: RunRecord,
-  options: BuildOptions,
-): OtlpSpan {
-  const startNs = msToNs(tool.startMs)
-  const endNs = msToNs(tool.endMs ?? tool.startMs)
-  const isError = Boolean(tool.error)
-  const captureContent = options.allowConversationAccess
-  return {
-    traceId,
-    spanId,
-    parentSpanId,
-    name: `tool:${tool.toolName}`,
-    kind: 1,
-    startTimeUnixNano: startNs,
-    endTimeUnixNano: endNs,
-    attributes: stripUndef([
-      str("span.type", "tool_execution"),
-      str("gen_ai.operation.name", "execute_tool"),
-      str("gen_ai.tool.name", tool.toolName),
-      str("gen_ai.tool.call.id", tool.toolCallId),
-      // Tool args + result are content. Gate on allowConversationAccess —
-      // when off, we still emit the call's name, id, duration, error state,
-      // and agent name so the timeline + counters still work.
-      captureContent ? str("gen_ai.tool.call.arguments", safeJson(tool.params)) : undefined,
-      captureContent && tool.result !== undefined ? str("gen_ai.tool.call.result", safeJson(tool.result)) : undefined,
-      bool("latitude.captured.content", captureContent),
-      isError ? str("error.type", "tool_error") : undefined,
-      isError ? str("error.message", tool.error ?? "") : undefined,
-      bool("tool.is_error", isError),
-      str("success", isError ? "false" : "true"),
-      tool.durationMs !== undefined ? int("tool.duration_ms", tool.durationMs) : undefined,
-      run.sessionId ? str("session.id", run.sessionId) : undefined,
-      run.sessionKey ? str("openclaw.session.key", run.sessionKey) : undefined,
-      str("openclaw.run.id", run.runId),
-      tool.agentId ? str("openclaw.agent.id", tool.agentId) : undefined,
-      tool.agentId ? str("openclaw.agent.name", tool.agentId) : undefined,
-    ]),
-    status: { code: isError ? 2 : 1 },
-  }
-}
-
-// ─── Message shape helpers ──────────────────────────────────────────────────
-//
-// Latitude UI expects `{ role, parts: [{ type, content|... }] }` objects.
-// Build both the input (history + current prompt) and output (assistant + any
-// tool_calls from this call) arrays in that shape, passing through whatever
-// OpenClaw handed us as-is where the shape is already usable.
-
-interface MessagePart {
-  type: string
-  [key: string]: unknown
-}
-
-interface Message {
-  role: "system" | "user" | "assistant" | "tool"
-  parts: MessagePart[]
-}
-
-function buildInputMessages(call: LlmCallRecord): Message[] {
-  const out: Message[] = []
-  // OpenClaw's `historyMessages` is typed `unknown[]`; we trust it enough to
-  // pass through but normalize simple shapes so the Latitude UI has something
-  // to render. Complex objects fall back to a JSON stringification.
-  for (const msg of call.historyMessages) {
-    const normalized = normalizeHistoryMessage(msg)
-    if (normalized) out.push(normalized)
-  }
-  if (call.prompt.length > 0) {
-    out.push({ role: "user", parts: [{ type: "text", content: call.prompt }] })
-  }
-  return out
-}
-
-const ALLOWED_ROLES: ReadonlySet<Message["role"]> = new Set(["system", "user", "assistant", "tool"])
-
-function normalizeRole(raw: unknown): Message["role"] {
-  // Provider adapters occasionally emit roles outside the canonical set
-  // (e.g. OpenAI's "developer"). Coerce unknown roles to "user" so the
-  // downstream Latitude UI gets a payload it can render.
-  if (typeof raw !== "string") return "user"
-  return ALLOWED_ROLES.has(raw as Message["role"]) ? (raw as Message["role"]) : "user"
-}
-
-function normalizeHistoryMessage(raw: unknown): Message | undefined {
-  if (!raw || typeof raw !== "object") return undefined
-  const obj = raw as Record<string, unknown>
-  const role = normalizeRole(obj.role)
-  const content = obj.content ?? obj.text ?? obj.message
-  if (typeof content === "string") {
-    return { role, parts: [{ type: "text", content }] }
-  }
-  if (Array.isArray(content)) {
-    const parts: MessagePart[] = []
-    for (const block of content) {
-      const part = normalizeContentBlock(block)
-      if (part) parts.push(part)
-    }
-    return { role, parts: parts.length > 0 ? parts : [{ type: "text", content: JSON.stringify(content) }] }
-  }
-  // Unknown shape — dump it as JSON so nothing is silently lost.
-  return { role, parts: [{ type: "text", content: safeJson(raw) }] }
-}
-
-function normalizeContentBlock(raw: unknown): MessagePart | undefined {
-  if (typeof raw === "string") return { type: "text", content: raw }
-  if (!raw || typeof raw !== "object") return undefined
-  const obj = raw as Record<string, unknown>
-  const type = typeof obj.type === "string" ? obj.type : "text"
-  if (type === "text" && typeof obj.text === "string") return { type: "text", content: obj.text }
-  if (type === "tool_use") {
-    return {
-      type: "tool_call",
-      id: typeof obj.id === "string" ? obj.id : "",
-      name: typeof obj.name === "string" ? obj.name : "",
-      arguments: obj.input ?? {},
-    }
-  }
-  if (type === "tool_result") {
-    return {
-      type: "tool_call_response",
-      id: typeof obj.tool_use_id === "string" ? obj.tool_use_id : "",
-      response: obj.content ?? "",
-    }
-  }
-  if (type === "image") {
-    return { type: "uri", modality: "image", uri: safeJson(obj.source ?? obj) }
-  }
-  return { type, content: safeJson(raw) }
-}
-
-function buildOutputMessages(call: LlmCallRecord): Message[] {
-  const parts: MessagePart[] = []
-  for (const text of call.assistantTexts) {
-    if (text.length > 0) parts.push({ type: "text", content: text })
-  }
-  // Attach tool_call parts from tools invoked during this call so the output
-  // message reads like the assistant message the model actually produced.
-  for (const tool of call.toolCalls) {
-    parts.push({
-      type: "tool_call",
-      id: tool.toolCallId,
-      name: tool.toolName,
-      arguments: tool.params,
-    })
-  }
-  // Fall back to `lastAssistant` if we have no text/tools (edge case — empty
-  // SSE response, failed run).
-  if (parts.length === 0 && call.lastAssistant !== undefined) {
-    parts.push({ type: "text", content: safeJson(call.lastAssistant) })
-  }
-  return [{ role: "assistant", parts }]
-}
-
-// ─── Utilities ──────────────────────────────────────────────────────────────
-
-function aggregateUsage(calls: LlmCallRecord[]): Required<Partial<import("./types.ts").OpenClawLlmUsage>> {
-  const agg = {
-    input: undefined as number | undefined,
-    output: undefined as number | undefined,
-    cacheRead: undefined as number | undefined,
-    cacheWrite: undefined as number | undefined,
-    total: undefined as number | undefined,
-  }
-  const add = (k: keyof typeof agg, v: number | undefined): void => {
-    if (v === undefined) return
-    agg[k] = (agg[k] ?? 0) + v
-  }
-  for (const c of calls) {
-    if (!c.usage) continue
-    add("input", c.usage.input)
-    add("output", c.usage.output)
-    add("cacheRead", c.usage.cacheRead)
-    add("cacheWrite", c.usage.cacheWrite)
-    add("total", c.usage.total)
-  }
-  return agg as Required<Partial<import("./types.ts").OpenClawLlmUsage>>
-}
+// ─── Resource + helper attribute encoders ──────────────────────────────────
 
 function resourceAttrs(): OtlpKeyValue[] {
   return [
@@ -401,21 +132,8 @@ function bool(key: string, value: boolean): OtlpKeyValue {
   return { key, value: { boolValue: value } }
 }
 
-function stripUndef(items: Array<OtlpKeyValue | undefined>): OtlpKeyValue[] {
-  return items.filter((x): x is OtlpKeyValue => x !== undefined)
-}
-
-function hashHex(input: string, length: number): string {
-  return createHash("sha256").update(input).digest("hex").slice(0, length)
-}
-
 function msToNs(ms: number): string {
   return (BigInt(Math.trunc(ms)) * 1_000_000n).toString()
-}
-
-function durationMs(startMs: number, endMs: number | undefined): number {
-  if (endMs === undefined) return 0
-  return Math.max(0, endMs - startMs)
 }
 
 function safeJson(value: unknown): string {

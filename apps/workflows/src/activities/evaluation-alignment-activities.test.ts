@@ -624,7 +624,7 @@ describe("evaluation-alignment activities", () => {
           })
         }
 
-        expect(input.reasoning).toBe("xhigh")
+        expect(input.reasoning).toBe("high")
         expect(input.prompt).toContain("Current evaluation script:")
         expect(input.prompt).toContain(baselineScript)
 

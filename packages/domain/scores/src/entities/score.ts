@@ -157,22 +157,22 @@ function validateScoreLifecycle(
 }
 
 export const evaluationScoreSchema = baseScoreSchema.extend({
-  source: z.literal("evaluation"), // "evaluation" | "annotation" | "custom"
-  sourceId: cuidSchema, // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
+  source: z.literal("evaluation"),
+  sourceId: cuidSchema, // evaluation cuid that produced this score
   metadata: evaluationScoreMetadataSchema,
 })
 export type EvaluationScore = z.infer<typeof evaluationScoreSchema>
 
 export const annotationScoreSchema = baseScoreSchema.extend({
-  source: z.literal("annotation"), // "evaluation" | "annotation" | "custom"
-  sourceId: annotationScoreSourceIdSchema, // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
+  source: z.literal("annotation"),
+  sourceId: annotationScoreSourceIdSchema, // sentinel `"UI"` / `"API"` / `"SYSTEM"` for drafts and automation, or annotation-queue cuid for queue-authored rows
   metadata: annotationScoreMetadataSchema,
 })
 export type AnnotationScore = z.infer<typeof annotationScoreSchema>
 
 export const customScoreSchema = baseScoreSchema.extend({
-  source: z.literal("custom"), // "evaluation" | "annotation" | "custom"
-  sourceId: scoreSourceIdSchema, // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
+  source: z.literal("custom"),
+  sourceId: scoreSourceIdSchema, // user-supplied tag for custom-source scores
   metadata: customScoreMetadataSchema,
 })
 export type CustomScore = z.infer<typeof customScoreSchema>

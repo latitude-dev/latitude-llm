@@ -514,6 +514,50 @@ describe("discoverIssueUseCase", () => {
     expect(startedWorkflows).toHaveLength(0)
   })
 
+  it("skips a human-authored draft (source = annotation) and does not start any workflow", async () => {
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository } = createFakeIssueRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
+    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
+    const fakeAi = createFakeAI({
+      embed: () => Effect.succeed({ embedding: makeEmbedding() }),
+    })
+    const { workflowStarter, startedWorkflows } = createWorkflowStarter()
+    const humanDraft = makeScore({
+      draftedAt: new Date("2026-03-30T10:30:00.000Z"),
+    })
+    scores.set(humanDraft.id, humanDraft)
+
+    const result = await Effect.runPromise(
+      discoverIssueUseCase({
+        organizationId,
+        projectId,
+        scoreId: humanDraft.id,
+        issueId: null,
+      }).pipe(
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(WorkflowStarter, workflowStarter),
+        Effect.provide(createPassthroughSqlClient(organizationId)),
+        Effect.provide(createPassthroughChSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "DraftScoreNotEligibleForDiscoveryError",
+    })
+    expect(startedWorkflows).toHaveLength(0)
+  })
+
   it("does not write immutable analytics twice when retrying an already-synced assignment", async () => {
     const existingIssue = makeIssue()
     const assignedScore = makeScore({

@@ -17,7 +17,7 @@ import type { ReactNode } from "react"
 import React from "react"
 import { emailDesignTokens, emailTailwindConfig } from "../tokens/design-system.js"
 
-const LATITUDE_LOGO_URL = "https://app.latitude.so/latitude-logo.png"
+const LATITUDE_LOGO_URL = "https://console.latitude.so/latitude-logo.png"
 
 interface ContainerLayoutProps {
   readonly children: ReactNode
@@ -37,13 +37,13 @@ export function ContainerLayout({ children, title, previewText, footer }: Contai
             <Section className="pb-8">
               <Row>
                 <Column align="left">
-                  <Link href="https://app.latitude.so" className="text-center">
+                  <Link href="https://console.latitude.so" className="text-center">
                     <Img src={LATITUDE_LOGO_URL} alt="Latitude's Logo" width="132" height="24" />
                   </Link>
                 </Column>
                 <Column align="right">
                   <Link
-                    href="https://app.latitude.so"
+                    href="https://console.latitude.so"
                     className="inline-block text-center font-medium rounded-lg no-underline text-sm leading-5 bg-white text-foreground border border-border py-[5px] px-3"
                   >
                     Open Latitude

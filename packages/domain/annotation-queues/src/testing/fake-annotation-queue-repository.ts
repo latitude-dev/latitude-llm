@@ -23,9 +23,6 @@ export const createFakeAnnotationQueueRepository = (
         }
       }),
 
-    listSystemQueuesByProject: ({ projectId }) =>
-      Effect.sync(() => [...queues.values()].filter((q) => q.projectId === projectId && q.system && !q.deletedAt)),
-
     listLiveQueuesByProject: ({ projectId }) =>
       Effect.sync(() =>
         [...queues.values()].filter(
@@ -44,14 +41,6 @@ export const createFakeAnnotationQueueRepository = (
       Effect.sync(() => {
         const queue = [...queues.values()].find(
           (q) => q.projectId === projectId && q.slug === queueSlug && !q.deletedAt,
-        )
-        return queue ?? null
-      }),
-
-    findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
-      Effect.sync(() => {
-        const queue = [...queues.values()].find(
-          (q) => q.projectId === projectId && q.slug === queueSlug && q.system && !q.deletedAt,
         )
         return queue ?? null
       }),

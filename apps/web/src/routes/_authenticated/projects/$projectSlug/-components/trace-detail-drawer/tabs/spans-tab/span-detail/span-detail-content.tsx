@@ -74,7 +74,7 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
       {exception?.stacktrace && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Stack Trace</Text.H6>
-          <CodeBlock value={exception.stacktrace} copyable />
+          <CodeBlock value={exception.stacktrace} />
         </div>
       )}
     </div>

@@ -1,9 +1,9 @@
-import { type FilterSet, filterSetSchema } from "@domain/shared"
+import type { FilterSet } from "@domain/shared"
 import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { DatabaseIcon, DownloadIcon, FilterIcon, LayersIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
+import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
@@ -11,7 +11,7 @@ import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
-import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
+import { EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
@@ -19,86 +19,21 @@ import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
+import {
+  DEFAULT_TRACE_COLUMNS,
+  DEFAULT_TRACE_SORTING,
+  getBulkSelection,
+  getSelectedCount,
+  getTimeFilterValue,
+  parseFilters,
+  parseTraceColumnIds,
+  serializeFilters,
+  serializeTraceColumnIds,
+} from "./-components/trace-page-state.ts"
 import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
-import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
-
-const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
-
-function parseFilters(raw?: string): FilterSet {
-  if (!raw) return {}
-  try {
-    let parsed = JSON.parse(raw)
-    // TanStack Router JSON-stringifies search param values. When we store a
-    // pre-serialized JSON string (e.g. '{"startTime":...}'), it becomes
-    // '"{\"startTime\":...}"' in the URL. Unwrap the extra layer if present.
-    if (typeof parsed === "string") {
-      parsed = JSON.parse(parsed)
-    }
-    return filterSetSchema.parse(parsed)
-  } catch {
-    return {}
-  }
-}
-
-function serializeFilters(filters: FilterSet): string | undefined {
-  const keys = Object.keys(filters)
-  return keys.length > 0 ? JSON.stringify(filters) : undefined
-}
-
-function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): string | undefined {
-  const conds = filters.startTime
-  if (!conds) return undefined
-  const match = conds.find((c) => c.op === op)
-  return match ? String(match.value) : undefined
-}
-
-const DEFAULT_TRACE_COLUMNS: TraceColumnId[] = TRACE_COLUMN_OPTIONS.map((column) => column.id)
-
-function parseTraceColumnIds(raw?: string): TraceColumnId[] {
-  const values = raw
-    ?.split(",")
-    .map((value) => value.trim())
-    .filter((value): value is TraceColumnId => TRACE_COLUMN_OPTIONS.some((column) => column.id === value))
-
-  if (!values || values.length === 0) {
-    return [...DEFAULT_TRACE_COLUMNS]
-  }
-
-  return values.includes("startTime") ? values : ["startTime", ...values]
-}
-
-function serializeTraceColumnIds(columnIds: readonly TraceColumnId[]): string {
-  return Array.from(new Set(["startTime", ...columnIds])).join(",")
-}
-
-function getSelectedCount(state: SelectionState<string>, total: number): number {
-  switch (state.mode) {
-    case "all":
-      return total - state.excludedIds.size
-    case "none":
-      return 0
-    case "partial":
-      return state.selectedIds.size
-    case "allExcept":
-      return total - state.excludedIds.size
-  }
-}
-
-function getBulkSelection(state: SelectionState<string>): BulkSelection<string> | null {
-  switch (state.mode) {
-    case "all":
-      return { mode: "all" }
-    case "allExcept":
-      return { mode: "allExcept", rowIds: Array.from(state.excludedIds) }
-    case "partial":
-      return state.selectedIds.size > 0 ? { mode: "selected", rowIds: Array.from(state.selectedIds) } : null
-    case "none":
-      return null
-  }
-}
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
   component: ProjectPage,
@@ -145,7 +80,6 @@ function ProjectPage() {
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [addToQueueOpen, setAddToQueueOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -385,10 +319,6 @@ function ProjectPage() {
             <Icon icon={DatabaseIcon} size="sm" />
             Add to Dataset ({selectedCount})
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
-            <Icon icon={LayersIcon} size="sm" />
-            Add to Annotation Queue ({selectedCount})
-          </Button>
         </div>
       )}
 
@@ -435,16 +365,6 @@ function ProjectPage() {
             projectId={currentProject.id}
             selection={bulkSelection}
             selectedCount={selectedCount}
-            onSuccess={clearSelections}
-          />
-          <AddToQueueModal
-            open={addToQueueOpen}
-            onOpenChange={setAddToQueueOpen}
-            projectId={currentProject.id}
-            projectSlug={projectSlug}
-            selection={bulkSelection}
-            selectedCount={selectedCount}
-            {...(hasActiveFilters ? { filters } : {})}
             onSuccess={clearSelections}
           />
         </>

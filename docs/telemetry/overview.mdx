@@ -3,10 +3,6 @@ title: Telemetry Overview
 description: Connect your LLM stack to Latitude's observability platform with Telemetry. See traces, add scores and annotations, and run evaluations.
 ---
 
-<Warning>
-  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
-</Warning>
-
 Latitude Telemetry instruments your AI application and sends traces to Latitude. Built entirely on **OpenTelemetry**, it works alongside your existing observability stack (Datadog, Sentry, Jaeger, etc.) without conflicts or vendor lock-in.
 
 Once connected, every LLM execution becomes a trace in Latitude that you can inspect in the **Traces** view, enrich with **scores and annotations**, and evaluate with [Evaluations](../evaluations/overview).
@@ -215,5 +211,6 @@ If you already run OpenTelemetry for other backends, you can add `LatitudeSpanPr
 ## Next Steps
 
 - **SDK Reference**: [TypeScript SDK](typescript) · [Python SDK](python)
+- **Other languages**: [OTLP Exporter](otel-exporter) — connect from Go, Java, Ruby, .NET, or any OpenTelemetry-supported language
 - **Understand your data**: [Traces](../observability/traces) · [Sessions](../observability/sessions)
 - **Act on your data**: [Evaluations](../evaluations/overview) · [Annotations](../annotations/overview)

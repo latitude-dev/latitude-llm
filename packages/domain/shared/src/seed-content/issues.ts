@@ -34,7 +34,7 @@ export type SeedIssueFixture = {
   readonly uuid: string
   readonly name: string
   readonly description: string
-  readonly source: "annotation" | "custom" | "flagger"
+  readonly source: "annotation" | "flagger" | "custom"
   readonly createdDaysAgo: number
   readonly clusteredDaysAgo: number
   readonly updatedDaysAgo: number

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, mockActivities } = vi.hoisted(() => {
+const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
   const callOrder: string[] = []
   type MockRetrievalResult = {
     matchedIssueUuid: string | null
@@ -18,9 +18,29 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     issueId: string | null
   }
   type MockAssignmentResult = {
-    action: "created" | "assigned-existing" | "already-assigned"
+    action: "created" | "assigned" | "already-assigned"
     issueId: string
   }
+  type MockSerializeResult =
+    | {
+        status: "serialized"
+        assignment: MockAssignmentResult
+      }
+    | {
+        status: "lock-unavailable"
+      }
+    | {
+        status: "skipped"
+        reason: string
+      }
+  type MockAssignResult =
+    | {
+        status: "assigned"
+        assignment: MockAssignmentResult
+      }
+    | {
+        status: "lock-unavailable"
+      }
 
   const mockActivities = {
     checkEligibility: vi.fn<() => Promise<MockEligibilityResult>>(async () => {
@@ -56,36 +76,45 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         issueId: "issue-1",
       }
     }),
-    createIssueFromScore: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
-      callOrder.push("createIssueFromScore")
+    serializeIssueDiscovery: vi.fn<() => Promise<MockSerializeResult>>(async () => {
+      callOrder.push("serializeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "serialized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     }),
-    assignScoreToIssue: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
+    assignScoreToIssue: vi.fn<() => Promise<MockAssignResult>>(async () => {
       callOrder.push("assignScoreToIssue")
       return {
-        action: "assigned-existing",
-        issueId: "issue-1",
+        status: "assigned" as const,
+        assignment: {
+          action: "assigned",
+          issueId: "issue-1",
+        },
       }
     }),
     syncScoreAnalytics: vi.fn(async () => {
       callOrder.push("syncScoreAnalytics")
     }),
-    syncIssueProjections: vi.fn(async () => {
-      callOrder.push("syncIssueProjections")
-    }),
   }
+
+  const mockSleep = vi.fn(async (durationMs: number) => {
+    callOrder.push(`sleep:${durationMs}`)
+  })
 
   return {
     callOrder,
     mockActivities,
+    mockSleep,
   }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   proxyActivities: () => mockActivities,
+  sleep: mockSleep,
 }))
 
 import { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
@@ -104,7 +133,7 @@ describe("issueDiscoveryWorkflow", () => {
     })
 
     expect(result).toEqual({
-      action: "assigned-existing",
+      action: "assigned",
       issueId: "issue-1",
     })
 
@@ -115,7 +144,6 @@ describe("issueDiscoveryWorkflow", () => {
       "rerankIssueCandidates",
       "resolveMatchedIssue",
       "assignScoreToIssue",
-      "syncIssueProjections",
       "syncScoreAnalytics",
     ])
 
@@ -141,14 +169,10 @@ describe("issueDiscoveryWorkflow", () => {
       issueId: "issue-1",
       normalizedEmbedding: [0.6, 0.8],
     })
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.serializeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
       organizationId: "org-1",
       scoreId: "score-1",
-    })
-    expect(mockActivities.syncIssueProjections).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      issueId: "issue-1",
     })
   })
 
@@ -172,10 +196,9 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.hybridSearchIssues).not.toHaveBeenCalled()
     expect(mockActivities.rerankIssueCandidates).not.toHaveBeenCalled()
     expect(mockActivities.resolveMatchedIssue).not.toHaveBeenCalled()
-    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.serializeIssueDiscovery).not.toHaveBeenCalled()
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
-    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
   })
 
   it("creates a brand-new issue after resolving to no canonical match", async () => {
@@ -192,11 +215,14 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.serializeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("serializeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "serialized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     })
 
@@ -216,8 +242,7 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
-      "syncIssueProjections",
+      "serializeIssueDiscovery",
       "syncScoreAnalytics",
     ])
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
@@ -225,10 +250,11 @@ describe("issueDiscoveryWorkflow", () => {
       projectId: "proj-1",
       matchedIssueUuid: null,
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.serializeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
@@ -241,11 +267,14 @@ describe("issueDiscoveryWorkflow", () => {
         issueId: null,
       }
     })
-    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
-      callOrder.push("createIssueFromScore")
+    mockActivities.serializeIssueDiscovery.mockImplementationOnce(async () => {
+      callOrder.push("serializeIssueDiscovery")
       return {
-        action: "created",
-        issueId: "issue-new",
+        status: "serialized" as const,
+        assignment: {
+          action: "created",
+          issueId: "issue-new",
+        },
       }
     })
 
@@ -265,8 +294,7 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "resolveMatchedIssue",
-      "createIssueFromScore",
-      "syncIssueProjections",
+      "serializeIssueDiscovery",
       "syncScoreAnalytics",
     ])
     expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
@@ -274,12 +302,102 @@ describe("issueDiscoveryWorkflow", () => {
       projectId: "proj-1",
       matchedIssueUuid: "issue-1",
     })
-    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+    expect(mockActivities.serializeIssueDiscovery).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
+      feedback: "token leakage in tool output",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
+  })
+
+  it("retries serialization lock contention with workflow sleeps", async () => {
+    // Pin Math.random so the jitter component of the retry delay is at its minimum (1s) and the asserted
+    // sleep durations stay deterministic. Math.random() is replay-safe inside Temporal workflows.
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
+    try {
+      mockActivities.resolveMatchedIssue.mockImplementationOnce(async () => {
+        callOrder.push("resolveMatchedIssue")
+        return {
+          issueId: null,
+        }
+      })
+      mockActivities.serializeIssueDiscovery
+        .mockImplementationOnce(async () => {
+          callOrder.push("serializeIssueDiscovery")
+          return { status: "lock-unavailable" as const }
+        })
+        .mockImplementationOnce(async () => {
+          callOrder.push("serializeIssueDiscovery")
+          return { status: "lock-unavailable" as const }
+        })
+        .mockImplementationOnce(async () => {
+          callOrder.push("serializeIssueDiscovery")
+          return {
+            status: "serialized" as const,
+            assignment: {
+              action: "assigned" as const,
+              issueId: "issue-1",
+            },
+          }
+        })
+
+      const result = await issueDiscoveryWorkflow({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        scoreId: "score-1",
+      })
+
+      expect(result).toEqual({
+        action: "assigned",
+        issueId: "issue-1",
+      })
+      expect(callOrder).toEqual([
+        "checkEligibility",
+        "embedScoreFeedback",
+        "hybridSearchIssues",
+        "rerankIssueCandidates",
+        "resolveMatchedIssue",
+        "serializeIssueDiscovery",
+        "sleep:2000",
+        "serializeIssueDiscovery",
+        "sleep:3000",
+        "serializeIssueDiscovery",
+        "syncScoreAnalytics",
+      ])
+      expect(mockSleep).toHaveBeenCalledTimes(2)
+    } finally {
+      randomSpy.mockRestore()
+    }
+  })
+
+  it("fails the workflow after exhausting lock-retry attempts", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
+    try {
+      mockActivities.resolveMatchedIssue.mockImplementationOnce(async () => {
+        callOrder.push("resolveMatchedIssue")
+        return { issueId: null }
+      })
+      mockActivities.serializeIssueDiscovery.mockImplementation(async () => {
+        callOrder.push("serializeIssueDiscovery")
+        return { status: "lock-unavailable" as const }
+      })
+
+      await expect(
+        issueDiscoveryWorkflow({
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-1",
+        }),
+      ).rejects.toThrow(/Lock remained unavailable after 18 workflow retries/)
+
+      // 18 attempts, 17 sleeps in between (no sleep after the final attempt).
+      expect(mockActivities.serializeIssueDiscovery).toHaveBeenCalledTimes(18)
+      expect(mockSleep).toHaveBeenCalledTimes(17)
+      expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
+    } finally {
+      randomSpy.mockRestore()
+    }
   })
 })

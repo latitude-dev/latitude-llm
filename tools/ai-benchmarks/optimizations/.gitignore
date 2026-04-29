@@ -1,0 +1,11 @@
+# Per-run audit JSON. Big, regenerable, only useful while iterating; the
+# committed-on-adoption MD report is the durable record.
+*.json
+
+# Per-run MD report. Default-ignored; commit explicitly when you adopt a
+# winner, mirroring the `--update-baseline` discipline.
+*.md
+
+# Operator-curated proposer notes ARE checked in. They're the dev-curated
+# steering input the proposer reads at run start.
+!proposer-notes.md

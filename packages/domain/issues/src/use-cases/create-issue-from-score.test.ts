@@ -1,12 +1,14 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { type AnnotationScore, ScoreRepository } from "@domain/scores"
+import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
+import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
+import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
 
@@ -97,6 +99,10 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -129,6 +135,10 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -176,6 +186,10 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -185,5 +199,62 @@ describe("createIssueFromScoreUseCase", () => {
     })
     expect(issues.size).toBe(0)
     expect(calls.generate).toHaveLength(1)
+  })
+
+  describe("issue.source mapping", () => {
+    const cases = [
+      {
+        scoreSource: "annotation" as const,
+        sourceId: "UI",
+        expected: "annotation" as const,
+      },
+      {
+        scoreSource: "annotation" as const,
+        sourceId: "SYSTEM",
+        expected: "flagger" as const,
+      },
+      {
+        scoreSource: "custom" as const,
+        sourceId: "api-source",
+        expected: "custom" as const,
+      },
+    ]
+
+    for (const { scoreSource, sourceId, expected } of cases) {
+      it(`derives issue.source = "${expected}" from score.source = "${scoreSource}"`, async () => {
+        const { layer: aiLayer } = createFakeAI({
+          generate: createGenerateIssueDetails("name", "description"),
+        })
+        const { repository: scoreRepository, scores } = createFakeScoreRepository()
+        const { repository: issueRepository, issues } = createFakeIssueRepository()
+
+        const baseScore = makeScore()
+        const sourceScore = {
+          ...baseScore,
+          source: scoreSource,
+          sourceId,
+          metadata: scoreSource === "custom" ? {} : { rawFeedback: baseScore.feedback },
+        } as unknown as Score
+        scores.set(sourceScore.id, sourceScore)
+
+        const result = await Effect.runPromise(
+          createIssueFromScoreUseCase({
+            organizationId,
+            projectId,
+            scoreId: sourceScore.id,
+            normalizedEmbedding: makeEmbedding(),
+          }).pipe(
+            Effect.provide(aiLayer),
+            Effect.provideService(ScoreRepository, scoreRepository),
+            Effect.provideService(IssueRepository, issueRepository),
+            Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+          ),
+        )
+
+        expect(result.action).toBe("created")
+        const issue = issues.get(result.issueId)
+        expect(issue?.source).toBe(expected)
+      })
+    }
   })
 })

@@ -96,9 +96,9 @@ describe("createProviderModel", () => {
   it("rewrites already-scoped Bedrock model IDs to the configured AWS geography", async () => {
     process.env.LAT_AWS_REGION = "eu-central-1"
 
-    await Effect.runPromise(createProviderModel("amazon-bedrock", "us.amazon.nova-lite-v1:0"))
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "us.amazon.nova-2-lite-v1:0"))
 
-    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.amazon.nova-lite-v1:0")
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.amazon.nova-2-lite-v1:0")
   })
 
   it("preserves global Bedrock model IDs", async () => {

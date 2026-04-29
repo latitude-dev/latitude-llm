@@ -35,11 +35,11 @@ export const toolCallErrorFixture: LiveSeedFixtureDefinition = {
   key: "tool-call-error",
   description: "Low-cost non-support trace that should deterministically match the Tool Call Errors system queue.",
   sampling: {
-    systemQueueSamples: {
+    flaggerSamples: {
       frustration: false,
     },
   },
-  deterministicSystemMatches: ["tool-call-errors"],
+  deterministicFlaggerMatches: ["tool-call-errors"],
   llmSystemIntents: [],
   generateCase: ({ fixtureKey, rng }) => {
     const scenario = rng.pick(TOOL_SCENARIOS)

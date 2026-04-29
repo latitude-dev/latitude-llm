@@ -18,6 +18,7 @@
   "dependencies": {
     "@domain/annotation-queues": "workspace:*",
     "@domain/evaluations": "workspace:*",
+    "@domain/flaggers": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

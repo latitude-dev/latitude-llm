@@ -17,13 +17,62 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
+const enrichAnnotationForPublicationEffect = Effect.fn("workflows.enrichAnnotationForPublication")(function* (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly scoreId: string
+}) {
+  yield* Effect.annotateCurrentSpan("workflow.organization_id", input.organizationId)
+  yield* Effect.annotateCurrentSpan("workflow.project_id", input.projectId)
+  yield* Effect.annotateCurrentSpan("workflow.score_id", input.scoreId)
+
+  return yield* enrichAnnotationForPublicationUseCase({ scoreId: ScoreId(input.scoreId) })
+})
+
+const writePublishedAnnotationScoreEffect = Effect.fn("workflows.writePublishedAnnotationScore")(function* (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly scoreId: string
+  readonly enrichedFeedback: string | undefined
+  readonly resolvedSessionId: string | null
+  readonly resolvedSpanId: string | null
+}) {
+  yield* Effect.annotateCurrentSpan("workflow.organization_id", input.organizationId)
+  yield* Effect.annotateCurrentSpan("workflow.project_id", input.projectId)
+  yield* Effect.annotateCurrentSpan("workflow.score_id", input.scoreId)
+
+  const scoreRepository = yield* ScoreRepository
+
+  const score = yield* scoreRepository
+    .findById(ScoreId(input.scoreId))
+    .pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
+      ),
+    )
+
+  if (score.source !== "annotation") {
+    return yield* new BadRequestError({
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+    })
+  }
+
+  const toWrite = mergeEnrichmentIntoAnnotationScoreForPublication(score as AnnotationScore, {
+    enrichedFeedback: input.enrichedFeedback ?? score.feedback,
+    resolvedSessionId: input.resolvedSessionId,
+    resolvedSpanId: input.resolvedSpanId,
+  })
+
+  yield* writeScoreUseCase(toWrite)
+})
+
 export const enrichAnnotationForPublication = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
 }) =>
   Effect.runPromise(
-    enrichAnnotationForPublicationUseCase({ scoreId: ScoreId(input.scoreId) }).pipe(
+    enrichAnnotationForPublicationEffect(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive),
@@ -44,31 +93,7 @@ export const writePublishedAnnotationScore = async (input: {
   readonly resolvedSpanId: string | null
 }) =>
   Effect.runPromise(
-    Effect.gen(function* () {
-      const scoreRepository = yield* ScoreRepository
-
-      const score = yield* scoreRepository
-        .findById(ScoreId(input.scoreId))
-        .pipe(
-          Effect.catchTag("NotFoundError", () =>
-            Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
-          ),
-        )
-
-      if (score.source !== "annotation") {
-        return yield* new BadRequestError({
-          message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
-        })
-      }
-
-      const toWrite = mergeEnrichmentIntoAnnotationScoreForPublication(score as AnnotationScore, {
-        enrichedFeedback: input.enrichedFeedback ?? score.feedback,
-        resolvedSessionId: input.resolvedSessionId,
-        resolvedSpanId: input.resolvedSpanId,
-      })
-
-      yield* writeScoreUseCase(toWrite)
-    }).pipe(
+    writePublishedAnnotationScoreEffect(input).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),

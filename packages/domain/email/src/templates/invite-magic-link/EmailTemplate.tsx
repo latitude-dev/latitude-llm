@@ -40,5 +40,5 @@ export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkU
 InviteMagicLinkEmail.PreviewProps = {
   inviterName: "Jordan",
   organizationName: "Acme",
-  magicLinkUrl: "https://app.latitude.so/invite/accept?token=invite-preview",
+  magicLinkUrl: "https://console.latitude.so/invite/accept?token=invite-preview",
 } satisfies InviteMagicLinkEmailProps

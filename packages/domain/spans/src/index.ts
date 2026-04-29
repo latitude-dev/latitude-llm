@@ -57,6 +57,7 @@ export { SpanRepository } from "./ports/span-repository.ts"
 export type {
   NumericRollup,
   TraceDistinctColumn,
+  TraceHistogramMetric,
   TraceListCursor,
   TraceListOptions,
   TraceListPage,
@@ -64,7 +65,13 @@ export type {
   TraceRepositoryShape,
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
-export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
+export {
+  emptyTraceMetrics,
+  emptyTraceTimeHistogramBucket,
+  isTraceHistogramMetric,
+  TRACE_HISTOGRAM_METRICS,
+  TraceRepository,
+} from "./ports/trace-repository.ts"
 export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
 export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type {
