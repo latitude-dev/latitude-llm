@@ -91,8 +91,9 @@ function DeleteProjectModal({
         description: `Project "${project.name}" has been deleted.`,
       })
       if (reloadAfterDelete) {
-        // Force a new route load so server-side beforeLoad bootstrap runs immediately.
-        await router.navigate({ to: "/", replace: true })
+        // `navigate({ to: "/" })` does nothing when already on `/`, so `beforeLoad` never
+        // re-runs and the empty-org → onboarding redirect does not fire. Invalidate instead.
+        await router.invalidate()
         return
       }
       onClose()

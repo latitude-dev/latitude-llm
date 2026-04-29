@@ -1,8 +1,9 @@
 import { Button, Text } from "@repo/ui"
 import { useRouter, useRouterState } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
-import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
-import { createProject } from "../../../domains/projects/projects.functions.ts"
+import { createProjectMutation, useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
+import type { ProjectRecord } from "../../../domains/projects/projects.functions.ts"
+import { getQueryClient } from "../../../lib/data/query-client.tsx"
 
 const PROJECT_ONBOARDING_PATH = /\/projects\/[^/]+\/onboarding\/?$/
 
@@ -39,18 +40,31 @@ export function EnsureOrganizationOnboarding({ organizationId }: { readonly orga
 
     inFlightRef.current = true
     setPhase("bootstrapping")
-    void createProject({ data: { name: "My project" } })
-      .then((created) =>
-        router.navigate({
+
+    void (async () => {
+      try {
+        const queryClient = getQueryClient()
+        const { projectId, transaction } = createProjectMutation("My project")
+        await transaction.isPersisted.promise
+        const list = queryClient.getQueryData<ProjectRecord[]>(["projects"])
+        const slug = list?.find((p) => p.id === projectId)?.slug
+        if (!slug) {
+          setBootstrapError("Could not start onboarding. Create a project from the dashboard or try again.")
+          setPhase("error")
+          inFlightRef.current = false
+          return
+        }
+        await router.navigate({
           to: "/projects/$projectSlug/onboarding",
-          params: { projectSlug: created.slug },
-        }),
-      )
-      .catch(() => {
+          params: { projectSlug: slug },
+          replace: true,
+        })
+      } catch {
         setBootstrapError("Could not start onboarding. Create a project from the dashboard or try again.")
         setPhase("error")
         inFlightRef.current = false
-      })
+      }
+    })()
   }, [isLoading, normalizedPath, organizationId, projects?.length, router])
 
   if (phase === "bootstrapping") {
