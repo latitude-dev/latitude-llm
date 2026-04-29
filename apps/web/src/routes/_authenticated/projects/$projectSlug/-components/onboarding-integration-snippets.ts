@@ -1,17 +1,17 @@
 /**
  * Snippets aligned with public telemetry docs:
- * https://latitude-monitoring.mintlify.app/telemetry/overview
+ * https://docs.latitude.so/telemetry/overview
  * Provider pages under /telemetry/providers/* and frameworks under /telemetry/frameworks/*
- * OTLP exporter: https://latitude-monitoring.mintlify.app/telemetry/otel-exporter
+ * OTLP exporter: https://docs.latitude.so/telemetry/otel-exporter
  *
- * Extra providers (Gemini, Groq, …) match the Mintlify docs nav and
+ * Extra providers (Gemini, Groq, …) match the public telemetry docs nav and
  * `packages/telemetry/python/examples` on main (Python SDK); TypeScript auto-instrumentation
  * for those SDKs is not in `@latitude-data/telemetry` yet — use the Python tab or OpenTelemetry.
  */
 
 export type SdkLanguage = "typescript" | "python"
 
-/** Telemetry providers + frameworks (Mintlify nav order, then frameworks). */
+/** Telemetry providers + frameworks (docs.latitude.so nav order, then frameworks). */
 export type OnboardingProviderId =
   | "openai"
   | "anthropic"
@@ -1166,30 +1166,149 @@ WATSONX_URL=https://us-south.ml.cloud.ibm.com`
   }
 }
 
-export function getEnvBlock(id: OnboardingProviderId, mode: "sdk" | "opentelemetry", projectSlug: string): string {
+/** Latitude SDK + provider keys for the TypeScript / Python tabs (not the OTLP exporter page). */
+export function getEnvBlock(id: OnboardingProviderId, projectSlug: string): string {
   const slugLine = `LATITUDE_PROJECT_SLUG=${projectSlug}`
   const commonSdk = `LATITUDE_API_KEY=your-api-key
 ${slugLine}`
 
-  if (mode === "sdk") {
-    const extra = sdkEnvExtras(id)
-    return extra ? `${commonSdk}\n${extra}` : commonSdk
-  }
-
-  const headers = `Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=${projectSlug}`
-  const otel = `# OTLP over HTTP (see https://latitude-monitoring.mintlify.app/telemetry/otel-exporter)
-OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="${OTLP_TRACES_ENDPOINT}"
-OTEL_EXPORTER_OTLP_TRACES_HEADERS="${headers}"
-
-# In OTEL_EXPORTER_OTLP_TRACES_HEADERS the Authorization value must include the Bearer prefix (see public OTLP docs).
-${commonSdk}`
-
   const extra = sdkEnvExtras(id)
-  return extra ? `${otel}\n\n# Your app still needs provider credentials, for example:\n${extra}` : otel
+  return extra ? `${commonSdk}\n${extra}` : commonSdk
 }
 
-const LATITUDE_DOCS_TELEMETRY_OVERVIEW = "https://latitude-monitoring.mintlify.app/telemetry/overview"
-const LATITUDE_DOCS_TELEMETRY_OTEL = "https://latitude-monitoring.mintlify.app/telemetry/otel-exporter"
+const LATITUDE_DOCS_TELEMETRY_OVERVIEW = "https://docs.latitude.so/telemetry/overview"
+export const LATITUDE_DOCS_TELEMETRY_OTEL = "https://docs.latitude.so/telemetry/otel-exporter"
+
+/** Language SDK examples aligned with https://docs.latitude.so/telemetry/otel-exporter (cURL is separate in the UI). */
+export type OtelExporterLanguageId = "go" | "java" | "ruby" | "dotnet"
+
+export const OTEL_EXPORTER_LANGUAGE_OPTIONS: ReadonlyArray<{
+  readonly id: OtelExporterLanguageId
+  readonly label: string
+}> = [
+  { id: "go", label: "Go" },
+  { id: "java", label: "Java" },
+  { id: "ruby", label: "Ruby" },
+  { id: "dotnet", label: ".NET" },
+]
+
+/**
+ * Curl example from the OTLP exporter docs (`/telemetry/otel-exporter`); project slug prefilled on the header line.
+ */
+export function getOtelCurlVerifySnippet(projectSlug: string): string {
+  return `curl -X POST ${OTLP_TRACES_ENDPOINT} \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "X-Latitude-Project: ${projectSlug}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [{
+          "key": "service.name",
+          "value": { "stringValue": "my-service" }
+        }]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "manual-test" },
+        "spans": [{
+          "traceId": "00000000000000000000000000000001",
+          "spanId": "0000000000000001",
+          "name": "test-span",
+          "kind": 1,
+          "startTimeUnixNano": "1700000000000000000",
+          "endTimeUnixNano": "1700000001000000000",
+          "attributes": [{
+            "key": "gen_ai.system",
+            "value": { "stringValue": "openai" }
+          }]
+        }]
+      }]
+    }]
+  }'`
+}
+
+function goOtelSnippet(projectSlug: string): string {
+  const slug = JSON.stringify(projectSlug)
+  return `import (
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+    "go.opentelemetry.io/otel/sdk/trace"
+)
+
+exporter, err := otlptracehttp.New(ctx,
+    otlptracehttp.WithEndpointURL("${OTLP_TRACES_ENDPOINT}"),
+    otlptracehttp.WithHeaders(map[string]string{
+        "Authorization":      "Bearer " + apiKey,
+        "X-Latitude-Project":   ${slug},
+    }),
+)
+
+provider := trace.NewTracerProvider(trace.WithBatcher(exporter))
+`
+}
+
+function javaOtelSnippet(projectSlug: string): string {
+  const slug = JSON.stringify(projectSlug)
+  return `import io.opentelemetry.exporter.otlp.trace.OtlpHttpSpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+
+OtlpHttpSpanExporter exporter = OtlpHttpSpanExporter.builder()
+    .setEndpoint("${OTLP_TRACES_ENDPOINT}")
+    .addHeader("Authorization", "Bearer " + apiKey)
+    .addHeader("X-Latitude-Project", ${slug})
+    .build();
+
+SdkTracerProvider provider = SdkTracerProvider.builder()
+    .addSpanProcessor(BatchSpanProcessor.builder(exporter).build())
+    .build();
+`
+}
+
+function rubyOtelSnippet(projectSlug: string): string {
+  return `require "opentelemetry-sdk"
+require "opentelemetry-exporter-otlp"
+
+ENV["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = "${OTLP_TRACES_ENDPOINT}"
+ENV["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = "Authorization=Bearer #{api_key},X-Latitude-Project=${projectSlug}"
+
+OpenTelemetry::SDK.configure do |c|
+  c.add_span_processor(
+    OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
+      OpenTelemetry::Exporter::OTLP::Exporter.new
+    )
+  )
+end
+`
+}
+
+function dotnetOtelSnippet(projectSlug: string): string {
+  return `using OpenTelemetry;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Exporter;
+
+var tracerProvider = Sdk.CreateTracerProviderBuilder()
+    .AddOtlpExporter(opt =>
+    {
+        opt.Endpoint = new Uri("${OTLP_TRACES_ENDPOINT}");
+        opt.Headers = "Authorization=Bearer " + apiKey + ",X-Latitude-Project=${projectSlug}";
+        opt.Protocol = OtlpExportProtocol.HttpProtobuf;
+    })
+    .Build();
+`
+}
+
+export function getOtelExporterLanguageSnippet(id: OtelExporterLanguageId, projectSlug: string): string {
+  switch (id) {
+    case "go":
+      return goOtelSnippet(projectSlug)
+    case "java":
+      return javaOtelSnippet(projectSlug)
+    case "ruby":
+      return rubyOtelSnippet(projectSlug)
+    case "dotnet":
+      return dotnetOtelSnippet(projectSlug)
+  }
+}
 
 /**
  * Short paste for coding agents: public telemetry docs, concrete project id (and slug for env), repo-aware setup.

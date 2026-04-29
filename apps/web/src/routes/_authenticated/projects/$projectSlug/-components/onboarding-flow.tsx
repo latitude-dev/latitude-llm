@@ -25,10 +25,15 @@ import {
   getLatitudeTelemetryPyInstallCommand,
   getLatitudeTelemetryTsInstallCommand,
   getOnboardingSnippet,
+  getOtelCurlVerifySnippet,
+  getOtelExporterLanguageSnippet,
   getProviderSdkPyInstallCommand,
   getProviderSdkTsInstallCommand,
+  LATITUDE_DOCS_TELEMETRY_OTEL,
   ONBOARDING_PROVIDER_SNIPPET_CONFIG,
   type OnboardingProviderId,
+  OTEL_EXPORTER_LANGUAGE_OPTIONS,
+  type OtelExporterLanguageId,
   PY_PACKAGE_MANAGERS,
   type PyPackageManager,
   type SdkLanguage,
@@ -199,7 +204,7 @@ function OnboardingPreviewImage({
 
 const OnboardingWaitingLottie = lazy(() => import("./onboarding-waiting-lottie.tsx"))
 
-/** Order matches Mintlify telemetry providers nav, then frameworks (see telemetry/overview). */
+/** Order matches docs.latitude.so telemetry providers, then frameworks (see /telemetry/overview). */
 const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "openai", name: "OpenAI", icon: "openai" },
   { id: "anthropic", name: "Anthropic", icon: "anthropic" },
@@ -223,6 +228,32 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "langchain", name: "LangChain", icon: "generic" },
   { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
 ]
+
+function OtelExporterLanguageChips({
+  active,
+  onSelect,
+}: {
+  readonly active: OtelExporterLanguageId
+  readonly onSelect: (id: OtelExporterLanguageId) => void
+}) {
+  return (
+    <div className="flex flex-row flex-wrap gap-1">
+      {OTEL_EXPORTER_LANGUAGE_OPTIONS.map(({ id, label }) => {
+        const selected = active === id
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onSelect(id)}
+            className={`h-6 cursor-pointer rounded-md border px-2 text-xs font-medium transition-colors ${selected ? "border-primary/30 bg-primary-muted text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 /** Figma-style package manager chips (Latitude Sandbox command pattern). */
 function PackageManagerChips<T extends string>({
@@ -353,7 +384,7 @@ function SdkIntegrationInstructions({
           Set these in your <code className="text-xs">.env</code> or runtime environment. Use a Latitude API key from
           organization settings.
         </Text.H5>
-        <CodeBlock value={getEnvBlock(selectedProviderId, "sdk", slugForSnippets)} copyable />
+        <CodeBlock value={getEnvBlock(selectedProviderId, slugForSnippets)} copyable />
       </div>
 
       {snippet ? (
@@ -384,6 +415,7 @@ export function OnboardingFlow({
   )
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
+  const [otelExporterLanguage, setOtelExporterLanguage] = useState<OtelExporterLanguageId>("go")
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
@@ -670,24 +702,54 @@ export function OnboardingFlow({
                   />
 
                   {integrationPanel === "opentelemetry" ? (
-                    <div className="flex flex-col gap-2">
-                      <Text.H5M>Environment variables</Text.H5M>
-                      <Text.H5 color="foregroundMuted">
-                        Latitude accepts standard OTLP over HTTP at{" "}
-                        <code className="text-xs">https://ingest.latitude.so/v1/traces</code> with{" "}
-                        <code className="text-xs">Authorization: Bearer …</code> and{" "}
-                        <code className="text-xs">X-Latitude-Project</code> (see{" "}
-                        <a
-                          className="text-primary underline-offset-2 hover:underline"
-                          href="https://latitude-monitoring.mintlify.app/telemetry/otel-exporter"
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          OpenTelemetry exporter
-                        </a>
-                        ). Prefer the Latitude SDK when you can; use OTLP for other languages or existing OTel stacks.
-                      </Text.H5>
-                      <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
+                        <Text.H5 color="foregroundMuted">
+                          Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
+                          Successful ingest returns <code className="text-xs">202</code> with{" "}
+                          <code className="text-xs">{"{}"}</code>.
+                        </Text.H5>
+                      </div>
+
+                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+                        <div>
+                          <span className="text-foreground">POST</span>{" "}
+                          <span className="break-all">https://ingest.latitude.so/v1/traces</span>
+                        </div>
+                        <div>
+                          <span className="text-foreground">Authorization:</span> Bearer &lt;api-key&gt;
+                        </div>
+                        <div>
+                          <span className="text-foreground">X-Latitude-Project:</span> &lt;project-slug&gt;
+                        </div>
+                        <div>
+                          <span className="text-foreground">Content-Type:</span> application/json or
+                          application/x-protobuf
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-2">
+                          <Text.H5M>Verify with cURL</Text.H5M>
+                          <Text.H5 color="foregroundMuted">
+                            POST a minimal OTLP JSON trace. Replace <code className="text-xs">YOUR_API_KEY</code> with a
+                            Latitude API key from Settings. Expect <code className="text-xs">202</code> and an empty
+                            JSON body on success. Project slug is prefilled on the header line.
+                          </Text.H5>
+                          <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets)} copyable />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <Text.H5M>Language examples</Text.H5M>
+                          <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
+                          <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
+                          <CodeBlock
+                            value={getOtelExporterLanguageSnippet(otelExporterLanguage, slugForSnippets)}
+                            copyable
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <SdkIntegrationInstructions
