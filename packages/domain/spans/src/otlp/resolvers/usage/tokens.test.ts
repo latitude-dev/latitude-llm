@@ -230,6 +230,27 @@ describe("resolveTokens", () => {
       })
     })
 
+    describe("gen_ai.usage.cache_creation_input_tokens (underscore variant — Anthropic-style OTel exporters, openclaw-telemetry)", () => {
+      // Two spellings exist in the wild for the cache-create token attr:
+      // the dot-separated form (`gen_ai.usage.cache_creation.input_tokens`)
+      // matches the OTEL semconv structure, and the underscore form
+      // (`gen_ai.usage.cache_creation_input_tokens`) matches what
+      // Anthropic-style OTel exporters and openclaw-telemetry emit. Both
+      // must resolve, otherwise cache-write tokens silently drop.
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 10_000),
+        int("gen_ai.usage.output_tokens", 200),
+        int("gen_ai.usage.cache_read_input_tokens", 8_000),
+        int("gen_ai.usage.cache_creation_input_tokens", 1_500),
+      ]
+
+      it("resolves cache_create from the underscore-spelling key", () => {
+        const r = resolveTokens(attrs, "anthropic")
+        expect(r.cacheCreate).toBe(EXPECTED.cacheCreate)
+        expect(r.cacheRead).toBe(EXPECTED.cacheRead)
+      })
+    })
+
     describe("ai.usage.promptTokens (Vercel AI SDK v5)", () => {
       const attrs = [
         int("ai.usage.promptTokens", 10_000),

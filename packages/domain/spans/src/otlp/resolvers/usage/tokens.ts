@@ -23,6 +23,7 @@ const cacheReadCandidates = [
 
 const cacheCreateCandidates = [
   fromInt("gen_ai.usage.cache_creation.input_tokens"),
+  fromInt("gen_ai.usage.cache_creation_input_tokens"), // Anthropic-style OTel exporters (and openclaw-telemetry)
   fromInt("llm.token_count.prompt_details.cache_write"),
   fromInt("ai.usage.inputTokenDetails.cacheWriteTokens"),
   fromInt("cache_creation_tokens"), // Claude Code

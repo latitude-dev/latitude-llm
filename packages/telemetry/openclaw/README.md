@@ -11,8 +11,10 @@ Requires OpenClaw **2026.4.25 or newer**. Get a Latitude API key + project slug 
 ### Step 1 — Install the plugin runtime
 
 ```bash
-openclaw plugins install @latitude-data/openclaw-telemetry
+openclaw plugins install @latitude-data/openclaw-telemetry@0.0.7
 ```
+
+Pin to an exact version. OpenClaw 2026.4.26's `openclaw security audit --deep` warns about unpinned install specs (`Pin install specs to exact versions … for higher supply-chain stability`), so always include the `@<version>` suffix when installing or upgrading.
 
 OpenClaw fetches the package from npm, runs its security scan, copies files into `~/.openclaw/extensions/<id>/`, and creates a (disabled) `plugins.entries["@latitude-data/openclaw-telemetry"]` entry in `~/.openclaw/openclaw.json`. The gateway will print:
 
