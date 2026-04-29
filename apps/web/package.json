@@ -73,7 +73,7 @@
     "agentation": "^3.0.2",
     "dotenv": "catalog:",
     "jsdom": "^29.0.1",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.11",
     "rollup-plugin-visualizer": "^7.0.1",
     "vite": "catalog:",
     "vitest": "catalog:"
