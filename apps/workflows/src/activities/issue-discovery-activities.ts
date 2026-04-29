@@ -9,12 +9,15 @@ import {
   embedScoreFeedbackUseCase,
   type HybridSearchIssuesInput,
   hybridSearchIssuesUseCase,
+  IssueDiscoveryLockUnavailableError,
   isEligibilityError,
   type RerankIssueCandidatesInput,
   type ResolveMatchedIssueInput,
   rerankIssueCandidatesUseCase,
   resolveMatchedIssueUseCase,
+  type SerializeIssueDiscoveryInput,
   type SyncIssueProjectionsInput,
+  serializeIssueDiscoveryUseCase,
   syncIssueProjectionsUseCase,
 } from "@domain/issues"
 import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
@@ -22,6 +25,7 @@ import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
+import { RedisIssueDiscoveryLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
@@ -95,8 +99,37 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
+    ),
+  )
+
+export const serializeIssueDiscovery = async (input: SerializeIssueDiscoveryInput) =>
+  Effect.runPromise(
+    serializeIssueDiscoveryUseCase(input).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
+      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
+      withTracing,
+      Effect.match({
+        onFailure: (error) => {
+          if (error instanceof IssueDiscoveryLockUnavailableError) {
+            return { status: "lock-unavailable" as const }
+          }
+
+          throw error
+        },
+        onSuccess: (result) =>
+          result.action === "skipped"
+            ? { status: "skipped" as const, reason: result.reason }
+            : { status: "serialized" as const, assignment: result },
+      }),
     ),
   )
 
@@ -108,7 +141,19 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withTracing,
+      Effect.match({
+        onFailure: (error) => {
+          if (error instanceof IssueDiscoveryLockUnavailableError) {
+            return { status: "lock-unavailable" as const }
+          }
+
+          throw error
+        },
+        onSuccess: (assignment) => ({ status: "assigned" as const, assignment }),
+      }),
     ),
   )
 

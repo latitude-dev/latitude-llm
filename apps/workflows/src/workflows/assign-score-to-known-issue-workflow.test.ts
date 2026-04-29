@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, mockActivities } = vi.hoisted(() => {
+const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
   const callOrder: string[] = []
   type MockAssignmentResult = {
-    action: "assigned-existing" | "already-assigned" | "created"
+    action: "assigned" | "already-assigned" | "created"
     issueId: string
   }
+  type MockAssignResult =
+    | {
+        status: "assigned"
+        assignment: MockAssignmentResult
+      }
+    | {
+        status: "lock-unavailable"
+      }
 
   const mockActivities = {
     embedScoreFeedback: vi.fn(async () => {
@@ -16,26 +24,31 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         normalizedEmbedding: [0.6, 0.8],
       }
     }),
-    assignScoreToIssue: vi.fn(async (): Promise<MockAssignmentResult> => {
+    assignScoreToIssue: vi.fn(async (): Promise<MockAssignResult> => {
       callOrder.push("assignScoreToIssue")
       return {
-        action: "assigned-existing",
-        issueId: "issue-known",
+        status: "assigned" as const,
+        assignment: {
+          action: "assigned",
+          issueId: "issue-known",
+        },
       }
-    }),
-    syncIssueProjections: vi.fn(async () => {
-      callOrder.push("syncIssueProjections")
     }),
     syncScoreAnalytics: vi.fn(async () => {
       callOrder.push("syncScoreAnalytics")
     }),
   }
 
-  return { callOrder, mockActivities }
+  const mockSleep = vi.fn(async (durationMs: number) => {
+    callOrder.push(`sleep:${durationMs}`)
+  })
+
+  return { callOrder, mockActivities, mockSleep }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   proxyActivities: () => mockActivities,
+  sleep: mockSleep,
 }))
 
 import { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
@@ -55,16 +68,11 @@ describe("assignScoreToKnownIssueWorkflow", () => {
     })
 
     expect(result).toEqual({
-      action: "assigned-existing",
+      action: "assigned",
       issueId: "issue-known",
     })
 
-    expect(callOrder).toEqual([
-      "embedScoreFeedback",
-      "assignScoreToIssue",
-      "syncIssueProjections",
-      "syncScoreAnalytics",
-    ])
+    expect(callOrder).toEqual(["embedScoreFeedback", "assignScoreToIssue", "syncScoreAnalytics"])
 
     expect(mockActivities.embedScoreFeedback).toHaveBeenCalledWith({
       organizationId: "org-1",
@@ -78,13 +86,10 @@ describe("assignScoreToKnownIssueWorkflow", () => {
       issueId: "issue-known",
       normalizedEmbedding: [0.6, 0.8],
     })
-    expect(mockActivities.syncIssueProjections).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      issueId: "issue-known",
-    })
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
       organizationId: "org-1",
       scoreId: "score-1",
     })
+    expect(mockSleep).not.toHaveBeenCalled()
   })
 })

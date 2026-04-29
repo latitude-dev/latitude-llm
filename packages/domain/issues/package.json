@@ -23,6 +23,7 @@
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/scores": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },

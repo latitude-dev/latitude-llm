@@ -21,6 +21,7 @@ export {
   hybridSearchIssues,
   rerankIssueCandidates,
   resolveMatchedIssue,
+  serializeIssueDiscovery,
   syncIssueProjections,
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"

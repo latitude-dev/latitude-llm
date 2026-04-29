@@ -7,8 +7,10 @@ import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
+import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
+import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
+import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -79,6 +81,10 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
   return sqlClient
 }
 
+const passthroughLockRepository = {
+  withLock: <A, E, R>(_input: unknown, effect: Effect.Effect<A, E, R>) => effect,
+}
+
 describe("assignScoreToIssueUseCase", () => {
   it("assigns to an existing issue and requests async refresh", async () => {
     const existingIssue = makeIssue()
@@ -105,11 +111,16 @@ describe("assignScoreToIssueUseCase", () => {
             }),
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
     expect(result).toEqual({
-      action: "assigned-existing",
+      action: "assigned",
       issueId: existingIssue.id,
     })
     expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
@@ -133,8 +144,9 @@ describe("assignScoreToIssueUseCase", () => {
     const existingIssue = makeIssue()
     const lockCalls: string[] = []
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    // findById is allowed (the post-tx projection sync legitimately uses it); we only assert that
+    // findByIdForUpdate is what gates the centroid recompute path.
     const { repository: issueRepository } = createFakeIssueRepository([existingIssue], {
-      findById: () => Effect.die("assignScoreToIssueUseCase should not use unlocked issue reads"),
       findByIdForUpdate: (id) => {
         lockCalls.push(id)
         return Effect.succeed(existingIssue)
@@ -155,6 +167,11 @@ describe("assignScoreToIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -189,6 +206,11 @@ describe("assignScoreToIssueUseCase", () => {
             }),
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -238,6 +260,11 @@ describe("assignScoreToIssueUseCase", () => {
             }),
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
       ),
     )
 
@@ -270,6 +297,11 @@ describe("assignScoreToIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+        Effect.provideService(
+          IssueProjectionRepository,
+          createFakeIssueProjectionRepository({ organizationId }).service,
+        ),
         Effect.match({
           onFailure: (error) => error,
           onSuccess: () => {

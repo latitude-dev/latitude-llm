@@ -1,5 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
+import { runWithLockRetry } from "./lock-retry.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 const {
@@ -8,9 +9,8 @@ const {
   hybridSearchIssues,
   rerankIssueCandidates,
   resolveMatchedIssue,
-  createIssueFromScore,
+  serializeIssueDiscovery,
   assignScoreToIssue,
-  syncIssueProjections,
   syncScoreAnalytics,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
@@ -47,28 +47,38 @@ export const issueDiscoveryWorkflow = async (input: {
     matchedIssueUuid: retrieval.matchedIssueUuid,
   })
 
-  const assignment =
+  const result =
     matchedIssue.issueId === null
-      ? await createIssueFromScore({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          scoreId: input.scoreId,
-          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-        })
-      : await assignScoreToIssue({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          scoreId: input.scoreId,
-          issueId: matchedIssue.issueId,
-          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-        })
+      ? await runWithLockRetry(() =>
+          serializeIssueDiscovery({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            scoreId: input.scoreId,
+            feedback: embeddedScoreFeedback.feedback,
+            normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+          }),
+        )
+      : await runWithLockRetry(() =>
+          assignScoreToIssue({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            scoreId: input.scoreId,
+            issueId: matchedIssue.issueId!,
+            normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+          }),
+        )
 
-  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
+  if (result.status === "skipped") {
+    return { action: "skipped" as const, reason: result.reason }
+  }
 
   await syncScoreAnalytics({
     organizationId: input.organizationId,
     scoreId: input.scoreId,
   })
 
-  return { action: assignment.action, issueId: assignment.issueId }
+  return {
+    action: result.assignment.action,
+    issueId: result.assignment.issueId,
+  }
 }
