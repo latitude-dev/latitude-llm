@@ -35,7 +35,7 @@ createBullBoard({
   serverAdapter,
 })
 
-// Basic authentication middleware
+// Basic authentication middleware.
 const basicAuth = (
   req: express.Request,
   res: express.Response,
