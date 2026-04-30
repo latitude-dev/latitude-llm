@@ -31,7 +31,6 @@ import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
   return seedDateDaysAgo(daysAgo, hour, minute)
 }

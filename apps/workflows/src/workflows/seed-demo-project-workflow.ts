@@ -43,6 +43,14 @@ export interface SeedDemoProjectWorkflowInput {
    */
   readonly queueAssigneeUserIds: readonly string[]
   /**
+   * The target org's existing default api key. Threaded through so seeded
+   * ClickHouse spans reference a key that actually exists on the org —
+   * rather than `SEED_API_KEY_ID` (the canonical seed org's key, invalid
+   * on every other org). Picked in the request handler too, before the
+   * workflow starts, so replays see a stable value.
+   */
+  readonly apiKeyId: string
+  /**
    * Captured at workflow-start time so all three datastores' seeded rows
    * pin to the same "now". A fresh `new Date()` per activity would drift
    * across retries.

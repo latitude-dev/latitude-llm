@@ -1,5 +1,5 @@
 import { normalizeIssueCentroid } from "@domain/issues"
-import { closePostgres, createPostgresClient } from "@platform/db-postgres"
+import { and, closePostgres, createPostgresClient, eq } from "@platform/db-postgres"
 import { issues as pgIssues } from "@platform/db-postgres/schema/issues"
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
@@ -25,9 +25,17 @@ const seedIssues: Seeder = {
           ctx.client,
         )
         try {
-          const seededIssueRows = (await postgresClient.db.select().from(pgIssues)).filter(
-            (row) => row.organizationId === ctx.scope.organizationId && row.projectId === ctx.scope.projectId,
-          )
+          // Push the (org, project) predicate into SQL — without it the
+          // runtime demo-project workflow scans the entire `latitude.issues`
+          // table just to filter in-memory, which gets ugly as the workspace
+          // grows. Drizzle's `eq` infers the branded id type from the column,
+          // so no casts needed.
+          const seededIssueRows = await postgresClient.db
+            .select()
+            .from(pgIssues)
+            .where(
+              and(eq(pgIssues.organizationId, ctx.scope.organizationId), eq(pgIssues.projectId, ctx.scope.projectId)),
+            )
 
           for (const row of seededIssueRows) {
             const vector = normalizeIssueCentroid(row.centroid)

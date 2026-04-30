@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { CUID_LENGTH, type OrganizationId, type ProjectId } from "./id.ts"
+import { type ApiKeyId, CUID_LENGTH, type OrganizationId, type ProjectId } from "./id.ts"
 
 /**
  * Per-project seeding context.
@@ -33,6 +33,16 @@ export interface SeedScope {
   readonly projectId: ProjectId
   readonly timelineAnchor: Date
   readonly queueAssigneeUserIds: readonly string[]
+  /**
+   * The api key id seeded ClickHouse spans should reference. Bootstrap
+   * scope passes `SEED_API_KEY_ID` (the canonical seed org's default
+   * key); the runtime demo path passes the target org's existing
+   * default key — picked in the request handler so the workflow input
+   * is fully deterministic, and so demo telemetry shows up alongside
+   * real traffic in usage views instead of dangling on a non-existent
+   * key.
+   */
+  readonly apiKeyId: ApiKeyId
 
   /** 24-char CUID-shaped id, stable per `(projectId, key)`. */
   cuid(key: string): string
@@ -62,6 +72,7 @@ export interface CreateSeedScopeInput {
   readonly projectId: ProjectId
   readonly timelineAnchor: Date
   readonly queueAssigneeUserIds: readonly string[]
+  readonly apiKeyId: ApiKeyId
   readonly overrides?: SeedScopeOverrides
 }
 
@@ -105,12 +116,13 @@ const deriveSpanHex = (projectId: string, key: string, index: number): string =>
  * no collisions, just an id that differs from any pre-existing literal).
  */
 export const createSeedScope = (input: CreateSeedScopeInput): SeedScope => {
-  const { organizationId, projectId, timelineAnchor, queueAssigneeUserIds, overrides } = input
+  const { organizationId, projectId, timelineAnchor, queueAssigneeUserIds, apiKeyId, overrides } = input
   return {
     organizationId,
     projectId,
     timelineAnchor,
     queueAssigneeUserIds,
+    apiKeyId,
     cuid: (key) => overrides?.cuid?.(key) ?? deriveCuid(projectId, key),
     uuid: (key) => overrides?.uuid?.(key) ?? deriveUuid(projectId, key),
     traceHex: (key, index = 0) => overrides?.traceHex?.(key, index) ?? deriveTraceHex(projectId, key, index),

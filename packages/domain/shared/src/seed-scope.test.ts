@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CUID_LENGTH, OrganizationId, ProjectId } from "./id.ts"
+import { ApiKeyId, CUID_LENGTH, OrganizationId, ProjectId } from "./id.ts"
 import { createSeedScope } from "./seed-scope.ts"
 
 const baseInput = {
@@ -7,6 +7,7 @@ const baseInput = {
   projectId: ProjectId("project-test"),
   timelineAnchor: new Date("2025-01-01T00:00:00.000Z"),
   queueAssigneeUserIds: ["user-test"] as const,
+  apiKeyId: ApiKeyId("apikey-test"),
 }
 
 describe("createSeedScope — derivation", () => {

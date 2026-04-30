@@ -2,6 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { createProject, ProjectRepository } from "@domain/projects"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import {
+  type ApiKeyId,
   ConflictError,
   generateId,
   type OrganizationId,
@@ -123,6 +124,22 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
   }
 
   const queueAssigneeUserId = pickedMember.user.id as UserId
+
+  // Pull the org's existing default api key so the seeded ClickHouse
+  // spans reference a key that actually exists on the target org. With
+  // out this, telemetry rows would point at `SEED_API_KEY_ID` (the
+  // canonical seed org's key, invalid on every other org) and any UI
+  // that filters by `api_key_id` would drop them. Fail loud for orgs
+  // with no api keys — that's a degenerate state, not something to
+  // silently work around.
+  const apiKeyId = yield* adminRepo.findFirstApiKeyId(input.organizationId)
+  if (apiKeyId === null) {
+    return yield* new ValidationError({
+      field: "organizationId",
+      message: "Cannot seed a demo project for an organization with no api keys",
+    })
+  }
+
   const result = yield* writeDemoProjectRow({
     organizationId: input.organizationId,
     actorAdminUserId: input.actorAdminUserId,
@@ -142,6 +159,7 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
     organizationId: input.organizationId,
     projectId: result.projectId,
     queueAssigneeUserIds: [queueAssigneeUserId],
+    apiKeyId,
     timelineAnchorIso: new Date().toISOString(),
   })
 
@@ -154,6 +172,7 @@ const startSeedDemoProjectWorkflow = (
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly queueAssigneeUserIds: readonly UserId[]
+    readonly apiKeyId: ApiKeyId
     readonly timelineAnchorIso: string
   },
 ) =>
@@ -163,6 +182,7 @@ const startSeedDemoProjectWorkflow = (
       organizationId: input.organizationId,
       projectId: input.projectId,
       queueAssigneeUserIds: input.queueAssigneeUserIds,
+      apiKeyId: input.apiKeyId,
       timelineAnchorIso: input.timelineAnchorIso,
     },
     {

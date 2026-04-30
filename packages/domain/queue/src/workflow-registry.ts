@@ -44,6 +44,7 @@ const _registry = {
     readonly organizationId: string
     readonly projectId: string
     readonly queueAssigneeUserIds: readonly string[]
+    readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
 }

@@ -1,7 +1,7 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type Project, ProjectRepository } from "@domain/projects"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
-import { type OrganizationId, ProjectId, SqlClient, type UserId } from "@domain/shared"
+import { type ApiKeyId, type OrganizationId, ProjectId, SqlClient, type UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -66,7 +66,9 @@ interface FakeWorld {
   readonly workflows: StartedWorkflow[]
 }
 
-const buildLayer = (org: AdminOrganizationDetails) => {
+const FAKE_API_KEY_ID = "apikeyxxxxxxxxxxxxxxxxxxx" as ApiKeyId
+
+const buildLayer = (org: AdminOrganizationDetails, apiKeyId: ApiKeyId | null = FAKE_API_KEY_ID) => {
   const world: FakeWorld = {
     outbox: [],
     savedProjects: [],
@@ -76,6 +78,7 @@ const buildLayer = (org: AdminOrganizationDetails) => {
 
   const adminRepo = Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.succeed(org),
+    findFirstApiKeyId: () => Effect.succeed(apiKeyId),
   })
 
   // The use-case only calls `save` + `existsBySlug`; cast through the full
@@ -162,7 +165,31 @@ describe("createDemoProjectUseCase", () => {
       organizationId: ORG_ID,
       projectId: saved.id,
       queueAssigneeUserIds: [result.queueAssigneeUserId],
+      apiKeyId: FAKE_API_KEY_ID,
     })
+  })
+
+  it("fails with ValidationError when the org has no api keys", async () => {
+    // The seeded ClickHouse spans need a real `api_key_id` from the
+    // target org so they round-trip through analytics views correctly.
+    // Empty-key orgs surface as a degenerate "no default key" state and
+    // we fail loud rather than silently writing spans with an empty key.
+    const org = mkOrg()
+    const { layer, world } = buildLayer(org, null)
+
+    await expect(
+      Effect.runPromise(
+        createDemoProjectUseCase({
+          organizationId: ORG_ID,
+          projectName: "Demo",
+          actorAdminUserId: ADMIN_ID,
+        }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toMatchObject({ _tag: "ValidationError", field: "organizationId" })
+
+    expect(world.savedProjects).toHaveLength(0)
+    expect(world.outbox).toHaveLength(0)
+    expect(world.workflows).toHaveLength(0)
   })
 
   it("fails with ConflictError when a project with the same name already exists in the org", async () => {

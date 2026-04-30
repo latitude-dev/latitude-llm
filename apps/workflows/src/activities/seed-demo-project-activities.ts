@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { ApiKeyId, OrganizationId, ProjectId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import { seedDemoProjectClickHouse } from "@platform/db-clickhouse"
 import { seedDemoProjectPostgres } from "@platform/db-postgres"
@@ -7,9 +7,9 @@ import { getClickhouseClient, getPostgresClient, getWeaviateClient } from "../cl
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
- * must be deterministic across replays, so the random queue assignee is
- * picked in the request handler (server function → use-case) and threaded
- * through here as an array.
+ * must be deterministic across replays, so the random queue assignee +
+ * api-key lookup happen in the request handler (server function →
+ * use-case) and arrive here as plain strings.
  *
  * `timelineAnchorIso` is captured at workflow-start time so all three
  * datastores end up with seeded rows pinned to the same "now". Using
@@ -19,6 +19,7 @@ export interface SeedDemoProjectActivityInput {
   readonly organizationId: string
   readonly projectId: string
   readonly queueAssigneeUserIds: readonly string[]
+  readonly apiKeyId: string
   readonly timelineAnchorIso: string
 }
 
@@ -28,6 +29,7 @@ const buildScope = (input: SeedDemoProjectActivityInput): SeedScope =>
     projectId: ProjectId(input.projectId),
     timelineAnchor: new Date(input.timelineAnchorIso),
     queueAssigneeUserIds: [...input.queueAssigneeUserIds],
+    apiKeyId: ApiKeyId(input.apiKeyId),
   })
 
 /**

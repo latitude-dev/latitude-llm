@@ -21,6 +21,7 @@ import {
   SEED_ANNOTATION_QUEUE_LIVE_ID,
   SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
   SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+  SEED_API_KEY_ID,
   SEED_BILLING_ISSUE_ID,
   SEED_BILLING_ISSUE_UUID,
   SEED_COMBINATION_EVALUATION_ID,
@@ -262,6 +263,7 @@ export const bootstrapSeedScope: SeedScope = createSeedScope({
   projectId: SEED_PROJECT_ID,
   timelineAnchor: SEED_TIMELINE_ANCHOR,
   queueAssigneeUserIds: [...SEED_MANUAL_QUEUE_ASSIGNEES],
+  apiKeyId: SEED_API_KEY_ID,
   overrides: {
     cuid: resolveBootstrapCuid,
     uuid: (key) => BOOTSTRAP_UUID_OVERRIDES[key],

@@ -1,4 +1,4 @@
-import { SEED_API_KEY_ID, type SeedScope, TraceId } from "@domain/shared/seeding"
+import { type SeedScope, TraceId } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
@@ -16,7 +16,7 @@ const defaultSpansSeedConfig = (scope: SeedScope): TraceConfig => {
     timeWindow: { from: thirtyDaysAgo, to: now },
     organizationId: scope.organizationId,
     projectId: scope.projectId,
-    apiKeyId: SEED_API_KEY_ID,
+    apiKeyId: scope.apiKeyId,
   }
 }
 

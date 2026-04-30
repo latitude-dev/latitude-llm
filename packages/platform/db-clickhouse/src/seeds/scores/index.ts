@@ -23,7 +23,6 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
 
-
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string {
   return seedTimestampDaysAgo(daysAgo, hour, minute)
 }
