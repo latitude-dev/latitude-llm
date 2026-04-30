@@ -6,22 +6,44 @@ import {
   type IssueCentroid,
   updateIssueCentroid,
 } from "@domain/issues"
-import { SEED_ISSUE_FIXTURES, SEED_ORG_ID, SEED_PROJECT_ID, seedDateDaysAgo } from "@domain/shared/seeding"
+import { IssueId } from "@domain/shared"
+import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { VoyageAIClient } from "voyageai"
 import { issues } from "../../schema/issues.ts"
-import { issueLinkedScoreSeedRows } from "../scores/index.ts"
+import { buildIssueLinkedScoreSeedRows } from "../scores/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const require = createRequire(import.meta.url)
 
 const EMBEDDING_BATCH_SIZE = 64
 
-type IssueLinkedScoreSeedRow = (typeof issueLinkedScoreSeedRows)[number]
+type IssueLinkedScoreSeedRow = ReturnType<typeof buildIssueLinkedScoreSeedRows>[number]
 type EmbeddedIssueLinkedScoreSeedRow = IssueLinkedScoreSeedRow & {
   readonly embedding: readonly number[]
 }
+
+const NAMED_ISSUE_KEYS = [
+  "warranty-fab",
+  "combination",
+  "logistics",
+  "returns",
+  "billing",
+  "access",
+  "installation",
+  "flagger",
+] as const
+
+const fixtureScopedId = (index: number, scope: SeedScope): string =>
+  index < NAMED_ISSUE_KEYS.length
+    ? scope.cuid(`issue:${NAMED_ISSUE_KEYS[index]}`)
+    : scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`)
+
+const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
+  index < NAMED_ISSUE_KEYS.length
+    ? scope.uuid(`issue:${NAMED_ISSUE_KEYS[index]}:uuid`)
+    : scope.uuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}:uuid`)
 
 function hashString(input: string): number {
   let hash = 1779033703 ^ input.length
@@ -167,23 +189,28 @@ function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueC
   }
 }
 
-function issueFixtureDates(issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
+function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
   return {
-    createdAt: seedDateDaysAgo(issue.createdDaysAgo, 14, 15),
-    clusteredAt: seedDateDaysAgo(issue.clusteredDaysAgo, 14, 15),
-    updatedAt: seedDateDaysAgo(issue.updatedDaysAgo, 16, 30),
-    escalatedAt: issue.escalatedDaysAgo === null ? null : seedDateDaysAgo(issue.escalatedDaysAgo, 9, 0),
-    resolvedAt: issue.resolvedDaysAgo === null ? null : seedDateDaysAgo(issue.resolvedDaysAgo, 11, 30),
-    ignoredAt: issue.ignoredDaysAgo === null ? null : seedDateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+    createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
+    clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
+    updatedAt: scope.dateDaysAgo(issue.updatedDaysAgo, 16, 30),
+    escalatedAt: issue.escalatedDaysAgo === null ? null : scope.dateDaysAgo(issue.escalatedDaysAgo, 9, 0),
+    resolvedAt: issue.resolvedDaysAgo === null ? null : scope.dateDaysAgo(issue.resolvedDaysAgo, 11, 30),
+    ignoredAt: issue.ignoredDaysAgo === null ? null : scope.dateDaysAgo(issue.ignoredDaysAgo, 13, 10),
   }
 }
 
 function buildIssueRow(input: {
+  readonly scope: SeedScope
   readonly issue: (typeof SEED_ISSUE_FIXTURES)[number]
+  readonly issueId: string
+  readonly issueUuid: string
+  readonly organizationId: string
+  readonly projectId: string
   readonly issueScores: readonly IssueLinkedScoreSeedRow[]
   readonly embeddedIssueScores: readonly EmbeddedIssueLinkedScoreSeedRow[] | null
 }): typeof issues.$inferInsert {
-  const fixtureDates = issueFixtureDates(input.issue)
+  const fixtureDates = issueFixtureDates(input.scope, input.issue)
   const sortedIssueScores = [...input.issueScores].sort(
     (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
   )
@@ -192,7 +219,7 @@ function buildIssueRow(input: {
   const centroid =
     input.embeddedIssueScores && input.embeddedIssueScores.length > 0
       ? buildCentroidFromEmbeddings(input.embeddedIssueScores)
-      : buildRandomFallbackCentroid(input.issue.uuid, lastSeenAt)
+      : buildRandomFallbackCentroid(input.issueUuid, lastSeenAt)
   const createdAt = minDate([fixtureDates.createdAt, firstSeenAt])
   const updatedAt = maxDate(
     [
@@ -205,10 +232,10 @@ function buildIssueRow(input: {
   )
 
   return {
-    id: input.issue.id,
-    uuid: input.issue.uuid,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
+    id: IssueId(input.issueId),
+    uuid: input.issueUuid,
+    organizationId: input.organizationId,
+    projectId: input.projectId,
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
@@ -227,6 +254,8 @@ const seedIssues: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
+        const issueLinkedScoreSeedRows = buildIssueLinkedScoreSeedRows(ctx.scope)
+
         const issueScoresByIssueId = new Map<string, IssueLinkedScoreSeedRow[]>()
         for (const row of issueLinkedScoreSeedRows) {
           const issueId = row.issueId
@@ -245,8 +274,10 @@ const seedIssues: Seeder = {
         const voyageApiKey = Effect.runSync(parseEnvOptional("LAT_VOYAGE_API_KEY", "string"))
         const embeddingsByScoreId =
           voyageApiKey === undefined ? null : await embedIssueFeedbacks(issueLinkedScoreSeedRows, voyageApiKey)
-        const issueRows = SEED_ISSUE_FIXTURES.map((issue) => {
-          const issueScores = issueScoresByIssueId.get(issue.id) ?? []
+        const issueRows = SEED_ISSUE_FIXTURES.map((issue, index) => {
+          const issueId = fixtureScopedId(index, ctx.scope)
+          const issueUuid = fixtureScopedUuid(index, ctx.scope)
+          const issueScores = issueScoresByIssueId.get(issueId) ?? []
           const embeddedIssueScores =
             embeddingsByScoreId === null
               ? null
@@ -263,7 +294,12 @@ const seedIssues: Seeder = {
                 })
 
           return buildIssueRow({
+            scope: ctx.scope,
             issue,
+            issueId,
+            issueUuid,
+            organizationId: ctx.scope.organizationId,
+            projectId: ctx.scope.projectId,
             issueScores,
             embeddedIssueScores,
           })

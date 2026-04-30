@@ -50,3 +50,28 @@ export class QueueClientError extends Data.TaggedError("QueueClientError")<{
     this.message = `Queue client not connectable: ${toCauseMessage(args.cause)}`
   }
 }
+
+/**
+ * Surfaced by `WorkflowStarter.start` when a workflow with the same
+ * `workflowId` is already running. Callers that use `workflowId` as an
+ * idempotency key (e.g. retries against a record-creating server function)
+ * can catch this error and treat it as success — the underlying intent
+ * ("a workflow with this id should be running") is already satisfied.
+ *
+ * Callers that consider duplicate starts a real failure (very rare) can
+ * let it propagate as a `RepositoryError`-shaped tagged failure.
+ */
+export class WorkflowAlreadyStartedError extends Data.TaggedError("WorkflowAlreadyStartedError")<{
+  readonly workflowId: string
+  readonly workflow: string
+}> {
+  readonly httpStatus = 409
+  get httpMessage() {
+    return `Workflow "${this.workflow}" already running for id ${this.workflowId}`
+  }
+
+  constructor(args: { readonly workflowId: string; readonly workflow: string }) {
+    super(args)
+    this.message = `Workflow "${args.workflow}" already running for id ${args.workflowId}`
+  }
+}

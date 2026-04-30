@@ -1,9 +1,10 @@
 import { inspect } from "node:util"
-import type {
-  WorkflowDescription,
-  WorkflowExecutionStatus,
-  WorkflowQuerierShape,
-  WorkflowStarterShape,
+import {
+  WorkflowAlreadyStartedError,
+  type WorkflowDescription,
+  type WorkflowExecutionStatus,
+  type WorkflowQuerierShape,
+  type WorkflowStarterShape,
 } from "@domain/queue"
 import { createLogger } from "@repo/observability"
 import type { WorkflowExecutionStatusName } from "@temporalio/client"
@@ -214,15 +215,21 @@ export function createWorkflowQuerier(client: Client): WorkflowQuerierShape {
 export function createWorkflowStarter(client: Client, config: TemporalConfig): WorkflowStarterShape {
   return {
     start: (workflow, input, options) =>
+      // `workflowId` is the dedupe key (analogous to BullMQ's `dedupeKey`).
+      // FAIL makes a duplicate start against a *running* workflow raise
+      // `WorkflowExecutionAlreadyStartedError` deterministically, and
+      // ALLOW_DUPLICATE lets a start against a *closed* workflow open a
+      // fresh run (so retries and subsequent refresh cycles keep working).
+      //
+      // We translate the duplicate-start exception into the tagged
+      // `WorkflowAlreadyStartedError` from `@domain/queue` so callers
+      // that use `workflowId` as an idempotency key (retried server fns
+      // against record-creating use-cases) can recover via
+      // `Effect.catchTag` instead of catching a Temporal-typed
+      // exception. Real failures (network, permission, etc.) still
+      // propagate as defects via `Effect.promise`.
       Effect.promise(async () => {
         try {
-          // `workflowId` is the dedupe key (analogous to BullMQ's `dedupeKey`).
-          // FAIL makes a duplicate start against a *running* workflow raise
-          // `WorkflowExecutionAlreadyStartedError` deterministically, and
-          // ALLOW_DUPLICATE lets a start against a *closed* workflow open a
-          // fresh run (so retries and subsequent refresh cycles keep working).
-          // We log the duplicate-start case for observability and then rethrow
-          // — callers must never confuse a deduped call with a fresh start.
           const handle = await client.workflow.start(workflow, {
             workflowId: options.workflowId,
             taskQueue: config.taskQueue,
@@ -235,16 +242,24 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
             workflowId: options.workflowId,
             runId: handle.firstExecutionRunId,
           })
+          return { kind: "started" as const }
         } catch (error) {
           if (error instanceof WorkflowExecutionAlreadyStartedError) {
             logger.info("workflow already started", {
               workflow,
               workflowId: options.workflowId,
             })
+            return { kind: "already-started" as const }
           }
           throw error
         }
-      }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          result.kind === "already-started"
+            ? Effect.fail(new WorkflowAlreadyStartedError({ workflow, workflowId: options.workflowId }))
+            : Effect.void,
+        ),
+      ),
     signalWithStart: (workflow, input, options) =>
       Effect.promise(async () => {
         // `signalWithStart` is idempotent against running workflows: Temporal

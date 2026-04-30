@@ -1,22 +1,12 @@
 import type { EvaluationAlignment, EvaluationTrigger } from "@domain/evaluations"
+import { EvaluationId, IssueId } from "@domain/shared"
 import {
   SEED_ACCESS_EVALUATION_HASH,
-  SEED_ACCESS_EVALUATION_ID,
-  SEED_ACCESS_ISSUE_ID,
   SEED_COMBINATION_EVALUATION_HASH,
-  SEED_COMBINATION_EVALUATION_ID,
-  SEED_COMBINATION_ISSUE_ID,
-  SEED_EVALUATION_ARCHIVED_ID,
-  SEED_EVALUATION_ID,
-  SEED_ISSUE_ID,
-  SEED_ORG_ID,
-  SEED_PROJECT_ID,
   SEED_RETURNS_EVALUATION_HASH,
-  SEED_RETURNS_EVALUATION_ID,
-  SEED_RETURNS_ISSUE_ID,
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
   SEED_WARRANTY_EVALUATION_HASH,
-  seedDateDaysAgo,
+  type SeedScope,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { evaluations } from "../../schema/evaluations.ts"
@@ -193,104 +183,108 @@ const accessAlignment: EvaluationAlignment = {
   },
 }
 
-const evaluationRows = [
-  {
-    id: SEED_EVALUATION_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    issueId: SEED_ISSUE_ID,
-    name: "Warranty Coverage Fabrication Monitor",
-    description:
-      "Detects when the support agent invents warranty coverage, waivers, or reimbursement promises for " +
-      "misuse scenarios that should stay excluded until a real review proves otherwise.",
-    script: warrantyMonitorScript,
-    trigger: warrantyTrigger,
-    alignment: warrantyAlignment,
-    alignedAt: seedDateDaysAgo(3, 16, 0),
-    archivedAt: null,
-    deletedAt: null,
-    createdAt: seedDateDaysAgo(32, 14, 0),
-    updatedAt: seedDateDaysAgo(3, 16, 0),
-  },
-  {
-    id: SEED_EVALUATION_ARCHIVED_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    issueId: SEED_ISSUE_ID,
-    name: "Terrain Warranty Promise Detector",
-    description:
-      "Earlier, narrower monitor that focused on guaranteed coverage for cliff and canyon incidents. It is " +
-      "archived because the active monitor now covers a broader family of warranty fabrication behaviors.",
-    script: warrantyLegacyScript,
-    trigger: warrantyArchivedTrigger,
-    alignment: warrantyArchivedAlignment,
-    alignedAt: seedDateDaysAgo(74, 10, 0),
-    archivedAt: seedDateDaysAgo(46, 9, 0),
-    deletedAt: null,
-    createdAt: seedDateDaysAgo(81, 8, 0),
-    updatedAt: seedDateDaysAgo(46, 9, 0),
-  },
-  {
-    id: SEED_COMBINATION_EVALUATION_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    issueId: SEED_COMBINATION_ISSUE_ID,
-    name: "Dangerous Combination Guardrail Monitor",
-    description:
-      "Detects when the support agent recommends unsafe product combinations or fabricates authorization for " +
-      "pairings that should remain prohibited unless they are officially tested or explicitly approved.",
-    script: combinationMonitorScript,
-    trigger: combinationTrigger,
-    alignment: combinationAlignment,
-    alignedAt: seedDateDaysAgo(5, 11, 30),
-    archivedAt: null,
-    deletedAt: null,
-    createdAt: seedDateDaysAgo(60, 12, 0),
-    updatedAt: seedDateDaysAgo(5, 11, 30),
-  },
-  {
-    id: SEED_RETURNS_EVALUATION_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    issueId: SEED_RETURNS_ISSUE_ID,
-    name: "Instant Returns Eligibility Monitor",
-    description:
-      "Detects when the support agent promises refunds, pickups, or fee waivers that still require inspection, " +
-      "approval, or an explicit policy exception. The monitor remains active after resolution to catch regressions.",
-    script: returnsMonitorScript,
-    trigger: returnsTrigger,
-    alignment: returnsAlignment,
-    alignedAt: seedDateDaysAgo(17, 15, 10),
-    archivedAt: null,
-    deletedAt: null,
-    createdAt: seedDateDaysAgo(50, 10, 0),
-    updatedAt: seedDateDaysAgo(17, 15, 10),
-  },
-  {
-    id: SEED_ACCESS_EVALUATION_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    issueId: SEED_ACCESS_ISSUE_ID,
-    name: "Account Recovery Verification Monitor",
-    description:
-      "Detects when the support agent weakens account-recovery verification by exposing sensitive data, disabling MFA, " +
-      "or issuing recovery guidance before ownership checks complete.",
-    script: accessRecoveryMonitorScript,
-    trigger: accessTrigger,
-    alignment: accessAlignment,
-    alignedAt: seedDateDaysAgo(2, 9, 40),
-    archivedAt: null,
-    deletedAt: null,
-    createdAt: seedDateDaysAgo(24, 8, 20),
-    updatedAt: seedDateDaysAgo(2, 9, 40),
-  },
-] as const
+const buildEvaluationRows = (scope: SeedScope) => {
+  const at = (daysAgo: number, hour: number, minute = 0) => scope.dateDaysAgo(daysAgo, hour, minute)
+  return [
+    {
+      id: EvaluationId(scope.cuid("evaluation:warranty-active")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      name: "Warranty Coverage Fabrication Monitor",
+      description:
+        "Detects when the support agent invents warranty coverage, waivers, or reimbursement promises for " +
+        "misuse scenarios that should stay excluded until a real review proves otherwise.",
+      script: warrantyMonitorScript,
+      trigger: warrantyTrigger,
+      alignment: warrantyAlignment,
+      alignedAt: at(3, 16, 0),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(32, 14, 0),
+      updatedAt: at(3, 16, 0),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:warranty-archived")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      name: "Terrain Warranty Promise Detector",
+      description:
+        "Earlier, narrower monitor that focused on guaranteed coverage for cliff and canyon incidents. It is " +
+        "archived because the active monitor now covers a broader family of warranty fabrication behaviors.",
+      script: warrantyLegacyScript,
+      trigger: warrantyArchivedTrigger,
+      alignment: warrantyArchivedAlignment,
+      alignedAt: at(74, 10, 0),
+      archivedAt: at(46, 9, 0),
+      deletedAt: null,
+      createdAt: at(81, 8, 0),
+      updatedAt: at(46, 9, 0),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:combination")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      issueId: IssueId(scope.cuid("issue:combination")),
+      name: "Dangerous Combination Guardrail Monitor",
+      description:
+        "Detects when the support agent recommends unsafe product combinations or fabricates authorization for " +
+        "pairings that should remain prohibited unless they are officially tested or explicitly approved.",
+      script: combinationMonitorScript,
+      trigger: combinationTrigger,
+      alignment: combinationAlignment,
+      alignedAt: at(5, 11, 30),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(60, 12, 0),
+      updatedAt: at(5, 11, 30),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:returns")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      issueId: IssueId(scope.cuid("issue:returns")),
+      name: "Instant Returns Eligibility Monitor",
+      description:
+        "Detects when the support agent promises refunds, pickups, or fee waivers that still require inspection, " +
+        "approval, or an explicit policy exception. The monitor remains active after resolution to catch regressions.",
+      script: returnsMonitorScript,
+      trigger: returnsTrigger,
+      alignment: returnsAlignment,
+      alignedAt: at(17, 15, 10),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(50, 10, 0),
+      updatedAt: at(17, 15, 10),
+    },
+    {
+      id: EvaluationId(scope.cuid("evaluation:access")),
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      issueId: IssueId(scope.cuid("issue:access")),
+      name: "Account Recovery Verification Monitor",
+      description:
+        "Detects when the support agent weakens account-recovery verification by exposing sensitive data, disabling MFA, " +
+        "or issuing recovery guidance before ownership checks complete.",
+      script: accessRecoveryMonitorScript,
+      trigger: accessTrigger,
+      alignment: accessAlignment,
+      alignedAt: at(2, 9, 40),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: at(24, 8, 20),
+      updatedAt: at(2, 9, 40),
+    },
+  ] as const
+}
 
 const seedEvaluations: Seeder = {
   name: "evaluations/acme-support-monitors",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
+        const evaluationRows = buildEvaluationRows(ctx.scope)
         for (const row of evaluationRows) {
           const { id, ...set } = row
           await ctx.db.insert(evaluations).values(row).onConflictDoUpdate({

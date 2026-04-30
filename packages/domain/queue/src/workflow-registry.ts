@@ -40,6 +40,13 @@ const _registry = {
     readonly flaggerId: string
     readonly flaggerSlug: string
   }>(),
+  seedDemoProjectWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly queueAssigneeUserIds: readonly string[]
+    readonly apiKeyId: string
+    readonly timelineAnchorIso: string
+  }>(),
 }
 
 export type WorkflowRegistry = typeof _registry

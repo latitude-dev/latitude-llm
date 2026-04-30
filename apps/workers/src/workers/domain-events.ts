@@ -166,6 +166,7 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    AdminDemoProjectSeeded: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

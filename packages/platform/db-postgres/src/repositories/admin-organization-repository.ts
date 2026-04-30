@@ -4,10 +4,11 @@ import {
   type AdminOrganizationProject,
   AdminOrganizationRepository,
 } from "@domain/admin"
-import { NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { type ApiKeyId, NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, asc, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
+import { apiKeys } from "../schema/api-keys.ts"
 import { members, organizations, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 
@@ -116,6 +117,25 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
           }
           return details
         }),
+
+      findFirstApiKeyId: (organizationId: OrganizationId) =>
+        Effect.gen(function* () {
+          // Order by `createdAt asc` so the org's default key (the one
+          // automatically created by the `OrganizationCreated` outbox
+          // worker chain at org-setup time) wins over any keys staff
+          // generated later. `null` for the degenerate "no keys" case
+          // — the use-case fails loudly rather than silently seeding
+          // spans with an empty `api_key_id`.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ id: apiKeys.id })
+              .from(apiKeys)
+              .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt)))
+              .orderBy(asc(apiKeys.createdAt))
+              .limit(1),
+          )
+          return rows[0]?.id ?? null
+        }) as Effect.Effect<ApiKeyId | null, never>,
     }
   }),
 )

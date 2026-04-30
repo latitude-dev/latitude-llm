@@ -1,5 +1,5 @@
 import { type Effect, ServiceMap } from "effect"
-import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
+import type { QueuePublishError, QueueSubscribeError, WorkflowAlreadyStartedError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
 
@@ -38,7 +38,7 @@ export interface WorkflowStarterShape {
     workflow: W,
     input: WorkflowInput<W>,
     options: { readonly workflowId: string },
-  ) => Effect.Effect<void>
+  ) => Effect.Effect<void, WorkflowAlreadyStartedError>
   readonly signalWithStart: <W extends WorkflowName>(
     workflow: W,
     input: WorkflowInput<W>,
@@ -145,4 +145,4 @@ export interface QueueConsumer {
   readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions) => void
 }
 
-export { QueueClientError, QueuePublishError, QueueSubscribeError } from "./errors.ts"
+export { QueueClientError, QueuePublishError, QueueSubscribeError, WorkflowAlreadyStartedError } from "./errors.ts"

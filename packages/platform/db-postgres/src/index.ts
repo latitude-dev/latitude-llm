@@ -1,6 +1,6 @@
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 // Re-export drizzle-orm helpers to ensure consistent type instances
-export { asc, eq, inArray } from "drizzle-orm"
+export { and, asc, eq, inArray } from "drizzle-orm"
 export type { Operator, PostgresClient, PostgresConfig, PostgresDb } from "./client.ts"
 export {
   closePostgres,
@@ -44,6 +44,7 @@ export { SavedSearchRepositoryLive } from "./repositories/saved-search-repositor
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
+export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

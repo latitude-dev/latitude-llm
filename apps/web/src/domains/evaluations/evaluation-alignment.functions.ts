@@ -7,6 +7,7 @@ import {
   softDeleteEvaluation,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
+import type { WorkflowAlreadyStartedError } from "@domain/queue"
 import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { EvaluationRepositoryLive, IssueRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -52,18 +53,17 @@ const buildRefreshAlignmentWorkflowId = (evaluationId: string) => `evaluations:r
 // Effect *defect*, not a typed error. Translate that specific defect into the
 // same `BadRequestError` the pre-check uses so the UI sees a friendly 400
 // instead of a generic unhandled-error response.
+//
+// `WorkflowStarter.start` now surfaces `WorkflowAlreadyStartedError` as a
+// tagged failure (was: a Temporal-typed defect propagating through
+// `Effect.promise`) — see `@platform/workflows-temporal` client. We
+// catch the tag and translate to `BadRequestError`; any other failure
+// stays in the error channel.
 const translateAlreadyStartedToBadRequest = <R>(
-  effect: Effect.Effect<void, never, R>,
+  effect: Effect.Effect<void, WorkflowAlreadyStartedError, R>,
   message: string,
 ): Effect.Effect<void, BadRequestError, R> =>
-  effect.pipe(
-    Effect.catchDefect((defect) => {
-      if (defect instanceof Error && defect.name === "WorkflowExecutionAlreadyStartedError") {
-        return Effect.fail(new BadRequestError({ message }))
-      }
-      return Effect.die(defect)
-    }),
-  )
+  effect.pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.fail(new BadRequestError({ message }))))
 
 export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   id: evaluation.id,

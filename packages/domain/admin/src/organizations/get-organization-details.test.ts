@@ -10,11 +10,13 @@ const TARGET = "org-target" as OrganizationId
 const successfulRepo = (result: AdminOrganizationDetails) =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.succeed(result),
+    findFirstApiKeyId: () => Effect.succeed(null),
   })
 
 const missingRepo = () =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: (id) => Effect.fail(new NotFoundError({ entity: "Organization", id })),
+    findFirstApiKeyId: () => Effect.succeed(null),
   })
 
 const mkDetails = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrganizationDetails => ({

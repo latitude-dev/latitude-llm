@@ -1,12 +1,18 @@
-import { type AdminOrganizationDetails, getOrganizationDetailsUseCase } from "@domain/admin"
-import { OrganizationId } from "@domain/shared"
-import { AdminOrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { type AdminOrganizationDetails, createDemoProjectUseCase, getOrganizationDetailsUseCase } from "@domain/admin"
+import { WorkflowStarter } from "@domain/queue"
+import { OrganizationId, UserId } from "@domain/shared"
+import {
+  AdminOrganizationRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getWorkflowStarter } from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -94,4 +100,67 @@ export const adminGetOrganization = createServerFn({ method: "GET" })
     )
 
     return toDto(details)
+  })
+
+/**
+ * Exported for input-schema tests.
+ */
+export const adminCreateDemoProjectInputSchema = z.object({
+  organizationId: z.string().min(1).max(256),
+  /** User-typed name from the modal. Trimmed and validated server-side. */
+  projectName: z.string().min(1).max(256),
+})
+
+interface AdminCreateDemoProjectResultDto {
+  projectId: string
+  projectSlug: string
+  /** The org member chosen as queue-item assignee for the seeded annotation queues. */
+  queueAssigneeUserId: string
+}
+
+/**
+ * Create a "demo project" on the target organization and kick off the
+ * Temporal workflow that seeds it with full bootstrap content (datasets,
+ * evaluations, issues, queues, scores, ~30 days of telemetry).
+ *
+ * Three-guard discipline mirroring the rest of the backoffice:
+ *  - {@link adminMiddleware} rejects non-admins with `NotFoundError`
+ *    (indistinguishable from a non-existent server function).
+ *  - Use-case enforces name-collision / empty-org-members invariants
+ *    before any side effect.
+ *  - Postgres reads/writes go through {@link getAdminPostgresClient}
+ *    (the only sanctioned RLS-bypass signal).
+ *
+ * The server function returns as soon as the project row + audit event
+ * commit and Temporal accepts the workflow handle. Seeding runs in the
+ * background — the UI just `router.invalidate()`s and lets the staff
+ * refresh to watch the project's content fill in.
+ */
+export const adminCreateDemoProject = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminCreateDemoProjectInputSchema)
+  .handler(async ({ data, context }): Promise<AdminCreateDemoProjectResultDto> => {
+    const client = getAdminPostgresClient()
+    const workflowStarter = await getWorkflowStarter()
+
+    const result = await Effect.runPromise(
+      createDemoProjectUseCase({
+        organizationId: OrganizationId(data.organizationId),
+        projectName: data.projectName,
+        actorAdminUserId: UserId(context.adminUserId),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(AdminOrganizationRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
+          client,
+        ),
+        Effect.provideService(WorkflowStarter, workflowStarter),
+        withTracing,
+      ),
+    )
+
+    return {
+      projectId: result.projectId,
+      projectSlug: result.projectSlug,
+      queueAssigneeUserId: result.queueAssigneeUserId,
+    }
   })
