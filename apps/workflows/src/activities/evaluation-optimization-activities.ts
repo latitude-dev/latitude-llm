@@ -1,5 +1,6 @@
 import { AI } from "@domain/ai"
 import {
+  ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_DEFAULT_SEED,
   ALIGNMENT_TRAIN_SPLIT,
   ALIGNMENT_VALIDATION_SPLIT,
@@ -23,6 +24,7 @@ import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import {
   buildGepaProposalPrompt,
+  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
   GEPA_PROPOSER_MODEL,
   GEPA_PROPOSER_SYSTEM_PROMPT,
   GepaOptimizerLive,
@@ -162,6 +164,13 @@ export const optimizeEvaluationDraft = (input: {
         validationRatio: ALIGNMENT_VALIDATION_SPLIT,
       })
 
+      // Stagnation budget sized so the proposer sees at least every curated
+      // dataset row before we declare the search exhausted, regardless of how
+      // the minibatch size is configured. Floored at 10 to keep the engine
+      // from giving up on tiny clusters where the math collapses.
+      const reflectionMinibatchSize = GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE
+      const stagnation = Math.max(10, Math.ceil(ALIGNMENT_CURATED_DATASET_MAX_ROWS / reflectionMinibatchSize))
+
       const optimized = yield* optimizer.optimize({
         baselineCandidate: {
           componentId: OPTIMIZATION_COMPONENT_ID,
@@ -169,6 +178,10 @@ export const optimizeEvaluationDraft = (input: {
           hash: input.draft.evaluationHash,
         },
         dataset,
+        reflectionMinibatchSize,
+        budget: {
+          stagnation,
+        },
         evaluate: async ({ candidate, example }: OptimizeEvaluationInput) => {
           const hydratedExample = examplesById.get(example.id)
           if (!hydratedExample) {
@@ -218,6 +231,9 @@ export const optimizeEvaluationDraft = (input: {
             context,
           }),
       })
+
+      yield* Effect.annotateCurrentSpan("optimization.stopReason", optimized.stopReason)
+      yield* Effect.annotateCurrentSpan("optimization.optimizedCandidateHash", optimized.optimizedCandidate.hash)
 
       return {
         ...input.draft,

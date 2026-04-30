@@ -1,6 +1,7 @@
 import { AI, AIError, type AIShape } from "@domain/ai"
 import type { ChSqlClient } from "@domain/shared"
 import {
+  bootstrapSeedScope,
   OrganizationId,
   ProjectId,
   SEED_ANNOTATION_DEMO_TRACE_ID,
@@ -136,8 +137,8 @@ describe("TraceRepository", () => {
   })
 
   beforeEach(async () => {
-    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client }))
-    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client }))
+    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client, scope: bootstrapSeedScope }))
+    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client, scope: bootstrapSeedScope }))
   })
 
   describe("matchesFiltersByTraceId", () => {

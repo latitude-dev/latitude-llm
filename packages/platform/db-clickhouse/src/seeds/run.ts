@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import { bootstrapSeedScope } from "@domain/shared/seeding"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -20,7 +21,7 @@ const main = async () => {
   console.log("Seeding ClickHouse...")
 
   try {
-    await Effect.runPromise(runSeeders(allSeeders, { client }))
+    await Effect.runPromise(runSeeders(allSeeders, { client, scope: bootstrapSeedScope }))
     console.log("Seed complete.")
   } catch (error) {
     console.error("Seed failed:", error)

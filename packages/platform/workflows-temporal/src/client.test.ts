@@ -1,3 +1,4 @@
+import { WorkflowAlreadyStartedError } from "@domain/queue"
 import type { Client } from "@temporalio/client"
 import { Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Cause, Effect } from "effect"
@@ -66,7 +67,11 @@ describe("createTemporalClientEffect", () => {
 })
 
 describe("createWorkflowStarter", () => {
-  it("propagates WorkflowExecutionAlreadyStartedError so duplicate starts never silently succeed", async () => {
+  it("translates Temporal's WorkflowExecutionAlreadyStartedError into the tagged WorkflowAlreadyStartedError", async () => {
+    // The contract changed: Temporal's class used to propagate as a defect,
+    // forcing every caller to catch by `instanceof`. Now `start` surfaces a
+    // tagged failure in the error channel so callers idempotency-key on
+    // `workflowId` can `Effect.catchTag("WorkflowAlreadyStartedError", ...)`.
     const start = vi.fn(async () => {
       throw Object.create(WorkflowExecutionAlreadyStartedError.prototype)
     })
@@ -82,8 +87,8 @@ describe("createWorkflowStarter", () => {
       taskQueue: "workflows",
     })
 
-    await expect(
-      Effect.runPromise(
+    const exit = await Effect.runPromise(
+      Effect.exit(
         starter.start(
           "issueDiscoveryWorkflow",
           {
@@ -94,7 +99,21 @@ describe("createWorkflowStarter", () => {
           { workflowId: "issue-discovery:org-1:proj-1:score-1" },
         ),
       ),
-    ).rejects.toBeInstanceOf(WorkflowExecutionAlreadyStartedError)
+    )
+
+    expect(exit._tag).toBe("Failure")
+    if (exit._tag === "Failure") {
+      const errOpt = Cause.findErrorOption(exit.cause)
+      expect(errOpt._tag).toBe("Some")
+      if (errOpt._tag === "Some") {
+        expect(errOpt.value).toBeInstanceOf(WorkflowAlreadyStartedError)
+        expect(errOpt.value).toMatchObject({
+          _tag: "WorkflowAlreadyStartedError",
+          workflow: "issueDiscoveryWorkflow",
+          workflowId: "issue-discovery:org-1:proj-1:score-1",
+        })
+      }
+    }
     expect(start).toHaveBeenCalledTimes(1)
     expect(start).toHaveBeenCalledWith(
       "issueDiscoveryWorkflow",

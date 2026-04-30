@@ -5,6 +5,7 @@ import {
 } from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId, ScoreId, TraceId } from "@domain/shared"
+import { bootstrapSeedScope } from "@domain/shared/seeding"
 import { TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -209,7 +210,7 @@ describe("evaluation-alignment activities", () => {
   it("hydrates curated examples with canonical trace-backed conversation context", async () => {
     const seededTraceIds = await Effect.runPromise(
       runSpansSeed(
-        { client: ch.client },
+        { client: ch.client, scope: bootstrapSeedScope },
         {
           traceCount: 4,
           organizationId,

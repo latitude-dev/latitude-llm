@@ -1,6 +1,10 @@
 import { ORGANIZATION_USAGE_MAX_LIMIT } from "@domain/admin"
 import { describe, expect, it } from "vitest"
-import { adminGetOrganizationInputSchema, adminListOrganizationsByUsageInputSchema } from "./organizations.functions.ts"
+import {
+  adminCreateDemoProjectInputSchema,
+  adminGetOrganizationInputSchema,
+  adminListOrganizationsByUsageInputSchema,
+} from "./organizations.functions.ts"
 
 describe("adminGetOrganizationInputSchema", () => {
   it("accepts a valid organizationId", () => {
@@ -60,5 +64,33 @@ describe("adminListOrganizationsByUsageInputSchema", () => {
 
   it("rejects an oversized cursor (defensive abuse bound)", () => {
     expect(adminListOrganizationsByUsageInputSchema.safeParse({ cursor: "x".repeat(1025) }).success).toBe(false)
+  })
+})
+
+describe("adminCreateDemoProjectInputSchema", () => {
+  it("accepts a valid organizationId + projectName", () => {
+    expect(
+      adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "Demo Project" }).success,
+    ).toBe(true)
+  })
+
+  it("rejects an empty projectName", () => {
+    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "" }).success).toBe(
+      false,
+    )
+  })
+
+  it("rejects a projectName above the max length", () => {
+    expect(
+      adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123", projectName: "x".repeat(257) }).success,
+    ).toBe(false)
+  })
+
+  it("rejects an empty organizationId", () => {
+    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "", projectName: "Demo" }).success).toBe(false)
+  })
+
+  it("rejects a missing projectName", () => {
+    expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
   })
 })

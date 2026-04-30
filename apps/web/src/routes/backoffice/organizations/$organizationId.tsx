@@ -1,6 +1,7 @@
 import { Avatar, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, notFound } from "@tanstack/react-router"
+import { SparklesIcon } from "lucide-react"
 import {
   type AdminOrganizationMemberDto,
   type AdminOrganizationProjectDto,
@@ -14,6 +15,8 @@ import {
   type PropertiesStripEntry,
   StripeCustomerLink,
 } from "../-components/dashboard/index.ts"
+import { CreateDemoProjectButton } from "../-components/organization-actions/create-demo-project.tsx"
+import { OrganizationActionRow, OrganizationActionsSection } from "../-components/organization-actions/section.tsx"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
 import { ProjectRow, UserRow } from "../-components/rows/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
@@ -128,6 +131,15 @@ function BackofficeOrganizationDetailPage() {
           </DashboardSection>
         }
       />
+
+      <OrganizationActionsSection>
+        <OrganizationActionRow
+          icon={SparklesIcon}
+          title="Create demo project"
+          description="Spin up a fresh project on this org seeded with bootstrap content (datasets, evaluations, issues, ~30 days of telemetry). Runs in the background."
+          action={<CreateDemoProjectButton organizationId={organization.id} />}
+        />
+      </OrganizationActionsSection>
 
       <PropertiesStrip entries={propertyEntries} />
     </div>

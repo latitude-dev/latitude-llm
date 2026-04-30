@@ -198,6 +198,13 @@ export const SEED_TIMELINE_ANCHOR = new Date(
   Date.UTC(seedTimelineNow.getUTCFullYear(), seedTimelineNow.getUTCMonth(), seedTimelineNow.getUTCDate(), 12, 0, 0, 0),
 )
 
+/**
+ * Free-function variants that anchor on `SEED_TIMELINE_ANCHOR`. Retained for
+ * a small number of test fixtures that import them directly. Production seed
+ * code goes through `scope.dateDaysAgo` / `scope.timestampDaysAgo` so the
+ * runtime "Create Demo Project" path uses the workflow's per-call anchor
+ * instead of this module-level constant.
+ */
 export function seedDateDaysAgo(daysAgo: number, hour = 12, minute = 0): Date {
   const date = new Date(SEED_TIMELINE_ANCHOR)
   date.setUTCDate(date.getUTCDate() - daysAgo)

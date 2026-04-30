@@ -1,3 +1,5 @@
+export * from "./bootstrap-seed-scope.ts"
 export * from "./index.ts"
 export * from "./seed-content/index.ts"
+export * from "./seed-scope.ts"
 export * from "./seeds.ts"

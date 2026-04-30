@@ -11,12 +11,14 @@ const successfulRepo = (result: AdminOrganizationDetails) =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.succeed(result),
     findManySummariesByIds: () => Effect.succeed(new Map()),
+    findFirstApiKeyId: () => Effect.succeed(null),
   })
 
 const missingRepo = () =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: (id) => Effect.fail(new NotFoundError({ entity: "Organization", id })),
     findManySummariesByIds: () => Effect.succeed(new Map()),
+    findFirstApiKeyId: () => Effect.succeed(null),
   })
 
 const mkDetails = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrganizationDetails => ({

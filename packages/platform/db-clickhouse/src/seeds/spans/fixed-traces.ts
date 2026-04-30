@@ -1,33 +1,22 @@
+import { IssueId, SimulationId } from "@domain/shared"
 import {
   ALL_ANNOTATION_TRACE_DAYS_AGO,
   ALL_ANNOTATION_TRACES,
   COMBINATION_DATASET_ROWS,
   type DatasetRow,
   ISSUE_2_ADDITIONAL_NEGATIVES,
+  SEED_ACCESS_ISSUE_ID,
   SEED_ADDITIONAL_ISSUE_OCCURRENCES,
-  SEED_ALIGNMENT_FIXTURE_SPAN_IDS,
-  SEED_ALIGNMENT_FIXTURE_TRACE_IDS,
-  SEED_ANNOTATION_DEMO_SPAN_ID,
-  SEED_ANNOTATION_DEMO_TRACE_ID,
-  SEED_ANNOTATION_SPAN_IDS,
-  SEED_ANNOTATION_TRACE_IDS,
-  SEED_API_KEY_ID,
-  SEED_COMBINATION_SIMULATION_SPAN_IDS,
-  SEED_COMBINATION_SIMULATION_TRACE_IDS,
+  SEED_BILLING_ISSUE_ID,
+  SEED_COMBINATION_ISSUE_ID,
+  SEED_EXTRA_ISSUE_IDS,
+  SEED_FLAGGER_ISSUE_ID,
+  SEED_GENERATE_ISSUE_ID,
+  SEED_INSTALLATION_ISSUE_ID,
   SEED_ISSUE_FIXTURES_BY_ID,
-  SEED_JSON_RESPONSE_SPAN_IDS,
-  SEED_JSON_RESPONSE_TRACE_IDS,
-  SEED_LIFECYCLE_SPAN_IDS,
-  SEED_LIFECYCLE_TRACE_IDS,
-  SEED_ORG_ID,
-  SEED_PROJECT_ID,
-  SEED_SIMULATION_ID,
-  SEED_WARRANTY_SIMULATION_ID,
-  SEED_WARRANTY_SIMULATION_SPAN_IDS,
-  SEED_WARRANTY_SIMULATION_TRACE_IDS,
-  seedDateDaysAgo,
-  seedIssueOccurrenceSpanId,
-  seedIssueOccurrenceTraceId,
+  SEED_ISSUE_ID,
+  SEED_RETURNS_ISSUE_ID,
+  type SeedScope,
   WARRANTY_DATASET_ROWS,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -46,7 +35,43 @@ function toSystemJson(content: string): string {
   return JSON.stringify([{ type: "text", content }])
 }
 
+/**
+ * Map literal `SEED_*_ISSUE_ID` constants embedded in `SEED_ADDITIONAL_ISSUE_OCCURRENCES`
+ * (a static fixture from `@domain/shared/seeding`) back to scope-derived ids so the
+ * same fixture data writes the canonical literals under the bootstrap scope and
+ * fresh ids under any other scope.
+ */
+function remapFixtureIssueId(literalIssueId: string, scope: SeedScope): string {
+  switch (literalIssueId) {
+    case SEED_ISSUE_ID:
+      return IssueId(scope.cuid("issue:warranty-fab"))
+    case SEED_COMBINATION_ISSUE_ID:
+      return IssueId(scope.cuid("issue:combination"))
+    case SEED_GENERATE_ISSUE_ID:
+      return IssueId(scope.cuid("issue:logistics"))
+    case SEED_RETURNS_ISSUE_ID:
+      return IssueId(scope.cuid("issue:returns"))
+    case SEED_BILLING_ISSUE_ID:
+      return IssueId(scope.cuid("issue:billing"))
+    case SEED_ACCESS_ISSUE_ID:
+      return IssueId(scope.cuid("issue:access"))
+    case SEED_INSTALLATION_ISSUE_ID:
+      return IssueId(scope.cuid("issue:installation"))
+    case SEED_FLAGGER_ISSUE_ID:
+      return IssueId(scope.cuid("issue:flagger"))
+    default: {
+      // Long-tail extras: SEED_EXTRA_ISSUE_IDS[i] → "issue:extra:${i}".
+      const extraIndex = SEED_EXTRA_ISSUE_IDS.indexOf(literalIssueId as (typeof SEED_EXTRA_ISSUE_IDS)[number])
+      if (extraIndex >= 0) {
+        return IssueId(scope.cuid(`issue:extra:${extraIndex}`))
+      }
+      throw new Error(`Unmapped fixture issueId literal: ${literalIssueId}`)
+    }
+  }
+}
+
 function createFixedSpan(opts: {
+  scope: SeedScope
   traceId: string
   spanId: string
   startTime: string
@@ -60,14 +85,14 @@ function createFixedSpan(opts: {
   metadata?: Record<string, string>
 }): SpanRow {
   return {
-    organization_id: SEED_ORG_ID,
-    project_id: SEED_PROJECT_ID,
+    organization_id: opts.scope.organizationId,
+    project_id: opts.scope.projectId,
     session_id: "",
     user_id: "",
     trace_id: opts.traceId,
     span_id: opts.spanId,
     parent_span_id: "",
-    api_key_id: SEED_API_KEY_ID,
+    api_key_id: opts.scope.apiKeyId,
     simulation_id: opts.simulationId ?? "",
     start_time: opts.startTime,
     end_time: opts.endTime,
@@ -122,30 +147,23 @@ function formatClickHouseTimestamp(date: Date): string {
   return date.toISOString().replace("T", " ").replace("Z", "000")
 }
 
-function generateTime(daysAgo: number, hour: number, minute = 0): { start: string; end: string } {
-  const start = seedDateDaysAgo(daysAgo, hour, minute)
+function generateTime(scope: SeedScope, daysAgo: number, hour: number, minute = 0): { start: string; end: string } {
+  const start = scope.dateDaysAgo(daysAgo, hour, minute)
   const end = new Date(start.getTime() + 4000)
   return { start: formatClickHouseTimestamp(start), end: formatClickHouseTimestamp(end) }
 }
 
-function requiredAt<T>(items: readonly T[], index: number): T {
-  const item = items[index]
-  if (item === undefined) {
-    throw new Error(`Missing seeded item at index ${index}`)
-  }
-  return item
-}
-
-function buildAnnotationTraceSpans(): SpanRow[] {
+function buildAnnotationTraceSpans(scope: SeedScope): SpanRow[] {
   return ALL_ANNOTATION_TRACES.map((trace, i) => {
     const daysAgo = ALL_ANNOTATION_TRACE_DAYS_AGO[i]
     if (daysAgo === undefined) {
       throw new Error(`Missing seeded annotation trace day at index ${i}`)
     }
-    const time = generateTime(daysAgo, 9 + (i % 4))
+    const time = generateTime(scope, daysAgo, 9 + (i % 4))
     return createFixedSpan({
-      traceId: requiredAt(SEED_ANNOTATION_TRACE_IDS, i),
-      spanId: requiredAt(SEED_ANNOTATION_SPAN_IDS, i),
+      scope,
+      traceId: scope.traceHex("annotation", i),
+      spanId: scope.spanHex("annotation", i),
       startTime: time.start,
       endTime: time.end,
       userPrompt: trace.userMessage,
@@ -158,12 +176,13 @@ function buildAnnotationTraceSpans(): SpanRow[] {
   })
 }
 
-function buildAlignmentFixtureSpans(): SpanRow[] {
+function buildAlignmentFixtureSpans(scope: SeedScope): SpanRow[] {
   return ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => {
-    const time = generateTime(26 - Math.floor(i / 5), 10 + (i % 5))
+    const time = generateTime(scope, 26 - Math.floor(i / 5), 10 + (i % 5))
     return createFixedSpan({
-      traceId: requiredAt(SEED_ALIGNMENT_FIXTURE_TRACE_IDS, i),
-      spanId: requiredAt(SEED_ALIGNMENT_FIXTURE_SPAN_IDS, i),
+      scope,
+      traceId: scope.traceHex("alignment-fixture", i),
+      spanId: scope.spanHex("alignment-fixture", i),
       startTime: time.start,
       endTime: time.end,
       userPrompt: fixture.userMessage,
@@ -176,19 +195,20 @@ function buildAlignmentFixtureSpans(): SpanRow[] {
   })
 }
 
-function buildIssueOccurrenceTraceSpans(): SpanRow[] {
+function buildIssueOccurrenceTraceSpans(scope: SeedScope): SpanRow[] {
   return SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
     const issue = SEED_ISSUE_FIXTURES_BY_ID.get(occurrence.issueId)
     const issueName = issue?.name ?? "seeded issue"
-    const time = generateTime(occurrence.daysAgo, occurrence.hour, occurrence.minute)
+    const time = generateTime(scope, occurrence.daysAgo, occurrence.hour, occurrence.minute)
     const userPrompt =
       occurrence.source === "evaluation"
         ? `Run the seeded monitor case for ${issueName.toLowerCase()}.`
         : `Review the seeded audit case for ${issueName.toLowerCase()}.`
 
     return createFixedSpan({
-      traceId: seedIssueOccurrenceTraceId(i),
-      spanId: seedIssueOccurrenceSpanId(i),
+      scope,
+      traceId: scope.traceHex("issue-occurrence", i),
+      spanId: scope.spanHex("issue-occurrence", i),
       startTime: time.start,
       endTime: time.end,
       userPrompt,
@@ -198,7 +218,7 @@ function buildIssueOccurrenceTraceSpans(): SpanRow[] {
       tags: ["support", "issue-occurrence", occurrence.source],
       metadata: {
         story: "issue-occurrence-corpus",
-        issueId: occurrence.issueId,
+        issueId: remapFixtureIssueId(occurrence.issueId, scope),
         issueName,
         source: occurrence.source,
         sourceId: occurrence.sourceId,
@@ -207,7 +227,7 @@ function buildIssueOccurrenceTraceSpans(): SpanRow[] {
   })
 }
 
-function buildJsonResponseSpans(): SpanRow[] {
+function buildJsonResponseSpans(scope: SeedScope): SpanRow[] {
   const prettyOrderDetails = JSON.stringify(
     {
       orderId: "ACM-98731",
@@ -247,10 +267,11 @@ function buildJsonResponseSpans(): SpanRow[] {
   ] as const
 
   return specs.map((spec, i) => {
-    const time = generateTime(0, 10 + i, 30)
+    const time = generateTime(scope, 0, 10 + i, 30)
     return createFixedSpan({
-      traceId: requiredAt(SEED_JSON_RESPONSE_TRACE_IDS, i),
-      spanId: requiredAt(SEED_JSON_RESPONSE_SPAN_IDS, i),
+      scope,
+      traceId: scope.traceHex("json-response", i),
+      spanId: scope.spanHex("json-response", i),
       startTime: time.start,
       endTime: time.end,
       userPrompt: spec.userPrompt,
@@ -263,7 +284,7 @@ function buildJsonResponseSpans(): SpanRow[] {
   })
 }
 
-function buildLifecycleSpans(): SpanRow[] {
+function buildLifecycleSpans(scope: SeedScope): SpanRow[] {
   const specs = [
     {
       userPrompt: "Summarize the deployment checklist for tonight's release.",
@@ -291,10 +312,11 @@ function buildLifecycleSpans(): SpanRow[] {
   ] as const
 
   return specs.map((spec, i) => {
-    const time = generateTime(12 - i, 10 + i)
+    const time = generateTime(scope, 12 - i, 10 + i)
     return createFixedSpan({
-      traceId: requiredAt(SEED_LIFECYCLE_TRACE_IDS, i),
-      spanId: requiredAt(SEED_LIFECYCLE_SPAN_IDS, i),
+      scope,
+      traceId: scope.traceHex("lifecycle", i),
+      spanId: scope.spanHex("lifecycle", i),
       startTime: time.start,
       endTime: time.end,
       userPrompt: spec.userPrompt,
@@ -308,19 +330,21 @@ function buildLifecycleSpans(): SpanRow[] {
 }
 
 function buildSimulationTraceSpans(opts: {
+  scope: SeedScope
   rows: readonly DatasetRow[]
-  traceIds: readonly string[]
-  spanIds: readonly string[]
+  traceKey: string
+  spanKey: string
   simulationId: string
   startIndex: number
   datasetName: string
   story: string
 }): SpanRow[] {
   return opts.rows.map((row, i) => {
-    const time = generateTime(opts.startIndex + i, 9 + (i % 5), i % 2 === 0 ? 6 : 7)
+    const time = generateTime(opts.scope, opts.startIndex + i, 9 + (i % 5), i % 2 === 0 ? 6 : 7)
     return createFixedSpan({
-      traceId: requiredAt(opts.traceIds, i),
-      spanId: requiredAt(opts.spanIds, i),
+      scope: opts.scope,
+      traceId: opts.scope.traceHex(opts.traceKey, i),
+      spanId: opts.scope.spanHex(opts.spanKey, i),
       startTime: time.start,
       endTime: time.end,
       userPrompt: row.input,
@@ -338,35 +362,8 @@ function buildSimulationTraceSpans(opts: {
   })
 }
 
-const allFixedSpans = [
-  ...buildAnnotationTraceSpans(),
-  ...buildAlignmentFixtureSpans(),
-  ...buildIssueOccurrenceTraceSpans(),
-  ...buildJsonResponseSpans(),
-  ...buildLifecycleSpans(),
-  ...buildSimulationTraceSpans({
-    rows: WARRANTY_DATASET_ROWS,
-    traceIds: SEED_WARRANTY_SIMULATION_TRACE_IDS,
-    spanIds: SEED_WARRANTY_SIMULATION_SPAN_IDS,
-    simulationId: SEED_WARRANTY_SIMULATION_ID,
-    startIndex: 6,
-    datasetName: "Warranty Coverage Guardrails",
-    story: "warranty-simulation",
-  }),
-  ...buildSimulationTraceSpans({
-    rows: COMBINATION_DATASET_ROWS,
-    traceIds: SEED_COMBINATION_SIMULATION_TRACE_IDS,
-    spanIds: SEED_COMBINATION_SIMULATION_SPAN_IDS,
-    simulationId: SEED_SIMULATION_ID,
-    startIndex: 4,
-    datasetName: "Dangerous Combination Guardrails",
-    story: "combination-simulation",
-  }),
-  buildKitchenSinkTrace(),
-]
-
-function buildKitchenSinkTrace(): SpanRow {
-  const baseTime = seedDateDaysAgo(2, 8, 0)
+function buildKitchenSinkTrace(scope: SeedScope): SpanRow {
+  const baseTime = scope.dateDaysAgo(2, 8, 0)
   const startTime = baseTime.toISOString().slice(0, 23).replace("T", " ")
   const endTime = new Date(baseTime.getTime() + 45_000).toISOString().slice(0, 23).replace("T", " ")
 
@@ -753,15 +750,18 @@ Let me know if you'd like the article expanded with more sections (e.g., adaptat
     ],
   })
 
+  const annotationDemoTraceId = scope.traceHex("annotation-demo", 0)
+  const annotationDemoSpanId = scope.spanHex("annotation-demo", 0)
+
   return {
-    organization_id: SEED_ORG_ID,
-    project_id: SEED_PROJECT_ID,
+    organization_id: scope.organizationId,
+    project_id: scope.projectId,
     session_id: "",
     user_id: "",
-    trace_id: SEED_ANNOTATION_DEMO_TRACE_ID,
-    span_id: SEED_ANNOTATION_DEMO_SPAN_ID,
+    trace_id: annotationDemoTraceId,
+    span_id: annotationDemoSpanId,
     parent_span_id: "",
-    api_key_id: SEED_API_KEY_ID,
+    api_key_id: scope.apiKeyId,
     simulation_id: "",
     start_time: startTime,
     end_time: endTime,
@@ -792,7 +792,7 @@ Let me know if you'd like the article expanded with more sections (e.g., adaptat
     cost_is_estimated: 1,
     time_to_first_token_ns: 280_000_000,
     is_streaming: 0,
-    response_id: `seed-${SEED_ANNOTATION_DEMO_SPAN_ID}`,
+    response_id: `seed-${annotationDemoSpanId}`,
     finish_reasons: ["stop"],
     input_messages: JSON.stringify(messages.slice(0, -1)),
     output_messages: JSON.stringify([messages[messages.length - 1]]),
@@ -817,14 +817,50 @@ Let me know if you'd like the article expanded with more sections (e.g., adaptat
   }
 }
 
+function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
+  const warrantySimulationId = SimulationId(scope.cuid("simulation:warranty"))
+  const combinationSimulationId = SimulationId(scope.cuid("simulation:combination"))
+
+  return [
+    ...buildAnnotationTraceSpans(scope),
+    ...buildAlignmentFixtureSpans(scope),
+    ...buildIssueOccurrenceTraceSpans(scope),
+    ...buildJsonResponseSpans(scope),
+    ...buildLifecycleSpans(scope),
+    ...buildSimulationTraceSpans({
+      scope,
+      rows: WARRANTY_DATASET_ROWS,
+      traceKey: "warranty-simulation",
+      spanKey: "warranty-simulation",
+      simulationId: warrantySimulationId,
+      startIndex: 6,
+      datasetName: "Warranty Coverage Guardrails",
+      story: "warranty-simulation",
+    }),
+    ...buildSimulationTraceSpans({
+      scope,
+      rows: COMBINATION_DATASET_ROWS,
+      traceKey: "combination-simulation",
+      spanKey: "combination-simulation",
+      simulationId: combinationSimulationId,
+      startIndex: 4,
+      datasetName: "Dangerous Combination Guardrails",
+      story: "combination-simulation",
+    }),
+    buildKitchenSinkTrace(scope),
+  ]
+}
+
 const seedFixedTraces: Seeder = {
   name: "spans/fixed-traces",
-  run: (ctx) =>
-    insertJsonEachRow(ctx.client, "spans", allFixedSpans).pipe(
+  run: (ctx) => {
+    const allFixedSpans = buildAllFixedSpans(ctx.scope)
+    return insertJsonEachRow(ctx.client, "spans", allFixedSpans).pipe(
       Effect.tap(() =>
         Effect.sync(() => console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic traces`)),
       ),
-    ),
+    )
+  },
 }
 
 export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces]
