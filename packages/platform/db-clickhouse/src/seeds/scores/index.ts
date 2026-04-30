@@ -23,9 +23,6 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
 
-function seedScoreId(prefix: string, index: number): string {
-  return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
-}
 
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string {
   return seedTimestampDaysAgo(daysAgo, hour, minute)
@@ -194,7 +191,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
       }
 
       return {
-        id: ScoreId(seedScoreId(opts.prefix, i)),
+        id: ScoreId(scope.cuid(`score:${opts.prefix}:${i}`)),
         organization_id: orgId,
         project_id: projectId,
         session_id: "",
@@ -246,7 +243,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
   })
 
   const alignmentAnalyticsRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => ({
-    id: ScoreId(seedScoreId("al", i)),
+    id: ScoreId(scope.cuid(`score:al:${i}`)),
     organization_id: orgId,
     project_id: projectId,
     session_id: "",
@@ -574,7 +571,7 @@ function buildAllAnalyticsRows(scope: SeedScope) {
           }
 
     return {
-      id: ScoreId(seedScoreId(occurrence.idPrefix, i)),
+      id: ScoreId(scope.cuid(`score:${occurrence.idPrefix}:${i}`)),
       organization_id: orgId,
       project_id: projectId,
       session_id: "",

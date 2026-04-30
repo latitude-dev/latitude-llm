@@ -91,4 +91,16 @@ describe("bootstrapSeedScope — invariance with seeds.ts literals", () => {
     const id = bootstrapSeedScope.cuid("dataset:future-fixture")
     expect(id).toMatch(/^[a-f0-9]{24}$/)
   })
+
+  it("preserves the legacy seedScoreId pattern for score-prefix keys", () => {
+    // Pre-refactor `seedScoreId(prefix, index)` produced
+    // `${prefix}${index padded 3}${'x' * remaining}`. With score ids now
+    // resolved via `scope.cuid("score:<prefix>:<index>")`, the bootstrap
+    // override must round-trip those keys back to the same literal so
+    // `pnpm seed` is byte-identical and `scores.id` doesn't shift.
+    expect(bootstrapSeedScope.cuid("score:i1:0")).toBe(`i1000${"x".repeat(19)}`)
+    expect(bootstrapSeedScope.cuid("score:i2:5")).toBe(`i2005${"x".repeat(19)}`)
+    expect(bootstrapSeedScope.cuid("score:al:12")).toBe(`al012${"x".repeat(19)}`)
+    expect(bootstrapSeedScope.cuid("score:io:128")).toBe(`io128${"x".repeat(19)}`)
+  })
 })

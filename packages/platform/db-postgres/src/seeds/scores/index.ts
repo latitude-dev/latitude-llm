@@ -31,9 +31,6 @@ import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-function seedScoreId(prefix: string, index: number): string {
-  return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
-}
 
 function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
   return seedDateDaysAgo(daysAgo, hour, minute)
@@ -264,7 +261,7 @@ function buildAllScoreRows(scope: SeedScope) {
       const createdAt = createdAtFromDaysAgo(dayOffset, 9 + (i % 4))
 
       return {
-        id: ScoreId(seedScoreId(opts.prefix, i)),
+        id: ScoreId(scope.cuid(`score:${opts.prefix}:${i}`)),
         organizationId: orgId,
         projectId,
         sessionId: null,
@@ -339,7 +336,7 @@ function buildAllScoreRows(scope: SeedScope) {
           : { importName: "seed-import", tier: fixture.tier }
 
     return {
-      id: ScoreId(seedScoreId("al", i)),
+      id: ScoreId(scope.cuid(`score:al:${i}`)),
       organizationId: orgId,
       projectId,
       sessionId: null,
@@ -801,7 +798,7 @@ function buildAllScoreRows(scope: SeedScope) {
           }
 
     return {
-      id: ScoreId(seedScoreId(occurrence.idPrefix, i)),
+      id: ScoreId(scope.cuid(`score:${occurrence.idPrefix}:${i}`)),
       organizationId: orgId,
       projectId,
       sessionId: null,
