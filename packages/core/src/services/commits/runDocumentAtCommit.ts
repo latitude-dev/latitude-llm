@@ -1,6 +1,7 @@
 import type { Message } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
-import { LogSources } from '../../constants'
+import { ErrorableEntity, LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { isRetryableError } from '../../lib/isRetryableError'
 import { Result } from '../../lib/Result'
@@ -17,6 +18,7 @@ import { runChain } from '../chains/run'
 import { getResolvedContent } from '../documents'
 import { ToolHandler } from '../documents/tools/clientTools/handlers'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
+import { createRunError } from '../runErrors/create'
 import { RunDocumentChecker } from './RunDocumentChecker'
 
 export type RunDocumentAtCommitArgs = {
@@ -87,21 +89,38 @@ export async function runDocumentAtCommit(
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
   })
-  const result = await getResolvedContent({
-    document,
-    commit,
-    customPrompt,
-  })
-  if (result.error) return result
 
   const $prompt = telemetry.span.prompt(
     {
       name: document.path.split('/').at(-1),
       parameters: parameters,
-      template: result.value,
+      template: customPrompt ?? document.content,
     },
     ctxWithAttributes,
   )
+
+  const result = await getResolvedContent({
+    document,
+    commit,
+    customPrompt,
+  })
+  if (result.error) {
+    const compileError = new ChainError({
+      code: RunErrorCodes.ChainCompileError,
+      message: `Error compiling prompt for document uuid: ${document.documentUuid} - ${result.error.message}`,
+    })
+    await createRunError({
+      data: {
+        errorableUuid,
+        errorableType: ErrorableEntity.DocumentLog,
+        code: compileError.errorCode,
+        message: compileError.message,
+        details: compileError.details,
+      },
+    }).then((r) => r.unwrap())
+    $prompt.fail(compileError)
+    return Result.error(compileError)
+  }
 
   const checker = new RunDocumentChecker({
     document,

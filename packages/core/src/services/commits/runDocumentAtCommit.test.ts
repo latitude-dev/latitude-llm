@@ -5,7 +5,12 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Providers } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { createProject, createTelemetryContext } from '../../tests/factories'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+  createTelemetryContext,
+} from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { Result } from './../../lib/Result'
 import { runDocumentAtCommit } from './index'
@@ -301,6 +306,48 @@ model: gpt-4o
 
       // Restore the spy
       streamAIResponseSpy.mockRestore()
+    })
+  })
+
+  describe('with unresolved prompt references', () => {
+    it('returns the underlying compile error instead of "missing reference function"', async () => {
+      const { workspace, project, user } = await createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: { placeholder: dummyDoc1Content },
+      })
+      const { commit } = await createDraft({ project, user })
+      const { documentVersion: document } = await createDocumentVersion({
+        workspace,
+        user,
+        commit,
+        path: 'main-prompt',
+        content: `---
+provider: openai
+model: gpt-4o
+---
+
+<prompt path="prompts/missing-doc" />
+`,
+      })
+      const context = createTelemetryContext({ workspace })
+
+      const result = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      })
+
+      expect(result.error).toBeInstanceOf(ChainError)
+      const error = result.error as ChainError<RunErrorCodes.ChainCompileError>
+      expect(error.errorCode).toBe(RunErrorCodes.ChainCompileError)
+      expect(error.message).toContain('reference-not-found')
+      expect(error.message).toContain('path: prompts/missing-doc')
+      expect(error.message).not.toContain(
+        'A reference function was not provided',
+      )
     })
   })
 
