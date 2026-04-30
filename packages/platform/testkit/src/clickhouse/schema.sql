@@ -232,25 +232,6 @@ PRIMARY KEY (organization_id, project_id, start_time)
 ORDER BY (organization_id, project_id, start_time, session_id, trace_id, span_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE trace_search_documents
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `root_span_name` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
-    `search_text` String DEFAULT '' CODEC(ZSTD(3)),
-    `content_hash` FixedString(64) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    INDEX idx_search_text_tokenbf search_text TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1,
-    INDEX idx_search_text_ngrambf search_text TYPE ngrambf_v1(3, 512, 3, 0) GRANULARITY 1
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id)
-ORDER BY (organization_id, project_id, trace_id)
-SETTINGS index_granularity = 8192;
-
 CREATE TABLE trace_search_embeddings
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
