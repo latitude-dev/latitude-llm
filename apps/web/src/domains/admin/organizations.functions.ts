@@ -147,15 +147,26 @@ const toUsagePageDto = (page: ListOrganizationsByUsageOutput): AdminOrganization
 const encodeUsageCursor = (cursor: AdminOrganizationUsageCursor): string =>
   Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
 
-const decodeUsageCursor = (encoded: string): AdminOrganizationUsageCursor => {
-  // Throw a generic error on malformed input — the cursor is opaque to
-  // the client, so a malformed string is a bug, not a user error.
-  const decoded = Buffer.from(encoded, "base64url").toString("utf8")
-  return adminOrganizationUsageCursorSchema.parse(JSON.parse(decoded))
-}
-
+// Decoding lives inside the Zod schema (below) so a malformed cursor surfaces
+// as an input validation error (4xx) instead of an unhandled exception (500).
+// The cursor is opaque to the client, so a bad value is almost always a bug,
+// but client-controlled query params shouldn't crash the handler.
 export const adminListOrganizationsByUsageInputSchema = z.object({
-  cursor: z.string().min(1).max(1024).optional(),
+  cursor: z
+    .string()
+    .min(1)
+    .max(1024)
+    .optional()
+    .transform((value, ctx) => {
+      if (value === undefined) return undefined
+      try {
+        const decoded = Buffer.from(value, "base64url").toString("utf8")
+        return adminOrganizationUsageCursorSchema.parse(JSON.parse(decoded))
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid cursor" })
+        return z.NEVER
+      }
+    }),
   limit: z.number().int().positive().max(ORGANIZATION_USAGE_MAX_LIMIT).optional(),
 })
 
@@ -173,11 +184,9 @@ export const adminListOrganizationsByUsage = createServerFn({ method: "GET" })
   .middleware([adminMiddleware])
   .inputValidator(adminListOrganizationsByUsageInputSchema)
   .handler(async ({ data }): Promise<AdminOrganizationUsagePageDto> => {
-    const cursor = data.cursor ? decodeUsageCursor(data.cursor) : undefined
-
     const page = await Effect.runPromise(
       listOrganizationsByUsageUseCase({
-        ...(cursor ? { cursor } : {}),
+        ...(data.cursor ? { cursor: data.cursor } : {}),
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
       }).pipe(
         withPostgres(AdminOrganizationRepositoryLive, getAdminPostgresClient()),

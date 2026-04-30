@@ -21,17 +21,30 @@ describe("adminGetOrganizationInputSchema", () => {
 })
 
 describe("adminListOrganizationsByUsageInputSchema", () => {
+  const encodeCursor = (cursor: { traceCount: number; organizationId: string }): string =>
+    Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
+
   it("accepts an empty payload (first page, default limit)", () => {
     expect(adminListOrganizationsByUsageInputSchema.safeParse({}).success).toBe(true)
   })
 
-  it("accepts a cursor and limit within bounds", () => {
-    expect(
-      adminListOrganizationsByUsageInputSchema.safeParse({
-        cursor: "abc",
-        limit: 25,
-      }).success,
-    ).toBe(true)
+  it("accepts and decodes a valid base64url-encoded cursor", () => {
+    const cursor = encodeCursor({ traceCount: 42, organizationId: "org-1" })
+    const result = adminListOrganizationsByUsageInputSchema.safeParse({ cursor, limit: 25 })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.cursor).toEqual({ traceCount: 42, organizationId: "org-1" })
+    }
+  })
+
+  it("rejects a malformed cursor (non-decodable input becomes a 400, not a 500)", () => {
+    // Plain string — not a valid base64url payload that decodes to a cursor.
+    expect(adminListOrganizationsByUsageInputSchema.safeParse({ cursor: "abc" }).success).toBe(false)
+  })
+
+  it("rejects a cursor whose decoded shape doesn't match the schema", () => {
+    const cursor = Buffer.from(JSON.stringify({ traceCount: -1, organizationId: "" }), "utf8").toString("base64url")
+    expect(adminListOrganizationsByUsageInputSchema.safeParse({ cursor }).success).toBe(false)
   })
 
   it("rejects a non-positive limit", () => {
