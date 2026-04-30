@@ -109,7 +109,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
       },
       {
         kind: "bar",
-        name: "Annotations passed",
+        name: "Positive annotations",
         values: activity.map((p) => p.annotationsPassed),
         color: ANNOTATION_PASSED_COLOR,
         axis: "right",
@@ -117,7 +117,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
       },
       {
         kind: "bar",
-        name: "Annotations failed",
+        name: "Negative annotations",
         values: activity.map((p) => p.annotationsFailed),
         color: ANNOTATION_FAILED_COLOR,
         axis: "right",
