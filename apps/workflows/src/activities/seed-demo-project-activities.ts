@@ -3,7 +3,7 @@ import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import { seedDemoProjectClickHouse } from "@platform/db-clickhouse"
 import { seedDemoProjectPostgres } from "@platform/db-postgres"
 import { seedDemoProjectWeaviate } from "@platform/db-weaviate"
-import { getClickhouseClient, getPostgresClient, getWeaviateClient } from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getWeaviateClient } from "../clients.ts"
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
@@ -40,9 +40,16 @@ const buildScope = (input: SeedDemoProjectActivityInput): SeedScope =>
  * intentionally skipped — the demo path operates on an existing org
  * with an existing API key, and the project row was created by the
  * use-case before this workflow started.
+ *
+ * Uses the admin (RLS-bypass) postgres client for the same reason
+ * `pnpm seed` does: the seeders write across many tables guarded by
+ * `organization_id = get_current_organization_id()` policies via the
+ * bare drizzle client (no `SqlClient.transaction` to set the RLS
+ * context), so the standard role's policies would reject every
+ * insert. Same trade-off the bootstrap CLI already makes.
  */
 export const seedDemoProjectPostgresActivity = (input: SeedDemoProjectActivityInput): Promise<void> =>
-  seedDemoProjectPostgres({ client: getPostgresClient(), scope: buildScope(input) })
+  seedDemoProjectPostgres({ client: getAdminPostgresClient(), scope: buildScope(input) })
 
 /**
  * ClickHouse content seed: ambient telemetry (~30 days × 6 agents),
