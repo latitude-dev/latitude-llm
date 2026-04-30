@@ -2,14 +2,20 @@ import { z } from "zod"
 
 /**
  * Per-day data point for the dual-axis "activity" chart at the top of
- * the backoffice project metrics panel. `traceCount` powers the bars,
- * `annotationCount` powers the line.
+ * the backoffice project metrics panel.
+ *
+ * `traceCount` powers the wide left-axis bars. The two annotation
+ * fields stack into the narrow right-axis bar pair (passed = green,
+ * failed = red — `passed=false` includes both failed and errored
+ * scores, since "errored" is a sub-flavour of failure on the score
+ * entity).
  */
 export const projectMetricsActivityPointSchema = z.object({
   /** Bucket start at midnight UTC, ISO-8601. */
   bucketStart: z.string(),
   traceCount: z.number().int().nonnegative(),
-  annotationCount: z.number().int().nonnegative(),
+  annotationsPassed: z.number().int().nonnegative(),
+  annotationsFailed: z.number().int().nonnegative(),
 })
 export type ProjectMetricsActivityPoint = z.infer<typeof projectMetricsActivityPointSchema>
 

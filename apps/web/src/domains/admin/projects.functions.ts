@@ -85,7 +85,8 @@ export const adminGetProject = createServerFn({ method: "GET" })
 interface ProjectMetricsActivityPointDto {
   bucketStart: string
   traceCount: number
-  annotationCount: number
+  annotationsPassed: number
+  annotationsFailed: number
 }
 
 interface ProjectIssueLifecyclePointDto {
@@ -117,7 +118,8 @@ const toMetricsDto = (metrics: ProjectMetrics): AdminProjectMetricsDto => ({
   activity: metrics.activity.map((p) => ({
     bucketStart: p.bucketStart,
     traceCount: p.traceCount,
-    annotationCount: p.annotationCount,
+    annotationsPassed: p.annotationsPassed,
+    annotationsFailed: p.annotationsFailed,
   })),
   issuesLifecycle: metrics.issuesLifecycle.map((p) => ({
     bucketStart: p.bucketStart,

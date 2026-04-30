@@ -6,7 +6,11 @@ import type {
   ProjectMetricsActivityPoint,
   ProjectTopIssue,
 } from "./project-metrics.ts"
-import { AdminProjectMetricsRepository, type ProjectMetricCountBucket } from "./project-metrics-repository.ts"
+import {
+  AdminProjectMetricsRepository,
+  type ProjectAnnotationBucket,
+  type ProjectMetricCountBucket,
+} from "./project-metrics-repository.ts"
 import { AdminProjectRepository, type ProjectIssueLifecycleEvent } from "./project-repository.ts"
 
 const DAY_SECONDS = 24 * 60 * 60
@@ -56,6 +60,23 @@ const denseCountSeries = (
   for (const bucket of buckets) {
     const key = bucket.toISOString()
     out.set(key, byKey.get(key) ?? 0)
+  }
+  return out
+}
+
+const denseAnnotationSeries = (
+  sparse: readonly ProjectAnnotationBucket[],
+  buckets: readonly Date[],
+): ReadonlyMap<string, { passed: number; failed: number }> => {
+  const byKey = new Map<string, { passed: number; failed: number }>()
+  for (const point of sparse) {
+    const key = startOfUtcDay(point.bucketStart.getTime()).toISOString()
+    byKey.set(key, { passed: point.passedCount, failed: point.failedCount })
+  }
+  const out = new Map<string, { passed: number; failed: number }>()
+  for (const bucket of buckets) {
+    const key = bucket.toISOString()
+    out.set(key, byKey.get(key) ?? { passed: 0, failed: 0 })
   }
   return out
 }
@@ -222,13 +243,15 @@ export const getProjectMetricsUseCase = (
       topIssueIds.length > 0 ? yield* projectRepo.findIssueNamesByIds(topIssueIds) : new Map<IssueId, string>()
 
     const traceByKey = denseCountSeries(traceBuckets, buckets)
-    const annotationByKey = denseCountSeries(annotationBuckets, buckets)
+    const annotationByKey = denseAnnotationSeries(annotationBuckets, buckets)
     const activity: ProjectMetricsActivityPoint[] = buckets.map((bucket) => {
       const key = bucket.toISOString()
+      const annotation = annotationByKey.get(key) ?? { passed: 0, failed: 0 }
       return {
         bucketStart: key,
         traceCount: traceByKey.get(key) ?? 0,
-        annotationCount: annotationByKey.get(key) ?? 0,
+        annotationsPassed: annotation.passed,
+        annotationsFailed: annotation.failed,
       }
     })
 

@@ -11,27 +11,31 @@ const barMaxWidthPx = 40
 const gridVerticalInsetPx = 16
 
 /**
- * Optional line series overlaid on the bars. Each line can target the
- * primary (left) y-axis or a secondary (right) one — caller decides.
+ * Optional secondary bar series rendered alongside the primary bars.
  *
- * Multi-axis is opt-in: if every spec has `axis: 'left'` (or omitted),
- * the chart renders a single y-axis. If at least one spec has
- * `axis: 'right'`, a second y-axis is added and labelled with
- * `secondaryAxisName` if provided.
+ * Each spec can target the primary (left) y-axis or a secondary
+ * (right) one. When at least one spec has `axis: 'right'`, the chart
+ * adds a secondary y-axis labelled with `secondaryAxisName`.
+ *
+ * `stack` groups bars together: any specs sharing the same `stack`
+ * key stack vertically at each category, and ECharts groups distinct
+ * stacks side-by-side. Caller is responsible for choosing colours
+ * that read well stacked.
  */
-export interface LineSeriesSpec {
+export interface BarSeriesSpec {
   readonly name: string
   readonly values: readonly number[]
   readonly color: string
   readonly axis?: "left" | "right"
+  readonly stack?: string
 }
 
 interface BarChartOptionExtras {
-  /** Optional line overlays. */
-  readonly lines?: readonly LineSeriesSpec[]
-  /** Series name for the bars (legend label). Defaults to "Bars". */
+  /** Optional secondary bar series (stacked, axis-aware). */
+  readonly bars?: readonly BarSeriesSpec[]
+  /** Series name for the primary bars (legend label). Defaults to "Bars". */
   readonly primarySeriesName?: string
-  /** Display name for the right y-axis (only used when at least one line targets it). */
+  /** Display name for the right y-axis (only used when at least one bar targets it). */
   readonly secondaryAxisName?: string
 }
 
@@ -46,9 +50,9 @@ export function buildBarChartOption(
   xAxisLabelFontSize = 11,
   extras: BarChartOptionExtras = {},
 ): EChartsCoreOption {
-  const { lines, primarySeriesName, secondaryAxisName } = extras
-  const hasSecondaryAxis = !!lines?.some((l) => l.axis === "right")
-  const showLegend = !!lines && lines.length > 0
+  const { bars, primarySeriesName, secondaryAxisName } = extras
+  const hasSecondaryAxis = !!bars?.some((b) => b.axis === "right")
+  const showLegend = !!bars && bars.length > 0
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
       ? 0
@@ -88,12 +92,11 @@ export function buildBarChartOption(
         axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
       }
 
-  // Disable emphasis-driven dimming when the chart has multiple series
-  // (bars + lines) — echarts' default fades non-hovered series down to
-  // ~10% opacity, which the user perceives as the chart "disappearing"
-  // on hover. Keep the bars-only branch using its existing emphasis
-  // tweak so single-series histograms behave identically to before.
-  const hasOverlay = (lines?.length ?? 0) > 0
+  // Disable emphasis-driven dimming when the chart has multiple series.
+  // ECharts' default fades non-hovered series to ~10% opacity, which
+  // reads as the chart "disappearing" on hover. Single-series
+  // histograms keep their existing emphasis tweak unchanged.
+  const hasOverlay = (bars?.length ?? 0) > 0
 
   const barSeries = {
     name: primarySeriesName ?? "Bars",
@@ -117,15 +120,23 @@ export function buildBarChartOption(
         },
   }
 
-  const lineSeries = (lines ?? []).map((line) => ({
-    name: line.name,
-    type: "line" as const,
-    data: [...line.values],
-    smooth: false,
-    showSymbol: false,
-    yAxisIndex: hasSecondaryAxis && line.axis === "right" ? 1 : 0,
-    lineStyle: { width: 2, color: line.color },
-    itemStyle: { color: line.color },
+  // Cap overlay bar widths in dense histograms so 30-day daily stacks
+  // don't spill into one another visually.
+  const overlayBars = (bars ?? []).map((bar) => ({
+    name: bar.name,
+    type: "bar" as const,
+    data: [...bar.values],
+    ...(bar.stack ? { stack: bar.stack } : {}),
+    yAxisIndex: hasSecondaryAxis && bar.axis === "right" ? 1 : 0,
+    ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
+    barCategoryGap: "18%",
+    itemStyle: {
+      color: bar.color,
+      // Only round the top of the topmost bar in a stack — the chart
+      // can't tell which is on top, so just round all corners on
+      // unstacked overlays and leave stacked overlays square.
+      ...(bar.stack ? {} : { borderRadius: [3, 3, 0, 0] as [number, number, number, number] }),
+    },
     emphasis: { disabled: true },
   }))
 
@@ -202,7 +213,7 @@ export function buildBarChartOption(
       axisTick: { alignWithLabel: true, lineStyle: { color: colors.border } },
     },
     yAxis,
-    series: [barSeries, ...lineSeries],
+    series: [barSeries, ...overlayBars],
   }
 
   if (enableBrush) {

@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
-import { buildBarChartOption, type LineSeriesSpec } from "./bar-chart-option.ts"
+import { type BarSeriesSpec, buildBarChartOption } from "./bar-chart-option.ts"
 import { chartThemeFallback } from "./chart-css-theme.ts"
 import { echarts } from "./register-echarts.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
@@ -18,15 +18,18 @@ export type BarChartDataPoint = {
 }
 
 /**
- * Optional line series overlaid on the bars. Aligned 1-1 with `data`
- * by index; if you pass 30 categories, each line's `values` should also
- * have 30 entries.
+ * Optional secondary bar series rendered alongside the primary bars.
+ * Aligned 1-1 with `data` by index; if you pass 30 categories, each
+ * overlay's `values` should also have 30 entries.
  *
- * Set `axis: 'right'` to plot the line against a secondary y-axis —
- * useful when bar magnitudes (e.g. trace counts) and line magnitudes
- * (e.g. annotation counts) live on very different scales.
+ * Set `axis: 'right'` to plot against a secondary y-axis — useful when
+ * the primary and overlay magnitudes live on very different scales.
+ *
+ * Set `stack` to group overlays vertically: any overlays sharing the
+ * same `stack` key stack together at each category, and ECharts
+ * groups distinct stacks side-by-side with the primary bars.
  */
-export type BarChartLineSeries = LineSeriesSpec
+export type BarChartBarSeries = BarSeriesSpec
 
 export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSelect"> & {
   readonly data: readonly BarChartDataPoint[]
@@ -49,11 +52,11 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
    */
   readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
-  /** Optional line overlays. */
-  readonly lines?: readonly BarChartLineSeries[]
-  /** Series name shown in the legend for the bars. Defaults to "Bars" when `lines` is set. */
+  /** Optional overlay bar series (stacked, axis-aware). */
+  readonly bars?: readonly BarChartBarSeries[]
+  /** Series name shown in the legend for the primary bars. Defaults to "Bars" when `bars` is set. */
   readonly primarySeriesName?: string
-  /** Display name for the secondary y-axis (only used when at least one line targets it). */
+  /** Display name for the secondary y-axis (only used when at least one overlay targets it). */
   readonly secondaryAxisName?: string
 }
 
@@ -83,7 +86,7 @@ function BarChart({
   showYAxis = true,
   xAxisLabelFontSize,
   onSelect,
-  lines,
+  bars,
   primarySeriesName,
   secondaryAxisName,
   className,
@@ -118,7 +121,7 @@ function BarChart({
         hasBrush,
         xAxisLabelFontSize,
         {
-          ...(lines ? { lines } : {}),
+          ...(bars ? { bars } : {}),
           ...(primarySeriesName ? { primarySeriesName } : {}),
           ...(secondaryAxisName ? { secondaryAxisName } : {}),
         },
@@ -132,7 +135,7 @@ function BarChart({
       showYAxis,
       hasBrush,
       xAxisLabelFontSize,
-      lines,
+      bars,
       primarySeriesName,
       secondaryAxisName,
     ],

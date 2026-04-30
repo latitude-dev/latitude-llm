@@ -44,7 +44,7 @@ const projectRepo = (overrides: {
 
 const metricsRepo = (overrides: {
   traces?: readonly { bucketStart: Date; count: number }[]
-  annotations?: readonly { bucketStart: Date; count: number }[]
+  annotations?: readonly { bucketStart: Date; passedCount: number; failedCount: number }[]
   topIssues?: readonly { issueId: IssueId; occurrences: number; lastSeenAt: Date }[]
 }) =>
   Layer.succeed(AdminProjectMetricsRepository, {
@@ -75,7 +75,33 @@ describe("getProjectMetricsUseCase", () => {
 
     expect(result.activity).toHaveLength(5)
     expect(result.activity.map((p) => p.traceCount)).toEqual([0, 0, 7, 0, 0])
-    expect(result.activity.every((p) => p.annotationCount === 0)).toBe(true)
+    expect(result.activity.every((p) => p.annotationsPassed === 0 && p.annotationsFailed === 0)).toBe(true)
+  })
+
+  it("threads annotation passed/failed counts through to the activity series", async () => {
+    const lastBucket = startOfUtcDay(NOW.getTime())
+    const today = lastBucket
+    const yesterday = new Date(lastBucket.getTime() - DAY_MS)
+
+    const result = await Effect.runPromise(
+      getProjectMetricsUseCase({ projectId: PROJECT_ID, now: NOW, windowDays: 3 }).pipe(
+        Effect.provide(projectRepo({})),
+        Effect.provide(
+          metricsRepo({
+            annotations: [
+              { bucketStart: yesterday, passedCount: 4, failedCount: 1 },
+              { bucketStart: today, passedCount: 2, failedCount: 3 },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    expect(result.activity.map((p) => [p.annotationsPassed, p.annotationsFailed])).toEqual([
+      [0, 0],
+      [4, 1],
+      [2, 3],
+    ])
   })
 
   it("composes a flat baseline-only lifecycle when there are no events in the window", async () => {

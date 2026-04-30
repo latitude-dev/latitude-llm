@@ -24,6 +24,7 @@ export {
 } from "./project-metrics.ts"
 export {
   AdminProjectMetricsRepository,
+  type ProjectAnnotationBucket,
   type ProjectMetricCountBucket,
   type ProjectMetricHistogramInput,
   type ProjectTopIssueOccurrence,

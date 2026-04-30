@@ -3,12 +3,24 @@ import { type Effect, ServiceMap } from "effect"
 
 /**
  * Per-day count of an event-typed metric for a project (e.g. trace
- * volume, manual annotations). Bucket start is the bucket's lower edge,
- * exclusive upper edge.
+ * volume). Bucket start is the bucket's lower edge, exclusive upper
+ * edge.
  */
 export interface ProjectMetricCountBucket {
   readonly bucketStart: Date
   readonly count: number
+}
+
+/**
+ * Per-day annotation counts split by outcome. `failedCount` rolls up
+ * both `passed=false` and `errored=true` since "errored" is a flavour
+ * of failure on the score entity (the schema represents it as a
+ * disjoint subset of `passed=false`).
+ */
+export interface ProjectAnnotationBucket {
+  readonly bucketStart: Date
+  readonly passedCount: number
+  readonly failedCount: number
 }
 
 export interface ProjectTopIssueOccurrence {
@@ -56,12 +68,13 @@ export class AdminProjectMetricsRepository extends ServiceMap.Service<
     ): Effect.Effect<readonly ProjectMetricCountBucket[], RepositoryError>
 
     /**
-     * Daily count of manual annotations (scores with `source = 'annotation'`).
-     * Sparse — same densify policy as `getTraceHistogram`.
+     * Daily counts of manual annotations (scores with `source = 'annotation'`)
+     * split by outcome — `passed=true` and `passed=false`. Sparse —
+     * same densify policy as `getTraceHistogram`.
      */
     getAnnotationHistogram(
       input: ProjectMetricHistogramInput,
-    ): Effect.Effect<readonly ProjectMetricCountBucket[], RepositoryError>
+    ): Effect.Effect<readonly ProjectAnnotationBucket[], RepositoryError>
 
     /**
      * Top-N issues by occurrences in the window. "Occurrence" = score row

@@ -22,7 +22,7 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/card/card.tsx"
-export type { BarChartDataPoint, BarChartLineSeries, BarChartProps } from "./components/charts/bar-chart.tsx"
+export type { BarChartBarSeries, BarChartDataPoint, BarChartProps } from "./components/charts/bar-chart.tsx"
 export {
   type ChartCssThemeColors,
   chartThemeFallback,

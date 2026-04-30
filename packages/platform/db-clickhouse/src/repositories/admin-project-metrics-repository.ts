@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
   AdminProjectMetricsRepository,
+  type ProjectAnnotationBucket,
   type ProjectMetricCountBucket,
   type ProjectTopIssueOccurrence,
 } from "@domain/admin"
@@ -79,13 +80,19 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
       getAnnotationHistogram: ({ organizationId, projectId, since, bucketSeconds }) =>
         chSqlClient
           .query(async (client) => {
+            // Split annotations by `passed`. `countIf(passed)` counts
+            // rows where the score passed; `countIf(NOT passed)` covers
+            // both failed and errored scores — the score entity treats
+            // "errored" as a sub-flavour of `passed=false`, not a third
+            // outcome, so the binary split matches the domain model.
             const result = await client.query({
               query: `SELECT
                         toDateTime(
                           intDiv(toUnixTimestamp(created_at), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                           'UTC'
                         ) AS bucket_start,
-                        count() AS count
+                        countIf(passed)     AS passed_count,
+                        countIf(NOT passed) AS failed_count
                       FROM scores
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -101,11 +108,15 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<{ bucket_start: string; count: string }>()
+            return result.json<{ bucket_start: string; passed_count: string; failed_count: string }>()
           })
           .pipe(
-            Effect.map((rows): readonly ProjectMetricCountBucket[] =>
-              rows.map((row) => ({ bucketStart: parseCHDate(row.bucket_start), count: Number(row.count) })),
+            Effect.map((rows): readonly ProjectAnnotationBucket[] =>
+              rows.map((row) => ({
+                bucketStart: parseCHDate(row.bucket_start),
+                passedCount: Number(row.passed_count),
+                failedCount: Number(row.failed_count),
+              })),
             ),
             Effect.mapError((error) => toRepositoryError(error, "getAnnotationHistogram")),
           ),

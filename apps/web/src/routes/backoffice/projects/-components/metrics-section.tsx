@@ -1,4 +1,4 @@
-import { BarChart, type BarChartLineSeries, HistogramSkeleton, StackedAreaChart, Text } from "@repo/ui"
+import { BarChart, type BarChartBarSeries, HistogramSkeleton, StackedAreaChart, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -19,7 +19,11 @@ const ISSUE_LAYER_COLORS = {
   untracked: "hsl(25 90% 55%)",
 } as const
 
-const ANNOTATION_LINE_COLOR = "hsl(280 70% 60%)"
+// Annotation outcome colours. Green for `passed=true` (the score
+// looked good), red for `passed=false` (which includes errored — see
+// the score-entity model). Stacks at each day on the right axis.
+const ANNOTATION_PASSED_COLOR = "hsl(142 60% 45%)"
+const ANNOTATION_FAILED_COLOR = "hsl(0 70% 55%)"
 
 function formatBucketLabel(iso: string): string {
   const d = new Date(iso)
@@ -108,13 +112,21 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
     [activity],
   )
 
-  const lines = useMemo<BarChartLineSeries[]>(
+  const overlayBars = useMemo<BarChartBarSeries[]>(
     () => [
       {
-        name: "Manual annotations",
-        values: activity.map((p) => p.annotationCount),
-        color: ANNOTATION_LINE_COLOR,
+        name: "Annotations passed",
+        values: activity.map((p) => p.annotationsPassed),
+        color: ANNOTATION_PASSED_COLOR,
         axis: "right",
+        stack: "annotations",
+      },
+      {
+        name: "Annotations failed",
+        values: activity.map((p) => p.annotationsFailed),
+        color: ANNOTATION_FAILED_COLOR,
+        axis: "right",
+        stack: "annotations",
       },
     ],
     [activity],
@@ -128,7 +140,9 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
     [],
   )
 
-  if (activity.every((p) => p.traceCount === 0 && p.annotationCount === 0)) {
+  const isEmpty = activity.every((p) => p.traceCount === 0 && p.annotationsPassed === 0 && p.annotationsFailed === 0)
+
+  if (isEmpty) {
     return (
       <div className="flex min-h-[120px] items-center justify-center">
         <Text.H6 color="foregroundMuted">No activity in this window.</Text.H6>
@@ -139,7 +153,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
   return (
     <BarChart
       data={chartData}
-      lines={lines}
+      bars={overlayBars}
       primarySeriesName="Traces"
       secondaryAxisName="Annotations"
       height={CHART_HEIGHT}
