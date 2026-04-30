@@ -1,5 +1,5 @@
 import { AnnotationQueueId, AnnotationQueueItemId } from "@domain/shared"
-import { SEED_ADMIN_USER_ID, SEED_OWNER_USER_ID, type SeedScope } from "@domain/shared/seeding"
+import type { SeedScope } from "@domain/shared/seeding"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import { annotationQueueItems, annotationQueues } from "../../schema/annotation-queues.ts"
@@ -21,8 +21,28 @@ const staleQueueNames = [
   "Weekly quality sample",
 ] as const
 
+/**
+ * Pick the `index`-th member of the scope's assignee list, wrapping. Used
+ * everywhere the seeders previously hardcoded `SEED_OWNER_USER_ID` /
+ * `SEED_ADMIN_USER_ID` — those literal ids only exist on the canonical
+ * bootstrap org, so a demo project on any other org would write rows
+ * referencing non-existent users (the schema has no FK on
+ * `assignees`/`completedBy`, so inserts succeed but the UI shows broken
+ * lookups). The bootstrap path keeps owner/admin verbatim because
+ * `bootstrapSeedScope.queueAssigneeUserIds[0] === SEED_OWNER_USER_ID` and
+ * `[1] === SEED_ADMIN_USER_ID`. The demo path passes a single picked
+ * member, and the modulo wraps every reference back to that user.
+ */
+function pickAssignee(scope: SeedScope, index: number): string {
+  const list = scope.queueAssigneeUserIds
+  // queueAssigneeUserIds is non-empty by SeedScope construction
+  // biome-ignore lint/style/noNonNullAssertion: contract-guaranteed
+  return list[index % list.length]!
+}
+
 function buildQueueRows(scope: SeedScope) {
   const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
+  const assignee = (index: number) => pickAssignee(scope, index)
 
   return [
     {
@@ -39,7 +59,7 @@ function buildQueueRows(scope: SeedScope) {
         "the agent turns an excluded misuse scenario into a covered claim. Mark passed when the assistant keeps the " +
         "outcome conditional, cites policy, or limits any exception to a documented approval.",
       settings: {},
-      assignees: [SEED_OWNER_USER_ID, SEED_ADMIN_USER_ID],
+      assignees: [assignee(0), assignee(1)],
       totalItems: 3,
       completedItems: 2,
       deletedAt: null,
@@ -80,7 +100,7 @@ function buildQueueRows(scope: SeedScope) {
         "Review whether the assistant invented a logistics capability, fee waiver, pickup workflow, or guaranteed delivery outcome. " +
         "Mark failed when the assistant promises unsupported service. Mark passed when it clearly states the supported options or keeps any exception scoped to a verified reference.",
       settings: {},
-      assignees: [SEED_OWNER_USER_ID],
+      assignees: [assignee(0)],
       totalItems: 3,
       completedItems: 2,
       deletedAt: null,
@@ -103,7 +123,7 @@ function buildQueueRows(scope: SeedScope) {
         filter: { cost: [{ op: "gte" as const, value: 500 }] },
         sampling: 25,
       },
-      assignees: [SEED_OWNER_USER_ID],
+      assignees: [assignee(0)],
       totalItems: 1,
       completedItems: 0,
       deletedAt: null,
@@ -123,7 +143,7 @@ function buildQueueRows(scope: SeedScope) {
         "This queue contains a trace with 30+ messages and 12 annotations demonstrating every combination of provenance (human, agent, API), " +
         "state (draft, published), and anchor type (global, message-level, text range selection). Use this queue to test the annotation UI.",
       settings: {},
-      assignees: [SEED_OWNER_USER_ID, SEED_ADMIN_USER_ID],
+      assignees: [assignee(0), assignee(1)],
       totalItems: 1,
       completedItems: 0,
       deletedAt: null,
@@ -135,6 +155,7 @@ function buildQueueRows(scope: SeedScope) {
 
 function buildQueueItemRows(scope: SeedScope) {
   const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
+  const assignee = (index: number) => pickAssignee(scope, index)
   const queueWarrantyId = AnnotationQueueId(scope.cuid("queue:warranty"))
   const queueCombinationId = AnnotationQueueId(scope.cuid("queue:combination"))
   const queueLogisticsId = AnnotationQueueId(scope.cuid("queue:logistics"))
@@ -165,7 +186,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 0),
       traceCreatedAt: queueDate(13, 7),
       completedAt: queueDate(12, 11, 15),
-      completedBy: SEED_OWNER_USER_ID,
+      completedBy: assignee(0),
       reviewStartedAt: queueDate(12, 10, 30),
       createdAt: queueDate(12, 9, 30),
       updatedAt: queueDate(12, 11, 15),
@@ -178,7 +199,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 8),
       traceCreatedAt: queueDate(13, 6),
       completedAt: queueDate(12, 12, 5),
-      completedBy: SEED_ADMIN_USER_ID,
+      completedBy: assignee(1),
       reviewStartedAt: queueDate(12, 11, 20),
       createdAt: queueDate(12, 9, 45),
       updatedAt: queueDate(12, 12, 5),
@@ -204,7 +225,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 16),
       traceCreatedAt: queueDate(8, 7),
       completedAt: queueDate(7, 11, 40),
-      completedBy: SEED_OWNER_USER_ID,
+      completedBy: assignee(0),
       reviewStartedAt: queueDate(7, 10, 50),
       createdAt: queueDate(7, 9, 20),
       updatedAt: queueDate(7, 11, 40),
@@ -217,7 +238,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 28),
       traceCreatedAt: queueDate(8, 6),
       completedAt: queueDate(7, 12, 10),
-      completedBy: SEED_OWNER_USER_ID,
+      completedBy: assignee(0),
       reviewStartedAt: queueDate(7, 11, 15),
       createdAt: queueDate(7, 9, 35),
       updatedAt: queueDate(7, 12, 10),
@@ -243,7 +264,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 38),
       traceCreatedAt: queueDate(4, 7),
       completedAt: queueDate(3, 10, 35),
-      completedBy: SEED_OWNER_USER_ID,
+      completedBy: assignee(0),
       reviewStartedAt: queueDate(3, 9, 40),
       createdAt: queueDate(3, 9, 10),
       updatedAt: queueDate(3, 10, 35),
@@ -256,7 +277,7 @@ function buildQueueItemRows(scope: SeedScope) {
       traceId: scope.traceHex("annotation", 43),
       traceCreatedAt: queueDate(4, 6),
       completedAt: queueDate(3, 11),
-      completedBy: SEED_OWNER_USER_ID,
+      completedBy: assignee(0),
       reviewStartedAt: queueDate(3, 10),
       createdAt: queueDate(3, 9, 15),
       updatedAt: queueDate(3, 11),

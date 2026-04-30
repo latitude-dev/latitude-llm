@@ -19,7 +19,6 @@ import {
   SEED_GENERATE_ISSUE_ID,
   SEED_INSTALLATION_ISSUE_ID,
   SEED_ISSUE_ID,
-  SEED_OWNER_USER_ID,
   SEED_RETURNS_EVALUATION_ID,
   SEED_RETURNS_ISSUE_ID,
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
@@ -88,6 +87,14 @@ function buildAllScoreRows(scope: SeedScope) {
   const projectId = scope.projectId
   const createdAtFromDaysAgo = (daysAgo: number, hour: number, minute = 0): Date =>
     scope.dateDaysAgo(daysAgo, hour, minute)
+  // The UI-polish annotation rows previously hardcoded `annotatorId:
+  // SEED_OWNER_USER_ID`, which only exists on the canonical bootstrap
+  // org. Pick from `scope.queueAssigneeUserIds` so demo projects
+  // reference users that actually exist on the target org. Bootstrap
+  // path keeps the owner verbatim because
+  // `bootstrapSeedScope.queueAssigneeUserIds[0] === SEED_OWNER_USER_ID`.
+  // biome-ignore lint/style/noNonNullAssertion: queueAssigneeUserIds non-empty by SeedScope contract
+  const annotatorUserId = scope.queueAssigneeUserIds[0]!
 
   const evaluationWarrantyActiveId = EvaluationId(scope.cuid("evaluation:warranty-active"))
   const evaluationWarrantyArchivedId = EvaluationId(scope.cuid("evaluation:warranty-archived"))
@@ -444,7 +451,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.3,
       passed: false,
       feedback: "Human draft annotation with text range anchor - needs review.",
@@ -475,7 +482,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.5,
       passed: false,
       feedback: "Human draft annotation - message level on assistant response.",
@@ -500,7 +507,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.8,
       passed: true,
       feedback: "Human draft annotation - trace level (global).",
@@ -525,7 +532,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.95,
       passed: true,
       feedback: "Human published annotation with text range on tool result.",
@@ -556,7 +563,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.1,
       passed: false,
       feedback: "Human published annotation - message level on user message.",
@@ -581,7 +588,7 @@ function buildAllScoreRows(scope: SeedScope) {
       sourceId: "UI",
       simulationId: null,
       issueId: null,
-      annotatorId: SEED_OWNER_USER_ID,
+      annotatorId: annotatorUserId,
       value: 0.88,
       passed: true,
       feedback: "Human published annotation - trace level (global).",
