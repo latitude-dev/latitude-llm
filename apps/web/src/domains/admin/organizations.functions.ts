@@ -1,6 +1,17 @@
-import { type AdminOrganizationDetails, createDemoProjectUseCase, getOrganizationDetailsUseCase } from "@domain/admin"
+import {
+  type AdminOrganizationDetails,
+  type AdminOrganizationUsageCursor,
+  type AdminOrganizationUsageSummary,
+  adminOrganizationUsageCursorSchema,
+  createDemoProjectUseCase,
+  getOrganizationDetailsUseCase,
+  type ListOrganizationsByUsageOutput,
+  listOrganizationsByUsageUseCase,
+  ORGANIZATION_USAGE_MAX_LIMIT,
+} from "@domain/admin"
 import { WorkflowStarter } from "@domain/queue"
 import { OrganizationId, UserId } from "@domain/shared"
+import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AdminOrganizationRepositoryLive,
   OutboxEventWriterLive,
@@ -12,7 +23,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getWorkflowStarter } from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -101,6 +112,102 @@ export const adminGetOrganization = createServerFn({ method: "GET" })
 
     return toDto(details)
   })
+
+// ───────────────────────────────────────────────────────────────────
+// Organisations by usage (backoffice listing)
+// ───────────────────────────────────────────────────────────────────
+
+export interface AdminOrganizationUsageItemDto {
+  id: string
+  name: string
+  slug: string
+  plan: string | null
+  memberCount: number
+  traceCount: number
+  /** ISO-8601, or null when the org has no traces in the rolling window. */
+  lastTraceAt: string | null
+  createdAt: string
+}
+
+interface AdminOrganizationUsagePageDto {
+  items: AdminOrganizationUsageItemDto[]
+  /** Opaque, base64url-encoded next-page cursor; null when there's no more data. */
+  nextCursor: string | null
+}
+
+const toUsageItemDto = (item: AdminOrganizationUsageSummary): AdminOrganizationUsageItemDto => ({
+  id: item.id,
+  name: item.name,
+  slug: item.slug,
+  plan: item.plan,
+  memberCount: item.memberCount,
+  traceCount: item.traceCount,
+  lastTraceAt: item.lastTraceAt ? item.lastTraceAt.toISOString() : null,
+  createdAt: item.createdAt.toISOString(),
+})
+
+const toUsagePageDto = (page: ListOrganizationsByUsageOutput): AdminOrganizationUsagePageDto => ({
+  items: page.items.map(toUsageItemDto),
+  nextCursor: page.nextCursor ? encodeUsageCursor(page.nextCursor) : null,
+})
+
+const encodeUsageCursor = (cursor: AdminOrganizationUsageCursor): string =>
+  Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
+
+// Decoding lives inside the Zod schema (below) so a malformed cursor surfaces
+// as an input validation error (4xx) instead of an unhandled exception (500).
+// The cursor is opaque to the client, so a bad value is almost always a bug,
+// but client-controlled query params shouldn't crash the handler.
+export const adminListOrganizationsByUsageInputSchema = z.object({
+  cursor: z
+    .string()
+    .min(1)
+    .max(1024)
+    .optional()
+    .transform((value, ctx) => {
+      if (value === undefined) return undefined
+      try {
+        const decoded = Buffer.from(value, "base64url").toString("utf8")
+        return adminOrganizationUsageCursorSchema.parse(JSON.parse(decoded))
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid cursor" })
+        return z.NEVER
+      }
+    }),
+  limit: z.number().int().positive().max(ORGANIZATION_USAGE_MAX_LIMIT).optional(),
+})
+
+/**
+ * Backoffice "organisations by usage" listing. Sorted by trace count over
+ * the rolling 30-day window (descending), with org id as the tiebreaker so
+ * pagination is deterministic.
+ *
+ * Guard: {@link adminMiddleware}. Postgres queries run on the admin client
+ * at the `"system"` org scope (RLS bypass); ClickHouse aggregates `traces`
+ * cross-tenant via the dedicated admin port — see the security warnings on
+ * `AdminOrganizationUsageRepositoryLive` and `AdminOrganizationRepositoryLive`.
+ */
+export const adminListOrganizationsByUsage = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminListOrganizationsByUsageInputSchema)
+  .handler(async ({ data }): Promise<AdminOrganizationUsagePageDto> => {
+    const page = await Effect.runPromise(
+      listOrganizationsByUsageUseCase({
+        ...(data.cursor ? { cursor: data.cursor } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+      }).pipe(
+        withPostgres(AdminOrganizationRepositoryLive, getAdminPostgresClient()),
+        withClickHouse(AdminOrganizationUsageRepositoryLive, getClickhouseClient()),
+        withTracing,
+      ),
+    )
+
+    return toUsagePageDto(page)
+  })
+
+// ───────────────────────────────────────────────────────────────────
+// Create demo project (backoffice action)
+// ───────────────────────────────────────────────────────────────────
 
 /**
  * Exported for input-schema tests.

@@ -1461,6 +1461,9 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.18.2
+      '@domain/admin':
+        specifier: workspace:*
+        version: link:../../domain/admin
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai

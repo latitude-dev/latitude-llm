@@ -1,6 +1,6 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, Search, ShieldAlertIcon } from "lucide-react"
+import { ArrowLeft, Building2, Search, ShieldAlertIcon } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 import { requireAdminSession } from "../../server/admin-auth.ts"
@@ -79,13 +79,26 @@ function BackofficeLayout() {
       <div className="flex min-h-0 flex-1">
         <AppSidebar title="Backoffice">
           {({ collapsed }) => (
-            <NavItem
-              icon={Search}
-              label="Search"
-              to="/backoffice/search"
-              active={pathname === "/backoffice/search" || pathname.startsWith("/backoffice/search/")}
-              collapsed={collapsed}
-            />
+            <>
+              <NavItem
+                icon={Search}
+                label="Search"
+                to="/backoffice/search"
+                active={pathname === "/backoffice/search" || pathname.startsWith("/backoffice/search/")}
+                collapsed={collapsed}
+              />
+              <NavItem
+                icon={Building2}
+                label="Organizations"
+                to="/backoffice/organizations"
+                // Match only the listing route, not the per-org detail page —
+                // detail pages are reached from search / recent chips and
+                // shouldn't highlight the listing entry as if the user is
+                // browsing it.
+                active={pathname === "/backoffice/organizations" || pathname === "/backoffice/organizations/"}
+                collapsed={collapsed}
+              />
+            </>
           )}
         </AppSidebar>
         <main className="flex-1 min-w-0 overflow-y-auto">

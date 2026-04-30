@@ -3,6 +3,20 @@ import { type Effect, ServiceMap } from "effect"
 import type { AdminOrganizationDetails } from "./organization-details.ts"
 
 /**
+ * Compact org summary keyed by id for the "organisations by usage" page.
+ * Plan is the most recent active/trialing `subscriptions.plan` for the
+ * org, or null when no such row exists.
+ */
+export interface AdminOrganizationSummary {
+  readonly id: OrganizationId
+  readonly name: string
+  readonly slug: string
+  readonly plan: string | null
+  readonly memberCount: number
+  readonly createdAt: Date
+}
+
+/**
  * Cross-organization org-detail port for the backoffice.
  *
  * WARNING: adapters MUST run under an admin (RLS-bypassing) DB
@@ -24,6 +38,16 @@ export class AdminOrganizationRepository extends ServiceMap.Service<
      * and the search results.
      */
     findById(organizationId: OrganizationId): Effect.Effect<AdminOrganizationDetails, NotFoundError | RepositoryError>
+
+    /**
+     * Hydrate a batch of organisations by id with member count and current
+     * plan. Result is keyed by organisation id; ids missing from the
+     * underlying table simply don't appear in the returned map — callers
+     * decide how to react (the usage page silently drops them).
+     */
+    findManySummariesByIds(
+      ids: readonly OrganizationId[],
+    ): Effect.Effect<ReadonlyMap<OrganizationId, AdminOrganizationSummary>, RepositoryError>
 
     /**
      * Return the first non-deleted api-key id for the org, or `null` when

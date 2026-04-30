@@ -24,6 +24,7 @@ import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as BackofficeUsersUserIdRouteImport } from './routes/backoffice/users/$userId'
@@ -118,6 +119,12 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const BackofficeOrganizationsIndexRoute =
+  BackofficeOrganizationsIndexRouteImport.update({
+    id: '/organizations/',
+    path: '/organizations/',
+    getParentRoute: () => BackofficeRouteRoute,
+  } as any)
 const ApiObservabilityTestIndexRoute =
   ApiObservabilityTestIndexRouteImport.update({
     id: '/api/observability-test/',
@@ -257,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -288,6 +296,7 @@ export interface FileRoutesByTo {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -325,6 +334,7 @@ export interface FileRoutesById {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/settings/'
     | '/api/observability-test/'
+    | '/backoffice/organizations/'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug/'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/settings'
     | '/api/observability-test'
+    | '/backoffice/organizations'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/_authenticated/settings/'
     | '/api/observability-test/'
+    | '/backoffice/organizations/'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/_authenticated/projects/$projectSlug/'
@@ -559,6 +572,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/backoffice/organizations/': {
+      id: '/backoffice/organizations/'
+      path: '/organizations'
+      fullPath: '/backoffice/organizations/'
+      preLoaderRoute: typeof BackofficeOrganizationsIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/api/observability-test/': {
       id: '/api/observability-test/'
@@ -702,6 +722,7 @@ interface BackofficeRouteRouteChildren {
   BackofficeOrganizationsOrganizationIdRoute: typeof BackofficeOrganizationsOrganizationIdRoute
   BackofficeProjectsProjectIdRoute: typeof BackofficeProjectsProjectIdRoute
   BackofficeUsersUserIdRoute: typeof BackofficeUsersUserIdRoute
+  BackofficeOrganizationsIndexRoute: typeof BackofficeOrganizationsIndexRoute
 }
 
 const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
@@ -711,6 +732,7 @@ const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
     BackofficeOrganizationsOrganizationIdRoute,
   BackofficeProjectsProjectIdRoute: BackofficeProjectsProjectIdRoute,
   BackofficeUsersUserIdRoute: BackofficeUsersUserIdRoute,
+  BackofficeOrganizationsIndexRoute: BackofficeOrganizationsIndexRoute,
 }
 
 const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(

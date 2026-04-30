@@ -88,6 +88,7 @@ const buildLayer = (
   const adminRepo = Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.succeed(org),
     findFirstApiKeyId: () => Effect.succeed(apiKeyId),
+    findManySummariesByIds: () => Effect.succeed(new Map()),
   })
 
   // The use-case only calls `save` + `existsBySlug`; cast through the full
