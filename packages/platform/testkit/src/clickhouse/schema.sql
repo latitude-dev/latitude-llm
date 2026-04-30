@@ -232,23 +232,6 @@ PRIMARY KEY (organization_id, project_id, start_time)
 ORDER BY (organization_id, project_id, start_time, session_id, trace_id, span_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE trace_search_embeddings
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `content_hash` FixedString(64) CODEC(ZSTD(1)),
-    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
-    `embedding` Array(Float32) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id)
-ORDER BY (organization_id, project_id, trace_id)
-SETTINGS index_granularity = 8192;
-
 CREATE TABLE traces
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -364,3 +347,35 @@ GROUP BY
     project_id,
     trace_id;
 
+
+CREATE TABLE trace_search_documents
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `root_span_name` LowCardinality(String) CODEC(ZSTD(1)),
+    `search_text` String CODEC(ZSTD(1)),
+    `content_hash` FixedString(64) CODEC(ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, trace_id)
+ORDER BY (organization_id, project_id, trace_id);
+
+CREATE TABLE trace_search_embeddings
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `content_hash` FixedString(64) CODEC(ZSTD(1)),
+    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, trace_id)
+ORDER BY (organization_id, project_id, trace_id);
