@@ -7,7 +7,6 @@ import {
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
   SEED_WARRANTY_EVALUATION_HASH,
   type SeedScope,
-  seedDateDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { evaluations } from "../../schema/evaluations.ts"
@@ -184,8 +183,9 @@ const accessAlignment: EvaluationAlignment = {
   },
 }
 
-const buildEvaluationRows = (scope: SeedScope) =>
-  [
+const buildEvaluationRows = (scope: SeedScope) => {
+  const at = (daysAgo: number, hour: number, minute = 0) => scope.dateDaysAgo(daysAgo, hour, minute)
+  return [
     {
       id: EvaluationId(scope.cuid("evaluation:warranty-active")),
       organizationId: scope.organizationId,
@@ -198,11 +198,11 @@ const buildEvaluationRows = (scope: SeedScope) =>
       script: warrantyMonitorScript,
       trigger: warrantyTrigger,
       alignment: warrantyAlignment,
-      alignedAt: seedDateDaysAgo(3, 16, 0),
+      alignedAt: at(3, 16, 0),
       archivedAt: null,
       deletedAt: null,
-      createdAt: seedDateDaysAgo(32, 14, 0),
-      updatedAt: seedDateDaysAgo(3, 16, 0),
+      createdAt: at(32, 14, 0),
+      updatedAt: at(3, 16, 0),
     },
     {
       id: EvaluationId(scope.cuid("evaluation:warranty-archived")),
@@ -216,11 +216,11 @@ const buildEvaluationRows = (scope: SeedScope) =>
       script: warrantyLegacyScript,
       trigger: warrantyArchivedTrigger,
       alignment: warrantyArchivedAlignment,
-      alignedAt: seedDateDaysAgo(74, 10, 0),
-      archivedAt: seedDateDaysAgo(46, 9, 0),
+      alignedAt: at(74, 10, 0),
+      archivedAt: at(46, 9, 0),
       deletedAt: null,
-      createdAt: seedDateDaysAgo(81, 8, 0),
-      updatedAt: seedDateDaysAgo(46, 9, 0),
+      createdAt: at(81, 8, 0),
+      updatedAt: at(46, 9, 0),
     },
     {
       id: EvaluationId(scope.cuid("evaluation:combination")),
@@ -234,11 +234,11 @@ const buildEvaluationRows = (scope: SeedScope) =>
       script: combinationMonitorScript,
       trigger: combinationTrigger,
       alignment: combinationAlignment,
-      alignedAt: seedDateDaysAgo(5, 11, 30),
+      alignedAt: at(5, 11, 30),
       archivedAt: null,
       deletedAt: null,
-      createdAt: seedDateDaysAgo(60, 12, 0),
-      updatedAt: seedDateDaysAgo(5, 11, 30),
+      createdAt: at(60, 12, 0),
+      updatedAt: at(5, 11, 30),
     },
     {
       id: EvaluationId(scope.cuid("evaluation:returns")),
@@ -252,11 +252,11 @@ const buildEvaluationRows = (scope: SeedScope) =>
       script: returnsMonitorScript,
       trigger: returnsTrigger,
       alignment: returnsAlignment,
-      alignedAt: seedDateDaysAgo(17, 15, 10),
+      alignedAt: at(17, 15, 10),
       archivedAt: null,
       deletedAt: null,
-      createdAt: seedDateDaysAgo(50, 10, 0),
-      updatedAt: seedDateDaysAgo(17, 15, 10),
+      createdAt: at(50, 10, 0),
+      updatedAt: at(17, 15, 10),
     },
     {
       id: EvaluationId(scope.cuid("evaluation:access")),
@@ -270,13 +270,14 @@ const buildEvaluationRows = (scope: SeedScope) =>
       script: accessRecoveryMonitorScript,
       trigger: accessTrigger,
       alignment: accessAlignment,
-      alignedAt: seedDateDaysAgo(2, 9, 40),
+      alignedAt: at(2, 9, 40),
       archivedAt: null,
       deletedAt: null,
-      createdAt: seedDateDaysAgo(24, 8, 20),
-      updatedAt: seedDateDaysAgo(2, 9, 40),
+      createdAt: at(24, 8, 20),
+      updatedAt: at(2, 9, 40),
     },
   ] as const
+}
 
 const seedEvaluations: Seeder = {
   name: "evaluations/acme-support-monitors",

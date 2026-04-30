@@ -52,6 +52,17 @@ export interface SeedScope {
   traceHex(key: string, index?: number): string
   /** 16-char hex span id. */
   spanHex(key: string, index?: number): string
+  /**
+   * Date `daysAgo` before the scope's `timelineAnchor`, at `hour:minute` UTC.
+   * Capped to wall-clock "now" so a future-skewed anchor never produces a
+   * timestamp that's ahead of the current wall clock — the bootstrap path
+   * relies on this cap because `SEED_TIMELINE_ANCHOR` is set to today at
+   * 12:00 UTC and a small `daysAgo` with a late `hour` would otherwise land
+   * in the future on machines whose clock drifted backwards.
+   */
+  dateDaysAgo(daysAgo: number, hour?: number, minute?: number): Date
+  /** Same as `dateDaysAgo`, formatted as a ClickHouse-friendly timestamp. */
+  timestampDaysAgo(daysAgo: number, hour?: number, minute?: number): string
 }
 
 /**
@@ -109,6 +120,23 @@ const deriveSpanHex = (projectId: string, key: string, index: number): string =>
   sha256(["span", projectId, key, index]).toString("hex").slice(0, SPAN_HEX_LENGTH)
 
 /**
+ * Wall-clock "now" used to cap relative dates. Module-scoped so all scopes
+ * share the same cap — the bootstrap and demo paths both expect "no
+ * timestamp ahead of when this process started".
+ */
+const seedTimelineNow = new Date()
+
+const deriveDateDaysAgo = (anchor: Date, daysAgo: number, hour: number, minute: number): Date => {
+  const date = new Date(anchor)
+  date.setUTCDate(date.getUTCDate() - daysAgo)
+  date.setUTCHours(hour, minute, 0, 0)
+  return date.getTime() > seedTimelineNow.getTime() ? new Date(seedTimelineNow) : date
+}
+
+const deriveTimestampDaysAgo = (anchor: Date, daysAgo: number, hour: number, minute: number): string =>
+  deriveDateDaysAgo(anchor, daysAgo, hour, minute).toISOString().slice(0, 23).replace("T", " ")
+
+/**
  * Build a `SeedScope`. Pass `overrides` for the bootstrap caller — keys not
  * found in the override functions still fall through to deterministic
  * derivation, which is the right behaviour for new fixtures the bootstrap
@@ -127,5 +155,7 @@ export const createSeedScope = (input: CreateSeedScopeInput): SeedScope => {
     uuid: (key) => overrides?.uuid?.(key) ?? deriveUuid(projectId, key),
     traceHex: (key, index = 0) => overrides?.traceHex?.(key, index) ?? deriveTraceHex(projectId, key, index),
     spanHex: (key, index = 0) => overrides?.spanHex?.(key, index) ?? deriveSpanHex(projectId, key, index),
+    dateDaysAgo: (daysAgo, hour = 12, minute = 0) => deriveDateDaysAgo(timelineAnchor, daysAgo, hour, minute),
+    timestampDaysAgo: (daysAgo, hour = 12, minute = 0) => deriveTimestampDaysAgo(timelineAnchor, daysAgo, hour, minute),
   }
 }

@@ -25,15 +25,10 @@ import {
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
   SEED_WARRANTY_EVALUATION_HASH,
   type SeedScope,
-  seedDateDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
-
-function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
-  return seedDateDaysAgo(daysAgo, hour, minute)
-}
 
 function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
@@ -91,6 +86,8 @@ function remapFixtureIssueId(literalIssueId: string, scope: SeedScope): string {
 function buildAllScoreRows(scope: SeedScope) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
+  const createdAtFromDaysAgo = (daysAgo: number, hour: number, minute = 0): Date =>
+    scope.dateDaysAgo(daysAgo, hour, minute)
 
   const evaluationWarrantyActiveId = EvaluationId(scope.cuid("evaluation:warranty-active"))
   const evaluationWarrantyArchivedId = EvaluationId(scope.cuid("evaluation:warranty-archived"))

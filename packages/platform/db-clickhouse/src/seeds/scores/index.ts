@@ -17,15 +17,10 @@ import {
   SEED_ISSUE_ID,
   SEED_RETURNS_ISSUE_ID,
   type SeedScope,
-  seedTimestampDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
-
-function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string {
-  return seedTimestampDaysAgo(daysAgo, hour, minute)
-}
 
 function annotationSeedSourceId(sourceId: string): "UI" | "API" {
   if (sourceId === "seed-issue-scout") return "UI"
@@ -76,6 +71,8 @@ function remapFixtureIssueId(literalIssueId: string, scope: SeedScope): string {
 function buildAllAnalyticsRows(scope: SeedScope) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
+  const createdAtFromDaysAgo = (daysAgo: number, hour: number, minute = 0): string =>
+    scope.timestampDaysAgo(daysAgo, hour, minute)
 
   const evaluationWarrantyActiveId = EvaluationId(scope.cuid("evaluation:warranty-active"))
   const evaluationWarrantyArchivedId = EvaluationId(scope.cuid("evaluation:warranty-archived"))

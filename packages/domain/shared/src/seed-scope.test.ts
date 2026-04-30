@@ -57,6 +57,26 @@ describe("createSeedScope — derivation", () => {
   })
 })
 
+describe("createSeedScope — date helpers", () => {
+  it("anchors dateDaysAgo on the scope's timelineAnchor", () => {
+    // Two scopes with anchors a year apart must produce dates a year apart
+    // for the same `daysAgo`. This is the regression test for the
+    // (previously) silent default to a global `SEED_TIMELINE_ANCHOR`.
+    const earlierAnchor = new Date("2024-06-15T12:00:00.000Z")
+    const laterAnchor = new Date("2025-06-15T12:00:00.000Z")
+    const earlier = createSeedScope({ ...baseInput, timelineAnchor: earlierAnchor })
+    const later = createSeedScope({ ...baseInput, timelineAnchor: laterAnchor })
+
+    expect(earlier.dateDaysAgo(0, 9, 30).toISOString()).toBe("2024-06-15T09:30:00.000Z")
+    expect(later.dateDaysAgo(0, 9, 30).toISOString()).toBe("2025-06-15T09:30:00.000Z")
+  })
+
+  it("formats timestampDaysAgo as ClickHouse-friendly", () => {
+    const scope = createSeedScope({ ...baseInput, timelineAnchor: new Date("2025-06-15T12:00:00.000Z") })
+    expect(scope.timestampDaysAgo(2, 8, 0)).toBe("2025-06-13 08:00:00.000")
+  })
+})
+
 describe("createSeedScope — overrides", () => {
   it("returns the override value when defined", () => {
     const scope = createSeedScope({

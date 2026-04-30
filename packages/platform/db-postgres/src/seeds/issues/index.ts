@@ -7,7 +7,7 @@ import {
   updateIssueCentroid,
 } from "@domain/issues"
 import { IssueId } from "@domain/shared"
-import { SEED_ISSUE_FIXTURES, type SeedScope, seedDateDaysAgo } from "@domain/shared/seeding"
+import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { VoyageAIClient } from "voyageai"
@@ -189,18 +189,19 @@ function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueC
   }
 }
 
-function issueFixtureDates(issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
+function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
   return {
-    createdAt: seedDateDaysAgo(issue.createdDaysAgo, 14, 15),
-    clusteredAt: seedDateDaysAgo(issue.clusteredDaysAgo, 14, 15),
-    updatedAt: seedDateDaysAgo(issue.updatedDaysAgo, 16, 30),
-    escalatedAt: issue.escalatedDaysAgo === null ? null : seedDateDaysAgo(issue.escalatedDaysAgo, 9, 0),
-    resolvedAt: issue.resolvedDaysAgo === null ? null : seedDateDaysAgo(issue.resolvedDaysAgo, 11, 30),
-    ignoredAt: issue.ignoredDaysAgo === null ? null : seedDateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+    createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
+    clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
+    updatedAt: scope.dateDaysAgo(issue.updatedDaysAgo, 16, 30),
+    escalatedAt: issue.escalatedDaysAgo === null ? null : scope.dateDaysAgo(issue.escalatedDaysAgo, 9, 0),
+    resolvedAt: issue.resolvedDaysAgo === null ? null : scope.dateDaysAgo(issue.resolvedDaysAgo, 11, 30),
+    ignoredAt: issue.ignoredDaysAgo === null ? null : scope.dateDaysAgo(issue.ignoredDaysAgo, 13, 10),
   }
 }
 
 function buildIssueRow(input: {
+  readonly scope: SeedScope
   readonly issue: (typeof SEED_ISSUE_FIXTURES)[number]
   readonly issueId: string
   readonly issueUuid: string
@@ -209,7 +210,7 @@ function buildIssueRow(input: {
   readonly issueScores: readonly IssueLinkedScoreSeedRow[]
   readonly embeddedIssueScores: readonly EmbeddedIssueLinkedScoreSeedRow[] | null
 }): typeof issues.$inferInsert {
-  const fixtureDates = issueFixtureDates(input.issue)
+  const fixtureDates = issueFixtureDates(input.scope, input.issue)
   const sortedIssueScores = [...input.issueScores].sort(
     (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
   )
@@ -293,6 +294,7 @@ const seedIssues: Seeder = {
                 })
 
           return buildIssueRow({
+            scope: ctx.scope,
             issue,
             issueId,
             issueUuid,

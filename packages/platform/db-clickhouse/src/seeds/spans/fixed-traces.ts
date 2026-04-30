@@ -17,7 +17,6 @@ import {
   SEED_ISSUE_ID,
   SEED_RETURNS_ISSUE_ID,
   type SeedScope,
-  seedDateDaysAgo,
   WARRANTY_DATASET_ROWS,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -148,8 +147,8 @@ function formatClickHouseTimestamp(date: Date): string {
   return date.toISOString().replace("T", " ").replace("Z", "000")
 }
 
-function generateTime(daysAgo: number, hour: number, minute = 0): { start: string; end: string } {
-  const start = seedDateDaysAgo(daysAgo, hour, minute)
+function generateTime(scope: SeedScope, daysAgo: number, hour: number, minute = 0): { start: string; end: string } {
+  const start = scope.dateDaysAgo(daysAgo, hour, minute)
   const end = new Date(start.getTime() + 4000)
   return { start: formatClickHouseTimestamp(start), end: formatClickHouseTimestamp(end) }
 }
@@ -160,7 +159,7 @@ function buildAnnotationTraceSpans(scope: SeedScope): SpanRow[] {
     if (daysAgo === undefined) {
       throw new Error(`Missing seeded annotation trace day at index ${i}`)
     }
-    const time = generateTime(daysAgo, 9 + (i % 4))
+    const time = generateTime(scope, daysAgo, 9 + (i % 4))
     return createFixedSpan({
       scope,
       traceId: scope.traceHex("annotation", i),
@@ -179,7 +178,7 @@ function buildAnnotationTraceSpans(scope: SeedScope): SpanRow[] {
 
 function buildAlignmentFixtureSpans(scope: SeedScope): SpanRow[] {
   return ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => {
-    const time = generateTime(26 - Math.floor(i / 5), 10 + (i % 5))
+    const time = generateTime(scope, 26 - Math.floor(i / 5), 10 + (i % 5))
     return createFixedSpan({
       scope,
       traceId: scope.traceHex("alignment-fixture", i),
@@ -200,7 +199,7 @@ function buildIssueOccurrenceTraceSpans(scope: SeedScope): SpanRow[] {
   return SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
     const issue = SEED_ISSUE_FIXTURES_BY_ID.get(occurrence.issueId)
     const issueName = issue?.name ?? "seeded issue"
-    const time = generateTime(occurrence.daysAgo, occurrence.hour, occurrence.minute)
+    const time = generateTime(scope, occurrence.daysAgo, occurrence.hour, occurrence.minute)
     const userPrompt =
       occurrence.source === "evaluation"
         ? `Run the seeded monitor case for ${issueName.toLowerCase()}.`
@@ -268,7 +267,7 @@ function buildJsonResponseSpans(scope: SeedScope): SpanRow[] {
   ] as const
 
   return specs.map((spec, i) => {
-    const time = generateTime(0, 10 + i, 30)
+    const time = generateTime(scope, 0, 10 + i, 30)
     return createFixedSpan({
       scope,
       traceId: scope.traceHex("json-response", i),
@@ -313,7 +312,7 @@ function buildLifecycleSpans(scope: SeedScope): SpanRow[] {
   ] as const
 
   return specs.map((spec, i) => {
-    const time = generateTime(12 - i, 10 + i)
+    const time = generateTime(scope, 12 - i, 10 + i)
     return createFixedSpan({
       scope,
       traceId: scope.traceHex("lifecycle", i),
@@ -341,7 +340,7 @@ function buildSimulationTraceSpans(opts: {
   story: string
 }): SpanRow[] {
   return opts.rows.map((row, i) => {
-    const time = generateTime(opts.startIndex + i, 9 + (i % 5), i % 2 === 0 ? 6 : 7)
+    const time = generateTime(opts.scope, opts.startIndex + i, 9 + (i % 5), i % 2 === 0 ? 6 : 7)
     return createFixedSpan({
       scope: opts.scope,
       traceId: opts.scope.traceHex(opts.traceKey, i),
@@ -364,7 +363,7 @@ function buildSimulationTraceSpans(opts: {
 }
 
 function buildKitchenSinkTrace(scope: SeedScope): SpanRow {
-  const baseTime = seedDateDaysAgo(2, 8, 0)
+  const baseTime = scope.dateDaysAgo(2, 8, 0)
   const startTime = baseTime.toISOString().slice(0, 23).replace("T", " ")
   const endTime = new Date(baseTime.getTime() + 45_000).toISOString().slice(0, 23).replace("T", " ")
 

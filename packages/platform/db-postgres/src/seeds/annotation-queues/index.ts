@@ -1,5 +1,5 @@
 import { AnnotationQueueId, AnnotationQueueItemId } from "@domain/shared"
-import { SEED_ADMIN_USER_ID, SEED_OWNER_USER_ID, type SeedScope, seedDateDaysAgo } from "@domain/shared/seeding"
+import { SEED_ADMIN_USER_ID, SEED_OWNER_USER_ID, type SeedScope } from "@domain/shared/seeding"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import { annotationQueueItems, annotationQueues } from "../../schema/annotation-queues.ts"
@@ -21,11 +21,9 @@ const staleQueueNames = [
   "Weekly quality sample",
 ] as const
 
-function queueDate(daysAgo: number, hour: number, minute = 0): Date {
-  return seedDateDaysAgo(daysAgo, hour, minute)
-}
-
 function buildQueueRows(scope: SeedScope) {
+  const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
+
   return [
     {
       id: AnnotationQueueId(scope.cuid("queue:warranty")),
@@ -136,6 +134,7 @@ function buildQueueRows(scope: SeedScope) {
 }
 
 function buildQueueItemRows(scope: SeedScope) {
+  const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
   const queueWarrantyId = AnnotationQueueId(scope.cuid("queue:warranty"))
   const queueCombinationId = AnnotationQueueId(scope.cuid("queue:combination"))
   const queueLogisticsId = AnnotationQueueId(scope.cuid("queue:logistics"))

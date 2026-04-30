@@ -1,20 +1,11 @@
 import { SimulationId } from "@domain/shared"
-import {
-  COMBINATION_DATASET_ROWS,
-  type SeedScope,
-  seedDateDaysAgo,
-  WARRANTY_DATASET_ROWS,
-} from "@domain/shared/seeding"
+import { COMBINATION_DATASET_ROWS, type SeedScope, WARRANTY_DATASET_ROWS } from "@domain/shared/seeding"
 import { SIMULATION_DATASET_CUSTOM_SENTINEL, SIMULATION_THRESHOLD_CUSTOM_SENTINEL } from "@domain/simulations"
 import { Effect } from "effect"
 import { simulations } from "../../schema/simulations.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 type SimulationRow = typeof simulations.$inferInsert
-
-function simulationDate(daysAgo: number, hour: number, minute = 0): Date {
-  return seedDateDaysAgo(daysAgo, hour, minute)
-}
 
 /**
  * The simulation row carries an `evaluations: [...]` snapshot — a list
@@ -24,8 +15,9 @@ function simulationDate(daysAgo: number, hour: number, minute = 0): Date {
  * seeder forward (the demo project's `evaluation:warranty-active`
  * resolves to the same fresh id on both sides of the link).
  */
-const buildSimulationRows = (scope: SeedScope) =>
-  [
+const buildSimulationRows = (scope: SeedScope) => {
+  const simulationDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
+  return [
     {
       id: SimulationId(scope.cuid("simulation:warranty")),
       organizationId: scope.organizationId,
@@ -91,6 +83,7 @@ const buildSimulationRows = (scope: SeedScope) =>
       updatedAt: simulationDate(3, 7, 41),
     },
   ] satisfies SimulationRow[]
+}
 
 const seedSimulations: Seeder = {
   name: "simulations/acme-support-runs",
