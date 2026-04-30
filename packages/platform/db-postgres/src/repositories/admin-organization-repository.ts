@@ -3,12 +3,13 @@ import {
   type AdminOrganizationMember,
   type AdminOrganizationProject,
   AdminOrganizationRepository,
+  type AdminOrganizationSummary,
 } from "@domain/admin"
-import { NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { NotFoundError, OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { members, organizations, users } from "../schema/better-auth.ts"
+import { members, organizations, subscriptions, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 
 type MemberRoleValue = AdminOrganizationMember["role"]
@@ -115,6 +116,84 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
             updatedAt: orgRow.updatedAt,
           }
           return details
+        }),
+
+      findManySummariesByIds: (ids) =>
+        Effect.gen(function* () {
+          if (ids.length === 0) return new Map<OrganizationId, AdminOrganizationSummary>()
+
+          // Drizzle's inArray expects raw strings; the OrganizationId branded
+          // type is structurally a string, but the type checker treats them
+          // as distinct without the cast.
+          const idList = ids as readonly string[]
+
+          const orgRows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                id: organizations.id,
+                name: organizations.name,
+                slug: organizations.slug,
+                createdAt: organizations.createdAt,
+              })
+              .from(organizations)
+              .where(inArray(organizations.id, idList)),
+          )
+
+          const memberCountRows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                organizationId: members.organizationId,
+                count: sql<number>`COUNT(*)::int`,
+              })
+              .from(members)
+              .where(inArray(members.organizationId, idList))
+              .groupBy(members.organizationId),
+          )
+
+          // Pick the most recent active or trialing subscription per org. We
+          // can't use Postgres' `DISTINCT ON` ergonomically through Drizzle,
+          // so we order by period_start DESC NULLS LAST + id DESC and take
+          // the first row we see for each reference id in JS. There aren't
+          // typically multiple concurrent active subs per org, so the result
+          // set is small.
+          const subRows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                referenceId: subscriptions.referenceId,
+                plan: subscriptions.plan,
+              })
+              .from(subscriptions)
+              .where(
+                and(inArray(subscriptions.referenceId, idList), inArray(subscriptions.status, ["active", "trialing"])),
+              )
+              .orderBy(desc(subscriptions.periodStart), desc(subscriptions.id)),
+          )
+
+          const memberCountByOrg = new Map<string, number>()
+          for (const row of memberCountRows) {
+            memberCountByOrg.set(row.organizationId, Number(row.count))
+          }
+
+          const planByOrg = new Map<string, string>()
+          for (const row of subRows) {
+            if (!planByOrg.has(row.referenceId)) {
+              planByOrg.set(row.referenceId, row.plan)
+            }
+          }
+
+          const result = new Map<OrganizationId, AdminOrganizationSummary>()
+          for (const row of orgRows) {
+            const orgId = OrganizationId(row.id)
+            result.set(orgId, {
+              id: orgId,
+              name: row.name,
+              slug: row.slug,
+              plan: planByOrg.get(row.id) ?? null,
+              memberCount: memberCountByOrg.get(row.id) ?? 0,
+              createdAt: row.createdAt,
+            })
+          }
+          return result
         }),
     }
   }),
