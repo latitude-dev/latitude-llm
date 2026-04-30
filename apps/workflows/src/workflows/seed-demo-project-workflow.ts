@@ -21,15 +21,30 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
  * but spikes are routine on shared infra; the cap is generous so a slow
  * insert doesn't trip the retry policy.
  *
- * TODO: half-seeded failures are accepted for v1 — if any activity errors
- * after exhausting retries, the project row already exists (the use-case
- * created it) but its content is partial. Operators clean up via the
- * existing `softDeleteProject` admin server function.
+ * Retry policy: spreads `defaultActivityRetryPolicy` and marks
+ * `SeedError` non-retryable. The Postgres and Weaviate seed runners
+ * wrap every per-seeder failure in a `SeedError`
+ * (`@platform/db-postgres/src/seeds/types.ts` +
+ * `@platform/db-weaviate/src/seeds/types.ts`), so the deterministic
+ * bugs that actually burn the retry budget (RLS misconfig, scope
+ * mistakes, missing repos) fail fast instead of churning for 50h.
+ * ClickHouse seeders rethrow raw `Error`s today and still get the full
+ * retry chain — that's a known gap; the CH failures we hit in practice
+ * are also deterministic (missing fixture key, unmapped id) and would
+ * benefit from the same treatment, but wiring SeedError there is a
+ * separate refactor. Genuine transient failures across all three stores
+ * (DB blip, Temporal heartbeat timeout) propagate as plain errors and
+ * still get the full chain.
+ *
+ * TODO: half-seeded failures are accepted for v1 — if any activity
+ * errors after exhausting retries, the project row already exists (the
+ * use-case created it) but its content is partial. Operators clean up
+ * via the existing `softDeleteProject` admin server function.
  */
 const { seedDemoProjectPostgresActivity, seedDemoProjectClickHouseActivity, seedDemoProjectWeaviateActivity } =
   proxyActivities<typeof activities>({
     startToCloseTimeout: "15 minutes",
-    retry: defaultActivityRetryPolicy,
+    retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
   })
 
 export interface SeedDemoProjectWorkflowInput {
