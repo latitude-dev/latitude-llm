@@ -88,6 +88,13 @@ export function buildBarChartOption(
         axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
       }
 
+  // Disable emphasis-driven dimming when the chart has multiple series
+  // (bars + lines) — echarts' default fades non-hovered series down to
+  // ~10% opacity, which the user perceives as the chart "disappearing"
+  // on hover. Keep the bars-only branch using its existing emphasis
+  // tweak so single-series histograms behave identically to before.
+  const hasOverlay = (lines?.length ?? 0) > 0
+
   const barSeries = {
     name: primarySeriesName ?? "Bars",
     type: "bar" as const,
@@ -100,12 +107,14 @@ export function buildBarChartOption(
       color: colors.primary,
       borderRadius: [4, 4, 0, 0] as [number, number, number, number],
     },
-    emphasis: {
-      itemStyle: {
-        color: colors.primary,
-        borderRadius: [4, 4, 0, 0] as [number, number, number, number],
-      },
-    },
+    emphasis: hasOverlay
+      ? { disabled: true }
+      : {
+          itemStyle: {
+            color: colors.primary,
+            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+          },
+        },
   }
 
   const lineSeries = (lines ?? []).map((line) => ({
@@ -117,7 +126,7 @@ export function buildBarChartOption(
     yAxisIndex: hasSecondaryAxis && line.axis === "right" ? 1 : 0,
     lineStyle: { width: 2, color: line.color },
     itemStyle: { color: line.color },
-    emphasis: { lineStyle: { width: 2.5 } },
+    emphasis: { disabled: true },
   }))
 
   // Pad the top of the grid when the legend is rendered so the legend

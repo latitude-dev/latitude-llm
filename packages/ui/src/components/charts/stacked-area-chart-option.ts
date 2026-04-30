@@ -100,7 +100,11 @@ export function buildStackedAreaChartOption(
       lineStyle: { width: 1, color: s.color, opacity: 0.8 },
       itemStyle: { color: s.color },
       areaStyle: { color: s.color, opacity: 0.45 },
-      emphasis: { focus: "series" as const },
+      // Default echarts behaviour fades the unhovered layers to ~10%
+      // opacity, which makes a stacked composition unreadable — every
+      // layer carries information at all times. Disable emphasis so
+      // hover only drives the tooltip, not visual dimming.
+      emphasis: { disabled: true },
     })),
   }
 }
