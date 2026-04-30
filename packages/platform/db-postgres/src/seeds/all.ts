@@ -2,7 +2,7 @@ import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
-import { flaggerSeeders } from "./flaggers/index.ts"
+import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
 import { issueSeeders } from "./issues/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
 import { projectSeeders } from "./projects/index.ts"
@@ -36,4 +36,8 @@ export const allSeeders: readonly Seeder[] = [
   ...projectSeeders,
   ...apiKeySeeders,
   ...contentSeeders,
+  // Bootstrap-only: provisions flaggers on the dogfood telemetry project,
+  // which lives on the canonical seed org. Excluded from `contentSeeders`
+  // because the demo workflow's scope points at a different org/project.
+  ...bootstrapTelemetryFlaggerSeeders,
 ]

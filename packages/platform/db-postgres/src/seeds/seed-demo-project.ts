@@ -45,7 +45,7 @@ export const seedDemoProjectPostgres = (params: { client: PostgresClient; scope:
       project: yield* ProjectRepository,
       user: yield* UserRepository,
     }
-    return { db: params.client.db, repositories, scope: params.scope } as SeedContext
+    return { db: params.client.db, client: params.client, repositories, scope: params.scope } as SeedContext
   })
 
   const program = Effect.gen(function* () {
