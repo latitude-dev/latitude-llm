@@ -22,7 +22,7 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/card/card.tsx"
-export type { BarChartDataPoint, BarChartProps } from "./components/charts/bar-chart.tsx"
+export type { BarChartDataPoint, BarChartLineSeries, BarChartProps } from "./components/charts/bar-chart.tsx"
 export {
   type ChartCssThemeColors,
   chartThemeFallback,
@@ -31,6 +31,11 @@ export {
 export { ChartSkeleton, type ChartSkeletonProps } from "./components/charts/chart-skeleton.tsx"
 export { HistogramSkeleton, type HistogramSkeletonProps } from "./components/charts/histogram-skeleton.tsx"
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
+export { LazyStackedAreaChart as StackedAreaChart } from "./components/charts/lazy-stacked-area-chart.tsx"
+export type {
+  StackedAreaChartProps,
+  StackedAreaSeriesSpec,
+} from "./components/charts/stacked-area-chart.tsx"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { CheckboxInput, type CheckboxInputProps } from "./components/checkbox/checkbox-input.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"

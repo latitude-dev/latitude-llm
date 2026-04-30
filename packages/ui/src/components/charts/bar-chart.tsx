@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
-import { buildBarChartOption } from "./bar-chart-option.ts"
+import { buildBarChartOption, type LineSeriesSpec } from "./bar-chart-option.ts"
 import { chartThemeFallback } from "./chart-css-theme.ts"
 import { echarts } from "./register-echarts.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
@@ -16,6 +16,17 @@ export type BarChartDataPoint = {
   readonly tooltipCategory?: string
   readonly value: number
 }
+
+/**
+ * Optional line series overlaid on the bars. Aligned 1-1 with `data`
+ * by index; if you pass 30 categories, each line's `values` should also
+ * have 30 entries.
+ *
+ * Set `axis: 'right'` to plot the line against a secondary y-axis —
+ * useful when bar magnitudes (e.g. trace counts) and line magnitudes
+ * (e.g. annotation counts) live on very different scales.
+ */
+export type BarChartLineSeries = LineSeriesSpec
 
 export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSelect"> & {
   readonly data: readonly BarChartDataPoint[]
@@ -38,6 +49,12 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
    */
   readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
+  /** Optional line overlays. */
+  readonly lines?: readonly BarChartLineSeries[]
+  /** Series name shown in the legend for the bars. Defaults to "Bars" when `lines` is set. */
+  readonly primarySeriesName?: string
+  /** Display name for the secondary y-axis (only used when at least one line targets it). */
+  readonly secondaryAxisName?: string
 }
 
 type EChartsEventHandler = (params: unknown) => void
@@ -66,6 +83,9 @@ function BarChart({
   showYAxis = true,
   xAxisLabelFontSize,
   onSelect,
+  lines,
+  primarySeriesName,
+  secondaryAxisName,
   className,
   ...rest
 }: BarChartProps) {
@@ -97,8 +117,25 @@ function BarChart({
         showYAxis,
         hasBrush,
         xAxisLabelFontSize,
+        {
+          ...(lines ? { lines } : {}),
+          ...(primarySeriesName ? { primarySeriesName } : {}),
+          ...(secondaryAxisName ? { secondaryAxisName } : {}),
+        },
       ),
-    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize],
+    [
+      categories,
+      values,
+      tooltipCategories,
+      colors,
+      formatTooltip,
+      showYAxis,
+      hasBrush,
+      xAxisLabelFontSize,
+      lines,
+      primarySeriesName,
+      secondaryAxisName,
+    ],
   )
 
   // Stable event handlers that read the latest onSelect from a ref.

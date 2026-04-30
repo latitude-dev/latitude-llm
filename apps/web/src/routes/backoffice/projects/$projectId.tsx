@@ -11,6 +11,7 @@ import {
   PropertiesStrip,
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
+import { MetricsSection } from "./-components/metrics-section.tsx"
 
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
   loader: async ({ params }) => {
@@ -115,6 +116,8 @@ function BackofficeProjectDetailPage() {
           </DashboardSection>
         }
       />
+
+      <MetricsSection projectId={project.id} />
 
       <DashboardSection
         title="Organization"
