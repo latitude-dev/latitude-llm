@@ -120,17 +120,23 @@ const deriveSpanHex = (projectId: string, key: string, index: number): string =>
   sha256(["span", projectId, key, index]).toString("hex").slice(0, SPAN_HEX_LENGTH)
 
 /**
- * Wall-clock "now" used to cap relative dates. Module-scoped so all scopes
- * share the same cap — the bootstrap and demo paths both expect "no
- * timestamp ahead of when this process started".
+ * Cap computed dates to wall-clock "now" so a future-skewed anchor (or a
+ * small `daysAgo` with a late `hour`) never produces a timestamp that's
+ * ahead of the current wall clock.
+ *
+ * Reads `new Date()` on every call rather than a module-scoped constant:
+ * the seed scope is consumed by a long-lived Temporal worker, so a
+ * captured-at-import-time "now" goes stale and demo projects seeded days
+ * after the worker started would have small-`daysAgo` rows incorrectly
+ * pinned to worker startup time. Per-call `Date()` keeps the cap honest
+ * over the worker's lifetime.
  */
-const seedTimelineNow = new Date()
-
 const deriveDateDaysAgo = (anchor: Date, daysAgo: number, hour: number, minute: number): Date => {
   const date = new Date(anchor)
   date.setUTCDate(date.getUTCDate() - daysAgo)
   date.setUTCHours(hour, minute, 0, 0)
-  return date.getTime() > seedTimelineNow.getTime() ? new Date(seedTimelineNow) : date
+  const now = new Date()
+  return date.getTime() > now.getTime() ? now : date
 }
 
 const deriveTimestampDaysAgo = (anchor: Date, daysAgo: number, hour: number, minute: number): string =>
