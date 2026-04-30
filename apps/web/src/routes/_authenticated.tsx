@@ -203,7 +203,9 @@ function AuthenticatedLayout() {
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
   const isProjectOnboarding = useRouterState({
-    select: (s) => s.matches.some((m) => m.id === projectOnboardingRouteId),
+    // `match.id` is unique per match instance (`routeId` + path + loader deps hash);
+    // `routeId` is the stable file-route id from `createFileRoute(...)`.
+    select: (s) => s.matches.some((m) => m.routeId === projectOnboardingRouteId),
   })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
