@@ -156,6 +156,12 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
           // the first row we see for each reference id in JS. There aren't
           // typically multiple concurrent active subs per org, so the result
           // set is small.
+          //
+          // Postgres `DESC` puts NULLs first by default, so we spell out
+          // `NULLS LAST` via raw SQL — otherwise a sub with no period_start
+          // (e.g. a freshly-incomplete row that later transitioned to active
+          // without Stripe period data) would beat a real recent one and we'd
+          // pick the wrong plan.
           const subRows = yield* sqlClient.query((db) =>
             db
               .select({
@@ -166,7 +172,7 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
               .where(
                 and(inArray(subscriptions.referenceId, idList), inArray(subscriptions.status, ["active", "trialing"])),
               )
-              .orderBy(desc(subscriptions.periodStart), desc(subscriptions.id)),
+              .orderBy(sql`${subscriptions.periodStart} DESC NULLS LAST`, desc(subscriptions.id)),
           )
 
           const memberCountByOrg = new Map<string, number>()
