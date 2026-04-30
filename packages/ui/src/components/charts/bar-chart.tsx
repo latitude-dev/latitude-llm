@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
-import { type BarSeriesSpec, buildBarChartOption } from "./bar-chart-option.ts"
+import { buildBarChartOption } from "./bar-chart-option.ts"
 import { chartThemeFallback } from "./chart-css-theme.ts"
 import { echarts } from "./register-echarts.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
@@ -16,20 +16,6 @@ export type BarChartDataPoint = {
   readonly tooltipCategory?: string
   readonly value: number
 }
-
-/**
- * Optional secondary bar series rendered alongside the primary bars.
- * Aligned 1-1 with `data` by index; if you pass 30 categories, each
- * overlay's `values` should also have 30 entries.
- *
- * Set `axis: 'right'` to plot against a secondary y-axis — useful when
- * the primary and overlay magnitudes live on very different scales.
- *
- * Set `stack` to group overlays vertically: any overlays sharing the
- * same `stack` key stack together at each category, and ECharts
- * groups distinct stacks side-by-side with the primary bars.
- */
-export type BarChartBarSeries = BarSeriesSpec
 
 export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSelect"> & {
   readonly data: readonly BarChartDataPoint[]
@@ -52,12 +38,6 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
    */
   readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
-  /** Optional overlay bar series (stacked, axis-aware). */
-  readonly bars?: readonly BarChartBarSeries[]
-  /** Series name shown in the legend for the primary bars. Defaults to "Bars" when `bars` is set. */
-  readonly primarySeriesName?: string
-  /** Display name for the secondary y-axis (only used when at least one overlay targets it). */
-  readonly secondaryAxisName?: string
 }
 
 type EChartsEventHandler = (params: unknown) => void
@@ -86,9 +66,6 @@ function BarChart({
   showYAxis = true,
   xAxisLabelFontSize,
   onSelect,
-  bars,
-  primarySeriesName,
-  secondaryAxisName,
   className,
   ...rest
 }: BarChartProps) {
@@ -120,25 +97,8 @@ function BarChart({
         showYAxis,
         hasBrush,
         xAxisLabelFontSize,
-        {
-          ...(bars ? { bars } : {}),
-          ...(primarySeriesName ? { primarySeriesName } : {}),
-          ...(secondaryAxisName ? { secondaryAxisName } : {}),
-        },
       ),
-    [
-      categories,
-      values,
-      tooltipCategories,
-      colors,
-      formatTooltip,
-      showYAxis,
-      hasBrush,
-      xAxisLabelFontSize,
-      bars,
-      primarySeriesName,
-      secondaryAxisName,
-    ],
+    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize],
   )
 
   // Stable event handlers that read the latest onSelect from a ref.

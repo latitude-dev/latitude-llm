@@ -7,23 +7,31 @@ import { useMemo, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import { chartThemeFallback } from "./chart-css-theme.ts"
+import { buildChartOption, type ChartAxisDescriptor, type ChartSeries } from "./chart-option.ts"
 import { echarts } from "./register-echarts.ts"
-import { buildStackedAreaChartOption, type StackedAreaSeriesSpec } from "./stacked-area-chart-option.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
 
-export type { StackedAreaSeriesSpec } from "./stacked-area-chart-option.ts"
+export type { ChartAxisDescriptor, ChartBarSeries, ChartLineSeries, ChartSeries } from "./chart-option.ts"
 
-export type StackedAreaChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
-  /** Shared X-axis labels; one entry per data point. */
+export type ChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
+  /** Shared X-axis labels — one entry per data point. */
   readonly categories: readonly string[]
-  /** Stacked layers, bottom-first. Each `values` must match `categories.length`. */
-  readonly series: readonly StackedAreaSeriesSpec[]
+  /**
+   * Series to render at the same X positions. Mix bar and line freely;
+   * each series controls its own axis (`'left' | 'right'`), stack key,
+   * and (for line) area fill. The chart auto-detects whether to render
+   * a single or dual y-axis based on the series mix.
+   */
+  readonly series: readonly ChartSeries[]
   /** Pixel height of the chart area (default 200). */
   readonly height?: number
   readonly ariaLabel?: string
   readonly colorScheme?: "light" | "dark"
+  readonly primaryAxis?: ChartAxisDescriptor
+  readonly secondaryAxis?: ChartAxisDescriptor
   /** Optional tooltip title formatter; receives the bucket category + index. */
   readonly tooltipTitle?: (category: string, dataIndex: number) => string
+  readonly xAxisLabelFontSize?: number
 }
 
 type EChartsReactBridgeProps = {
@@ -39,23 +47,24 @@ const EChartsView = ((EChartsReact as unknown as { default?: unknown }).default 
   EChartsReact) as unknown as ComponentType<EChartsReactBridgeProps>
 
 /**
- * A multi-layer stacked area chart for showing a composition over a
- * time axis. Designed for small dashboard tiles — no brush, no click,
- * no axis customisation beyond what the theme dictates.
- *
- * The chart renders nothing on the server (echarts requires the DOM)
- * and shows a fixed-height placeholder until mount.
+ * Generic time-series chart that takes any combination of bar / line /
+ * area series at shared X categories. One primitive for every layout
+ * the dashboard needs — pick a series mix, pick axes, render. No
+ * brush; if you need brush selection, reach for `BarChart` instead.
  */
-export function StackedAreaChart({
+export function Chart({
   categories,
   series,
   height = 200,
-  ariaLabel = "Stacked area chart",
+  ariaLabel = "Chart",
   colorScheme,
+  primaryAxis,
+  secondaryAxis,
   tooltipTitle,
+  xAxisLabelFontSize,
   className,
   ...rest
-}: StackedAreaChartProps) {
+}: ChartProps) {
   const [mounted, setMounted] = useState(false)
   useMountEffect(() => {
     setMounted(true)
@@ -65,8 +74,17 @@ export function StackedAreaChart({
   const colors = colorScheme ? chartThemeFallback(colorScheme === "dark") : cssTheme
 
   const option = useMemo(
-    () => buildStackedAreaChartOption(categories, series, colors, tooltipTitle ? { tooltipTitle } : {}),
-    [categories, series, colors, tooltipTitle],
+    () =>
+      buildChartOption({
+        categories,
+        series,
+        colors,
+        ...(primaryAxis ? { primaryAxis } : {}),
+        ...(secondaryAxis ? { secondaryAxis } : {}),
+        ...(tooltipTitle ? { tooltipTitle } : {}),
+        ...(xAxisLabelFontSize !== undefined ? { xAxisLabelFontSize } : {}),
+      }),
+    [categories, series, colors, primaryAxis, secondaryAxis, tooltipTitle, xAxisLabelFontSize],
   )
 
   if (!mounted) {

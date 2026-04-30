@@ -1,5 +1,4 @@
-import { BarChart, type BarChartBarSeries, HistogramSkeleton, StackedAreaChart, Text } from "@repo/ui"
-import { formatCount } from "@repo/utils"
+import { Chart, type ChartSeries, HistogramSkeleton, Text } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { type AdminProjectMetricsDto, adminGetProjectMetrics } from "../../../../domains/admin/projects.functions.ts"
@@ -8,22 +7,17 @@ import { TopIssuesTable } from "./top-issues-table.tsx"
 
 const CHART_HEIGHT = 200
 
-// Stacked area layer colours. Hardcoded HSL strings rather than CSS
-// variables because the chart-theme module only exposes a handful of
-// tokens — exposing more is worth doing later, but for v1 these three
-// values keep the layers visually distinct in both light and dark.
-// Order is rendering order (the chart stacks bottom-up).
+// Series colours. Hardcoded HSL strings rather than CSS variables —
+// the chart-theme module only exposes a handful of tokens, and these
+// values keep series visually distinct in both light and dark mode.
+const TRACE_LINE_COLOR = "hsl(217 91% 60%)"
+const ANNOTATION_PASSED_COLOR = "hsl(142 60% 45%)"
+const ANNOTATION_FAILED_COLOR = "hsl(0 70% 55%)"
 const ISSUE_LAYER_COLORS = {
   resolved: "hsl(142 60% 45%)",
   tracked: "hsl(217 91% 60%)",
   untracked: "hsl(25 90% 55%)",
 } as const
-
-// Annotation outcome colours. Green for `passed=true` (the score
-// looked good), red for `passed=false` (which includes errored — see
-// the score-entity model). Stacks at each day on the right axis.
-const ANNOTATION_PASSED_COLOR = "hsl(142 60% 45%)"
-const ANNOTATION_FAILED_COLOR = "hsl(0 70% 55%)"
 
 function formatBucketLabel(iso: string): string {
   const d = new Date(iso)
@@ -102,19 +96,19 @@ export function MetricsSection({ projectId }: MetricsSectionProps) {
 }
 
 function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto["activity"] }) {
-  const chartData = useMemo(
-    () =>
-      activity.map((p) => ({
-        category: formatBucketLabel(p.bucketStart),
-        tooltipCategory: formatBucketTooltip(p.bucketStart),
-        value: p.traceCount,
-      })),
-    [activity],
-  )
+  const categories = useMemo(() => activity.map((p) => formatBucketLabel(p.bucketStart)), [activity])
 
-  const overlayBars = useMemo<BarChartBarSeries[]>(
+  const series = useMemo<ChartSeries[]>(
     () => [
       {
+        kind: "line",
+        name: "Traces",
+        values: activity.map((p) => p.traceCount),
+        color: TRACE_LINE_COLOR,
+        axis: "left",
+      },
+      {
+        kind: "bar",
         name: "Annotations passed",
         values: activity.map((p) => p.annotationsPassed),
         color: ANNOTATION_PASSED_COLOR,
@@ -122,6 +116,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
         stack: "annotations",
       },
       {
+        kind: "bar",
         name: "Annotations failed",
         values: activity.map((p) => p.annotationsFailed),
         color: ANNOTATION_FAILED_COLOR,
@@ -132,12 +127,13 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
     [activity],
   )
 
-  const formatTooltip = useMemo(
+  const tooltipTitle = useMemo(
     () =>
-      (category: string, value: number): string => {
-        return `${category}<br/><b>${formatCount(value)}</b> traces`
+      (_label: string, dataIndex: number): string => {
+        const point = activity[dataIndex]
+        return point ? formatBucketTooltip(point.bucketStart) : ""
       },
-    [],
+    [activity],
   )
 
   const isEmpty = activity.every((p) => p.traceCount === 0 && p.annotationsPassed === 0 && p.annotationsFailed === 0)
@@ -151,13 +147,11 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
   }
 
   return (
-    <BarChart
-      data={chartData}
-      bars={overlayBars}
-      primarySeriesName="Traces"
-      secondaryAxisName="Annotations"
+    <Chart
+      categories={categories}
+      series={series}
       height={CHART_HEIGHT}
-      formatTooltip={formatTooltip}
+      tooltipTitle={tooltipTitle}
       ariaLabel="Project activity over the last 30 days"
     />
   )
@@ -166,14 +160,35 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
 function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetricsDto["issuesLifecycle"] }) {
   const categories = useMemo(() => points.map((p) => formatBucketLabel(p.bucketStart)), [points])
 
-  const series = useMemo(
+  const series = useMemo<ChartSeries[]>(
     () => [
       // Bottom-first stacking order: resolved baseline at the bottom,
       // active layers on top so day-to-day movement is most visible at
       // the top edge of the band.
-      { name: "Resolved", values: points.map((p) => p.resolved), color: ISSUE_LAYER_COLORS.resolved },
-      { name: "Tracked", values: points.map((p) => p.tracked), color: ISSUE_LAYER_COLORS.tracked },
-      { name: "Untracked", values: points.map((p) => p.untracked), color: ISSUE_LAYER_COLORS.untracked },
+      {
+        kind: "line",
+        name: "Resolved",
+        values: points.map((p) => p.resolved),
+        color: ISSUE_LAYER_COLORS.resolved,
+        area: true,
+        stack: "issues",
+      },
+      {
+        kind: "line",
+        name: "Tracked",
+        values: points.map((p) => p.tracked),
+        color: ISSUE_LAYER_COLORS.tracked,
+        area: true,
+        stack: "issues",
+      },
+      {
+        kind: "line",
+        name: "Untracked",
+        values: points.map((p) => p.untracked),
+        color: ISSUE_LAYER_COLORS.untracked,
+        area: true,
+        stack: "issues",
+      },
     ],
     [points],
   )
@@ -196,7 +211,7 @@ function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetrics
   }
 
   return (
-    <StackedAreaChart
+    <Chart
       categories={categories}
       series={series}
       height={CHART_HEIGHT}

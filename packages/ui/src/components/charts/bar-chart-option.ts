@@ -10,35 +10,6 @@ const barMaxWidthCategoryThreshold = 16
 const barMaxWidthPx = 40
 const gridVerticalInsetPx = 16
 
-/**
- * Optional secondary bar series rendered alongside the primary bars.
- *
- * Each spec can target the primary (left) y-axis or a secondary
- * (right) one. When at least one spec has `axis: 'right'`, the chart
- * adds a secondary y-axis labelled with `secondaryAxisName`.
- *
- * `stack` groups bars together: any specs sharing the same `stack`
- * key stack vertically at each category, and ECharts groups distinct
- * stacks side-by-side. Caller is responsible for choosing colours
- * that read well stacked.
- */
-export interface BarSeriesSpec {
-  readonly name: string
-  readonly values: readonly number[]
-  readonly color: string
-  readonly axis?: "left" | "right"
-  readonly stack?: string
-}
-
-interface BarChartOptionExtras {
-  /** Optional secondary bar series (stacked, axis-aware). */
-  readonly bars?: readonly BarSeriesSpec[]
-  /** Series name for the primary bars (legend label). Defaults to "Bars". */
-  readonly primarySeriesName?: string
-  /** Display name for the right y-axis (only used when at least one bar targets it). */
-  readonly secondaryAxisName?: string
-}
-
 export function buildBarChartOption(
   categories: readonly string[],
   values: readonly number[],
@@ -48,11 +19,7 @@ export function buildBarChartOption(
   showYAxis = true,
   enableBrush = false,
   xAxisLabelFontSize = 11,
-  extras: BarChartOptionExtras = {},
 ): EChartsCoreOption {
-  const { bars, primarySeriesName, secondaryAxisName } = extras
-  const hasSecondaryAxis = !!bars?.some((b) => b.axis === "right")
-  const showLegend = !!bars && bars.length > 0
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
       ? 0
@@ -60,117 +27,20 @@ export function buildBarChartOption(
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
   const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
   const splitLineOpacity = colors.isDark ? 0.3 : 0.6
-
-  const yAxisBase = {
-    type: "value" as const,
-    minInterval: 1,
-    splitLine: { lineStyle: { color: splitLineColor, type: "dashed" as const, opacity: splitLineOpacity } },
-    axisLine: { show: false },
-  }
-
-  const yAxis = hasSecondaryAxis
-    ? [
-        {
-          ...yAxisBase,
-          ...(showYAxis ? {} : { axisTick: { show: false } }),
-          axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
-        },
-        {
-          ...yAxisBase,
-          name: secondaryAxisName ?? "",
-          nameTextStyle: { color: colors.mutedForeground, fontSize: 10 },
-          axisLabel: { color: colors.mutedForeground, fontSize: 11 },
-          // The secondary axis sits opposite the primary (right edge).
-          // Suppress its split lines so they don't double-stripe with the
-          // primary's lines on dense charts.
-          splitLine: { show: false },
-        },
-      ]
-    : {
-        ...yAxisBase,
-        ...(showYAxis ? {} : { axisTick: { show: false } }),
-        axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
-      }
-
-  // Disable emphasis-driven dimming when the chart has multiple series.
-  // ECharts' default fades non-hovered series to ~10% opacity, which
-  // reads as the chart "disappearing" on hover. Single-series
-  // histograms keep their existing emphasis tweak unchanged.
-  const hasOverlay = (bars?.length ?? 0) > 0
-
-  const barSeries = {
-    name: primarySeriesName ?? "Bars",
-    type: "bar" as const,
-    data: [...values],
-    ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
-    barCategoryGap: "18%",
-    cursor: "default" as const,
-    yAxisIndex: 0,
-    itemStyle: {
-      color: colors.primary,
-      borderRadius: [4, 4, 0, 0] as [number, number, number, number],
-    },
-    emphasis: hasOverlay
-      ? { disabled: true }
-      : {
-          itemStyle: {
-            color: colors.primary,
-            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
-          },
-        },
-  }
-
-  // Cap overlay bar widths in dense histograms so 30-day daily stacks
-  // don't spill into one another visually.
-  const overlayBars = (bars ?? []).map((bar) => ({
-    name: bar.name,
-    type: "bar" as const,
-    data: [...bar.values],
-    ...(bar.stack ? { stack: bar.stack } : {}),
-    yAxisIndex: hasSecondaryAxis && bar.axis === "right" ? 1 : 0,
-    ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
-    barCategoryGap: "18%",
-    itemStyle: {
-      color: bar.color,
-      // Only round the top of the topmost bar in a stack — the chart
-      // can't tell which is on top, so just round all corners on
-      // unstacked overlays and leave stacked overlays square.
-      ...(bar.stack ? {} : { borderRadius: [3, 3, 0, 0] as [number, number, number, number] }),
-    },
-    emphasis: { disabled: true },
-  }))
-
-  // Pad the top of the grid when the legend is rendered so the legend
-  // strip doesn't overlap the highest bar. ECharts measures the legend
-  // height itself, but `grid.top` is the only knob exposed for the
-  // gap; 28 is enough room for one row of the chip-style legend.
-  const gridTop = showLegend ? 28 : gridVerticalInsetPx
-  // Reserve a touch of right-side padding for the secondary axis labels
-  // when present.
-  const gridRight = hasSecondaryAxis ? 48 : 16
-
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
       left: showYAxis ? 48 : 8,
-      right: gridRight,
-      top: gridTop,
+      right: 16,
+      top: gridVerticalInsetPx,
       bottom: gridVerticalInsetPx,
       containLabel: false,
     },
-    legend: showLegend
-      ? {
-          top: 0,
-          textStyle: { color: colors.mutedForeground, fontSize: 11 },
-          itemWidth: 12,
-          itemHeight: 8,
-          itemGap: 14,
-        }
-      : { show: false },
     tooltip: {
       trigger: "axis",
       axisPointer: {
         type: "shadow",
+        // Default shadow is often too opaque and paints over bars; keep a light band only.
         shadowStyle: {
           color: colors.foreground,
           opacity: 0.06,
@@ -181,22 +51,12 @@ export function buildBarChartOption(
       textStyle: { color: colors.foreground, fontSize: 12 },
       formatter: (params: unknown) => {
         const list = Array.isArray(params) ? params : [params]
-        const first = list[0] as { name?: string; dataIndex?: number } | undefined
+        const first = list[0] as { name?: string; value?: number; dataIndex?: number } | undefined
+        const name = first?.name ?? ""
         const dataIndex = typeof first?.dataIndex === "number" ? first.dataIndex : 0
-        const tooltipCategory = tooltipCategories[dataIndex] ?? first?.name ?? ""
-        // Single-series formatter path (preserves the original
-        // `formatTooltip` API for the bars-only case).
-        if (!showLegend) {
-          const v = list[0] as { value?: number } | undefined
-          const value = typeof v?.value === "number" ? v.value : Number(v?.value ?? 0)
-          return formatTooltip ? formatTooltip(tooltipCategory, value) : `${tooltipCategory}<br/><b>${value}</b>`
-        }
-        const rows = list.map((p) => {
-          const item = p as { seriesName?: string; value?: number; marker?: string }
-          const value = typeof item.value === "number" ? item.value : Number(item.value ?? 0)
-          return `${item.marker ?? ""} ${item.seriesName ?? ""} <b>${value}</b>`
-        })
-        return `${tooltipCategory}<br/>${rows.join("<br/>")}`
+        const tooltipCategory = tooltipCategories[dataIndex] ?? name
+        const value = typeof first?.value === "number" ? first.value : Number(first?.value ?? 0)
+        return formatTooltip ? formatTooltip(tooltipCategory, value) : `${tooltipCategory}<br/><b>${value}</b>`
       },
     },
     xAxis: {
@@ -212,8 +72,33 @@ export function buildBarChartOption(
       },
       axisTick: { alignWithLabel: true, lineStyle: { color: colors.border } },
     },
-    yAxis,
-    series: [barSeries, ...overlayBars],
+    yAxis: {
+      type: "value",
+      minInterval: 1,
+      splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
+      axisLine: { show: false },
+      ...(showYAxis ? {} : { axisTick: { show: false } }),
+      axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
+    },
+    series: [
+      {
+        type: "bar",
+        data: [...values],
+        ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
+        barCategoryGap: "18%",
+        cursor: "default",
+        itemStyle: {
+          color: colors.primary,
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          itemStyle: {
+            color: colors.primary,
+            borderRadius: [4, 4, 0, 0],
+          },
+        },
+      },
+    ],
   }
 
   if (enableBrush) {
