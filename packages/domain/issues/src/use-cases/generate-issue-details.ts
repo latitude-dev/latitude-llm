@@ -91,6 +91,7 @@ const buildPrompt = (input: {
     "- Prefer stable wording over churn when the current details already fit.",
     "- Keep `name` under 128 characters.",
     "- Keep `description` concise and focused on the shared underlying problem.",
+    '- Frame `name` around the problem itself, not around the AI as the actor. Do not start it with "Agent", "The Agent", "Model", "The Model", "AI", "The AI", "Assistant", "The Assistant", "Bot", "The Bot", or any equivalent generic reference to the system being evaluated. Concrete subjects (specific tools, behaviors, outputs, or failure modes) are fine. Good examples: "Recommendation of dangerous product combinations", "Read tool fails accessing annotation queues data", "Tool call failures due to missing dependencies, malformed input, or environment misconfiguration", "Unnecessary conversational filler undermines formal tone". Bad example: "Agent recommends dangerous product combinations".',
   )
 
   return parts.join("\n\n")

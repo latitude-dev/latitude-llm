@@ -352,7 +352,7 @@ function SearchInput({
         placeholder="Search"
         size="lg"
         maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className="w-full pl-9"
+        className="w-full pl-9 rounded-xl"
         autoFocus
       />
     </div>
