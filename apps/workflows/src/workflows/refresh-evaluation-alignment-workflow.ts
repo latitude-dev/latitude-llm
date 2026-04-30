@@ -49,7 +49,7 @@ const { evaluateBaselineEvaluationDraft, evaluateIncrementalEvaluationDraft } = 
   // Runs the evaluation script plus an LLM judge per example. Incremental runs
   // are bounded by annotations since the last alignment; full rebuilds are
   // bounded by the curated dataset size (up to 100). Either can be heavy.
-  startToCloseTimeout: "2 hours",
+  startToCloseTimeout: "1 hour",
   retry: defaultActivityRetryPolicy,
 })
 

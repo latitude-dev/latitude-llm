@@ -38,11 +38,22 @@ const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft } = 
   retry: defaultActivityRetryPolicy,
 })
 
-const { optimizeEvaluationDraft, evaluateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
-  // GEPA optimization does many LLM round-trips and the baseline evaluator
-  // runs the script plus an LLM judge across the full curated dataset (up to
-  // 100 examples). P99 can legitimately reach an hour or more.
-  startToCloseTimeout: "2 hours",
+const { optimizeEvaluationDraft } = proxyActivities<typeof activities>({
+  // GEPA optimization does many LLM round-trips. The Python engine is bounded
+  // by `GEPA_MAX_TIME` (1 hour) but only checks its stop conditions between
+  // full iterations, so the activity gets a 1.25x buffer over the engine
+  // budget to avoid clipping a run that is finishing its current iteration
+  // when the budget elapses. Keep this in sync with `GEPA_MAX_TIME` in
+  // `@platform/op-gepa`.
+  startToCloseTimeout: "75 minutes",
+  retry: defaultActivityRetryPolicy,
+})
+
+const { evaluateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
+  // The baseline evaluator runs the script plus an LLM judge across the full
+  // curated dataset (up to 100 examples) and can legitimately take a long
+  // time even after the optimization step is bounded.
+  startToCloseTimeout: "1 hour",
   retry: defaultActivityRetryPolicy,
 })
 
