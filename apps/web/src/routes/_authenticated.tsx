@@ -1,5 +1,5 @@
 import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
-import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, HatGlassesIcon, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
@@ -13,15 +13,12 @@ import { ImpersonationBanner } from "./_authenticated/-components/impersonation-
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
+const projectOnboardingRouteId = "/_authenticated/projects/$projectSlug/onboarding" as const
+
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
   staleTime: Infinity,
   remountDeps: () => "authenticated-layout",
-  // Path flag for layout UI; `beforeLoad` runs on every navigation (correct with
-  // `staleTime: Infinity` on this route's loader).
-  beforeLoad: ({ location }) => ({
-    isProjectOnboardingRoute: isProjectOnboardingPathname(location.pathname),
-  }),
   // Session + org bootstrap: empty orgs get a default project and redirect to
   // onboarding here (server fn), instead of a client `useEffect` on every page.
   loader: async ({ location }) => {
@@ -205,8 +202,8 @@ function AuthenticatedLayout() {
   const user = Route.useLoaderData({ select: (data) => data.user })
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
-  const isProjectOnboarding = Route.useRouteContext({
-    select: (c) => (c as { isProjectOnboardingRoute: boolean }).isProjectOnboardingRoute,
+  const isProjectOnboarding = useRouterState({
+    select: (s) => s.matches.some((m) => m.id === projectOnboardingRouteId),
   })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
