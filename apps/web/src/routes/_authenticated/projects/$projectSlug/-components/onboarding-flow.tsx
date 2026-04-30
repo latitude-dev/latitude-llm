@@ -494,7 +494,7 @@ export function OnboardingFlow({
       if (cancelled) return
       try {
         const count = await countTracesByProject({
-          data: { projectId: projectIdRef.current, pollNonce: Date.now() },
+          data: { projectId: projectIdRef.current },
         })
         if (cancelled) return
         if (count > 0) {
