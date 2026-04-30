@@ -108,7 +108,7 @@ function BackofficeOrganizationsByUsagePage() {
       },
       {
         key: "lastTraceAt",
-        header: "Last activity",
+        header: "Last trace",
         align: "end",
         minWidth: 110,
         width: 150,
