@@ -152,8 +152,15 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
   // event have committed so a transient Temporal failure doesn't leave a
   // ghost project with no audit trail. The workflow id is namespaced by
   // the project id, which gives us a free idempotency guard — re-issuing
-  // the same start (e.g. from a retried server-fn call) lands on the
-  // existing handle instead of double-running the seed.
+  // the same start (e.g. from a retried server-fn call after the
+  // transaction committed but the response didn't reach the client)
+  // lands on the existing handle.
+  //
+  // `WorkflowAlreadyStartedError` is the recoverable case: a workflow
+  // for this project is already running, which is exactly what the
+  // caller wanted. Treat it as success and return the existing
+  // result. Other Temporal failures (network, permission) propagate as
+  // defects.
   const workflowStarter = yield* WorkflowStarter
   yield* startSeedDemoProjectWorkflow(workflowStarter, {
     organizationId: input.organizationId,
@@ -161,7 +168,7 @@ export const createDemoProjectUseCase = Effect.fn("admin.createDemoProject")(fun
     queueAssigneeUserIds: [queueAssigneeUserId],
     apiKeyId,
     timelineAnchorIso: new Date().toISOString(),
-  })
+  }).pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
 
   return result
 })

@@ -1,6 +1,6 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type Project, ProjectRepository } from "@domain/projects"
-import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { WorkflowAlreadyStartedError, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type ApiKeyId, type OrganizationId, ProjectId, SqlClient, type UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -68,7 +68,16 @@ interface FakeWorld {
 
 const FAKE_API_KEY_ID = "apikeyxxxxxxxxxxxxxxxxxxx" as ApiKeyId
 
-const buildLayer = (org: AdminOrganizationDetails, apiKeyId: ApiKeyId | null = FAKE_API_KEY_ID) => {
+const buildLayer = (
+  org: AdminOrganizationDetails,
+  apiKeyId: ApiKeyId | null = FAKE_API_KEY_ID,
+  /**
+   * Inject a custom workflow-start outcome — used by the
+   * "treats `WorkflowAlreadyStartedError` as success" test to assert
+   * the use-case recovers from idempotent retries.
+   */
+  startBehavior: "ok" | "already-started" = "ok",
+) => {
   const world: FakeWorld = {
     outbox: [],
     savedProjects: [],
@@ -101,10 +110,12 @@ const buildLayer = (org: AdminOrganizationDetails, apiKeyId: ApiKeyId | null = F
   const sqlClient = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))
 
   const workflowStarter: WorkflowStarterShape = {
-    start: (name, input, options) =>
-      Effect.sync(() => {
-        world.workflows.push({ name, input, options })
-      }),
+    start: (name, input, options) => {
+      world.workflows.push({ name, input, options })
+      return startBehavior === "already-started"
+        ? Effect.fail(new WorkflowAlreadyStartedError({ workflow: name, workflowId: options.workflowId }))
+        : Effect.void
+    },
     signalWithStart: () => Effect.void,
   }
   const workflowStarterLayer = Layer.succeed(WorkflowStarter, workflowStarter)
@@ -305,5 +316,33 @@ describe("createDemoProjectUseCase", () => {
     if (!saved) throw new Error("no project saved")
     expect(result.projectId).toBe(saved.id)
     expect(ProjectId(result.projectId)).toBe(saved.id)
+  })
+
+  it("treats WorkflowAlreadyStartedError as success — server-fn retries are idempotent", async () => {
+    // Scenario: the request handler retried after the project row + outbox
+    // event committed but before the response reached the client. The
+    // second call still tries to start the workflow; Temporal returns
+    // `WorkflowAlreadyStartedError` because a run for this projectId is
+    // already going. The use-case must NOT bubble this up as a failure
+    // — the caller's intent ("a seed workflow for this project should
+    // be running") is already satisfied. Real failures (network /
+    // permission) still propagate; only the duplicate-start case
+    // recovers.
+    const org = mkOrg()
+    const { layer, world } = buildLayer(org, FAKE_API_KEY_ID, "already-started")
+
+    const result = await Effect.runPromise(
+      createDemoProjectUseCase({
+        organizationId: ORG_ID,
+        projectName: "Demo",
+        actorAdminUserId: ADMIN_ID,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    const saved = world.savedProjects[0]
+    expect(result.projectId).toBe(saved?.id)
+    // The starter was still called once — the recovery happens after
+    // the failure surfaces, not by short-circuiting the call.
+    expect(world.workflows).toHaveLength(1)
   })
 })
