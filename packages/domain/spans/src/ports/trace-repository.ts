@@ -44,6 +44,26 @@ export interface TraceRepositoryShape {
     readonly searchQuery?: string
   }): Effect.Effect<number, RepositoryError, ChSqlClient>
 
+  /** Latest `start_time` across traces matching the same filter + search semantics as `countByProjectId`. */
+  findLastTraceAt(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly searchQuery?: string
+  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+
+  /**
+   * Count of traces matching the same filter + search semantics as `countByProjectId` that have at
+   * least one `source = 'annotation'` score linked. The shared `searchQuery` path requires AI
+   * embeddings, so the platform implementation depends on `AiEmbed` like the other read methods do.
+   */
+  countAnnotatedByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly searchQuery?: string
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
+
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

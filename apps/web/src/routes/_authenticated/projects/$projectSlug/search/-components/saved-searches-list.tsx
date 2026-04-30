@@ -1,9 +1,11 @@
-import { DropdownMenu, Icon, Skeleton, Text, toast } from "@repo/ui"
-import { Link, useRouter } from "@tanstack/react-router"
-import { BookmarkIcon, FilterIcon, SearchIcon, SparklesIcon } from "lucide-react"
+import { Icon, InfiniteTable, type InfiniteTableColumn, optionsColumn, Skeleton, Text, toast } from "@repo/ui"
+import { useRouter } from "@tanstack/react-router"
+import { FilterIcon, SearchIcon, SparklesIcon } from "lucide-react"
 import { useState } from "react"
 import {
+  type SavedSearchAggregates,
   useDeleteSavedSearch,
+  useSavedSearchAggregates,
   useSavedSearchesList,
 } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../../domains/saved-searches/saved-searches.functions.ts"
@@ -11,8 +13,10 @@ import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { SaveSearchModal } from "./save-search-modal.tsx"
 
-const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+const dateFormatter = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" })
+const numberFormatter = new Intl.NumberFormat()
+
+const formatDate = (iso: string): string => dateFormatter.format(new Date(iso))
 
 const filtersCount = (filterSet: SavedSearchRecord["filterSet"]): number => Object.keys(filterSet).length
 
@@ -23,33 +27,110 @@ export function SavedSearchesList({
   readonly projectId: string
   readonly projectSlug: string
 }) {
+  const router = useRouter()
   const { data, isLoading } = useSavedSearchesList(projectId)
+  const deleteMutation = useDeleteSavedSearch(projectId)
+  const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-2 px-6 py-4">
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-      </div>
-    )
-  }
-
-  if (data.length === 0) {
+  if (!isLoading && data.length === 0) {
     return <SavedSearchesEmpty />
   }
 
+  const columns: InfiniteTableColumn<SavedSearchRecord>[] = [
+    {
+      key: "name",
+      header: "Saved search",
+      minWidth: 280,
+      render: (row) => <NameCell row={row} />,
+    },
+    {
+      key: "lastFound",
+      header: "Last found",
+      width: 160,
+      minWidth: 120,
+      render: (row) => <LastFoundCell row={row} />,
+    },
+    {
+      key: "assignedTo",
+      header: "Assigned To",
+      width: 160,
+      minWidth: 120,
+      render: () => <Text.H5 color="foregroundMuted">—</Text.H5>,
+    },
+    {
+      key: "annotated",
+      header: "Annotated",
+      width: 120,
+      minWidth: 96,
+      align: "end",
+      render: (row) => <AnnotatedCell row={row} />,
+    },
+    {
+      key: "total",
+      header: "Total",
+      width: 120,
+      minWidth: 96,
+      align: "end",
+      render: (row) => <TotalCell row={row} />,
+    },
+    optionsColumn<SavedSearchRecord>({
+      getOptions: (row) => [
+        { label: "Rename", onClick: () => setRowToRename(row) },
+        {
+          label: "Delete",
+          type: "destructive",
+          onClick: () => {
+            deleteMutation.mutate(row.id, {
+              onSuccess: () => {
+                toast({ title: "Saved search deleted" })
+                void router.invalidate()
+              },
+              onError: (error) => {
+                toast({ variant: "destructive", title: "Could not delete", description: toUserMessage(error) })
+              },
+            })
+          },
+        },
+      ],
+    }),
+  ]
+
+  const onRowClick = (row: SavedSearchRecord) => {
+    const serialized = serializeFilters(row.filterSet)
+    void router.navigate({
+      to: "/projects/$projectSlug/search",
+      params: { projectSlug },
+      search: () => {
+        const next: Record<string, unknown> = { savedSearch: row.slug, q: row.query ?? "" }
+        if (serialized) next.filters = serialized
+        return next
+      },
+    })
+  }
+
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-6 py-3">
-        <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" />
-        <Text.H5M color="foregroundMuted">Saved searches</Text.H5M>
-      </div>
-      <ul className="flex flex-col divide-y divide-border">
-        {data.map((row) => (
-          <SavedSearchRow key={row.id} projectId={projectId} projectSlug={projectSlug} row={row} />
-        ))}
-      </ul>
+    <div className="flex min-h-0 min-w-0 grow flex-col px-6 pb-6">
+      <InfiniteTable<SavedSearchRecord>
+        scrollAreaLayout="intrinsic"
+        className="max-h-full"
+        data={data}
+        isLoading={isLoading}
+        columns={columns}
+        getRowKey={(row) => row.id}
+        onRowClick={onRowClick}
+        rowInteractionRole="link"
+        getRowAriaLabel={(row) => `Open saved search ${row.name}`}
+        blankSlate="No saved searches yet."
+      />
+      {rowToRename ? (
+        <SaveSearchModal
+          mode="rename"
+          open
+          onClose={() => setRowToRename(null)}
+          projectId={projectId}
+          savedSearch={rowToRename}
+        />
+      ) : null}
     </div>
   )
 }
@@ -76,99 +157,65 @@ function SavedSearchesEmpty() {
   )
 }
 
-function SavedSearchRow({
-  projectId,
-  projectSlug,
-  row,
-}: {
-  readonly projectId: string
-  readonly projectSlug: string
-  readonly row: SavedSearchRecord
-}) {
-  const router = useRouter()
-  const deleteMutation = useDeleteSavedSearch(projectId)
-  const [renameOpen, setRenameOpen] = useState(false)
-
+function NameCell({ row }: { readonly row: SavedSearchRecord }) {
   const filters = filtersCount(row.filterSet)
   const queryPreview = row.query?.trim() || null
-  const serialized = serializeFilters(row.filterSet)
-
   return (
-    <li className="flex items-center gap-3 px-6 py-3 hover:bg-muted/40">
-      <Link
-        to="/projects/$projectSlug/search"
-        params={{ projectSlug }}
-        search={(prev: Record<string, unknown>) => {
-          const next: Record<string, unknown> = {
-            ...prev,
-            savedSearch: row.slug,
-            q: row.query ?? "",
-          }
-          if (serialized) next.filters = serialized
-          else delete next.filters
-          return next
-        }}
-        className="flex min-w-0 flex-1 flex-col gap-1"
-      >
-        <Text.H5M ellipsis noWrap>
-          {row.name}
-        </Text.H5M>
-        <div className="flex items-center gap-3">
-          {queryPreview ? (
-            <span className="flex min-w-0 items-center gap-1">
-              <Icon icon={SearchIcon} size="xs" color="foregroundMuted" />
-              <Text.H6 color="foregroundMuted" ellipsis noWrap>
-                {queryPreview}
-              </Text.H6>
-            </span>
-          ) : null}
-          {filters > 0 ? (
-            <span className="flex items-center gap-1">
-              <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
-              <Text.H6 color="foregroundMuted">
-                {filters} {filters === 1 ? "filter" : "filters"}
-              </Text.H6>
-            </span>
-          ) : null}
-          <Text.H6 color="foregroundMuted">Saved {formatDate(row.createdAt)}</Text.H6>
-        </div>
-      </Link>
-      <div className="shrink-0">
-        <DropdownMenu
-          align="end"
-          triggerButtonProps={{
-            variant: "ghost",
-            "aria-label": `Actions for saved search ${row.name}`,
-          }}
-          options={[
-            { label: "Rename", onClick: () => setRenameOpen(true) },
-            {
-              label: "Delete",
-              type: "destructive" as const,
-              onClick: () => {
-                deleteMutation.mutate(row.id, {
-                  onSuccess: () => {
-                    toast({ title: "Saved search deleted" })
-                    void router.invalidate()
-                  },
-                  onError: (error) => {
-                    toast({ variant: "destructive", title: "Could not delete", description: toUserMessage(error) })
-                  },
-                })
-              },
-            },
-          ]}
-        />
+    <div className="flex min-w-0 flex-col gap-1">
+      <Text.H5M ellipsis noWrap>
+        {row.name}
+      </Text.H5M>
+      <div className="flex items-center gap-3">
+        {queryPreview ? (
+          <span className="flex min-w-0 items-center gap-1">
+            <Icon icon={SearchIcon} size="xs" color="foregroundMuted" />
+            <Text.H6 color="foregroundMuted" ellipsis noWrap>
+              {queryPreview}
+            </Text.H6>
+          </span>
+        ) : null}
+        {filters > 0 ? (
+          <span className="flex items-center gap-1">
+            <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
+            <Text.H6 color="foregroundMuted">
+              {filters} {filters === 1 ? "filter" : "filters"}
+            </Text.H6>
+          </span>
+        ) : null}
+        <Text.H6 color="foregroundMuted">Saved {formatDate(row.createdAt)}</Text.H6>
       </div>
-      {renameOpen ? (
-        <SaveSearchModal
-          mode="rename"
-          open={renameOpen}
-          onClose={() => setRenameOpen(false)}
-          projectId={projectId}
-          savedSearch={row}
-        />
-      ) : null}
-    </li>
+    </div>
   )
+}
+
+function LastFoundCell({ row }: { readonly row: SavedSearchRecord }) {
+  const aggregates = useSavedSearchAggregates(row)
+  return <LastFoundDisplay aggregates={aggregates} />
+}
+
+function LastFoundDisplay({ aggregates }: { readonly aggregates: SavedSearchAggregates }) {
+  if (aggregates.lastFoundLoading) {
+    return <Skeleton className="h-4 w-20" />
+  }
+  if (!aggregates.lastFoundAt) {
+    return <Text.H5 color="foregroundMuted">No matches</Text.H5>
+  }
+  return <Text.H5 color="foregroundMuted">{dateFormatter.format(aggregates.lastFoundAt)}</Text.H5>
+}
+
+function AnnotatedCell({ row }: { readonly row: SavedSearchRecord }) {
+  const aggregates = useSavedSearchAggregates(row)
+  return <NumberDisplay value={aggregates.annotated} loading={aggregates.annotatedLoading} />
+}
+
+function TotalCell({ row }: { readonly row: SavedSearchRecord }) {
+  const aggregates = useSavedSearchAggregates(row)
+  return <NumberDisplay value={aggregates.total} loading={aggregates.totalLoading} />
+}
+
+function NumberDisplay({ value, loading }: { readonly value: number | undefined; readonly loading: boolean }) {
+  if (loading || value === undefined) {
+    return <Skeleton className="h-4 w-10" />
+  }
+  return <Text.H5 color="foregroundMuted">{numberFormatter.format(value)}</Text.H5>
 }

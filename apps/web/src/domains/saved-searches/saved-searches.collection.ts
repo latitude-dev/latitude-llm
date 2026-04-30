@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  countAnnotatedTracesByProject,
+  countTracesByProject,
+  findLastTraceAtByProject,
+} from "../traces/traces.functions.ts"
 import {
   createSavedSearchFn,
   deleteSavedSearchFn,
@@ -73,4 +78,62 @@ export function useDeleteSavedSearch(projectId: string) {
     mutationFn: (id: string) => deleteSavedSearchFn({ data: { id } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
   })
+}
+
+export interface SavedSearchAggregates {
+  readonly total: number | undefined
+  readonly totalLoading: boolean
+  readonly annotated: number | undefined
+  readonly annotatedLoading: boolean
+  readonly lastFoundAt: Date | null | undefined
+  readonly lastFoundLoading: boolean
+}
+
+const aggregateInputs = (savedSearch: SavedSearchRecord) => ({
+  projectId: savedSearch.projectId,
+  ...(savedSearch.query ? { searchQuery: savedSearch.query } : {}),
+  ...(Object.keys(savedSearch.filterSet).length > 0 ? { filterSet: savedSearch.filterSet } : {}),
+})
+
+const aggregateKey = (kind: string, savedSearch: SavedSearchRecord) =>
+  [
+    "savedSearchAggregate",
+    kind,
+    savedSearch.projectId,
+    savedSearch.id,
+    savedSearch.query ?? "",
+    savedSearch.filterSet,
+  ] as const
+
+export function useSavedSearchAggregates(savedSearch: SavedSearchRecord): SavedSearchAggregates {
+  const inputs = aggregateInputs(savedSearch)
+  const [totalQuery, annotatedQuery, lastFoundQuery] = useQueries({
+    queries: [
+      {
+        queryKey: aggregateKey("total", savedSearch),
+        queryFn: () => countTracesByProject({ data: inputs }),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: aggregateKey("annotated", savedSearch),
+        queryFn: () => countAnnotatedTracesByProject({ data: inputs }),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: aggregateKey("lastFound", savedSearch),
+        queryFn: () => findLastTraceAtByProject({ data: inputs }),
+        staleTime: 30_000,
+      },
+    ],
+  })
+
+  return {
+    total: totalQuery.data,
+    totalLoading: totalQuery.isLoading,
+    annotated: annotatedQuery.data,
+    annotatedLoading: annotatedQuery.isLoading,
+    lastFoundAt:
+      lastFoundQuery.data === undefined ? undefined : lastFoundQuery.data ? new Date(lastFoundQuery.data) : null,
+    lastFoundLoading: lastFoundQuery.isLoading,
+  }
 }
