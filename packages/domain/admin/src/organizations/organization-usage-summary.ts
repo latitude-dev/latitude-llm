@@ -22,8 +22,12 @@ export const adminOrganizationUsageSummarySchema = z.object({
    */
   plan: z.string().nullable(),
   memberCount: z.number().int().nonnegative(),
-  /** Trace count over the rolling usage window. Always > 0 for rows that reach this DTO. */
-  traceCount: z.number().int().nonnegative(),
+  /**
+   * Trace count over the rolling usage window. Always > 0 for rows that
+   * reach this DTO — orgs with no traces in the window don't appear in
+   * the listing at all.
+   */
+  traceCount: z.number().int().positive(),
   /** End time of the most recent trace in the window. */
   lastTraceAt: z.date().nullable(),
   createdAt: z.date(),
