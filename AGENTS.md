@@ -41,3 +41,35 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Testing** | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md) | Vitest layers, PGlite/chdb testkit, **`/testing` package exports**, avoiding `vi.mock` for repositories |
 | **Toolchain and commands** | [.agents/skills/toolchain-commands/SKILL.md](.agents/skills/toolchain-commands/SKILL.md) | Node/pnpm/Turbo/Vitest/Biome, scripts, filters, CI, `.env.*` setup, **Docker Compose, dev servers, Mailpit** |
 | **Web frontend** | [.agents/skills/web-frontend/SKILL.md](.agents/skills/web-frontend/SKILL.md) | `apps/web` UI, TanStack Start, collections, `@repo/ui`, layout, **`-components/`**, legacy UI reference, **`useMountEffect` policy**, **`useForm` + `createFormSubmitHandler` + `fieldErrorsAsStrings`** for Zod field errors on forms |
+
+## Cursor Cloud specific instructions
+
+### Environment prerequisites
+
+The VM snapshot includes Docker, mise (with Node 25), pnpm 10.33.0, and goose. The update script runs `scripts/cloud-install.sh` (env files + `pnpm install`) and `scripts/cloud-start.sh` (Docker infra + migrations + seeds) on every session start, so all databases are migrated and seeded automatically.
+
+### Services overview
+
+| Service | Port | Health / verify |
+|---------|------|----------------|
+| Web (TanStack Start) | 3000 | `curl -sI http://localhost:3000` → 307 redirect to `/login` |
+| API (Hono) | 3001 | `curl -s http://localhost:3001/health` |
+| Ingest (Hono) | 3002 | `curl -s http://localhost:3002/health` |
+| Workers (BullMQ) | 9090 | `curl -s http://localhost:9090/health` |
+| Workflows (Temporal) | 9091 | `curl -s http://localhost:9091/health` |
+| Mailpit UI | 8025 | `curl -s http://localhost:8025` |
+| Temporal UI | 8233 | `curl -s http://localhost:8233` |
+
+Start dev servers per `.cursor/environment.json` terminals, or individually: `pnpm --filter @app/<name> dev`.
+
+### Authentication in local dev
+
+Auth uses Better Auth with **magic links** (no passwords by default). After entering an email at `/login`, retrieve the magic link from Mailpit at `http://localhost:8025`. Seeded users include `owner@acme.com`, `admin@acme.com`, etc., all in the "Acme Inc." organization.
+
+### Gotchas
+
+- `pnpm build` must complete before `pnpm db:up` — migration scripts depend on compiled platform packages.
+- The `pnpm install` output may warn about unapproved build scripts (`@swc/core`, `sharp`, etc.). These are non-blocking — pre-built binaries are used.
+- The Docker daemon in cloud VMs needs `fuse-overlayfs` storage driver and `iptables-legacy`. The update script handles this.
+- Typechecking uses `tsgo` (native TS preview) via `pnpm typecheck` — never invoke `tsc` directly.
+- For standard commands (lint, test, build, dev, typecheck), see [toolchain-commands skill](.agents/skills/toolchain-commands/SKILL.md).
