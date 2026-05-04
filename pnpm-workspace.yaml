@@ -8,7 +8,7 @@ packages:
 
 catalog:
   '@biomejs/biome': 2.4.6
-  '@clickhouse/client': 1.18.2
+  '@clickhouse/client': 1.18.3
   '@hono/node-server': 1.19.13
   '@opentelemetry/api': ^1.9.0
   '@paralleldrive/cuid2': 3.3.0
