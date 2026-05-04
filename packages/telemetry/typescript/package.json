@@ -53,7 +53,7 @@
     "@opentelemetry/sdk-trace-node": "^2.6.1",
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "@traceloop/instrumentation-anthropic": "^0.26.0",
-    "@traceloop/instrumentation-bedrock": "^0.25.0",
+    "@traceloop/instrumentation-bedrock": "^0.26.0",
     "@traceloop/instrumentation-cohere": "^0.25.0",
     "@traceloop/instrumentation-langchain": "^0.25.0",
     "@traceloop/instrumentation-llamaindex": "^0.25.0",
