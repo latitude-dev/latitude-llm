@@ -56,9 +56,7 @@ describe("resolveAnnotationSpanIdForWrite", () => {
     }
     const messages: GenAIMessage[] = [textMsg("user", "open file"), assistantWithTool]
     const toolSpanId = "t".repeat(16)
-    const spanMessages = [
-      makeSpanMessages(toolSpanId, textMsg("assistant", "tool output"), [], toolCallId),
-    ]
+    const spanMessages = [makeSpanMessages(toolSpanId, textMsg("assistant", "tool output"), [], toolCallId)]
 
     const resolved = resolveAnnotationSpanIdForWrite({
       allMessages: messages,
