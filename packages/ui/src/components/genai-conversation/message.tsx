@@ -101,7 +101,7 @@ function ViewSourceSpanButton({ onNavigate }: { readonly onNavigate: () => void 
         <button
           type="button"
           onClick={onNavigate}
-          className="flex items-center justify-center w-6 h-6 rounded-md border border-border bg-background shadow-sm opacity-0 group-hover/message:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
+          className="flex items-center justify-center w-6 h-6 rounded-md border border-border bg-background shadow-sm opacity-0 group-hover/message:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
           title="View source span"
         >
           <Icon icon={ScanSearchIcon} size="sm" />
