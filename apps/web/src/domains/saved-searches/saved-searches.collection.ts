@@ -67,6 +67,9 @@ export function useUpdateSavedSearch(projectId: string) {
     }) => updateSavedSearchFn({ data: input }),
     onSuccess: (record) => {
       queryClient.invalidateQueries({ queryKey: listKey(projectId) })
+      // Renames change the slug; invalidate every cached slug query for this project so any
+      // subscriber pointing at the previous slug refetches instead of serving a stale entity.
+      queryClient.invalidateQueries({ queryKey: ["savedSearches", projectId, "slug"] })
       queryClient.setQueryData(slugKey(projectId, record.slug), record)
     },
   })
@@ -92,7 +95,7 @@ export interface SavedSearchAggregates {
 const aggregateInputs = (savedSearch: SavedSearchRecord) => ({
   projectId: savedSearch.projectId,
   ...(savedSearch.query ? { searchQuery: savedSearch.query } : {}),
-  ...(Object.keys(savedSearch.filterSet).length > 0 ? { filterSet: savedSearch.filterSet } : {}),
+  ...(Object.keys(savedSearch.filterSet).length > 0 ? { filters: savedSearch.filterSet } : {}),
 })
 
 const aggregateKey = (kind: string, savedSearch: SavedSearchRecord) =>
