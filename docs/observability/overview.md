@@ -97,6 +97,12 @@ The trace dashboard provides rich filtering through a shared filter system. You 
 
 These same filters power evaluation triggers and live annotation queues. When you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
 
+### Saved searches
+
+You can save any combination of search query and filters from the **Search** page to recall it later. Saved searches appear on the Search landing page in a table that surfaces, for each entry, the last matching trace, the number of annotated traces, and the total trace count. You can also assign a saved search to an organization member to indicate ownership.
+
+Loading a saved search restores its query and filters in the URL. Editing either while a saved search is loaded surfaces an **Update saved search** action (with a **Save as new search** alternative). Per-row actions on the list let you rename, reassign, or delete a saved search.
+
 ## Next Steps
 
 - [Traces](./traces): Understand the trace model and lifecycle in detail
