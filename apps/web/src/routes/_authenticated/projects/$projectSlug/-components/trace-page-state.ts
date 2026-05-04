@@ -8,7 +8,7 @@ export const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime"
 export const DEFAULT_TRACE_COLUMNS: TraceColumnId[] = TRACE_COLUMN_OPTIONS.map((column) => column.id)
 
 const getRequiredTraceColumnIds = (): TraceColumnId[] =>
-  TRACE_COLUMN_OPTIONS.filter((column) => column.required === true).map((column) => column.id)
+  TRACE_COLUMN_OPTIONS.filter((column) => "required" in column && column.required === true).map((column) => column.id)
 
 export function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
