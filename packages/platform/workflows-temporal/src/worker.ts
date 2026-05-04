@@ -10,10 +10,13 @@ import type {
 import { NativeConnection, Worker } from "@temporalio/worker"
 import type { TemporalConfig } from "./config.ts"
 
+/** Context type expected by {@link ActivityInterceptorsFactory} (matches worker's @temporalio/activity). */
+type ActivityFactoryContext = Parameters<ActivityInterceptorsFactory>[0]
+
 const tracer = trace.getTracer("temporal-worker")
 const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
 
-const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityContext) => ({
+const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityFactoryContext) => ({
   inbound: {
     async execute(
       input: ActivityExecuteInput,
