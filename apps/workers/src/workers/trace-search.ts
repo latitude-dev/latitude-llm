@@ -28,6 +28,11 @@ interface TraceSearchDeps {
   redisClient?: RedisClient
 }
 
+interface TraceSearchRunDeps {
+  clickhouseClient?: ClickHouseClient
+  redisClient?: RedisClient
+}
+
 interface RefreshTracePayload {
   readonly organizationId: string
   readonly projectId: string
@@ -196,23 +201,29 @@ export const createTraceSearchWorker = ({ consumer, clickhouseClient, redisClien
   const chClient = clickhouseClient ?? getClickhouseClient()
   const rdClient = redisClient ?? getRedisClient()
 
-  // Budget tracker depends on the resolver; both are Redis-backed (tracker)
-  // and memory-backed (resolver, hardcoded defaults until subscription-plan
-  // tiers land and swap in a Postgres-backed impl).
-  const budgetLayer = Layer.provide(TraceSearchBudgetLive(rdClient), EmbedBudgetResolverLive)
-
   consumer.subscribe("trace-search", {
     refreshTrace: (payload) =>
-      processRefreshTrace(payload as RefreshTracePayload).pipe(
-        withClickHouse(
-          Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive),
-          chClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withAi(AIEmbedLive, rdClient),
-        Effect.provide(Layer.mergeAll(RedisCacheStoreLive(rdClient), budgetLayer)),
-        withTracing,
-        Effect.asVoid,
-      ),
+      runTraceSearchRefresh(payload as RefreshTracePayload, {
+        clickhouseClient: chClient,
+        redisClient: rdClient,
+      }),
   })
+}
+
+export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceSearchRunDeps = {}) => {
+  const clickhouseClient = deps.clickhouseClient ?? getClickhouseClient()
+  const redisClient = deps.redisClient ?? getRedisClient()
+  const budgetLayer = Layer.provide(TraceSearchBudgetLive(redisClient), EmbedBudgetResolverLive)
+
+  return processRefreshTrace(payload).pipe(
+    withClickHouse(
+      Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive),
+      clickhouseClient,
+      OrganizationId(payload.organizationId),
+    ),
+    withAi(AIEmbedLive, redisClient),
+    Effect.provide(Layer.mergeAll(RedisCacheStoreLive(redisClient), budgetLayer)),
+    withTracing,
+    Effect.asVoid,
+  )
 }
