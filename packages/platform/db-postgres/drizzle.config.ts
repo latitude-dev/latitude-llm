@@ -26,16 +26,20 @@ if (!url) {
   )
 }
 
-try {
-  const parsed = new URL(url)
-  if (parsed.username === "latitude_app") {
-    throw new Error(
-      "drizzle.config.ts: LAT_ADMIN_DATABASE_URL points at user `latitude_app` (RLS runtime). " +
-        "Use the admin URL with user `latitude` for drizzle-kit migrate / pg:migrate (see .env.example).",
-    )
+function urlUsername(connectionUrl: string): string | undefined {
+  try {
+    return new URL(connectionUrl).username || undefined
+  } catch {
+    // Malformed URL: do not assert here; let drizzle-kit / pg surface the error.
+    return undefined
   }
-} catch (err) {
-  if (err instanceof Error && err.message.startsWith("drizzle.config.ts:")) throw err
+}
+
+if (urlUsername(url) === "latitude_app") {
+  throw new Error(
+    "drizzle.config.ts: LAT_ADMIN_DATABASE_URL points at user `latitude_app` (RLS runtime). " +
+      "Use the admin URL with user `latitude` for drizzle-kit migrate / pg:migrate (see .env.example).",
+  )
 }
 
 export default defineConfig({
