@@ -1,17 +1,35 @@
-import { dirname } from "node:path"
+import { spawnSync } from "node:child_process"
+import { mkdtempSync, writeFileSync } from "node:fs"
+import { unlink, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { dirname, join } from "node:path"
+import { pathToFileURL } from "node:url"
 import type { FlaggerStrategy } from "@domain/flaggers"
 import esbuild from "esbuild"
 import { type PackageContext, runStaticSafetyScan, type ScanReject, sniffRegexDosRisk } from "./safety-scan.ts"
 
 /**
  * v1 candidate loader for `ts-module` candidates: static safety scan →
- * esbuild compile (in-memory, workspace deps bundled inline) → dynamic
- * import via a `data:` URL → shape probe.
+ * esbuild compile (workspace + npm deps externalized) → dynamic import via a
+ * temp `.mjs` file in the strategy directory → shape probe.
  *
- * v2 (planned, see spec §"v2: Worker isolation") swaps the dynamic-import
- * step for a worker-thread spawn so `worker.terminate()` can hard-kill
- * runaway candidates. The external `loadFlaggerCandidate` API is the seam
- * that v2 swaps without changing callers.
+ * The temp-file dance instead of a `data:` URL is deliberate: data: URLs
+ * have no parent location, so Node refuses to resolve bare imports (`effect`,
+ * `@domain/spans`, ...) from them. Writing a small file inside the strategy
+ * directory means Node walks up into the strategy package's `node_modules`
+ * for those bare specifiers — the same resolution the original strategy
+ * file uses — so esbuild can keep deps external and the bundle stays tiny.
+ *
+ * Why this matters: every dynamically imported module is permanently pinned
+ * in Node's ESM loader cache (no public eviction API). On long optimizer
+ * runs that pin is the dominant memory cost. Externalizing the heavy deps
+ * shrinks each pin from megabytes to tens of kilobytes — a ~50× reduction
+ * that buys the orchestrator orders of magnitude more iterations before it
+ * OOMs. The leak is not eliminated; v2 (planned, see spec §"v2: Worker
+ * isolation") swaps the dynamic-import step for a worker-thread spawn so
+ * `worker.terminate()` can release the entire isolate (and hard-kill runaway
+ * candidates). The external `loadFlaggerCandidate` API is the seam that
+ * v2 swaps without changing callers.
  */
 
 const REQUIRED_METHOD_NAMES = [
@@ -24,6 +42,18 @@ const REQUIRED_METHOD_NAMES = [
 interface LoadedCandidate {
   readonly shape: FlaggerStrategy
   readonly cleanup: () => Promise<void>
+}
+
+interface BundleInfo {
+  readonly inputBytes: number
+  readonly outputBytes: number
+  /**
+   * Plain (no ANSI color) unified diff between the input strategy file and
+   * the bundled output, produced by `git diff --no-index -U1`. Empty string
+   * when there are no textual differences. Plain so the verbose log file
+   * stays grep/cat-friendly; colorize at tail time if you want.
+   */
+  readonly diff: string
 }
 
 interface LoadCandidateInput {
@@ -42,6 +72,13 @@ interface LoadCandidateInput {
    * across a run is bounded rather than geometric.
    */
   readonly maxBytes?: number
+  /**
+   * Optional sink for per-candidate bundle diagnostics. Fires once per
+   * unique candidate hash (the in-memory cache dedupes repeat loads). The
+   * orchestrator routes this to the verbose debug log so it doesn't fight
+   * the live ink TUI.
+   */
+  readonly onBundle?: (info: BundleInfo) => void
 }
 
 type CandidateLoadError =
@@ -118,15 +155,42 @@ const compileAndImport = async (input: LoadCandidateInput): Promise<LoadedCandid
     })
   }
 
+  if (input.onBundle !== undefined) {
+    input.onBundle({
+      inputBytes: input.text.length,
+      outputBytes: bundled.length,
+      diff: computeBundleDiff(input.text, bundled),
+    })
+  }
+
+  // Write the bundle to a temp `.mjs` file inside the strategy directory and
+  // import via `file:` URL. We can't use a `data:` URL because data: URLs
+  // have no parent location, so Node refuses to resolve bare specifiers
+  // (`effect`, `@domain/spans`, ...) from them. That constraint is what
+  // forced the previous version to bundle every workspace + npm dep inline,
+  // producing MB-sized bundles that V8 then pinned forever in the ESM
+  // loader cache once imported. With externalized deps + a file: URL,
+  // resolution walks up from `flagger-strategies/` into the strategy
+  // package's `node_modules`, the bundled output stays in the tens of KB,
+  // and even though Node still pins each imported file in the loader cache
+  // (no public API to evict), each pin is now ~50× smaller. The file
+  // itself is deleted immediately after import — Node holds the module by
+  // URL, not by the file's continued existence, so deletion is safe.
+  const candidateDir = dirname(input.context.strategyFilePath)
+  const candidatePath = join(candidateDir, `.candidate-${input.hash.slice(0, 16)}.mjs`)
   let mod: Record<string, unknown>
   try {
-    const dataUrl = `data:text/javascript;base64,${Buffer.from(bundled, "utf8").toString("base64")}`
-    mod = (await import(dataUrl)) as Record<string, unknown>
-  } catch (err) {
-    throw new CandidateLoadFailure({
-      stage: "import",
-      reason: err instanceof Error ? err.message : String(err),
-    })
+    try {
+      await writeFile(candidatePath, bundled, "utf8")
+      mod = (await import(pathToFileURL(candidatePath).href)) as Record<string, unknown>
+    } catch (err) {
+      throw new CandidateLoadFailure({
+        stage: "import",
+        reason: err instanceof Error ? err.message : String(err),
+      })
+    }
+  } finally {
+    await unlink(candidatePath).catch(() => {})
   }
 
   const exported = mod[input.exportName]
@@ -150,10 +214,10 @@ const compileAndImport = async (input: LoadCandidateInput): Promise<LoadedCandid
   return {
     shape: shape as unknown as FlaggerStrategy,
     cleanup: async () => {
-      // v1: no-op. The data: URL has no resource to release; the module is
-      // GC'd when no references remain (cache holds the only reference,
-      // released by `cleanupAllCandidates`). v2 will terminate the worker
-      // here.
+      // v1: no-op. The temp file is already unlinked in `compileAndImport`'s
+      // finally block (immediately after import), and Node's ESM loader
+      // cache pins the module by URL with no public eviction API. v2 will
+      // terminate the worker here, releasing the entire isolate at once.
     },
   }
 }
@@ -162,6 +226,19 @@ const compileTsToEsmJs = async (input: {
   readonly text: string
   readonly context: PackageContext
 }): Promise<string> => {
+  // Externalize workspace + npm deps (the same set the static scan
+  // allows) so esbuild emits bare imports instead of inlining megabytes of
+  // dependency code. The same module instances are then reused across
+  // every candidate import — see the long comment in `compileAndImport`
+  // for why this matters.
+  //
+  // Both `<spec>` and `<spec>/*` are listed because esbuild's external
+  // matching is exact on the literal specifier; subpath imports like
+  // `@domain/spans/foo` need their own entry. Relative imports (`./shared.ts`,
+  // `./types.ts`) stay bundled — they're tiny and bundling them keeps the
+  // candidate self-contained for resolution.
+  const allowed = [...input.context.allowedSpecifiers]
+  const external = [...allowed, ...allowed.map((s) => `${s}/*`)]
   const result = await esbuild.build({
     stdin: {
       contents: input.text,
@@ -177,6 +254,7 @@ const compileTsToEsmJs = async (input: {
     logLevel: "silent",
     legalComments: "none",
     treeShaking: true,
+    external,
   })
 
   if (result.errors.length > 0) {
@@ -185,6 +263,25 @@ const compileTsToEsmJs = async (input: {
   const out = result.outputFiles?.[0]
   if (out === undefined) throw new Error("esbuild produced no output files")
   return out.text
+}
+
+/**
+ * Plain unified diff between input and bundled output. Shells out to
+ * `git diff --no-index` because (a) it's universally available, (b) the
+ * `+`/`-` line prefixes are unambiguous without ANSI color, keeping the
+ * verbose log file grep/cat-friendly. Tail-time colorizers (e.g.
+ * `bat -l diff` or a `sed` filter) handle the live-color use case.
+ */
+const computeBundleDiff = (inputText: string, outputText: string): string => {
+  const tmp = mkdtempSync(join(tmpdir(), "candidate-diff-"))
+  const inPath = join(tmp, "input.ts")
+  const outPath = join(tmp, "bundle.mjs")
+  writeFileSync(inPath, inputText)
+  writeFileSync(outPath, outputText)
+  const result = spawnSync("git", ["diff", "--no-index", "--no-prefix", "-U1", "--", inPath, outPath], {
+    encoding: "utf8",
+  })
+  return result.stdout ?? ""
 }
 
 const scanRejectToError = (scan: ScanReject): CandidateLoadError => ({

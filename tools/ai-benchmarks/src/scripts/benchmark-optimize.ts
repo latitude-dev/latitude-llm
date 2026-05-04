@@ -355,6 +355,19 @@ const main = async (): Promise<void> => {
     debug.dot(charForEvalPhase(phase))
   }
 
+  // Bundle diagnostics sink: routes per-candidate compile output to the
+  // verbose debug log so the live ink TUI stays clean. Fires once per
+  // unique candidate hash (the loader caches by hash). Off when --verbose
+  // is not set; debug is a no-op in that case so this is safe to always
+  // pass through.
+  const logBundle = (hash: string) => (info: { inputBytes: number; outputBytes: number; diff: string }) => {
+    debug.section(`bundle ${hash.slice(0, 8)}`)
+    debug.kv("input bytes", String(info.inputBytes))
+    debug.kv("output bytes", String(info.outputBytes))
+    if (info.diff.length > 0) debug.text(info.diff)
+    else debug.text("(no textual differences)")
+  }
+
   const ink = render(createElement(OptimizeView, { getState: () => viewState.current }))
 
   const evaluate = async (input: {
@@ -378,6 +391,7 @@ const main = async (): Promise<void> => {
         exportName: cfg.exportName,
         context: packageContext,
         maxBytes: candidateMaxBytes,
+        onBundle: logBundle(input.candidate.hash),
       })
       strategy = loaded.shape
     } catch (err) {
@@ -699,6 +713,7 @@ const main = async (): Promise<void> => {
       exportName: cfg.exportName,
       context: packageContext,
       maxBytes: candidateMaxBytes,
+      onBundle: logBundle(winner.hash),
     })
     const winnerStrategy = loaded.shape
 
