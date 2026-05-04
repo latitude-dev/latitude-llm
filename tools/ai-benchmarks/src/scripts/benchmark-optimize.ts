@@ -355,6 +355,22 @@ const main = async (): Promise<void> => {
     debug.dot(charForEvalPhase(phase))
   }
 
+  // Bundle diagnostics sink: routes per-candidate compile output to the
+  // verbose debug log so the live ink TUI stays clean. Fires once per
+  // unique candidate hash (the loader caches by hash). Only wired up when
+  // --verbose is set — passing onBundle unconditionally would still pay
+  // the cost of computeBundleDiff (mkdtemp + writes + sync `git diff`)
+  // per candidate even when the diagnostic output is dropped.
+  const logBundle = args.verbose
+    ? (hash: string) => (info: { inputBytes: number; outputBytes: number; diff: string }) => {
+        debug.section(`bundle ${hash.slice(0, 8)}`)
+        debug.kv("input bytes", String(info.inputBytes))
+        debug.kv("output bytes", String(info.outputBytes))
+        if (info.diff.length > 0) debug.text(info.diff)
+        else debug.text("(no textual differences)")
+      }
+    : null
+
   const ink = render(createElement(OptimizeView, { getState: () => viewState.current }))
 
   const evaluate = async (input: {
@@ -372,12 +388,14 @@ const main = async (): Promise<void> => {
 
     let strategy: FlaggerStrategy
     try {
+      const onBundle = logBundle?.(input.candidate.hash)
       const loaded = await loadFlaggerCandidate({
         hash: input.candidate.hash,
         text: input.candidate.text,
         exportName: cfg.exportName,
         context: packageContext,
         maxBytes: candidateMaxBytes,
+        ...(onBundle ? { onBundle } : {}),
       })
       strategy = loaded.shape
     } catch (err) {
@@ -693,12 +711,14 @@ const main = async (): Promise<void> => {
     // + shape probe run again here — if the winner somehow loads in
     // optimization but not at adoption time (race, fs flakiness), we
     // surface that as an error rather than silently proceeding.
+    const winnerOnBundle = logBundle?.(winner.hash)
     const loaded = await loadFlaggerCandidate({
       hash: winner.hash,
       text: winner.text,
       exportName: cfg.exportName,
       context: packageContext,
       maxBytes: candidateMaxBytes,
+      ...(winnerOnBundle ? { onBundle: winnerOnBundle } : {}),
     })
     const winnerStrategy = loaded.shape
 
