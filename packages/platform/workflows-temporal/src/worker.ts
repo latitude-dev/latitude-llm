@@ -1,7 +1,12 @@
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { createLogger } from "@repo/observability"
 import { Context as ActivityContext } from "@temporalio/activity"
-import type { ActivityExecuteInput, ActivityInterceptorsFactory, Next } from "@temporalio/worker"
+import type {
+  ActivityExecuteInput,
+  ActivityInboundCallsInterceptor,
+  ActivityInterceptorsFactory,
+  Next,
+} from "@temporalio/worker"
 import { NativeConnection, Worker } from "@temporalio/worker"
 import type { TemporalConfig } from "./config.ts"
 
@@ -10,7 +15,10 @@ const toError = (value: unknown): Error => (value instanceof Error ? value : new
 
 const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityContext) => ({
   inbound: {
-    async execute(input: ActivityExecuteInput, next: Next): Promise<unknown> {
+    async execute(
+      input: ActivityExecuteInput,
+      next: Next<ActivityInboundCallsInterceptor, "execute">,
+    ): Promise<unknown> {
       const info = ActivityContext.current().info
       const spanName = `temporal.activity.${info.activityType}`
 
