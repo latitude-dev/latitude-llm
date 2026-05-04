@@ -7,6 +7,9 @@ export const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime"
 
 export const DEFAULT_TRACE_COLUMNS: TraceColumnId[] = TRACE_COLUMN_OPTIONS.map((column) => column.id)
 
+const getRequiredTraceColumnIds = (): TraceColumnId[] =>
+  TRACE_COLUMN_OPTIONS.filter((column) => "required" in column && column.required === true).map((column) => column.id)
+
 export function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
   try {
@@ -36,6 +39,7 @@ export function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): strin
 }
 
 export function parseTraceColumnIds(raw?: string): TraceColumnId[] {
+  const requiredColumnIds = getRequiredTraceColumnIds()
   const values = raw
     ?.split(",")
     .map((value) => value.trim())
@@ -45,11 +49,11 @@ export function parseTraceColumnIds(raw?: string): TraceColumnId[] {
     return [...DEFAULT_TRACE_COLUMNS]
   }
 
-  return values.includes("startTime") ? values : ["startTime", ...values]
+  return Array.from(new Set([...requiredColumnIds, ...values]))
 }
 
 export function serializeTraceColumnIds(columnIds: readonly TraceColumnId[]): string {
-  return Array.from(new Set(["startTime", ...columnIds])).join(",")
+  return Array.from(new Set([...getRequiredTraceColumnIds(), ...columnIds])).join(",")
 }
 
 export function getSelectedCount(state: SelectionState<string>, total: number): number {

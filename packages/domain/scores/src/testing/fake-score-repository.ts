@@ -63,6 +63,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceId: () => Effect.succeed(EMPTY_PAGE),
+    countAnnotationsByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
     listByIssueId: () => Effect.succeed(EMPTY_PAGE),

@@ -1,4 +1,4 @@
-import type { Score, ScoreListOptions, ScoreSource } from "@domain/scores"
+import type { Score, ScoreListOptions, ScoreSource, TraceAnnotationCounts } from "@domain/scores"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
 import {
   type IssueId,
@@ -12,7 +12,7 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, isNotNull, isNull, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
@@ -368,6 +368,51 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         })
       },
+
+      countAnnotationsByTraceIds: ({ projectId, traceIds, options }) =>
+        Effect.gen(function* () {
+          if (traceIds.length === 0) return []
+
+          const sqlClient = yield* resolveSqlClient()
+          const draftClause = applyDraftMode(options)
+          const traceIdValues = traceIds.map((traceId) => String(traceId))
+          const baseWhere = and(
+            eq(scores.projectId, projectId),
+            eq(scores.source, "annotation"),
+            inArray(scores.traceId, traceIdValues),
+          )
+          const whereClause = draftClause
+            ? and(eq(scores.organizationId, sqlClient.organizationId), baseWhere, draftClause)
+            : and(eq(scores.organizationId, sqlClient.organizationId), baseWhere)
+
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select({
+                  traceId: scores.traceId,
+                  positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
+                  negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false)::int`,
+                })
+                .from(scores)
+                .where(whereClause)
+                .groupBy(scores.traceId),
+            )
+            .pipe(
+              Effect.map((rows): readonly TraceAnnotationCounts[] =>
+                rows.flatMap((row) =>
+                  row.traceId
+                    ? [
+                        {
+                          traceId: row.traceId as TraceId,
+                          positiveCount: row.positiveCount,
+                          negativeCount: row.negativeCount,
+                        },
+                      ]
+                    : [],
+                ),
+              ),
+            )
+        }),
 
       listBySessionId: ({
         projectId,

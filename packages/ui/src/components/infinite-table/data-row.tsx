@@ -128,6 +128,7 @@ function DataRowInner<T>({
               "align-middle text-sm leading-5 font-normal",
               { "max-w-0 whitespace-nowrap text-ellipsis": useEllipsis },
               { "text-right": col.align === "end" },
+              col.cellClassName,
             )}
           >
             {typeof content === "string" ? (

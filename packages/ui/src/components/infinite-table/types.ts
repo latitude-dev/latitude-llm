@@ -18,6 +18,8 @@ export interface InfiniteTableColumn<T> {
   renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
   /** Whether to apply text ellipsis overflow on the cell. Defaults to `true`. */
   ellipsis?: boolean
+  /** Optional className applied to each body cell for this column. */
+  cellClassName?: string
 }
 
 export interface InfiniteTableSelection {
