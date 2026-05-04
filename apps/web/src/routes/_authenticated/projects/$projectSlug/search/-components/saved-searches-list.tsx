@@ -1,4 +1,15 @@
-import { Icon, InfiniteTable, type InfiniteTableColumn, optionsColumn, Skeleton, Text, toast } from "@repo/ui"
+import {
+  Button,
+  CloseTrigger,
+  Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
+  Modal,
+  optionsColumn,
+  Skeleton,
+  Text,
+  toast,
+} from "@repo/ui"
 import { useRouter } from "@tanstack/react-router"
 import { FilterIcon, SearchIcon, SparklesIcon } from "lucide-react"
 import { useState } from "react"
@@ -31,9 +42,9 @@ export function SavedSearchesList({
 }) {
   const router = useRouter()
   const { data, isLoading } = useSavedSearchesList(projectId)
-  const deleteMutation = useDeleteSavedSearch(projectId)
   const updateMutation = useUpdateSavedSearch(projectId)
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
+  const [rowToDelete, setRowToDelete] = useState<SavedSearchRecord | null>(null)
   const [assignOpenForId, setAssignOpenForId] = useState<string | null>(null)
 
   if (!isLoading && data.length === 0) {
@@ -108,17 +119,7 @@ export function SavedSearchesList({
         {
           label: "Delete",
           type: "destructive",
-          onClick: () => {
-            deleteMutation.mutate(row.id, {
-              onSuccess: () => {
-                toast({ title: "Saved search deleted" })
-                void router.invalidate()
-              },
-              onError: (error) => {
-                toast({ variant: "destructive", title: "Could not delete", description: toUserMessage(error) })
-              },
-            })
-          },
+          onClick: () => setRowToDelete(row),
         },
       ],
     }),
@@ -160,7 +161,65 @@ export function SavedSearchesList({
           savedSearch={rowToRename}
         />
       ) : null}
+      {rowToDelete ? (
+        <DeleteSavedSearchModal
+          row={rowToDelete}
+          projectId={projectId}
+          onClose={() => setRowToDelete(null)}
+          onDeleted={() => void router.invalidate()}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function DeleteSavedSearchModal({
+  row,
+  projectId,
+  onClose,
+  onDeleted,
+}: {
+  readonly row: SavedSearchRecord
+  readonly projectId: string
+  readonly onClose: () => void
+  readonly onDeleted: () => void
+}) {
+  const deleteMutation = useDeleteSavedSearch(projectId)
+
+  const handleDelete = () => {
+    deleteMutation.mutate(row.id, {
+      onSuccess: () => {
+        toast({ title: "Saved search deleted" })
+        onDeleted()
+        onClose()
+      },
+      onError: (error) => {
+        toast({ variant: "destructive", title: "Could not delete", description: toUserMessage(error) })
+      },
+    })
+  }
+
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={onClose}
+      title="Delete saved search"
+      description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+            isLoading={deleteMutation.isPending}
+          >
+            Delete saved search
+          </Button>
+        </>
+      }
+    />
   )
 }
 
