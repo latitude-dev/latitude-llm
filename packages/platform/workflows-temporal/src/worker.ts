@@ -1,11 +1,7 @@
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { createLogger } from "@repo/observability"
 import { Context as ActivityContext } from "@temporalio/activity"
-import type {
-  ActivityExecuteInput,
-  ActivityInterceptorsFactory,
-  Next,
-} from "@temporalio/worker"
+import type { ActivityExecuteInput, ActivityInterceptorsFactory, Next } from "@temporalio/worker"
 import { NativeConnection, Worker } from "@temporalio/worker"
 import type { TemporalConfig } from "./config.ts"
 
