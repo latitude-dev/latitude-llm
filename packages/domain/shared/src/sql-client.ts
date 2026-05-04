@@ -1,5 +1,5 @@
 import type { Effect } from "effect"
-import { ServiceMap } from "effect"
+import { Context } from "effect"
 import { z } from "zod"
 import type { ConcurrentSqlTransactionError, RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
@@ -49,4 +49,4 @@ export interface SqlClientShape<X = unknown> {
  * than being captured once at Layer build time. Leaking this requirement
  * through service interfaces is intentional.
  */
-export class SqlClient extends ServiceMap.Service<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}
+export class SqlClient extends Context.Service<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}

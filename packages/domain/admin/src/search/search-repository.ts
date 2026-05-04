@@ -1,5 +1,5 @@
 import type { RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { SearchEntityType, UnifiedSearchResult } from "./search-result.ts"
 
 /**
@@ -10,7 +10,7 @@ import type { SearchEntityType, UnifiedSearchResult } from "./search-result.ts"
  * `@platform/db-postgres`. This service is only ever wired into handlers
  * that have passed `requireAdminSession()` in `apps/web`.
  */
-export class AdminSearchRepository extends ServiceMap.Service<
+export class AdminSearchRepository extends Context.Service<
   AdminSearchRepository,
   {
     /**

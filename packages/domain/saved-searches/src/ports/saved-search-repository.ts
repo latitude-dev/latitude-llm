@@ -1,5 +1,5 @@
 import type { FilterSet, ProjectId, RepositoryError, SavedSearchId, SqlClient, UserId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { SavedSearch } from "../entities/saved-search.ts"
 import type { DuplicateSavedSearchSlugError, SavedSearchNotFoundError } from "../errors.ts"
 
@@ -57,6 +57,6 @@ export interface SavedSearchRepositoryShape {
   softDelete(id: SavedSearchId): Effect.Effect<void, SavedSearchNotFoundError | RepositoryError, SqlClient>
 }
 
-export class SavedSearchRepository extends ServiceMap.Service<SavedSearchRepository, SavedSearchRepositoryShape>()(
+export class SavedSearchRepository extends Context.Service<SavedSearchRepository, SavedSearchRepositoryShape>()(
   "@domain/saved-searches/SavedSearchRepository",
 ) {}

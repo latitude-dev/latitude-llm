@@ -1,8 +1,8 @@
 import type { NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 
-export class ProjectRepository extends ServiceMap.Service<
+export class ProjectRepository extends Context.Service<
   ProjectRepository,
   {
     findById(id: string): Effect.Effect<Project, NotFoundError | RepositoryError, SqlClient>

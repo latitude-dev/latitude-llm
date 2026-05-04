@@ -1,5 +1,5 @@
 import type { CacheError, OrganizationId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 
 /**
  * Per-organization embedding-token budget tracker.
@@ -28,6 +28,6 @@ export interface TraceSearchBudgetShape {
   tryConsume(organizationId: OrganizationId, tokens: number): Effect.Effect<boolean, CacheError>
 }
 
-export class TraceSearchBudget extends ServiceMap.Service<TraceSearchBudget, TraceSearchBudgetShape>()(
+export class TraceSearchBudget extends Context.Service<TraceSearchBudget, TraceSearchBudgetShape>()(
   "@domain/spans/TraceSearchBudget",
 ) {}

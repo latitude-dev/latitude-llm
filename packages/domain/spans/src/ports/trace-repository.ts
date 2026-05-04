@@ -7,7 +7,7 @@ import type {
   RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 import type { TraceCohortBaselineData } from "../trace-cohorts.ts"
 
@@ -205,6 +205,6 @@ export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHis
   timeToFirstTokenNsMedian: 0,
 })
 
-export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(
+export class TraceRepository extends Context.Service<TraceRepository, TraceRepositoryShape>()(
   "@domain/spans/TraceRepository",
 ) {}

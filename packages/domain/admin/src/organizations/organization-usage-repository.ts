@@ -1,5 +1,5 @@
 import type { OrganizationId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { AdminOrganizationUsageCursor } from "./organization-usage-summary.ts"
 
 /** Per-organisation slice of trace activity inside the rolling usage window. */
@@ -33,7 +33,7 @@ export interface OrganizationsByTraceCountPage {
  * adapter ships in `@platform/db-clickhouse` as
  * `AdminOrganizationUsageRepositoryLive`.
  */
-export class AdminOrganizationUsageRepository extends ServiceMap.Service<
+export class AdminOrganizationUsageRepository extends Context.Service<
   AdminOrganizationUsageRepository,
   {
     /**

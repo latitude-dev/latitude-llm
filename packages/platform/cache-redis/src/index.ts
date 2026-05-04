@@ -4,9 +4,9 @@ export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
 export { RedisIssueDiscoveryLockRepositoryLive } from "./issue-discovery-lock.ts"
 export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
 
-import { ServiceMap } from "effect"
+import { Context } from "effect"
 
-export class RedisCacheAdapterTag extends ServiceMap.Service<
+export class RedisCacheAdapterTag extends Context.Service<
   RedisCacheAdapterTag,
   {
     readonly type: "redis"

@@ -1,5 +1,5 @@
 import type { NotFoundError, RepositoryError, UserId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { AdminUserDetails } from "./user-details.ts"
 
 /**
@@ -10,7 +10,7 @@ import type { AdminUserDetails } from "./user-details.ts"
  * `@platform/db-postgres`. This service is only ever wired into handlers
  * that have passed `requireAdminSession()` in `apps/web`.
  */
-export class AdminUserRepository extends ServiceMap.Service<
+export class AdminUserRepository extends Context.Service<
   AdminUserRepository,
   {
     /**

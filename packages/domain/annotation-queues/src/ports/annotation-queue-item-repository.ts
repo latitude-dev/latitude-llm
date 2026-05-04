@@ -1,5 +1,5 @@
 import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
 
 /**
@@ -142,7 +142,7 @@ export interface AnnotationQueueItemRepositoryShape {
   getNextUncompletedItem(input: GetNextUncompletedItemInput): Effect.Effect<string | null, RepositoryError, SqlClient>
 }
 
-export class AnnotationQueueItemRepository extends ServiceMap.Service<
+export class AnnotationQueueItemRepository extends Context.Service<
   AnnotationQueueItemRepository,
   AnnotationQueueItemRepositoryShape
 >()("@domain/annotation-queues/AnnotationQueueItemRepository") {}

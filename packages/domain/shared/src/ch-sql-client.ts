@@ -1,5 +1,5 @@
 import type { Effect } from "effect"
-import { ServiceMap } from "effect"
+import { Context } from "effect"
 import type { RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
 
@@ -28,4 +28,4 @@ export interface ChSqlClientShape<X = unknown> {
  * captured once at Layer build time. Leaking this requirement through
  * service interfaces is intentional.
  */
-export class ChSqlClient extends ServiceMap.Service<ChSqlClient, ChSqlClientShape>()("@domain/shared/ChSqlClient") {}
+export class ChSqlClient extends Context.Service<ChSqlClient, ChSqlClientShape>()("@domain/shared/ChSqlClient") {}

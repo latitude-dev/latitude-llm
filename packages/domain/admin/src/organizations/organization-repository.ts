@@ -1,5 +1,5 @@
 import type { ApiKeyId, NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { AdminOrganizationDetails } from "./organization-details.ts"
 
 /**
@@ -24,7 +24,7 @@ export interface AdminOrganizationSummary {
  * `@platform/db-postgres`. Only wired into handlers that have passed
  * `adminMiddleware` in `apps/web`.
  */
-export class AdminOrganizationRepository extends ServiceMap.Service<
+export class AdminOrganizationRepository extends Context.Service<
   AdminOrganizationRepository,
   {
     /**

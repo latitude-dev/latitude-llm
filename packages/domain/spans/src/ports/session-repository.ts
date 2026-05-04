@@ -1,5 +1,5 @@
 import type { ChSqlClient, FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Session } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 
@@ -73,6 +73,6 @@ export const emptySessionMetrics = (): SessionMetrics => ({
   spanCount: zeroRollup(),
 })
 
-export class SessionRepository extends ServiceMap.Service<SessionRepository, SessionRepositoryShape>()(
+export class SessionRepository extends Context.Service<SessionRepository, SessionRepositoryShape>()(
   "@domain/spans/SessionRepository",
 ) {}

@@ -1,5 +1,5 @@
 import type { IssueId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { AdminProjectDetails } from "./project-details.ts"
 
 /** Snapshot of issue counts by lifecycle state at request time. */
@@ -46,7 +46,7 @@ export interface ProjectIssueDetails {
  * `@platform/db-postgres`. Only wired into handlers that have passed
  * `adminMiddleware` in `apps/web`.
  */
-export class AdminProjectRepository extends ServiceMap.Service<
+export class AdminProjectRepository extends Context.Service<
   AdminProjectRepository,
   {
     /**
