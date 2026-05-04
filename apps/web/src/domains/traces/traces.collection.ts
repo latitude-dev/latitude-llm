@@ -1,8 +1,9 @@
-import type { FilterSet } from "@domain/shared"
+import type { FilterSet, PercentileTraceFilterField } from "@domain/shared"
 import {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
   type TraceCohortSummary,
+  type TraceDistribution,
   type TraceTimeHistogramBucket,
 } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
@@ -13,6 +14,7 @@ import {
   getTraceCohortSummaryByTags,
   getTraceDetail,
   getTraceDistinctValues,
+  getTraceDistribution,
   getTraceMetricsByProject,
   getTraceTimeHistogramByProject,
   listTracesByProject,
@@ -207,6 +209,26 @@ export function useTraceTimeHistogram({
     rangeEndIso,
     bucketSeconds,
   }
+}
+
+export function useTraceDistribution({
+  projectId,
+  field,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly field: PercentileTraceFilterField
+  readonly enabled?: boolean
+}) {
+  return useQuery<TraceDistribution>({
+    queryKey: ["trace-distribution", projectId, field],
+    queryFn: () => getTraceDistribution({ data: { projectId, field } }),
+    // Distribution is intentionally insensitive to other filters and changes
+    // slowly relative to a user's interaction window — long stale time keeps
+    // the chart steady while picking a threshold.
+    staleTime: 60_000,
+    enabled: enabled && projectId.length > 0,
+  })
 }
 
 export function useTraceDistinctValues({

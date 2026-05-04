@@ -228,6 +228,7 @@ export function SessionsView({
       {
         key: "name",
         header: "Name",
+        headerTooltip: "Each trace within a session can have different names",
         width: 180,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
@@ -243,23 +244,18 @@ export function SessionsView({
       {
         key: "duration",
         header: "Duration",
+        headerTooltip: "End time of a session is undefined",
         align: "end",
         width: 120,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
           return row.trace.durationNs > 0 ? formatDuration(row.trace.durationNs) : "-"
         },
-        renderSubheader: () => (
-          <TableMetricSubheader
-            rollup={sessionMetrics?.durationNs}
-            format="duration"
-            isLoading={sessionMetricsLoading}
-          />
-        ),
       },
       {
         key: "ttft",
         header: "Time To First Token",
+        headerTooltip: "Each trace within a session can have different TTFTs",
         align: "end",
         width: 162,
         render: (row) => {
