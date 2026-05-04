@@ -1,6 +1,6 @@
 import { isJsonBlock } from "@repo/utils"
 import { ChevronDownIcon, ChevronRightIcon, ScanSearchIcon } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
 import { Icon } from "../icons/icons.tsx"
@@ -64,6 +64,10 @@ function CollapseToggleButton({
           <button
             type="button"
             data-no-navigate
+            onMouseDown={(e) => {
+              // Mouse clicks should not leave hover-only actions visible after the pointer leaves.
+              e.preventDefault()
+            }}
             onClick={(e) => {
               e.stopPropagation()
               onToggle()
@@ -78,6 +82,34 @@ function CollapseToggleButton({
         <Text.H6>{collapsed ? "Expand" : "Collapse"}</Text.H6>
       </Tooltip>
     </div>
+  )
+}
+
+function MessageActionsRail({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className="sticky top-0 h-0 overflow-visible z-10">
+      <div className="absolute -left-8 z-10 flex flex-col gap-1">{children}</div>
+    </div>
+  )
+}
+
+function ViewSourceSpanButton({ onNavigate }: { readonly onNavigate: () => void }) {
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="flex items-center justify-center w-6 h-6 rounded-md border border-border bg-background shadow-sm opacity-0 group-hover/message:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
+          title="View source span"
+        >
+          <Icon icon={ScanSearchIcon} size="sm" />
+        </button>
+      }
+    >
+      <Text.H6>View source span</Text.H6>
+    </Tooltip>
   )
 }
 
@@ -136,11 +168,9 @@ function UserMessage({
     <div className={cn("flex min-w-0 max-w-full flex-col gap-1", alignment === "right" ? "items-end" : "items-start")}>
       <div className="relative min-w-0 max-w-full rounded-2xl bg-accent px-4 py-3">
         {!isAlreadyCollapsible(message.parts) && (
-          <CollapseToggleButton
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((v) => !v)}
-            className="absolute top-2 right-2 z-10"
-          />
+          <MessageActionsRail>
+            <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
+          </MessageActionsRail>
         )}
         {collapsed ? (
           <CollapsedPreview parts={message.parts} />
@@ -168,32 +198,12 @@ function AssistantMessage({
   const [collapsed, setCollapsed] = useState(false)
   return (
     <div className="relative flex min-w-0 max-w-full w-full flex-col gap-1">
-      <div className={cn("sticky top-0 h-0 overflow-visible z-10", { relative: !onNavigate })}>
-        {onNavigate && (
-          <Tooltip
-            asChild
-            trigger={
-              <button
-                type="button"
-                onClick={onNavigate}
-                className="absolute -left-8 flex items-center justify-center w-6 h-6 rounded-md border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
-                title="View source span"
-              >
-                <ScanSearchIcon className="h-4 w-4" />
-              </button>
-            }
-          >
-            <Text.H6>View source span</Text.H6>
-          </Tooltip>
-        )}
+      <MessageActionsRail>
+        {onNavigate && <ViewSourceSpanButton onNavigate={onNavigate} />}
         {!isAlreadyCollapsible(message.parts) && (
-          <CollapseToggleButton
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((v) => !v)}
-            className={cn("absolute -right-2 z-10", { "right-2": !onNavigate })}
-          />
+          <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
         )}
-      </div>
+      </MessageActionsRail>
       {collapsed ? (
         <CollapsedPreview parts={message.parts} />
       ) : (
@@ -220,11 +230,9 @@ function SystemMessage({
     <div className="flex min-w-0 max-w-full flex-col gap-1">
       <div className="relative min-w-0 max-w-full border-l-2 border-accent bg-muted/50 rounded-r-lg px-4 py-3">
         {!isAlreadyCollapsible(message.parts) && (
-          <CollapseToggleButton
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((v) => !v)}
-            className="absolute top-2 right-2 z-10"
-          />
+          <MessageActionsRail>
+            <CollapseToggleButton collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
+          </MessageActionsRail>
         )}
         {collapsed ? (
           <CollapsedPreview parts={message.parts} />
