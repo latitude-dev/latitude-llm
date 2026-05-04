@@ -1,5 +1,6 @@
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
+export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
 export { flaggerWorkflow } from "./flagger-workflow.ts"
 export { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
 export {

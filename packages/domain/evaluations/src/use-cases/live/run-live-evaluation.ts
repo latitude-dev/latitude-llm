@@ -1,4 +1,15 @@
 import type { AI } from "@domain/ai"
+import {
+  authorizeBillableAction,
+  type BillingOverrideRepository,
+  type BillingSpendReservation,
+  type BillingUsageEventRepository,
+  type BillingUsagePeriodRepository,
+  buildBillingIdempotencyKey,
+  recordBillableActionUseCase,
+  type StripeSubscriptionLookup,
+  type UnknownStripePlanError,
+} from "@domain/billing"
 import type { OutboxEventWriter } from "@domain/events"
 import {
   type EvaluationScore,
@@ -13,6 +24,7 @@ import {
   OrganizationId,
   ProjectId,
   type RepositoryError,
+  type SettingsReader,
   type SqlClient,
   TraceId,
 } from "@domain/shared"
@@ -84,6 +96,7 @@ export type RunLiveEvaluationResult =
         | "archived"
         | "paused"
         | "result-already-exists"
+        | "billing-blocked"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -93,7 +106,7 @@ export type RunLiveEvaluationResult =
       readonly context: RunLiveEvaluationPersistedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError | WriteScoreError
+export type RunLiveEvaluationError = RepositoryError | WriteScoreError | UnknownStripePlanError
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 const isRepositoryError = (error: unknown): error is RepositoryError =>
@@ -202,6 +215,29 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       name: issue.name,
       description: issue.description,
     } satisfies LiveEvaluationIssueContext
+
+    const billingOrganizationId = OrganizationId(input.organizationId)
+    const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
+      input.organizationId,
+      evaluation.id,
+      input.traceId,
+    ])
+    const authorization = yield* authorizeBillableAction({
+      organizationId: billingOrganizationId,
+      action: "live-eval-scan",
+      skipIfBlocked: true,
+      idempotencyKey,
+    })
+
+    if (!authorization.allowed) {
+      return {
+        action: "skipped",
+        reason: "billing-blocked",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
@@ -229,6 +265,26 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
       }),
     )
+
+    // Record billing AFTER the AI work has been attempted so a crash between
+    // authorization and execution does not charge the customer for work that
+    // never ran. The Redis spend reservation taken during `authorizeBillableAction`
+    // protects the spending cap; the Postgres usage event written here is the
+    // truth-of-record that ultimately drives Stripe overage. Both completed and
+    // errored executions are recorded — work was attempted and AI tokens may
+    // have been consumed — but not skips that returned earlier.
+    yield* recordBillableActionUseCase({
+      organizationId: billingOrganizationId,
+      projectId: ProjectId(input.projectId),
+      action: "live-eval-scan",
+      idempotencyKey,
+      context: authorization.context,
+      traceId: TraceId(input.traceId),
+      metadata: {
+        evaluationId: evaluation.id,
+        traceId: input.traceId,
+      },
+    })
     const persistedIssueId =
       execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
     const scoreWriteExit = yield* Effect.exit(
@@ -309,11 +365,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     RunLiveEvaluationResult,
     RunLiveEvaluationError,
     | AI
+    | BillingUsagePeriodRepository
+    | BillingUsageEventRepository
     | EvaluationIssueRepository
     | EvaluationRepository
     | OutboxEventWriter
     | ScoreAnalyticsRepository
     | ScoreRepository
+    | SettingsReader
     | SqlClient
+    | StripeSubscriptionLookup
     | TraceRepository
+    | BillingOverrideRepository
+    | BillingSpendReservation
   >

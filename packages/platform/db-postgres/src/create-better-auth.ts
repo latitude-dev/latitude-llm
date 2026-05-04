@@ -52,6 +52,16 @@ export interface BetterAuthConfig {
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
+  readonly onSubscriptionChanged?: (subscription: {
+    referenceId: string
+    subscriptionId: string
+    eventType:
+      | "subscription-complete"
+      | "subscription-created"
+      | "subscription-updated"
+      | "subscription-canceled"
+      | "subscription-deleted"
+  }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
   readonly captchaSecretKey?: string
@@ -253,6 +263,41 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               subscription: {
                 enabled: true,
                 plans: config.subscriptionPlans ?? [],
+                onSubscriptionComplete: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-complete",
+                  })
+                },
+                onSubscriptionCreated: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-created",
+                  })
+                },
+                onSubscriptionUpdate: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-updated",
+                  })
+                },
+                onSubscriptionCancel: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-canceled",
+                  })
+                },
+                onSubscriptionDeleted: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-deleted",
+                  })
+                },
                 authorizeReference: async ({
                   user: stripeUser,
                   referenceId,
@@ -261,10 +306,16 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
                   referenceId: string
                   action: string
                 }) => {
-                  if (referenceId !== stripeUser.id) {
-                    return true
-                  }
-                  return true
+                  const { and, eq: eq_ } = await import("drizzle-orm")
+                  const memberRole = await config.client.db
+                    .select({ role: members.role })
+                    .from(members)
+                    .where(and(eq_(members.organizationId, referenceId), eq_(members.userId, stripeUser.id)))
+                    .limit(1)
+                    .then((rows) => rows[0]?.role)
+
+                  if (!memberRole) return false
+                  return memberRole === "owner" || memberRole === "admin"
                 },
               },
               organization: {

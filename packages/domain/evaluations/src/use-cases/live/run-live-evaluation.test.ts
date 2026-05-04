@@ -1,5 +1,20 @@
 import { type AI, AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import {
+  BillingOverrideRepository,
+  BillingSpendReservation,
+  BillingUsageEventRepository,
+  BillingUsagePeriodRepository,
+  StripeSubscriptionLookup,
+} from "@domain/billing"
+import {
+  createFakeBillingOverrideRepository,
+  createFakeBillingSpendReservation,
+  createFakeBillingUsageEventRepository,
+  createFakeBillingUsagePeriodRepository,
+  createFakeStripeSubscriptionLookup,
+  seedBillingUsagePeriod,
+} from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
@@ -11,6 +26,7 @@ import {
   ProjectId,
   RepositoryError,
   SessionId,
+  SettingsReader,
   SimulationId,
   SpanId,
   SqlClient,
@@ -180,6 +196,43 @@ function createScoreWriteLayer(input?: {
   )
 }
 
+function createBillingLayer(input?: {
+  readonly billingOverrideRepository?: ReturnType<typeof createFakeBillingOverrideRepository>["repository"] | undefined
+  readonly billingUsageEventRepository?:
+    | ReturnType<typeof createFakeBillingUsageEventRepository>["repository"]
+    | undefined
+  readonly billingUsagePeriodRepository?:
+    | ReturnType<typeof createFakeBillingUsagePeriodRepository>["repository"]
+    | undefined
+  readonly stripeSubscriptionLookup?: ReturnType<typeof createFakeStripeSubscriptionLookup>["service"] | undefined
+  readonly reservation?: ReturnType<typeof createFakeBillingSpendReservation>["reservation"] | undefined
+  readonly organizationSettings?: { readonly billing?: { readonly spendingLimitCents?: number } } | null
+}) {
+  const { repository: defaultBillingOverrideRepository } = createFakeBillingOverrideRepository()
+  const { repository: defaultBillingUsageEventRepository } = createFakeBillingUsageEventRepository()
+  const { repository: defaultBillingUsagePeriodRepository } = createFakeBillingUsagePeriodRepository()
+  const { service: defaultStripeSubscriptionLookup } = createFakeStripeSubscriptionLookup()
+  const { reservation: defaultReservation } = createFakeBillingSpendReservation()
+
+  return Layer.mergeAll(
+    Layer.succeed(BillingOverrideRepository, input?.billingOverrideRepository ?? defaultBillingOverrideRepository),
+    Layer.succeed(
+      BillingUsageEventRepository,
+      input?.billingUsageEventRepository ?? defaultBillingUsageEventRepository,
+    ),
+    Layer.succeed(
+      BillingUsagePeriodRepository,
+      input?.billingUsagePeriodRepository ?? defaultBillingUsagePeriodRepository,
+    ),
+    Layer.succeed(StripeSubscriptionLookup, input?.stripeSubscriptionLookup ?? defaultStripeSubscriptionLookup),
+    Layer.succeed(BillingSpendReservation, input?.reservation ?? defaultReservation),
+    Layer.succeed(SettingsReader, {
+      getOrganizationSettings: () => Effect.succeed(input?.organizationSettings ?? null),
+      getProjectSettings: () => Effect.die("Project settings should not be loaded in runLiveEvaluation tests"),
+    }),
+  )
+}
+
 function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
@@ -187,14 +240,21 @@ function createUseCaseLayer(input: {
   readonly scoreWriteLayer?: ReturnType<typeof createScoreWriteLayer> | undefined
   readonly issueRepository?: ReturnType<typeof createIssueRepository> | undefined
   readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
+  readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
 }): Layer.Layer<
   | AI
+  | BillingOverrideRepository
+  | BillingSpendReservation
+  | BillingUsageEventRepository
+  | BillingUsagePeriodRepository
   | EvaluationIssueRepository
   | EvaluationRepository
-  | OutboxEventWriter
   | ScoreAnalyticsRepository
+  | OutboxEventWriter
   | ScoreRepository
+  | SettingsReader
   | SqlClient
+  | StripeSubscriptionLookup
   | TraceRepository,
   never,
   never
@@ -208,6 +268,7 @@ function createUseCaseLayer(input: {
       input.issueRepository ?? createIssueRepository(() => Effect.die("Issue should not be loaded in this scenario")),
     ),
     input.aiLayer ?? createFakeAI().layer,
+    input.billingLayer ?? createBillingLayer(),
   )
 }
 
@@ -248,7 +309,7 @@ function createTrackedScoreWriteFixture() {
     outboxEventWriter: {
       write: (event: Parameters<OutboxEventWriterShape["write"]>[0]) =>
         Effect.sync(() => {
-          operations.push("outbox-write")
+          operations.push(event.eventName === "ScoreCreated" ? "score-outbox-write" : "billing-outbox-write")
           outboxEvents.push(event)
         }),
     },
@@ -265,7 +326,7 @@ function createTrackedScoreWriteFixture() {
 
 function expectImmutableAnalyticsSyncOrder(operations: readonly string[]) {
   const scoreSaveIndex = operations.indexOf("score-save")
-  const outboxWriteIndex = operations.indexOf("outbox-write")
+  const outboxWriteIndex = operations.indexOf("score-outbox-write")
   const analyticsExistsIndex = operations.indexOf("analytics-exists")
   const analyticsInsertIndex = operations.indexOf("analytics-insert")
 
@@ -508,9 +569,9 @@ describe("runLiveEvaluationUseCase", () => {
       scoreRepository,
       scoreAnalyticsRepository,
       outboxEventWriter: {
-        write: () =>
+        write: (event) =>
           Effect.sync(() => {
-            operations.push("outbox-write")
+            operations.push(event.eventName === "ScoreCreated" ? "score-outbox-write" : "billing-outbox-write")
           }),
       },
     })
@@ -610,7 +671,7 @@ describe("runLiveEvaluationUseCase", () => {
       outboxEventWriter: {
         write: (event: Parameters<OutboxEventWriterShape["write"]>[0]) =>
           Effect.sync(() => {
-            operations.push("outbox-write")
+            operations.push(event.eventName === "ScoreCreated" ? "score-outbox-write" : "billing-outbox-write")
             outboxEvents.push(event)
           }),
       },
@@ -654,8 +715,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(duplicateCheckCalls).toBe(2)
     expect(calls.generate).toHaveLength(1)
-    expect(outboxEvents).toEqual([])
-    expect(operations).toEqual(["score-save"])
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+    ])
+    expect(operations).toEqual(["billing-outbox-write", "score-save"])
   })
 
   it("skips when the trace no longer exists", async () => {
@@ -711,6 +774,120 @@ describe("runLiveEvaluationUseCase", () => {
       evaluationId: evaluation.id,
       traceId: traceDetail.traceId,
     })
+  })
+
+  it("skips before AI execution when billing blocks the live evaluation", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeIssue({ id: IssueId(evaluation.issueId) })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const { repository: billingUsagePeriodRepository } = createFakeBillingUsagePeriodRepository()
+    const now = new Date()
+    const currentPeriodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const currentPeriodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+
+    await Effect.runPromise(
+      billingUsagePeriodRepository
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: OrganizationId(INPUT.organizationId),
+            planSlug: "free",
+            periodStart: currentPeriodStart,
+            periodEnd: currentPeriodEnd,
+            includedCredits: 20_000,
+            consumedCredits: 19_980,
+          }),
+        )
+        .pipe(
+          Effect.provideService(
+            SqlClient,
+            createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
+          ),
+        ),
+    )
+
+    const { layer: aiLayer, calls } = createFakeAI()
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            issueRepository,
+            aiLayer,
+            billingLayer: createBillingLayer({ billingUsagePeriodRepository }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "billing-blocked",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("records billing after hosted AI execution completes", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeIssue({ id: IssueId(evaluation.issueId) })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const operations: string[] = []
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.sync(() => {
+          operations.push("ai-generate")
+          return {
+            object: input.schema.parse({
+              passed: true,
+              value: 1,
+              feedback: "The conversation does not exhibit the linked issue.",
+            }),
+            tokens: 12,
+            duration: 1,
+            tokenUsage: { input: 6, output: 6 },
+          } satisfies GenerateResult<T>
+        }),
+    })
+    const scoreWriteLayer = createScoreWriteLayer({
+      outboxEventWriter: {
+        write: (event) =>
+          Effect.sync(() => {
+            operations.push(event.eventName === "ScoreCreated" ? "score-outbox-write" : "billing-outbox-write")
+          }),
+      },
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            issueRepository,
+            aiLayer,
+            billingLayer: createBillingLayer(),
+            scoreWriteLayer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(operations).toEqual(["ai-generate", "billing-outbox-write", "score-outbox-write"])
+    expect(calls.generate).toHaveLength(1)
   })
 
   it("persists the live evaluation result through the canonical score write path after hosted execution", async () => {
@@ -825,7 +1002,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents).toHaveLength(1)
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expect(calls.generate).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
     expect(calls.generate[0]?.telemetry).toMatchObject({
@@ -938,7 +1118,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents).toHaveLength(1)
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expectImmutableAnalyticsSyncOrder(operations)
   })
 
@@ -1022,7 +1205,10 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
-    expect(outboxEvents).toHaveLength(1)
+    expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
+      "BillingUsagePeriodUpdated",
+      "ScoreCreated",
+    ])
     expect(calls.generate).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })

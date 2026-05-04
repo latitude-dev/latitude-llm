@@ -16,21 +16,31 @@ import type { RedisClient } from "@platform/cache-redis"
 import { EmbedBudgetResolverLive, RedisCacheStoreLive, TraceSearchBudgetLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  BillingOverrideRepositoryLive,
+  type PostgresClient,
+  resolveEffectivePlanCached,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("trace-search")
+const TRACE_SEARCH_FALLBACK_RETENTION_DAYS = 30
 
 interface TraceSearchDeps {
   consumer: QueueConsumer
-  clickhouseClient?: ClickHouseClient
-  redisClient?: RedisClient
+  clickhouseClient: ClickHouseClient
+  postgresClient: PostgresClient
+  redisClient: RedisClient
 }
 
 interface TraceSearchRunDeps {
-  clickhouseClient?: ClickHouseClient
-  redisClient?: RedisClient
+  clickhouseClient: ClickHouseClient
+  postgresClient: PostgresClient
+  redisClient: RedisClient
 }
 
 interface RefreshTracePayload {
@@ -40,6 +50,21 @@ interface RefreshTracePayload {
   readonly startTime: string
   readonly rootSpanName: string
 }
+
+export const resolveTraceSearchRetentionDays = (organizationId: string) =>
+  resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
+    Effect.map((plan) => plan.plan.retentionDays),
+    Effect.tapError((error) =>
+      Effect.sync(() =>
+        logger.warn("Trace search billing lookup degraded; using fallback retention", {
+          organizationId,
+          retentionDays: TRACE_SEARCH_FALLBACK_RETENTION_DAYS,
+          error,
+        }),
+      ),
+    ),
+    Effect.orElseSucceed(() => TRACE_SEARCH_FALLBACK_RETENTION_DAYS),
+  )
 
 /**
  * Generate embedding for search text using the AI embedding service.
@@ -82,6 +107,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const projectId = payload.projectId
     const traceId = payload.traceId
     const startTime = new Date(payload.startTime)
+    const retentionDays = yield* resolveTraceSearchRetentionDays(organizationId)
 
     // 1. Load the canonical conversation for the trace. This preserves the
     // same chronological de-duplicated message list shown in the trace detail
@@ -114,6 +140,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       rootSpanName: searchDocument.rootSpanName,
       searchText: searchDocument.searchText,
       contentHash: searchDocument.contentHash,
+      retentionDays,
     })
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
@@ -184,6 +211,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       contentHash: searchDocument.contentHash,
       embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
       embedding,
+      retentionDays,
     })
 
     logger.info(`Indexed semantic search embedding for trace ${traceId}`)
@@ -197,25 +225,38 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     Effect.orElseSucceed(() => undefined), // Never fail the job
   )
 
-export const createTraceSearchWorker = ({ consumer, clickhouseClient, redisClient }: TraceSearchDeps) => {
-  const chClient = clickhouseClient ?? getClickhouseClient()
-  const rdClient = redisClient ?? getRedisClient()
+export const createTraceSearchWorker = ({
+  consumer,
+  clickhouseClient,
+  postgresClient,
+  redisClient,
+}: TraceSearchDeps) => {
+  const chClient = clickhouseClient
+  const pgClient = postgresClient
+  const rdClient = redisClient
 
   consumer.subscribe("trace-search", {
     refreshTrace: (payload) =>
       runTraceSearchRefresh(payload as RefreshTracePayload, {
         clickhouseClient: chClient,
+        postgresClient: pgClient,
         redisClient: rdClient,
       }),
   })
 }
 
-export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceSearchRunDeps = {}) => {
-  const clickhouseClient = deps.clickhouseClient ?? getClickhouseClient()
-  const redisClient = deps.redisClient ?? getRedisClient()
+export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceSearchRunDeps) => {
+  const clickhouseClient = deps.clickhouseClient
+  const postgresClient = deps.postgresClient
+  const redisClient = deps.redisClient
   const budgetLayer = Layer.provide(TraceSearchBudgetLive(redisClient), EmbedBudgetResolverLive)
 
   return processRefreshTrace(payload).pipe(
+    withPostgres(
+      Layer.mergeAll(BillingOverrideRepositoryLive, SettingsReaderLive, StripeSubscriptionLookupLive),
+      postgresClient,
+      OrganizationId(payload.organizationId),
+    ),
     withClickHouse(
       Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive),
       clickhouseClient,

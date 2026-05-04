@@ -19,6 +19,7 @@
     "@intercom/messenger-js-sdk": "0.0.14",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",

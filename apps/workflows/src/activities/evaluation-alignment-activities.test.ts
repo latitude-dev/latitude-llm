@@ -96,6 +96,10 @@ vi.mock("@platform/ai", async () => {
   }
 })
 
+vi.mock("../clients.ts", () => ({
+  getRedisClient: () => ({}),
+}))
+
 import { optimizeEvaluationDraft } from "./index.ts"
 
 silenceLoggerInTests()

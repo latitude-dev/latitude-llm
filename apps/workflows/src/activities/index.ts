@@ -3,6 +3,12 @@ export {
   writePublishedAnnotationScore,
 } from "./annotation-publication-activities.ts"
 export {
+  type ReportBillingOverageActivityInput,
+  type ReportBillingOverageActivityResult,
+  reportBillingOverage,
+} from "./billing-overage-activities.ts"
+export {
+  authorizeEvaluationGenerationBilling,
   collectEvaluationAlignmentExamples,
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,
@@ -10,6 +16,7 @@ export {
   loadEvaluationAlignmentState,
   loadEvaluationAlignmentStateOrInactive,
   persistEvaluationAlignmentResult,
+  recordEvaluationGenerationUsage,
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
 export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"

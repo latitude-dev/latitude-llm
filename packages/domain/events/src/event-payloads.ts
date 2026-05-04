@@ -23,10 +23,18 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly userId: string
   }
-  SpanIngested: {
+  TracesIngested: {
     readonly organizationId: string
     readonly projectId: string
-    readonly traceId: string
+    readonly traceIds: readonly string[]
+    readonly billing?: {
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
   }
   ScoreCreated: {
     readonly organizationId: string
@@ -166,6 +174,17 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
+  }
+  BillingUsagePeriodUpdated: {
+    readonly organizationId: string
+    readonly periodStart: string
+    readonly periodEnd: string
+    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly overageAllowed: boolean
+    readonly includedCredits: number
+    readonly consumedCredits: number
+    readonly overageCredits: number
+    readonly reportedOverageCredits: number
   }
   /**
    * Emitted when a platform admin begins impersonating another user via

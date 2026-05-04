@@ -1,4 +1,5 @@
 import type { QueueConsumer, WorkflowStarterShape } from "@domain/queue"
+import { generateId } from "@domain/shared"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -69,6 +70,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
             issueId: payload.issueId,
             evaluationId: payload.evaluationId,
             jobId: `auto-optimize:${payload.evaluationId}`,
+            billingOperationId: generateId(),
           },
           { workflowId },
         )

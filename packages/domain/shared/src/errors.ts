@@ -180,6 +180,24 @@ export type DomainError =
 export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
   new RepositoryError({ cause, operation })
 
+/**
+ * Walks `error` and nested `cause` chains (e.g. Drizzle → pg) for Postgres SQLSTATE `23505` (unique_violation).
+ */
+export const causesIncludePostgresUniqueViolation = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "23505") {
+      return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError

@@ -1,3 +1,4 @@
+import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
@@ -24,11 +25,12 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 
 const setupDispatcher = () => {
   const consumer = new TestQueueConsumer()
-  const { publisher, published } = createFakeQueuePublisher()
+  const queue = createFakeQueuePublisher()
+  const { publisher, published } = queue
 
   createDomainEventsWorker({ consumer, publisher })
 
-  return { consumer, published }
+  return { consumer, published, queue }
 }
 
 describe("domain-events dispatcher", () => {
@@ -91,13 +93,13 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to the debounced trace-end runtime and immediate firstTrace check", async () => {
+  it("routes TracesIngested to per-trace debounced trace-end work and firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("SpanIngested", {
+    const envelope = makeEnvelope("TracesIngested", {
       organizationId: "org-1",
       projectId: "proj-1",
-      traceId: "trace-abc",
+      traceIds: ["trace-abc"],
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -117,6 +119,45 @@ describe("domain-events dispatcher", () => {
       debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
+  })
+
+  it("routes TracesIngested billing snapshots to billing:recordTraceUsageBatch", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("TracesIngested", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceIds: ["trace-abc", "trace-def"],
+      billing: {
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: "2026-01-01T00:00:00.000Z",
+        periodEnd: "2026-02-01T00:00:00.000Z",
+        includedCredits: 20_000,
+        overageAllowed: false,
+      },
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const billing = published.find((p) => p.queue === "billing" && p.task === "recordTraceUsageBatch")
+    expect(billing).toMatchObject({
+      payload: {
+        organizationId: "org-1",
+        projectId: "proj-1",
+        traceIds: ["trace-abc", "trace-def"],
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: "2026-01-01T00:00:00.000Z",
+        periodEnd: "2026-02-01T00:00:00.000Z",
+        includedCredits: 20_000,
+        overageAllowed: false,
+      },
+      options: {
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
+      },
+    })
   })
 
   it("routes ProjectCreated to projects:provision", async () => {
@@ -214,11 +255,11 @@ describe("domain-events dispatcher", () => {
   it("does NOT fan out non-whitelisted events to posthog-analytics", async () => {
     const { consumer, published } = setupDispatcher()
 
-    // SpanIngested is handled but deliberately excluded from the PostHog whitelist.
-    const envelope = makeEnvelope("SpanIngested", {
+    // TracesIngested is handled but deliberately excluded from the PostHog whitelist.
+    const envelope = makeEnvelope("TracesIngested", {
       organizationId: "org-1",
       projectId: "proj-1",
-      traceId: "trace-x",
+      traceIds: ["trace-x"],
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -284,5 +325,76 @@ describe("domain-events dispatcher", () => {
     const dedupeKeys = discoveryPublishes.map((p) => p.options?.dedupeKey)
     expect(dedupeKeys).toContain("issues:discovery:score-3:draft")
     expect(dedupeKeys).toContain("issues:discovery:score-3:published")
+  })
+
+  it("routes BillingUsagePeriodUpdated to billing-overage:reportOverage when subscription overage is pending", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "subscription",
+      overageAllowed: true,
+      includedCredits: 100_000,
+      consumedCredits: 100_030,
+      overageCredits: 30,
+      reportedOverageCredits: 0,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published[0]).toMatchObject({
+      queue: "billing-overage",
+      task: "reportOverage",
+      payload: {
+        organizationId: "org-1",
+        periodStart: "2026-01-01T00:00:00.000Z",
+        periodEnd: "2026-02-01T00:00:00.000Z",
+        snapshotOverageCredits: 30,
+      },
+      options: {
+        latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
+      },
+    })
+  })
+
+  it("coalesces BillingUsagePeriodUpdated overage reports to the latest snapshot without sliding the window", async () => {
+    const { consumer, queue } = setupDispatcher()
+
+    const firstEnvelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "subscription",
+      overageAllowed: true,
+      includedCredits: 100_000,
+      consumedCredits: 100_030,
+      overageCredits: 30,
+      reportedOverageCredits: 0,
+    })
+    const secondEnvelope = makeEnvelope("BillingUsagePeriodUpdated", {
+      organizationId: "org-1",
+      periodStart: "2026-01-01T00:00:00.000Z",
+      periodEnd: "2026-02-01T00:00:00.000Z",
+      planSource: "subscription",
+      overageAllowed: true,
+      includedCredits: 100_000,
+      consumedCredits: 105_000,
+      overageCredits: 5_000,
+      reportedOverageCredits: 0,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(firstEnvelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(secondEnvelope))
+
+    const pending = queue.getPublishedByDedupeKey(
+      "billing-overage",
+      "billing:reportOverage:org-1:2026-01-01T00:00:00.000Z:2026-02-01T00:00:00.000Z",
+    )
+    expect(pending?.options?.latestThrottleMs).toBe(BILLING_OVERAGE_SYNC_THROTTLE_MS)
+    expect((pending?.payload as { snapshotOverageCredits: number }).snapshotOverageCredits).toBe(5_000)
   })
 })

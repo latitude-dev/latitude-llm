@@ -25,7 +25,7 @@ export interface TrackedEventInput {
  * frontend↔backend funnels ("viewed page → created API key").
  *
  * For system-initiated events without a user context (FirstTraceReceived,
- * SpanIngested, etc.) we fall back to an org-scoped pseudo-id.
+ * TracesIngested, etc.) we fall back to an org-scoped pseudo-id.
  */
 /**
  * Returns true when the event has a real user behind it — either via

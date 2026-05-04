@@ -1,13 +1,16 @@
+import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
-import { generateId, type StorageDiskPort } from "@domain/shared"
-import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
+import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import {
   createBetterAuth,
   createOutboxWriter,
   createPostgresClient,
+  invalidateEffectivePlanCache,
   type PostgresClient,
   SqlClientLive,
+  type StripePlanConfig,
 } from "@platform/db-postgres"
 import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -157,7 +160,36 @@ export const getBetterAuth = () => {
 
     const captchaSecretKey = Effect.runSync(parseEnvOptional("LAT_TURNSTILE_SECRET_KEY", "string"))
     const allowedEmailDomain = Effect.runSync(parseEnvOptional("LAT_ALLOWED_EMAIL_DOMAIN", "string"))
+    const stripeSecretKey = Effect.runSync(parseEnvOptional("LAT_STRIPE_SECRET_KEY", "string"))
+    const stripeProPriceId = Effect.runSync(parseEnvOptional("LAT_STRIPE_PRO_PRICE_ID", "string"))
+    const stripeWebhookSecret = Effect.runSync(parseEnvOptional("LAT_STRIPE_WEBHOOK_SECRET", "string"))
     const outboxWriter = getOutboxWriter()
+
+    const invalidateBillingPlanCache = async (organizationId: string) => {
+      await Effect.runPromise(
+        invalidateEffectivePlanCache(OrganizationId(organizationId)).pipe(
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      )
+    }
+
+    const selfServePlans: StripePlanConfig[] = SELF_SERVE_PLAN_SLUGS.flatMap((slug) => {
+      if (slug === "pro" && stripeProPriceId) {
+        return [
+          {
+            name: slug,
+            priceId: stripeProPriceId,
+            limits: {
+              credits: PRO_PLAN_CONFIG.includedCredits,
+              retentionDays: PRO_PLAN_CONFIG.retentionDays,
+            },
+          },
+        ]
+      }
+
+      return []
+    })
 
     betterAuthInstance = createBetterAuth({
       client: adminClient,
@@ -167,6 +199,9 @@ export const getBetterAuth = () => {
       trustedOrigins,
       ...(captchaSecretKey ? { captchaSecretKey } : {}),
       ...(allowedEmailDomain ? { allowedEmailDomain } : {}),
+      ...(stripeSecretKey ? { stripeSecretKey } : {}),
+      ...(stripeWebhookSecret ? { stripeWebhookSecret } : {}),
+      ...(selfServePlans.length > 0 ? { subscriptionPlans: selfServePlans } : {}),
       extraPlugins: [tanstackStartCookies()],
       onUserCreated: async (user) => {
         await Effect.runPromise(
@@ -254,6 +289,9 @@ export const getBetterAuth = () => {
             })
             .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
+      },
+      onSubscriptionChanged: async ({ referenceId }) => {
+        await invalidateBillingPlanCache(referenceId)
       },
     })
   }

@@ -68,7 +68,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
 
         // Mark the project so future checks are fast no-ops. This is
         // outside the outbox transaction — a crash between the two is
-        // acceptable: the next SpanIngested check will re-emit the event
+        // acceptable: the next TracesIngested check will re-emit the event
         // (PostHog dedupe absorbs it) and then set the column.
         yield* Effect.tryPromise({
           try: () =>

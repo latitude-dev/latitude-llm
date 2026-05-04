@@ -20,6 +20,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/billing": "workspace:*",
     "@repo/utils": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",

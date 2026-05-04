@@ -1,5 +1,6 @@
+import { NoCreditsRemainingError } from "@domain/billing"
 import {
-  draftFlaggerAnnotationUseCase,
+  draftFlaggerAnnotationWithBillingUseCase,
   type FlaggerAnnotateOutput,
   type RunFlaggerResult,
   runFlaggerUseCase,
@@ -9,13 +10,23 @@ import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
+import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
+  ScoreRepositoryLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -56,14 +67,25 @@ interface DraftAnnotateOutput {
   readonly messageIndex?: number | undefined
 }
 
+const billingLayers = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+)
+
 export const draftAnnotate = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
   readonly flaggerSlug: string
-}): Promise<DraftAnnotateOutput> =>
-  Effect.runPromise(
-    draftFlaggerAnnotationUseCase(input).pipe(
+}): Promise<DraftAnnotateOutput> => {
+  return Effect.runPromise(
+    draftFlaggerAnnotationWithBillingUseCase(input).pipe(
+      withPostgres(billingLayers, getPostgresClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
         getClickhouseClient(),
@@ -73,6 +95,14 @@ export const draftAnnotate = async (input: {
       withTracing,
       Effect.tapError((error) =>
         Effect.sync(() => {
+          if (error instanceof NoCreditsRemainingError) {
+            logger.info("Flagger annotation blocked — billing limit reached", {
+              organizationId: input.organizationId,
+              traceId: input.traceId,
+              flaggerSlug: input.flaggerSlug,
+            })
+            return
+          }
           logger.error("Flagger draft annotate activity failed", {
             organizationId: input.organizationId,
             projectId: input.projectId,
@@ -84,6 +114,7 @@ export const draftAnnotate = async (input: {
       ),
     ),
   )
+}
 
 export const saveAnnotation = async (input: {
   readonly organizationId: string

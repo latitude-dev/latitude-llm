@@ -103,6 +103,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
+    const billingOperationId = generateId()
     const workflowId = buildGenerateWorkflowId(issueId)
 
     await Effect.runPromise(
@@ -143,6 +144,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
             issueId,
             evaluationId: null,
             jobId,
+            billingOperationId,
           },
           { workflowId },
         ),
@@ -180,6 +182,7 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
     const jobId = generateId()
+    const billingOperationId = generateId()
     const workflowId = buildOptimizeWorkflowId(data.evaluationId)
 
     await Effect.runPromise(
@@ -224,6 +227,7 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
             issueId,
             evaluationId: data.evaluationId,
             jobId,
+            billingOperationId,
           },
           { workflowId },
         ),
