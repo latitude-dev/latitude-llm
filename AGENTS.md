@@ -41,3 +41,15 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Testing** | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md) | Vitest layers, PGlite/chdb testkit, **`/testing` package exports**, avoiding `vi.mock` for repositories |
 | **Toolchain and commands** | [.agents/skills/toolchain-commands/SKILL.md](.agents/skills/toolchain-commands/SKILL.md) | Node/pnpm/Turbo/Vitest/Biome, scripts, filters, CI, `.env.*` setup, **Docker Compose, dev servers, Mailpit** |
 | **Web frontend** | [.agents/skills/web-frontend/SKILL.md](.agents/skills/web-frontend/SKILL.md) | `apps/web` UI, TanStack Start, collections, `@repo/ui`, layout, **`-components/`**, legacy UI reference, **`useMountEffect` policy**, **`useForm` + `createFormSubmitHandler` + `fieldErrorsAsStrings`** for Zod field errors on forms |
+
+## Cursor Cloud specific instructions
+
+The update script runs `scripts/cloud-install.sh` and `scripts/cloud-start.sh` on every session start — dependencies are installed, Docker infra is started, and all databases are migrated and seeded automatically.
+
+For services, ports, health checks, Docker Compose, dev servers, and Mailpit auth flow, see [toolchain-commands skill](.agents/skills/toolchain-commands/SKILL.md). Seeded users include `owner@acme.com`, `admin@acme.com`, etc., all in the "Acme Inc." organization.
+
+**Cloud-only gotchas:**
+
+- `pnpm build` must complete before `pnpm db:up` — migration scripts depend on compiled platform packages.
+- The `pnpm install` output may warn about unapproved build scripts (`@swc/core`, `sharp`, etc.). These are non-blocking — pre-built binaries are used.
+- The Docker daemon in cloud VMs needs `fuse-overlayfs` storage driver and `iptables-legacy`. The update script handles this.
