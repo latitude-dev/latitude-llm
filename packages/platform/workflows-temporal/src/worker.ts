@@ -3,7 +3,6 @@ import { createLogger } from "@repo/observability"
 import { Context as ActivityContext } from "@temporalio/activity"
 import type {
   ActivityExecuteInput,
-  ActivityInboundCallsInterceptor,
   ActivityInterceptorsFactory,
   Next,
 } from "@temporalio/worker"
@@ -15,10 +14,7 @@ const toError = (value: unknown): Error => (value instanceof Error ? value : new
 
 const datadogActivityInterceptor: ActivityInterceptorsFactory = (_ctx: ActivityContext) => ({
   inbound: {
-    async execute(
-      input: ActivityExecuteInput,
-      next: Next<ActivityInboundCallsInterceptor, "execute">,
-    ): Promise<unknown> {
+    async execute(input: ActivityExecuteInput, next: Next): Promise<unknown> {
       const info = ActivityContext.current().info
       const spanName = `temporal.activity.${info.activityType}`
 
