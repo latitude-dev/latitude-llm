@@ -238,7 +238,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         sourceId: evaluation.id,
         sessionId: traceDetail.sessionId ?? null,
         traceId: traceDetail.traceId,
-        spanId: traceDetail.rootSpanId,
+        spanId: traceDetail.rootSpanId || null,
         simulationId: traceDetail.simulationId || null,
         issueId: persistedIssueId,
         value: execution.kind === "completed" ? execution.result.value : 0,
