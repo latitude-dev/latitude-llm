@@ -248,6 +248,10 @@ describe("createIssueFromScoreUseCase", () => {
             Effect.provideService(ScoreRepository, scoreRepository),
             Effect.provideService(IssueRepository, issueRepository),
             Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+            Effect.provideService(
+              IssueProjectionRepository,
+              createFakeIssueProjectionRepository({ organizationId }).service,
+            ),
           ),
         )
 

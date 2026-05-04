@@ -5,7 +5,14 @@
   "type": "module",
   "main": "index.ts",
   "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./silence-logger": "./silence-logger.ts"
+  },
   "dependencies": {
     "dotenv": "catalog:"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

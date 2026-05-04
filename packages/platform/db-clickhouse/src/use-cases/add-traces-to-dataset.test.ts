@@ -7,8 +7,9 @@ import {
   DatasetRowRepository,
   type DatasetRowRepositoryShape,
 } from "@domain/datasets"
+import { createFakeDatasetRepository } from "@domain/datasets/testing"
 import { OutboxEventWriter } from "@domain/events"
-import { SqlClient } from "@domain/shared"
+import { SqlClient, type SqlClientShape } from "@domain/shared"
 import {
   bootstrapSeedScope,
   type ChSqlClient,
@@ -23,13 +24,10 @@ import {
   SpanId,
   TraceId,
 } from "@domain/shared/seeding"
-import { createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
 import { TRACE_SEARCH_EMBEDDING_DIMENSIONS, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
-import { datasets } from "@platform/db-postgres/schema/datasets"
-import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
+import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
@@ -49,8 +47,13 @@ const ORG_ID = OrganizationId("org-add-traces")
 const PROJECT_ID = ProjectId("proj-add-traces")
 const DATASET_ID = DatasetId("ds-add-traces-existing")
 
-const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
+
+const inertSqlClient: SqlClientShape = {
+  organizationId: ORG_ID,
+  transaction: (effect) => effect.pipe(Effect.provideService(SqlClient, inertSqlClient)),
+  query: () => Effect.die("Fake DatasetRepository must not access SqlClient"),
+}
 
 function makeFakeTraceRepository(traces: TraceDetail[]) {
   return createFakeTraceRepository({
@@ -58,51 +61,28 @@ function makeFakeTraceRepository(traces: TraceDetail[]) {
   }).repository
 }
 
-const runWithLive = <A, E>(
-  effect: Effect.Effect<
-    A,
-    E,
-    DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
-  >,
-) =>
-  Effect.runPromise(
-    effect.pipe(
-      withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pg.adminPostgresClient, ORG_ID),
-      withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID),
-      withClickHouse(TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer)), ch.client, ORG_ID),
-    ),
-  )
-
 describe("addTracesToDataset and createDatasetFromTraces", () => {
   let datasetRepo: (typeof DatasetRepository)["Service"]
   let rowRepo: DatasetRowRepositoryShape
   let seededTraceIds: readonly TraceId[] = []
 
   beforeAll(async () => {
-    datasetRepo = await Effect.runPromise(
-      Effect.gen(function* () {
-        return yield* DatasetRepository
-      }).pipe(
-        withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pg.adminPostgresClient, ORG_ID),
-      ),
-    )
-
     rowRepo = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* DatasetRowRepository
       }).pipe(withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID)),
     )
-
-    await pg.db.insert(datasets).values({
-      id: DATASET_ID,
-      organizationId: ORG_ID,
-      projectId: PROJECT_ID,
-      name: "existing-dataset",
-      currentVersion: 0,
-    })
   })
 
   beforeEach(async () => {
+    const fake = createFakeDatasetRepository(undefined, undefined, { organizationId: ORG_ID })
+    datasetRepo = fake.repository
+    await Effect.runPromise(
+      datasetRepo
+        .create({ id: DATASET_ID, projectId: PROJECT_ID, name: "existing-dataset" })
+        .pipe(Effect.provideService(SqlClient, inertSqlClient)),
+    )
+
     seededTraceIds = await Effect.runPromise(
       runSpansSeed(
         { client: ch.client, scope: bootstrapSeedScope },
@@ -116,6 +96,24 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       ),
     )
   })
+
+  const runWithLive = <A, E>(
+    effect: Effect.Effect<
+      A,
+      E,
+      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
+    >,
+  ) =>
+    Effect.runPromise(
+      effect.pipe(
+        Effect.provideService(DatasetRepository, datasetRepo),
+        Effect.provideService(DatasetRowRepository, rowRepo),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, inertSqlClient),
+        withClickHouse(TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer)), ch.client, ORG_ID),
+        Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
+      ),
+    )
 
   const runWithOverrides = <A, E>(
     effect: Effect.Effect<
@@ -135,7 +133,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         Effect.provideService(DatasetRowRepository, services.rowRepo),
         Effect.provideService(TraceRepository, services.traceRepo),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
-        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+        Effect.provideService(SqlClient, inertSqlClient),
         Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
       ),
     )
@@ -181,9 +179,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     expect(result.rowIds.length).toBe(traceIds.length)
 
     const dataset = await Effect.runPromise(
-      datasetRepo
-        .findById(result.datasetId)
-        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))),
+      datasetRepo.findById(result.datasetId).pipe(Effect.provideService(SqlClient, inertSqlClient)),
     )
     expect(dataset.name).toBe("from-traces-dataset")
 
@@ -195,6 +191,65 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       expect(row.input).toBeDefined()
       expect(row.output).toBeDefined()
     }
+  })
+
+  it("addTracesToDataset copies user-defined trace metadata into the row metadata", async () => {
+    const fakeTraceRepo = makeFakeTraceRepository([
+      {
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        traceId: TraceId("trace-meta-1"),
+        spanCount: 1,
+        errorCount: 0,
+        startTime: new Date(),
+        endTime: new Date(),
+        durationNs: 0,
+        timeToFirstTokenNs: 0,
+        tokensInput: 0,
+        tokensOutput: 0,
+        tokensCacheRead: 0,
+        tokensCacheCreate: 0,
+        tokensReasoning: 0,
+        tokensTotal: 0,
+        costInputMicrocents: 0,
+        costOutputMicrocents: 0,
+        costTotalMicrocents: 0,
+        sessionId: SessionId(""),
+        userId: ExternalUserId(""),
+        simulationId: SimulationId(""),
+        tags: [],
+        metadata: { user_name: "Ada", topic: "regression-testing" },
+        models: [],
+        providers: [],
+        serviceNames: [],
+        rootSpanId: SpanId("span-1"),
+        rootSpanName: "root",
+        systemInstructions: [],
+        inputMessages: [],
+        outputMessages: [],
+        allMessages: [],
+      },
+    ])
+
+    await runWithOverrides(
+      addTracesToDataset({
+        projectId: PROJECT_ID,
+        datasetId: DATASET_ID,
+        selection: { mode: "selected", traceIds: [TraceId("trace-meta-1")] },
+      }),
+      { datasetRepo, rowRepo, traceRepo: fakeTraceRepo },
+    )
+
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: DATASET_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
+    const row = rows.find((r) => {
+      const meta = r.metadata as Record<string, unknown>
+      return meta.traceId === "trace-meta-1"
+    })
+    expect(row).toBeDefined()
+    const metadata = row?.metadata as Record<string, unknown>
+    expect(metadata.traceMetadata).toEqual({ user_name: "Ada", topic: "regression-testing" })
   })
 
   it("createDatasetFromTraces soft-deletes the dataset when ClickHouse insert fails", async () => {
@@ -279,11 +334,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     if (id === null) return
 
     await expect(
-      Effect.runPromise(
-        capturingDatasetRepo
-          .findById(id)
-          .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))),
-      ),
+      Effect.runPromise(capturingDatasetRepo.findById(id).pipe(Effect.provideService(SqlClient, inertSqlClient))),
     ).rejects.toBeInstanceOf(DatasetNotFoundError)
   })
 })

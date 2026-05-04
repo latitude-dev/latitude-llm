@@ -857,7 +857,9 @@ const seedFixedTraces: Seeder = {
     const allFixedSpans = buildAllFixedSpans(ctx.scope)
     return insertJsonEachRow(ctx.client, "spans", allFixedSpans).pipe(
       Effect.tap(() =>
-        Effect.sync(() => console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic traces`)),
+        Effect.sync(() => {
+          if (!ctx.quiet) console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic traces`)
+        }),
       ),
     )
   },

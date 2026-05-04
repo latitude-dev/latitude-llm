@@ -143,6 +143,7 @@ describe("buildIssuesExportUseCase", () => {
           from: new Date("2026-04-01T00:00:00.000Z"),
           to: new Date("2026-04-10T00:00:00.000Z"),
         },
+        now: new Date("2026-04-25T00:00:00.000Z"),
       }).pipe(
         Effect.provideService(IssueProjectionRepository, {
           upsert: () => Effect.void,

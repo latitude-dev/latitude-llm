@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 type MockNavigateOptions = {
   to: string
@@ -58,8 +58,14 @@ function setUrl(search: string, pathname = window.location.pathname) {
   window.history.replaceState(null, "", search ? `${pathname}${search}` : pathname)
 }
 
-afterEach(() => setUrl("", "/"))
-afterEach(() => mockNavigate.mockClear())
+// Reset URL + mock state in beforeEach (not afterEach) so the previous test's
+// hook has already been unmounted by RTL's auto-cleanup. Otherwise the patched
+// replaceState dispatches LOCATION_CHANGE_EVENT to a still-mounted hook,
+// triggering an unwrapped setValue and a React act(...) warning.
+beforeEach(() => {
+  setUrl("", "/")
+  mockNavigate.mockClear()
+})
 
 function setup<T extends boolean | number | string>(paramKey: string, defaultValue: T) {
   return renderHook(() => useParamState(paramKey, defaultValue))

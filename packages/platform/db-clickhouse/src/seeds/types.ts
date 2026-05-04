@@ -12,6 +12,8 @@ export interface SeedContext {
    * runtime via the backoffice.
    */
   readonly scope: SeedScope
+  /** When true, seeders skip progress logs. Tests opt in. */
+  readonly quiet?: boolean
 }
 
 export interface Seeder {
