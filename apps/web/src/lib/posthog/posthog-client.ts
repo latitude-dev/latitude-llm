@@ -88,9 +88,11 @@ export const identifyOrganization = async (input: IdentifyOrganizationInput): Pr
 }
 
 /**
- * Clear the current identity. Call before identifying a new user (handled
- * automatically in the authenticated layout effect) and at explicit logout so
- * the previous user's session events don't bleed into the next one.
+ * Clear the current identity and session. Call on explicit logout only — do
+ * not call from the authenticated layout on mount: `posthog.reset()` starts a
+ * fresh recording session, and layout remounts (including React Strict Mode in
+ * dev) would fragment recordings. `identifyUser` in `PostHogIdentity` is enough
+ * to attribute the same browser session to the signed-in user.
  */
 export const resetPostHog = async (): Promise<void> => {
   const posthog = await loadInstance()
