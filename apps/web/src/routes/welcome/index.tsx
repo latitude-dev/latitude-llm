@@ -119,6 +119,7 @@ function WelcomePage() {
       await setActiveOrganization({
         data: { organizationId: organization.id, organizationSlug: organization.slug },
       })
+      // Full navigation ensures project onboarding reads the freshly-updated auth session.
       window.location.href = `/projects/${organization.defaultProject.slug}/onboarding`
     } catch (err) {
       setError(toUserMessage(err))
