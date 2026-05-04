@@ -2,11 +2,13 @@ import { Icon, InfiniteTable, type InfiniteTableColumn, optionsColumn, Skeleton,
 import { useRouter } from "@tanstack/react-router"
 import { FilterIcon, SearchIcon, SparklesIcon } from "lucide-react"
 import { useState } from "react"
+import { MemberSelector } from "../../../../../../components/member-selector.tsx"
 import {
   type SavedSearchAggregates,
   useDeleteSavedSearch,
   useSavedSearchAggregates,
   useSavedSearchesList,
+  useUpdateSavedSearch,
 } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../../domains/saved-searches/saved-searches.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -30,6 +32,7 @@ export function SavedSearchesList({
   const router = useRouter()
   const { data, isLoading } = useSavedSearchesList(projectId)
   const deleteMutation = useDeleteSavedSearch(projectId)
+  const updateMutation = useUpdateSavedSearch(projectId)
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
 
   if (!isLoading && data.length === 0) {
@@ -53,9 +56,28 @@ export function SavedSearchesList({
     {
       key: "assignedTo",
       header: "Assigned To",
-      width: 160,
-      minWidth: 120,
-      render: () => <Text.H5 color="foregroundMuted">—</Text.H5>,
+      width: 200,
+      minWidth: 160,
+      ellipsis: false,
+      render: (row) => (
+        <AssigneeCell
+          row={row}
+          onChange={(nextUserId) => {
+            updateMutation.mutate(
+              { id: row.id, assignedUserId: nextUserId },
+              {
+                onError: (error) => {
+                  toast({
+                    variant: "destructive",
+                    title: "Could not update assignee",
+                    description: toUserMessage(error),
+                  })
+                },
+              },
+            )
+          }}
+        />
+      ),
     },
     {
       key: "annotated",
@@ -185,6 +207,25 @@ function NameCell({ row }: { readonly row: SavedSearchRecord }) {
         <Text.H6 color="foregroundMuted">Saved {formatDate(row.createdAt)}</Text.H6>
       </div>
     </div>
+  )
+}
+
+function AssigneeCell({
+  row,
+  onChange,
+}: {
+  readonly row: SavedSearchRecord
+  readonly onChange: (userId: string | null) => void
+}) {
+  return (
+    <span
+      role="none"
+      className="flex w-full"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <MemberSelector value={row.assignedUserId} onChange={onChange} />
+    </span>
   )
 }
 
