@@ -67,7 +67,7 @@ export function TracesView({
     ...(hasSearchQuery ? { searchQuery } : {}),
   })
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
-  const { data: annotationCounts, isLoading: annotationCountsLoading } = useAnnotationCountsByTraceIds({
+  const { data: annotationCounts, pendingTraceIds: annotationCountsPendingTraceIds } = useAnnotationCountsByTraceIds({
     projectId,
     traceIds,
     enabled: traceIds.length > 0,
@@ -157,7 +157,7 @@ export function TracesView({
           traceMetrics={traceMetrics}
           metricsLoading={metricsLoading}
           annotationCounts={annotationCounts}
-          annotationCountsLoading={annotationCountsLoading}
+          annotationCountsPendingTraceIds={annotationCountsPendingTraceIds}
         />
       </Layout.List>
     </Layout.Body>

@@ -66,7 +66,7 @@ interface ProjectTracesTableProps {
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
   readonly annotationCounts?: ReadonlyMap<string, TraceAnnotationCounts> | undefined
-  readonly annotationCountsLoading?: boolean | undefined
+  readonly annotationCountsPendingTraceIds?: ReadonlySet<string> | undefined
   readonly scrollAreaLayout?: "fill" | "intrinsic"
   readonly scrollContainerClassName?: string
 }
@@ -92,7 +92,7 @@ export function ProjectTracesTable({
   traceMetrics,
   metricsLoading,
   annotationCounts,
-  annotationCountsLoading,
+  annotationCountsPendingTraceIds,
   scrollAreaLayout,
   scrollContainerClassName,
 }: ProjectTracesTableProps) {
@@ -112,7 +112,7 @@ export function ProjectTracesTable({
           <TraceIndicatorsCell
             errorCount={trace.errorCount}
             annotationCounts={annotationCounts?.get(trace.traceId)}
-            annotationCountsLoading={annotationCountsLoading === true}
+            annotationCountsPending={annotationCountsPendingTraceIds?.has(trace.traceId) === true}
           />
         ),
       },
@@ -307,7 +307,7 @@ export function ProjectTracesTable({
     getTraceHref,
     linkTarget,
     annotationCounts,
-    annotationCountsLoading,
+    annotationCountsPendingTraceIds,
   ])
 
   const columns = useMemo(
@@ -362,11 +362,11 @@ export function ProjectTracesTable({
 function TraceIndicatorsCell({
   errorCount,
   annotationCounts,
-  annotationCountsLoading,
+  annotationCountsPending,
 }: {
   readonly errorCount: number
   readonly annotationCounts: TraceAnnotationCounts | undefined
-  readonly annotationCountsLoading: boolean
+  readonly annotationCountsPending: boolean
 }) {
   const positiveCount = annotationCounts?.positiveCount ?? 0
   const negativeCount = annotationCounts?.negativeCount ?? 0
@@ -423,7 +423,7 @@ function TraceIndicatorsCell({
           {errorCount} {errorCount === 1 ? "error" : "errors"} in this trace
         </Tooltip>
       ) : null}
-      {!hasBadges && annotationCountsLoading ? <Skeleton className="h-5 w-20" /> : null}
+      {!hasBadges && annotationCountsPending ? <Skeleton className="h-5 w-20" /> : null}
     </span>
   )
 }

@@ -86,7 +86,7 @@ export function useAnnotationCountsByTraceIds({
   readonly enabled?: boolean
 }) {
   const effectiveDraftMode = draftMode ?? DEFAULT_TRACE_DRAFT_MODE
-  const uniqueTraceIds = useMemo(() => [...new Set(traceIds)], [traceIds])
+  const uniqueTraceIds = useMemo(() => [...new Set(traceIds)].sort(), [traceIds])
   const chunks = useMemo(() => chunkTraceIds(uniqueTraceIds), [uniqueTraceIds])
 
   const queries = useQueries({
@@ -111,8 +111,20 @@ export function useAnnotationCountsByTraceIds({
     return countsByTraceId
   }, [queries])
 
+  const pendingTraceIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const [index, query] of queries.entries()) {
+      if (!query.isLoading) continue
+      for (const traceId of chunks[index] ?? []) {
+        ids.add(traceId)
+      }
+    }
+    return ids
+  }, [chunks, queries])
+
   return {
     data,
+    pendingTraceIds,
     isLoading: queries.some((query) => query.isLoading),
     isFetching: queries.some((query) => query.isFetching),
   }

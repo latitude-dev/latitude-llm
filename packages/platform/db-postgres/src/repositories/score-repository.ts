@@ -375,10 +375,11 @@ export const ScoreRepositoryLive = Layer.effect(
 
           const sqlClient = yield* resolveSqlClient()
           const draftClause = applyDraftMode(options)
+          const traceIdValues = traceIds.map((traceId) => String(traceId))
           const baseWhere = and(
             eq(scores.projectId, projectId),
             eq(scores.source, "annotation"),
-            inArray(scores.traceId, [...traceIds] as string[]),
+            inArray(scores.traceId, traceIdValues),
           )
           const whereClause = draftClause
             ? and(eq(scores.organizationId, sqlClient.organizationId), baseWhere, draftClause)
