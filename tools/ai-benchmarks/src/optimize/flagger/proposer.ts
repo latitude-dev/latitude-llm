@@ -1,4 +1,4 @@
-import { AI } from "@domain/ai"
+import { AI, type GenerateInput } from "@domain/ai"
 import {
   hashOptimizationCandidateText,
   type OptimizationCandidate,
@@ -7,55 +7,23 @@ import {
 import { type Cause, Data, Effect } from "effect"
 import { z } from "zod"
 import { computeCost } from "../../runner/pricing.ts"
+import { applyEdits, type FindReplaceEdit } from "./apply-edits.ts"
 
-/**
- * Flagger-local proposer model. Distinct from `@platform/op-gepa`'s
- * `GEPA_PROPOSER_MODEL` (which the eval-flow optimizer uses) so we can
- * iterate on speed/quality here without affecting the workflows app.
- *
- * Sonnet 4-6 chosen for the flagger optimizer because the proposer's
- * task — rewriting a strategy `.ts` file given concrete trajectory
- * feedback — doesn't need Opus-tier reasoning, and Sonnet is ~3-5×
- * faster per call (~5× cheaper) on Bedrock. Has the explicit capability
- * entry in `@ai-sdk/anthropic` (`supportsStructuredOutput: true`,
- * `supportsAdaptiveThinking: true`), so the structured-output path
- * works without tripping the Opus-4-7 `output_config.format` issue
- * filed upstream as vercel/ai#14773.
- *
- * `reasoningConfig` is the Bedrock-native thinking knob (typed at
- * `@ai-sdk/amazon-bedrock` → `amazonBedrockLanguageModelOptions`). We use
- * it directly instead of the abstract top-level `reasoning: "high"` for
- * two reasons:
- *
- * 1. Wall-time control. The abstract `"high"` level corresponds to a
- *    ~16K-token thinking budget on Opus 4.6, which streams at ~50–100
- *    tokens/sec on Bedrock → ~120–180s per propose call. Our optimization
- *    runs do many propose calls, and that wait dominates wall time.
- *    `budgetTokens: 8192` gives us a precise ~60–90s middle point that
- *    isn't reachable through the level enum (which only exposes ~4K
- *    "medium" and ~16K "high").
- * 2. `display: "summarized"` cuts wire bytes — Bedrock returns a short
- *    summary of the thinking channel instead of streaming the full chain.
- *    Saves a few seconds of streaming time. Note: this does NOT reduce
- *    billing — Anthropic charges for thinking tokens generated regardless
- *    of what's transmitted. Worth setting anyway for cleaner network
- *    behavior and smaller debug-log payloads.
- *
- * The structured `reasoning` field in `flaggerProposerOutputSchema` is the
- * auditable rationale we surface to reviewers; the Bedrock thinking
- * channel is internal-only and discarded. Keep `budgetTokens` in line
- * with how much *internal* deliberation you want; bump it (up to 16K) if
- * proposed candidates start looking shallow on hard reflections.
- */
-export const FLAGGER_PROPOSER_MODEL = {
-  provider: "amazon-bedrock",
-  model: "anthropic.claude-opus-4-6-v1",
-  reasoningConfig: {
-    type: "enabled",
-    budgetTokens: 4096,
-    display: "summarized",
-  },
-} as const
+export type ProposerProvider = "amazon-bedrock" | "anthropic"
+
+export const DEFAULT_PROPOSER_PROVIDER: ProposerProvider = "amazon-bedrock"
+
+export const DEFAULT_PROPOSER_MODELS: Record<ProposerProvider, string> = {
+  "amazon-bedrock": "anthropic.claude-opus-4-6-v1",
+  anthropic: "claude-opus-4-6",
+}
+
+const REASONING_BUDGET_TOKENS = 4096
+
+export interface FlaggerProposerModel {
+  readonly provider: ProposerProvider
+  readonly model: string
+}
 
 /**
  * Flagger proposer: given the current strategy `.ts` file and the
@@ -74,15 +42,55 @@ const flaggerProposerOutputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Concrete rationale: which trajectories drove which edits, what gap each edit addresses. Surface 'I would have used X' suggestions here for the human reviewer.",
+      "Concrete rationale: which trajectories drove which edits, what gap each edit addresses. Surface 'I would have used X' suggestions here for the human reviewer. Keep it to 100–300 words — this is for human reviewers at adoption time, not internal deliberation (the thinking channel handles that).",
     ),
-  fileText: z
-    .string()
+  edits: z
+    .array(
+      z.object({
+        find: z
+          .string()
+          .min(20)
+          .describe(
+            "Substring of the CURRENT strategy file to replace. MUST occur exactly once in the file (or in the file produced by previous edits in this list, if any). Include 1–2 lines of surrounding context above and below the change to make the match unambiguous. Whitespace and indentation must match byte-for-byte.",
+          ),
+        replace: z
+          .string()
+          .describe(
+            "Text that replaces `find`. Use empty string to delete. Use the same surrounding context as `find` plus the new lines you want to add — do NOT emit a unified-diff `+`/`-` format, just the literal replacement text.",
+          ),
+      }),
+    )
     .min(1)
     .describe(
-      "Complete new TypeScript source for the strategy file. No markdown fences. The file must export the named FlaggerStrategy with all four methods.",
+      "Ordered list of literal find/replace edits applied SEQUENTIALLY against the current strategy file. Each edit operates on the result of the previous one. The applier rejects the candidate if any `find` matches zero or multiple times — pick anchors with enough context to be unique.",
     ),
 })
+type FlaggerProposerOutput = z.infer<typeof flaggerProposerOutputSchema>
+
+type ThinkingConfig = Pick<GenerateInput<FlaggerProposerOutput>, "reasoning" | "providerOptions">
+/**
+ * Provider-specific thinking/reasoning options. Bedrock and direct Anthropic
+ * expose the same Anthropic feature under different shapes; this resolver
+ * picks the right one. Bedrock additionally supports `display: "summarized"`,
+ * which direct Anthropic doesn't.
+ */
+const resolveThinking = (model: FlaggerProposerModel): ThinkingConfig => {
+  if (model.provider === "amazon-bedrock") {
+    return {
+      providerOptions: {
+        bedrock: {
+          reasoningConfig: {
+            type: "enabled",
+            budgetTokens: REASONING_BUDGET_TOKENS,
+            display: "summarized",
+          },
+        },
+      },
+    }
+  }
+
+  return { reasoning: "medium" }
+}
 
 /**
  * Tagged error for the candidate-text hashing step. Distinct from AI
@@ -94,6 +102,23 @@ class FlaggerProposerHashError extends Data.TaggedError("FlaggerProposerHashErro
   readonly cause: unknown
 }> {}
 
+/**
+ * Tagged error raised when the model returned a syntactically valid edits
+ * list but at least one find/replace failed to apply (zero or 2+ matches).
+ * Distinct from AI / hashing errors so the orchestrator can classify the
+ * rejection stage as `patch-apply` in the audit trail and surface a more
+ * actionable message to the next propose call's trajectories.
+ *
+ * `cause` is widened to `unknown` so the `Effect.try` `catch` can return
+ * a single typed error regardless of what `applyEdits` threw — in practice
+ * always an `ApplyEditsError`, but a defensive wrap keeps the Effect
+ * error channel typed without a second tagged error class for the
+ * "shouldn't-happen" branch.
+ */
+class FlaggerProposerApplyError extends Data.TaggedError("FlaggerProposerApplyError")<{
+  readonly cause: unknown
+}> {}
+
 type ProposerPhase = "preparing" | "calling" | "received" | "hashing"
 
 interface FlaggerProposerInput {
@@ -101,9 +126,10 @@ interface FlaggerProposerInput {
   readonly currentCandidate: OptimizationCandidate
   readonly trajectories: readonly OptimizationTrajectory[]
   readonly operatorNotes: string | null
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly exportName: string
   readonly maxTrajectories: number
+  readonly proposerModel: FlaggerProposerModel
   /**
    * Hard cap on the returned file's character count. The candidate-loader
    * static-scan stage rejects anything larger; we surface the number to
@@ -123,72 +149,117 @@ interface FlaggerProposerInput {
 export interface FlaggerProposerResult {
   readonly candidate: OptimizationCandidate
   readonly reasoning: string
+  /**
+   * The literal find/replace edits the model returned. Empty on the
+   * error sentinel (AI / patch-apply / hashing failures), populated on
+   * success. Surfaced so the orchestrator can render a digestible
+   * per-edit summary in the debug log instead of dumping the full
+   * post-edit file text on every iteration.
+   */
+  readonly edits: readonly FindReplaceEdit[]
   readonly costUsd: number
   readonly inputTokens: number
   readonly outputTokens: number
   readonly reasoningTokens: number
 }
 
-const buildSystemPrompt = (input: { readonly queueSlug: string; readonly exportName: string }): string =>
-  `You optimize a Latitude flagger strategy file used in production trace classification.
+const buildSystemPrompt = (input: { readonly flaggerSlug: string; readonly exportName: string }): string =>
+  `# Role
 
-You receive:
-- the full TypeScript source of the current strategy file
-- a JSON-encoded set of evaluation trajectories (each row's expected/predicted verdicts, the deterministic-phase signals, and the LLM verdict if reached)
+You optimize a Latitude flagger strategy file used in production trace classification.
 
-You must return reasoning and a complete replacement file per the output schema.
+# Inputs
 
-The file you return MUST:
-- Export "${input.exportName}: FlaggerStrategy" with four methods: hasRequiredContext, detectDeterministically, buildSystemPrompt, buildPrompt.
-- Compile as valid TypeScript with no markdown fences in the output.
-- Only import from modules already declared in the strategy package's package.json (workspace modules under @domain/*, @repo/*, and any npm package the package already depends on). Relative imports must stay inside the flagger-strategies directory.
-- Avoid any of: process.*, globalThis writes, eval, Function constructor, dynamic import(), require(), child_process, fs, net, vm, or any node:* builtin.
-- NEVER use catastrophic-backtracking regex. This is a HARD constraint and the single biggest risk for this strategy file. Forbidden: nested unbounded quantifiers — any \`*\` or \`+\` quantified group whose body itself contains another unbounded quantifier on overlapping characters. Patterns that ALL hang Node's regex engine on adversarial input and are auto-rejected by the static scan: (a+)+, (.*)*, (.+)*, (\\w+)+, (\\S*)*, (\\d*)*, (.|\\s)*. They block the event loop synchronously — the per-method 5s timeout cannot interrupt sync regex hangs — so a single bad pattern freezes the entire run, not just one row. If you need repeated matching, use a single quantifier on a non-overlapping character class (e.g. [a-z]+ instead of (\\w+)+), bound the inner repetition (e.g. \\w{1,32} instead of \\w+), or split the match into multiple anchored passes. The trace text is adversarial (real jailbreak attempts) — assume any pattern that CAN be exploited WILL be.
-- Keep the strategy compatible with the FlaggerStrategy interface contract.
+- The full TypeScript source of the current strategy file.
+- A JSON-encoded set of evaluation trajectories (per-row expected/predicted verdicts, deterministic-phase signals, LLM verdict if reached).
 
-You may freely:
-- Restructure helpers, rename internal functions, replace regex with a different deterministic check inside detectDeterministically, rewrite the system prompt, change the suspicious-snippet extractor, etc. — as long as the four exported methods remain present.
+# Output
 
-You may surface "I would have used X" notes in the reasoning field. The reviewer reads reasoning at adoption time and may decide to install a new dependency before re-running.
+Return reasoning and an ORDERED list of literal find/replace edits per the output schema. Edits apply SEQUENTIALLY: edit 2 operates on the file produced by edit 1, etc. Each \`find\` is a verbatim substring of the (possibly already-edited) file; \`replace\` is the literal text that takes its place. Empty \`replace\` deletes.
 
-Trajectory schema reminder: each trajectory's "feedback" string is JSON-encoded and contains:
-- expected, predicted (booleans)
-- phase: deterministic-{match,no-match}, llm-{match,no-match}, schema-mismatch, error, or candidate-rejected
-- tags (e.g. tactic labels)
-- preFilter: { kind: "matched" | "no-match" | "ambiguous" | "no-required-context" | "no-detect-method", feedback?: string } — what the candidate's deterministic layer returned. "no-required-context" means hasRequiredContext returned false (or threw); "no-detect-method" means detectDeterministically threw; "ambiguous" means the deterministic layer deferred to the LLM.
-- llmVerdict: non-null only on llm-* phases
-- rejection: { stage, reason } — present only when phase is candidate-rejected. \`stage\` is one of: static-scan, compile, import, shape. \`reason\` is the literal failure message (esbuild output, import resolution error, or shape probe text).
-- errorMessage: present (string) whenever a strategy method or the classify call threw at runtime. Set on phase=error, on phase=deterministic-no-match when hasRequiredContext threw (preFilter.kind=no-required-context), and on phase=llm-* when the AI call surfaced a provider error. Examples: "strategy.detectDeterministically did not complete within 5000ms", "TypeError: Cannot read properties of undefined…".
+## Edit rules — failure here wastes an entire iteration
 
-How to read each phase:
-- deterministic-no-match: the LLM never saw the row. If \`errorMessage\` is set, hasRequiredContext threw — fix that method. Otherwise the deterministic layer is the layer to fix (hasRequiredContext returning false too aggressively, or detectDeterministically returning no-match when it should have been ambiguous).
-- llm-{match,no-match} with wrong verdict: the prompt or buildPrompt context is the layer to fix.
-- schema-mismatch: the LLM replied but the structured-output validator rejected it. Tighten the output instructions in buildSystemPrompt or buildPrompt.
-- error: a strategy method or classify call threw. Read \`errorMessage\` and address THAT specific failure (e.g. an async stall in detectDeterministically → simplify the deterministic check; a TypeError → guard the offending access). A throwing candidate is worse than a wrong one — fix runtime errors before chasing accuracy.
-- candidate-rejected: the previous candidate failed to even compile/load. Read \`rejection.reason\` and address THAT specific failure (e.g. "Import 'tldts' does not resolve" → drop the offending import; "regex DoS risk: possibly-pathological regex pattern near …" → rewrite the offending regex per the catastrophic-backtracking rules in the MUST list above, do NOT just rename or reformat it; "candidate file exceeds size budget: …" → REMOVE code, do not just shorten variable names — consolidate overlapping patterns, drop deterministic rules that the LLM phase already covers, see the Size discipline section). Multiple rows will carry the same rejection reason if the candidate failed wholesale; treat them as a single signal.
+- \`find\` MUST match exactly once. Zero matches → "match-not-found" rejection; multiple → "ambiguous-match". Both surface in next round's trajectories under \`phase: "candidate-rejected"\`.
+- Include 1–2 lines of context above and below the change so \`find\` is unique. The changed line alone almost always matches multiple places.
+- Whitespace and indentation must match the source byte-for-byte — copy, don't paraphrase.
+- No unified-diff \`+\`/\`-\` markers. \`replace\` is the literal text that should appear after the edit, including the context lines from \`find\`.
+- Prefer many small edits over one big edit (easier to disambiguate, cheaper to generate).
+- Pure additions: use a small \`find\` for the line above the insertion point and put that line plus the new content in \`replace\`.
 
-When \`errorMessage\` or \`rejection\` is set, ignore predicted/expected on that row — the row's prediction is meaningless because the candidate didn't run cleanly. Treat those trajectories purely as runtime/load-failure signals.
+## Example edit (illustrative format — not necessarily applicable)
 
-Be SURGICAL. Strong preference for the smallest viable change:
-- If the trajectories point at a single regex pattern, change ONLY that pattern. Do not refactor unrelated helpers.
-- If the trajectories point at the LLM prompt, change ONLY the prompt. Leave the deterministic phase byte-for-byte identical.
-- If only one tactic class is failing (e.g. persona-aim), edit only the patterns and prompt sections that target it.
-- Preserve unchanged code verbatim — do not rewrite functions just for taste, naming, or formatting. Smaller diffs review faster, ship faster, and are easier to revert.
-- Wholesale rewrites are acceptable ONLY when the trajectories clearly show a structural problem (e.g. the pre-filter and the prompt are both wrong on overlapping rows). State that case explicitly in the reasoning field.
+{
+  "find": "  // Block obvious AIM persona attacks\n  if (text.match(/\\\\bact as AIM\\\\b/i)) return { kind: \\"matched\\" }",
+  "replace": "  // Block AIM and Machiavelli persona-roleplay attacks\n  if (text.match(/\\\\b(act as|pretend to be) (AIM|Machiavelli)\\\\b/i)) return { kind: \\"matched\\" }"
+}
 
-Size discipline:
-- The strategy file has a HARD upper bound enforced by the static scan (rejected as candidate-rejected with reason "candidate file exceeds size budget: …"). Each iteration sees only failing rows, which biases you toward addition; resist that. If the file grows on every iteration, you will eventually hit the cap and waste an iteration on a rejection.
-- Before adding a pattern, regex, branch, or prompt clause: ask whether it REPLACES something existing (consolidation) or just ADDS (accretion). Strongly prefer consolidation. If you add 50 lines, try to remove 30.
-- A successful iteration may produce a SMALLER file than the parent. That is a good outcome; do not pad to feel productive. Removing a regex that no longer pulls weight is just as valid as adding one that does.
-- Consolidate aggressively: if two regexes capture overlapping shapes, merge them into a single alternation. If three branches differ only in a constant, table-drive them.
+# Hard constraint: no catastrophic-backtracking regex
 
-Layer balance (read this carefully — this is the most common bias):
-- Trajectories are an ADVERSARIAL sample of the file's behavior: the orchestrator filters context to FAILURES only (rows the candidate got wrong, plus rejections). You never see the rows the candidate got right. That makes the deterministic layer look broken on every iteration even when it's working well — the regex misses are the only thing that surface.
-- Resist the gradient. The deterministic layer is intentionally HIGH-PRECISION and LOW-RECALL: it exists to short-circuit obviously-malicious-or-obviously-benign rows cheaply. EVERYTHING ambiguous is supposed to fall through to the LLM phase. If the LLM is misclassifying ambiguous rows, the fix is in buildSystemPrompt / buildPrompt — NOT in piling more regex into detectDeterministically.
-- Concrete heuristic: when a deterministic-no-match trajectory shows expected=true predicted=false on adversarial-but-not-obviously-malicious text, prefer LOOSENING the deterministic gate (so the row falls through to the LLM) over ADDING a new regex to catch it. Adding a regex risks false positives on benign rows you can't see; loosening the gate just shifts cost to the LLM where the model has better generalization.
-- A regex pile that grows every iteration is a code smell, not a feature. If you find yourself adding regex #15 to catch a 16th tactic, the deterministic layer has outgrown its purpose — collapse it.
+The single biggest production risk in this file. The static scan auto-rejects nested unbounded quantifiers — any \`*\` or \`+\` group whose body contains another unbounded quantifier on overlapping characters. Forbidden examples: \`(a+)+\`, \`(.*)*\`, \`(.+)*\`, \`(\\w+)+\`, \`(\\S*)*\`, \`(\\d*)*\`, \`(.|\\s)*\`.
 
-Prefer concrete, testable changes that the trajectories justify over speculative rewrites.`
+These hang Node's regex engine on adversarial input — the per-method 5s timeout cannot interrupt sync regex hangs, so one bad pattern freezes the whole run.
+
+If you need repeated matching:
+- Use a single quantifier on a non-overlapping class (\`[a-z]+\` not \`(\\w+)+\`).
+- Bound the inner repetition (\`\\w{1,32}\` not \`\\w+\`).
+- Split into multiple anchored passes.
+
+Trace text is adversarial — assume any pattern that CAN be exploited WILL be.
+
+# Other constraints on the resulting file
+
+- Export "${input.exportName}: FlaggerStrategy" with four methods: \`hasRequiredContext\`, \`detectDeterministically\`, \`buildSystemPrompt\`, \`buildPrompt\`.
+- Compiles as valid TypeScript. No markdown fences.
+- Imports limited to modules already declared in the strategy package's \`package.json\` (workspace \`@domain/*\`, \`@repo/*\`, plus existing npm deps). Relative imports stay inside the \`flagger-strategies\` directory.
+- No \`process.*\`, \`globalThis\` writes, \`eval\`, \`Function\` constructor, dynamic \`import()\`, \`require()\`, \`child_process\`, \`fs\`, \`net\`, \`vm\`, or any \`node:*\` builtin.
+- Conforms to the \`FlaggerStrategy\` interface contract.
+
+# Free to change
+
+Restructure helpers, rename internal functions, replace regex with a different deterministic check, rewrite the system prompt, change the suspicious-snippet extractor — as long as the four exported methods remain. Surface "I would have used X (would need a new dep)" notes in \`reasoning\` so the reviewer can decide whether to install before re-running.
+
+# Optimization objective
+
+Optimize for **F1 at the lowest per-trace cost**. Every fall-through to the LLM is real money on every production trace — the deterministic layer is essentially free, the LLM is not. Prefer the candidate that hits the same F1 with fewer LLM calls.
+
+If you're trading precision for recall, F1 for cost, or vice versa, say so explicitly in \`reasoning\` so the reviewer can sanity-check the trade-off.
+
+# Trajectory schema
+
+Each trajectory's \`feedback\` is JSON with:
+- \`expected\`, \`predicted\` (booleans)
+- \`phase\`: \`deterministic-{match,no-match}\`, \`llm-{match,no-match}\`, \`schema-mismatch\`, \`error\`, or \`candidate-rejected\`
+- \`tags\` (e.g. tactic labels)
+- \`preFilter\`: \`{ kind: "matched" | "no-match" | "ambiguous" | "no-required-context" | "no-detect-method", feedback? }\` — what the deterministic layer returned. \`no-required-context\` = \`hasRequiredContext\` returned false or threw; \`no-detect-method\` = \`detectDeterministically\` threw; \`ambiguous\` = deferred to LLM.
+- \`llmVerdict\`: non-null only on \`llm-*\` phases
+- \`rejection\`: \`{ stage, reason }\`, present only on \`candidate-rejected\`. \`stage\` ∈ {\`static-scan\`, \`compile\`, \`import\`, \`shape\`, \`patch-apply\`}.
+- \`errorMessage\`: when a strategy method or the classify call threw. Set on \`phase=error\`, on \`deterministic-no-match\` when \`hasRequiredContext\` threw, and on \`llm-*\` when the AI call surfaced a provider error.
+
+When \`errorMessage\` or \`rejection\` is set, ignore \`predicted\`/\`expected\` on that row — the candidate didn't run cleanly, so per-row predictions are meaningless. Treat as load-failure signals.
+
+# Reading the phases — which layer to fix
+
+- \`deterministic-no-match\`: LLM never saw the row. If \`errorMessage\` is set, fix \`hasRequiredContext\`. Otherwise the deterministic layer is too aggressive — usually means \`detectDeterministically\` returned \`no-match\` where it should have returned \`ambiguous\`.
+- \`llm-{match,no-match}\` with wrong verdict: fix \`buildSystemPrompt\` or \`buildPrompt\`.
+- \`schema-mismatch\`: LLM replied but output didn't validate. Tighten the output instructions in the prompt.
+- \`error\`: a method threw. Read \`errorMessage\` and fix THAT specific failure. A throwing candidate is worse than a wrong one — fix runtime errors before chasing accuracy.
+- \`candidate-rejected\`: previous candidate failed to compile/load. Read \`rejection.reason\` and address THAT failure (e.g. \`Import 'tldts' does not resolve\` → drop the import; \`regex DoS risk\` → rewrite per the catastrophic-backtracking rules above; \`candidate file exceeds size budget\` → REMOVE code, don't shorten variable names; \`patch-apply\` → your previous edit's \`find\` was non-unique, add more context). Many rows usually carry the same reason for a wholesale failure — treat as a single signal.
+
+# Change discipline
+
+- Smallest viable change. If trajectories point at one regex, edit ONLY that regex. If they point at the LLM prompt, edit ONLY the prompt. If only one tactic class is failing, touch only the patterns and prompt sections targeting it.
+- Preserve unchanged code verbatim. Don't rewrite functions for taste, naming, or formatting — smaller diffs review faster, ship faster, revert easier.
+- Wholesale rewrites are acceptable ONLY when trajectories clearly show a structural problem (e.g. pre-filter and prompt both wrong on overlapping rows). State that case explicitly in \`reasoning\`.
+- Consolidate, don't accrete. Each iteration sees only failing rows, biasing toward addition. Resist. Before adding a regex/branch/clause, ask: does this REPLACE something or just ADD? Strong preference for replace. If you add 50 lines, try to remove 30. Two regexes capturing overlapping shapes → merge into one alternation. Three branches differing only in a constant → table-drive.
+- A successful iteration may produce a SMALLER file. That's a good outcome — don't pad to feel productive. Removing a regex that no longer pulls weight is just as valid as adding one that does.
+
+# Layer balance (the most common bias — read carefully)
+
+- Trajectories are an ADVERSARIAL sample: the orchestrator filters to FAILURES only. You never see the rows the candidate got right. That makes the deterministic layer look broken every iteration even when it's working well — the regex misses are the only thing that surface.
+- Resist the gradient. The deterministic layer is intentionally HIGH-PRECISION and LOW-RECALL — its job is to short-circuit obvious cases cheaply. Truly ambiguous rows fall through to the LLM; if the LLM then misclassifies them, the fix is in \`buildSystemPrompt\`/\`buildPrompt\`, not in piling more regex into \`detectDeterministically\`.
+- Cost asymmetry: deterministic checks are essentially free; every LLM call costs real money on every production trace. "Just defer to the LLM" is NOT a free move. A tight deterministic gate that short-circuits clear-cut cases — both clearly malicious AND clearly benign — beats a loose gate that punts everything to the LLM.
+- When a \`deterministic-no-match\` shows \`expected=true predicted=false\` on adversarial-but-not-obviously-malicious text, weigh both fixes honestly. Adding a regex risks false positives on benign rows you can't see; loosening the gate shifts cost to the LLM on every future trace that matches the loosened pattern. Neither is automatically correct — pick based on which is the genuine generalization.
+- A regex pile that grows every iteration without consolidation is a code smell — merge overlapping patterns. But a well-targeted regex that cheaply short-circuits a common shape is a cost win, not a smell.`
 
 const buildOperatorNotesSection = (notes: string | null): string => {
   if (notes === null || notes.trim().length === 0) return ""
@@ -222,7 +293,7 @@ const buildUserPrompt = (input: FlaggerProposerInput): string => {
   const baselinePct = ((currentBytes / input.baselineBytes) * 100).toFixed(0)
   const capPct = ((currentBytes / input.maxBytes) * 100).toFixed(0)
   const sections: string[] = [
-    `Target: flaggers:${input.queueSlug}`,
+    `Target: flaggers:${input.flaggerSlug}`,
     `Required export: ${input.exportName} (FlaggerStrategy)`,
     "",
     "Size budget:",
@@ -239,7 +310,7 @@ const buildUserPrompt = (input: FlaggerProposerInput): string => {
     "Trajectories:",
     formatTrajectories(input.trajectories, input.maxTrajectories),
     "",
-    "Return reasoning and a complete fileText per the schema. Remember: if the trajectories all point at the deterministic layer, consider whether the right fix is to LOOSEN it (defer to LLM) rather than to add patterns. The deterministic layer is a pre-filter, not the classifier.",
+    "Return reasoning and an ordered list of find/replace edits per the schema. Each edit operates on the result of the previous one. Remember: if the trajectories all point at the deterministic layer, consider whether the right fix is to LOOSEN it (defer to LLM) rather than to add patterns. The deterministic layer is a pre-filter, not the classifier.",
   ]
 
   return sections.join("\n")
@@ -249,44 +320,28 @@ export const callFlaggerProposer = (input: FlaggerProposerInput): Effect.Effect<
   Effect.gen(function* () {
     const ai = yield* AI
     input.onPhase?.("preparing")
-    const systemPrompt = buildSystemPrompt({ queueSlug: input.queueSlug, exportName: input.exportName })
+    const systemPrompt = buildSystemPrompt({
+      flaggerSlug: input.flaggerSlug,
+      exportName: input.exportName,
+    })
     const operatorNotes = buildOperatorNotesSection(input.operatorNotes)
     const userPrompt = buildUserPrompt(input)
 
     input.onPhase?.("calling")
-    // maxTokens is the *output* cap and on Anthropic it covers reasoning
-    // tokens + visible answer tokens combined. budgetTokens (~8K) caps
-    // thinking; the rewritten strategy file is up to ~4K tokens; the
-    // visible reasoning field is a few hundred. The platform's 8192
-    // default (ai-vercel/src/ai.ts) is too tight when thinking is on —
-    // reasoning saturates it and the SDK throws AI_NoOutputGeneratedError
-    // with no billable output. 32K leaves comfortable buffer above the
-    // worst case and stays well below Opus 4.6's 64K hard cap.
-    //
-    // We pass `reasoningConfig` via `providerOptions.bedrock` (the
-    // Bedrock-native knob from @ai-sdk/amazon-bedrock) instead of the
-    // abstract top-level `reasoning` field — see the FLAGGER_PROPOSER_MODEL
-    // docstring for the rationale (precise budget control + summarized
-    // display). Don't set both `reasoning` and `providerOptions.bedrock.
-    // reasoningConfig` — the SDK's level→budget translation can fight the
-    // explicit budget and the resolution depends on SDK version.
+
     const result = yield* ai.generate({
-      model: FLAGGER_PROPOSER_MODEL.model,
-      provider: FLAGGER_PROPOSER_MODEL.provider,
-      maxTokens: 16_000,
-      providerOptions: {
-        bedrock: {
-          reasoningConfig: FLAGGER_PROPOSER_MODEL.reasoningConfig,
-        },
-      },
+      model: input.proposerModel.model,
+      provider: input.proposerModel.provider,
       system: `${systemPrompt}${operatorNotes}`,
       prompt: userPrompt,
       schema: flaggerProposerOutputSchema,
+      maxTokens: 16_000,
+      ...resolveThinking(input.proposerModel),
     })
     input.onPhase?.("received")
 
     const usage = result.tokenUsage ?? { input: 0, output: 0 }
-    const cost = computeCost(FLAGGER_PROPOSER_MODEL.provider, FLAGGER_PROPOSER_MODEL.model, {
+    const cost = computeCost(input.proposerModel.provider, input.proposerModel.model, {
       input: usage.input ?? 0,
       output: usage.output ?? 0,
       reasoning: usage.reasoning ?? 0,
@@ -296,7 +351,10 @@ export const callFlaggerProposer = (input: FlaggerProposerInput): Effect.Effect<
       successes: 1,
     })
 
-    const fileText = result.object.fileText.replace(/^\s*```(?:ts|typescript)?\s*\n?/u, "").replace(/\n?```\s*$/u, "")
+    const fileText = yield* Effect.try({
+      try: () => applyEdits(input.currentFileText, result.object.edits),
+      catch: (cause: unknown) => new FlaggerProposerApplyError({ cause }),
+    })
     input.onPhase?.("hashing")
     const hash = yield* Effect.tryPromise({
       try: () => hashOptimizationCandidateText(fileText),
@@ -312,6 +370,7 @@ export const callFlaggerProposer = (input: FlaggerProposerInput): Effect.Effect<
     return {
       candidate,
       reasoning: result.object.reasoning,
+      edits: result.object.edits,
       costUsd: typeof cost.totalUsd === "number" ? cost.totalUsd : 0,
       inputTokens: usage.input ?? 0,
       outputTokens: usage.output ?? 0,
@@ -320,18 +379,37 @@ export const callFlaggerProposer = (input: FlaggerProposerInput): Effect.Effect<
   }).pipe(
     Effect.catchCause((cause: Cause.Cause<unknown>) =>
       Effect.sync(() => {
-        // The propose path swallows AI / hashing errors and surfaces them as
-        // a sentinel result (empty fileText + reasoning carrying the cause)
-        // so the retry loop in benchmark-optimize can detect the failure
+        // The propose path swallows AI / hashing / patch-apply errors and
+        // surfaces them as a sentinel result (empty fileText + reasoning
+        // carrying the cause) so the orchestrator can detect the failure
         // and feed it back to the next proposer attempt.
-        const reason = String(cause).slice(0, 500)
+        //
+        // Two prefix kinds the orchestrator pattern-matches on:
+        //   [patch-apply-error] — the model returned an edits list but at
+        //     least one find/replace failed to apply uniquely. Maps to
+        //     rejection.stage = "patch-apply" in the audit so the next
+        //     propose sees the failure in candidate-rejected trajectory
+        //     feedback and can pick better anchors next time.
+        //   [proposer-error] — anything else (Anthropic API failure, schema
+        //     validation, hashing). Maps to rejection.stage = "proposer-error".
+        //
+        // We pattern-match on the stringified cause rather than walking
+        // Effect's Cause structure: the tagged error's class name is
+        // preserved through `String(cause)` for both Fail and Die cases,
+        // and it's resilient to future Effect version changes that
+        // reshape the Cause iterator API.
+        const causeStr = String(cause)
+        const isApplyError = causeStr.includes("FlaggerProposerApplyError")
+        const reason = causeStr.slice(0, 500)
+        const prefix = isApplyError ? "[patch-apply-error]" : "[proposer-error]"
         return {
           candidate: {
             componentId: input.currentCandidate.componentId,
             text: "",
             hash: "",
           },
-          reasoning: `[proposer-error] ${reason}`,
+          reasoning: `${prefix} ${reason}`,
+          edits: [],
           costUsd: 0,
           inputTokens: 0,
           outputTokens: 0,

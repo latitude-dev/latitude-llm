@@ -1,4 +1,5 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"
+import { createAnthropic } from "@ai-sdk/anthropic"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
   AICredentialError,
@@ -195,6 +196,20 @@ const createBedrockProvider = (): Effect.Effect<
     return { bedrock, region }
   })
 
+const createAnthropicProvider = (): Effect.Effect<ReturnType<typeof createAnthropic>, AICredentialError> =>
+  Effect.gen(function* () {
+    const apiKey = yield* parseEnv("LAT_ANTHROPIC_API_KEY", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "anthropic",
+            message: "Anthropic is unavailable: set LAT_ANTHROPIC_API_KEY.",
+          }),
+      ),
+    )
+    return createAnthropic({ apiKey })
+  })
+
 /**
  * Creates a Vercel AI SDK language model for supported providers.
  * Failures are returned on the Effect error channel.
@@ -208,6 +223,9 @@ export const createProviderModel = (
       return createBedrockProvider().pipe(
         Effect.map(({ bedrock, region }) => bedrock(resolveBedrockModelId(model, region))),
       )
+
+    case "anthropic":
+      return createAnthropicProvider().pipe(Effect.map((anthropic) => anthropic(model)))
 
     default:
       return Effect.fail(

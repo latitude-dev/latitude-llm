@@ -1,7 +1,8 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { classifyTraceForFlaggerUseCase, FLAGGER_MODEL, type FlaggerStrategy } from "@domain/flaggers"
-import { mapJailbreakBench } from "../mappers/jailbreakbench.ts"
+import { mapJailbreaking } from "../mappers/jailbreak.ts"
+import { mapRefusal } from "../mappers/refusal.ts"
 import type { FixtureRow } from "../types.ts"
 import { fixtureRowToTraceDetail } from "./adapter.ts"
 import { BENCHMARK_ORG_ID, BENCHMARK_PROJECT_ID } from "./benchmark-identity.ts"
@@ -12,8 +13,8 @@ import { BENCHMARK_ORG_ID, BENCHMARK_PROJECT_ID } from "./benchmark-identity.ts"
 // `tools/ai-benchmarks/src/runner/targets.ts`.
 const WORKSPACE_ROOT = fileURLToPath(new URL("../../../..", import.meta.url))
 const FLAGGERS_PKG = join(WORKSPACE_ROOT, "packages/domain/flaggers")
-const flaggerStrategyFilePath = (queueSlug: string): string =>
-  join(FLAGGERS_PKG, "src/flagger-strategies", `${queueSlug}.ts`)
+const flaggerStrategyFilePath = (flaggerSlug: string): string =>
+  join(FLAGGERS_PKG, "src/flagger-strategies", `${flaggerSlug}.ts`)
 const FLAGGERS_PACKAGE_JSON = join(FLAGGERS_PKG, "package.json")
 
 /**
@@ -25,7 +26,7 @@ export interface TsModuleOptimizationConfig {
   readonly candidateKind: "ts-module"
   readonly strategyFilePath: string
   readonly packageJsonPath: string
-  readonly queueSlug: string
+  readonly flaggerSlug: string
   readonly exportName: string
 }
 
@@ -42,7 +43,7 @@ export interface TsModuleOptimizationConfig {
 export interface BenchmarkTarget {
   readonly id: string
   readonly mapper: () => Promise<FixtureRow[]>
-  readonly mapperSourcePath: string
+  readonly mapperSourcePaths: readonly string[]
   readonly classify: (
     row: FixtureRow,
     strategyOverride?: FlaggerStrategy,
@@ -59,7 +60,7 @@ export interface BenchmarkTarget {
 interface FlaggerDef {
   readonly flaggerSlug: string
   readonly mapper: () => Promise<FixtureRow[]>
-  readonly mapperSourcePath: string
+  readonly mapperSourcePaths: readonly string[]
 }
 
 // Flagger files export `<camelCaseSlug>Strategy`. e.g. `jailbreaking` →
@@ -70,10 +71,10 @@ const camelCaseSlug = (slug: string): string => slug.replace(/-([a-z])/g, (_, c:
 // the production flagger uses (`FLAGGER_MODEL`). If production
 // swaps the model, the benchmark reports update automatically — no manual
 // sync of provider / model ids.
-const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): BenchmarkTarget => ({
+const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePaths }: FlaggerDef): BenchmarkTarget => ({
   id: `flaggers:${flaggerSlug}`,
   mapper,
-  mapperSourcePath,
+  mapperSourcePaths,
   classify: (row, strategyOverride) =>
     classifyTraceForFlaggerUseCase({
       organizationId: BENCHMARK_ORG_ID,
@@ -89,7 +90,7 @@ const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): B
     candidateKind: "ts-module",
     strategyFilePath: flaggerStrategyFilePath(flaggerSlug),
     packageJsonPath: FLAGGERS_PACKAGE_JSON,
-    queueSlug: flaggerSlug,
+    flaggerSlug,
     exportName: `${camelCaseSlug(flaggerSlug)}Strategy`,
   },
 })
@@ -97,8 +98,19 @@ const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePath }: FlaggerDef): B
 export const TARGETS: readonly BenchmarkTarget[] = [
   flaggerTarget({
     flaggerSlug: "jailbreaking",
-    mapper: mapJailbreakBench,
-    mapperSourcePath: fileURLToPath(new URL("../mappers/jailbreakbench.ts", import.meta.url)),
+    mapper: mapJailbreaking,
+    mapperSourcePaths: [
+      fileURLToPath(new URL("../mappers/jailbreak.ts", import.meta.url)),
+      fileURLToPath(new URL("../mappers/jailbreak/jailbreakbench.ts", import.meta.url)),
+    ],
+  }),
+  flaggerTarget({
+    flaggerSlug: "refusal",
+    mapper: mapRefusal,
+    mapperSourcePaths: [
+      fileURLToPath(new URL("../mappers/refusal.ts", import.meta.url)),
+      fileURLToPath(new URL("../mappers/refusal/xstest.ts", import.meta.url)),
+    ],
   }),
 ]
 

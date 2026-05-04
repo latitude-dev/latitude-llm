@@ -1,3 +1,4 @@
+import type { FlaggerStrategy } from "@domain/flaggers"
 import { withAi } from "@platform/ai"
 import { Effect } from "effect"
 import type { FixtureRow } from "../types.ts"
@@ -37,10 +38,10 @@ interface ClassifyOutcome {
   readonly error: string | null
 }
 
-const classifyOne = (target: BenchmarkTarget, row: FixtureRow) =>
+const classifyOne = (target: BenchmarkTarget, row: FixtureRow, strategyOverride?: FlaggerStrategy) =>
   Effect.gen(function* () {
     const meter = createTokenMeter()
-    const outcome = yield* target.classify(row).pipe(
+    const outcome = yield* target.classify(row, strategyOverride).pipe(
       withAi(meteringAIGenerateLive(meter)),
       Effect.match({
         onFailure: (err): ClassifyOutcome => ({
@@ -85,6 +86,15 @@ function truncate(s: string, max: number): string {
 interface RunOptions {
   readonly concurrency?: number
   readonly onProgress?: (done: number, total: number) => void
+  /**
+   * If set, every row's classify call uses this in-memory strategy instead
+   * of the one looked up from the static flagger registry. Used by the
+   * optimizer's pre-adoption validation pass so a freshly-proposed winner
+   * (whose source isn't yet on disk, or whose source is on disk but the
+   * Node module cache still holds the previous version) gets evaluated
+   * against the actual candidate text rather than the stale registry.
+   */
+  readonly strategyOverride?: FlaggerStrategy
 }
 
 /**
@@ -103,7 +113,7 @@ export const runTarget = (target: BenchmarkTarget, rows: readonly FixtureRow[], 
     let done = 0
     const total = rows.length
     const tickOne = (row: FixtureRow) =>
-      classifyOne(target, row).pipe(
+      classifyOne(target, row, options.strategyOverride).pipe(
         Effect.tap(() =>
           Effect.sync(() => {
             done++

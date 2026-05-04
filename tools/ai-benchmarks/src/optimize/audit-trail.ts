@@ -84,6 +84,19 @@ export interface SerializedAuditTrail {
     readonly stagnation?: number
   } | null
   readonly stopReason: OptimizationStopReason | null
+  /**
+   * Total main-loop iterations the optimizer engine actually entered.
+   * For GEPA this includes iterations skipped before any propose call
+   * (`skip_perfect_score` path, merge-only iterations). Null when the
+   * engine did not report it (older crashes, etc.).
+   */
+  readonly engineTotalIterations: number | null
+  /**
+   * Number of accepted candidates produced from a propose call. Together
+   * with `engineTotalIterations` this lets reviewers see how many
+   * iterations were silently skipped by the engine.
+   */
+  readonly engineProposeCalls: number | null
   readonly sampleSize: number | null
   readonly seed: number
   readonly operatorNotes: string | null

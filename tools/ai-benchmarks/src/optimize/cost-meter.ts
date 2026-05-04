@@ -26,21 +26,37 @@ export interface CostBreakdown {
   readonly proposerUsd: number
   readonly judgeUsd: number
   readonly totalUsd: number
+  /**
+   * Number of judge-LLM row evaluations counted (i.e. addJudgeUsd was
+   * called with usd > 0). Deterministic-phase evals are excluded since
+   * they don't add to the meter. Used downstream to compute an average
+   * judge-eval cost for the silent-skip estimate in the banner.
+   */
+  readonly judgeEvalCount: number
 }
 
 export const createCostMeter = (): CostMeterShape => {
   let proposer = 0
   let judge = 0
+  let judgeEvalCount = 0
   return {
     addProposerUsd(usd) {
       if (Number.isFinite(usd) && usd > 0) proposer += usd
     },
     addJudgeUsd(usd) {
-      if (Number.isFinite(usd) && usd > 0) judge += usd
+      if (Number.isFinite(usd) && usd > 0) {
+        judge += usd
+        judgeEvalCount += 1
+      }
     },
     proposerTotalUsd: () => proposer,
     judgeTotalUsd: () => judge,
     totalUsd: () => proposer + judge,
-    snapshot: () => ({ proposerUsd: proposer, judgeUsd: judge, totalUsd: proposer + judge }),
+    snapshot: () => ({
+      proposerUsd: proposer,
+      judgeUsd: judge,
+      totalUsd: proposer + judge,
+      judgeEvalCount,
+    }),
   }
 }

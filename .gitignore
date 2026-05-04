@@ -27,6 +27,10 @@ node_modules
 **/.pnpm-store
 *.*-E
 
+# Benchmark optimizer temp candidate files (deleted after import; this is a
+# crash-recovery safety net so a leftover file is never accidentally tracked)
+# **/.candidate-*.mjs
+
 # Logs and runtime files
 *.log
 *.pid
