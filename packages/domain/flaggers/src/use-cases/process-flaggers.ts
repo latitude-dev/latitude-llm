@@ -207,7 +207,7 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
 
     switch (result.kind) {
       case "matched":
-        return yield* handleMatched(input, result.feedback)
+        return yield* handleMatched(input, result.feedback, result.messageIndex)
       case "no-match":
         return yield* handleNoMatch(input, flagger, strategy)
       case "ambiguous":
@@ -215,7 +215,7 @@ const processOneStrategy = (input: ProcessOneStrategyInput) =>
     }
   })
 
-const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
+const handleMatched = (input: ProcessOneStrategyInput, feedback: string, messageIndex?: number) =>
   Effect.gen(function* () {
     const simulationId = input.trace.simulationId === "" ? null : input.trace.simulationId
 
@@ -225,6 +225,7 @@ const handleMatched = (input: ProcessOneStrategyInput, feedback: string) =>
       sessionId: input.trace.sessionId,
       simulationId,
       feedback,
+      messageIndex,
     })
 
     return { slug: input.slug, action: "matched-issue" } satisfies StrategyDecision

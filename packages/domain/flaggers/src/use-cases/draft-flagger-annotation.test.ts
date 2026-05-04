@@ -57,14 +57,14 @@ const makeTraceDetail = (): TraceDetail => ({
 })
 
 describe("draftFlaggerAnnotationUseCase", () => {
-  it("generates a scoreId, returns it in the output, and forwards it to the annotator's telemetry", async () => {
+  it("generates a scoreId, returns messageIndex and other fields in the output, and forwards them to the annotator's telemetry", async () => {
     const { repository: traceRepo } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(makeTraceDetail()),
     })
     const { calls, layer: aiLayer } = createFakeAI({
       generate: <T>() =>
         Effect.succeed({
-          object: { feedback: "Draft feedback" } as T,
+          object: { feedback: "Draft feedback", messageIndex: 0 } as T,
           tokens: 10,
           duration: 100,
         }),
@@ -94,6 +94,7 @@ describe("draftFlaggerAnnotationUseCase", () => {
     expect(result.traceId).toBe(TRACE_ID)
     expect(result.sessionId).toBe("session")
     expect(result.simulationId).toBeNull()
+    expect(result.messageIndex).toBe(0)
 
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].telemetry).toMatchObject({

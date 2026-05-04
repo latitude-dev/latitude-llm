@@ -19,6 +19,8 @@ export const emptyResponseStrategy: FlaggerStrategy = {
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
     const result = detectEmptyResponseFlagger(trace)
-    return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "no-match" }
+    return result.matched
+      ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
+      : { kind: "no-match" }
   },
 }

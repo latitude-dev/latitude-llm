@@ -26,6 +26,7 @@ export interface RunFlaggerAnnotatorResult {
   readonly traceCreatedAt: string
   readonly sessionId: string | null
   readonly simulationId: string | null
+  readonly messageIndex?: number | undefined
 }
 
 export type RunFlaggerAnnotatorError = RepositoryError | AIError | AICredentialError
@@ -70,7 +71,7 @@ Grounding rules:
 
 Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep the feedback only as long as it needs to be — no padding, no restatement, no meta-commentary. The original context and nuance must still come through; simpler wording is the goal, not less information.
 
-Respond with structured data containing a single "feedback" field with your annotation text.
+Respond with structured data containing a "feedback" field with your annotation text, and an optional "messageIndex" field (integer) pointing to the specific transcript line where the issue is most evident. Each transcript line is prefixed with its message index like \`[m12 assistant]:\`. Only specify messageIndex when you can confidently identify the line — it is better to omit it than to guess. When the transcript shows a toolcall or toolresult line that is the direct evidence, prefer its index.
 `.trim()
 
 const SYSTEM_PROMPT_PREVIEW_MAX_LINES = 4
@@ -164,7 +165,8 @@ function responseIndicatesFailure(response: unknown): boolean {
 const formatConversationForAnnotator = (messages: readonly { role: string; parts: unknown[] }[]): string => {
   const lines: string[] = []
 
-  for (const message of messages) {
+  for (let msgIdx = 0; msgIdx < messages.length; msgIdx++) {
+    const message = messages[msgIdx]!
     if (message.role === "system") {
       const systemText = message.parts
         .flatMap((part) => {
@@ -175,7 +177,7 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
         .join("\n")
 
       const preview = cropSystemPromptPreview(systemText)
-      if (preview) lines.push(`[system]: ${preview}`)
+      if (preview) lines.push(`[m${msgIdx} system]: ${preview}`)
       continue
     }
 
@@ -185,7 +187,7 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
       if (message.role !== "user" && message.role !== "assistant") return
 
       const body = textParts.join("\n").trim()
-      if (body) lines.push(`[${message.role}]: ${body}`)
+      if (body) lines.push(`[m${msgIdx} ${message.role}]: ${body}`)
       textParts.length = 0
     }
 
@@ -202,14 +204,18 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
 
       if (part.type === "tool_call" || part.type === "tool-call") {
         flushText()
-        lines.push(`[toolcall]: ${toNonEmptyString(part.name) ?? toNonEmptyString(part.toolName) ?? "<unknown tool>"}`)
+        const toolName = toNonEmptyString(part.name) ?? toNonEmptyString(part.toolName) ?? "<unknown tool>"
+        lines.push(`[m${msgIdx} toolcall]: ${toolName}`)
         continue
       }
 
       if (part.type === "tool_call_response" || part.type === "tool-result") {
         flushText()
         const response = "response" in part ? part.response : part.result
-        lines.push(`[toolresult]: ${responseIndicatesFailure(response) ? "error" : "ok"}`)
+        const status = responseIndicatesFailure(response) ? "error" : "ok"
+        if (message.role === "tool" || message.role === "function") {
+          lines.push(`[m${msgIdx} toolresult]: ${status}`)
+        }
       }
     }
 
@@ -290,6 +296,7 @@ Return structured data with a single "feedback" field per the system instruction
     traceCreatedAt: input.trace.startTime.toISOString(),
     sessionId: input.trace.sessionId,
     simulationId: input.trace.simulationId === "" ? null : input.trace.simulationId,
+    messageIndex: result.object.messageIndex,
   }
 })
 

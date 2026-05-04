@@ -10,6 +10,7 @@ interface UpsertFlaggerAnnotationScoreInput {
   readonly sessionId: string | null
   readonly simulationId: string | null
   readonly feedback: string
+  readonly messageIndex?: number | undefined
 }
 
 type UpsertFlaggerAnnotationScoreResult =
@@ -50,7 +51,10 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
       value: FLAGGER_DRAFT_DEFAULTS.value,
       passed: FLAGGER_DRAFT_DEFAULTS.passed,
       feedback: input.feedback,
-      metadata: { rawFeedback: input.feedback },
+      metadata: {
+        rawFeedback: input.feedback,
+        ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
+      },
       error: null,
       draftedAt: null,
     })
