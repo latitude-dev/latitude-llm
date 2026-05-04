@@ -326,16 +326,18 @@ function SdkIntegrationInstructions({
   providerDisplayName,
   lang,
   slugForSnippets,
+  defaultApiKeyToken,
 }: {
   readonly selectedProviderId: OnboardingProviderId
   readonly providerDisplayName: string
   readonly lang: SdkLanguage
   readonly slugForSnippets: string
+  readonly defaultApiKeyToken: string | null
 }) {
   const [tsPm, setTsPm] = useState<TsPackageManager>("npm")
   const [pyPm, setPyPm] = useState<PyPackageManager>("pip")
 
-  const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets)
+  const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets, defaultApiKeyToken)
 
   const isTs = lang === "typescript"
   const latInstall = isTs ? getLatitudeTelemetryTsInstallCommand(tsPm) : getLatitudeTelemetryPyInstallCommand(pyPm)
@@ -383,7 +385,7 @@ function SdkIntegrationInstructions({
           Set these in your <code className="text-xs">.env</code> or runtime environment. Use a Latitude API key from
           organization settings.
         </Text.H5>
-        <CodeBlock value={getEnvBlock(selectedProviderId, slugForSnippets)} copyable />
+        <CodeBlock value={getEnvBlock(selectedProviderId, slugForSnippets, defaultApiKeyToken)} copyable />
       </div>
 
       {snippet ? (
@@ -434,10 +436,10 @@ export function OnboardingFlow({
   const codingAgentPrompt = useMemo(
     () =>
       getCodingAgentTelemetryPrompt({
-        projectId,
+        apiKey: defaultApiKeyToken,
         projectSlug: slugForSnippets,
       }),
-    [projectId, slugForSnippets],
+    [defaultApiKeyToken, slugForSnippets],
   )
 
   const integrationTabOptions = useMemo(() => {
@@ -625,7 +627,6 @@ export function OnboardingFlow({
                   disabled={stackChoice === null}
                   onClick={() => {
                     if (stackChoice === null) return
-                    if (stackChoice === "production-agent") setTelemetrySetupMode("manual")
                     setStep("telemetry")
                   }}
                 >
@@ -671,7 +672,7 @@ export function OnboardingFlow({
                     Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set
                     up Latitude telemetry in your project.
                   </Text.H5>
-                  <CodeBlock value={codingAgentPrompt} copyable />
+                  <CodeBlock value={codingAgentPrompt} copyable wrapLines={false} />
                 </div>
               ) : (
                 <>
@@ -717,10 +718,11 @@ export function OnboardingFlow({
                           <span className="break-all">https://ingest.latitude.so/v1/traces</span>
                         </div>
                         <div>
-                          <span className="text-foreground">Authorization:</span> Bearer &lt;api-key&gt;
+                          <span className="text-foreground">Authorization:</span> Bearer{" "}
+                          {defaultApiKeyToken ?? "<api-key>"}
                         </div>
                         <div>
-                          <span className="text-foreground">X-Latitude-Project:</span> &lt;project-slug&gt;
+                          <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
                         </div>
                         <div>
                           <span className="text-foreground">Content-Type:</span> application/json or
@@ -732,11 +734,19 @@ export function OnboardingFlow({
                         <div className="flex flex-col gap-2">
                           <Text.H5M>Verify with cURL</Text.H5M>
                           <Text.H5 color="foregroundMuted">
-                            POST a minimal OTLP JSON trace. Replace <code className="text-xs">YOUR_API_KEY</code> with a
-                            Latitude API key from Settings. Expect <code className="text-xs">202</code> and an empty
-                            JSON body on success. Project slug is prefilled on the header line.
+                            POST a minimal OTLP JSON trace.{" "}
+                            {defaultApiKeyToken ? (
+                              "The authorization header is prefilled with your default Latitude API key."
+                            ) : (
+                              <>
+                                Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from
+                                Settings.
+                              </>
+                            )}{" "}
+                            Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug
+                            is prefilled on the header line.
                           </Text.H5>
-                          <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets)} copyable />
+                          <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -744,7 +754,11 @@ export function OnboardingFlow({
                           <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
                           <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
                           <CodeBlock
-                            value={getOtelExporterLanguageSnippet(otelExporterLanguage, slugForSnippets)}
+                            value={getOtelExporterLanguageSnippet(
+                              otelExporterLanguage,
+                              slugForSnippets,
+                              defaultApiKeyToken,
+                            )}
                             copyable
                           />
                         </div>
@@ -756,6 +770,7 @@ export function OnboardingFlow({
                       providerDisplayName={selectedProvider.name}
                       lang={integrationPanel === "typescript" ? "typescript" : "python"}
                       slugForSnippets={slugForSnippets}
+                      defaultApiKeyToken={defaultApiKeyToken}
                     />
                   )}
                 </>

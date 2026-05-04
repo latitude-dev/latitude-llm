@@ -40,6 +40,12 @@ export {
   cleanupUserMembershipsUseCase,
 } from "./use-cases/cleanup-user-memberships.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
+export {
+  type ProvisionOrganizationWorkspaceError,
+  type ProvisionOrganizationWorkspaceInput,
+  type ProvisionOrganizationWorkspaceResult,
+  provisionOrganizationWorkspaceUseCase,
+} from "./use-cases/provision-organization-workspace.ts"
 export { type RemoveMemberInput, removeMemberUseCase } from "./use-cases/remove-member.ts"
 export {
   type TransferOwnershipInput,

@@ -173,57 +173,101 @@ export function getProviderSdkPyInstallCommand(id: OnboardingProviderId, pm: PyP
   return pkgs ? pyInstallPackages(pm, pkgs) : null
 }
 
-export function getOnboardingSnippet(id: OnboardingProviderId, lang: SdkLanguage, _projectSlug: string): string | null {
+function injectLatitudeSdkValues(snippet: string, projectSlug: string, apiKey: string | null): string {
+  let resolved = snippet
+    .replaceAll("process.env.LATITUDE_PROJECT_SLUG!", JSON.stringify(projectSlug))
+    .replaceAll('os.environ["LATITUDE_PROJECT_SLUG"]', JSON.stringify(projectSlug))
+
+  if (apiKey) {
+    resolved = resolved
+      .replaceAll("process.env.LATITUDE_API_KEY!", JSON.stringify(apiKey))
+      .replaceAll('os.environ["LATITUDE_API_KEY"]', JSON.stringify(apiKey))
+  }
+
+  return resolved
+}
+
+export function getOnboardingSnippet(
+  id: OnboardingProviderId,
+  lang: SdkLanguage,
+  projectSlug: string,
+  apiKey: string | null,
+): string | null {
   const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[id]
   if (lang === "typescript" && !cfg.supportsTypescript) return null
   if (lang === "python" && !cfg.supportsPython) return null
 
+  let snippet: string | null
+
   switch (id) {
     case "openai":
-      return lang === "typescript" ? snippetTsOpenai() : snippetPyOpenai()
+      snippet = lang === "typescript" ? snippetTsOpenai() : snippetPyOpenai()
+      break
     case "anthropic":
-      return lang === "typescript" ? snippetTsAnthropic() : snippetPyAnthropic()
+      snippet = lang === "typescript" ? snippetTsAnthropic() : snippetPyAnthropic()
+      break
     case "gemini":
-      return lang === "python" ? snippetPyGemini() : null
+      snippet = lang === "python" ? snippetPyGemini() : null
+      break
     case "bedrock":
-      return lang === "typescript" ? snippetTsBedrock() : snippetPyBedrock()
+      snippet = lang === "typescript" ? snippetTsBedrock() : snippetPyBedrock()
+      break
     case "cohere":
-      return lang === "typescript" ? snippetTsCohere() : snippetPyCohere()
+      snippet = lang === "typescript" ? snippetTsCohere() : snippetPyCohere()
+      break
     case "togetherai":
-      return lang === "typescript" ? snippetTsTogether() : snippetPyTogether()
+      snippet = lang === "typescript" ? snippetTsTogether() : snippetPyTogether()
+      break
     case "vertexai":
-      return lang === "typescript" ? snippetTsVertex() : snippetPyVertex()
+      snippet = lang === "typescript" ? snippetTsVertex() : snippetPyVertex()
+      break
     case "aiplatform":
-      return lang === "typescript" ? snippetTsAiplatform() : snippetPyAiplatform()
+      snippet = lang === "typescript" ? snippetTsAiplatform() : snippetPyAiplatform()
+      break
     case "azure-openai":
-      return lang === "typescript" ? snippetTsAzureOpenai() : snippetPyAzureOpenai()
+      snippet = lang === "typescript" ? snippetTsAzureOpenai() : snippetPyAzureOpenai()
+      break
     case "groq":
-      return lang === "python" ? snippetPyGroq() : null
+      snippet = lang === "python" ? snippetPyGroq() : null
+      break
     case "mistral":
-      return lang === "python" ? snippetPyMistral() : null
+      snippet = lang === "python" ? snippetPyMistral() : null
+      break
     case "ollama":
-      return lang === "python" ? snippetPyOllama() : null
+      snippet = lang === "python" ? snippetPyOllama() : null
+      break
     case "litellm":
-      return lang === "python" ? snippetPyLitellm() : null
+      snippet = lang === "python" ? snippetPyLitellm() : null
+      break
     case "replicate":
-      return lang === "python" ? snippetPyReplicate() : null
+      snippet = lang === "python" ? snippetPyReplicate() : null
+      break
     case "sagemaker":
-      return lang === "python" ? snippetPySagemaker() : null
+      snippet = lang === "python" ? snippetPySagemaker() : null
+      break
     case "watsonx":
-      return lang === "python" ? snippetPyWatsonx() : null
+      snippet = lang === "python" ? snippetPyWatsonx() : null
+      break
     case "aleph-alpha":
-      return lang === "python" ? snippetPyAlephAlpha() : null
+      snippet = lang === "python" ? snippetPyAlephAlpha() : null
+      break
     case "transformers":
-      return lang === "python" ? snippetPyTransformers() : null
+      snippet = lang === "python" ? snippetPyTransformers() : null
+      break
     case "vercel-ai-sdk":
-      return snippetTsVercelAiSdk()
+      snippet = snippetTsVercelAiSdk()
+      break
     case "langchain":
-      return lang === "typescript" ? snippetTsLangchain() : snippetPyLangchain()
+      snippet = lang === "typescript" ? snippetTsLangchain() : snippetPyLangchain()
+      break
     case "llamaindex":
-      return lang === "typescript" ? snippetTsLlamaindex() : snippetPyLlamaindex()
+      snippet = lang === "typescript" ? snippetTsLlamaindex() : snippetPyLlamaindex()
+      break
     default:
-      return null
+      snippet = null
   }
+
+  return snippet ? injectLatitudeSdkValues(snippet, projectSlug, apiKey) : null
 }
 
 function snippetTsOpenai() {
@@ -1167,9 +1211,9 @@ WATSONX_URL=https://us-south.ml.cloud.ibm.com`
 }
 
 /** Latitude SDK + provider keys for the TypeScript / Python tabs (not the OTLP exporter page). */
-export function getEnvBlock(id: OnboardingProviderId, projectSlug: string): string {
+export function getEnvBlock(id: OnboardingProviderId, projectSlug: string, apiKey: string | null): string {
   const slugLine = `LATITUDE_PROJECT_SLUG=${projectSlug}`
-  const commonSdk = `LATITUDE_API_KEY=your-api-key
+  const commonSdk = `LATITUDE_API_KEY=${apiKey ?? "your-api-key"}
 ${slugLine}`
 
   const extra = sdkEnvExtras(id)
@@ -1195,9 +1239,9 @@ export const OTEL_EXPORTER_LANGUAGE_OPTIONS: ReadonlyArray<{
 /**
  * Curl example from the OTLP exporter docs (`/telemetry/otel-exporter`); project slug prefilled on the header line.
  */
-export function getOtelCurlVerifySnippet(projectSlug: string): string {
+export function getOtelCurlVerifySnippet(projectSlug: string, apiKey: string | null): string {
   return `curl -X POST ${OTLP_TRACES_ENDPOINT} \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Authorization: Bearer ${apiKey ?? "YOUR_API_KEY"}" \\
   -H "X-Latitude-Project: ${projectSlug}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1227,8 +1271,9 @@ export function getOtelCurlVerifySnippet(projectSlug: string): string {
   }'`
 }
 
-function goOtelSnippet(projectSlug: string): string {
+function goOtelSnippet(projectSlug: string, apiKey: string | null): string {
   const slug = JSON.stringify(projectSlug)
+  const authHeader = apiKey ? JSON.stringify(`Bearer ${apiKey}`) : '"Bearer " + apiKey'
   return `import (
     "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
     "go.opentelemetry.io/otel/sdk/trace"
@@ -1237,7 +1282,7 @@ function goOtelSnippet(projectSlug: string): string {
 exporter, err := otlptracehttp.New(ctx,
     otlptracehttp.WithEndpointURL("${OTLP_TRACES_ENDPOINT}"),
     otlptracehttp.WithHeaders(map[string]string{
-        "Authorization":      "Bearer " + apiKey,
+        "Authorization":      ${authHeader},
         "X-Latitude-Project":   ${slug},
     }),
 )
@@ -1246,15 +1291,16 @@ provider := trace.NewTracerProvider(trace.WithBatcher(exporter))
 `
 }
 
-function javaOtelSnippet(projectSlug: string): string {
+function javaOtelSnippet(projectSlug: string, apiKey: string | null): string {
   const slug = JSON.stringify(projectSlug)
+  const authHeader = apiKey ? JSON.stringify(`Bearer ${apiKey}`) : '"Bearer " + apiKey'
   return `import io.opentelemetry.exporter.otlp.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
 OtlpHttpSpanExporter exporter = OtlpHttpSpanExporter.builder()
     .setEndpoint("${OTLP_TRACES_ENDPOINT}")
-    .addHeader("Authorization", "Bearer " + apiKey)
+    .addHeader("Authorization", ${authHeader})
     .addHeader("X-Latitude-Project", ${slug})
     .build();
 
@@ -1264,12 +1310,13 @@ SdkTracerProvider provider = SdkTracerProvider.builder()
 `
 }
 
-function rubyOtelSnippet(projectSlug: string): string {
+function rubyOtelSnippet(projectSlug: string, apiKey: string | null): string {
+  const authHeader = apiKey ?? "#{api_key}"
   return `require "opentelemetry-sdk"
 require "opentelemetry-exporter-otlp"
 
 ENV["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = "${OTLP_TRACES_ENDPOINT}"
-ENV["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = "Authorization=Bearer #{api_key},X-Latitude-Project=${projectSlug}"
+ENV["OTEL_EXPORTER_OTLP_TRACES_HEADERS"] = "Authorization=Bearer ${authHeader},X-Latitude-Project=${projectSlug}"
 
 OpenTelemetry::SDK.configure do |c|
   c.add_span_processor(
@@ -1281,7 +1328,10 @@ end
 `
 }
 
-function dotnetOtelSnippet(projectSlug: string): string {
+function dotnetOtelSnippet(projectSlug: string, apiKey: string | null): string {
+  const authHeader = apiKey
+    ? JSON.stringify(`Authorization=Bearer ${apiKey},X-Latitude-Project=${projectSlug}`)
+    : `"Authorization=Bearer " + apiKey + ",X-Latitude-Project=${projectSlug}"`
   return `using OpenTelemetry;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Exporter;
@@ -1290,37 +1340,41 @@ var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddOtlpExporter(opt =>
     {
         opt.Endpoint = new Uri("${OTLP_TRACES_ENDPOINT}");
-        opt.Headers = "Authorization=Bearer " + apiKey + ",X-Latitude-Project=${projectSlug}";
+        opt.Headers = ${authHeader};
         opt.Protocol = OtlpExportProtocol.HttpProtobuf;
     })
     .Build();
 `
 }
 
-export function getOtelExporterLanguageSnippet(id: OtelExporterLanguageId, projectSlug: string): string {
+export function getOtelExporterLanguageSnippet(
+  id: OtelExporterLanguageId,
+  projectSlug: string,
+  apiKey: string | null,
+): string {
   switch (id) {
     case "go":
-      return goOtelSnippet(projectSlug)
+      return goOtelSnippet(projectSlug, apiKey)
     case "java":
-      return javaOtelSnippet(projectSlug)
+      return javaOtelSnippet(projectSlug, apiKey)
     case "ruby":
-      return rubyOtelSnippet(projectSlug)
+      return rubyOtelSnippet(projectSlug, apiKey)
     case "dotnet":
-      return dotnetOtelSnippet(projectSlug)
+      return dotnetOtelSnippet(projectSlug, apiKey)
   }
 }
 
 /**
- * Short paste for coding agents: public telemetry docs, concrete project id (and slug for env), repo-aware setup.
+ * Short paste for coding agents: public telemetry docs, concrete project slug, repo-aware setup.
  */
 export function getCodingAgentTelemetryPrompt(params: {
-  readonly projectId: string
   readonly projectSlug: string
+  readonly apiKey: string | null
 }): string {
-  const { projectId, projectSlug } = params
+  const { projectSlug, apiKey } = params
   return [
     `Read ${LATITUDE_DOCS_TELEMETRY_OVERVIEW} and ${LATITUDE_DOCS_TELEMETRY_OTEL} first, then implement Latitude telemetry in this repository per the documentation (env vars, TypeScript/Python SDK for your LLM provider, or OTLP to ${OTLP_TRACES_ENDPOINT}).`,
-    `Target this Latitude project: id \`${projectId}\`, slug \`${projectSlug}\` — set LATITUDE_PROJECT_SLUG (and X-Latitude-Project for OTLP) accordingly. Use a Latitude API key from Settings; never commit secrets.`,
+    `Target this Latitude project slug: \`${projectSlug}\` — set LATITUDE_PROJECT_SLUG (and X-Latitude-Project for OTLP) accordingly.${apiKey ? ` Use this Latitude API key: \`${apiKey}\`.` : " Use a Latitude API key from Settings."} Never commit secrets.`,
   ].join("\n")
 }
 

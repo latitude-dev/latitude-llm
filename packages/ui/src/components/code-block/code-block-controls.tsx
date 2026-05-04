@@ -57,7 +57,7 @@ export function CodeBlockControls({ content, language, copyable = true, expandab
 
   return (
     <>
-      <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5">
+      <div className="pointer-events-none absolute top-0 right-0 z-10 flex items-center gap-0.5 rounded-tr-md rounded-bl-lg bg-muted p-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         {copyable ? <CopyButton value={content} tooltip="Copy" /> : null}
         {expandable ? (
           <Tooltip
@@ -82,8 +82,8 @@ export function CodeBlockControls({ content, language, copyable = true, expandab
           scrollable={false}
           title={titleFor(language, isJson)}
         >
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-muted">
-            <div className="absolute top-1 right-1 z-10">
+          <div className="group relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-muted">
+            <div className="pointer-events-none absolute top-0 right-0 z-10 rounded-tr-lg rounded-bl-lg bg-muted p-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
               <CopyButton value={prettified} tooltip="Copy" />
             </div>
             <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-4 pr-12 text-xs">

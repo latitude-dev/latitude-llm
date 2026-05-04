@@ -19,8 +19,8 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
   staleTime: Infinity,
   remountDeps: () => "authenticated-layout",
-  // Session + org bootstrap: empty orgs get a default project and redirect to
-  // onboarding here (server fn), instead of a client `useEffect` on every page.
+  // Session + org bootstrap. New organizations are provisioned during creation,
+  // but this fallback still repairs older orgs that somehow have no projects.
   loader: async ({ location }) => {
     const session = await getSession()
     if (!session) {
