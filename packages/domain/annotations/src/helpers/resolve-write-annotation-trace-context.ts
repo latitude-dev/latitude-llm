@@ -7,13 +7,13 @@ import {
   type RepositoryError,
   type TraceId,
 } from "@domain/shared"
-import { resolveLastLlmCompletionSpanId, SpanRepository, TraceRepository } from "@domain/spans"
+import { resolveAnnotationSpanIdForWrite, SpanRepository, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { resolveAnnotationAnchorText } from "./resolve-annotation-anchor-text.ts"
 
 /**
  * Loads trace (and optionally spans) for annotation writes: anchor validation, session/span resolution.
- * Fails if the trace is missing when required, or if span resolution is required but no LLM span exists.
+ * Fails if the trace is missing when required.
  */
 export const resolveWriteAnnotationTraceContext = (input: {
   readonly organizationId: OrganizationId
@@ -69,11 +69,25 @@ export const resolveWriteAnnotationTraceContext = (input: {
 
     if (needsSpanResolution) {
       const spanRepository = yield* SpanRepository
-      const spans = yield* spanRepository.listByTraceId({
+      const llmSpans = yield* spanRepository.listByTraceId({
         organizationId: input.organizationId,
         traceId: input.traceId,
       })
-      const resolvedSpanId = resolveLastLlmCompletionSpanId(spans)
+      const startTimeFrom = new Date(detail.startTime.getTime() - 60 * 1000)
+      const startTimeTo = new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000)
+      const spanMessages = yield* spanRepository.findMessagesForTrace({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        traceId: input.traceId,
+        startTimeFrom,
+        startTimeTo,
+      })
+      const resolvedSpanId = resolveAnnotationSpanIdForWrite({
+        allMessages: detail.allMessages,
+        spanMessages,
+        llmSpans,
+        anchor: input.anchor,
+      })
       if (resolvedSpanId) spanId = resolvedSpanId
     }
 

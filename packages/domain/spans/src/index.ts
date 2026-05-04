@@ -36,6 +36,10 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export {
+  resolveAnnotationSpanIdForWrite,
+  type AnnotationWriteSpanAnchor,
+} from "./helpers/resolve-annotation-span-id-for-write.ts"
+export {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,
   mergeTraceHistogramTimeFilters,

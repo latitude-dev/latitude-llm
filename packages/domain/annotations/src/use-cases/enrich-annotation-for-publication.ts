@@ -16,7 +16,7 @@ import {
   type ScoreId,
   TraceId,
 } from "@domain/shared"
-import { resolveLastLlmCompletionSpanId, SpanRepository, TraceRepository } from "@domain/spans"
+import { resolveAnnotationSpanIdForWrite, SpanRepository, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
@@ -155,11 +155,26 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
       }
       if (resolvedSpanId === null) {
         const spanRepository = yield* SpanRepository
-        const spans = yield* spanRepository.listByTraceId({
+        const llmSpans = yield* spanRepository.listByTraceId({
           organizationId: OrganizationId(annotationScore.organizationId),
           traceId: TraceId(annotationScore.traceId),
         })
-        resolvedSpanId = resolveLastLlmCompletionSpanId(spans) ?? null
+        const startTimeFrom = new Date(detail.startTime.getTime() - 60 * 1000)
+        const startTimeTo = new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000)
+        const spanMessages = yield* spanRepository.findMessagesForTrace({
+          organizationId: OrganizationId(annotationScore.organizationId),
+          projectId: ProjectId(annotationScore.projectId),
+          traceId: TraceId(annotationScore.traceId),
+          startTimeFrom,
+          startTimeTo,
+        })
+        resolvedSpanId =
+          resolveAnnotationSpanIdForWrite({
+            allMessages: detail.allMessages,
+            spanMessages,
+            llmSpans,
+            anchor: metadata,
+          }) ?? null
       }
 
       if (detail.allMessages.length > 0) {
