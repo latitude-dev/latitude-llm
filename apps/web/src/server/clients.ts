@@ -156,6 +156,7 @@ export const getBetterAuth = () => {
       : [webUrl]
 
     const captchaSecretKey = Effect.runSync(parseEnvOptional("LAT_TURNSTILE_SECRET_KEY", "string"))
+    const allowedEmailDomain = Effect.runSync(parseEnvOptional("LAT_ALLOWED_EMAIL_DOMAIN", "string"))
     const outboxWriter = getOutboxWriter()
 
     betterAuthInstance = createBetterAuth({
@@ -165,6 +166,7 @@ export const getBetterAuth = () => {
       basePath: "/api/auth",
       trustedOrigins,
       ...(captchaSecretKey ? { captchaSecretKey } : {}),
+      ...(allowedEmailDomain ? { allowedEmailDomain } : {}),
       extraPlugins: [tanstackStartCookies()],
       onUserCreated: async (user) => {
         await Effect.runPromise(

@@ -56,6 +56,11 @@ export interface BetterAuthConfig {
   readonly basePath?: string
   readonly captchaSecretKey?: string
   readonly extraPlugins?: BetterAuthOptions["plugins"]
+  /**
+   * When set, only emails from this domain (e.g. "latitude.so") are allowed to sign up or sign in.
+   * Used on staging to restrict access to internal users only.
+   */
+  readonly allowedEmailDomain?: string
 }
 
 export interface StripePlanConfig {
@@ -120,6 +125,12 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     databaseHooks: {
       user: {
         create: {
+          before: async (user) => {
+            if (config.allowedEmailDomain && !user.email.toLowerCase().endsWith(`@${config.allowedEmailDomain}`)) {
+              throw new Error(`Only @${config.allowedEmailDomain} emails are allowed on staging`)
+            }
+            return { data: user }
+          },
           after: async (user) => {
             await config.onUserCreated?.({ id: user.id, email: user.email, name: user.name })
           },
