@@ -32,6 +32,7 @@ export {
 } from "./project-metrics-repository.ts"
 export {
   AdminProjectRepository,
+  type ProjectIssueDetails,
   type ProjectIssueLifecycleEvent,
   type ProjectIssueStateSnapshot,
 } from "./project-repository.ts"

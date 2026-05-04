@@ -12,7 +12,7 @@ const successfulRepo = (result: AdminProjectDetails) =>
     findById: () => Effect.succeed(result),
     getCurrentIssueStateCounts: () => Effect.succeed({ untracked: 0, tracked: 0, resolved: 0 }),
     getIssueLifecycleEvents: () => Effect.succeed([]),
-    findIssueNamesByIds: () => Effect.succeed(new Map()),
+    findIssueDetailsByIds: () => Effect.succeed(new Map()),
   })
 
 const missingRepo = () =>
@@ -20,7 +20,7 @@ const missingRepo = () =>
     findById: (id) => Effect.fail(new NotFoundError({ entity: "Project", id })),
     getCurrentIssueStateCounts: () => Effect.succeed({ untracked: 0, tracked: 0, resolved: 0 }),
     getIssueLifecycleEvents: () => Effect.succeed([]),
-    findIssueNamesByIds: () => Effect.succeed(new Map()),
+    findIssueDetailsByIds: () => Effect.succeed(new Map()),
   })
 
 const mkDetails = (overrides: Partial<AdminProjectDetails> = {}): AdminProjectDetails => ({

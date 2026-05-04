@@ -11,7 +11,11 @@ import {
   type ProjectAnnotationBucket,
   type ProjectMetricCountBucket,
 } from "./project-metrics-repository.ts"
-import { AdminProjectRepository, type ProjectIssueLifecycleEvent } from "./project-repository.ts"
+import {
+  AdminProjectRepository,
+  type ProjectIssueDetails,
+  type ProjectIssueLifecycleEvent,
+} from "./project-repository.ts"
 
 const DAY_SECONDS = 24 * 60 * 60
 const DEFAULT_WINDOW_DAYS = 30
@@ -166,13 +170,6 @@ export const composeIssueLifecycleTimeline = (input: {
   })
 }
 
-/** Current state from the issue's lifecycle event row, used for top-issues labelling. */
-const currentIssueState = (event: ProjectIssueLifecycleEvent): "untracked" | "tracked" | "resolved" => {
-  if (event.resolvedAt || event.ignoredAt) return "resolved"
-  if (event.firstEvalAttachedAt) return "tracked"
-  return "untracked"
-}
-
 /**
  * Backoffice "project metrics over time" use-case.
  *
@@ -199,8 +196,13 @@ export const getProjectMetricsUseCase = (
   Effect.gen(function* () {
     const windowDays = clampWindow(input.windowDays)
     const now = input.now ?? new Date()
-    const since = new Date(now.getTime() - windowDays * DAY_SECONDS * 1000)
     const buckets = buildDayBuckets(now, windowDays)
+    // Align the query window to the first bucket's midnight so events
+    // that fall in the same calendar day as the oldest bucket aren't
+    // missed (a midday `now - windowDays * 24h` would otherwise leave
+    // half of the oldest day outside the WHERE clause but still inside
+    // the displayed bucket).
+    const since = buckets[0] ?? new Date(now.getTime() - windowDays * DAY_SECONDS * 1000)
 
     const projectRepo = yield* AdminProjectRepository
     const metricsRepo = yield* AdminProjectMetricsRepository
@@ -236,11 +238,17 @@ export const getProjectMetricsUseCase = (
       { concurrency: "unbounded" },
     )
 
-    // Hydrate top-issue names from PG. Skip the round-trip when the CH
-    // side returned no rows.
+    // Hydrate top-issue display name + current state from PG. Inferring
+    // state from the in-window events alone would mis-label issues that
+    // became `tracked` long ago and haven't transitioned since (they
+    // have no event in the window, and the events port intentionally
+    // returns nothing for them). Fetch the authoritative state in one
+    // batched query keyed on the CH-returned ids.
     const topIssueIds = topOccurrences.map((row) => row.issueId)
-    const namesById =
-      topIssueIds.length > 0 ? yield* projectRepo.findIssueNamesByIds(topIssueIds) : new Map<IssueId, string>()
+    const detailsById =
+      topIssueIds.length > 0
+        ? yield* projectRepo.findIssueDetailsByIds(topIssueIds)
+        : new Map<IssueId, ProjectIssueDetails>()
 
     const traceByKey = denseCountSeries(traceBuckets, buckets)
     const annotationByKey = denseAnnotationSeries(annotationBuckets, buckets)
@@ -257,27 +265,18 @@ export const getProjectMetricsUseCase = (
 
     const issuesLifecycle = composeIssueLifecycleTimeline({ snapshot, events, buckets })
 
-    const eventsById = new Map<IssueId, ProjectIssueLifecycleEvent>()
-    for (const event of events) {
-      eventsById.set(event.issueId, event)
-    }
-
     const topIssues: ProjectTopIssue[] = topOccurrences.map((row) => {
-      const event = eventsById.get(row.issueId)
-      // An issue with non-zero occurrences in the window may still have
-      // no lifecycle event in the same window (it was created long ago
-      // and has had no state transition recently). Default to "untracked"
-      // for those — they're never "tracked" without an evaluation, and
-      // we only have the lifecycle event source to tell us about evals.
-      // Adapter layer (PG) is responsible for filling that gap if/when
-      // we want a stricter "is this currently tracked?" signal — for v1
-      // the heuristic is good enough.
+      const details = detailsById.get(row.issueId)
       return {
         id: row.issueId,
-        name: namesById.get(row.issueId) ?? row.issueId,
+        name: details?.name ?? row.issueId,
         occurrences: row.occurrences,
         lastSeenAt: row.lastSeenAt,
-        state: event ? currentIssueState(event) : "untracked",
+        // Fall back to "untracked" for ids that PG can't find (the issue
+        // was hard-deleted between the CH read and the PG hydration —
+        // unlikely but possible). Mislabelling a phantom row matters
+        // less than crashing on it.
+        state: details?.state ?? "untracked",
       }
     })
 

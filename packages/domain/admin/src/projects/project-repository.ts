@@ -27,6 +27,18 @@ export interface ProjectIssueLifecycleEvent {
 }
 
 /**
+ * Display details for a top-issues table row. The `state` field is
+ * computed against current PG state (resolved/ignored stamps + presence
+ * of any non-deleted evaluation), independent of the in-window
+ * lifecycle events — an issue that became `tracked` long before the
+ * window opened still reports `tracked` here.
+ */
+export interface ProjectIssueDetails {
+  readonly name: string
+  readonly state: "untracked" | "tracked" | "resolved"
+}
+
+/**
  * Cross-organization project-detail port for the backoffice.
  *
  * WARNING: adapters MUST run under an admin (RLS-bypassing) DB
@@ -66,11 +78,14 @@ export class AdminProjectRepository extends ServiceMap.Service<
     ): Effect.Effect<readonly ProjectIssueLifecycleEvent[], RepositoryError>
 
     /**
-     * Hydrate issue ids → display names. Used by the top-issues table
-     * to render human labels for ids the CH side returned. Result keyed
-     * by issue id; ids missing from PG are simply absent and the caller
-     * decides how to render them.
+     * Hydrate display details (name + current lifecycle state) for the
+     * given issue ids. Used by the top-issues table to render human
+     * labels and authoritative state badges. Result keyed by issue id;
+     * ids missing from PG are simply absent (callers fall back to the
+     * id and an `untracked` default).
      */
-    findIssueNamesByIds(ids: readonly IssueId[]): Effect.Effect<ReadonlyMap<IssueId, string>, RepositoryError>
+    findIssueDetailsByIds(
+      ids: readonly IssueId[],
+    ): Effect.Effect<ReadonlyMap<IssueId, ProjectIssueDetails>, RepositoryError>
   }
 >()("@domain/admin/AdminProjectRepository") {}

@@ -5,6 +5,7 @@ import { composeIssueLifecycleTimeline, getProjectMetricsUseCase } from "./get-p
 import { AdminProjectMetricsRepository } from "./project-metrics-repository.ts"
 import {
   AdminProjectRepository,
+  type ProjectIssueDetails,
   type ProjectIssueLifecycleEvent,
   type ProjectIssueStateSnapshot,
 } from "./project-repository.ts"
@@ -33,13 +34,13 @@ const mkProjectDetails = () => ({
 const projectRepo = (overrides: {
   snapshot?: ProjectIssueStateSnapshot
   events?: readonly ProjectIssueLifecycleEvent[]
-  names?: ReadonlyMap<IssueId, string>
+  details?: ReadonlyMap<IssueId, ProjectIssueDetails>
 }) =>
   Layer.succeed(AdminProjectRepository, {
     findById: () => Effect.succeed(mkProjectDetails()),
     getCurrentIssueStateCounts: () => Effect.succeed(overrides.snapshot ?? { untracked: 0, tracked: 0, resolved: 0 }),
     getIssueLifecycleEvents: () => Effect.succeed(overrides.events ?? []),
-    findIssueNamesByIds: () => Effect.succeed(overrides.names ?? new Map<IssueId, string>()),
+    findIssueDetailsByIds: () => Effect.succeed(overrides.details ?? new Map<IssueId, ProjectIssueDetails>()),
   })
 
 const metricsRepo = (overrides: {
@@ -118,33 +119,19 @@ describe("getProjectMetricsUseCase", () => {
     }
   })
 
-  it("hydrates top issue names + classifies state from in-window events", async () => {
-    const lastBucket = startOfUtcDay(NOW.getTime())
-    const yesterday = new Date(lastBucket.getTime() - DAY_MS)
-
+  it("hydrates top issue names + state from PG (independent of in-window events)", async () => {
     const result = await Effect.runPromise(
       getProjectMetricsUseCase({ projectId: PROJECT_ID, now: NOW, windowDays: 5 }).pipe(
         Effect.provide(
           projectRepo({
-            events: [
-              {
-                issueId: issueId("a"),
-                createdAt: yesterday,
-                firstEvalAttachedAt: yesterday,
-                resolvedAt: null,
-                ignoredAt: null,
-              },
-              {
-                issueId: issueId("b"),
-                createdAt: yesterday,
-                firstEvalAttachedAt: null,
-                resolvedAt: null,
-                ignoredAt: null,
-              },
-            ],
-            names: new Map<IssueId, string>([
-              [issueId("a"), "Tracked thing"],
-              [issueId("b"), "Bare thing"],
+            // No in-window events for either id — exactly the scenario
+            // where inferring from events would mislabel both as
+            // "untracked". PG-side `findIssueDetailsByIds` gives us
+            // the authoritative current state.
+            details: new Map<IssueId, ProjectIssueDetails>([
+              [issueId("a"), { name: "Tracked thing", state: "tracked" }],
+              [issueId("b"), { name: "Bare thing", state: "untracked" }],
+              [issueId("c"), { name: "Done thing", state: "resolved" }],
             ]),
           }),
         ),
@@ -153,6 +140,7 @@ describe("getProjectMetricsUseCase", () => {
             topIssues: [
               { issueId: issueId("a"), occurrences: 100, lastSeenAt: NOW },
               { issueId: issueId("b"), occurrences: 50, lastSeenAt: NOW },
+              { issueId: issueId("c"), occurrences: 25, lastSeenAt: NOW },
             ],
           }),
         ),
@@ -162,10 +150,11 @@ describe("getProjectMetricsUseCase", () => {
     expect(result.topIssues).toEqual([
       { id: "a", name: "Tracked thing", occurrences: 100, lastSeenAt: NOW, state: "tracked" },
       { id: "b", name: "Bare thing", occurrences: 50, lastSeenAt: NOW, state: "untracked" },
+      { id: "c", name: "Done thing", occurrences: 25, lastSeenAt: NOW, state: "resolved" },
     ])
   })
 
-  it("falls back to issue id when PG has no name for it", async () => {
+  it("falls back to issue id + untracked when PG has no row for the id", async () => {
     const result = await Effect.runPromise(
       getProjectMetricsUseCase({ projectId: PROJECT_ID, now: NOW, windowDays: 5 }).pipe(
         Effect.provide(projectRepo({})),
