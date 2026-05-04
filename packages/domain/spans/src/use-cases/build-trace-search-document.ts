@@ -7,8 +7,7 @@ export interface TraceSearchDocumentInput {
   readonly traceId: string
   readonly startTime: Date
   readonly rootSpanName: string
-  readonly inputMessages: readonly GenAIMessage[]
-  readonly outputMessages: readonly GenAIMessage[]
+  readonly messages: readonly GenAIMessage[]
 }
 
 export interface TraceSearchDocument {
@@ -26,10 +25,6 @@ function formatGenAIPart(part: GenAIPart): string {
   switch (part.type) {
     case "text":
       return typeof part.content === "string" ? part.content : ""
-    case "reasoning": {
-      const c = part.content
-      return typeof c === "string" && c.trim() !== "" ? c : ""
-    }
     case "blob": {
       if (part.modality === "image") return "[IMAGE]"
       if (part.modality === "video") return "[VIDEO]"
@@ -43,9 +38,10 @@ function formatGenAIPart(part: GenAIPart): string {
     case "tool_call":
       return `[TOOL CALL: ${part.name}]`
     default:
-      // Skip unsearchable part types such as tool_call_response, and any
+      // Skip unsearchable part types (reasoning, tool_call_response) and any
       // unknown variants, rather than emitting placeholder tokens that only
-      // add embedding noise.
+      // add embedding noise. Reasoning content in particular can be large and
+      // has low search value — paying Voyage to embed it isn't worth it.
       return ""
   }
 }
@@ -61,11 +57,11 @@ function formatGenAIMessage(message: GenAIMessage): string {
 }
 
 /**
- * Extracts searchable text from GenAI messages.
- * Includes user input and assistant output messages.
+ * Extracts searchable text from the canonical conversation.
+ * Includes user input and assistant output messages in order.
  * Excludes system prompts entirely.
  */
-function extractMessageText(messages: readonly GenAIMessage[]): string {
+function extractConversationText(messages: readonly GenAIMessage[]): string {
   const parts: string[] = []
 
   for (const message of messages) {
@@ -83,34 +79,48 @@ function extractMessageText(messages: readonly GenAIMessage[]): string {
   return parts.join("\n\n")
 }
 
+function truncateMiddle(text: string): string {
+  if (text.length <= TRACE_SEARCH_DOCUMENT_MAX_LENGTH) return text
+
+  const marker = "\n\n[... trace search omitted middle ...]\n\n"
+  const remainingLength = TRACE_SEARCH_DOCUMENT_MAX_LENGTH - marker.length
+  const headLength = Math.floor(remainingLength / 2)
+  const tailLength = remainingLength - headLength
+
+  return `${text.slice(0, headLength)}${marker}${text.slice(-tailLength)}`
+}
+
+// JS strings are UTF-16 and may contain unpaired surrogates — either from
+// malformed input or from a code-unit slice that split a surrogate pair.
+// ClickHouse's strict JSON parser rejects them ("missing second part of
+// surrogate pair"), so we replace any lone surrogate with U+FFFD before
+// the document leaves this module.
+function stripLoneSurrogates(text: string): string {
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
+}
+
 /**
  * Normalizes text for search indexing:
  * - Trims whitespace
  * - Collapses multiple whitespace characters
- * - Truncates to max length
+ * - Truncates oversized conversations by keeping the beginning and end
+ * - Replaces unpaired UTF-16 surrogates so ClickHouse JSON insert won't reject
  */
 function normalizeSearchText(text: string): string {
   // Trim and collapse whitespace
-  let normalized = text
+  const normalized = text
     .trim()
     .replace(/\s+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
 
-  // Truncate to max length
-  if (normalized.length > TRACE_SEARCH_DOCUMENT_MAX_LENGTH) {
-    normalized = normalized.slice(0, TRACE_SEARCH_DOCUMENT_MAX_LENGTH)
-  }
-
-  return normalized
+  return stripLoneSurrogates(truncateMiddle(normalized))
 }
 
 /**
  * Builds a canonical search document from trace data.
  *
  * The document includes:
- * - User input messages
- * - Assistant output messages
- * - Root span name as metadata
+ * - Canonical conversation user input and assistant output messages
  *
  * The document excludes:
  * - System prompt text
@@ -122,15 +132,7 @@ export const buildTraceSearchDocument = (
   input: TraceSearchDocumentInput,
 ): Effect.Effect<TraceSearchDocument, CryptoError> =>
   Effect.gen(function* () {
-    const inputText = extractMessageText(input.inputMessages)
-    const outputText = extractMessageText(input.outputMessages)
-
-    const parts: string[] = []
-    if (input.rootSpanName && input.rootSpanName !== "") parts.push(input.rootSpanName)
-    if (inputText) parts.push(inputText)
-    if (outputText) parts.push(outputText)
-
-    const searchText = normalizeSearchText(parts.join("\n\n"))
+    const searchText = normalizeSearchText(extractConversationText(input.messages))
     const contentHash = yield* hash(`${input.traceId}\0${searchText}`)
 
     return {

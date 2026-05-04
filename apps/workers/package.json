@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
+    "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
