@@ -44,32 +44,12 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 
 ## Cursor Cloud specific instructions
 
-### Environment prerequisites
+The update script runs `scripts/cloud-install.sh` and `scripts/cloud-start.sh` on every session start — dependencies are installed, Docker infra is started, and all databases are migrated and seeded automatically.
 
-The VM snapshot includes Docker, mise (with Node 25), pnpm 10.33.0, and goose. The update script runs `scripts/cloud-install.sh` (env files + `pnpm install`) and `scripts/cloud-start.sh` (Docker infra + migrations + seeds) on every session start, so all databases are migrated and seeded automatically.
+For services, ports, health checks, Docker Compose, dev servers, and Mailpit auth flow, see [toolchain-commands skill](.agents/skills/toolchain-commands/SKILL.md). Seeded users include `owner@acme.com`, `admin@acme.com`, etc., all in the "Acme Inc." organization.
 
-### Services overview
-
-| Service | Port | Health / verify |
-|---------|------|----------------|
-| Web (TanStack Start) | 3000 | `curl -sI http://localhost:3000` → 307 redirect to `/login` |
-| API (Hono) | 3001 | `curl -s http://localhost:3001/health` |
-| Ingest (Hono) | 3002 | `curl -s http://localhost:3002/health` |
-| Workers (BullMQ) | 9090 | `curl -s http://localhost:9090/health` |
-| Workflows (Temporal) | 9091 | `curl -s http://localhost:9091/health` |
-| Mailpit UI | 8025 | `curl -s http://localhost:8025` |
-| Temporal UI | 8233 | `curl -s http://localhost:8233` |
-
-Start dev servers per `.cursor/environment.json` terminals, or individually: `pnpm --filter @app/<name> dev`.
-
-### Authentication in local dev
-
-Auth uses Better Auth with **magic links** (no passwords by default). After entering an email at `/login`, retrieve the magic link from Mailpit at `http://localhost:8025`. Seeded users include `owner@acme.com`, `admin@acme.com`, etc., all in the "Acme Inc." organization.
-
-### Gotchas
+**Cloud-only gotchas:**
 
 - `pnpm build` must complete before `pnpm db:up` — migration scripts depend on compiled platform packages.
 - The `pnpm install` output may warn about unapproved build scripts (`@swc/core`, `sharp`, etc.). These are non-blocking — pre-built binaries are used.
 - The Docker daemon in cloud VMs needs `fuse-overlayfs` storage driver and `iptables-legacy`. The update script handles this.
-- Typechecking uses `tsgo` (native TS preview) via `pnpm typecheck` — never invoke `tsc` directly.
-- For standard commands (lint, test, build, dev, typecheck), see [toolchain-commands skill](.agents/skills/toolchain-commands/SKILL.md).
