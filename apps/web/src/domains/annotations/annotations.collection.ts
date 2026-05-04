@@ -3,13 +3,16 @@
 // inserts would need to fake those locally and reconcile — fragile given how isDraftAnnotation
 // drives read-only vs editable state. Annotations are also scoped per trace, not a single global
 // list, so a collection instance cache would add complexity with no reactive benefit.
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMemo } from "react"
 import {
   approveSystemAnnotation,
   createAnnotation,
   deleteAnnotation,
+  listAnnotationCountsByTraceIds,
   listAnnotationsByTrace,
   rejectSystemAnnotation,
+  type TraceAnnotationCountsRecord,
   updateAnnotation,
 } from "./annotations.functions.ts"
 
@@ -27,6 +30,22 @@ const annotationsByTraceQueryKey = (
   offset?: number,
   draftMode: "exclude" | "include" | "only" = DEFAULT_TRACE_DRAFT_MODE,
 ) => ["annotations", "trace", projectId, traceId, limit, offset, draftMode] as const
+
+const annotationCountsByTraceIdsQueryKey = (
+  projectId: string,
+  traceIds: readonly string[],
+  draftMode: "exclude" | "include" | "only" = DEFAULT_TRACE_DRAFT_MODE,
+) => ["annotations", "trace-counts", projectId, traceIds, draftMode] as const
+
+const TRACE_COUNT_BATCH_SIZE = 50
+
+const chunkTraceIds = (traceIds: readonly string[]): readonly string[][] => {
+  const chunks: string[][] = []
+  for (let i = 0; i < traceIds.length; i += TRACE_COUNT_BATCH_SIZE) {
+    chunks.push(traceIds.slice(i, i + TRACE_COUNT_BATCH_SIZE))
+  }
+  return chunks
+}
 
 export function useAnnotationsByTrace({
   projectId,
@@ -53,6 +72,50 @@ export function useAnnotationsByTrace({
       }),
     enabled,
   })
+}
+
+export function useAnnotationCountsByTraceIds({
+  projectId,
+  traceIds,
+  draftMode,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceIds: readonly string[]
+  readonly draftMode?: "exclude" | "include" | "only"
+  readonly enabled?: boolean
+}) {
+  const effectiveDraftMode = draftMode ?? DEFAULT_TRACE_DRAFT_MODE
+  const uniqueTraceIds = useMemo(() => [...new Set(traceIds)], [traceIds])
+  const chunks = useMemo(() => chunkTraceIds(uniqueTraceIds), [uniqueTraceIds])
+
+  const queries = useQueries({
+    queries: chunks.map((chunk) => ({
+      queryKey: annotationCountsByTraceIdsQueryKey(projectId, chunk, effectiveDraftMode),
+      queryFn: () =>
+        listAnnotationCountsByTraceIds({
+          data: { projectId, traceIds: chunk, draftMode: effectiveDraftMode },
+        }),
+      enabled: enabled && projectId.length > 0 && chunk.length > 0,
+      staleTime: 30_000,
+    })),
+  })
+
+  const data = useMemo(() => {
+    const countsByTraceId = new Map<string, TraceAnnotationCountsRecord>()
+    for (const query of queries) {
+      for (const counts of query.data ?? []) {
+        countsByTraceId.set(counts.traceId, counts)
+      }
+    }
+    return countsByTraceId
+  }, [queries])
+
+  return {
+    data,
+    isLoading: queries.some((query) => query.isLoading),
+    isFetching: queries.some((query) => query.isFetching),
+  }
 }
 
 export function useCreateAnnotation() {
@@ -127,6 +190,9 @@ export function useApproveSystemAnnotation() {
         }
       }
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["annotations"] })
+    },
   })
 }
 
@@ -162,6 +228,9 @@ export function useRejectSystemAnnotation() {
           queryClient.setQueryData(queryKey, data)
         }
       }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["annotations"] })
     },
   })
 }

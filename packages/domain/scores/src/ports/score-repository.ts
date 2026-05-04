@@ -29,6 +29,12 @@ export interface ScoreListPage {
   readonly offset: number
 }
 
+export interface TraceAnnotationCounts {
+  readonly traceId: TraceId
+  readonly positiveCount: number
+  readonly negativeCount: number
+}
+
 export interface ScoreRepositoryShape {
   findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError, SqlClient>
   save(score: Score): Effect.Effect<void, RepositoryError, SqlClient>
@@ -75,6 +81,11 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  countAnnotationsByTraceIds(input: {
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly options?: Pick<ScoreListOptions, "draftMode">
+  }): Effect.Effect<readonly TraceAnnotationCounts[], RepositoryError, SqlClient>
   listBySessionId(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId

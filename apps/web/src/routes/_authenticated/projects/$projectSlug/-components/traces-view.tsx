@@ -2,6 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { type RefObject, useCallback, useMemo } from "react"
+import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -66,6 +67,11 @@ export function TracesView({
     ...(hasSearchQuery ? { searchQuery } : {}),
   })
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
+  const { data: annotationCounts, isLoading: annotationCountsLoading } = useAnnotationCountsByTraceIds({
+    projectId,
+    traceIds,
+    enabled: traceIds.length > 0,
+  })
 
   // Write trace IDs into the shared ref during render so the parent can navigate next/prev without a callback effect
   traceIdsRef.current = traceIds
@@ -150,6 +156,8 @@ export function TracesView({
           }
           traceMetrics={traceMetrics}
           metricsLoading={metricsLoading}
+          annotationCounts={annotationCounts}
+          annotationCountsLoading={annotationCountsLoading}
         />
       </Layout.List>
     </Layout.Body>

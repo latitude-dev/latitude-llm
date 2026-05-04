@@ -36,6 +36,7 @@ export function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): strin
 }
 
 export function parseTraceColumnIds(raw?: string): TraceColumnId[] {
+  const requiredColumnIds = TRACE_COLUMN_OPTIONS.filter((column) => column.required === true).map((column) => column.id)
   const values = raw
     ?.split(",")
     .map((value) => value.trim())
@@ -45,7 +46,7 @@ export function parseTraceColumnIds(raw?: string): TraceColumnId[] {
     return [...DEFAULT_TRACE_COLUMNS]
   }
 
-  return values.includes("startTime") ? values : ["startTime", ...values]
+  return Array.from(new Set([...requiredColumnIds, ...values]))
 }
 
 export function serializeTraceColumnIds(columnIds: readonly TraceColumnId[]): string {

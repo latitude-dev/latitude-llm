@@ -1,17 +1,20 @@
 import type { TraceMetrics } from "@domain/spans"
 import {
+  Icon,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   type InfiniteTableSelection,
   type InfiniteTableSorting,
   ProviderIcon,
+  Skeleton,
   Status,
   TagList,
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
+import { ThumbsDownIcon, ThumbsUpIcon, TriangleAlertIcon } from "lucide-react"
 import { type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
@@ -20,6 +23,7 @@ import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
 export const DEFAULT_TRACE_TABLE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
 export const TRACE_COLUMN_OPTIONS = [
+  { id: "indicators", label: "Indicators", required: true },
   { id: "startTime", label: "Start Time", required: true },
   { id: "name", label: "Name" },
   { id: "tags", label: "Tags" },
@@ -33,6 +37,11 @@ export const TRACE_COLUMN_OPTIONS = [
 ] as const
 
 export type TraceColumnId = (typeof TRACE_COLUMN_OPTIONS)[number]["id"]
+
+export interface TraceAnnotationCounts {
+  readonly positiveCount: number
+  readonly negativeCount: number
+}
 
 interface ProjectTracesTableProps {
   readonly projectId: string
@@ -56,6 +65,8 @@ interface ProjectTracesTableProps {
   readonly linkTarget?: "_self" | "_blank"
   readonly traceMetrics?: TraceMetrics | null | undefined
   readonly metricsLoading?: boolean | undefined
+  readonly annotationCounts?: ReadonlyMap<string, TraceAnnotationCounts> | undefined
+  readonly annotationCountsLoading?: boolean | undefined
   readonly scrollAreaLayout?: "fill" | "intrinsic"
   readonly scrollContainerClassName?: string
 }
@@ -80,6 +91,8 @@ export function ProjectTracesTable({
   linkTarget,
   traceMetrics,
   metricsLoading,
+  annotationCounts,
+  annotationCountsLoading,
   scrollAreaLayout,
   scrollContainerClassName,
 }: ProjectTracesTableProps) {
@@ -88,31 +101,30 @@ export function ProjectTracesTable({
   const allColumns = useMemo((): InfiniteTableColumn<TraceRecord>[] => {
     return [
       {
+        key: "indicators",
+        header: "",
+        width: 96,
+        minWidth: 96,
+        resizable: false,
+        ellipsis: false,
+        cellClassName: "px-0",
+        render: (trace) => (
+          <TraceIndicatorsCell
+            errorCount={trace.errorCount}
+            annotationCounts={annotationCounts?.get(trace.traceId)}
+            annotationCountsLoading={annotationCountsLoading === true}
+          />
+        ),
+      },
+      {
         key: "startTime",
         header: "Start Time",
         sortKey: "startTime",
         width: 210,
         render: (trace) => (
-          <span className="flex items-center justify-start gap-x-1.5">
-            <Tooltip asChild trigger={<span className="truncate">{relativeTime(new Date(trace.startTime))}</span>}>
-              {new Date(trace.startTime).toLocaleString()}
-            </Tooltip>
-            {trace.errorCount > 0 && (
-              <Tooltip
-                asChild
-                trigger={
-                  <Status
-                    variant="destructive"
-                    indicator={false}
-                    label={formatCount(trace.errorCount)}
-                    className="!rounded-md"
-                  />
-                }
-              >
-                {trace.errorCount} {trace.errorCount === 1 ? "error" : "errors"} in this trace
-              </Tooltip>
-            )}
-          </span>
+          <Tooltip asChild trigger={<span className="truncate">{relativeTime(new Date(trace.startTime))}</span>}>
+            {new Date(trace.startTime).toLocaleString()}
+          </Tooltip>
         ),
       },
       {
@@ -273,12 +285,7 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "spans",
         width: 110,
-        render: (trace) => (
-          <>
-            {formatCount(trace.spanCount)}
-            {trace.errorCount > 0 ? <span className="text-destructive"> ({trace.errorCount} err)</span> : null}
-          </>
-        ),
+        render: (trace) => formatCount(trace.spanCount),
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -292,7 +299,16 @@ export function ProjectTracesTable({
           : {}),
       },
     ]
-  }, [showMetricSubheaders, traceMetrics, metricsLoading, projectId, getTraceHref, linkTarget])
+  }, [
+    showMetricSubheaders,
+    traceMetrics,
+    metricsLoading,
+    projectId,
+    getTraceHref,
+    linkTarget,
+    annotationCounts,
+    annotationCountsLoading,
+  ])
 
   const columns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
@@ -340,5 +356,67 @@ export function ProjectTracesTable({
       {...(onSortChange ? { onSortChange } : {})}
       {...(blankSlate !== undefined ? { blankSlate } : {})}
     />
+  )
+}
+
+function TraceIndicatorsCell({
+  errorCount,
+  annotationCounts,
+  annotationCountsLoading,
+}: {
+  readonly errorCount: number
+  readonly annotationCounts: TraceAnnotationCounts | undefined
+  readonly annotationCountsLoading: boolean
+}) {
+  const positiveCount = annotationCounts?.positiveCount ?? 0
+  const negativeCount = annotationCounts?.negativeCount ?? 0
+  const hasBadges = positiveCount > 0 || negativeCount > 0 || errorCount > 0
+
+  return (
+    <span className="flex items-center justify-start gap-1">
+      {positiveCount > 0 ? (
+        <Tooltip
+          asChild
+          trigger={
+            <Status
+              variant="success"
+              indicator={<Icon icon={ThumbsUpIcon} size="xs" />}
+              label={formatCount(positiveCount)}
+            />
+          }
+        >
+          {positiveCount} positive {positiveCount === 1 ? "annotation" : "annotations"}
+        </Tooltip>
+      ) : null}
+      {negativeCount > 0 ? (
+        <Tooltip
+          asChild
+          trigger={
+            <Status
+              variant="destructive"
+              indicator={<Icon icon={ThumbsDownIcon} size="xs" />}
+              label={formatCount(negativeCount)}
+            />
+          }
+        >
+          {negativeCount} negative {negativeCount === 1 ? "annotation" : "annotations"}
+        </Tooltip>
+      ) : null}
+      {errorCount > 0 ? (
+        <Tooltip
+          asChild
+          trigger={
+            <Status
+              variant="warning"
+              indicator={<Icon icon={TriangleAlertIcon} size="xs" />}
+              label={formatCount(errorCount)}
+            />
+          }
+        >
+          {errorCount} {errorCount === 1 ? "error" : "errors"} in this trace
+        </Tooltip>
+      ) : null}
+      {!hasBadges && annotationCountsLoading ? <Skeleton className="h-5 w-20" /> : null}
+    </span>
   )
 }
