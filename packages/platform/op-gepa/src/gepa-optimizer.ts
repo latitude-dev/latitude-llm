@@ -11,7 +11,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { GepaClient } from "./client.ts"
 import {
-  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+  GEPA_DEFAULT_REFLECTION_SIZE,
   GEPA_MAX_STAGNATION,
   GEPA_MAX_TIME,
   GEPA_MAX_TOKENS,
@@ -241,7 +241,7 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
               tokens: input.budget?.tokens ?? GEPA_MAX_TOKENS,
               stagnation: input.budget?.stagnation ?? GEPA_MAX_STAGNATION,
             },
-            reflectionSize: input.reflectionSize ?? GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE,
+            reflectionSize: input.reflectionSize ?? GEPA_DEFAULT_REFLECTION_SIZE,
           },
           optimizeResultSchema,
         ),

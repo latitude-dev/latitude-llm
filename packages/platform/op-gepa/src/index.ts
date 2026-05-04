@@ -2,7 +2,7 @@ export type { GepaProcessOptions } from "./client.ts"
 export { GepaClient, resolveGepaProcessOptions } from "./client.ts"
 export {
   GEPA_BATCH_SIZE,
-  GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE as GEPA_DEFAULT_REFLECTION_SIZE,
+  GEPA_DEFAULT_REFLECTION_SIZE,
   GEPA_DEFAULT_SEED,
   GEPA_MAX_STAGNATION,
   GEPA_MAX_TIME,

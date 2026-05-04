@@ -566,7 +566,7 @@ references the original question for traceability.
 - **Iteration count budget** *(was OQ6, Critique #5)*: Drop
   `--max-iterations` for v1. Rely on `--budget-time`, `--budget-tokens`,
   and GEPA's built-in `MAX_STAGNATION` (inversely scaled with
-  `GEPA_DEFAULT_REFLECTION_MINIBATCH_SIZE`, floored at 10) to
+  `GEPA_DEFAULT_REFLECTION_SIZE`, floored at 10) to
   terminate. No port extension on this axis.
 
 - **Proposer model** *(was OQ7)*: Reuse `GEPA_PROPOSER_MODEL`
