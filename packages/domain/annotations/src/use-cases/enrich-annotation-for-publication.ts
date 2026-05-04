@@ -16,7 +16,12 @@ import {
   type ScoreId,
   TraceId,
 } from "@domain/shared"
-import { resolveAnnotationSpanIdForWrite, SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  annotationAnchorTargetsToolPart,
+  resolveAnnotationSpanIdForWrite,
+  SpanRepository,
+  TraceRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
@@ -159,15 +164,16 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
           organizationId: OrganizationId(annotationScore.organizationId),
           traceId: TraceId(annotationScore.traceId),
         })
-        const startTimeFrom = new Date(detail.startTime.getTime() - 60 * 1000)
-        const startTimeTo = new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000)
-        const spanMessages = yield* spanRepository.findMessagesForTrace({
-          organizationId: OrganizationId(annotationScore.organizationId),
-          projectId: ProjectId(annotationScore.projectId),
-          traceId: TraceId(annotationScore.traceId),
-          startTimeFrom,
-          startTimeTo,
-        })
+        const needsToolSpanMessages = annotationAnchorTargetsToolPart(detail.allMessages, metadata)
+        const spanMessages = needsToolSpanMessages
+          ? yield* spanRepository.findMessagesForTrace({
+              organizationId: OrganizationId(annotationScore.organizationId),
+              projectId: ProjectId(annotationScore.projectId),
+              traceId: TraceId(annotationScore.traceId),
+              startTimeFrom: new Date(detail.startTime.getTime() - 60 * 1000),
+              startTimeTo: new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000),
+            })
+          : []
         resolvedSpanId =
           resolveAnnotationSpanIdForWrite({
             allMessages: detail.allMessages,

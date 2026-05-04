@@ -3,7 +3,10 @@ import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
 import type { SpanMessagesData } from "../ports/span-repository.ts"
 import { stubListSpan } from "../testing/stub-list-span.ts"
-import { resolveAnnotationSpanIdForWrite } from "./resolve-annotation-span-id-for-write.ts"
+import {
+  annotationAnchorTargetsToolPart,
+  resolveAnnotationSpanIdForWrite,
+} from "./resolve-annotation-span-id-for-write.ts"
 
 const orgId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -38,6 +41,26 @@ const chatSpan = stubListSpan({
   operation: "chat",
   startTime: new Date("2026-01-02T00:00:00.000Z"),
   endTime: new Date("2026-01-02T00:01:00.000Z"),
+})
+
+describe("annotationAnchorTargetsToolPart", () => {
+  it("is false for text selections", () => {
+    const messages: GenAIMessage[] = [textMsg("assistant", "Hello")]
+    expect(annotationAnchorTargetsToolPart(messages, { messageIndex: 0, partIndex: 0 })).toBe(false)
+  })
+
+  it("is true for tool_call_response anchor", () => {
+    const messages: GenAIMessage[] = [
+      {
+        role: "assistant",
+        parts: [
+          { type: "tool_call", name: "Read", id: "tc1", arguments: {} },
+          { type: "tool_call_response", id: "tc1", response: {} },
+        ],
+      },
+    ]
+    expect(annotationAnchorTargetsToolPart(messages, { messageIndex: 0, partIndex: 1 })).toBe(true)
+  })
 })
 
 describe("resolveAnnotationSpanIdForWrite", () => {

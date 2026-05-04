@@ -7,7 +7,12 @@ import {
   type RepositoryError,
   type TraceId,
 } from "@domain/shared"
-import { resolveAnnotationSpanIdForWrite, SpanRepository, TraceRepository } from "@domain/spans"
+import {
+  annotationAnchorTargetsToolPart,
+  resolveAnnotationSpanIdForWrite,
+  SpanRepository,
+  TraceRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { resolveAnnotationAnchorText } from "./resolve-annotation-anchor-text.ts"
 
@@ -73,15 +78,16 @@ export const resolveWriteAnnotationTraceContext = (input: {
         organizationId: input.organizationId,
         traceId: input.traceId,
       })
-      const startTimeFrom = new Date(detail.startTime.getTime() - 60 * 1000)
-      const startTimeTo = new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000)
-      const spanMessages = yield* spanRepository.findMessagesForTrace({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        traceId: input.traceId,
-        startTimeFrom,
-        startTimeTo,
-      })
+      const needsToolSpanMessages = annotationAnchorTargetsToolPart(detail.allMessages, input.anchor)
+      const spanMessages = needsToolSpanMessages
+        ? yield* spanRepository.findMessagesForTrace({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traceId: input.traceId,
+            startTimeFrom: new Date(detail.startTime.getTime() - 60 * 1000),
+            startTimeTo: new Date(detail.startTime.getTime() + 24 * 60 * 60 * 1000),
+          })
+        : []
       const resolvedSpanId = resolveAnnotationSpanIdForWrite({
         allMessages: detail.allMessages,
         spanMessages,

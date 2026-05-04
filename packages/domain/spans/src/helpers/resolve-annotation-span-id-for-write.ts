@@ -10,6 +10,17 @@ export type AnnotationWriteSpanAnchor = {
   readonly partIndex?: number | undefined
 }
 
+/** True when the anchor selects a tool_call or tool_call_response part (needs execute_tool span mapping). */
+export function annotationAnchorTargetsToolPart(
+  allMessages: readonly GenAIMessage[],
+  anchor: AnnotationWriteSpanAnchor | undefined,
+): boolean {
+  const { messageIndex, partIndex } = anchor ?? {}
+  if (messageIndex === undefined || partIndex === undefined) return false
+  const part = allMessages[messageIndex]?.parts[partIndex]
+  return part?.type === "tool_call" || part?.type === "tool_call_response"
+}
+
 /**
  * Resolves which span an annotation should attach to when the client did not send `spanId`.
  *
