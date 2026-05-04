@@ -16,8 +16,8 @@ catalogs:
       specifier: 6.12.1
       version: 6.12.1
     '@clickhouse/client':
-      specifier: 1.18.2
-      version: 1.18.2
+      specifier: 1.18.3
+      version: 1.18.3
     '@effect/opentelemetry':
       specifier: 4.0.0-beta.4
       version: 4.0.0-beta.4
@@ -166,7 +166,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.18.2
+        version: 1.18.3
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -1460,7 +1460,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.18.2
+        version: 1.18.3
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
@@ -1798,7 +1798,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.18.2
+        version: 1.18.3
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
@@ -3165,11 +3165,11 @@ packages:
   '@clack/prompts@1.2.0':
     resolution: {integrity: sha512-4jmztR9fMqPMjz6H/UZXj0zEmE43ha1euENwkckKKel4XpSfokExPo5AiVStdHSAlHekz4d0CA/r45Ok1E4D3w==}
 
-  '@clickhouse/client-common@1.18.2':
-    resolution: {integrity: sha512-J0SG6q9V31ydxonglpj9xhNRsUxCsF71iEZ784yldqMYwsHixj/9xHFDgBDX3DuMiDx/kPDfXnf+pimp08wIBA==}
+  '@clickhouse/client-common@1.18.3':
+    resolution: {integrity: sha512-3axzO3zvrsGT5PzDenxgWscltYCNRDbhaHWUgdsmcM9OnW/VnZn9EarOcZogr9P82Z0mQh+Jd2x+p2K4TFD2fA==}
 
-  '@clickhouse/client@1.18.2':
-    resolution: {integrity: sha512-fuquQswRSHWM6D079ZeuGqkMOsqtcUPL06UdTnowmoeeYjVrqisfVmvnw8pc3OeKS4kVb91oygb/MfLDiMs0TQ==}
+  '@clickhouse/client@1.18.3':
+    resolution: {integrity: sha512-340ngdYktL8PLUBK2QKSwe0o02tYfZSz1mSn1uXCEU8TxHvwh9pnQxElf9YHumDGj5gX/IdgxPsJTGMs82Hgug==}
     engines: {node: '>=16'}
 
   '@codemirror/commands@6.10.3':
@@ -13212,11 +13212,11 @@ snapshots:
       fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
-  '@clickhouse/client-common@1.18.2': {}
+  '@clickhouse/client-common@1.18.3': {}
 
-  '@clickhouse/client@1.18.2':
+  '@clickhouse/client@1.18.3':
     dependencies:
-      '@clickhouse/client-common': 1.18.2
+      '@clickhouse/client-common': 1.18.3
 
   '@codemirror/commands@6.10.3':
     dependencies:
