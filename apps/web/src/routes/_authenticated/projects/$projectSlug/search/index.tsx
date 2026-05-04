@@ -1,16 +1,8 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Input, type SortDirection, Tooltip, toast } from "@repo/ui"
+import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import {
-  ArrowLeftIcon,
-  BookmarkIcon,
-  BookmarkPlusIcon,
-  DatabaseIcon,
-  DownloadIcon,
-  FilterIcon,
-  SearchIcon,
-} from "lucide-react"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import {
   useSavedSearchBySlug,
@@ -100,9 +92,13 @@ function SearchPage() {
   const { data: loadedSavedSearch } = useSavedSearchBySlug(projectId, savedSearchSlug || null)
   const updateSavedSearchMutation = useUpdateSavedSearch(projectId)
 
+  // Compare canonical serializations of both filter sets. `rawFilters` is whatever TanStack Router
+  // wrote to the URL (potentially JSON-stringified twice depending on encoding), so going through
+  // `serializeFilters` on both sides — after `parseFilters` already normalized `filters` — is the
+  // only way to get a stable match when the saved search hasn't been touched.
   const hasDrift = loadedSavedSearch
     ? (loadedSavedSearch.query ?? "") !== q ||
-      (serializeFilters(loadedSavedSearch.filterSet) ?? "") !== (rawFilters || "")
+      (serializeFilters(loadedSavedSearch.filterSet) ?? "") !== (serializeFilters(filters) ?? "")
     : false
 
   const { totalCount: totalTraceCount } = useTracesCount({
@@ -274,37 +270,41 @@ function SearchPage() {
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
               {loadedSavedSearch ? (
-                hasDrift ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    isLoading={updateSavedSearchMutation.isPending}
-                    onClick={() => {
-                      updateSavedSearchMutation.mutate(
-                        {
-                          id: loadedSavedSearch.id,
-                          query: q || null,
-                          filterSet: filters,
-                        },
-                        {
-                          onSuccess: () => toast({ title: "Saved search updated" }),
-                          onError: (error) =>
-                            toast({
-                              variant: "destructive",
-                              title: "Could not save changes",
-                              description: toUserMessage(error),
-                            }),
-                        },
-                      )
-                    }}
-                  >
-                    <Icon icon={BookmarkIcon} size="sm" />
-                    Save changes
-                  </Button>
-                ) : null
+                <SplitButton
+                  variant="outline"
+                  size="sm"
+                  disabled={!hasDrift}
+                  isLoading={updateSavedSearchMutation.isPending}
+                  actions={[
+                    {
+                      content: "Update Saved Search",
+                      onClick: () =>
+                        updateSavedSearchMutation.mutate(
+                          {
+                            id: loadedSavedSearch.id,
+                            query: q || null,
+                            filterSet: filters,
+                          },
+                          {
+                            onSuccess: () => toast({ title: "Saved search updated" }),
+                            onError: (error) =>
+                              toast({
+                                variant: "destructive",
+                                title: "Could not save changes",
+                                description: toUserMessage(error),
+                              }),
+                          },
+                        ),
+                    },
+                    {
+                      content: "Save as new Search",
+                      onClick: () => setSaveModalOpen(true),
+                    },
+                  ]}
+                />
               ) : (
                 <Button variant="outline" size="sm" onClick={() => setSaveModalOpen(true)}>
-                  <Icon icon={BookmarkPlusIcon} size="sm" />
+                  <Icon icon={PinIcon} size="sm" />
                   Save search
                 </Button>
               )}

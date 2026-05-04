@@ -27,12 +27,13 @@ import {
   Label,
   LatitudeLogo,
   RichTextEditor,
+  SplitButton,
   Status,
   Text,
   useMountEffect,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
+import { Check, Moon, Palette, PinIcon, Sparkles, Sun, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { listingLayoutIntrinsicScroll } from "../../layouts/ListingLayout/index.tsx"
 
@@ -218,6 +219,85 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
               <Button variant="outline" disabled>
                 Disabled
               </Button>
+            </div>
+          </div>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="SplitButton"
+        description="Primary action joined to a chevron menu of additional actions; per-action disabled is supported."
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Variants</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <SplitButton
+                actions={[
+                  { content: "Update", onClick: () => undefined },
+                  { content: "Save as new", onClick: () => undefined },
+                ]}
+              />
+              <SplitButton
+                variant="default"
+                actions={[
+                  { content: "Update", onClick: () => undefined },
+                  { content: "Save as new", onClick: () => undefined },
+                ]}
+              />
+              <SplitButton
+                variant="secondary"
+                actions={[
+                  { content: "Update", onClick: () => undefined },
+                  { content: "Save as new", onClick: () => undefined },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">With per-action icons</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <SplitButton
+                actions={[
+                  {
+                    content: "Pin search",
+                    icon: <Icon icon={PinIcon} size="sm" />,
+                    onClick: () => undefined,
+                  },
+                  {
+                    content: "Discard",
+                    icon: <Icon icon={Trash2} size="sm" />,
+                    onClick: () => undefined,
+                  },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Mixed disabled (primary off, secondary still reachable via chevron)</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <SplitButton
+                actions={[
+                  { content: "Update", onClick: () => undefined, disabled: true },
+                  { content: "Save as new", onClick: () => undefined },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Fully disabled</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <SplitButton
+                disabled
+                actions={[
+                  { content: "Update", onClick: () => undefined },
+                  { content: "Save as new", onClick: () => undefined },
+                ]}
+              />
             </div>
           </div>
         </div>
