@@ -56,7 +56,12 @@ describe("createLiveEvaluationsWorker execute path", () => {
 
     await consumer.dispatchTask("live-evaluations", "execute", PAYLOAD)
 
-    expect(runLiveEvaluation).toHaveBeenCalledWith(PAYLOAD)
+    expect(runLiveEvaluation).toHaveBeenCalledWith(
+      PAYLOAD,
+      expect.objectContaining({
+        beforeExecute: expect.any(Function),
+      }),
+    )
     expect(log.info).toHaveBeenCalledWith("Live evaluation execute skipped", {
       queue: "live-evaluations",
       task: "execute",

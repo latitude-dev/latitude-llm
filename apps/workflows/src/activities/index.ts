@@ -3,6 +3,7 @@ export {
   writePublishedAnnotationScore,
 } from "./annotation-publication-activities.ts"
 export {
+  checkEvaluationGenerationBilling,
   collectEvaluationAlignmentExamples,
   evaluateBaselineEvaluationDraft,
   evaluateIncrementalEvaluationDraft,

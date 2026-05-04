@@ -253,10 +253,16 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
                   referenceId: string
                   action: string
                 }) => {
-                  if (referenceId !== stripeUser.id) {
-                    return true
-                  }
-                  return true
+                  const { eq: eq_ } = await import("drizzle-orm")
+                  const memberRole = await config.client.db
+                    .select({ role: members.role })
+                    .from(members)
+                    .where(eq_(members.organizationId, referenceId) && eq_(members.userId, stripeUser.id))
+                    .limit(1)
+                    .then((rows) => rows[0]?.role)
+
+                  if (!memberRole) return false
+                  return memberRole === "owner" || memberRole === "admin"
                 },
               },
               organization: {

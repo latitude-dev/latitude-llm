@@ -1,3 +1,4 @@
+import { meterBillableAction } from "@domain/billing"
 import {
   type BaselineEvaluationResult,
   type CollectedEvaluationAlignmentExamples,
@@ -15,20 +16,27 @@ import {
   type PersistEvaluationAlignmentResult,
   persistAlignmentResultUseCase,
 } from "@domain/evaluations"
-import { OrganizationId } from "@domain/shared"
+import { QueuePublisher } from "@domain/queue"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
   EvaluationAlignmentExamplesRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { withTracing } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../clients.ts"
+
+const logger = createLogger("workflows-evaluation-alignment")
 
 class EvaluationAlignmentActivityError extends Data.TaggedError("EvaluationAlignmentActivityError")<{
   readonly activity: string
@@ -45,6 +53,13 @@ const evaluationAlignmentRepositoriesLive = Layer.mergeAll(
   EvaluationRepositoryLive,
   EvaluationAlignmentExamplesRepositoryLive,
   IssueRepositoryLive,
+)
+
+const evaluationGenerationBillingRepositoriesLive = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  StripeSubscriptionLookupLive,
 )
 
 export const loadEvaluationAlignmentState = (input: {
@@ -90,6 +105,49 @@ export const collectEvaluationAlignmentExamples = (input: {
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(AIEmbedLive, getRedisClient()),
       withTracing,
+    ),
+  )
+
+export const checkEvaluationGenerationBilling = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly evaluationId: string | null
+  readonly billingOperationId: string
+}): Promise<boolean> =>
+  getQueuePublisher().then((queuePublisher) =>
+    Effect.runPromise(
+      meterBillableAction({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        action: "eval-generation",
+        idempotencyKey: `eval-generation:${input.organizationId}:${input.billingOperationId}`,
+        skipIfBlocked: true,
+        metadata: {
+          evaluationId: input.evaluationId,
+          billingOperationId: input.billingOperationId,
+        },
+      }).pipe(
+        withPostgres(
+          evaluationGenerationBillingRepositoriesLive,
+          getPostgresClient(),
+          OrganizationId(input.organizationId),
+        ),
+        Effect.provideService(QueuePublisher, queuePublisher),
+        withTracing,
+        Effect.tap((result) =>
+          result.allowed
+            ? Effect.void
+            : Effect.sync(() =>
+                logger.info("Evaluation generation blocked — no credits remaining", {
+                  organizationId: input.organizationId,
+                  projectId: input.projectId,
+                  evaluationId: input.evaluationId,
+                  billingOperationId: input.billingOperationId,
+                }),
+              ),
+        ),
+        Effect.map((result) => result.allowed),
+      ),
     ),
   )
 

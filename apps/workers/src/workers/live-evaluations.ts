@@ -1,7 +1,8 @@
+import { meterBillableAction } from "@domain/billing"
 import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
-import type { QueueConsumer } from "@domain/queue"
+import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import type { RedisClient } from "@platform/cache-redis"
@@ -12,11 +13,15 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -41,6 +46,7 @@ interface LiveEvaluationsDeps {
   postgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
   redisClient?: RedisClient
+  publisher?: QueuePublisherShape
   runLiveEvaluation?: typeof runLiveEvaluationUseCase
   logger?: LiveEvaluationsLogger
 }
@@ -92,6 +98,7 @@ export const createLiveEvaluationsWorker = ({
   postgresClient,
   clickhouseClient,
   redisClient,
+  publisher,
   runLiveEvaluation,
   logger: injectedLogger,
 }: LiveEvaluationsDeps) => {
@@ -103,48 +110,74 @@ export const createLiveEvaluationsWorker = ({
     return effect.pipe(withAi(AIGenerateLive, rdClient))
   }
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
-
-  consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
-    execute: (payload: ExecutePayload) =>
-      executeLiveEvaluation(payload).pipe(
-        withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
+  const executeEffect = (payload: ExecutePayload) => {
+    const baseEffect = executeLiveEvaluation(payload, {
+      beforeExecute: ({ organizationId, projectId, evaluationId, traceId }) =>
+        meterBillableAction({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(projectId),
+          action: "live-eval-scan",
+          idempotencyKey: `live-eval-scan:${organizationId}:${evaluationId}:${traceId}`,
+          skipIfBlocked: true,
+          metadata: {
+            evaluationId,
+            traceId,
+          },
+        }).pipe(Effect.map((result) => result.allowed)),
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          EvaluationRepositoryLive,
+          IssueRepositoryLive,
+          OutboxEventWriterLive,
+          ScoreRepositoryLive,
+          BillingOverrideRepositoryLive,
+          BillingUsageEventRepositoryLive,
+          BillingUsagePeriodRepositoryLive,
+          StripeSubscriptionLookupLive,
         ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
-          chClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withDefaultAi,
-        withTracing,
-        Effect.tap((result) =>
-          Effect.sync(() => {
-            if (result.action === "skipped") {
-              liveEvaluationsLogger.info("Live evaluation execute skipped", {
-                ...buildExecuteLogContext(payload),
-                ...buildExecuteSkippedLogContext(result),
-              })
-              return
-            }
-
-            liveEvaluationsLogger.info("Live evaluation execute completed", {
+        pgClient,
+        OrganizationId(payload.organizationId),
+      ),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        chClient,
+        OrganizationId(payload.organizationId),
+      ),
+      withDefaultAi,
+      withTracing,
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          if (result.action === "skipped") {
+            liveEvaluationsLogger.info("Live evaluation execute skipped", {
               ...buildExecuteLogContext(payload),
-              ...buildExecutePersistedLogContext(result),
+              ...buildExecuteSkippedLogContext(result),
             })
+            return
+          }
+
+          liveEvaluationsLogger.info("Live evaluation execute completed", {
+            ...buildExecuteLogContext(payload),
+            ...buildExecutePersistedLogContext(result),
+          })
+        }),
+      ),
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          liveEvaluationsLogger.error("Live evaluation execute failed", {
+            ...buildExecuteLogContext(payload),
+            outcome: "failed",
+            error,
           }),
         ),
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            liveEvaluationsLogger.error("Live evaluation execute failed", {
-              ...buildExecuteLogContext(payload),
-              outcome: "failed",
-              error,
-            }),
-          ),
-        ),
-        Effect.asVoid,
       ),
+      Effect.asVoid,
+    )
+
+    return publisher ? baseEffect.pipe(Effect.provideService(QueuePublisher, publisher)) : baseEffect
+  }
+
+  consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
+    execute: executeEffect,
   })
 }

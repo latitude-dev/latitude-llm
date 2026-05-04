@@ -18,6 +18,7 @@
     "@domain/admin": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",

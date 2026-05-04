@@ -65,6 +65,10 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
   }
 
   const mockActivities = {
+    checkEvaluationGenerationBilling: vi.fn(async () => {
+      callOrder.push("checkEvaluationGenerationBilling")
+      return true
+    }),
     loadEvaluationAlignmentStateOrInactive: vi.fn(async (): Promise<LoadResult> => {
       callOrder.push("loadEvaluationAlignmentStateOrInactive")
       return activeState
@@ -175,6 +179,7 @@ describe("optimizeEvaluationWorkflow", () => {
       issueId: "issue-1",
       evaluationId: null,
       jobId: "job-1",
+      billingOperationId: "billing-op-1",
     })
 
     expect(result).toEqual({
@@ -184,6 +189,7 @@ describe("optimizeEvaluationWorkflow", () => {
       negativeExampleCount: 1,
     })
     expect(callOrder).toEqual([
+      "checkEvaluationGenerationBilling",
       "collectEvaluationAlignmentExamples",
       "generateBaselineEvaluationDraft",
       "optimizeEvaluationDraft",
@@ -203,11 +209,13 @@ describe("optimizeEvaluationWorkflow", () => {
       issueId: "issue-1",
       evaluationId: "eval-existing",
       jobId: "job-1",
+      billingOperationId: "billing-op-1",
     })
 
     expect(result.status).toBe("optimized")
     expect(callOrder).toEqual([
       "loadEvaluationAlignmentStateOrInactive",
+      "checkEvaluationGenerationBilling",
       "collectEvaluationAlignmentExamples",
       "generateBaselineEvaluationDraft",
       "optimizeEvaluationDraft",
@@ -231,10 +239,34 @@ describe("optimizeEvaluationWorkflow", () => {
       issueId: "issue-1",
       evaluationId: "eval-existing",
       jobId: "job-1",
+      billingOperationId: "billing-op-1",
     })
 
     expect(result).toEqual({ status: "inactive" })
     expect(callOrder).toEqual(["loadEvaluationAlignmentStateOrInactive"])
+    expect(mockActivities.collectEvaluationAlignmentExamples).not.toHaveBeenCalled()
+  })
+
+  it("returns blocked before starting AI generation when billing rejects the run", async () => {
+    mockActivities.checkEvaluationGenerationBilling.mockImplementationOnce(async () => {
+      callOrder.push("checkEvaluationGenerationBilling")
+      return false
+    })
+
+    const result = await optimizeEvaluationWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      issueId: "issue-1",
+      evaluationId: null,
+      jobId: "job-1",
+      billingOperationId: "billing-op-1",
+    })
+
+    expect(result).toEqual({
+      status: "blocked",
+      reason: "no-credits-remaining",
+    })
+    expect(callOrder).toEqual(["checkEvaluationGenerationBilling"])
     expect(mockActivities.collectEvaluationAlignmentExamples).not.toHaveBeenCalled()
   })
 })

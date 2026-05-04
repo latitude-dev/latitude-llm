@@ -73,6 +73,17 @@ export type RunLiveEvaluationExecutedContext = RunLiveEvaluationPersistedContext
 export type RunLiveEvaluationLoadedSummary = RunLiveEvaluationPersistedSummary
 export type RunLiveEvaluationLoadedContext = RunLiveEvaluationPersistedContext
 
+interface RunLiveEvaluationBeforeExecuteInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly evaluationId: string
+  readonly traceId: string
+}
+
+interface RunLiveEvaluationDeps {
+  readonly beforeExecute?: (input: RunLiveEvaluationBeforeExecuteInput) => Effect.Effect<boolean, unknown, unknown>
+}
+
 export type RunLiveEvaluationResult =
   | {
       readonly action: "skipped"
@@ -84,6 +95,7 @@ export type RunLiveEvaluationResult =
         | "archived"
         | "paused"
         | "result-already-exists"
+        | "billing-blocked"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -113,7 +125,7 @@ const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvalua
   tokens: 0,
   cost: 0,
 })
-export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
+export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput, deps: RunLiveEvaluationDeps = {}) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
     yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
@@ -202,6 +214,25 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       name: issue.name,
       description: issue.description,
     } satisfies LiveEvaluationIssueContext
+
+    if (deps.beforeExecute) {
+      const allowed = yield* deps.beforeExecute({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        evaluationId: evaluation.id,
+        traceId: input.traceId,
+      })
+
+      if (!allowed) {
+        return {
+          action: "skipped",
+          reason: "billing-blocked",
+          evaluationId: input.evaluationId,
+          traceId: input.traceId,
+        } satisfies RunLiveEvaluationResult
+      }
+    }
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,

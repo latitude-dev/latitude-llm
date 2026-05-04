@@ -40,8 +40,12 @@ vi.mock("@platform/db-clickhouse", () => ({
 vi.mock("@platform/db-postgres", () => ({
   AnnotationQueueItemRepositoryLive: {},
   AnnotationQueueRepositoryLive: {},
+  BillingOverrideRepositoryLive: {},
+  BillingUsageEventRepositoryLive: {},
+  BillingUsagePeriodRepositoryLive: {},
   OutboxEventWriterLive: {},
   ScoreRepositoryLive: {},
+  StripeSubscriptionLookupLive: {},
   withPostgres: () => (effect: unknown) => effect,
 }))
 
@@ -53,6 +57,7 @@ vi.mock("@repo/observability", () => ({
 vi.mock("../clients.ts", () => ({
   getClickhouseClient: vi.fn(() => ({})),
   getPostgresClient: vi.fn(() => ({})),
+  getQueuePublisher: vi.fn(async () => ({ publish: () => Effect.void, close: () => Effect.void })),
   getRedisClient: vi.fn(() => ({})),
 }))
 

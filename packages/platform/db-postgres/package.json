@@ -32,6 +32,7 @@
     "@domain/admin": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",

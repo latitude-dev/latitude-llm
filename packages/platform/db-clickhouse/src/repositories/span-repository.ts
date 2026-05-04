@@ -292,6 +292,7 @@ const toInsertRow = (span: SpanDetail) => ({
   resource_string: span.resourceString,
   scope_name: span.scopeName,
   scope_version: span.scopeVersion,
+  retention_days: span.retentionDays ?? 90,
   input_messages: span.inputMessages.length > 0 ? JSON.stringify(span.inputMessages) : "",
   output_messages: span.outputMessages.length > 0 ? JSON.stringify(span.outputMessages) : "",
   system_instructions: span.systemInstructions.length > 0 ? JSON.stringify(span.systemInstructions) : "",

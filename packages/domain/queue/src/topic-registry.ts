@@ -243,6 +243,14 @@ const _registry = {
     }
   }>(),
 
+  billing: payloads<{
+    reportOverage: {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+    }
+  }>(),
+
   // Writes annotations into the Latitude-owned dogfood project via
   // @platform/latitude-api. The worker is fire-and-forget from the reviewer's
   // perspective — the web route 202s immediately on enqueue, and BullMQ's

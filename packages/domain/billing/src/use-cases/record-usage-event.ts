@@ -1,0 +1,150 @@
+import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { generateId } from "@domain/shared"
+import { Effect } from "effect"
+import { ACTION_CREDITS, type ChargeableAction, PRO_PLAN_CONFIG } from "../constants.ts"
+import type { BillingUsageEvent } from "../entities/billing-usage-event.ts"
+import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
+import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
+import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
+
+const CENT_TO_MICROCENTS = 1_000_000
+
+const calculateOverageAmountMicrocents = (planSlug: BillingUsagePeriod["planSlug"], overageCredits: number) => {
+  if (planSlug !== "pro") return 0
+
+  return Math.floor(
+    (overageCredits * PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MICROCENTS) /
+      PRO_PLAN_CONFIG.overageCreditsPerUnit,
+  )
+}
+
+export interface RecordUsageEventInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly action: ChargeableAction
+  readonly idempotencyKey: string
+  readonly planSlug: BillingUsagePeriod["planSlug"]
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly includedCredits: number
+  readonly traceId?: TraceId | undefined
+  readonly metadata?: Record<string, unknown> | undefined
+}
+
+export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(function* (input: RecordUsageEventInput) {
+  yield* Effect.annotateCurrentSpan("billing.organizationId", input.organizationId)
+  yield* Effect.annotateCurrentSpan("billing.action", input.action)
+  yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
+
+  const eventRepo = yield* BillingUsageEventRepository
+  const periodRepo = yield* BillingUsagePeriodRepository
+
+  const existing = yield* eventRepo.findByKey(input.idempotencyKey)
+  if (existing) {
+    const period = yield* periodRepo.findByPeriod({
+      organizationId: input.organizationId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+    })
+    return (
+      period ?? {
+        organizationId: input.organizationId,
+        planSlug: input.planSlug,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        includedCredits: input.includedCredits,
+        consumedCredits: 0,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMicrocents: 0,
+        updatedAt: new Date(),
+      }
+    )
+  }
+
+  const credits = ACTION_CREDITS[input.action]
+  const now = new Date()
+
+  const event: BillingUsageEvent = {
+    id: generateId(),
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    action: input.action,
+    credits,
+    idempotencyKey: input.idempotencyKey,
+    traceId: input.traceId,
+    metadata: input.metadata,
+    happenedAt: now,
+    billingPeriodStart: input.periodStart,
+    billingPeriodEnd: input.periodEnd,
+  }
+
+  yield* eventRepo.insert(event)
+
+  let period = yield* periodRepo.findByPeriod({
+    organizationId: input.organizationId,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+  })
+
+  if (!period) {
+    period = {
+      organizationId: input.organizationId,
+      planSlug: input.planSlug,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      includedCredits: input.includedCredits,
+      consumedCredits: 0,
+      overageCredits: 0,
+      reportedOverageCredits: 0,
+      overageAmountMicrocents: 0,
+      updatedAt: now,
+    }
+  }
+
+  const newConsumed = period.consumedCredits + credits
+  let newOverage = period.overageCredits
+
+  if (newConsumed > period.includedCredits) {
+    newOverage = newConsumed - period.includedCredits
+  }
+
+  const updated: BillingUsagePeriod = {
+    ...period,
+    consumedCredits: newConsumed,
+    overageCredits: newOverage,
+    overageAmountMicrocents: calculateOverageAmountMicrocents(period.planSlug, newOverage),
+    updatedAt: now,
+  }
+
+  yield* periodRepo.upsert(updated)
+
+  return updated
+})
+
+export interface CheckCreditAvailabilityInput {
+  readonly organizationId: OrganizationId
+  readonly action: ChargeableAction
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly includedCredits: number
+  readonly hardCapped: boolean
+}
+
+export const checkCreditAvailabilityUseCase = Effect.fn("billing.checkCreditAvailability")(function* (
+  input: CheckCreditAvailabilityInput,
+) {
+  if (!input.hardCapped) return true
+
+  const credits = ACTION_CREDITS[input.action]
+  const periodRepo = yield* BillingUsagePeriodRepository
+  const period = yield* periodRepo.findByPeriod({
+    organizationId: input.organizationId,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+  })
+
+  if (!period) return input.includedCredits >= credits
+
+  return period.consumedCredits + credits <= input.includedCredits
+})

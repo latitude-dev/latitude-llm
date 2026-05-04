@@ -21,6 +21,7 @@
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/evaluations": "workspace:*",

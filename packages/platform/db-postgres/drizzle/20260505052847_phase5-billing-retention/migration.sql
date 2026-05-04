@@ -1,0 +1,3 @@
+ALTER TABLE "latitude"."billing_usage_periods" ADD COLUMN "reported_overage_credits" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "latitude"."billing_usage_periods" ADD COLUMN "overage_amount_microcents" bigint DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "billing_usage_periods_org_period_idx" ON "latitude"."billing_usage_periods" ("organization_id","period_start","period_end");

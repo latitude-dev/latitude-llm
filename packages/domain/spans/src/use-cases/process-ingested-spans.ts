@@ -67,6 +67,7 @@ export interface ProcessIngestedSpansInput {
   readonly apiKeyId: string
   readonly contentType: string
   readonly ingestedAt: Date
+  readonly retentionDays?: number
   readonly inlinePayload: string | null
   readonly fileKey: string | null
 }
@@ -125,12 +126,21 @@ function decodeAndTransform(
   })
 }
 
+interface TraceUsageRecord {
+  readonly traceId: string
+}
+
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
+  readonly recordTraceUsage?: (params: {
+    organizationId: string
+    projectId: string
+    traces: readonly TraceUsageRecord[]
+  }) => Promise<void>
 }
 
 export const processIngestedSpansUseCase =
-  <TPublishError>({ eventsPublisher }: ProcessIngestedSpansDeps<TPublishError>) =>
+  <TPublishError>({ eventsPublisher, recordTraceUsage }: ProcessIngestedSpansDeps<TPublishError>) =>
   (
     input: ProcessIngestedSpansInput,
   ): Effect.Effect<
@@ -144,15 +154,23 @@ export const processIngestedSpansUseCase =
 
       const payload = yield* resolvePayload(input)
       const spans = yield* decodeAndTransform(payload, input)
+      const persistedSpans =
+        input.retentionDays === undefined
+          ? spans
+          : spans.map((span) => ({
+              ...span,
+              retentionDays: input.retentionDays,
+            }))
 
-      if (spans.length === 0) {
+      if (persistedSpans.length === 0) {
         return
       }
 
       const repo = yield* SpanRepository
-      yield* repo.insert(spans)
+      yield* repo.insert(persistedSpans)
 
-      const traceIds = new Set(spans.map((s) => s.traceId))
+      const traceIds = new Set(persistedSpans.map((s) => s.traceId))
+
       yield* Effect.all(
         [...traceIds].map((traceId) =>
           eventsPublisher.publish({
@@ -163,4 +181,14 @@ export const processIngestedSpansUseCase =
         ),
         { concurrency: "unbounded" },
       )
+
+      if (recordTraceUsage) {
+        yield* Effect.promise(() =>
+          recordTraceUsage({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traces: [...traceIds].map((traceId) => ({ traceId })),
+          }),
+        ).pipe(Effect.ignore)
+      }
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))

@@ -1,3 +1,4 @@
+import { meterBillableAction } from "@domain/billing"
 import {
   draftFlaggerAnnotationUseCase,
   type FlaggerAnnotateOutput,
@@ -5,7 +6,8 @@ import {
   runFlaggerUseCase,
   saveFlaggerAnnotationUseCase,
 } from "@domain/flaggers"
-import { OrganizationId } from "@domain/shared"
+import { QueuePublisher } from "@domain/queue"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -15,10 +17,18 @@ import {
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
+  ScoreRepositoryLive,
+  StripeSubscriptionLookupLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("workflows-flagger")
 
@@ -55,13 +65,46 @@ interface DraftAnnotateOutput {
   readonly scoreId: string
 }
 
+const billingLayers = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  StripeSubscriptionLookupLive,
+)
+
 export const draftAnnotate = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
   readonly flaggerSlug: string
-}): Promise<DraftAnnotateOutput> =>
-  Effect.runPromise(
+}): Promise<DraftAnnotateOutput> => {
+  const idempotencyKey = `flagger-scan:${input.organizationId}:${input.flaggerSlug}:${input.traceId}`
+  const queuePublisher = await getQueuePublisher()
+
+  const billingResult = await Effect.runPromise(
+    meterBillableAction({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      action: "flagger-scan",
+      idempotencyKey,
+      skipIfBlocked: true,
+    }).pipe(
+      withPostgres(billingLayers, getPostgresClient(), OrganizationId(input.organizationId)),
+      Effect.provideService(QueuePublisher, queuePublisher),
+      withTracing,
+    ),
+  ).catch(() => ({ allowed: true }))
+
+  if (!billingResult.allowed) {
+    logger.info("Flagger annotation blocked — no credits remaining", {
+      organizationId: input.organizationId,
+      traceId: input.traceId,
+      flaggerSlug: input.flaggerSlug,
+    })
+    throw new Error("No credits remaining")
+  }
+
+  return Effect.runPromise(
     draftFlaggerAnnotationUseCase(input).pipe(
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
@@ -83,6 +126,7 @@ export const draftAnnotate = async (input: {
       ),
     ),
   )
+}
 
 export const saveAnnotation = async (input: {
   readonly organizationId: string

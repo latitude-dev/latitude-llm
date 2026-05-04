@@ -1,12 +1,22 @@
+import { meterBillableAction, resolveEffectivePlan } from "@domain/billing"
 import type { EventsPublisher } from "@domain/events"
-import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
+import { type QueueConsumer, type QueuePublishError, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
+import { OrganizationId, ProjectId, type StorageDiskPort, TraceId } from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import type { PostgresClient } from "@platform/db-postgres"
+import {
+  BillingOverageReporterLive,
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  StripeSubscriptionLookupLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { StorageDiskLive } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { getClickhouseClient, getStorageDisk } from "../clients.ts"
 
 const logger = createLogger("span-ingestion")
@@ -16,6 +26,8 @@ interface SpanIngestionDeps {
   eventsPublisher: EventsPublisher<QueuePublishError>
   clickhouseClient?: ClickHouseClient
   disk?: StorageDiskPort
+  postgresClient?: PostgresClient
+  publisher?: QueuePublisherShape
 }
 
 export const createSpanIngestionWorker = ({
@@ -23,10 +35,51 @@ export const createSpanIngestionWorker = ({
   eventsPublisher,
   clickhouseClient,
   disk: diskDep,
+  postgresClient,
+  publisher,
 }: SpanIngestionDeps) => {
   const chClient = clickhouseClient ?? getClickhouseClient()
   const disk = diskDep ?? getStorageDisk()
-  const processSpans = processIngestedSpansUseCase({ eventsPublisher })
+
+  const billingLayers = Layer.mergeAll(
+    BillingOverageReporterLive,
+    BillingOverrideRepositoryLive,
+    BillingUsageEventRepositoryLive,
+    BillingUsagePeriodRepositoryLive,
+    StripeSubscriptionLookupLive,
+  )
+
+  const recordTraceUsage =
+    postgresClient && publisher
+      ? (params: { organizationId: string; projectId: string; traces: readonly { traceId: string }[] }) =>
+          Effect.runPromise(
+            Effect.gen(function* () {
+              yield* Effect.all(
+                params.traces.map((t) =>
+                  meterBillableAction({
+                    organizationId: OrganizationId(params.organizationId),
+                    projectId: ProjectId(params.projectId),
+                    action: "trace",
+                    idempotencyKey: `trace:${params.organizationId}:${params.projectId}:${t.traceId}`,
+                    traceId: TraceId(t.traceId),
+                  }),
+                ),
+                { concurrency: "unbounded", discard: true },
+              )
+            }).pipe(
+              withPostgres(billingLayers, postgresClient, OrganizationId(params.organizationId)),
+              Effect.provideService(QueuePublisher, publisher),
+              withTracing,
+            ),
+          )
+            .then(() => undefined)
+            .catch(() => undefined)
+      : undefined
+
+  const processSpans = processIngestedSpansUseCase({
+    eventsPublisher,
+    ...(recordTraceUsage ? { recordTraceUsage } : {}),
+  })
 
   consumer.subscribe(
     "span-ingestion",
@@ -39,19 +92,47 @@ export const createSpanIngestionWorker = ({
           return Effect.void
         }
 
-        return processSpans({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(projectId),
-          apiKeyId: wire.apiKeyId,
-          contentType: wire.contentType || "application/json",
-          ingestedAt: wire.ingestedAt ? new Date(wire.ingestedAt) : new Date(),
-          inlinePayload: wire.inlinePayload,
-          fileKey: wire.fileKey,
+        if (!postgresClient) {
+          return processSpans({
+            organizationId: OrganizationId(organizationId),
+            projectId: ProjectId(projectId),
+            apiKeyId: wire.apiKeyId,
+            contentType: wire.contentType || "application/json",
+            ingestedAt: wire.ingestedAt ? new Date(wire.ingestedAt) : new Date(),
+            inlinePayload: wire.inlinePayload,
+            fileKey: wire.fileKey,
+          }).pipe(
+            Effect.catchTag("SpanDecodingError", (error) =>
+              Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
+            ),
+            Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
+            withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
+            withTracing,
+            Effect.provide(StorageDiskLive(disk)),
+          )
+        }
+
+        return Effect.gen(function* () {
+          const orgPlan = yield* resolveEffectivePlan(OrganizationId(organizationId)).pipe(
+            Effect.orElseSucceed(() => null),
+          )
+
+          return yield* processSpans({
+            organizationId: OrganizationId(organizationId),
+            projectId: ProjectId(projectId),
+            apiKeyId: wire.apiKeyId,
+            contentType: wire.contentType || "application/json",
+            ingestedAt: wire.ingestedAt ? new Date(wire.ingestedAt) : new Date(),
+            inlinePayload: wire.inlinePayload,
+            fileKey: wire.fileKey,
+            ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
+          })
         }).pipe(
           Effect.catchTag("SpanDecodingError", (error) =>
             Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
           ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
+          withPostgres(billingLayers, postgresClient, OrganizationId(organizationId)),
           withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
           withTracing,
           Effect.provide(StorageDiskLive(disk)),

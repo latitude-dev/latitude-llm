@@ -74,6 +74,7 @@ describe("createEvaluationsWorker", () => {
           issueId: "issue-1",
           evaluationId: "evaluation-1",
           jobId: "auto-optimize:evaluation-1",
+          billingOperationId: expect.any(String),
         },
         options: { workflowId: "evaluations:optimize:evaluation-1" },
       },

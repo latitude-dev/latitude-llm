@@ -28,6 +28,7 @@ import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowSt
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
+import { createBillingWorker } from "./workers/billing.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
@@ -152,7 +153,8 @@ const bootstrap = async () => {
     createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
-    createSpanIngestionWorker(ctx)
+    createBillingWorker(ctx)
+    createSpanIngestionWorker({ ...ctx, postgresClient: pgClient })
     createExportsWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)

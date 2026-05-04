@@ -30,6 +30,10 @@ export { AdminUserRepositoryLive } from "./repositories/admin-user-repository.ts
 export { AnnotationQueueItemRepositoryLive } from "./repositories/annotation-queue-item-repository.ts"
 export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
+export { BillingOverageReporterLive } from "./repositories/billing-overage-reporter.ts"
+export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
+export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-event-repository.ts"
+export { BillingUsagePeriodRepositoryLive } from "./repositories/billing-usage-period-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
@@ -43,6 +47,7 @@ export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
+export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation

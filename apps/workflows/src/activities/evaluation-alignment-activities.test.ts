@@ -59,6 +59,7 @@ vi.mock("../clients.ts", async () => {
   return {
     getPostgresClient: () => pg.appPostgresClient,
     getClickhouseClient: () => ch.client,
+    getQueuePublisher: async () => ({ publish: () => Effect.void, close: () => Effect.void }),
     getRedisClient: () => ({}),
   }
 })

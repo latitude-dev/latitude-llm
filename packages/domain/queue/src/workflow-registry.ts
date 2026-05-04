@@ -15,6 +15,7 @@ const _registry = {
     readonly issueId: string
     readonly evaluationId: string | null
     readonly jobId: string
+    readonly billingOperationId: string
   }>(),
   issueDiscoveryWorkflow: input<{
     readonly organizationId: string

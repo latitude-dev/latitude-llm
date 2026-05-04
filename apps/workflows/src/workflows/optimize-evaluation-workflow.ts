@@ -8,10 +8,12 @@ type OptimizeEvaluationWorkflowInput = {
   readonly issueId: string
   readonly evaluationId: string | null
   readonly jobId: string
+  readonly billingOperationId: string
 }
 
 export type OptimizeEvaluationWorkflowResult =
   | { readonly status: "inactive" }
+  | { readonly status: "blocked"; readonly reason: "no-credits-remaining" }
   | {
       readonly status: "optimized"
       readonly evaluationId: string
@@ -24,13 +26,12 @@ export type OptimizeEvaluationWorkflowResult =
 // evaluation passes are not clipped mid-run. No activity heartbeats (grep
 // confirms none exist), so Temporal can only detect a hang when the full
 // `startToCloseTimeout` elapses.
-const { loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult } = proxyActivities<typeof activities>(
-  {
+const { checkEvaluationGenerationBilling, loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult } =
+  proxyActivities<typeof activities>({
     // Postgres reads/writes only.
     startToCloseTimeout: "1 minute",
     retry: defaultActivityRetryPolicy,
-  },
-)
+  })
 
 const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
   // Example collection plus a single-shot LLM call for the baseline script.
@@ -80,6 +81,20 @@ export const optimizeEvaluationWorkflow = async (
 
     if (existing.status === "inactive") {
       return { status: "inactive" }
+    }
+  }
+
+  const billingAllowed = await checkEvaluationGenerationBilling({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluationId,
+    billingOperationId: input.billingOperationId,
+  })
+
+  if (!billingAllowed) {
+    return {
+      status: "blocked",
+      reason: "no-credits-remaining",
     }
   }
 
