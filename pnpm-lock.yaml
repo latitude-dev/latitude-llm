@@ -1040,7 +1040,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1185,7 +1185,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.4
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
