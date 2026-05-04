@@ -11,7 +11,7 @@ import {
   Icon,
   Text,
 } from "@repo/ui"
-import { CircleUserRoundIcon } from "lucide-react"
+import { CircleDashedIcon, CircleUserRoundIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
 import { useMembersCollection } from "../domains/members/members.collection.ts"
 import { useAuthenticatedUser } from "../routes/_authenticated/-route-data.ts"
@@ -24,25 +24,47 @@ interface MemberOption {
   readonly imageSrc: string | null
 }
 
+const UNASSIGNED_KEY = "@unassigned"
 const ME_KEY = "@me"
+
+const UNASSIGNED_OPTION: MemberOption = {
+  key: UNASSIGNED_KEY,
+  userId: null,
+  label: "Unassigned",
+  searchText: "unassigned none nobody",
+  imageSrc: null,
+}
+
+const ME_OPTION: MemberOption = {
+  key: ME_KEY,
+  userId: null,
+  label: "Me",
+  searchText: "me yourself",
+  imageSrc: null,
+}
 
 interface MemberSelectorProps {
   readonly value: string | null
   readonly onChange: (userId: string | null) => void
-  readonly placeholder?: string
+  readonly open?: boolean
+  readonly onOpenChange?: (open: boolean) => void
   readonly disabled?: boolean
   readonly portalContainer?: RefObject<HTMLElement | null>
 }
 
 /**
- * Single-select picker for assigning an organization member. The first item is a "Me" shortcut that
- * resolves to the current user; the rest of the list is every active org member, with a muted
- * "(You)" suffix when the row points at the current user.
+ * Single-select picker for assigning an organization member. The list is `Unassigned` → `Me`
+ * (current-user shortcut) → every active org member with a muted `(You)` suffix on the row that
+ * points at the current user. The trigger displays the selected option's avatar/icon + label.
+ *
+ * `open` / `onOpenChange` make the popup controllable so other UI (e.g. a row's kebab menu) can
+ * open the picker programmatically without imperative refs.
  */
 export function MemberSelector({
   value,
   onChange,
-  placeholder = "Unassigned",
+  open,
+  onOpenChange,
   disabled,
   portalContainer,
 }: MemberSelectorProps) {
@@ -67,12 +89,14 @@ export function MemberSelector({
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [members])
 
-  const items = useMemo<MemberOption[]>(
-    () => [{ key: ME_KEY, userId: null, label: "Me", searchText: "me yourself", imageSrc: null }, ...memberOptions],
-    [memberOptions],
-  )
+  const items = useMemo<MemberOption[]>(() => [UNASSIGNED_OPTION, ME_OPTION, ...memberOptions], [memberOptions])
 
-  const selectedOption = value ? (memberOptions.find((m) => m.userId === value) ?? null) : null
+  // Map `value` (the userId stored on the saved search) to the matching option, falling back to the
+  // Unassigned option when null. This keeps the trigger styled like every other selection state and
+  // lets `autoHighlight` highlight the right item on open without an additional `'always'` mode.
+  const selectedOption = value
+    ? (memberOptions.find((m) => m.userId === value) ?? UNASSIGNED_OPTION)
+    : UNASSIGNED_OPTION
 
   const [inputValue, setInputValue] = useState("")
 
@@ -80,10 +104,12 @@ export function MemberSelector({
     <Combobox
       autoHighlight
       modal
+      {...(open !== undefined ? { open } : {})}
+      {...(onOpenChange ? { onOpenChange } : {})}
       value={selectedOption}
       onValueChange={(picked: MemberOption | null) => {
         setInputValue("")
-        if (!picked) {
+        if (!picked || picked.key === UNASSIGNED_KEY) {
           onChange(null)
           return
         }
@@ -100,7 +126,7 @@ export function MemberSelector({
     >
       <Button asChild variant="outline" size="sm" disabled={disabled} className="w-full justify-between">
         <ComboboxTrigger ref={triggerRef}>
-          <SelectedTrigger selected={selectedOption} placeholder={placeholder} />
+          <SelectedTrigger selected={selectedOption} />
         </ComboboxTrigger>
       </Button>
       <ComboboxContent anchor={triggerRef} container={portalContainer?.current}>
@@ -118,20 +144,11 @@ export function MemberSelector({
   )
 }
 
-function SelectedTrigger({
-  selected,
-  placeholder,
-}: {
-  readonly selected: MemberOption | null
-  readonly placeholder: string
-}) {
-  if (!selected) {
-    return <Text.H5 color="foregroundMuted">{placeholder}</Text.H5>
-  }
+function SelectedTrigger({ selected }: { readonly selected: MemberOption }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <Avatar size="xs" name={selected.label} imageSrc={selected.imageSrc} />
-      <Text.H5 ellipsis noWrap>
+      <OptionLeading item={selected} mutedIcon />
+      <Text.H5 ellipsis noWrap color={selected.key === UNASSIGNED_KEY ? "foregroundMuted" : "foreground"}>
         {selected.label}
       </Text.H5>
     </span>
@@ -141,13 +158,25 @@ function SelectedTrigger({
 function MemberOptionRow({ item, isMe }: { readonly item: MemberOption; readonly isMe: boolean }) {
   return (
     <ComboboxItem value={item}>
-      {item.key === ME_KEY ? (
-        <Icon icon={CircleUserRoundIcon} size="sm" color="foregroundMuted" />
-      ) : (
-        <Avatar size="xs" name={item.label} imageSrc={item.imageSrc} />
-      )}
+      <OptionLeading item={item} />
       <Text.H5 className="flex-1 truncate">{item.label}</Text.H5>
-      {item.key !== ME_KEY && isMe ? <Text.H6 color="foregroundMuted">(You)</Text.H6> : null}
+      {item.key !== ME_KEY && item.key !== UNASSIGNED_KEY && isMe ? (
+        <Text.H6 color="foregroundMuted">(You)</Text.H6>
+      ) : null}
     </ComboboxItem>
   )
+}
+
+function OptionLeading({ item, mutedIcon = false }: { readonly item: MemberOption; readonly mutedIcon?: boolean }) {
+  if (item.key === UNASSIGNED_KEY) {
+    return <Icon icon={CircleDashedIcon} size="default" color="foregroundMuted" />
+  }
+  if (item.key === ME_KEY) {
+    return mutedIcon ? (
+      <Icon icon={CircleUserRoundIcon} size="default" color="foregroundMuted" />
+    ) : (
+      <Icon icon={CircleUserRoundIcon} size="default" />
+    )
+  }
+  return <Avatar size="xs" name={item.label} imageSrc={item.imageSrc} />
 }

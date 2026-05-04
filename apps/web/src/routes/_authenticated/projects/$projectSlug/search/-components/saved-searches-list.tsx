@@ -34,6 +34,7 @@ export function SavedSearchesList({
   const deleteMutation = useDeleteSavedSearch(projectId)
   const updateMutation = useUpdateSavedSearch(projectId)
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
+  const [assignOpenForId, setAssignOpenForId] = useState<string | null>(null)
 
   if (!isLoading && data.length === 0) {
     return <SavedSearchesEmpty />
@@ -62,6 +63,11 @@ export function SavedSearchesList({
       render: (row) => (
         <AssigneeCell
           row={row}
+          open={assignOpenForId === row.id}
+          onOpenChange={(open) => {
+            if (open) setAssignOpenForId(row.id)
+            else if (assignOpenForId === row.id) setAssignOpenForId(null)
+          }}
           onChange={(nextUserId) => {
             updateMutation.mutate(
               { id: row.id, assignedUserId: nextUserId },
@@ -97,6 +103,7 @@ export function SavedSearchesList({
     },
     optionsColumn<SavedSearchRecord>({
       getOptions: (row) => [
+        { label: "Assign to", onClick: () => setAssignOpenForId(row.id) },
         { label: "Rename", onClick: () => setRowToRename(row) },
         {
           label: "Delete",
@@ -212,9 +219,13 @@ function NameCell({ row }: { readonly row: SavedSearchRecord }) {
 
 function AssigneeCell({
   row,
+  open,
+  onOpenChange,
   onChange,
 }: {
   readonly row: SavedSearchRecord
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
   readonly onChange: (userId: string | null) => void
 }) {
   return (
@@ -224,7 +235,7 @@ function AssigneeCell({
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <MemberSelector value={row.assignedUserId} onChange={onChange} />
+      <MemberSelector value={row.assignedUserId} onChange={onChange} open={open} onOpenChange={onOpenChange} />
     </span>
   )
 }
