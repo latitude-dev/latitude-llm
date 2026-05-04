@@ -1017,6 +1017,117 @@ export const TraceRepositoryLive = Layer.effect(
             )
         }),
 
+      findLastTraceAt: ({ organizationId, projectId, filters, searchQuery }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+          const runQuery = (extraJoinCondition: string, extraParams: Record<string, unknown>) =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT toString(max(start_time)) AS last_at
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                            ${extraJoinCondition}
+                          GROUP BY organization_id, project_id, trace_id
+                          ${havingClause}
+                        )`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    ...filterParams,
+                    ...extraParams,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<{ last_at: string | null }>()
+              })
+              .pipe(
+                Effect.map((rows) => {
+                  const raw = rows[0]?.last_at ?? null
+                  if (!raw) return null
+                  const parsed = new Date(raw.includes(" ") ? raw.replace(" ", "T") + "Z" : raw)
+                  return Number.isNaN(parsed.getTime()) ? null : parsed
+                }),
+                Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
+              )
+
+          if (hasActiveSearchQuery(searchQuery)) {
+            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+            return yield* runQuery(
+              `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`,
+              searchResult.params,
+            )
+          }
+
+          return yield* runQuery("", {})
+        }),
+
+      countAnnotatedByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+          const runQuery = (extraJoinCondition: string, extraParams: Record<string, unknown>) =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT count(DISTINCT trace_id) AS total
+                        FROM scores
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND source = {annotationSource:FixedString(32)}
+                          AND trace_id IN (
+                            SELECT trace_id
+                            FROM (
+                              SELECT ${LIST_SELECT}
+                              FROM traces
+                              WHERE organization_id = {organizationId:String}
+                                AND project_id = {projectId:String}
+                                ${extraWhere}
+                                ${extraJoinCondition}
+                              GROUP BY organization_id, project_id, trace_id
+                              ${havingClause}
+                            )
+                          )`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    annotationSource: "annotation",
+                    ...filterParams,
+                    ...extraParams,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<{ total: string }>()
+              })
+              .pipe(
+                Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+                Effect.mapError((error) => toRepositoryError(error, "countAnnotatedByProjectId")),
+              )
+
+          if (hasActiveSearchQuery(searchQuery)) {
+            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
+            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+            return yield* runQuery(
+              `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`,
+              searchResult.params,
+            )
+          }
+
+          return yield* runQuery("", {})
+        }),
+
       aggregateMetricsByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

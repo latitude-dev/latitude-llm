@@ -188,6 +188,65 @@ export const countTracesByProject = createServerFn({ method: "GET" })
     )
   })
 
+export const findLastTraceAtByProject = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<string | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const date = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.findLastTraceAt({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        })
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+    return date ? date.toISOString() : null
+  })
+
+export const countAnnotatedTracesByProject = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<number> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.countAnnotatedByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        })
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+  })
+
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

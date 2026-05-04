@@ -1,12 +1,17 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Input, type SortDirection, Tooltip, toast } from "@repo/ui"
+import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, SearchIcon } from "lucide-react"
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
+import {
+  useSavedSearchBySlug,
+  useUpdateSavedSearch,
+} from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
@@ -28,7 +33,8 @@ import {
 import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddToDatasetModal } from "../datasets/-components/add-to-dataset-modal.tsx"
-import { SearchBlankSlate } from "./-components/search-blank-slate.tsx"
+import { SaveSearchModal } from "./-components/save-search-modal.tsx"
+import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -40,9 +46,10 @@ function SearchPage() {
   const { projectSlug } = Route.useParams()
   const project = useRouteProject()
   const projectId = project.id
+  const router = useRouter()
 
   const [q, setQ] = useParamState("q", "")
-  const hasSearchQuery = q.length > 0
+  const [savedSearchSlug] = useParamState("savedSearch", "")
 
   // Results state — kept at the top level so the layout slots below
   // (`Layout.Actions`, `Layout.Aside`, …) remain DIRECT children of `<Layout>`.
@@ -69,7 +76,9 @@ function SearchPage() {
 
   const filters = parseFilters(rawFilters || undefined)
   const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
+  const hasSearchQuery = q.length > 0
   const hasActiveFilters = Object.keys(filters).length > 0
+  const hasContent = hasSearchQuery || hasActiveFilters
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
   const sorting = { column: sortBy, direction: sortDirection } as const
@@ -78,9 +87,22 @@ function SearchPage() {
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+
+  const { data: loadedSavedSearch } = useSavedSearchBySlug(projectId, savedSearchSlug || null)
+  const updateSavedSearchMutation = useUpdateSavedSearch(projectId)
+
+  // Compare canonical serializations of both filter sets. `rawFilters` is whatever TanStack Router
+  // wrote to the URL (potentially JSON-stringified twice depending on encoding), so going through
+  // `serializeFilters` on both sides — after `parseFilters` already normalized `filters` — is the
+  // only way to get a stable match when the saved search hasn't been touched.
+  const hasDrift = loadedSavedSearch
+    ? (loadedSavedSearch.query ?? "") !== q ||
+      (serializeFilters(loadedSavedSearch.filterSet) ?? "") !== (serializeFilters(filters) ?? "")
+    : false
 
   const { totalCount: totalTraceCount } = useTracesCount({
-    projectId: hasSearchQuery ? projectId : "",
+    projectId: hasContent ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
     searchQuery: q,
   })
@@ -165,7 +187,7 @@ function SearchPage() {
   const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
 
   useHotkeys([
-    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev), options: { enabled: hasSearchQuery } },
+    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev), options: { enabled: hasContent } },
     {
       hotkey: "Escape",
       callback: closeTraceDrawer,
@@ -178,7 +200,7 @@ function SearchPage() {
       <Layout.Actions>
         <Layout.ActionsRow className="justify-stretch">
           <div className="relative flex w-full items-center gap-2">
-            {hasSearchQuery ? (
+            {hasContent ? (
               <Tooltip
                 asChild
                 trigger={
@@ -197,9 +219,9 @@ function SearchPage() {
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {!hasSearchQuery ? <SearchBlankSlate /> : null}
+      {!hasContent ? <SavedSearchesList projectId={projectId} projectSlug={projectSlug} /> : null}
 
-      {hasSearchQuery ? (
+      {hasContent ? (
         <Layout.Actions className="pt-0">
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
@@ -246,11 +268,52 @@ function SearchPage() {
                 </Button>
               ) : null}
             </Layout.ActionRowItem>
+            <Layout.ActionRowItem>
+              {loadedSavedSearch ? (
+                <SplitButton
+                  variant="outline"
+                  size="sm"
+                  disabled={!hasDrift}
+                  isLoading={updateSavedSearchMutation.isPending}
+                  actions={[
+                    {
+                      content: "Update Saved Search",
+                      onClick: () =>
+                        updateSavedSearchMutation.mutate(
+                          {
+                            id: loadedSavedSearch.id,
+                            query: q || null,
+                            filterSet: filters,
+                          },
+                          {
+                            onSuccess: () => toast({ title: "Saved search updated" }),
+                            onError: (error) =>
+                              toast({
+                                variant: "destructive",
+                                title: "Could not save changes",
+                                description: toUserMessage(error),
+                              }),
+                          },
+                        ),
+                    },
+                    {
+                      content: "Save as new Search",
+                      onClick: () => setSaveModalOpen(true),
+                    },
+                  ]}
+                />
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setSaveModalOpen(true)}>
+                  <Icon icon={PinIcon} size="sm" />
+                  Save search
+                </Button>
+              )}
+            </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
       ) : null}
 
-      {hasSearchQuery && showBulkActions ? (
+      {hasContent && showBulkActions ? (
         <div className="flex flex-row items-center gap-2 px-6">
           <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
             <Icon icon={DownloadIcon} size="sm" />
@@ -263,7 +326,7 @@ function SearchPage() {
         </div>
       ) : null}
 
-      {hasSearchQuery ? (
+      {hasContent ? (
         <TracesView
           projectId={projectId}
           filters={filters}
@@ -284,7 +347,7 @@ function SearchPage() {
         />
       ) : null}
 
-      {hasSearchQuery && activeTraceId ? (
+      {hasContent && activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
             key={activeTraceId}
@@ -301,7 +364,7 @@ function SearchPage() {
         </Layout.Aside>
       ) : null}
 
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
+      {hasContent && showBulkActions && bulkSelection ? (
         <ExportConfirmationModal
           open={exportModalOpen}
           onOpenChange={setExportModalOpen}
@@ -312,7 +375,7 @@ function SearchPage() {
         />
       ) : null}
 
-      {hasSearchQuery && showBulkActions && bulkSelection ? (
+      {hasContent && showBulkActions && bulkSelection ? (
         <AddToDatasetModal
           open={addToDatasetOpen}
           onOpenChange={setAddToDatasetOpen}
@@ -320,6 +383,24 @@ function SearchPage() {
           selection={bulkSelection}
           selectedCount={selectedCount}
           onSuccess={clearSelections}
+        />
+      ) : null}
+
+      {saveModalOpen ? (
+        <SaveSearchModal
+          mode="create"
+          open={saveModalOpen}
+          onClose={() => setSaveModalOpen(false)}
+          projectId={projectId}
+          query={q || null}
+          filterSet={filters}
+          onCreated={() => {
+            void router.navigate({
+              to: "/projects/$projectSlug/search",
+              params: { projectSlug },
+              search: () => ({}),
+            })
+          }}
         />
       ) : null}
     </Layout>

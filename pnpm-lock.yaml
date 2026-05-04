@@ -355,6 +355,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../../packages/domain/saved-searches
       '@domain/scores':
         specifier: workspace:*
         version: link:../../packages/domain/scores

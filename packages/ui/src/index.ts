@@ -150,6 +150,11 @@ export {
 } from "./components/select/index.tsx"
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { Slider, type SliderProps } from "./components/slider/index.tsx"
+export {
+  SplitButton,
+  type SplitButtonAction,
+  type SplitButtonProps,
+} from "./components/split-button/split-button.tsx"
 export { Status, type StatusProps, statusVariants } from "./components/status/status.tsx"
 export { Switch, type SwitchProps } from "./components/switch/switch.tsx"
 export { SwitchInput, type SwitchInputProps } from "./components/switch/switch-input.tsx"
