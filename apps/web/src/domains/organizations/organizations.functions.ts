@@ -1,13 +1,16 @@
 import {
   generateUniqueOrganizationSlugUseCase,
   OrganizationRepository,
+  provisionOrganizationWorkspaceUseCase,
   updateOrganizationUseCase,
 } from "@domain/organizations"
 import { OrganizationId, UserId } from "@domain/shared"
 import {
+  ApiKeyRepositoryLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
-  SqlClientLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -16,7 +19,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getBetterAuth, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getPostgresClient } from "../../server/clients.ts"
 
 export const listOrganizations = createServerFn({ method: "GET" }).handler(async () => {
   const userId = await requireUserSession()
@@ -52,25 +55,25 @@ export const createOrganization = createServerFn({ method: "POST" })
       headers: await getRequestHeaders(),
     })
 
-    const outboxWriter = getOutboxWriter()
-    await Effect.runPromise(
-      outboxWriter
-        .write({
-          eventName: "OrganizationCreated",
-          aggregateType: "organization",
-          aggregateId: organization.id,
-          organizationId: OrganizationId(organization.id),
-          payload: {
-            organizationId: organization.id,
-            actorUserId: userId,
-            name: data.name,
-            slug,
-          },
-        })
-        .pipe(Effect.provide(SqlClientLive(adminClient, OrganizationId(organization.id))), withTracing),
+    const organizationId = OrganizationId(organization.id)
+    const workspace = await Effect.runPromise(
+      provisionOrganizationWorkspaceUseCase({
+        organizationId,
+        actorUserId: userId,
+        name: data.name,
+        slug,
+        defaultProjectName: "My project",
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
+          adminClient,
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
 
-    return organization
+    return { ...organization, ...workspace }
   })
 
 const organizationSettingsSchema = z.object({

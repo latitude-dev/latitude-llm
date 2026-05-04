@@ -1,4 +1,4 @@
-import type { LucideProps } from "lucide-react"
+import { BotIcon, type LucideProps } from "lucide-react"
 import type { ComponentType } from "react"
 import {
   AmazonQIcon,
@@ -36,6 +36,8 @@ type ProviderIconComponent = ComponentType<LucideProps>
 // Providers from https://models.dev/
 // Icons from https://svgl.app/
 export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
+  /** Generic / framework integrations without a dedicated brand mark */
+  generic: BotIcon,
   alibaba: QwenIcon,
   "alibaba-cn": QwenIcon,
   "amazon-bedrock": AmazonQIcon,

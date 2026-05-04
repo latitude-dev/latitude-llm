@@ -115,8 +115,11 @@ function WelcomePage() {
 
     try {
       await updateUser({ data: { name: userName } })
-      await createOrganization({ data: { name: organizationName } })
-      await router.navigate({ to: "/" })
+      const organization = await createOrganization({ data: { name: organizationName } })
+      await router.navigate({
+        to: "/projects/$projectSlug/onboarding",
+        params: { projectSlug: organization.defaultProject.slug },
+      })
     } catch (err) {
       setError(toUserMessage(err))
       setIsSubmitting(false)

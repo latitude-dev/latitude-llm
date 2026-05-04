@@ -16,6 +16,9 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/api-keys": "workspace:*",
+    "@domain/events": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"

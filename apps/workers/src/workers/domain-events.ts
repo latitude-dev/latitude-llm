@@ -1,4 +1,3 @@
-import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
@@ -128,18 +127,7 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid)
     },
 
-    OrganizationCreated: (event) =>
-      pub.publish(
-        "api-keys",
-        "create",
-        {
-          organizationId: event.payload.organizationId,
-          name: DEFAULT_API_KEY_NAME,
-        },
-        {
-          dedupeKey: `api-keys:create:${event.payload.organizationId}`,
-        },
-      ),
+    OrganizationCreated: () => Effect.void,
 
     ProjectCreated: (event) =>
       pub.publish("projects", "provision", event.payload, {

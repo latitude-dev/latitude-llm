@@ -9,6 +9,7 @@ export interface CodeBlockProps {
   readonly expandable?: boolean
   readonly language?: string
   readonly className?: string
+  readonly wrapLines?: boolean
 }
 
 const CodeMirrorReadonly = lazy(() =>
@@ -23,7 +24,14 @@ function CodeBlockFallback({ className }: { readonly className?: string }) {
   )
 }
 
-export function CodeBlock({ value, copyable = true, expandable = true, language, className }: CodeBlockProps) {
+export function CodeBlock({
+  value,
+  copyable = true,
+  expandable = true,
+  language,
+  className,
+  wrapLines = true,
+}: CodeBlockProps) {
   const [mounted, setMounted] = useState(false)
 
   useMountEffect(() => {
@@ -35,9 +43,9 @@ export function CodeBlock({ value, copyable = true, expandable = true, language,
   }
 
   return (
-    <div className="relative">
+    <div className="group relative">
       <Suspense fallback={<CodeBlockFallback {...(className != null && { className })} />}>
-        <CodeMirrorReadonly value={value} {...(className != null && { className })} />
+        <CodeMirrorReadonly value={value} wrapLines={wrapLines} {...(className != null && { className })} />
       </Suspense>
       <CodeBlockControls
         content={value}

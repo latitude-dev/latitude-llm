@@ -1,7 +1,8 @@
 import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
-import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, HatGlassesIcon, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
+import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { resetPostHog } from "../lib/posthog/posthog-client.ts"
@@ -9,18 +10,18 @@ import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
+import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
 import { useRootThemePreference } from "./-root-route-data.ts"
+
+const projectOnboardingRouteId = "/_authenticated/projects/$projectSlug/onboarding" as const
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
   staleTime: Infinity,
   remountDeps: () => "authenticated-layout",
-  // Keep rendered layout data in `loader` instead of `beforeLoad`.
-  // `beforeLoad` is best for middleware-style redirects/preconditions, while
-  // `loader` participates in TanStack Router's cache (`staleTime`) and can be
-  // consumed via `useLoaderData({ select })` without refetching on same-route
-  // search-param navigations.
-  loader: async () => {
+  // Session + org bootstrap. New organizations are provisioned during creation,
+  // but this fallback still repairs older orgs that somehow have no projects.
+  loader: async ({ location }) => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -37,6 +38,15 @@ export const Route = createFileRoute("/_authenticated")({
     // another user. The impersonation banner reads this to announce the
     // active impersonation on every authenticated page.
     const impersonatedBy = typeof sessionData.impersonatedBy === "string" ? sessionData.impersonatedBy : null
+
+    const projects = await listProjects()
+    if (projects.length === 0 && !isProjectOnboardingPathname(location.pathname)) {
+      const created = await createProject({ data: { name: "My project" } })
+      throw redirect({
+        to: "/projects/$projectSlug/onboarding",
+        params: { projectSlug: created.slug },
+      })
+    }
 
     return {
       user: session.user,
@@ -192,11 +202,16 @@ function AuthenticatedLayout() {
   const user = Route.useLoaderData({ select: (data) => data.user })
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
+  const isProjectOnboarding = useRouterState({
+    // `match.id` is unique per match instance (`routeId` + path + loader deps hash);
+    // `routeId` is the stable file-route id from `createFileRoute(...)`.
+    select: (s) => s.matches.some((m) => m.routeId === projectOnboardingRouteId),
+  })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <PostHogIdentity
         key={user.id}
         userId={user.id}
@@ -206,8 +221,14 @@ function AuthenticatedLayout() {
         organizationName={org?.name}
       />
       {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-      <NavHeader />
-      <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
+      {isProjectOnboarding ? null : <NavHeader />}
+      <main
+        className={
+          isProjectOnboarding
+            ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+            : "relative h-full min-h-0 w-full grow overflow-y-auto"
+        }
+      >
         <Outlet />
       </main>
     </div>

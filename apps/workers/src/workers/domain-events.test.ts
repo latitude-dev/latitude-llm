@@ -1,4 +1,3 @@
-import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
@@ -56,7 +55,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)
   })
 
-  it("routes OrganizationCreated to api-keys:create with default key name", async () => {
+  it("keeps OrganizationCreated as a no-op primary handler while still fanning out to PostHog", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope(
@@ -67,15 +66,9 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    const apiKeysPublish = published.find((p) => p.queue === "api-keys")
-    expect(apiKeysPublish?.task).toBe("create")
-    expect(apiKeysPublish?.payload).toEqual({
-      organizationId: "org-new",
-      name: DEFAULT_API_KEY_NAME,
-    })
-    expect(apiKeysPublish?.options?.dedupeKey).toBe("api-keys:create:org-new")
-    // OrganizationCreated is whitelisted for PostHog.
-    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
+    expect(published).toHaveLength(1)
+    expect(published[0]?.queue).toBe("posthog-analytics")
+    expect(published[0]?.task).toBe("track")
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
@@ -206,9 +199,8 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    // One to the primary handler (api-keys:create) and one to posthog-analytics.
     const byQueue = published.map((p) => `${p.queue}:${p.task}`).sort()
-    expect(byQueue).toEqual(["api-keys:create", "posthog-analytics:track"])
+    expect(byQueue).toEqual(["posthog-analytics:track"])
 
     const ph = published.find((p) => p.queue === "posthog-analytics")
     expect(ph?.payload).toMatchObject({

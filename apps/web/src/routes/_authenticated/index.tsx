@@ -59,8 +59,17 @@ function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string
   )
 }
 
-function DeleteProjectModal({ project, onClose }: { project: ProjectRecord; onClose: () => void }) {
+function DeleteProjectModal({
+  project,
+  onClose,
+  reloadAfterDelete,
+}: {
+  project: ProjectRecord
+  onClose: () => void
+  reloadAfterDelete?: boolean
+}) {
   const { toast } = useToast()
+  const router = useRouter()
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -71,6 +80,12 @@ function DeleteProjectModal({ project, onClose }: { project: ProjectRecord; onCl
         title: "Success",
         description: `Project "${project.name}" has been deleted.`,
       })
+      if (reloadAfterDelete) {
+        // `navigate({ to: "/" })` does nothing when already on `/`, so `beforeLoad` never
+        // re-runs and the empty-org → onboarding redirect does not fire. Invalidate instead.
+        await router.invalidate()
+        return
+      }
       onClose()
     } catch (error) {
       toast({
@@ -210,7 +225,13 @@ function ProjectsTable({
       </Table>
 
       {projectToRename && <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />}
-      {projectToDelete && <DeleteProjectModal project={projectToDelete} onClose={() => setProjectToDelete(null)} />}
+      {projectToDelete && (
+        <DeleteProjectModal
+          project={projectToDelete}
+          onClose={() => setProjectToDelete(null)}
+          reloadAfterDelete={projects.length === 1}
+        />
+      )}
     </>
   )
 }

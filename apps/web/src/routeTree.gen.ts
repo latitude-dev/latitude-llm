@@ -40,6 +40,7 @@ import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
+import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
 import { Route as AuthenticatedProjectsProjectSlugSearchIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/search/index'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
@@ -212,6 +213,12 @@ const AuthenticatedProjectsProjectSlugSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugOnboardingRoute =
+  AuthenticatedProjectsProjectSlugOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSearchIndexRoute =
   AuthenticatedProjectsProjectSlugSearchIndexRouteImport.update({
     id: '/search/',
@@ -265,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -297,6 +305,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
+  '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -335,6 +344,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/observability-test/'
     | '/backoffice/organizations/'
+    | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug/'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/observability-test'
     | '/backoffice/organizations'
+    | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/projects/$projectSlug'
@@ -442,6 +454,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/api/observability-test/'
     | '/backoffice/organizations/'
+    | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/_authenticated/projects/$projectSlug/'
@@ -685,6 +698,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/onboarding': {
+      id: '/_authenticated/projects/$projectSlug/onboarding'
+      path: '/onboarding'
+      fullPath: '/projects/$projectSlug/onboarding'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/search/': {
       id: '/_authenticated/projects/$projectSlug/search/'
       path: '/search'
@@ -777,6 +797,7 @@ const AuthenticatedSettingsRouteWithChildren =
   )
 
 interface AuthenticatedProjectsProjectSlugRouteChildren {
+  AuthenticatedProjectsProjectSlugOnboardingRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -787,6 +808,8 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
 
 const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjectSlugRouteChildren =
   {
+    AuthenticatedProjectsProjectSlugOnboardingRoute:
+      AuthenticatedProjectsProjectSlugOnboardingRoute,
     AuthenticatedProjectsProjectSlugSettingsRoute:
       AuthenticatedProjectsProjectSlugSettingsRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:

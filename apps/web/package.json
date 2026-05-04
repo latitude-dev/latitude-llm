@@ -30,6 +30,7 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@lottiefiles/dotlottie-wc": "^0.9.12",
     "@platform/ai": "workspace:*",
     "@platform/ai-voyage": "workspace:*",
     "@platform/cache-redis": "workspace:*",

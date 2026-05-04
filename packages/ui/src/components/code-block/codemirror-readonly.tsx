@@ -9,6 +9,7 @@ import { cn } from "../../utils/cn.ts"
 interface CodeMirrorReadonlyProps {
   readonly value: string
   readonly className?: string
+  readonly wrapLines?: boolean
 }
 
 function isJson(value: string): boolean {
@@ -47,15 +48,18 @@ const readonlyTheme = EditorView.theme({
   },
 })
 
-function buildState(doc: string, isJsonContent: boolean) {
+function buildState(doc: string, isJsonContent: boolean, wrapLines: boolean) {
   const extensions = [
     readonlyTheme,
     lineNumbers(),
     syntaxHighlighting(defaultHighlightStyle),
-    EditorView.lineWrapping,
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
   ]
+
+  if (wrapLines) {
+    extensions.push(EditorView.lineWrapping)
+  }
 
   if (isJsonContent) {
     extensions.push(json())
@@ -64,7 +68,7 @@ function buildState(doc: string, isJsonContent: boolean) {
   return EditorState.create({ doc, extensions })
 }
 
-export function CodeMirrorReadonly({ value, className }: CodeMirrorReadonlyProps) {
+export function CodeMirrorReadonly({ value, className, wrapLines = true }: CodeMirrorReadonlyProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const initialValueRef = useRef(value)
@@ -75,7 +79,7 @@ export function CodeMirrorReadonly({ value, className }: CodeMirrorReadonlyProps
     if (!container) return
 
     const view = new EditorView({
-      state: buildState(initialValueRef.current, isJsonContent),
+      state: buildState(initialValueRef.current, isJsonContent, wrapLines),
       parent: container,
     })
     viewRef.current = view
@@ -92,9 +96,9 @@ export function CodeMirrorReadonly({ value, className }: CodeMirrorReadonlyProps
     const view = viewRef.current
     if (!view) return
     if (view.state.doc.toString() !== value) {
-      view.setState(buildState(value, isJsonContent))
+      view.setState(buildState(value, isJsonContent, wrapLines))
     }
-  }, [value, isJsonContent])
+  }, [value, isJsonContent, wrapLines])
 
   return <div ref={containerRef} className={cn("rounded-md overflow-hidden bg-muted", className)} />
 }

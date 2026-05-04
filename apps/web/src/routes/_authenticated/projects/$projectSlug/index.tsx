@@ -199,8 +199,12 @@ function ProjectPage() {
   const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters
   const showEmptyState = !isTracesCountLoading && hasNoTraces
 
-  if (isTracesCountLoading && hasNoTraces) {
-    return null
+  if (isTracesCountLoading && !hasActiveFilters) {
+    return (
+      <Layout>
+        <TracesEmptyState isLoading />
+      </Layout>
+    )
   }
 
   if (showEmptyState) {
