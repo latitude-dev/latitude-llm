@@ -1,12 +1,18 @@
-import { type AdminProjectDetails, getProjectDetailsUseCase } from "@domain/admin"
+import {
+  type AdminProjectDetails,
+  getProjectDetailsUseCase,
+  getProjectMetricsUseCase,
+  type ProjectMetrics,
+} from "@domain/admin"
 import { ProjectId } from "@domain/shared"
+import { AdminProjectMetricsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { AdminProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getClickhouseClient } from "../../server/clients.ts"
 
 interface AdminProjectOrganizationDto {
   id: string
@@ -70,4 +76,94 @@ export const adminGetProject = createServerFn({ method: "GET" })
     )
 
     return toDto(details)
+  })
+
+// ───────────────────────────────────────────────────────────────────
+// Project metrics over time (backoffice panel)
+// ───────────────────────────────────────────────────────────────────
+
+interface ProjectMetricsActivityPointDto {
+  bucketStart: string
+  traceCount: number
+  annotationsPassed: number
+  annotationsFailed: number
+}
+
+interface ProjectIssueLifecyclePointDto {
+  bucketStart: string
+  untracked: number
+  tracked: number
+  resolved: number
+}
+
+interface ProjectTopIssueDto {
+  id: string
+  name: string
+  occurrences: number
+  lastSeenAt: string
+  state: "untracked" | "tracked" | "resolved"
+}
+
+export interface AdminProjectMetricsDto {
+  windowEnd: string
+  windowDays: number
+  activity: ProjectMetricsActivityPointDto[]
+  issuesLifecycle: ProjectIssueLifecyclePointDto[]
+  topIssues: ProjectTopIssueDto[]
+}
+
+const toMetricsDto = (metrics: ProjectMetrics): AdminProjectMetricsDto => ({
+  windowEnd: metrics.windowEnd.toISOString(),
+  windowDays: metrics.windowDays,
+  activity: metrics.activity.map((p) => ({
+    bucketStart: p.bucketStart,
+    traceCount: p.traceCount,
+    annotationsPassed: p.annotationsPassed,
+    annotationsFailed: p.annotationsFailed,
+  })),
+  issuesLifecycle: metrics.issuesLifecycle.map((p) => ({
+    bucketStart: p.bucketStart,
+    untracked: p.untracked,
+    tracked: p.tracked,
+    resolved: p.resolved,
+  })),
+  topIssues: metrics.topIssues.map((i) => ({
+    id: i.id,
+    name: i.name,
+    occurrences: i.occurrences,
+    lastSeenAt: i.lastSeenAt.toISOString(),
+    state: i.state,
+  })),
+})
+
+export const adminGetProjectMetricsInputSchema = z.object({
+  projectId: z.string().min(1).max(256),
+  windowDays: z.number().int().positive().max(90).optional(),
+})
+
+/**
+ * Backoffice "project metrics over time" panel data fetch.
+ *
+ * Guard: {@link adminMiddleware}. PG queries run on the admin client at
+ * the `"system"` org scope (RLS bypass); CH aggregates `traces` /
+ * `scores` cross-tenant via the dedicated admin port — see security
+ * warnings on `AdminProjectMetricsRepositoryLive` and
+ * `AdminProjectRepositoryLive`.
+ */
+export const adminGetProjectMetrics = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminGetProjectMetricsInputSchema)
+  .handler(async ({ data }): Promise<AdminProjectMetricsDto> => {
+    const metrics = await Effect.runPromise(
+      getProjectMetricsUseCase({
+        projectId: ProjectId(data.projectId),
+        ...(data.windowDays !== undefined ? { windowDays: data.windowDays } : {}),
+      }).pipe(
+        withPostgres(AdminProjectRepositoryLive, getAdminPostgresClient()),
+        withClickHouse(AdminProjectMetricsRepositoryLive, getClickhouseClient()),
+        withTracing,
+      ),
+    )
+
+    return toMetricsDto(metrics)
   })

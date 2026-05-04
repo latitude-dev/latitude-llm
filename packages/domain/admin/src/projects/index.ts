@@ -1,5 +1,10 @@
 export { type GetProjectDetailsInput, getProjectDetailsUseCase } from "./get-project-details.ts"
 export {
+  composeIssueLifecycleTimeline,
+  type GetProjectMetricsInput,
+  getProjectMetricsUseCase,
+} from "./get-project-metrics.ts"
+export {
   type AdminProjectDetails,
   type AdminProjectOrganization,
   type AdminProjectSettings,
@@ -7,4 +12,27 @@ export {
   adminProjectOrganizationSchema,
   adminProjectSettingsSchema,
 } from "./project-details.ts"
-export { AdminProjectRepository } from "./project-repository.ts"
+export {
+  type ProjectIssueLifecyclePoint,
+  type ProjectMetrics,
+  type ProjectMetricsActivityPoint,
+  type ProjectTopIssue,
+  projectIssueLifecyclePointSchema,
+  projectMetricsActivityPointSchema,
+  projectMetricsSchema,
+  projectTopIssueSchema,
+} from "./project-metrics.ts"
+export {
+  AdminProjectMetricsRepository,
+  type ProjectAnnotationBucket,
+  type ProjectMetricCountBucket,
+  type ProjectMetricHistogramInput,
+  type ProjectTopIssueOccurrence,
+  type ProjectTopIssuesInput,
+} from "./project-metrics-repository.ts"
+export {
+  AdminProjectRepository,
+  type ProjectIssueDetails,
+  type ProjectIssueLifecycleEvent,
+  type ProjectIssueStateSnapshot,
+} from "./project-repository.ts"
