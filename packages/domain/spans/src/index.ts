@@ -32,8 +32,8 @@ export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {
-  annotationAnchorTargetsToolPart,
   type AnnotationWriteSpanAnchor,
+  annotationAnchorTargetsToolPart,
   resolveAnnotationSpanIdForWrite,
 } from "./helpers/resolve-annotation-span-id-for-write.ts"
 export {
