@@ -103,8 +103,8 @@ export function ProjectTracesTable({
       {
         key: "indicators",
         header: "",
-        width: 96,
-        minWidth: 96,
+        width: 88,
+        minWidth: 80,
         resizable: false,
         ellipsis: false,
         cellClassName: "px-0",
@@ -371,6 +371,7 @@ function TraceIndicatorsCell({
   const positiveCount = annotationCounts?.positiveCount ?? 0
   const negativeCount = annotationCounts?.negativeCount ?? 0
   const hasBadges = positiveCount > 0 || negativeCount > 0 || errorCount > 0
+  const showIconOnly = positiveCount > 0 && negativeCount > 0 && errorCount > 0
 
   return (
     <span className="flex items-center justify-start gap-1">
@@ -381,7 +382,9 @@ function TraceIndicatorsCell({
             <Status
               variant="success"
               indicator={<Icon icon={ThumbsUpIcon} size="xs" />}
-              label={formatCount(positiveCount)}
+              label={showIconOnly ? "" : formatCount(positiveCount)}
+              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              aria-label={`${positiveCount} positive ${positiveCount === 1 ? "annotation" : "annotations"}`}
             />
           }
         >
@@ -395,7 +398,9 @@ function TraceIndicatorsCell({
             <Status
               variant="destructive"
               indicator={<Icon icon={ThumbsDownIcon} size="xs" />}
-              label={formatCount(negativeCount)}
+              label={showIconOnly ? "" : formatCount(negativeCount)}
+              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              aria-label={`${negativeCount} negative ${negativeCount === 1 ? "annotation" : "annotations"}`}
             />
           }
         >
@@ -409,7 +414,9 @@ function TraceIndicatorsCell({
             <Status
               variant="warning"
               indicator={<Icon icon={TriangleAlertIcon} size="xs" />}
-              label={formatCount(errorCount)}
+              label={showIconOnly ? "" : formatCount(errorCount)}
+              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              aria-label={`${errorCount} ${errorCount === 1 ? "error" : "errors"} in this trace`}
             />
           }
         >
