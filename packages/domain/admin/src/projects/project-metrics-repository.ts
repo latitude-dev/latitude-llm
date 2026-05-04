@@ -1,5 +1,5 @@
 import type { IssueId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 
 /**
  * Per-day count of an event-typed metric for a project (e.g. trace
@@ -53,7 +53,7 @@ export interface ProjectTopIssuesInput {
  * no per-tenant ACL. Only wire into handlers that have already passed
  * `adminMiddleware`. Live layer ships in `@platform/db-clickhouse`.
  */
-export class AdminProjectMetricsRepository extends ServiceMap.Service<
+export class AdminProjectMetricsRepository extends Context.Service<
   AdminProjectMetricsRepository,
   {
     /**

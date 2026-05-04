@@ -1,5 +1,5 @@
 import type { CacheError, ProjectId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 
 export interface IssueDiscoveryLockInput {
@@ -16,7 +16,7 @@ export interface IssueDiscoveryLockRepositoryShape {
   ): Effect.Effect<A, E | IssueDiscoveryLockUnavailableError | CacheError, R>
 }
 
-export class IssueDiscoveryLockRepository extends ServiceMap.Service<
+export class IssueDiscoveryLockRepository extends Context.Service<
   IssueDiscoveryLockRepository,
   IssueDiscoveryLockRepositoryShape
 >()("@domain/issues/IssueDiscoveryLockRepository") {}

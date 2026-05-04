@@ -1,5 +1,5 @@
 import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Flagger } from "../entities/flagger.ts"
 import type { FlaggerSlug } from "../flagger-strategies/types.ts"
 
@@ -42,6 +42,6 @@ export interface FlaggerRepositoryShape {
   update(input: UpdateFlaggerInput): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
 }
 
-export class FlaggerRepository extends ServiceMap.Service<FlaggerRepository, FlaggerRepositoryShape>()(
+export class FlaggerRepository extends Context.Service<FlaggerRepository, FlaggerRepositoryShape>()(
   "@domain/flaggers/FlaggerRepository",
 ) {}
