@@ -7,8 +7,8 @@ export const runSeeders = (seeders: readonly Seeder[], ctx: SeedContext): Effect
 
     for (const [index, seeder] of seeders.entries()) {
       const step = `${index + 1}/${total}`
-      console.log(`- [${step}] ${seeder.name}`)
+      if (!ctx.quiet) console.log(`- [${step}] ${seeder.name}`)
       yield* seeder.run(ctx)
-      console.log("  -> ok")
+      if (!ctx.quiet) console.log("  -> ok")
     }
   })

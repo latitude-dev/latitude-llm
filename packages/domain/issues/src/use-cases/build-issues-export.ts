@@ -27,6 +27,7 @@ export interface BuildIssuesExportInput {
     readonly field: IssuesSortField
     readonly direction: IssuesSortDirection
   }
+  readonly now?: Date
 }
 
 export interface BuildIssuesExportResult {
@@ -66,6 +67,7 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
       ...(input.search ? { search: input.search } : {}),
       ...(input.timeRange ? { timeRange: input.timeRange } : {}),
       ...(input.sort ? { sort: input.sort } : {}),
+      ...(input.now ? { now: input.now } : {}),
     })
 
     if (page.items.length === 0) break

@@ -121,8 +121,8 @@ if (firstScoreSeeder === undefined) {
 
 const ch = setupTestClickHouse()
 
-const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
+const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient | AI>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(mockAILayer), Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
 describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
@@ -137,8 +137,8 @@ describe("TraceRepository", () => {
   })
 
   beforeEach(async () => {
-    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client, scope: bootstrapSeedScope }))
-    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client, scope: bootstrapSeedScope }))
+    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client, scope: bootstrapSeedScope, quiet: true }))
+    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client, scope: bootstrapSeedScope, quiet: true }))
   })
 
   describe("matchesFiltersByTraceId", () => {

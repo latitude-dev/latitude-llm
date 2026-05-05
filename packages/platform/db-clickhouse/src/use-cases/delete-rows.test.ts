@@ -5,13 +5,19 @@ import {
   deleteRows,
   RowNotFoundError,
 } from "@domain/datasets"
-import { type ChSqlClient, DatasetId, DatasetRowId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
-import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { datasets } from "@platform/db-postgres/schema/datasets"
-import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
+import { createFakeDatasetRepository } from "@domain/datasets/testing"
+import {
+  type ChSqlClient,
+  DatasetId,
+  DatasetRowId,
+  OrganizationId,
+  ProjectId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
+import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { DatasetRowRepositoryLive } from "../repositories/dataset-row-repository.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
@@ -23,44 +29,41 @@ const ROW_1 = DatasetRowId("row-del-1")
 const ROW_2 = DatasetRowId("row-del-2")
 const ROW_3 = DatasetRowId("row-del-3")
 
-const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
+
+const inertSqlClient: SqlClientShape = {
+  organizationId: ORG_ID,
+  transaction: (effect) => effect.pipe(Effect.provideService(SqlClient, inertSqlClient)),
+  query: () => Effect.die("Fake DatasetRepository must not access SqlClient"),
+}
 
 describe("deleteRows", () => {
   let datasetRepo: (typeof DatasetRepository)["Service"]
   let rowRepo: DatasetRowRepositoryShape
 
   beforeAll(async () => {
-    datasetRepo = await Effect.runPromise(
-      Effect.gen(function* () {
-        return yield* DatasetRepository
-      }).pipe(withPostgres(DatasetRepositoryLive, pg.adminPostgresClient, ORG_ID)),
-    )
-
     rowRepo = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* DatasetRowRepository
       }).pipe(withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID)),
     )
+  })
 
-    await pg.db.insert(datasets).values({
-      id: DATASET_ID,
-      organizationId: ORG_ID,
-      projectId: PROJECT_ID,
-      name: "delete-rows-test",
-      currentVersion: 0,
-    })
+  beforeEach(async () => {
+    const fake = createFakeDatasetRepository(undefined, undefined, { organizationId: ORG_ID })
+    datasetRepo = fake.repository
+    await Effect.runPromise(
+      datasetRepo
+        .create({ id: DATASET_ID, projectId: PROJECT_ID, name: "delete-rows-test" })
+        .pipe(Effect.provideService(SqlClient, inertSqlClient)),
+    )
   })
 
   const seedRows = async (rowIds: DatasetRowId[]) => {
     const version = await Effect.runPromise(
       datasetRepo
-        .incrementVersion({
-          id: DATASET_ID,
-          rowsInserted: rowIds.length,
-          source: "web",
-        })
-        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID }))),
+        .incrementVersion({ id: DATASET_ID, rowsInserted: rowIds.length, source: "web" })
+        .pipe(Effect.provideService(SqlClient, inertSqlClient)),
     )
 
     await Effect.runPromise(
@@ -81,7 +84,7 @@ describe("deleteRows", () => {
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),
         Effect.provideService(DatasetRowRepository, rowRepo),
-        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+        Effect.provideService(SqlClient, inertSqlClient),
         Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
       ),
     )

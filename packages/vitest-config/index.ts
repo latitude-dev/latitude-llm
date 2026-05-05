@@ -34,12 +34,17 @@ const findAndLoadEnvTest = () => {
 
 findAndLoadEnvTest()
 
-export const PGLITE_HOOK_TIMEOUT_MS = 30_000
+export const PGLITE_HOOK_TIMEOUT_MS = 90_000
 
 export default defineConfig({
   test: {
     globals: true,
     environment: "node",
     exclude: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/coverage/**", "**/.turbo/**"],
+    // PGlite migrations + chdb session bootstrapping comfortably exceed the 10s
+    // vitest default when many packages run in parallel under turbo. Set the
+    // ceiling here so every package using setupTestPostgres / setupTestClickHouse
+    // inherits the same headroom without each declaring its own override.
+    hookTimeout: PGLITE_HOOK_TIMEOUT_MS,
   },
 })

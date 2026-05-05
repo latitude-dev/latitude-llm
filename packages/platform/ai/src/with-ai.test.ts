@@ -1,8 +1,11 @@
 import { AI, AIEmbed, AIGenerate, AIRerank, type GenerateInput } from "@domain/ai"
 import type { RedisClient } from "@platform/cache-redis"
+import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createAiLayer, withAi } from "./with-ai.ts"
+
+silenceLoggerInTests()
 
 beforeEach(() => {
   vi.clearAllMocks()

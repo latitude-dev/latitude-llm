@@ -16,5 +16,9 @@
     "@platform/cache-redis": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

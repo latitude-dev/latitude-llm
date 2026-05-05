@@ -36,7 +36,6 @@ const staleQueueNames = [
 function pickAssignee(scope: SeedScope, index: number): string {
   const list = scope.queueAssigneeUserIds
   // queueAssigneeUserIds is non-empty by SeedScope construction
-  // biome-ignore lint/style/noNonNullAssertion: contract-guaranteed
   return list[index % list.length]!
 }
 

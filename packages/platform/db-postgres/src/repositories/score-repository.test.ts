@@ -18,6 +18,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
+import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -27,6 +28,8 @@ import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { ScoreRepositoryLive } from "./score-repository.ts"
+
+silenceLoggerInTests()
 
 const evaluationSourceId = "eeeeeeeeeeeeeeeeeeeeeeee"
 const customProjectId = ProjectId("pppppppppppppppppppppppp")
