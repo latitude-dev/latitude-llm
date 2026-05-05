@@ -12,6 +12,7 @@ import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
 const EXPANDED_SKELETON_COUNT = 3
+const SELECTION_COLUMN_WIDTH = 48
 
 function nextSortDirection(current: SortDirection | null): SortDirection | null {
   if (current === null) return "desc"
@@ -161,7 +162,13 @@ export function InfiniteTable<T>({
               <tr>
                 {hasExpansion && <HeaderCell resizable={false} className="w-8" showSubheaderSlot={hasSubheaderRow} />}
                 {selection && (
-                  <HeaderCell resizable={false} className="w-10" showSubheaderSlot={hasSubheaderRow}>
+                  <HeaderCell
+                    resizable={false}
+                    width={SELECTION_COLUMN_WIDTH}
+                    minWidth={SELECTION_COLUMN_WIDTH}
+                    maxWidth={SELECTION_COLUMN_WIDTH}
+                    showSubheaderSlot={hasSubheaderRow}
+                  >
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
                   </HeaderCell>
                 )}
