@@ -36,6 +36,10 @@ export type ProjectId = Id<"ProjectId">
 // API Key IDs
 export type ApiKeyId = Id<"ApiKeyId">
 
+// Feature flag IDs
+export type FeatureFlagId = Id<"FeatureFlagId">
+export type OrganizationFeatureFlagId = Id<"OrganizationFeatureFlagId">
+
 // Dataset-related IDs
 export type DatasetId = Id<"DatasetId">
 export type DatasetRowId = Id<"DatasetRowId">
@@ -65,6 +69,9 @@ export const OrganizationId = (value: string): OrganizationId => value as Organi
 export const MembershipId = (value: string): MembershipId => value as MembershipId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
+export const FeatureFlagId = (value: string): FeatureFlagId => value as FeatureFlagId
+export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
+  value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
 export const IssueId = (value: string): IssueId => value as IssueId
 export const EvaluationId = (value: string): EvaluationId => value as EvaluationId
@@ -86,6 +93,8 @@ export const organizationIdSchema = cuidSchema.transform(OrganizationId)
 export const membershipIdSchema = cuidSchema.transform(MembershipId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const featureFlagIdSchema = cuidSchema.transform(FeatureFlagId)
+export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
 export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)

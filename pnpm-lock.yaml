@@ -340,6 +340,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../../packages/domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
@@ -1012,6 +1015,18 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
+  packages/domain/feature-flags:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/flaggers:
     dependencies:
       '@domain/ai':
@@ -1542,6 +1557,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../../domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../domain/flaggers

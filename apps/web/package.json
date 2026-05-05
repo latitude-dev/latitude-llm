@@ -21,6 +21,7 @@
     "@domain/datasets": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",
+    "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/organizations": "workspace:*",
