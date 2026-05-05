@@ -1,5 +1,5 @@
 import { index, text, unique, varchar } from "drizzle-orm/pg-core"
-import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const featureFlags = latitudeSchema.table(
   "feature_flags",
@@ -8,6 +8,7 @@ export const featureFlags = latitudeSchema.table(
     identifier: varchar("identifier", { length: 128 }).notNull().unique(),
     name: varchar("name", { length: 256 }),
     description: text("description"),
+    archivedAt: tzTimestamp("archived_at"),
     ...timestamps(),
   },
   (t) => [index("feature_flags_identifier_idx").on(t.identifier)],

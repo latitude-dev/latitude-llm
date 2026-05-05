@@ -789,6 +789,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
       '@domain/projects':
         specifier: workspace:*
         version: link:../projects

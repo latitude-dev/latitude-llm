@@ -168,4 +168,28 @@ describe("FeatureFlagRepositoryLive", () => {
       ),
     ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
   })
+
+  it("treats archived feature flags like missing flags", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* FeatureFlagRepository
+        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
+        yield* repo.enableForOrganization({
+          identifier: "new-dashboard",
+          enabledByAdminUserId: ADMIN_USER_ID,
+        })
+        yield* repo.archiveFeatureFlag("new-dashboard")
+
+        const enabled = yield* repo.isEnabledForOrganization("new-dashboard")
+        const allFlags = yield* repo.list()
+        const enabledFlags = yield* repo.listEnabledForOrganization()
+
+        return { enabled, allFlags, enabledFlags }
+      }),
+    )
+
+    expect(result.enabled).toBe(false)
+    expect(result.allFlags).toHaveLength(0)
+    expect(result.enabledFlags).toHaveLength(0)
+  })
 })

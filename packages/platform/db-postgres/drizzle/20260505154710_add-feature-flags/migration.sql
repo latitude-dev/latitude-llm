@@ -3,6 +3,7 @@ CREATE TABLE "latitude"."feature_flags" (
 	"identifier" varchar(128) NOT NULL UNIQUE,
 	"name" varchar(256),
 	"description" text,
+	"archived_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

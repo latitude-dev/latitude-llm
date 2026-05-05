@@ -22,6 +22,11 @@ export {
   type FeatureFlagRepositoryShape,
 } from "./ports/feature-flag-repository.ts"
 export {
+  type ArchiveFeatureFlagError,
+  type ArchiveFeatureFlagInput,
+  archiveFeatureFlagUseCase,
+} from "./use-cases/archive-feature-flag.ts"
+export {
   type CreateFeatureFlagError,
   type CreateFeatureFlagInput,
   createFeatureFlagUseCase,

@@ -25,6 +25,7 @@ export interface FeatureFlagRepositoryShape {
   createFeatureFlag(
     input: CreateFeatureFlagRepoInput,
   ): Effect.Effect<FeatureFlag, DuplicateFeatureFlagIdentifierError | RepositoryError, SqlClient>
+  archiveFeatureFlag(identifier: string): Effect.Effect<void, FeatureFlagNotFoundError | RepositoryError, SqlClient>
   enableForOrganization(
     input: EnableFeatureFlagForOrganizationRepoInput,
   ): Effect.Effect<OrganizationFeatureFlag, FeatureFlagNotFoundError | RepositoryError, SqlClient>

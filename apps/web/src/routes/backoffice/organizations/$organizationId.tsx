@@ -1,12 +1,21 @@
-import { Avatar, Text } from "@repo/ui"
+import { Avatar, Badge, Button, CloseTrigger, Icon, Modal, Select, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import { SparklesIcon } from "lucide-react"
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
+import { Flag, Plus, SparklesIcon } from "lucide-react"
+import { useState } from "react"
+import {
+  type AdminOrganizationFeatureFlagDto,
+  type AdminOrganizationFeatureFlagsDto,
+  adminDisableFeatureFlagForOrganization,
+  adminEnableFeatureFlagForOrganization,
+  adminListOrganizationFeatureFlags,
+} from "../../../domains/admin/feature-flags.functions.ts"
 import {
   type AdminOrganizationMemberDto,
   type AdminOrganizationProjectDto,
   adminGetOrganization,
 } from "../../../domains/admin/organizations.functions.ts"
+import { toUserMessage } from "../../../lib/errors.ts"
 import {
   DashboardHero,
   DashboardSection,
@@ -24,8 +33,11 @@ import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 export const Route = createFileRoute("/backoffice/organizations/$organizationId")({
   loader: async ({ params }) => {
     try {
-      const organization = await adminGetOrganization({ data: { organizationId: params.organizationId } })
-      return { organization }
+      const [organization, featureFlags] = await Promise.all([
+        adminGetOrganization({ data: { organizationId: params.organizationId } }),
+        adminListOrganizationFeatureFlags({ data: { organizationId: params.organizationId } }),
+      ])
+      return { organization, featureFlags }
     } catch (error) {
       const tag = (error as { _tag?: string } | null | undefined)?._tag
       if (tag === "NotFoundError") {
@@ -39,6 +51,7 @@ export const Route = createFileRoute("/backoffice/organizations/$organizationId"
 
 function BackofficeOrganizationDetailPage() {
   const organization = Route.useLoaderData({ select: (data) => data.organization })
+  const featureFlags = Route.useLoaderData({ select: (data) => data.featureFlags })
 
   useTrackRecentBackofficeView({
     kind: "organization",
@@ -132,6 +145,8 @@ function BackofficeOrganizationDetailPage() {
         }
       />
 
+      <FeatureFlagsSection organizationId={organization.id} featureFlags={featureFlags} />
+
       <OrganizationActionsSection>
         <OrganizationActionRow
           icon={SparklesIcon}
@@ -143,6 +158,215 @@ function BackofficeOrganizationDetailPage() {
 
       <PropertiesStrip entries={propertyEntries} />
     </div>
+  )
+}
+
+function FeatureFlagsSection({
+  organizationId,
+  featureFlags,
+}: {
+  readonly organizationId: string
+  readonly featureFlags: AdminOrganizationFeatureFlagsDto
+}) {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [removingIdentifier, setRemovingIdentifier] = useState<string | null>(null)
+
+  const handleRemove = async (featureFlag: AdminOrganizationFeatureFlagDto) => {
+    if (!window.confirm(`Remove feature flag "${featureFlag.identifier}" from this organization?`)) return
+
+    setRemovingIdentifier(featureFlag.identifier)
+    try {
+      await adminDisableFeatureFlagForOrganization({
+        data: { organizationId, identifier: featureFlag.identifier },
+      })
+      toast({ description: `Removed "${featureFlag.identifier}" from this organization.` })
+      void router.invalidate()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Could not remove feature flag",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setRemovingIdentifier(null)
+    }
+  }
+
+  return (
+    <DashboardSection
+      title={
+        <span className="flex items-center gap-2">
+          <Icon icon={Flag} size="sm" />
+          Feature Flags
+        </span>
+      }
+      count={featureFlags.enabled.length}
+      aside={<AddFeatureFlagButton organizationId={organizationId} availableFlags={featureFlags.available} />}
+    >
+      {featureFlags.enabled.length === 0 ? (
+        <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-4">
+          <Text.H6 weight="medium">No active feature flags</Text.H6>
+          <Text.H6 color="foregroundMuted">
+            Enable a flag when this organization should get access to behavior that is still gated.
+          </Text.H6>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {featureFlags.enabled.map((featureFlag) => (
+            <div
+              key={featureFlag.id}
+              className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+            >
+              <div className="flex min-w-0 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{featureFlag.identifier}</code>
+                  <Badge variant="outlineSuccessMuted" noWrap>
+                    Enabled
+                  </Badge>
+                </div>
+                <Text.H6 color={featureFlag.name ? "foreground" : "foregroundMuted"} weight="medium">
+                  {featureFlag.name ?? "Unnamed flag"}
+                </Text.H6>
+                {featureFlag.description ? (
+                  <Text.H6 color="foregroundMuted">{featureFlag.description}</Text.H6>
+                ) : (
+                  <Text.H6 color="foregroundMuted">No description.</Text.H6>
+                )}
+              </div>
+              <Button
+                variant="destructive-soft"
+                size="sm"
+                disabled={removingIdentifier === featureFlag.identifier}
+                onClick={() => void handleRemove(featureFlag)}
+              >
+                {removingIdentifier === featureFlag.identifier ? "Removing…" : "Remove"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </DashboardSection>
+  )
+}
+
+function AddFeatureFlagButton({
+  organizationId,
+  availableFlags,
+}: {
+  readonly organizationId: string
+  readonly availableFlags: AdminOrganizationFeatureFlagDto[]
+}) {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedIdentifier, setSelectedIdentifier] = useState<string | undefined>()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const selectedFeatureFlag = availableFlags.find((featureFlag) => featureFlag.identifier === selectedIdentifier)
+
+  const options = availableFlags.map((featureFlag) => ({
+    label: featureFlag.name ? `${featureFlag.identifier} — ${featureFlag.name}` : featureFlag.identifier,
+    value: featureFlag.identifier,
+  }))
+
+  const handleAdd = async () => {
+    if (!selectedIdentifier) return
+
+    setIsSubmitting(true)
+    try {
+      await adminEnableFeatureFlagForOrganization({
+        data: { organizationId, identifier: selectedIdentifier },
+      })
+      toast({ description: `Enabled "${selectedIdentifier}" for this organization.` })
+      setIsOpen(false)
+      setSelectedIdentifier(undefined)
+      void router.invalidate()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Could not enable feature flag",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
+        <Icon icon={Plus} size="sm" />
+        Add feature flag
+      </Button>
+      <Modal.Root
+        open={isOpen}
+        onOpenChange={(next) => {
+          if (!next) setSelectedIdentifier(undefined)
+          setIsOpen(next)
+        }}
+      >
+        <Modal.Content dismissible size="large">
+          <Modal.Header
+            title="Add feature flag"
+            description="Choose one active flag to enable for this organization."
+          />
+          <Modal.Body>
+            {availableFlags.length === 0 ? (
+              <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-4">
+                <Text.H6 weight="medium">No available feature flags</Text.H6>
+                <Text.H6 color="foregroundMuted">
+                  Every active flag is already enabled for this organization, or no active flags exist yet.
+                </Text.H6>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <Select
+                  name="featureFlag"
+                  label="Feature flag"
+                  options={options}
+                  value={selectedIdentifier}
+                  onChange={setSelectedIdentifier}
+                  placeholder="Select a feature flag"
+                  disabled={isSubmitting}
+                  searchable
+                  searchPlaceholder="Search feature flags..."
+                  searchableEmptyMessage="No matching feature flags."
+                  contentWidth="trigger"
+                />
+                {selectedFeatureFlag ? (
+                  <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="rounded bg-background px-1.5 py-0.5 font-mono text-sm">
+                        {selectedFeatureFlag.identifier}
+                      </code>
+                      <Text.H6 weight="medium">{selectedFeatureFlag.name ?? "Unnamed flag"}</Text.H6>
+                    </div>
+                    <Text.H6 color="foregroundMuted">{selectedFeatureFlag.description ?? "No description."}</Text.H6>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-3">
+                    <Text.H6 weight="medium">Select a flag to preview it</Text.H6>
+                    <Text.H6 color="foregroundMuted">
+                      The flag identifier, name, and description will be shown before enabling it.
+                    </Text.H6>
+                  </div>
+                )}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button
+              size="sm"
+              disabled={!selectedIdentifier || isSubmitting || availableFlags.length === 0}
+              onClick={() => void handleAdd()}
+            >
+              {isSubmitting ? "Enabling..." : "Enable feature flag"}
+            </Button>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
+    </>
   )
 }
 

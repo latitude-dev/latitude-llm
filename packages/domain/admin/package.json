@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@domain/events": "workspace:*",
+    "@domain/feature-flags": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

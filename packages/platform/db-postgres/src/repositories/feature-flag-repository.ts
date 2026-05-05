@@ -16,7 +16,7 @@ import {
   type SqlClientShape,
   UserId,
 } from "@domain/shared"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
@@ -47,6 +47,7 @@ const toFeatureFlag = (row: typeof featureFlags.$inferSelect): FeatureFlag =>
     identifier: row.identifier,
     name: row.name,
     description: row.description,
+    archivedAt: row.archivedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -69,7 +70,11 @@ export const FeatureFlagRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [row] = yield* sqlClient.query((db) =>
-            db.select().from(featureFlags).where(eq(featureFlags.identifier, identifier)).limit(1),
+            db
+              .select()
+              .from(featureFlags)
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .limit(1),
           )
 
           if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
@@ -80,7 +85,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db) =>
-            db.select().from(featureFlags).orderBy(asc(featureFlags.identifier)),
+            db.select().from(featureFlags).where(isNull(featureFlags.archivedAt)).orderBy(asc(featureFlags.identifier)),
           )
           return rows.map(toFeatureFlag)
         }),
@@ -93,7 +98,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
               .select({ featureFlag: featureFlags })
               .from(organizationFeatureFlags)
               .innerJoin(featureFlags, eq(featureFlags.id, organizationFeatureFlags.featureFlagId))
-              .where(eq(organizationFeatureFlags.organizationId, organizationId))
+              .where(and(eq(organizationFeatureFlags.organizationId, organizationId), isNull(featureFlags.archivedAt)))
               .orderBy(asc(featureFlags.identifier)),
           )
 
@@ -112,6 +117,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
                 and(
                   eq(featureFlags.identifier, identifier),
                   eq(organizationFeatureFlags.organizationId, organizationId),
+                  isNull(featureFlags.archivedAt),
                 ),
               )
               .limit(1),
@@ -141,11 +147,29 @@ export const FeatureFlagRepositoryLive = Layer.effect(
           return toFeatureFlag(row)
         }),
 
+      archiveFeatureFlag: (identifier) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .update(featureFlags)
+              .set({ archivedAt: new Date(), updatedAt: new Date() })
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .returning({ id: featureFlags.id }),
+          )
+
+          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
+        }),
+
       enableForOrganization: (input) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [featureFlagRow] = yield* sqlClient.query((db) =>
-            db.select().from(featureFlags).where(eq(featureFlags.identifier, input.identifier)).limit(1),
+            db
+              .select()
+              .from(featureFlags)
+              .where(and(eq(featureFlags.identifier, input.identifier), isNull(featureFlags.archivedAt)))
+              .limit(1),
           )
           if (!featureFlagRow) return yield* new FeatureFlagNotFoundError({ identifier: input.identifier })
 
@@ -184,7 +208,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
             db
               .select({ id: featureFlags.id })
               .from(featureFlags)
-              .where(eq(featureFlags.identifier, identifier))
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
               .limit(1),
           )
           if (!featureFlagRow) return

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { DuplicateFeatureFlagIdentifierError, FeatureFlagNotFoundError } from "../errors.ts"
 import { FeatureFlagRepository } from "../ports/feature-flag-repository.ts"
 import { createFakeFeatureFlagRepository } from "../testing/fake-feature-flag-repository.ts"
+import { archiveFeatureFlagUseCase } from "./archive-feature-flag.ts"
 import { createFeatureFlagUseCase } from "./create-feature-flag.ts"
 import { disableFeatureFlagForOrganizationUseCase } from "./disable-feature-flag-for-organization.ts"
 import { enableFeatureFlagForOrganizationUseCase } from "./enable-feature-flag-for-organization.ts"
@@ -128,5 +129,29 @@ describe("feature flag use cases", () => {
       hasFeatureFlagUseCase({ identifier: "new-dashboard" }).pipe(Effect.provide(otherOrgLayer)),
     )
     expect(otherOrgEnabled).toBe(false)
+  })
+
+  it("treats archived feature flags like missing flags", async () => {
+    const layer = makeLayer()
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* createFeatureFlagUseCase({ identifier: "new-dashboard" })
+        yield* enableFeatureFlagForOrganizationUseCase({
+          identifier: "new-dashboard",
+          enabledByAdminUserId: ADMIN_USER_ID,
+        })
+        yield* archiveFeatureFlagUseCase({ identifier: "new-dashboard" })
+
+        const enabled = yield* hasFeatureFlagUseCase({ identifier: "new-dashboard" })
+        const allFlags = yield* listFeatureFlagsUseCase()
+        const enabledFlags = yield* listEnabledFeatureFlagsUseCase()
+
+        return { enabled, allFlags, enabledFlags }
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.enabled).toBe(false)
+    expect(result.allFlags).toHaveLength(0)
+    expect(result.enabledFlags).toHaveLength(0)
   })
 })
