@@ -1,6 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import { emptyTraceMetrics, type TraceRepositoryShape } from "../ports/trace-repository.ts"
+import { emptyTraceDistribution, emptyTraceMetrics, type TraceRepositoryShape } from "../ports/trace-repository.ts"
 
 export const createFakeTraceRepository = (overrides?: Partial<TraceRepositoryShape>) => {
   const repository: TraceRepositoryShape = {
@@ -25,6 +25,7 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
     listMatchingFilterIdsByTraceId: () => Effect.succeed([]),
     listByTraceIds: () => Effect.succeed([]),
     distinctFilterValues: () => Effect.succeed([]),
+    getDistribution: () => Effect.succeed(emptyTraceDistribution()),
     ...overrides,
   }
 

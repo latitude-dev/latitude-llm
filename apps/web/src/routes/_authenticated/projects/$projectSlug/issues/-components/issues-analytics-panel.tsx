@@ -5,12 +5,12 @@ import type { IssuesListResultRecord } from "../../../../../../domains/issues/is
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
-  { key: "newIssues", label: "New issues" },
-  { key: "escalatingIssues", label: "Escalating issues" },
-  { key: "ongoingIssues", label: "Ongoing issues" },
-  { key: "regressedIssues", label: "Regressed issues" },
-  { key: "resolvedIssues", label: "Resolved issues" },
-  { key: "seenOccurrences", label: "Seen occurrences" },
+  { key: "newIssues", label: "New" },
+  { key: "escalatingIssues", label: "Escalating" },
+  { key: "ongoingIssues", label: "Ongoing" },
+  { key: "regressedIssues", label: "Regressed" },
+  { key: "resolvedIssues", label: "Resolved" },
+  { key: "seenOccurrences", label: "Occurrences" },
 ] as const
 const ISSUE_HISTOGRAM_BUCKET_MS = 24 * 60 * 60 * 1000
 

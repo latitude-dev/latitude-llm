@@ -1,9 +1,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { InfoIcon } from "lucide-react"
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
+import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 import { DataRow } from "./data-row.tsx"
 import { HeaderCell } from "./headers/header-cell.tsx"
 import type { InfiniteTableProps } from "./types.ts"
@@ -191,7 +194,23 @@ export function InfiniteTable<T>({
                           }
                         : {})}
                     >
-                      {col.header}
+                      {col.headerTooltip ? (
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <span className="flex justify-center items-center gap-1">
+                              <Text.H6 weight="medium" color="foregroundMuted" noWrap>
+                                {col.header}
+                              </Text.H6>
+                              <Icon icon={InfoIcon} size="xs" color="foregroundMuted" className="shrink-0" />
+                            </span>
+                          }
+                        >
+                          {col.headerTooltip}
+                        </Tooltip>
+                      ) : (
+                        col.header
+                      )}
                     </HeaderCell>
                   )
                 })}

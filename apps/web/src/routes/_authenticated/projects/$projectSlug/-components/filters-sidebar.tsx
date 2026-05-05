@@ -1,5 +1,5 @@
-import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, Icon, Input, Text, Tooltip } from "@repo/ui"
+import type { FilterCondition, FilterSet, PercentileTraceFilterField } from "@domain/shared"
+import { Button, Icon, Input, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
@@ -10,6 +10,7 @@ import {
 } from "../../../../../components/filters-builder/constants.ts"
 import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter } from "../../../../../components/filters-builder/multi-select-filter.tsx"
+import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 
 export type { FilterMode }
@@ -42,6 +43,11 @@ function getRangeValues(filters: FilterSet, field: string): { min: number | unde
   }
 }
 
+function getPercentileValue(filters: FilterSet, field: string): number | undefined {
+  const cond = filters[field]?.find((c) => c.op === "gtePercentile")
+  return typeof cond?.value === "number" ? cond.value : undefined
+}
+
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
   if (conditions.length === 0) {
     const { [field]: _, ...rest } = filters
@@ -61,9 +67,13 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen)
 
-  // TODO(frontend-use-effect-policy): keep section openness in sync with externally-controlled active filters.
+  // Auto-open when `defaultOpen` flips true (e.g. a filter just got set), but
+  // never auto-close — clearing or swapping a filter value should leave the
+  // section expanded so the user keeps their place. Manual collapse via the
+  // chevron still works because we don't react to `defaultOpen` going false.
+  // TODO(frontend-use-effect-policy): one-way sync from external filter activation.
   useEffect(() => {
-    setOpen(defaultOpen)
+    if (defaultOpen) setOpen(true)
   }, [defaultOpen])
 
   const ChevronIcon = open ? ChevronUp : ChevronDown
@@ -239,6 +249,105 @@ function NumberRangeFilter({
   )
 }
 
+type NumberFilterMode = "range" | "percentile"
+
+interface NumberFilterSectionProps {
+  readonly label: ReactNode
+  readonly field: string
+  readonly tooltip: string | undefined
+  readonly percentileField: PercentileTraceFilterField | undefined
+  readonly projectId: string
+  readonly minValue: number | undefined
+  readonly maxValue: number | undefined
+  readonly percentileValue: number | undefined
+  readonly onRangeChange: (min: number | undefined, max: number | undefined) => void
+  readonly onPercentileChange: (percentile: number | undefined) => void
+}
+
+function NumberFilterSection({
+  label,
+  field,
+  tooltip,
+  percentileField,
+  projectId,
+  minValue,
+  maxValue,
+  percentileValue,
+  onRangeChange,
+  onPercentileChange,
+}: NumberFilterSectionProps) {
+  const hasRange = minValue !== undefined || maxValue !== undefined
+  const hasPercentile = percentileValue !== undefined
+  const supportsPercentile = percentileField !== undefined
+
+  // Inferred mode: existing filter state wins. If the user only has the
+  // section open with no filter set yet, fall back to whichever mode they
+  // last selected (local state).
+  const [userMode, setUserMode] = useState<NumberFilterMode>("range")
+  const inferredMode: NumberFilterMode = hasPercentile ? "percentile" : hasRange ? "range" : userMode
+
+  const handleModeChange = useCallback(
+    (next: NumberFilterMode) => {
+      setUserMode(next)
+      // Switching modes always clears the *other* mode's filter so the two
+      // never coexist on the same field.
+      if (next === "range" && hasPercentile) onPercentileChange(undefined)
+      if (next === "percentile" && hasRange) onRangeChange(undefined, undefined)
+    },
+    [hasPercentile, hasRange, onPercentileChange, onRangeChange],
+  )
+
+  const labelNode = tooltip ? (
+    <span className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <Tooltip
+        asChild
+        trigger={
+          <span className="inline-flex items-center text-muted-foreground">
+            <InfoIcon className="h-3.5 w-3.5" />
+          </span>
+        }
+      >
+        {tooltip}
+      </Tooltip>
+    </span>
+  ) : (
+    label
+  )
+
+  return (
+    <CollapsibleSection key={field} label={labelNode} defaultOpen={hasRange || hasPercentile}>
+      {supportsPercentile && (
+        <Tabs<NumberFilterMode>
+          variant="secondary"
+          size="sm"
+          options={[
+            { id: "range", label: "Range" },
+            { id: "percentile", label: "Percentile" },
+          ]}
+          active={inferredMode}
+          onSelect={handleModeChange}
+        />
+      )}
+      {inferredMode === "percentile" && percentileField ? (
+        <PercentileFilter
+          projectId={projectId}
+          field={percentileField}
+          value={percentileValue}
+          onChange={onPercentileChange}
+        />
+      ) : (
+        <NumberRangeFilter
+          minValue={minValue}
+          maxValue={maxValue}
+          onMinChange={(min) => onRangeChange(min, maxValue)}
+          onMaxChange={(max) => onRangeChange(minValue, max)}
+        />
+      )}
+    </CollapsibleSection>
+  )
+}
+
 export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onClose }: FiltersSidebarProps) {
   const setField = useCallback(
     (field: string, conditions: FilterCondition[]) => {
@@ -260,6 +369,13 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       if (min !== undefined) conditions.push({ op: "gte", value: min })
       if (max !== undefined) conditions.push({ op: "lte", value: max })
       setField(field, conditions)
+    },
+    [setField],
+  )
+
+  const setPercentileFilter = useCallback(
+    (field: string, percentile: number | undefined) => {
+      setField(field, percentile !== undefined ? [{ op: "gtePercentile", value: percentile }] : [])
     },
     [setField],
   )
@@ -333,39 +449,23 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           )
         })}
 
-        {NUMBER_RANGE_FIELDS.map(({ label, field, tooltip }) => {
+        {NUMBER_RANGE_FIELDS.map(({ label, field, tooltip, percentile }) => {
           const range = getRangeValues(filters, field)
+          const percentileValue = getPercentileValue(filters, field)
           return (
-            <CollapsibleSection
+            <NumberFilterSection
               key={field}
-              label={
-                tooltip ? (
-                  <span className="inline-flex items-center gap-1">
-                    <span>{label}</span>
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <span className="inline-flex items-center text-muted-foreground">
-                          <InfoIcon className="h-3.5 w-3.5" />
-                        </span>
-                      }
-                    >
-                      {tooltip}
-                    </Tooltip>
-                  </span>
-                ) : (
-                  label
-                )
-              }
-              defaultOpen={!!filters[field]}
-            >
-              <NumberRangeFilter
-                minValue={range.min}
-                maxValue={range.max}
-                onMinChange={(min) => setRangeFilter(field, min, range.max)}
-                onMaxChange={(max) => setRangeFilter(field, range.min, max)}
-              />
-            </CollapsibleSection>
+              label={label}
+              field={field}
+              tooltip={tooltip}
+              percentileField={percentile?.field}
+              projectId={projectId}
+              minValue={range.min}
+              maxValue={range.max}
+              percentileValue={percentileValue}
+              onRangeChange={(min, max) => setRangeFilter(field, min, max)}
+              onPercentileChange={(p) => setPercentileFilter(field, p)}
+            />
           )
         })}
 

@@ -91,4 +91,28 @@ describe("filterSetSchema", () => {
     const result = filterSetSchema.safeParse(input)
     expect(result.success).toBe(false)
   })
+
+  it("accepts gtePercentile with a valid percentile value", () => {
+    const input = { duration: [{ op: "gtePercentile", value: 95 }] }
+    const result = filterSetSchema.safeParse(input)
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects gtePercentile with non-numeric value", () => {
+    const input = { duration: [{ op: "gtePercentile", value: "p99" }] }
+    const result = filterSetSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects gtePercentile with value above 100", () => {
+    const input = { duration: [{ op: "gtePercentile", value: 101 }] }
+    const result = filterSetSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects gtePercentile with negative value", () => {
+    const input = { duration: [{ op: "gtePercentile", value: -1 }] }
+    const result = filterSetSchema.safeParse(input)
+    expect(result.success).toBe(false)
+  })
 })
