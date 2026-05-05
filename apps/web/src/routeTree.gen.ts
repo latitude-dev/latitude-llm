@@ -25,6 +25,7 @@ import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
+import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as BackofficeUsersUserIdRouteImport } from './routes/backoffice/users/$userId'
@@ -124,6 +125,12 @@ const BackofficeOrganizationsIndexRoute =
   BackofficeOrganizationsIndexRouteImport.update({
     id: '/organizations/',
     path: '/organizations/',
+    getParentRoute: () => BackofficeRouteRoute,
+  } as any)
+const BackofficeFeatureFlagsIndexRoute =
+  BackofficeFeatureFlagsIndexRouteImport.update({
+    id: '/feature-flags/',
+    path: '/feature-flags/',
     getParentRoute: () => BackofficeRouteRoute,
   } as any)
 const ApiObservabilityTestIndexRoute =
@@ -271,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
@@ -304,6 +312,7 @@ export interface FileRoutesByTo {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/feature-flags': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
@@ -343,6 +352,7 @@ export interface FileRoutesById {
   '/backoffice/users/$userId': typeof BackofficeUsersUserIdRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
+  '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/settings/'
     | '/api/observability-test/'
+    | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/settings'
     | '/api/observability-test'
+    | '/backoffice/feature-flags'
     | '/backoffice/organizations'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
@@ -453,6 +465,7 @@ export interface FileRouteTypes {
     | '/backoffice/users/$userId'
     | '/_authenticated/settings/'
     | '/api/observability-test/'
+    | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/backoffice/organizations/'
       preLoaderRoute: typeof BackofficeOrganizationsIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/feature-flags/': {
+      id: '/backoffice/feature-flags/'
+      path: '/feature-flags'
+      fullPath: '/backoffice/feature-flags/'
+      preLoaderRoute: typeof BackofficeFeatureFlagsIndexRouteImport
       parentRoute: typeof BackofficeRouteRoute
     }
     '/api/observability-test/': {
@@ -742,6 +762,7 @@ interface BackofficeRouteRouteChildren {
   BackofficeOrganizationsOrganizationIdRoute: typeof BackofficeOrganizationsOrganizationIdRoute
   BackofficeProjectsProjectIdRoute: typeof BackofficeProjectsProjectIdRoute
   BackofficeUsersUserIdRoute: typeof BackofficeUsersUserIdRoute
+  BackofficeFeatureFlagsIndexRoute: typeof BackofficeFeatureFlagsIndexRoute
   BackofficeOrganizationsIndexRoute: typeof BackofficeOrganizationsIndexRoute
 }
 
@@ -752,6 +773,7 @@ const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
     BackofficeOrganizationsOrganizationIdRoute,
   BackofficeProjectsProjectIdRoute: BackofficeProjectsProjectIdRoute,
   BackofficeUsersUserIdRoute: BackofficeUsersUserIdRoute,
+  BackofficeFeatureFlagsIndexRoute: BackofficeFeatureFlagsIndexRoute,
   BackofficeOrganizationsIndexRoute: BackofficeOrganizationsIndexRoute,
 }
 

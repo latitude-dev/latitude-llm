@@ -1,10 +1,14 @@
 {
-  "name": "@domain/admin",
+  "name": "@domain/feature-flags",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
   "scripts": {
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
@@ -12,10 +16,6 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/events": "workspace:*",
-    "@domain/feature-flags": "workspace:*",
-    "@domain/projects": "workspace:*",
-    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
