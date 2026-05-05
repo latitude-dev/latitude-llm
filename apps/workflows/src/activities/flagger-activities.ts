@@ -122,28 +122,30 @@ export const draftAnnotate = async (input: {
   }
 
   await Effect.runPromise(
-    queuePublisher.publish(
-      "billing",
-      "recordBillableAction",
-      {
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        action: "flagger-scan",
-        idempotencyKey,
-        context: {
-          planSlug: billingResult.context.planSlug,
-          planSource: billingResult.context.planSource,
-          periodStart: billingResult.context.periodStart.toISOString(),
-          periodEnd: billingResult.context.periodEnd.toISOString(),
-          includedCredits: billingResult.context.includedCredits,
-          overageAllowed: billingResult.context.overageAllowed,
+    queuePublisher
+      .publish(
+        "billing",
+        "recordBillableAction",
+        {
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          action: "flagger-scan",
+          idempotencyKey,
+          context: {
+            planSlug: billingResult.context.planSlug,
+            planSource: billingResult.context.planSource,
+            periodStart: billingResult.context.periodStart.toISOString(),
+            periodEnd: billingResult.context.periodEnd.toISOString(),
+            includedCredits: billingResult.context.includedCredits,
+            overageAllowed: billingResult.context.overageAllowed,
+          },
         },
-      },
-      {
-        attempts: 10,
-        backoff: { type: "exponential", delayMs: 1_000 },
-      },
-    ).pipe(withTracing),
+        {
+          attempts: 10,
+          backoff: { type: "exponential", delayMs: 1_000 },
+        },
+      )
+      .pipe(withTracing),
   )
 
   return Effect.runPromise(

@@ -1,4 +1,4 @@
-import { resolveEffectivePlan, type EffectivePlanResolution } from "@domain/billing"
+import { type EffectivePlanResolution, resolveEffectivePlan } from "@domain/billing"
 import { CacheStore, type OrganizationId } from "@domain/shared"
 import { Effect, Option } from "effect"
 
@@ -34,7 +34,9 @@ const parseCachedPlan = (json: string): EffectivePlanResolution | null => {
       typeof parsed.plan.overageAllowed !== "boolean" ||
       typeof parsed.plan.hardCapped !== "boolean" ||
       (parsed.plan.priceCents !== null && typeof parsed.plan.priceCents !== "number") ||
-      (parsed.plan.spendingLimitCents !== null && parsed.plan.spendingLimitCents !== undefined && typeof parsed.plan.spendingLimitCents !== "number") ||
+      (parsed.plan.spendingLimitCents !== null &&
+        parsed.plan.spendingLimitCents !== undefined &&
+        typeof parsed.plan.spendingLimitCents !== "number") ||
       typeof parsed.periodStart !== "string" ||
       typeof parsed.periodEnd !== "string"
     ) {

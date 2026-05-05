@@ -2,8 +2,8 @@ import { QueuePublisher } from "@domain/queue"
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import type { ChargeableAction } from "../constants.ts"
-import { recordUsageEventUseCase } from "./record-usage-event.ts"
 import type { AuthorizedBillableActionContext } from "./authorize-billable-action.ts"
+import { recordUsageEventUseCase } from "./record-usage-event.ts"
 
 const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5_000
 

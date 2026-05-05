@@ -1,5 +1,4 @@
 import { AI } from "@domain/ai"
-import { resolveEffectivePlanCached } from "@platform/db-postgres"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
@@ -20,6 +19,7 @@ import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "
 import {
   BillingOverrideRepositoryLive,
   type PostgresClient,
+  resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,

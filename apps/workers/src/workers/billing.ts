@@ -83,146 +83,150 @@ export const createBillingWorker = ({ consumer, postgresClient, publisher }: Bil
     return Effect.succeed(publisher)
   }
 
-  consumer.subscribe("billing", {
-    recordBillableAction: (payload: RecordBillableActionPayload) =>
-      Effect.gen(function* () {
-        const queuePublisher = yield* ensurePublisher()
+  consumer.subscribe(
+    "billing",
+    {
+      recordBillableAction: (payload: RecordBillableActionPayload) =>
+        Effect.gen(function* () {
+          const queuePublisher = yield* ensurePublisher()
 
-        return yield* recordBillableActionUseCase({
+          return yield* recordBillableActionUseCase({
+            organizationId: OrganizationId(payload.organizationId),
+            projectId: ProjectId(payload.projectId),
+            action: payload.action,
+            idempotencyKey: payload.idempotencyKey,
+            context: {
+              planSlug: payload.context.planSlug,
+              planSource: payload.context.planSource,
+              periodStart: new Date(payload.context.periodStart),
+              periodEnd: new Date(payload.context.periodEnd),
+              includedCredits: payload.context.includedCredits,
+              overageAllowed: payload.context.overageAllowed,
+            } satisfies AuthorizedBillableActionContext,
+            ...(payload.traceId ? { traceId: TraceId(payload.traceId) } : {}),
+            ...(payload.metadata ? { metadata: payload.metadata } : {}),
+          }).pipe(Effect.provideService(QueuePublisher, queuePublisher))
+        }).pipe(
+          withPostgres(billingLayers, pgClient, OrganizationId(payload.organizationId)),
+          withTracing,
+          Effect.tapError((error) =>
+            Effect.sync(() =>
+              logger.error("Billing record billable action failed", {
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                action: payload.action,
+                idempotencyKey: payload.idempotencyKey,
+                error,
+              }),
+            ),
+          ),
+          Effect.asVoid,
+        ),
+
+      recordTraceUsageBatch: (payload: RecordTraceUsageBatchPayload) => {
+        const batchEffect = recordTraceUsageBatchUseCase({
           organizationId: OrganizationId(payload.organizationId),
           projectId: ProjectId(payload.projectId),
-          action: payload.action,
-          idempotencyKey: payload.idempotencyKey,
-          context: {
-            planSlug: payload.context.planSlug,
-            planSource: payload.context.planSource,
-            periodStart: new Date(payload.context.periodStart),
-            periodEnd: new Date(payload.context.periodEnd),
-            includedCredits: payload.context.includedCredits,
-            overageAllowed: payload.context.overageAllowed,
-          } satisfies AuthorizedBillableActionContext,
-          ...(payload.traceId ? { traceId: TraceId(payload.traceId) } : {}),
-          ...(payload.metadata ? { metadata: payload.metadata } : {}),
-        }).pipe(Effect.provideService(QueuePublisher, queuePublisher))
-      }).pipe(
-        withPostgres(billingLayers, pgClient, OrganizationId(payload.organizationId)),
-        withTracing,
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            logger.error("Billing record billable action failed", {
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              action: payload.action,
-              idempotencyKey: payload.idempotencyKey,
-              error,
-            }),
+          traceIds: payload.traceIds.map((traceId) => TraceId(traceId)),
+          planSlug: payload.planSlug,
+          planSource: payload.planSource,
+          periodStart: new Date(payload.periodStart),
+          periodEnd: new Date(payload.periodEnd),
+          includedCredits: payload.includedCredits,
+          overageAllowed: payload.overageAllowed,
+        }).pipe(
+          withPostgres(billingLayers, pgClient, OrganizationId(payload.organizationId)),
+          withTracing,
+          Effect.tapError((error) =>
+            Effect.sync(() =>
+              logger.error("Billing trace usage batch failed", {
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                traceCount: payload.traceIds.length,
+                error,
+              }),
+            ),
           ),
-        ),
-        Effect.asVoid,
-      ),
+          Effect.asVoid,
+        )
 
-    recordTraceUsageBatch: (payload: RecordTraceUsageBatchPayload) => {
-      const batchEffect = recordTraceUsageBatchUseCase({
-        organizationId: OrganizationId(payload.organizationId),
-        projectId: ProjectId(payload.projectId),
-        traceIds: payload.traceIds.map((traceId) => TraceId(traceId)),
-        planSlug: payload.planSlug,
-        planSource: payload.planSource,
-        periodStart: new Date(payload.periodStart),
-        periodEnd: new Date(payload.periodEnd),
-        includedCredits: payload.includedCredits,
-        overageAllowed: payload.overageAllowed,
-      }).pipe(
-        withPostgres(billingLayers, pgClient, OrganizationId(payload.organizationId)),
-        withTracing,
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            logger.error("Billing trace usage batch failed", {
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              traceCount: payload.traceIds.length,
-              error,
-            }),
-          ),
-        ),
-        Effect.asVoid,
-      )
-
-      if (!publisher) {
-        return Effect.fail(new Error("Billing worker requires a queue publisher for trace usage batches"))
-      }
-
-      return batchEffect.pipe(Effect.provideService(QueuePublisher, publisher))
-    },
-
-    reportOverage: (payload: ReportOveragePayload) =>
-      Effect.gen(function* () {
-        const organizationId = OrganizationId(payload.organizationId)
-        const periodStart = new Date(payload.periodStart)
-        const periodEnd = new Date(payload.periodEnd)
-        const periodRepo = yield* BillingUsagePeriodRepository
-        const period = yield* periodRepo.findByPeriod({
-          organizationId,
-          periodStart,
-          periodEnd,
-        })
-
-        if (
-          !period ||
-          period.planSlug !== PRO_PLAN_CONFIG.slug ||
-          period.overageCredits <= period.reportedOverageCredits
-        ) {
-          return
+        if (!publisher) {
+          return Effect.fail(new Error("Billing worker requires a queue publisher for trace usage batches"))
         }
 
-        const reporter = yield* BillingOverageReporter
-        const result = yield* reporter.reportOverage({
-          organizationId,
-          periodStart,
-          periodEnd,
-          overageCreditsToReport: period.overageCredits - period.reportedOverageCredits,
-        })
+        return batchEffect.pipe(Effect.provideService(QueuePublisher, publisher))
+      },
 
-        if (result.status !== "reported") {
-          logger.info("Billing overage sync skipped", {
-            organizationId: payload.organizationId,
-            periodStart: payload.periodStart,
-            periodEnd: payload.periodEnd,
-            reason: result.reason,
+      reportOverage: (payload: ReportOveragePayload) =>
+        Effect.gen(function* () {
+          const organizationId = OrganizationId(payload.organizationId)
+          const periodStart = new Date(payload.periodStart)
+          const periodEnd = new Date(payload.periodEnd)
+          const periodRepo = yield* BillingUsagePeriodRepository
+          const period = yield* periodRepo.findByPeriod({
+            organizationId,
+            periodStart,
+            periodEnd,
           })
-          return
-        }
 
-        yield* periodRepo.advanceReportedOverageCredits({
-          organizationId,
-          periodStart,
-          periodEnd,
-          reportedOverageCredits: period.overageCredits,
-        })
+          if (
+            !period ||
+            period.planSlug !== PRO_PLAN_CONFIG.slug ||
+            period.overageCredits <= period.reportedOverageCredits
+          ) {
+            return
+          }
 
-        logger.info("Billing overage sync completed", {
-          organizationId: payload.organizationId,
-          periodStart: payload.periodStart,
-          periodEnd: payload.periodEnd,
-          reportedOverageCredits: period.overageCredits,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(BillingOverageReporterLive, BillingUsagePeriodRepositoryLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withTracing,
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            logger.error("Billing overage sync failed", {
+          const reporter = yield* BillingOverageReporter
+          const result = yield* reporter.reportOverage({
+            organizationId,
+            periodStart,
+            periodEnd,
+            overageCreditsToReport: period.overageCredits - period.reportedOverageCredits,
+          })
+
+          if (result.status !== "reported") {
+            logger.info("Billing overage sync skipped", {
               organizationId: payload.organizationId,
               periodStart: payload.periodStart,
               periodEnd: payload.periodEnd,
-              error,
-            }),
+              reason: result.reason,
+            })
+            return
+          }
+
+          yield* periodRepo.advanceReportedOverageCredits({
+            organizationId,
+            periodStart,
+            periodEnd,
+            reportedOverageCredits: period.overageCredits,
+          })
+
+          logger.info("Billing overage sync completed", {
+            organizationId: payload.organizationId,
+            periodStart: payload.periodStart,
+            periodEnd: payload.periodEnd,
+            reportedOverageCredits: period.overageCredits,
+          })
+        }).pipe(
+          withPostgres(
+            Layer.mergeAll(BillingOverageReporterLive, BillingUsagePeriodRepositoryLive),
+            pgClient,
+            OrganizationId(payload.organizationId),
+          ),
+          withTracing,
+          Effect.tapError((error) =>
+            Effect.sync(() =>
+              logger.error("Billing overage sync failed", {
+                organizationId: payload.organizationId,
+                periodStart: payload.periodStart,
+                periodEnd: payload.periodEnd,
+                error,
+              }),
+            ),
           ),
         ),
-      ),
-  }, { concurrency: 1 })
+    },
+    { concurrency: 1 },
+  )
 }

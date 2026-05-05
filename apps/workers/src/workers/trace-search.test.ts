@@ -46,7 +46,9 @@ describe("resolveTraceSearchRetentionDays", () => {
   it("falls back to 30 days when billing lookup fails", async () => {
     resolveEffectivePlanCachedMock.mockReturnValueOnce(Effect.fail(new Error("pg down")))
 
-    const retentionDays = await Effect.runPromise(resolveTraceSearchRetentionDays("org-1") as Effect.Effect<number, never, never>)
+    const retentionDays = await Effect.runPromise(
+      resolveTraceSearchRetentionDays("org-1") as Effect.Effect<number, never, never>,
+    )
 
     expect(retentionDays).toBe(30)
   })

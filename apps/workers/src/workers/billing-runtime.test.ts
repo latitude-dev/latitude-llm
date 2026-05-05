@@ -576,7 +576,10 @@ describe("billing runtime integration", () => {
           periodEnd,
           reportedOverageCredits: 3,
         })
-      }).pipe(withPostgres(BillingUsagePeriodRepositoryLive, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
+      }).pipe(
+        withPostgres(BillingUsagePeriodRepositoryLive, pg.appPostgresClient, OrganizationId(organizationId)),
+        withTracing,
+      ),
     )
 
     const [period] = await pg.db

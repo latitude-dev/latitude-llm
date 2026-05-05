@@ -1,4 +1,3 @@
-import { resolveEffectivePlanCached } from "@platform/db-postgres"
 import type { EventsPublisher } from "@domain/events"
 import { type QueueConsumer, type QueuePublishError, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
@@ -9,8 +8,9 @@ import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import {
   BillingOverrideRepositoryLive,
-  StripeSubscriptionLookupLive,
+  resolveEffectivePlanCached,
   SettingsReaderLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { StorageDiskLive } from "@platform/storage-object"
@@ -49,60 +49,56 @@ export const createSpanIngestionWorker = ({
     StripeSubscriptionLookupLive,
   )
 
-  const recordTraceUsage =
-    publisher
-      ? (params: {
-          organizationId: string
-          projectId: string
-          traces: readonly { traceId: string }[]
-          context: {
-            planSlug: "free" | "pro" | "enterprise"
-            planSource: "override" | "subscription" | "free-fallback"
-            periodStart: Date
-            periodEnd: Date
-            includedCredits: number
-            overageAllowed: boolean
-          }
-        }) =>
-          Effect.runPromise(
-            Effect.gen(function* () {
-              const queuePublisher = yield* QueuePublisher
-              yield* queuePublisher.publish(
-                "billing",
-                "recordTraceUsageBatch",
-                {
-                  organizationId: params.organizationId,
-                  projectId: params.projectId,
-                  traceIds: params.traces.map((trace) => trace.traceId),
-                  planSlug: params.context.planSlug,
-                  planSource: params.context.planSource,
-                  periodStart: params.context.periodStart.toISOString(),
-                  periodEnd: params.context.periodEnd.toISOString(),
-                  includedCredits: params.context.includedCredits,
-                  overageAllowed: params.context.overageAllowed,
-                },
-                {
-                  attempts: 10,
-                  backoff: { type: "exponential", delayMs: 1_000 },
-                },
-              )
-            }).pipe(
-              Effect.provideService(QueuePublisher, publisher),
-              withTracing,
-            ),
-          )
-            .then(() => undefined)
-            .catch((error) => {
-              logger.error("Trace billing recording failed after span persistence", {
+  const recordTraceUsage = publisher
+    ? (params: {
+        organizationId: string
+        projectId: string
+        traces: readonly { traceId: string }[]
+        context: {
+          planSlug: "free" | "pro" | "enterprise"
+          planSource: "override" | "subscription" | "free-fallback"
+          periodStart: Date
+          periodEnd: Date
+          includedCredits: number
+          overageAllowed: boolean
+        }
+      }) =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            const queuePublisher = yield* QueuePublisher
+            yield* queuePublisher.publish(
+              "billing",
+              "recordTraceUsageBatch",
+              {
                 organizationId: params.organizationId,
                 projectId: params.projectId,
-                traceCount: params.traces.length,
                 traceIds: params.traces.map((trace) => trace.traceId),
-                error,
-              })
-              return undefined
+                planSlug: params.context.planSlug,
+                planSource: params.context.planSource,
+                periodStart: params.context.periodStart.toISOString(),
+                periodEnd: params.context.periodEnd.toISOString(),
+                includedCredits: params.context.includedCredits,
+                overageAllowed: params.context.overageAllowed,
+              },
+              {
+                attempts: 10,
+                backoff: { type: "exponential", delayMs: 1_000 },
+              },
+            )
+          }).pipe(Effect.provideService(QueuePublisher, publisher), withTracing),
+        )
+          .then(() => undefined)
+          .catch((error) => {
+            logger.error("Trace billing recording failed after span persistence", {
+              organizationId: params.organizationId,
+              projectId: params.projectId,
+              traceCount: params.traces.length,
+              traceIds: params.traces.map((trace) => trace.traceId),
+              error,
             })
-      : undefined
+            return undefined
+          })
+    : undefined
 
   const processSpans = processIngestedSpansUseCase({
     eventsPublisher,
@@ -169,16 +165,16 @@ export const createSpanIngestionWorker = ({
                 }
               : {}),
           })
-          }).pipe(
-            Effect.catchTag("SpanDecodingError", (error) =>
-              Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
-            ),
-            Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
-            withPostgres(billingPlanLayers, postgresClient, OrganizationId(organizationId)),
-            withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
-            withTracing,
-            Effect.provide(StorageDiskLive(disk)),
-          )
+        }).pipe(
+          Effect.catchTag("SpanDecodingError", (error) =>
+            Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
+          ),
+          Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
+          withPostgres(billingPlanLayers, postgresClient, OrganizationId(organizationId)),
+          withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
+          withTracing,
+          Effect.provide(StorageDiskLive(disk)),
+        )
 
         return rdClient ? processEffect.pipe(Effect.provide(RedisCacheStoreLive(rdClient))) : processEffect
       },

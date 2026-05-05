@@ -353,9 +353,9 @@ describe("createSpanIngestionWorker", () => {
     }
 
     await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
-    for (const message of queue.published.filter(
-      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
-    ).slice(1)) {
+    for (const message of queue.published
+      .filter((message) => message.queue === "billing" && message.task === "recordTraceUsageBatch")
+      .slice(1)) {
       await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
     }
 

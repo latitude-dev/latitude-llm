@@ -94,7 +94,11 @@ export const recordTraceUsageBatchUseCase = Effect.fn("billing.recordTraceUsageB
     }),
   )
 
-  if (input.planSource === "subscription" && input.overageAllowed && updated.overageCredits > updated.reportedOverageCredits) {
+  if (
+    input.planSource === "subscription" &&
+    input.overageAllowed &&
+    updated.overageCredits > updated.reportedOverageCredits
+  ) {
     const queuePublisher = yield* QueuePublisher
     yield* queuePublisher
       .publish(

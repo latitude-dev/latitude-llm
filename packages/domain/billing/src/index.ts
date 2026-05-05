@@ -57,23 +57,23 @@ export {
   type StripeSubscriptionRow,
 } from "./ports/stripe-subscription-lookup.ts"
 export {
-  authorizeBillableAction,
   type AuthorizeBillableActionInput,
   type AuthorizeBillableActionResult,
   type AuthorizedBillableActionContext,
+  authorizeBillableAction,
 } from "./use-cases/authorize-billable-action.ts"
 export {
-  recordBillableActionUseCase,
   type RecordBillableActionInput,
+  recordBillableActionUseCase,
 } from "./use-cases/record-billable-action.ts"
+export {
+  type RecordTraceUsageBatchInput,
+  recordTraceUsageBatchUseCase,
+} from "./use-cases/record-trace-usage-batch.ts"
 export {
   type CheckCreditAvailabilityInput,
   checkCreditAvailabilityUseCase,
   type RecordUsageEventInput,
   recordUsageEventUseCase,
 } from "./use-cases/record-usage-event.ts"
-export {
-  type RecordTraceUsageBatchInput,
-  recordTraceUsageBatchUseCase,
-} from "./use-cases/record-trace-usage-batch.ts"
 export { type EffectivePlanResolution, resolveEffectivePlan } from "./use-cases/resolve-effective-plan.ts"
