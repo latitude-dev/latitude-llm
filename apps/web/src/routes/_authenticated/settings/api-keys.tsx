@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
-import { Pencil, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
   deleteApiKeyMutation,
@@ -165,9 +165,50 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   )
 }
 
-function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
+function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose: () => void }) {
   const { toast } = useToast()
+  const [deleting, setDeleting] = useState(false)
+  const displayName = apiKey.name || "Latitude API Key"
+
+  const handleConfirm = async () => {
+    setDeleting(true)
+    try {
+      await deleteApiKeyMutation(apiKey.id).isPersisted.promise
+      toast({ description: "API key deleted" })
+      onClose()
+    } catch (error) {
+      setDeleting(false)
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onOpenChange={(open) => {
+        if (!open && !deleting) onClose()
+      }}
+      title="Delete API Key"
+      description={`Are you sure you want to delete "${displayName}"? Any application using this key will immediately lose access to the Latitude API. This action cannot be undone.`}
+      dismissible
+      footer={
+        <div className="flex flex-row items-center gap-2">
+          <Button variant="outline" onClick={onClose} disabled={deleting}>
+            <Text.H5>Cancel</Text.H5>
+          </Button>
+          <Button variant="destructive" onClick={() => void handleConfirm()} disabled={deleting}>
+            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            <Text.H5 color="white">{deleting ? "Deleting..." : "Delete API Key"}</Text.H5>
+          </Button>
+        </div>
+      }
+    />
+  )
+}
+
+function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
   const [apiKeyToEdit, setApiKeyToEdit] = useState<ApiKeyRecord | null>(null)
+  const [apiKeyToDelete, setApiKeyToDelete] = useState<ApiKeyRecord | null>(null)
 
   return (
     <>
@@ -211,15 +252,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <Button
-                        disabled={apiKeys.length === 1}
-                        variant="ghost"
-                        onClick={() => {
-                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise.then(() => {
-                            toast({ description: "API key deleted" })
-                          })
-                        }}
-                      >
+                      <Button disabled={apiKeys.length === 1} variant="ghost" onClick={() => setApiKeyToDelete(apiKey)}>
                         <Icon icon={Trash2} size="sm" />
                       </Button>
                     }
@@ -234,6 +267,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
       </Table>
 
       {apiKeyToEdit ? <UpdateApiKeyModal apiKey={apiKeyToEdit} onClose={() => setApiKeyToEdit(null)} /> : null}
+      {apiKeyToDelete ? <DeleteApiKeyModal apiKey={apiKeyToDelete} onClose={() => setApiKeyToDelete(null)} /> : null}
     </>
   )
 }

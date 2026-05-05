@@ -462,7 +462,9 @@ function MembersTable({
                   member.expiresAt && isExpired(member.expiresAt) ? (
                     <Text.H5 color="destructive">Expired</Text.H5>
                   ) : member.expiresAt ? (
-                    <Text.H5 color="foregroundMuted">{relativeTime(member.expiresAt)}</Text.H5>
+                    <Text.H5 color="foregroundMuted">
+                      Expires {relativeTime(member.expiresAt).replace(/^./, (c) => c.toLowerCase())}
+                    </Text.H5>
                   ) : (
                     <Text.H5 color="foregroundMuted">No expiration</Text.H5>
                   )
