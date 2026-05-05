@@ -23,7 +23,7 @@ export class ScoresClient {
     }
 
     /**
-     * Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.
+     * Creates a score grouped by a source. The optional `trace` field associates the score with a target trace (resolved by id or filter set, exactly-one-match required for filters); when omitted, the score persists as uninstrumented. Annotations use the separate `/annotations` endpoint.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateScoreBody} request

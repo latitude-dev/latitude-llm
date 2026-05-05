@@ -1188,6 +1188,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

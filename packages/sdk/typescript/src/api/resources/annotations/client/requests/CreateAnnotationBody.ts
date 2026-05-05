@@ -5,37 +5,24 @@ import type * as LatitudeApi from "../../../../index.js";
 /**
  * @example
  *     {
- *         value: 1,
+ *         value: 1.1,
  *         passed: true,
- *         feedback: "Approved - the system annotator correctly flagged this as a refusal.",
+ *         feedback: "feedback",
  *         trace: {
- *             by: "filters",
- *             filters: {
- *                 "metadata.scoreId": [{
- *                         op: "eq",
- *                         value: "abc123def456ghi789jkl012"
- *                     }]
- *             }
+ *             by: "id",
+ *             id: "id"
  *         }
  *     }
  */
 export interface CreateAnnotationBody {
-    id?: string;
-    sessionId?: string;
-    spanId?: string;
     simulationId?: string;
     issueId?: string;
     annotatorId?: string;
     value: number;
     passed: boolean;
     feedback: string;
-    messageIndex?: number;
-    partIndex?: number;
-    startOffset?: number;
-    endOffset?: number;
     anchor?: CreateAnnotationBody.Anchor;
     trace: LatitudeApi.TraceRef;
-    draft?: boolean;
 }
 
 export namespace CreateAnnotationBody {
@@ -44,5 +31,6 @@ export namespace CreateAnnotationBody {
         partIndex?: number | undefined;
         startOffset?: number | undefined;
         endOffset?: number | undefined;
+        textFormat?: "pretty-json" | undefined;
     }
 }

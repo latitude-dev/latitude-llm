@@ -17,6 +17,7 @@ export namespace FilterCondition {
         NotIn: "notIn",
         Contains: "contains",
         NotContains: "notContains",
+        GtePercentile: "gtePercentile",
     } as const;
     export type Op = (typeof Op)[keyof typeof Op];
     export type Value = string | number | boolean | (string | number)[];

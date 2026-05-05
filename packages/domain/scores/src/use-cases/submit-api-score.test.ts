@@ -1,10 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
-import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
-import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ChSqlClient,
   ExternalUserId,
-  NotFoundError,
   OrganizationId,
   ProjectId,
   SessionId,
@@ -14,17 +11,28 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import type { Trace, TraceDetail, TraceListPage } from "@domain/spans"
-import { SpanRepository, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
+import {
+  SpanRepository,
+  type Trace,
+  type TraceDetail,
+  type TraceListPage,
+  TraceRepository,
+  type TraceRepositoryShape,
+} from "@domain/spans"
 import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { submitApiAnnotationUseCase } from "./submit-api-annotation.ts"
+import { ScoreAnalyticsRepository } from "../ports/score-analytics-repository.ts"
+import { ScoreRepository } from "../ports/score-repository.ts"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "../testing/index.ts"
+import { submitApiScoreUseCase } from "./submit-api-score.ts"
 
 const cuid = "a".repeat(24)
 const projectCuid = "b".repeat(24)
+const evaluationCuid = "c".repeat(24)
 const traceIdRaw = "d".repeat(32)
-const defaultResolvedSpanId = SpanId("s".repeat(16))
+const traceSessionId = SessionId("trace-session")
+const resolvedSpanId = SpanId("s".repeat(16))
 
 const traceDetailStub = (traceId: string): TraceDetail => ({
   organizationId: OrganizationId(cuid),
@@ -45,7 +53,7 @@ const traceDetailStub = (traceId: string): TraceDetail => ({
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
-  sessionId: SessionId("session"),
+  sessionId: traceSessionId,
   userId: ExternalUserId("user"),
   simulationId: SimulationId(""),
   tags: [],
@@ -80,7 +88,7 @@ const traceStub = (traceId: string): Trace => ({
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
-  sessionId: SessionId("session"),
+  sessionId: traceSessionId,
   userId: ExternalUserId("user"),
   simulationId: SimulationId(""),
   tags: [],
@@ -92,46 +100,33 @@ const traceStub = (traceId: string): Trace => ({
   rootSpanName: "root",
 })
 
-const defaultCompletionSpan = (traceId = traceIdRaw) =>
+const completionSpan = (traceId = traceIdRaw) =>
   stubListSpan({
     organizationId: OrganizationId(cuid),
     projectId: ProjectId(projectCuid),
     traceId: TraceId(traceId),
-    sessionId: SessionId("session"),
-    spanId: defaultResolvedSpanId,
+    sessionId: traceSessionId,
+    spanId: resolvedSpanId,
     operation: "chat",
     startTime: new Date("2026-03-24T00:00:00.000Z"),
     endTime: new Date("2026-03-24T00:01:00.000Z"),
   })
 
-const createTestLayers = (options?: {
-  traceRepositoryOverrides?: Partial<TraceRepositoryShape>
-  traceDetailForFindByTraceId?: TraceDetail | null
-}) => {
+const createTestLayers = (options?: { traceRepositoryOverrides?: Partial<TraceRepositoryShape> }) => {
   const events: unknown[] = []
   const { repository: scoreRepository, scores: store } = createFakeScoreRepository()
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
 
-  const traceDetailForLookup =
-    options?.traceDetailForFindByTraceId === undefined
-      ? traceDetailStub(traceIdRaw)
-      : options.traceDetailForFindByTraceId
-
   const { repository: traceRepository } = createFakeTraceRepository({
-    findByTraceId: () => {
-      if (traceDetailForLookup === null) {
-        return Effect.fail(new NotFoundError({ entity: "Trace", id: "" }))
-      }
-      return Effect.succeed(traceDetailForLookup)
-    },
-    // By default, treat the caller-supplied traceId as belonging to the project.
-    // Tests that exercise cross-tenant rejection override this to `false`.
+    findByTraceId: () => Effect.succeed(traceDetailStub(traceIdRaw)),
+    // Default: caller-supplied trace id belongs to the project. Cross-tenant
+    // rejection is exercised explicitly by overriding to `false`.
     matchesFiltersByTraceId: () => Effect.succeed(true),
     ...options?.traceRepositoryOverrides,
   })
 
   const { repository: spanRepository } = createFakeSpanRepository({
-    listByTraceId: () => Effect.succeed([defaultCompletionSpan()]),
+    listByTraceId: () => Effect.succeed([completionSpan()]),
   })
 
   return {
@@ -154,20 +149,36 @@ const createTestLayers = (options?: {
   }
 }
 
-describe("submitApiAnnotationUseCase", () => {
+const customInput = (overrides?: Record<string, unknown>) => ({
+  source: "custom" as const,
+  sourceId: "api-source",
+  value: 0.87,
+  passed: true,
+  feedback: "Custom score",
+  organizationId: cuid,
+  projectId: ProjectId(projectCuid),
+  ...overrides,
+})
+
+const evaluationInput = (overrides?: Record<string, unknown>) => ({
+  source: "evaluation" as const,
+  sourceId: evaluationCuid,
+  metadata: { evaluationHash: "sha256:abc123" },
+  value: 0.91,
+  passed: true,
+  feedback: "Evaluation score",
+  organizationId: cuid,
+  projectId: ProjectId(projectCuid),
+  ...overrides,
+})
+
+describe("submitApiScoreUseCase", () => {
   describe("trace resolution", () => {
-    it("resolves trace by id and persists the annotation", async () => {
+    it("resolves trace by id and persists the score", async () => {
       const { store, layer } = createTestLayers()
 
       const score = await Effect.runPromise(
-        submitApiAnnotationUseCase({
-          trace: { by: "id", id: traceIdRaw },
-          value: 0.5,
-          passed: true,
-          feedback: "Good answer",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(customInput({ trace: { by: "id", id: traceIdRaw } })).pipe(Effect.provide(layer)),
       )
 
       expect(score.traceId).toBe(TraceId(traceIdRaw))
@@ -182,14 +193,7 @@ describe("submitApiAnnotationUseCase", () => {
       })
 
       const exit = await Effect.runPromiseExit(
-        submitApiAnnotationUseCase({
-          trace: { by: "id", id: traceIdRaw },
-          value: 0.5,
-          passed: true,
-          feedback: "Should not persist — trace belongs to a different project",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(customInput({ trace: { by: "id", id: traceIdRaw } })).pipe(Effect.provide(layer)),
       )
 
       expect(exit._tag).toBe("Failure")
@@ -215,17 +219,14 @@ describe("submitApiAnnotationUseCase", () => {
       })
 
       const score = await Effect.runPromise(
-        submitApiAnnotationUseCase({
-          trace: {
-            by: "filters",
-            filters: { "attributes.scoreId": [{ op: "eq", value: "some-score-id" }] },
-          },
-          value: 0.5,
-          passed: true,
-          feedback: "Resolved by filter",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(
+          customInput({
+            trace: {
+              by: "filters",
+              filters: { "metadata.runId": [{ op: "eq", value: "run-abc" }] },
+            },
+          }),
+        ).pipe(Effect.provide(layer)),
       )
 
       expect(score.traceId).toBe(TraceId(traceIdRaw))
@@ -233,24 +234,21 @@ describe("submitApiAnnotationUseCase", () => {
     })
 
     it("fails with NotFoundError when no trace matches the filters", async () => {
-      const { layer } = createTestLayers({
+      const { store, layer } = createTestLayers({
         traceRepositoryOverrides: {
           listByProjectId: () => Effect.succeed<TraceListPage>({ items: [], hasMore: false }),
         },
       })
 
       const exit = await Effect.runPromiseExit(
-        submitApiAnnotationUseCase({
-          trace: {
-            by: "filters",
-            filters: { "attributes.scoreId": [{ op: "eq", value: "no-match" }] },
-          },
-          value: 0.5,
-          passed: true,
-          feedback: "Should not persist",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(
+          customInput({
+            trace: {
+              by: "filters",
+              filters: { "metadata.runId": [{ op: "eq", value: "no-match" }] },
+            },
+          }),
+        ).pipe(Effect.provide(layer)),
       )
 
       expect(exit._tag).toBe("Failure")
@@ -260,11 +258,12 @@ describe("submitApiAnnotationUseCase", () => {
         // The message must explain *why* we failed, not just "Trace not found".
         expect(serialized).toContain("No trace in this project matches the provided filters")
       }
+      expect(store.size).toBe(0)
     })
 
     it("fails with BadRequestError when multiple traces match the filters", async () => {
       const otherTraceId = "e".repeat(32)
-      const { layer } = createTestLayers({
+      const { store, layer } = createTestLayers({
         traceRepositoryOverrides: {
           listByProjectId: () =>
             Effect.succeed<TraceListPage>({
@@ -275,17 +274,14 @@ describe("submitApiAnnotationUseCase", () => {
       })
 
       const exit = await Effect.runPromiseExit(
-        submitApiAnnotationUseCase({
-          trace: {
-            by: "filters",
-            filters: { "attributes.scoreId": [{ op: "eq", value: "ambiguous" }] },
-          },
-          value: 0.5,
-          passed: true,
-          feedback: "Should not persist",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(
+          customInput({
+            trace: {
+              by: "filters",
+              filters: { "metadata.runId": [{ op: "eq", value: "ambiguous" }] },
+            },
+          }),
+        ).pipe(Effect.provide(layer)),
       )
 
       expect(exit._tag).toBe("Failure")
@@ -297,25 +293,71 @@ describe("submitApiAnnotationUseCase", () => {
         expect(serialized).toContain("more than one trace")
         expect(serialized).toContain("Refine the filter set")
       }
+      expect(store.size).toBe(0)
     })
   })
 
-  describe("publication", () => {
-    it("always writes a published annotation (draftedAt=null) — the public API does not expose draft state", async () => {
+  describe("session/span auto-resolution", () => {
+    it("lifts sessionId from the trace and pins spanId to the last LLM completion when a trace is provided", async () => {
+      const { store, layer } = createTestLayers()
+
+      const score = await Effect.runPromise(
+        submitApiScoreUseCase(customInput({ trace: { by: "id", id: traceIdRaw } })).pipe(Effect.provide(layer)),
+      )
+
+      expect(score.sessionId).toBe(traceSessionId)
+      expect(score.spanId).toBe(resolvedSpanId)
+      const persisted = Array.from(store.values())[0]
+      expect(persisted?.sessionId).toBe(traceSessionId)
+      expect(persisted?.spanId).toBe(resolvedSpanId)
+    })
+
+    it("does not call the trace repository when no trace ref is provided", async () => {
+      let findByTraceIdCalls = 0
+      let listByProjectIdCalls = 0
+      const { layer } = createTestLayers({
+        traceRepositoryOverrides: {
+          findByTraceId: () => {
+            findByTraceIdCalls++
+            return Effect.succeed(traceDetailStub(traceIdRaw))
+          },
+          listByProjectId: () => {
+            listByProjectIdCalls++
+            return Effect.succeed<TraceListPage>({ items: [], hasMore: false })
+          },
+        },
+      })
+
+      await Effect.runPromise(submitApiScoreUseCase(customInput()).pipe(Effect.provide(layer)))
+
+      expect(findByTraceIdCalls).toBe(0)
+      expect(listByProjectIdCalls).toBe(0)
+    })
+  })
+
+  describe("uninstrumented scores", () => {
+    it("persists with null trace/session/span when the trace ref is omitted", async () => {
+      const { store, layer } = createTestLayers()
+
+      const score = await Effect.runPromise(submitApiScoreUseCase(customInput()).pipe(Effect.provide(layer)))
+
+      expect(score.traceId).toBeNull()
+      expect(score.sessionId).toBeNull()
+      expect(score.spanId).toBeNull()
+      expect(store.size).toBe(1)
+    })
+  })
+
+  describe("source variants", () => {
+    it("persists a custom score and emits ScoreCreated", async () => {
       const { store, events, layer } = createTestLayers()
 
       const score = await Effect.runPromise(
-        submitApiAnnotationUseCase({
-          trace: { by: "id", id: traceIdRaw },
-          value: 0.5,
-          passed: true,
-          feedback: "Always published",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+        submitApiScoreUseCase(customInput({ trace: { by: "id", id: traceIdRaw } })).pipe(Effect.provide(layer)),
       )
 
-      expect(score.draftedAt).toBeNull()
+      expect(score.source).toBe("custom")
+      expect(score.sourceId).toBe("api-source")
       expect(store.size).toBe(1)
       expect(events).toEqual([
         expect.objectContaining({
@@ -324,26 +366,42 @@ describe("submitApiAnnotationUseCase", () => {
         }),
       ])
     })
-  })
 
-  describe("sourceId", () => {
-    it('always persists with sourceId="API" regardless of caller', async () => {
+    it("persists an evaluation score with required evaluationHash metadata", async () => {
       const { store, layer } = createTestLayers()
 
-      await Effect.runPromise(
-        submitApiAnnotationUseCase({
-          trace: { by: "id", id: traceIdRaw },
-          value: 0.5,
-          passed: true,
-          feedback: "Has sourceId",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
+      const score = await Effect.runPromise(
+        submitApiScoreUseCase(evaluationInput({ trace: { by: "id", id: traceIdRaw } })).pipe(Effect.provide(layer)),
       )
 
-      const persisted = Array.from(store.values())[0]
-      expect(persisted?.source).toBe("annotation")
-      expect(persisted?.sourceId).toBe("API")
+      expect(score.source).toBe("evaluation")
+      expect(score.sourceId).toBe(evaluationCuid)
+      expect(score.metadata).toEqual({ evaluationHash: "sha256:abc123" })
+      expect(store.size).toBe(1)
+    })
+  })
+
+  describe("validation", () => {
+    it("rejects a payload missing required fields with BadRequestError", async () => {
+      const { layer } = createTestLayers()
+
+      const exit = await Effect.runPromiseExit(
+        // Missing `feedback` — a required field. Cast through unknown so the
+        // test exercises the runtime parse rather than relying on a TS error.
+        submitApiScoreUseCase({
+          source: "custom",
+          sourceId: "api-source",
+          value: 0.5,
+          passed: true,
+          organizationId: cuid,
+          projectId: ProjectId(projectCuid),
+        } as unknown as Parameters<typeof submitApiScoreUseCase>[0]).pipe(Effect.provide(layer)),
+      )
+
+      expect(exit._tag).toBe("Failure")
+      if (exit._tag === "Failure") {
+        expect(JSON.stringify(exit.cause)).toContain("BadRequestError")
+      }
     })
   })
 })

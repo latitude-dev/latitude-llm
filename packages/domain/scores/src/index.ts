@@ -80,6 +80,12 @@ export {
   syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
 export {
+  baseSubmitApiScoreSchema,
+  type SubmitApiScoreInput,
+  submitApiScoreInputSchema,
+  submitApiScoreUseCase,
+} from "./use-cases/submit-api-score.ts"
+export {
   type BaseWriteScoreInput,
   baseWriteScoreInputSchema,
   type WriteScoreError,
