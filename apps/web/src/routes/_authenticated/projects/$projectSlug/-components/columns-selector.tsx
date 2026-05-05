@@ -10,7 +10,7 @@ import {
   Icon,
 } from "@repo/ui"
 import { ChevronDown, Columns2Icon, EyeIcon, EyeOffIcon, GripVerticalIcon, LockIcon } from "lucide-react"
-import { type DragEvent, useState } from "react"
+import { type DragEvent, type KeyboardEvent, useState } from "react"
 
 export interface TableColumnOption {
   readonly id: string
@@ -73,6 +73,21 @@ export function ColumnsSelector({
     setDragTargetColumnId(null)
   }
 
+  function moveColumn(columnId: string, direction: -1 | 1) {
+    if (!onOrderChange) return
+
+    const orderedColumnIds = columns.map((column) => column.id)
+    const sourceIndex = orderedColumnIds.indexOf(columnId)
+    const targetIndex = sourceIndex + direction
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= orderedColumnIds.length) return
+
+    const nextColumnIds = [...orderedColumnIds]
+    const [movedColumnId] = nextColumnIds.splice(sourceIndex, 1)
+    if (!movedColumnId) return
+    nextColumnIds.splice(targetIndex, 0, movedColumnId)
+    onOrderChange(nextColumnIds)
+  }
+
   return (
     <DropdownMenuRoot>
       <DropdownMenuTrigger asChild>
@@ -100,14 +115,34 @@ export function ColumnsSelector({
             onChange(columns.map((option) => option.id).filter((columnId) => nextSelectedColumnIds.has(columnId)))
           }
 
+          function handleKeyDown(event: KeyboardEvent) {
+            if (!event.shiftKey) return
+            if (event.key === "ArrowUp") {
+              event.preventDefault()
+              event.stopPropagation()
+              moveColumn(column.id, -1)
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault()
+              event.stopPropagation()
+              moveColumn(column.id, 1)
+            }
+          }
+
           return (
             <DropdownMenuItem
               key={column.id}
-              onSelect={(event) => event.preventDefault()}
+              role="menuitemcheckbox"
+              aria-checked={checked}
+              aria-label={required ? `${column.label}, always visible` : undefined}
+              aria-keyshortcuts={onOrderChange ? "Shift+ArrowUp Shift+ArrowDown" : undefined}
+              onSelect={(event) => {
+                event.preventDefault()
+                toggleColumn()
+              }}
+              onKeyDown={handleKeyDown}
               onDragOver={(event) => handleDragOver(event, column.id)}
               onDragLeave={() => setDragTargetColumnId(null)}
               onDrop={(event) => handleDrop(event, column.id)}
-              onClick={toggleColumn}
               className={cn("group cursor-pointer gap-2", {
                 "bg-accent": dragTargetColumnId === column.id,
                 "opacity-50": draggedColumnId === column.id,
