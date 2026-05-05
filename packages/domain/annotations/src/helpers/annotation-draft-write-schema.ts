@@ -23,30 +23,7 @@ const annotationDraftWriteCoreSchema = z.object({
   feedback: z.string().min(1),
 })
 
-const persistDraftAnnotationAnchorFlatSchema = z.object({
-  messageIndex: z.number().int().min(0).optional(),
-  partIndex: z.number().int().min(0).optional(),
-  startOffset: z.number().int().min(0).optional(),
-  endOffset: z.number().int().min(0).optional(),
+/** Persist payload: optional nested `anchor` carrying message/part/offset indices. */
+export const persistDraftAnnotationInputSchema = annotationDraftWriteCoreSchema.extend({
+  anchor: annotationAnchorSchema.optional(),
 })
-
-/** Persist payload: optional `anchor` (UI) or flat indices (programmatic callers). */
-export const persistDraftAnnotationInputSchema = annotationDraftWriteCoreSchema
-  .merge(persistDraftAnnotationAnchorFlatSchema)
-  .extend({
-    anchor: annotationAnchorSchema.optional(),
-  })
-
-type PersistDraftAnnotationParsedBody = z.output<typeof persistDraftAnnotationInputSchema>
-
-export const anchorFromPersistDraftFlatFields = (
-  parsed: Pick<PersistDraftAnnotationParsedBody, "messageIndex" | "partIndex" | "startOffset" | "endOffset">,
-): z.infer<typeof annotationAnchorSchema> | undefined =>
-  parsed.messageIndex !== undefined
-    ? {
-        messageIndex: parsed.messageIndex,
-        partIndex: parsed.partIndex,
-        startOffset: parsed.startOffset,
-        endOffset: parsed.endOffset,
-      }
-    : undefined

@@ -97,7 +97,6 @@ export const createLatitudeApiClient = (
               by: "filters",
               filters: { "metadata.scoreId": [{ op: "eq", value: input.upstreamScoreId }] },
             },
-            draft: false,
             passed: input.passed,
             value: input.value,
             feedback: input.feedback,

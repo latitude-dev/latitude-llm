@@ -70,14 +70,30 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Extract changelog
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+            found { print }
+          ' packages/sdk/typescript/CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Package updates and improvements" > release_notes.md
+          fi
+          {
+            echo "body<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: typescript-sdk-${{ steps.get_version.outputs.version }}
           name: TypeScript SDK v${{ steps.get_version.outputs.version }}
-          body: |
-            Published `@latitude-data/sdk@${{ steps.get_version.outputs.version }}` to npm.
-            See the package [README](https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/typescript) for usage.
+          body: ${{ steps.changelog.outputs.body }}
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}

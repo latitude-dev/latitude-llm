@@ -155,49 +155,6 @@ describe("Annotations Routes Integration", () => {
     expect(persistedScores[0]?.draftedAt).toBeNull()
   })
 
-  it<ApiTestContext>("creates a draft annotation when draft=true is passed", async ({ app, database, clickhouse }) => {
-    const tenant = await createTenantSetup(database)
-    const projectId = "ffffffffffffffffffffffff"
-    const traceId = "99999999999999999999999999999999"
-    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
-    await seedAnnotationTrace({
-      clickhouse,
-      organizationId: tenant.organizationId,
-      projectId,
-      traceId,
-    })
-
-    const response = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
-        method: "POST",
-        headers: {
-          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          value: 0.5,
-          passed: true,
-          feedback: "Mid-edit draft",
-          trace: { by: "id", id: traceId },
-          draft: true,
-        }),
-      }),
-    )
-
-    expect(response.status).toBe(201)
-    const body = await response.json()
-    expect(typeof body.draftedAt).toBe("string")
-    expect(Number.isNaN(Date.parse(body.draftedAt as string))).toBe(false)
-
-    const persistedScores = await database.db
-      .select()
-      .from(scoresTable)
-      .where(eq(scoresTable.organizationId, tenant.organizationId))
-
-    expect(persistedScores).toHaveLength(1)
-    expect(persistedScores[0]?.draftedAt).toBeInstanceOf(Date)
-  })
-
   it<ApiTestContext>("resolves a trace by filters when exactly one trace matches", async ({
     app,
     database,
