@@ -50,6 +50,7 @@ For services, ports, health checks, Docker Compose, dev servers, and Mailpit aut
 
 **Cloud-only gotchas:**
 
+- **mise activation**: Use `eval "$(mise env)"` (not `mise activate bash`) before running scripts that call `node`/`pnpm` in child shells. `mise activate` only hooks the current shell's prompt; child `bash` invocations won't inherit the PATH.
 - `pnpm build` must complete before `pnpm db:up` — migration scripts depend on compiled platform packages.
 - The `pnpm install` output may warn about unapproved build scripts (`@swc/core`, `sharp`, etc.). These are non-blocking — pre-built binaries are used.
 - The Docker daemon in cloud VMs needs `fuse-overlayfs` storage driver and `iptables-legacy`. The update script handles this.
