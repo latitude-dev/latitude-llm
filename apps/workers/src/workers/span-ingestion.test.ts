@@ -1,14 +1,19 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
 import type { QueuePublishError } from "@domain/queue"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { generateId } from "@domain/shared"
 import { queryClickhouse } from "@platform/db-clickhouse"
+import { eq } from "@platform/db-postgres"
+import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/schema/billing"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
-import { setupTestClickHouse } from "@platform/testkit"
+import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createSpanIngestionWorker } from "./span-ingestion.ts"
 
 const ch = setupTestClickHouse()
+const pg = setupTestPostgres()
 
 function createFakeEventsPublisher(): EventsPublisher<QueuePublishError> & {
   readonly published: DomainEvent[]
@@ -48,6 +53,23 @@ const validRequest = {
       ],
     },
   ],
+}
+
+const dispatchValidIngest = async (
+  consumer: TestQueueConsumer,
+  fileKey: string,
+  organizationId: string,
+  projectId: string,
+) => {
+  await consumer.dispatchTask("span-ingestion", "ingest", {
+    fileKey,
+    inlinePayload: null,
+    contentType: "application/json",
+    organizationId,
+    projectId,
+    apiKeyId: `api-key-${organizationId}`,
+    ingestedAt: "2026-03-18T10:00:00.000Z",
+  })
 }
 
 const vercelWrapperRequest = {
@@ -296,5 +318,48 @@ describe("createSpanIngestionWorker", () => {
       projectId: "proj_vercel_wrapper_test",
       traceId: "11111111111111111111111111111111",
     })
+  })
+
+  it("records trace usage only once across repeated ingest requests for the same trace", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const queue = createFakeQueuePublisher()
+    const fileKey = `span-ingestion/${generateId()}-duplicate.json`
+    const organizationId = generateId()
+    const projectId = generateId()
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      publisher: queue.publisher,
+    })
+
+    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+
+    const events = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+    const periods = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.action).toBe("trace")
+    expect(events[0]?.credits).toBe(1)
+
+    expect(periods).toHaveLength(1)
+    expect(periods[0]?.consumedCredits).toBe(1)
+    expect(periods[0]?.overageCredits).toBe(0)
+
+    const billingPublishes = queue.published.filter((message) => message.queue === "billing")
+    expect(billingPublishes).toHaveLength(0)
   })
 })

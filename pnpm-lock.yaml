@@ -919,9 +919,6 @@ importers:
 
   packages/domain/billing:
     dependencies:
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -931,9 +928,6 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../observability
-      '@repo/utils':
-        specifier: workspace:*
-        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

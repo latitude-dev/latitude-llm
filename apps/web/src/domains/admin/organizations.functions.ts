@@ -9,13 +9,23 @@ import {
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
 } from "@domain/admin"
+import {
+  type BillingOverride,
+  BillingOverrideRepository,
+  BillingUsagePeriodRepository,
+  resolveEffectivePlan,
+  StripeSubscriptionLookup,
+} from "@domain/billing"
 import { WorkflowStarter } from "@domain/queue"
-import { OrganizationId, UserId } from "@domain/shared"
+import { generateId, OrganizationId, UserId } from "@domain/shared"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AdminOrganizationRepositoryLive,
+  BillingOverrideRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -55,6 +65,27 @@ interface AdminOrganizationDetailsDto {
   updatedAt: string
 }
 
+export interface AdminOrganizationBillingDto {
+  effectivePlanSlug: "free" | "pro" | "enterprise"
+  effectivePlanSource: "override" | "subscription" | "free-fallback"
+  stripeSubscriptionPlan: string | null
+  stripeSubscriptionStatus: string | null
+  periodStart: string
+  periodEnd: string
+  includedCredits: number
+  consumedCredits: number
+  overageCredits: number
+  overageAmountMicrocents: number
+  retentionDays: number
+  override: {
+    plan: "free" | "pro" | "enterprise"
+    includedCredits: number | null
+    retentionDays: number | null
+    notes: string | null
+    updatedAt: string
+  } | null
+}
+
 const toDto = (details: AdminOrganizationDetails): AdminOrganizationDetailsDto => ({
   id: details.id,
   name: details.name,
@@ -88,6 +119,14 @@ export const adminGetOrganizationInputSchema = z.object({
   organizationId: z.string().min(1).max(256),
 })
 
+const adminUpdateOrganizationBillingOverrideInputSchema = z.object({
+  organizationId: z.string().min(1).max(256),
+  plan: z.enum(["free", "pro", "enterprise"]),
+  includedCredits: z.number().int().nonnegative().nullable(),
+  retentionDays: z.number().int().positive().nullable(),
+  notes: z.string().nullable(),
+})
+
 /**
  * Backoffice organisation-detail fetch.
  *
@@ -111,6 +150,106 @@ export const adminGetOrganization = createServerFn({ method: "GET" })
     )
 
     return toDto(details)
+  })
+
+export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminGetOrganizationInputSchema)
+  .handler(async ({ data }): Promise<AdminOrganizationBillingDto> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const orgPlan = yield* resolveEffectivePlan(organizationId)
+        const overrideRepo = yield* BillingOverrideRepository
+        const periodRepo = yield* BillingUsagePeriodRepository
+        const stripeLookup = yield* StripeSubscriptionLookup
+
+        const [override, period, subscription] = yield* Effect.all([
+          overrideRepo.findByOrganizationId(organizationId),
+          periodRepo.findByPeriod({
+            organizationId,
+            periodStart: orgPlan.periodStart,
+            periodEnd: orgPlan.periodEnd,
+          }),
+          stripeLookup.findActiveByOrganizationId(organizationId),
+        ])
+
+        return {
+          effectivePlanSlug: orgPlan.plan.slug,
+          effectivePlanSource: orgPlan.source as AdminOrganizationBillingDto["effectivePlanSource"],
+          stripeSubscriptionPlan: subscription?.plan ?? null,
+          stripeSubscriptionStatus: subscription?.status ?? null,
+          periodStart: orgPlan.periodStart.toISOString(),
+          periodEnd: orgPlan.periodEnd.toISOString(),
+          includedCredits: orgPlan.plan.includedCredits,
+          consumedCredits: period?.consumedCredits ?? 0,
+          overageCredits: period?.overageCredits ?? 0,
+          overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,
+          retentionDays: orgPlan.plan.retentionDays,
+          override: override
+            ? {
+                plan: override.plan,
+                includedCredits: override.includedCredits,
+                retentionDays: override.retentionDays,
+                notes: override.notes,
+                updatedAt: override.updatedAt.toISOString(),
+              }
+            : null,
+        } satisfies AdminOrganizationBillingDto
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(BillingOverrideRepositoryLive, BillingUsagePeriodRepositoryLive, StripeSubscriptionLookupLive),
+          client,
+        ),
+        withTracing,
+      ),
+    )
+  })
+
+export const adminUpdateOrganizationBillingOverride = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminUpdateOrganizationBillingOverrideInputSchema)
+  .handler(async ({ data }): Promise<void> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* BillingOverrideRepository
+        const existing = yield* repo.findByOrganizationId(organizationId)
+        const now = new Date()
+
+        const override: BillingOverride = {
+          id: existing?.id ?? generateId(),
+          organizationId,
+          plan: data.plan,
+          includedCredits: data.includedCredits,
+          retentionDays: data.retentionDays,
+          notes: data.notes,
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now,
+        }
+
+        yield* repo.upsert(override)
+      }).pipe(withPostgres(BillingOverrideRepositoryLive, client), withTracing),
+    )
+  })
+
+export const adminClearOrganizationBillingOverride = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminGetOrganizationInputSchema)
+  .handler(async ({ data }): Promise<void> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* BillingOverrideRepository
+        yield* repo.deleteByOrganizationId(organizationId)
+      }).pipe(withPostgres(BillingOverrideRepositoryLive, client), withTracing),
+    )
   })
 
 // ───────────────────────────────────────────────────────────────────

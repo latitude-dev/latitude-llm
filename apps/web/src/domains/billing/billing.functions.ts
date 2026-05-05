@@ -2,7 +2,6 @@ import { BillingUsagePeriodRepository, resolveEffectivePlan } from "@domain/bill
 import { OrganizationId } from "@domain/shared"
 import {
   BillingOverrideRepositoryLive,
-  BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -13,14 +12,15 @@ import { Effect, Layer } from "effect"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 
-export interface BillingOverviewDto {
-  planSlug: string
+interface BillingOverviewDto {
+  planSlug: "free" | "pro" | "enterprise"
   planSource: "override" | "subscription" | "free-fallback"
   periodStart: string
   periodEnd: string
   includedCredits: number
   consumedCredits: number
   overageCredits: number
+  overageAmountMicrocents: number
   overageAllowed: boolean
   hardCapped: boolean
   retentionDays: number
@@ -32,7 +32,6 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
 
   const billingLayers = Layer.mergeAll(
     BillingOverrideRepositoryLive,
-    BillingUsageEventRepositoryLive,
     BillingUsagePeriodRepositoryLive,
     StripeSubscriptionLookupLive,
   )
@@ -41,20 +40,25 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
     Effect.gen(function* () {
       const orgPlan = yield* resolveEffectivePlan(OrganizationId(orgId))
       const periodRepo = yield* BillingUsagePeriodRepository
-      const period = yield* periodRepo.findCurrent(OrganizationId(orgId))
+      const period = yield* periodRepo.findByPeriod({
+        organizationId: OrganizationId(orgId),
+        periodStart: orgPlan.periodStart,
+        periodEnd: orgPlan.periodEnd,
+      })
 
       return {
         planSlug: orgPlan.plan.slug,
-        planSource: orgPlan.source,
+        planSource: orgPlan.source as BillingOverviewDto["planSource"],
         periodStart: orgPlan.periodStart.toISOString(),
         periodEnd: orgPlan.periodEnd.toISOString(),
         includedCredits: orgPlan.plan.includedCredits,
         consumedCredits: period?.consumedCredits ?? 0,
         overageCredits: period?.overageCredits ?? 0,
+        overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,
         overageAllowed: orgPlan.plan.overageAllowed,
         hardCapped: orgPlan.plan.hardCapped,
         retentionDays: orgPlan.plan.retentionDays,
-      }
+      } satisfies BillingOverviewDto
     }).pipe(withPostgres(billingLayers, client, OrganizationId(orgId)), withTracing),
   )
 })

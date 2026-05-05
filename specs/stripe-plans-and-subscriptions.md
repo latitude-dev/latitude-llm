@@ -1,6 +1,6 @@
 # Stripe Plans And Subscriptions
 
-> **Documentation**: `dev-docs/organizations.md`, `dev-docs/spans.md`, `dev-docs/evaluations.md`, `dev-docs/scores.md`, `dev-docs/reliability.md`, `dev-docs/settings.md`, `dev-docs/authentication.md`
+> **Documentation**: `dev-docs/billing.md`, `dev-docs/organizations.md`, `dev-docs/spans.md`, `dev-docs/evaluations.md`, `dev-docs/scores.md`, `dev-docs/reliability.md`, `dev-docs/settings.md`, `dev-docs/authentication.md`
 
 ## Spec Contract
 
@@ -553,11 +553,11 @@ Highest-risk billing tests are:
 
 ### Phase 6 - Web And Backoffice Surfaces
 
-- [ ] **P6-1**: Add a `/settings/billing` route and settings navigation entry.
-- [ ] **P6-2**: Show effective plan, current period, included credits, used credits, overage, and action pricing in the billing UI.
-- [ ] **P6-3**: Add upgrade and billing-portal actions for self-serve plans.
-- [ ] **P6-4**: Add enterprise contact / manual-contract state to the billing UI.
-- [ ] **P6-5**: Add backoffice billing visibility and manual enterprise override controls.
+- [x] **P6-1**: Add a `/settings/billing` route and settings navigation entry.
+- [x] **P6-2**: Show effective plan, current period, included credits, used credits, overage, and action pricing in the billing UI.
+- [x] **P6-3**: Add upgrade and billing-portal actions for self-serve plans.
+- [x] **P6-4**: Add enterprise contact / manual-contract state to the billing UI.
+- [x] **P6-5**: Add backoffice billing visibility and manual enterprise override controls.
 
 **Exit gate**:
 
@@ -565,11 +565,11 @@ Highest-risk billing tests are:
 
 ### Phase 7 - Test Coverage And Documentation Sync
 
-- [ ] **P7-1**: Add tests for trace metering dedupe across repeated ingest requests.
-- [ ] **P7-2**: Add tests for duplicate queue and workflow retry safety for billable actions.
-- [ ] **P7-3**: Add tests for free-plan cap enforcement and paid overage continuation.
-- [ ] **P7-4**: Add tests for plan resolution and Stripe-plan safety.
-- [ ] **P7-5**: Promote durable knowledge from this spec into `dev-docs/` once the implementation stabilizes.
+- [x] **P7-1**: Add tests for trace metering dedupe across repeated ingest requests.
+- [x] **P7-2**: Add tests for duplicate queue and workflow retry safety for billable actions.
+- [x] **P7-3**: Add tests for free-plan cap enforcement and paid overage continuation.
+- [x] **P7-4**: Add tests for plan resolution and Stripe-plan safety.
+- [x] **P7-5**: Promote durable knowledge from this spec into `dev-docs/` once the implementation stabilizes.
 
 **Exit gate**:
 
@@ -577,9 +577,9 @@ Highest-risk billing tests are:
 
 ---
 
-## Current Checkpoint (2026-05-05, Phase 5)
+## Current Checkpoint (2026-05-05, Phase 7)
 
-### Done (Phases 1-5 complete in code):
+### Done (Phases 1-7 complete in code):
 
 **New files created:**
 
@@ -650,10 +650,11 @@ Highest-risk billing tests are:
 - `packages/domain/queue/src/workflow-registry.ts` — includes `billingOperationId` on `optimizeEvaluationWorkflow`
 - `apps/web/src/domains/evaluations/evaluation-alignment.functions.ts` — passes `billingOperationId` for initial generation and manual realignment
 - `apps/workflows/src/workflows/optimize-evaluation-workflow.test.ts`, `apps/workers/src/workers/evaluations.test.ts`, `apps/workers/src/workers/live-evaluations-execute.test.ts`, `apps/workflows/src/activities/flagger-activities.test.ts` — updated coverage/mocks for the new billing paths
+- `apps/workers/src/workers/billing-runtime.test.ts` and `apps/workers/src/workers/span-ingestion.test.ts` — cover plan resolution safety, free-cap blocking, paid overage continuation, duplicate retry safety, and trace metering dedupe across repeated ingest requests
+- `dev-docs/billing.md`, `dev-docs/organizations.md`, `dev-docs/settings.md`, and `dev-docs/spans.md` — durable billing model, retention, downgrade, and product-surface documentation
+- `AGENTS.md` — repo-wide rule: always create ClickHouse migrations with `ch:create`, never by hand
 
 ### Next to continue:
 
-1. **ClickHouse apply step**: run `pnpm --filter @platform/db-clickhouse ch:up` when you want the new TTL/retention migration applied locally
-2. **Phase 6**: Billing UI and backoffice surfaces
-3. **Phase 7**: Billing correctness tests and docs promotion
-4. **Broader verification**: run repo-wide `pnpm typecheck` / `pnpm test` after the remaining unrelated `apps/web` type issues are addressed
+1. **ClickHouse apply step**: run `pnpm --filter @platform/db-clickhouse ch:up` when you want the generated plan-aware retention migration applied locally
+2. **Follow-up**: revisit the Better Auth Stripe client-plugin import path. `@better-auth/stripe/client` did not resolve cleanly in the current app/toolchain, so the web billing UI currently calls the Better Auth Stripe endpoints directly instead of using the plugin helper.

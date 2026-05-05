@@ -2,6 +2,8 @@
 
 Reliability settings stay attached to owner entities. There is no standalone settings domain.
 
+Billing is the main exception for product surface placement: the settings area includes `/settings/billing`, but the billing rules and persistence model are documented separately in `./billing.md` because they are not stored in `organization.settings` or `projects.settings`.
+
 The settings model is intentionally phased:
 
 - MVP only needs organization/project `keepMonitoring`

@@ -99,3 +99,14 @@ The trace-search document is normalized before storage and embedding. The local 
 When the normalized conversation exceeds that cap, truncation keeps both ends of the conversation: the initial half of the cap, an omission marker, and the final half of the cap. The middle is omitted. This preserves the setup and final outcome of long conversations while keeping budget accounting predictable.
 
 Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
+
+## Billing And Retention Stamping
+
+Span ingestion is the canonical trace-billing boundary.
+
+- after spans are durably inserted, the worker meters one `trace` usage event per distinct trace id in the payload
+- the idempotency key is `trace:{organizationId}:{projectId}:{traceId}` so repeated ingest requests for the same trace do not double-charge
+
+Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
+
+The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.

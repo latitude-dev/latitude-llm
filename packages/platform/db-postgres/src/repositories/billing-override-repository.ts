@@ -28,8 +28,8 @@ export const BillingOverrideRepositoryLive = Layer.effect(
       findByOrganizationId: (organizationId: OrganizationIdType) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [result] = yield* sqlClient.query((db, orgId) =>
-            db.select().from(billingOverrides).where(eq(billingOverrides.organizationId, orgId)).limit(1),
+          const [result] = yield* sqlClient.query((db) =>
+            db.select().from(billingOverrides).where(eq(billingOverrides.organizationId, organizationId)).limit(1),
           )
           return result ? toDomain(result) : null
         }),
@@ -60,6 +60,14 @@ export const BillingOverrideRepositoryLive = Layer.effect(
                   updatedAt: new Date(),
                 },
               }),
+          )
+        }),
+
+      deleteByOrganizationId: (organizationId: OrganizationIdType) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db.delete(billingOverrides).where(eq(billingOverrides.organizationId, organizationId)),
           )
         }),
     }

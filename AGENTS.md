@@ -12,6 +12,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 - Organization-scoped Redis or cache keys must start with the organization prefix: `org:${organizationId}:...`. Put the org id first so tenancy is obvious and keyspaces stay consistently partitioned.
 - Never invoke `tsc` directly. Typechecking goes through `tsgo` via the package `typecheck` script — use `pnpm --filter <pkg> typecheck` for one package or `pnpm typecheck` for the whole workspace. `tsc` would diverge from CI.
+- ClickHouse migrations must be created with `pnpm --filter @platform/db-clickhouse ch:create <migration_name>`. Do not create ClickHouse migration files manually.
 
 ## How to use this guide
 

@@ -7,5 +7,6 @@ export class BillingOverrideRepository extends Context.Service<
   {
     findByOrganizationId: (id: OrganizationId) => Effect.Effect<BillingOverride | null, RepositoryError, SqlClient>
     upsert: (override: BillingOverride) => Effect.Effect<void, RepositoryError, SqlClient>
+    deleteByOrganizationId: (id: OrganizationId) => Effect.Effect<void, RepositoryError, SqlClient>
   }
 >()("@domain/billing/BillingOverrideRepository") {}
