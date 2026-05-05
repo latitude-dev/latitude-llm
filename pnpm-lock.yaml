@@ -367,6 +367,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@intercom/messenger-js-sdk':
+        specifier: 0.0.14
+        version: 0.0.14
       '@lottiefiles/dotlottie-wc':
         specifier: ^0.9.12
         version: 0.9.12
@@ -3849,6 +3852,9 @@ packages:
     engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}
     cpu: [x64]
     os: [win32]
+
+  '@intercom/messenger-js-sdk@0.0.14':
+    resolution: {integrity: sha512-2dH4BDAh9EI90K7hUkAdZ76W79LM45Sd1OBX7t6Vzy8twpNiQ5X+7sH9G5hlJlkSGnf+vFWlFcy9TOYAyEs1hA==}
 
   '@ioredis/commands@1.5.1':
     resolution: {integrity: sha512-JH8ZL/ywcJyR9MmJ5BNqZllXNZQqQbnVZOqpPQqE1vHiFgAw4NHbvE0FOduNU8IX9babitBT46571OnPTT0Zcw==}
@@ -13703,6 +13709,8 @@ snapshots:
 
   '@img/sharp-win32-x64@0.34.5':
     optional: true
+
+  '@intercom/messenger-js-sdk@0.0.14': {}
 
   '@ioredis/commands@1.5.1': {}
 
