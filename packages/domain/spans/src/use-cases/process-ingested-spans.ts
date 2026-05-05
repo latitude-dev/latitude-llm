@@ -68,8 +68,27 @@ export interface ProcessIngestedSpansInput {
   readonly contentType: string
   readonly ingestedAt: Date
   readonly retentionDays?: number
+  readonly traceUsage?: {
+    readonly context?: {
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: Date
+      readonly periodEnd: Date
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
+  }
   readonly inlinePayload: string | null
   readonly fileKey: string | null
+}
+
+interface TraceUsageContext {
+  readonly planSlug: "free" | "pro" | "enterprise"
+  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly includedCredits: number
+  readonly overageAllowed: boolean
 }
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
@@ -136,6 +155,7 @@ export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
     organizationId: string
     projectId: string
     traces: readonly TraceUsageRecord[]
+    context: TraceUsageContext
   }) => Promise<void>
 }
 
@@ -182,12 +202,14 @@ export const processIngestedSpansUseCase =
         { concurrency: "unbounded" },
       )
 
-      if (recordTraceUsage) {
+      const traceUsageContext = input.traceUsage?.context
+      if (recordTraceUsage && traceUsageContext) {
         yield* Effect.promise(() =>
           recordTraceUsage({
             organizationId: input.organizationId,
             projectId: input.projectId,
             traces: [...traceIds].map((traceId) => ({ traceId })),
+            context: traceUsageContext,
           }),
         ).pipe(Effect.ignore)
       }

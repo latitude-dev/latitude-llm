@@ -1,12 +1,13 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
-import { generateId, type StorageDiskPort } from "@domain/shared"
-import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
+import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import {
   createBetterAuth,
   createOutboxWriter,
   createPostgresClient,
+  invalidateEffectivePlanCache,
   type PostgresClient,
   SqlClientLive,
   type StripePlanConfig,
@@ -164,6 +165,15 @@ export const getBetterAuth = () => {
     const stripeWebhookSecret = Effect.runSync(parseEnvOptional("LAT_STRIPE_WEBHOOK_SECRET", "string"))
     const outboxWriter = getOutboxWriter()
 
+    const invalidateBillingPlanCache = async (organizationId: string) => {
+      await Effect.runPromise(
+        invalidateEffectivePlanCache(OrganizationId(organizationId)).pipe(
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      )
+    }
+
     const selfServePlans: StripePlanConfig[] = SELF_SERVE_PLAN_SLUGS.flatMap((slug) => {
       if (slug === "pro" && stripeProPriceId) {
         return [
@@ -279,6 +289,9 @@ export const getBetterAuth = () => {
             })
             .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
+      },
+      onSubscriptionChanged: async ({ referenceId }) => {
+        await invalidateBillingPlanCache(referenceId)
       },
     })
   }

@@ -24,7 +24,7 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { basicAuth } from "hono/basic-auth"
-import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getPostHogClient, getRedisClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
@@ -154,7 +154,7 @@ const bootstrap = async () => {
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createBillingWorker(ctx)
-    createSpanIngestionWorker({ ...ctx, postgresClient: pgClient })
+    createSpanIngestionWorker({ ...ctx, postgresClient: pgClient, redisClient: getRedisClient() })
     createExportsWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)

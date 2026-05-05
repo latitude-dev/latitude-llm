@@ -6,7 +6,7 @@ import {
 } from "@domain/billing"
 import { SqlClient, type SqlClientShape } from "@domain/shared"
 import { parseEnvOptional } from "@platform/env"
-import { and, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import Stripe from "stripe"
 import type { Operator } from "../client.ts"
@@ -52,7 +52,7 @@ export const BillingOverageReporterLive = Layer.effect(
                     eq(subscriptions.plan, PRO_PLAN_CONFIG.slug),
                   ),
                 )
-                .orderBy(subscriptions.periodEnd)
+                .orderBy(desc(subscriptions.periodEnd))
                 .limit(1),
             )
             .pipe(

@@ -164,6 +164,29 @@ END`,
           return result ? toDomain(result) : null
         }),
 
+      advanceReportedOverageCredits: ({ organizationId, periodStart, periodEnd, reportedOverageCredits }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const [result] = yield* sqlClient.query((db) =>
+            db
+              .update(billingUsagePeriods)
+              .set({
+                reportedOverageCredits,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(billingUsagePeriods.organizationId, organizationId),
+                  eq(billingUsagePeriods.periodStart, periodStart),
+                  eq(billingUsagePeriods.periodEnd, periodEnd),
+                ),
+              )
+              .returning(),
+          )
+
+          return result ? toDomain(result) : null
+        }),
+
       findCurrent: (_organizationId: OrganizationIdType) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

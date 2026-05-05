@@ -1,4 +1,5 @@
 import type { RunLiveEvaluationResult } from "@domain/evaluations"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
 import type { RedisClient } from "@platform/cache-redis"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
@@ -21,12 +22,14 @@ const PAYLOAD = {
 describe("createLiveEvaluationsWorker execute path", () => {
   it("registers only the execute task", () => {
     const consumer = new TestQueueConsumer()
+    const queue = createFakeQueuePublisher()
 
     createLiveEvaluationsWorker({
       consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: DUMMY_REDIS,
+      publisher: queue.publisher,
     })
 
     expect(consumer.getRegisteredTasks("live-evaluations")).toEqual(["execute"])
@@ -34,6 +37,7 @@ describe("createLiveEvaluationsWorker execute path", () => {
 
   it("logs skipped execute results", async () => {
     const consumer = new TestQueueConsumer()
+    const queue = createFakeQueuePublisher()
     const log = createMockLogger()
     const runLiveEvaluation = vi.fn(
       (): Effect.Effect<RunLiveEvaluationResult> =>
@@ -50,6 +54,7 @@ describe("createLiveEvaluationsWorker execute path", () => {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: DUMMY_REDIS,
+      publisher: queue.publisher,
       runLiveEvaluation,
       logger: log,
     })

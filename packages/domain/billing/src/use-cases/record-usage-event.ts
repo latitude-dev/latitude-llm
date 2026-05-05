@@ -1,5 +1,5 @@
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import { generateId } from "@domain/shared"
+import { generateId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import {
   ACTION_CREDITS,
@@ -32,59 +32,64 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
 
   const eventRepo = yield* BillingUsageEventRepository
   const periodRepo = yield* BillingUsagePeriodRepository
+  const sqlClient = yield* SqlClient
 
-  const existing = yield* eventRepo.findByKey(input.idempotencyKey)
-  if (existing) {
-    const period = yield* periodRepo.findByPeriod({
-      organizationId: input.organizationId,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-    })
-    return (
-      period ?? {
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const existing = yield* eventRepo.findByKey(input.idempotencyKey)
+      if (existing) {
+        const period = yield* periodRepo.findByPeriod({
+          organizationId: input.organizationId,
+          periodStart: input.periodStart,
+          periodEnd: input.periodEnd,
+        })
+        return (
+          period ?? {
+            organizationId: input.organizationId,
+            planSlug: input.planSlug,
+            periodStart: input.periodStart,
+            periodEnd: input.periodEnd,
+            includedCredits: persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits),
+            consumedCredits: 0,
+            overageCredits: 0,
+            reportedOverageCredits: 0,
+            overageAmountMicrocents: 0,
+            updatedAt: new Date(),
+          }
+        )
+      }
+
+      const credits = ACTION_CREDITS[input.action]
+      const now = new Date()
+
+      const event: BillingUsageEvent = {
+        id: generateId(),
         organizationId: input.organizationId,
-        planSlug: input.planSlug,
+        projectId: input.projectId,
+        action: input.action,
+        credits,
+        idempotencyKey: input.idempotencyKey,
+        traceId: input.traceId,
+        metadata: input.metadata,
+        happenedAt: now,
+        billingPeriodStart: input.periodStart,
+        billingPeriodEnd: input.periodEnd,
+      }
+
+      yield* eventRepo.insert(event)
+
+      const persistedIncludedCredits = persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits)
+
+      return yield* periodRepo.appendCreditsForBillingPeriod({
+        organizationId: input.organizationId,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
-        includedCredits: persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits),
-        consumedCredits: 0,
-        overageCredits: 0,
-        reportedOverageCredits: 0,
-        overageAmountMicrocents: 0,
-        updatedAt: new Date(),
-      }
-    )
-  }
-
-  const credits = ACTION_CREDITS[input.action]
-  const now = new Date()
-
-  const event: BillingUsageEvent = {
-    id: generateId(),
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    action: input.action,
-    credits,
-    idempotencyKey: input.idempotencyKey,
-    traceId: input.traceId,
-    metadata: input.metadata,
-    happenedAt: now,
-    billingPeriodStart: input.periodStart,
-    billingPeriodEnd: input.periodEnd,
-  }
-
-  yield* eventRepo.insert(event)
-
-  const persistedIncludedCredits = persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits)
-
-  return yield* periodRepo.appendCreditsForBillingPeriod({
-    organizationId: input.organizationId,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    planSlug: input.planSlug,
-    persistedIncludedCredits,
-    creditsDelta: credits,
-  })
+        planSlug: input.planSlug,
+        persistedIncludedCredits,
+        creditsDelta: credits,
+      })
+    }),
+  )
 })
 
 export interface CheckCreditAvailabilityInput {

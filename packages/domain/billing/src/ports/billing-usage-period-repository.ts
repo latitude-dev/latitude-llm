@@ -12,6 +12,13 @@ export interface AppendBillingPeriodCreditsInput {
   readonly creditsDelta: number
 }
 
+export interface AdvanceReportedOverageCreditsInput {
+  readonly organizationId: OrganizationId
+  readonly periodStart: Date
+  readonly periodEnd: Date
+  readonly reportedOverageCredits: number
+}
+
 export class BillingUsagePeriodRepository extends Context.Service<
   BillingUsagePeriodRepository,
   {
@@ -27,6 +34,9 @@ export class BillingUsagePeriodRepository extends Context.Service<
       periodStart: Date
       periodEnd: Date
     }) => Effect.Effect<BillingUsagePeriod | null, RepositoryError, SqlClient>
+    advanceReportedOverageCredits: (
+      input: AdvanceReportedOverageCreditsInput,
+    ) => Effect.Effect<BillingUsagePeriod | null, RepositoryError, SqlClient>
     findCurrent: (
       organizationId: OrganizationId,
     ) => Effect.Effect<BillingUsagePeriod | null, RepositoryError, SqlClient>

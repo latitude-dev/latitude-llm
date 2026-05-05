@@ -1,5 +1,5 @@
 import { AI } from "@domain/ai"
-import { resolveEffectivePlan } from "@domain/billing"
+import { resolveEffectivePlanCached } from "@platform/db-postgres"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
@@ -29,6 +29,7 @@ import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("trace-search")
+const TRACE_SEARCH_FALLBACK_RETENTION_DAYS = 30
 
 interface TraceSearchDeps {
   consumer: QueueConsumer
@@ -50,6 +51,21 @@ interface RefreshTracePayload {
   readonly startTime: string
   readonly rootSpanName: string
 }
+
+export const resolveTraceSearchRetentionDays = (organizationId: string) =>
+  resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
+    Effect.map((plan) => plan.plan.retentionDays),
+    Effect.tapError((error) =>
+      Effect.sync(() =>
+        logger.warn("Trace search billing lookup degraded; using fallback retention", {
+          organizationId,
+          retentionDays: TRACE_SEARCH_FALLBACK_RETENTION_DAYS,
+          error,
+        }),
+      ),
+    ),
+    Effect.orElseSucceed(() => TRACE_SEARCH_FALLBACK_RETENTION_DAYS),
+  )
 
 /**
  * Generate embedding for search text using the AI embedding service.
@@ -92,7 +108,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const projectId = payload.projectId
     const traceId = payload.traceId
     const startTime = new Date(payload.startTime)
-    const orgPlan = yield* resolveEffectivePlan(OrganizationId(organizationId))
+    const retentionDays = yield* resolveTraceSearchRetentionDays(organizationId)
 
     // 1. Load the canonical conversation for the trace. This preserves the
     // same chronological de-duplicated message list shown in the trace detail
@@ -125,7 +141,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       rootSpanName: searchDocument.rootSpanName,
       searchText: searchDocument.searchText,
       contentHash: searchDocument.contentHash,
-      retentionDays: orgPlan.plan.retentionDays,
+      retentionDays,
     })
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
@@ -196,7 +212,7 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       contentHash: searchDocument.contentHash,
       embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
       embedding,
-      retentionDays: orgPlan.plan.retentionDays,
+      retentionDays,
     })
 
     logger.info(`Indexed semantic search embedding for trace ${traceId}`)

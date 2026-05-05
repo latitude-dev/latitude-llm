@@ -1,18 +1,16 @@
-import { buildBillingIdempotencyKey, meterBillableAction, resolveEffectivePlan } from "@domain/billing"
+import { resolveEffectivePlanCached } from "@platform/db-postgres"
 import type { EventsPublisher } from "@domain/events"
 import { type QueueConsumer, type QueuePublishError, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
-import { OrganizationId, ProjectId, type StorageDiskPort, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
+import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import {
-  BillingOverageReporterLive,
   BillingOverrideRepositoryLive,
-  BillingUsageEventRepositoryLive,
-  BillingUsagePeriodRepositoryLive,
-  SettingsReaderLive,
   StripeSubscriptionLookupLive,
+  SettingsReaderLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { StorageDiskLive } from "@platform/storage-object"
@@ -29,6 +27,7 @@ interface SpanIngestionDeps {
   disk?: StorageDiskPort
   postgresClient?: PostgresClient
   publisher?: QueuePublisherShape
+  redisClient?: RedisClient
 }
 
 export const createSpanIngestionWorker = ({
@@ -38,54 +37,56 @@ export const createSpanIngestionWorker = ({
   disk: diskDep,
   postgresClient,
   publisher,
+  redisClient,
 }: SpanIngestionDeps) => {
   const chClient = clickhouseClient ?? getClickhouseClient()
   const disk = diskDep ?? getStorageDisk()
+  const rdClient = redisClient
 
-  const billingLayers = Layer.mergeAll(
-    BillingOverageReporterLive,
+  const billingPlanLayers = Layer.mergeAll(
     BillingOverrideRepositoryLive,
-    BillingUsageEventRepositoryLive,
-    BillingUsagePeriodRepositoryLive,
     SettingsReaderLive,
     StripeSubscriptionLookupLive,
   )
 
   const recordTraceUsage =
-    postgresClient && publisher
-      ? (params: { organizationId: string; projectId: string; traces: readonly { traceId: string }[] }) =>
+    publisher
+      ? (params: {
+          organizationId: string
+          projectId: string
+          traces: readonly { traceId: string }[]
+          context: {
+            planSlug: "free" | "pro" | "enterprise"
+            planSource: "override" | "subscription" | "free-fallback"
+            periodStart: Date
+            periodEnd: Date
+            includedCredits: number
+            overageAllowed: boolean
+          }
+        }) =>
           Effect.runPromise(
             Effect.gen(function* () {
-              yield* Effect.all(
-                params.traces.map((t) =>
-                  meterBillableAction({
-                    organizationId: OrganizationId(params.organizationId),
-                    projectId: ProjectId(params.projectId),
-                    action: "trace",
-                    idempotencyKey: buildBillingIdempotencyKey("trace", [
-                      params.organizationId,
-                      params.projectId,
-                      t.traceId,
-                    ]),
-                    traceId: TraceId(t.traceId),
-                  }).pipe(
-                    Effect.tap((result) =>
-                      result.allowed
-                        ? Effect.void
-                        : Effect.sync(() =>
-                            logger.warn("Trace billing recorded as overshoot — billing limit reached", {
-                              organizationId: params.organizationId,
-                              projectId: params.projectId,
-                              traceId: t.traceId,
-                            }),
-                          ),
-                    ),
-                  ),
-                ),
-                { concurrency: 8, discard: true },
+              const queuePublisher = yield* QueuePublisher
+              yield* queuePublisher.publish(
+                "billing",
+                "recordTraceUsageBatch",
+                {
+                  organizationId: params.organizationId,
+                  projectId: params.projectId,
+                  traceIds: params.traces.map((trace) => trace.traceId),
+                  planSlug: params.context.planSlug,
+                  planSource: params.context.planSource,
+                  periodStart: params.context.periodStart.toISOString(),
+                  periodEnd: params.context.periodEnd.toISOString(),
+                  includedCredits: params.context.includedCredits,
+                  overageAllowed: params.context.overageAllowed,
+                },
+                {
+                  attempts: 10,
+                  backoff: { type: "exponential", delayMs: 1_000 },
+                },
               )
             }).pipe(
-              withPostgres(billingLayers, postgresClient, OrganizationId(params.organizationId)),
               Effect.provideService(QueuePublisher, publisher),
               withTracing,
             ),
@@ -139,8 +140,8 @@ export const createSpanIngestionWorker = ({
           )
         }
 
-        return Effect.gen(function* () {
-          const orgPlan = yield* resolveEffectivePlan(OrganizationId(organizationId)).pipe(
+        const processEffect = Effect.gen(function* () {
+          const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
             Effect.orElseSucceed(() => null),
           )
 
@@ -153,17 +154,33 @@ export const createSpanIngestionWorker = ({
             inlinePayload: wire.inlinePayload,
             fileKey: wire.fileKey,
             ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
+            ...(orgPlan
+              ? {
+                  traceUsage: {
+                    context: {
+                      planSlug: orgPlan.plan.slug,
+                      planSource: orgPlan.source as "override" | "subscription" | "free-fallback",
+                      periodStart: orgPlan.periodStart,
+                      periodEnd: orgPlan.periodEnd,
+                      includedCredits: orgPlan.plan.includedCredits,
+                      overageAllowed: orgPlan.plan.overageAllowed,
+                    },
+                  },
+                }
+              : {}),
           })
-        }).pipe(
-          Effect.catchTag("SpanDecodingError", (error) =>
-            Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
-          ),
-          Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
-          withPostgres(billingLayers, postgresClient, OrganizationId(organizationId)),
-          withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
-          withTracing,
-          Effect.provide(StorageDiskLive(disk)),
-        )
+          }).pipe(
+            Effect.catchTag("SpanDecodingError", (error) =>
+              Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
+            ),
+            Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
+            withPostgres(billingPlanLayers, postgresClient, OrganizationId(organizationId)),
+            withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
+            withTracing,
+            Effect.provide(StorageDiskLive(disk)),
+          )
+
+        return rdClient ? processEffect.pipe(Effect.provide(RedisCacheStoreLive(rdClient))) : processEffect
       },
     },
     { concurrency: 50 },

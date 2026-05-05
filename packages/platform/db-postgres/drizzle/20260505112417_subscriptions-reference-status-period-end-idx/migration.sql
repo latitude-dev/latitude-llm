@@ -1,0 +1,1 @@
+CREATE INDEX "subscriptions_reference_status_period_end_idx" ON "latitude"."subscriptions" ("reference_id","status","period_end");

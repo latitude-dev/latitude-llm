@@ -9,6 +9,7 @@ export class BillingUsageEventRepository extends Context.Service<
     insert: (
       event: BillingUsageEvent,
     ) => Effect.Effect<void, UsageEventAlreadyRecordedError | RepositoryError, SqlClient>
+    insertMany: (events: readonly BillingUsageEvent[]) => Effect.Effect<number, RepositoryError, SqlClient>
     findByKey: (key: string) => Effect.Effect<BillingUsageEvent | null, RepositoryError, SqlClient>
   }
 >()("@domain/billing/BillingUsageEventRepository") {}

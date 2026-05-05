@@ -49,6 +49,7 @@ export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
+export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"
 export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"

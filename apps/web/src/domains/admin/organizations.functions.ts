@@ -14,18 +14,20 @@ import {
   BillingOverrideRepository,
   BillingUsagePeriodRepository,
   calculatePlanSpendMicrocents,
-  resolveEffectivePlan,
   StripeSubscriptionLookup,
 } from "@domain/billing"
 import { WorkflowStarter } from "@domain/queue"
 import { generateId, OrganizationId, UserId } from "@domain/shared"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AdminOrganizationRepositoryLive,
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  invalidateEffectivePlanCache,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -35,7 +37,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient, getClickhouseClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -166,7 +168,7 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
 
     return await Effect.runPromise(
       Effect.gen(function* () {
-        const orgPlan = yield* resolveEffectivePlan(organizationId)
+        const orgPlan = yield* resolveEffectivePlanCached(organizationId)
         const overrideRepo = yield* BillingOverrideRepository
         const periodRepo = yield* BillingUsagePeriodRepository
         const stripeLookup = yield* StripeSubscriptionLookup
@@ -215,6 +217,7 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
           ),
           client,
         ),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
     )
@@ -245,7 +248,12 @@ export const adminUpdateOrganizationBillingOverride = createServerFn({ method: "
         }
 
         yield* repo.upsert(override)
-      }).pipe(withPostgres(BillingOverrideRepositoryLive, client), withTracing),
+        yield* invalidateEffectivePlanCache(organizationId)
+      }).pipe(
+        withPostgres(BillingOverrideRepositoryLive, client),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
     )
   })
 
@@ -260,7 +268,12 @@ export const adminClearOrganizationBillingOverride = createServerFn({ method: "P
       Effect.gen(function* () {
         const repo = yield* BillingOverrideRepository
         yield* repo.deleteByOrganizationId(organizationId)
-      }).pipe(withPostgres(BillingOverrideRepositoryLive, client), withTracing),
+        yield* invalidateEffectivePlanCache(organizationId)
+      }).pipe(
+        withPostgres(BillingOverrideRepositoryLive, client),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
     )
   })
 

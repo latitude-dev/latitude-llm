@@ -10,6 +10,7 @@ import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
+import { createBillingWorker } from "./billing.ts"
 import { createSpanIngestionWorker } from "./span-ingestion.ts"
 
 const ch = setupTestClickHouse()
@@ -338,9 +339,25 @@ describe("createSpanIngestionWorker", () => {
       postgresClient: pg.appPostgresClient,
       publisher: queue.publisher,
     })
+    createBillingWorker({
+      consumer,
+      postgresClient: pg.appPostgresClient,
+      publisher: queue.publisher,
+    })
 
     await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    for (const message of queue.published.filter(
+      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
+    )) {
+      await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
+    }
+
     await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    for (const message of queue.published.filter(
+      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
+    ).slice(1)) {
+      await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
+    }
 
     const events = await pg.db
       .select()
@@ -359,7 +376,9 @@ describe("createSpanIngestionWorker", () => {
     expect(periods[0]?.consumedCredits).toBe(1)
     expect(periods[0]?.overageCredits).toBe(0)
 
-    const billingPublishes = queue.published.filter((message) => message.queue === "billing")
-    expect(billingPublishes).toHaveLength(0)
+    const billingPublishes = queue.published.filter(
+      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
+    )
+    expect(billingPublishes).toHaveLength(2)
   })
 })

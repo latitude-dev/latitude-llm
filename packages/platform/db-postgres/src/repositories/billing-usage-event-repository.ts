@@ -65,6 +65,36 @@ export const BillingUsageEventRepositoryLive = Layer.effect(
             )
         }),
 
+      insertMany: (events: readonly BillingUsageEvent[]) =>
+        Effect.gen(function* () {
+          if (events.length === 0) return 0
+
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const inserted = yield* sqlClient.query((db) =>
+            db
+              .insert(billingUsageEvents)
+              .values(
+                events.map((event) => ({
+                  id: event.id,
+                  organizationId: event.organizationId,
+                  projectId: event.projectId,
+                  action: event.action,
+                  credits: event.credits,
+                  idempotencyKey: event.idempotencyKey,
+                  traceId: event.traceId ?? null,
+                  metadata: event.metadata ? JSON.stringify(event.metadata) : null,
+                  happenedAt: event.happenedAt,
+                  billingPeriodStart: event.billingPeriodStart,
+                  billingPeriodEnd: event.billingPeriodEnd,
+                })),
+              )
+              .onConflictDoNothing({ target: billingUsageEvents.idempotencyKey })
+              .returning({ id: billingUsageEvents.id }),
+          )
+
+          return inserted.length
+        }),
+
       findByKey: (key: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

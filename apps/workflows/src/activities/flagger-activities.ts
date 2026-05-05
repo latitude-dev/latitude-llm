@@ -1,4 +1,4 @@
-import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
+import { authorizeBillableAction, buildBillingIdempotencyKey } from "@domain/billing"
 import {
   draftFlaggerAnnotationUseCase,
   type FlaggerAnnotateOutput,
@@ -6,11 +6,11 @@ import {
   runFlaggerUseCase,
   saveFlaggerAnnotationUseCase,
 } from "@domain/flaggers"
-import { QueuePublisher } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -22,6 +22,7 @@ import {
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   OutboxEventWriterLive,
+  resolveEffectivePlanCached,
   ScoreRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -88,15 +89,17 @@ export const draftAnnotate = async (input: {
   const queuePublisher = await getQueuePublisher()
 
   const billingResult = await Effect.runPromise(
-    meterBillableAction({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      action: "flagger-scan",
-      idempotencyKey,
-      skipIfBlocked: true,
+    Effect.gen(function* () {
+      const resolvedPlan = yield* resolveEffectivePlanCached(OrganizationId(input.organizationId))
+      return yield* authorizeBillableAction({
+        organizationId: OrganizationId(input.organizationId),
+        action: "flagger-scan",
+        skipIfBlocked: true,
+        resolvedPlan,
+      })
     }).pipe(
       withPostgres(billingLayers, getPostgresClient(), OrganizationId(input.organizationId)),
-      Effect.provideService(QueuePublisher, queuePublisher),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
     ),
   ).catch((error) => {
@@ -117,6 +120,31 @@ export const draftAnnotate = async (input: {
     })
     throw new Error("Billing limit reached for the current billing period")
   }
+
+  await Effect.runPromise(
+    queuePublisher.publish(
+      "billing",
+      "recordBillableAction",
+      {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        action: "flagger-scan",
+        idempotencyKey,
+        context: {
+          planSlug: billingResult.context.planSlug,
+          planSource: billingResult.context.planSource,
+          periodStart: billingResult.context.periodStart.toISOString(),
+          periodEnd: billingResult.context.periodEnd.toISOString(),
+          includedCredits: billingResult.context.includedCredits,
+          overageAllowed: billingResult.context.overageAllowed,
+        },
+      },
+      {
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
+      },
+    ).pipe(withTracing),
+  )
 
   return Effect.runPromise(
     draftFlaggerAnnotationUseCase(input).pipe(

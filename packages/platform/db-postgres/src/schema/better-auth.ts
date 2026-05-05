@@ -192,5 +192,8 @@ export const subscriptions = latitudeSchema.table(
     billingInterval: text("billing_interval"),
     stripeScheduleId: text("stripe_schedule_id"),
   },
-  () => [subscriptionReferenceRLSPolicy()],
+  (t) => [
+    subscriptionReferenceRLSPolicy(),
+    index("subscriptions_reference_status_period_end_idx").on(t.referenceId, t.status, t.periodEnd),
+  ],
 )

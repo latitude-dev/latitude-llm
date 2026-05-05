@@ -244,6 +244,33 @@ const _registry = {
   }>(),
 
   billing: payloads<{
+    recordBillableAction: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+      readonly idempotencyKey: string
+      readonly context: {
+        readonly planSlug: "free" | "pro" | "enterprise"
+        readonly planSource: "override" | "subscription" | "free-fallback"
+        readonly periodStart: string
+        readonly periodEnd: string
+        readonly includedCredits: number
+        readonly overageAllowed: boolean
+      }
+      readonly traceId?: string
+      readonly metadata?: Record<string, unknown>
+    }
+    recordTraceUsageBatch: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceIds: readonly string[]
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
     reportOverage: {
       readonly organizationId: string
       readonly periodStart: string

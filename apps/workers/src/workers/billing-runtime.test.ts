@@ -1,7 +1,14 @@
-import { meterBillableAction, PLAN_CONFIGS, resolveEffectivePlan } from "@domain/billing"
+import {
+  authorizeBillableAction,
+  BillingUsagePeriodRepository,
+  PLAN_CONFIGS,
+  recordBillableActionUseCase,
+  recordTraceUsageBatchUseCase,
+  resolveEffectivePlan,
+} from "@domain/billing"
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { generateId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
@@ -168,20 +175,29 @@ describe("billing runtime integration", () => {
       periodEnd: new Date("2026-05-01T00:00:00.000Z"),
     })
 
-    const run = (action: "live-eval-scan" | "eval-generation", idempotencyKey: string) =>
-      Effect.runPromise(
-        meterBillableAction({
+    const run = async (action: "live-eval-scan" | "eval-generation", idempotencyKey: string) => {
+      const authorization = await Effect.runPromise(
+        authorizeBillableAction({
+          organizationId: OrganizationId(organizationId),
+          action,
+          skipIfBlocked: true,
+        }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
+      )
+
+      return Effect.runPromise(
+        recordBillableActionUseCase({
           organizationId: OrganizationId(organizationId),
           projectId: ProjectId(projectId),
           action,
           idempotencyKey,
-          skipIfBlocked: true,
+          context: authorization.context,
         }).pipe(
           withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
           Effect.provideService(QueuePublisher, queue.publisher),
           withTracing,
         ),
       )
+    }
 
     await run("live-eval-scan", `live-eval-scan:${organizationId}:evaluation-a:trace-a`)
     await run("live-eval-scan", `live-eval-scan:${organizationId}:evaluation-a:trace-a`)
@@ -200,6 +216,125 @@ describe("billing runtime integration", () => {
     expect(events).toHaveLength(2)
     expect(events.map((event) => event.credits).sort((a, b) => a - b)).toEqual([30, 1000])
     expect(period?.consumedCredits).toBe(1030)
+  })
+
+  it("authorizes synchronously without recording, then records asynchronously from the authorization snapshot", async () => {
+    const organizationId = generateId()
+    const projectId = generateId()
+    const queue = createFakeQueuePublisher()
+
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Authorize Org",
+      slug: `authorize-${organizationId}`,
+    })
+
+    const authorization = await Effect.runPromise(
+      authorizeBillableAction({
+        organizationId: OrganizationId(organizationId),
+        action: "flagger-scan",
+        skipIfBlocked: true,
+      }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
+    )
+
+    const preRecordEvents = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+
+    expect(authorization.allowed).toBe(true)
+    expect(preRecordEvents).toHaveLength(0)
+
+    await Effect.runPromise(
+      recordBillableActionUseCase({
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        action: "flagger-scan",
+        idempotencyKey: `flagger-scan:${organizationId}:flagger-a:trace-a`,
+        context: authorization.context,
+      }).pipe(
+        withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
+        Effect.provideService(QueuePublisher, queue.publisher),
+        withTracing,
+      ),
+    )
+
+    const events = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+    const [period] = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.action).toBe("flagger-scan")
+    expect(period?.consumedCredits).toBe(30)
+  })
+
+  it("records trace usage batches idempotently across queue retries", async () => {
+    const organizationId = generateId()
+    const projectId = generateId()
+    const queue = createFakeQueuePublisher()
+    const periodStart = new Date("2026-04-01T00:00:00.000Z")
+    const periodEnd = new Date("2026-05-01T00:00:00.000Z")
+
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Trace Batch Org",
+      slug: `trace-batch-${organizationId}`,
+    })
+
+    await Effect.runPromise(
+      recordTraceUsageBatchUseCase({
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        traceIds: [TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"), TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2")],
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart,
+        periodEnd,
+        includedCredits: PLAN_CONFIGS.free.includedCredits,
+        overageAllowed: false,
+      }).pipe(
+        withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
+        Effect.provideService(QueuePublisher, queue.publisher),
+        withTracing,
+      ),
+    )
+
+    await Effect.runPromise(
+      recordTraceUsageBatchUseCase({
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        traceIds: [TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"), TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2")],
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart,
+        periodEnd,
+        includedCredits: PLAN_CONFIGS.free.includedCredits,
+        overageAllowed: false,
+      }).pipe(
+        withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
+        Effect.provideService(QueuePublisher, queue.publisher),
+        withTracing,
+      ),
+    )
+
+    const events = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+    const [period] = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(events).toHaveLength(2)
+    expect(period?.consumedCredits).toBe(2)
+    expect(period?.overageCredits).toBe(0)
+    expect(queue.published.filter((message) => message.queue === "billing")).toHaveLength(0)
   })
 
   it("blocks exhausted free orgs but allows paid orgs to continue into overage", async () => {
@@ -264,26 +399,28 @@ describe("billing runtime integration", () => {
       })
 
       const freeResult = await Effect.runPromise(
-        meterBillableAction({
+        authorizeBillableAction({
           organizationId: OrganizationId(freeOrgId),
-          projectId: ProjectId(projectId),
           action: "flagger-scan",
-          idempotencyKey: `flagger-scan:${freeOrgId}:flagger-a:trace-a`,
           skipIfBlocked: true,
-        }).pipe(
-          withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(freeOrgId)),
-          Effect.provideService(QueuePublisher, queue.publisher),
-          withTracing,
-        ),
+        }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(freeOrgId)), withTracing),
       )
 
-      const paidResult = await Effect.runPromise(
-        meterBillableAction({
+      const paidAuthorization = await Effect.runPromise(
+        authorizeBillableAction({
+          organizationId: OrganizationId(proOrgId),
+          action: "trace",
+          skipIfBlocked: true,
+        }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(proOrgId)), withTracing),
+      )
+
+      await Effect.runPromise(
+        recordBillableActionUseCase({
           organizationId: OrganizationId(proOrgId),
           projectId: ProjectId(projectId),
           action: "trace",
           idempotencyKey: `trace:${proOrgId}:${projectId}:trace-overage`,
-          skipIfBlocked: true,
+          context: paidAuthorization.context,
         }).pipe(
           withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(proOrgId)),
           Effect.provideService(QueuePublisher, queue.publisher),
@@ -298,6 +435,14 @@ describe("billing runtime integration", () => {
 
       expect(freeResult).toEqual({
         allowed: false,
+        context: {
+          planSlug: "free",
+          planSource: "free-fallback",
+          periodStart: new Date("2026-06-01T00:00:00.000Z"),
+          periodEnd: new Date("2026-07-01T00:00:00.000Z"),
+          includedCredits: PLAN_CONFIGS.free.includedCredits,
+          overageAllowed: false,
+        },
         period: {
           start: new Date("2026-06-01T00:00:00.000Z"),
           end: new Date("2026-07-01T00:00:00.000Z"),
@@ -307,7 +452,7 @@ describe("billing runtime integration", () => {
         },
       })
 
-      expect(paidResult.allowed).toBe(true)
+      expect(paidAuthorization.allowed).toBe(true)
       expect(updatedPaidPeriod?.consumedCredits).toBe(PLAN_CONFIGS.pro.includedCredits + 1)
       expect(updatedPaidPeriod?.overageCredits).toBe(1)
       expect(updatedPaidPeriod?.overageAmountMicrocents).toBeGreaterThan(0)
@@ -321,7 +466,6 @@ describe("billing runtime integration", () => {
 
   it("applies a pro spending cap from organization settings before recording new overage", async () => {
     const organizationId = generateId()
-    const projectId = generateId()
     const queue = createFakeQueuePublisher()
     const proBasePriceCents = PLAN_CONFIGS.pro.priceCents
 
@@ -374,16 +518,10 @@ describe("billing runtime integration", () => {
     )
 
     const result = await Effect.runPromise(
-      meterBillableAction({
+      authorizeBillableAction({
         organizationId: OrganizationId(organizationId),
-        projectId: ProjectId(projectId),
         action: "trace",
-        idempotencyKey: `trace:${organizationId}:${projectId}:trace-cap`,
-      }).pipe(
-        withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
-        Effect.provideService(QueuePublisher, queue.publisher),
-        withTracing,
-      ),
+      }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
     )
 
     const [updatedPeriod] = await pg.db
@@ -398,5 +536,56 @@ describe("billing runtime integration", () => {
     expect(
       queue.getPublishedByDedupeKey("billing", `billing:reportOverage:${organizationId}:2026-07-01T00:00:00.000Z`),
     ).toBeUndefined()
+  })
+
+  it("advances reported overage credits without overwriting fresher usage totals", async () => {
+    const organizationId = generateId()
+    const periodStart = new Date("2026-08-01T00:00:00.000Z")
+    const periodEnd = new Date("2026-09-01T00:00:00.000Z")
+
+    await pg.db.insert(billingUsagePeriods).values({
+      id: generateId(),
+      organizationId,
+      planSlug: "pro",
+      periodStart,
+      periodEnd,
+      includedCredits: 0,
+      consumedCredits: 3,
+      overageCredits: 3,
+      reportedOverageCredits: 0,
+      overageAmountMicrocents: 0,
+      updatedAt: new Date("2026-08-15T12:00:00.000Z"),
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const periodRepo = yield* BillingUsagePeriodRepository
+
+        yield* periodRepo.appendCreditsForBillingPeriod({
+          organizationId: OrganizationId(organizationId),
+          periodStart,
+          periodEnd,
+          planSlug: "pro",
+          persistedIncludedCredits: 0,
+          creditsDelta: 2,
+        })
+
+        yield* periodRepo.advanceReportedOverageCredits({
+          organizationId: OrganizationId(organizationId),
+          periodStart,
+          periodEnd,
+          reportedOverageCredits: 3,
+        })
+      }).pipe(withPostgres(BillingUsagePeriodRepositoryLive, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
+    )
+
+    const [period] = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(period?.consumedCredits).toBe(5)
+    expect(period?.overageCredits).toBe(5)
+    expect(period?.reportedOverageCredits).toBe(3)
   })
 })

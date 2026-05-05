@@ -8,6 +8,22 @@ import { StripeSubscriptionLookup } from "../ports/stripe-subscription-lookup.ts
 
 const log = createLogger("billing")
 
+export interface EffectivePlanResolution {
+  readonly organizationId: OrganizationId
+  readonly plan: {
+    readonly slug: "free" | "pro" | "enterprise"
+    readonly includedCredits: number
+    readonly retentionDays: number
+    readonly overageAllowed: boolean
+    readonly hardCapped: boolean
+    readonly priceCents: number | null
+    readonly spendingLimitCents: number | null
+  }
+  readonly source: "override" | "subscription" | "free-fallback"
+  readonly periodStart: Date
+  readonly periodEnd: Date
+}
+
 export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(function* (
   organizationId: OrganizationId,
 ) {
@@ -39,7 +55,7 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
       source: "override",
       periodStart: monthStart,
       periodEnd: monthEnd,
-    }
+    } satisfies EffectivePlanResolution
   }
 
   const subLookup = yield* StripeSubscriptionLookup
@@ -84,7 +100,7 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
       source: "subscription",
       periodStart: subscription.periodStart ?? new Date(),
       periodEnd: subscription.periodEnd ?? new Date(),
-    }
+    } satisfies EffectivePlanResolution
   }
 
   const freePlan = PLAN_CONFIGS.free
@@ -106,5 +122,5 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
     source: "free-fallback",
     periodStart: monthStart,
     periodEnd: monthEnd,
-  }
+  } satisfies EffectivePlanResolution
 })

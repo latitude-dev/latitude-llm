@@ -3,17 +3,37 @@ import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
+  authorizeBillableActionMock,
   draftFlaggerAnnotationUseCaseMock,
   loggerErrorMock,
   loggerInfoMock,
   runFlaggerUseCaseMock,
   saveFlaggerAnnotationUseCaseMock,
 } = vi.hoisted(() => ({
+  authorizeBillableActionMock: vi.fn(() =>
+    Effect.succeed({
+      allowed: true,
+      period: null,
+      context: {
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: new Date("2026-01-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-02-01T00:00:00.000Z"),
+        includedCredits: 20_000,
+        overageAllowed: false,
+      },
+    }),
+  ),
   draftFlaggerAnnotationUseCaseMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   runFlaggerUseCaseMock: vi.fn(),
   saveFlaggerAnnotationUseCaseMock: vi.fn(),
+}))
+
+vi.mock("@domain/billing", () => ({
+  authorizeBillableAction: authorizeBillableActionMock,
+  buildBillingIdempotencyKey: vi.fn(() => "flagger-scan:org-1:frustration:trace-1"),
 }))
 
 vi.mock("@domain/flaggers", () => ({
@@ -44,6 +64,7 @@ vi.mock("@platform/db-postgres", () => ({
   BillingUsageEventRepositoryLive: {},
   BillingUsagePeriodRepositoryLive: {},
   OutboxEventWriterLive: {},
+  resolveEffectivePlanCached: vi.fn(() => Effect.succeed(null)),
   SettingsReaderLive: {},
   ScoreRepositoryLive: {},
   StripeSubscriptionLookupLive: {},

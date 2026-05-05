@@ -2,15 +2,17 @@ import {
   BillingUsagePeriodRepository,
   calculatePlanSpendMicrocents,
   PRO_PLAN_CONFIG,
-  resolveEffectivePlan,
 } from "@domain/billing"
 import { MembershipRepository, updateOrganizationUseCase } from "@domain/organizations"
 import { BadRequestError, OrganizationId, PermissionError, SettingsReader } from "@domain/shared"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  invalidateEffectivePlanCache,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
+  resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -20,7 +22,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 interface BillingOverviewDto {
   planSlug: "free" | "pro" | "enterprise"
@@ -52,7 +54,7 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
 
   return await Effect.runPromise(
     Effect.gen(function* () {
-      const orgPlan = yield* resolveEffectivePlan(OrganizationId(orgId))
+      const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(orgId))
       const periodRepo = yield* BillingUsagePeriodRepository
       const period = yield* periodRepo.findByPeriod({
         organizationId: OrganizationId(orgId),
@@ -75,7 +77,11 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
         currentSpendMicrocents: calculatePlanSpendMicrocents(orgPlan.plan.slug, period?.overageAmountMicrocents ?? 0),
         spendingLimitCents: orgPlan.plan.spendingLimitCents,
       } satisfies BillingOverviewDto
-    }).pipe(withPostgres(billingLayers, client, OrganizationId(orgId)), withTracing),
+    }).pipe(
+      withPostgres(billingLayers, client, OrganizationId(orgId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
+      withTracing,
+    ),
   )
 })
 
@@ -102,7 +108,7 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
           )
         }
 
-        const orgPlan = yield* resolveEffectivePlan(OrganizationId(organizationId))
+        const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
         if (orgPlan.plan.slug !== PRO_PLAN_CONFIG.slug) {
           return yield* Effect.fail(
             new BadRequestError({ message: "Custom spending limits are only available on Pro plans" }),
@@ -135,6 +141,7 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
         }
 
         yield* updateOrganizationUseCase({ settings: nextSettings })
+        yield* invalidateEffectivePlanCache(OrganizationId(organizationId))
       }).pipe(
         withPostgres(
           Layer.mergeAll(
@@ -147,6 +154,7 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
           client,
           OrganizationId(organizationId),
         ),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),
     )

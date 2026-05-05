@@ -1,4 +1,4 @@
-import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
+import { authorizeBillableAction, buildBillingIdempotencyKey } from "@domain/billing"
 import {
   type BaselineEvaluationResult,
   type CollectedEvaluationAlignmentExamples,
@@ -17,10 +17,11 @@ import {
   persistAlignmentResultUseCase,
 } from "@domain/evaluations"
 import { QueuePublisher } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   BillingOverrideRepositoryLive,
@@ -29,6 +30,7 @@ import {
   EvaluationAlignmentExamplesRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -118,16 +120,52 @@ export const checkEvaluationGenerationBilling = (input: {
 }): Promise<boolean> =>
   getQueuePublisher().then((queuePublisher) =>
     Effect.runPromise(
-      meterBillableAction({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        action: "eval-generation",
-        idempotencyKey: buildBillingIdempotencyKey("eval-generation", [input.organizationId, input.billingOperationId]),
-        skipIfBlocked: true,
-        metadata: {
-          evaluationId: input.evaluationId,
-          billingOperationId: input.billingOperationId,
-        },
+      Effect.gen(function* () {
+        const idempotencyKey = buildBillingIdempotencyKey("eval-generation", [
+          input.organizationId,
+          input.billingOperationId,
+        ])
+        const resolvedPlan = yield* resolveEffectivePlanCached(OrganizationId(input.organizationId))
+        const authorization = yield* authorizeBillableAction({
+          organizationId: OrganizationId(input.organizationId),
+          action: "eval-generation",
+          skipIfBlocked: true,
+          resolvedPlan,
+        })
+
+        if (!authorization.allowed) {
+          return false
+        }
+
+        const queuePublisherService = yield* QueuePublisher
+        yield* queuePublisherService.publish(
+          "billing",
+          "recordBillableAction",
+          {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            action: "eval-generation",
+            idempotencyKey,
+            context: {
+              planSlug: authorization.context.planSlug,
+              planSource: authorization.context.planSource,
+              periodStart: authorization.context.periodStart.toISOString(),
+              periodEnd: authorization.context.periodEnd.toISOString(),
+              includedCredits: authorization.context.includedCredits,
+              overageAllowed: authorization.context.overageAllowed,
+            },
+            metadata: {
+              evaluationId: input.evaluationId,
+              billingOperationId: input.billingOperationId,
+            },
+          },
+          {
+            attempts: 10,
+            backoff: { type: "exponential", delayMs: 1_000 },
+          },
+        )
+
+        return true
       }).pipe(
         withPostgres(
           evaluationGenerationBillingRepositoriesLive,
@@ -135,9 +173,10 @@ export const checkEvaluationGenerationBilling = (input: {
           OrganizationId(input.organizationId),
         ),
         Effect.provideService(QueuePublisher, queuePublisher),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
         Effect.tap((result) =>
-          result.allowed
+          result
             ? Effect.void
             : Effect.sync(() =>
                 logger.info("Evaluation generation blocked — billing limit reached", {
@@ -148,7 +187,6 @@ export const checkEvaluationGenerationBilling = (input: {
                 }),
               ),
         ),
-        Effect.map((result) => result.allowed),
       ),
     ),
   )

@@ -1,11 +1,11 @@
-import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
+import { authorizeBillableAction, buildBillingIdempotencyKey } from "@domain/billing"
 import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
 import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
-import type { RedisClient } from "@platform/cache-redis"
+import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
   ScoreAnalyticsRepositoryLive,
@@ -20,6 +20,7 @@ import {
   IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
+  resolveEffectivePlanCached,
   ScoreRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -112,22 +113,60 @@ export const createLiveEvaluationsWorker = ({
   }
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
   const executeEffect = (payload: ExecutePayload) => {
+    if (!publisher) {
+      return Effect.fail(new Error("Live evaluations worker requires a queue publisher for async billing"))
+    }
+
     const baseEffect = executeLiveEvaluation(payload, {
       // Invariant: this `beforeExecute` runs the billing meter and resolves to `allowed` BEFORE
       // the hosted AI execution starts. `runLiveEvaluationUseCase` must short-circuit when this
       // returns `false`. Do not invert the ordering — billing must precede the chargeable AI call.
       beforeExecute: ({ organizationId, projectId, evaluationId, traceId }) =>
-        meterBillableAction({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(projectId),
-          action: "live-eval-scan",
-          idempotencyKey: buildBillingIdempotencyKey("live-eval-scan", [organizationId, evaluationId, traceId]),
-          skipIfBlocked: true,
-          metadata: {
-            evaluationId,
-            traceId,
-          },
-        }).pipe(Effect.map((result) => result.allowed)),
+        Effect.gen(function* () {
+          const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [organizationId, evaluationId, traceId])
+          const resolvedPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
+          const authorization = yield* authorizeBillableAction({
+            organizationId: OrganizationId(organizationId),
+            action: "live-eval-scan",
+            skipIfBlocked: true,
+            resolvedPlan,
+          })
+
+          if (!authorization.allowed) {
+            return false
+          }
+
+          const queuePublisher = yield* QueuePublisher
+          yield* queuePublisher.publish(
+            "billing",
+            "recordBillableAction",
+            {
+              organizationId,
+              projectId,
+              action: "live-eval-scan",
+              idempotencyKey,
+              context: {
+                planSlug: authorization.context.planSlug,
+                planSource: authorization.context.planSource,
+                periodStart: authorization.context.periodStart.toISOString(),
+                periodEnd: authorization.context.periodEnd.toISOString(),
+                includedCredits: authorization.context.includedCredits,
+                overageAllowed: authorization.context.overageAllowed,
+              },
+              traceId,
+              metadata: {
+                evaluationId,
+                traceId,
+              },
+            },
+            {
+              attempts: 10,
+              backoff: { type: "exponential", delayMs: 1_000 },
+            },
+          )
+
+          return true
+        }),
     }).pipe(
       withPostgres(
         Layer.mergeAll(
@@ -144,6 +183,7 @@ export const createLiveEvaluationsWorker = ({
         pgClient,
         OrganizationId(payload.organizationId),
       ),
+      Effect.provide(RedisCacheStoreLive(redisClient ?? getRedisClient())),
       withClickHouse(
         Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
         chClient,
@@ -179,7 +219,7 @@ export const createLiveEvaluationsWorker = ({
       Effect.asVoid,
     )
 
-    return publisher ? baseEffect.pipe(Effect.provideService(QueuePublisher, publisher)) : baseEffect
+    return baseEffect.pipe(Effect.provideService(QueuePublisher, publisher))
   }
 
   consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
