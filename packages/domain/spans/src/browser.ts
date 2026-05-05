@@ -20,6 +20,11 @@ export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {
+  type AnnotationWriteSpanAnchor,
+  annotationAnchorTargetsToolPart,
+  resolveAnnotationSpanIdForWrite,
+} from "./helpers/resolve-annotation-span-id-for-write.ts"
+export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
