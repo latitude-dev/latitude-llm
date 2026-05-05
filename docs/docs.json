@@ -70,6 +70,7 @@
           "telemetry/typescript",
           "telemetry/python",
           "telemetry/claude-code",
+          "telemetry/openclaw",
           {
             "group": "Providers",
             "pages": [
