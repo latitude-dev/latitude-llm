@@ -158,40 +158,28 @@ export const createScoresRoutes = () => {
 
         // The route exposes `_evaluation: boolean` for the public OpenAPI shape;
         // the use case takes the discriminated `source` shape used internally.
-        const submitInput: SubmitApiScoreInput & { organizationId: string; projectId: typeof project.id } =
+        // The variant fields (`source`/`sourceId`/`metadata`) live inside the
+        // ternary so TypeScript keeps each branch's discriminator narrowed; the
+        // rest of the body is shared.
+        const variantFields =
           body._evaluation === true
-            ? {
-                source: "evaluation",
-                sourceId: body.sourceId,
-                trace: body.trace,
-                simulationId: body.simulationId,
-                value: body.value,
-                passed: body.passed,
-                feedback: body.feedback,
-                metadata: body.metadata,
-                error: body.error,
-                duration: body.duration,
-                tokens: body.tokens,
-                cost: body.cost,
-                organizationId,
-                projectId: project.id,
-              }
-            : {
-                source: "custom",
-                sourceId: body.sourceId,
-                trace: body.trace,
-                simulationId: body.simulationId,
-                value: body.value,
-                passed: body.passed,
-                feedback: body.feedback,
-                metadata: body.metadata,
-                error: body.error,
-                duration: body.duration,
-                tokens: body.tokens,
-                cost: body.cost,
-                organizationId,
-                projectId: project.id,
-              }
+            ? { source: "evaluation" as const, sourceId: body.sourceId, metadata: body.metadata }
+            : { source: "custom" as const, sourceId: body.sourceId, metadata: body.metadata }
+
+        const submitInput: SubmitApiScoreInput & { organizationId: string; projectId: typeof project.id } = {
+          ...variantFields,
+          trace: body.trace,
+          simulationId: body.simulationId,
+          value: body.value,
+          passed: body.passed,
+          feedback: body.feedback,
+          error: body.error,
+          duration: body.duration,
+          tokens: body.tokens,
+          cost: body.cost,
+          organizationId,
+          projectId: project.id,
+        }
 
         return (yield* submitApiScoreUseCase(submitInput)) as ApiScore
       }).pipe(
