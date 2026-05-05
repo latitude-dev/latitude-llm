@@ -27,6 +27,22 @@ const readEnv = (): PostHogEnv | null => {
 // underlying window object.
 let instancePromise: Promise<PostHog | null> | null = null
 
+const LAST_IDENTIFIED_KEY = "ph_last_identified_user"
+
+const getLastIdentifiedUserId = (): string | null => {
+  if (typeof window === "undefined") return null
+  return sessionStorage.getItem(LAST_IDENTIFIED_KEY)
+}
+
+const setLastIdentifiedUserId = (id: string | null) => {
+  if (typeof window === "undefined") return
+  if (id) {
+    sessionStorage.setItem(LAST_IDENTIFIED_KEY, id)
+  } else {
+    sessionStorage.removeItem(LAST_IDENTIFIED_KEY)
+  }
+}
+
 const loadInstance = (): Promise<PostHog | null> => {
   if (typeof window === "undefined") return Promise.resolve(null)
   const env = readEnv()
@@ -68,8 +84,18 @@ interface IdentifyUserInput {
 }
 
 export const identifyUser = async (input: IdentifyUserInput): Promise<void> => {
+  const previousUserId = getLastIdentifiedUserId()
+  const userChanged = !!(previousUserId && previousUserId !== input.id)
+
+  setLastIdentifiedUserId(input.id)
+
   const posthog = await loadInstance()
   if (!posthog) return
+
+  if (userChanged) {
+    posthog.reset()
+  }
+
   posthog.identify(input.id, {
     email: input.email,
     ...(input.name ? { name: input.name } : {}),
@@ -88,14 +114,16 @@ export const identifyOrganization = async (input: IdentifyOrganizationInput): Pr
 }
 
 /**
- * Clear the current identity and session. Call on explicit logout only — do
- * not call from the authenticated layout on mount: `posthog.reset()` starts a
- * fresh recording session, and layout remounts (including React Strict Mode in
- * dev) would fragment recordings. `identifyUser` in `PostHogIdentity` is enough
- * to attribute the same browser session to the signed-in user.
+ * Clear the current identity and session. Called on explicit logout and
+ * automatically by {@link identifyUser} when the user id changes (i.e. impersonation)
+ *
+ * Do not call from the authenticated layout on mount: `posthog.reset()`
+ * starts a fresh recording session, and layout remounts (including React
+ * Strict Mode in dev) would fragment recordings.
  */
 export const resetPostHog = async (): Promise<void> => {
   const posthog = await loadInstance()
   if (!posthog) return
+  setLastIdentifiedUserId(null)
   posthog.reset()
 }
