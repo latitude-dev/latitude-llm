@@ -118,7 +118,7 @@ GitHub Actions workflows:
 
 Deployment triggers:
 
-- **Staging**: push to `staging` → build → migrate → deploy
+- **Staging**: push to `development` → build → migrate → deploy
 - **Production**: push to `main` → checks pass → build → migrate → deploy
 - **Manual**: workflow_dispatch with environment selector
 
@@ -126,7 +126,7 @@ Deployment triggers:
 
 To deploy to production:
 
-1. **Promote `staging` into `main`**: open a PR from `staging` to `main` and merge it after review.
+1. **Promote `development` into `main`**: open a PR from `development` to `main` and merge it after review.
 
 2. **Ensure all checks pass**: The deployment workflow requires the CI jobs to succeed. This includes:
     - Type checking (`pnpm typecheck`)
@@ -135,7 +135,7 @@ To deploy to production:
 
 3. **Merge to `main`**:
     ```bash
-    gh pr create --base main --head staging --fill
+    gh pr create --base main --head development --fill
     ```
 
    Merging the PR triggers the production deployment automatically.
@@ -153,7 +153,7 @@ To deploy to production:
 
 Manual deployments must be dispatched from the matching branch:
 
-- Dispatch from `staging` when deploying to the `staging` environment
+- Dispatch from `development` when deploying to the `staging` environment
 - Dispatch from `main` when deploying to the `production` environment
 
 The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
