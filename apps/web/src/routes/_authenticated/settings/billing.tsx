@@ -308,9 +308,9 @@ function SpendingLimitSection() {
           </Text.H6>
         </div>
         <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background p-4">
-          <Text.H6 color="foregroundMuted">Current cap</Text.H6>
+          <Text.H6 color="foregroundMuted">Current limit</Text.H6>
           <Text.H4 weight="bold">
-            {overview.spendingLimitCents === null ? "No cap" : formatCurrencyFromCents(overview.spendingLimitCents)}
+            {overview.spendingLimitCents === null ? "Unlimited" : formatCurrencyFromCents(overview.spendingLimitCents)}
           </Text.H4>
           <Text.H6 color="foregroundMuted">
             {overview.spendingLimitCents === null
