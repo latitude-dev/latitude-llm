@@ -66,6 +66,8 @@ const loadInstance = (): Promise<PostHog | null> => {
         capture_pageview: true,
         autocapture: true,
         disable_session_recording: false,
+        // Start silent — syncPostHogSession opts in for real customers once the authenticated layout mounts
+        opt_out_capturing_by_default: true,
       })
       return posthog
     })
@@ -148,13 +150,13 @@ export const syncPostHogSession = async (input: SyncSessionInput): Promise<void>
 /**
  * Clear the current identity and session. Called on explicit logout.
  *
- * Re-enables capturing after reset so the next login starts from a neutral
- * baseline — `syncPostHogSession` will opt out again if the new user is staff.
+ * Does NOT re-enable capturing — `opt_out_capturing_by_default: true` in the
+ * init config keeps unauthenticated routes silent. The next authenticated
+ * mount will call `syncPostHogSession`, which opts in for real customers.
  */
 export const resetPostHog = async (): Promise<void> => {
   const posthog = await loadInstance()
   if (!posthog) return
   setLastIdentifiedUserId(null)
   posthog.reset()
-  posthog.opt_in_capturing()
 }
