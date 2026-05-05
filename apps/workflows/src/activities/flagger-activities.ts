@@ -53,6 +53,7 @@ interface DraftAnnotateOutput {
   readonly sessionId: string | null
   readonly simulationId: string | null
   readonly scoreId: string
+  readonly messageIndex?: number | undefined
 }
 
 export const draftAnnotate = async (input: {
@@ -95,6 +96,7 @@ export const saveAnnotation = async (input: {
   readonly sessionId?: string | null
   readonly simulationId?: string | null
   readonly scoreId: string
+  readonly messageIndex?: number | undefined
 }): Promise<FlaggerAnnotateOutput> =>
   Effect.runPromise(
     saveFlaggerAnnotationUseCase(input).pipe(

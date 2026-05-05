@@ -28,6 +28,7 @@ export interface DraftFlaggerAnnotationOutput {
   readonly sessionId: string | null
   readonly simulationId: string | null
   readonly scoreId: ScoreId
+  readonly messageIndex?: number | undefined
 }
 
 interface DraftFlaggerAnnotationInput {
@@ -70,5 +71,6 @@ export const draftFlaggerAnnotationUseCase = Effect.fn("flaggers.draftFlaggerAnn
     sessionId: annotatorResult.sessionId,
     simulationId: annotatorResult.simulationId,
     scoreId,
+    messageIndex: annotatorResult.messageIndex,
   } as DraftFlaggerAnnotationOutput
 })
