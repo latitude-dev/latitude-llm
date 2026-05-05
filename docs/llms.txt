@@ -1,0 +1,154 @@
+# Latitude
+
+> Latitude is an open-source agent observability platform that captures live agent traffic via OpenTelemetry, scores it through automated evaluations and human annotations, groups failures into trackable issues, and feeds the results back into evaluations and simulations so teams can ship reliable AI agents with confidence.
+
+Latitude is provider-agnostic and integrates with major LLM providers (OpenAI, Anthropic, Gemini, Azure, Bedrock, Vertex, Groq, Mistral, Cohere, Together AI, Ollama, and more) and frameworks (Vercel AI SDK, LangChain, LlamaIndex, CrewAI, DSPy, Haystack). It is available as a managed cloud service at [latitude.so](https://latitude.so) and as a self-hosted deployment.
+
+## Requirements and constraints
+
+- **Authentication**: All SDK and HTTP API calls require a Latitude API key sent as the `x-api-key` header (or supplied via `apiKey` / `api_key` to the SDK). Create one in your project's settings.
+- **Project scoping**: Every trace, score, evaluation, and annotation queue is scoped to a single project. SDKs require both `apiKey` and `projectSlug` (or `project_slug`).
+- **Telemetry transport**: Traces are sent over OpenTelemetry (OTLP). Latitude works alongside other OTel backends without conflicts.
+- **SDK runtimes**: TypeScript SDK (`@latitude-data/telemetry`) supports Node.js 18+ in CommonJS and ESM. Python SDK (`latitude-telemetry`) supports Python 3.9+.
+- **Rate limits**: Manual evaluation realignment from the dashboard is rate-limited. Evaluations support a `debounce` setting (seconds) to batch or rate-limit execution against live traffic.
+- **Scores**: Every score is a normalized number between `0` and `1` with a `pass`/`fail` verdict and human-readable feedback.
+- **Prerequisites for the Developer Quick Start**: a Latitude account and an existing AI application using a supported provider or framework.
+
+## Getting Started
+
+- [Introduction](https://docs.latitude.so/getting-started/introduction): What Latitude is, the closed-loop observe → score → discover → evaluate → align → simulate → improve cycle, and key concepts (span, trace, session, score, evaluation, issue, annotation, simulation).
+- [Developer Quick Start](https://docs.latitude.so/getting-started/quick-start-dev): Connect an existing AI agent, see your first traces, and review scores end-to-end.
+- [No-Code Quick Start](https://docs.latitude.so/getting-started/quick-start-pm): Walkthrough of the Latitude web UI for team leads and PMs.
+- [Core Concepts](https://docs.latitude.so/getting-started/concepts): Organizations, projects, and how the data model fits together.
+
+## Guides
+
+- [Telemetry Overview](https://docs.latitude.so/telemetry/overview): Connect your LLM stack to Latitude over OpenTelemetry.
+- [OTel Exporter](https://docs.latitude.so/telemetry/otel-exporter): Send traces from an existing OpenTelemetry pipeline.
+- [Claude Code Telemetry](https://docs.latitude.so/telemetry/claude-code): Capture Claude Code sessions in Latitude.
+- [Observability Overview](https://docs.latitude.so/observability/overview): Spans, traces, and sessions in depth.
+- [Traces](https://docs.latitude.so/observability/traces): Inspect single interactions end-to-end.
+- [Sessions](https://docs.latitude.so/observability/sessions): Multi-turn conversations and session-level analysis.
+- [Evaluations Overview](https://docs.latitude.so/evaluations/overview): Automated scoring scripts that run on live traffic.
+- [Evaluation Triggers](https://docs.latitude.so/evaluations/triggers): When and how evaluations execute.
+- [Evaluation Alignment](https://docs.latitude.so/evaluations/alignment): Track drift between machine and human judgment.
+- [Annotations Overview](https://docs.latitude.so/annotations/overview): Human review workflows and queues.
+- [Annotation Queues](https://docs.latitude.so/annotations/annotation-queues): Managed review backlogs that route traces to reviewers.
+- [Inline Annotations](https://docs.latitude.so/annotations/inline-annotations): Annotate spans and messages directly inside a trace.
+- [Scores Overview](https://docs.latitude.so/scores/overview): The scoring system and its three sources (evaluations, annotations, custom).
+- [Score Analytics](https://docs.latitude.so/scores/analytics): Aggregate score views and trends.
+- [Issues Overview](https://docs.latitude.so/issues/overview): Named, trackable failure patterns discovered from failed scores.
+- [Issue Management](https://docs.latitude.so/issues/management): Triage, status, and resolution.
+- [Simulations Overview](https://docs.latitude.so/simulations/overview): Run agents against test scenarios locally or in CI.
+
+## API Reference
+
+- [TypeScript SDK](https://docs.latitude.so/telemetry/typescript): `@latitude-data/telemetry` — `initLatitude`, `capture`, span processors, and configuration.
+- [Python SDK](https://docs.latitude.so/telemetry/python): `latitude-telemetry` — `init_latitude`, `LatitudeSpanProcessor`, and configuration.
+- [OpenAI Provider](https://docs.latitude.so/telemetry/providers/openai): Auto-instrumentation for the OpenAI SDK.
+- [Anthropic Provider](https://docs.latitude.so/telemetry/providers/anthropic): Auto-instrumentation for the Anthropic SDK.
+- [Gemini Provider](https://docs.latitude.so/telemetry/providers/gemini): Auto-instrumentation for Google Gemini.
+- [Azure Provider](https://docs.latitude.so/telemetry/providers/azure): Auto-instrumentation for Azure OpenAI.
+- [Amazon Bedrock](https://docs.latitude.so/telemetry/providers/amazon-bedrock): Auto-instrumentation for Bedrock.
+- [Google AI Platform](https://docs.latitude.so/telemetry/providers/google-ai-platform): Auto-instrumentation for Google AI Platform.
+- [Vertex AI](https://docs.latitude.so/telemetry/providers/vertex-ai): Auto-instrumentation for Vertex AI.
+- [Groq Provider](https://docs.latitude.so/telemetry/providers/groq): Auto-instrumentation for Groq.
+- [Mistral Provider](https://docs.latitude.so/telemetry/providers/mistral): Auto-instrumentation for Mistral.
+- [Ollama Provider](https://docs.latitude.so/telemetry/providers/ollama): Auto-instrumentation for Ollama.
+- [Cohere Provider](https://docs.latitude.so/telemetry/providers/cohere): Auto-instrumentation for Cohere.
+- [Together AI](https://docs.latitude.so/telemetry/providers/together-ai): Auto-instrumentation for Together AI.
+- [LiteLLM](https://docs.latitude.so/telemetry/providers/litellm): Auto-instrumentation for LiteLLM.
+- [Replicate](https://docs.latitude.so/telemetry/providers/replicate): Auto-instrumentation for Replicate.
+- [SageMaker](https://docs.latitude.so/telemetry/providers/sagemaker): Auto-instrumentation for SageMaker.
+- [WatsonX](https://docs.latitude.so/telemetry/providers/watsonx): Auto-instrumentation for IBM WatsonX.
+- [Aleph Alpha](https://docs.latitude.so/telemetry/providers/aleph-alpha): Auto-instrumentation for Aleph Alpha.
+- [Transformers](https://docs.latitude.so/telemetry/providers/transformers): Auto-instrumentation for HuggingFace Transformers.
+- [Vercel AI SDK](https://docs.latitude.so/telemetry/frameworks/vercel-ai-sdk): Framework integration.
+- [LangChain](https://docs.latitude.so/telemetry/frameworks/langchain): Framework integration.
+- [LlamaIndex](https://docs.latitude.so/telemetry/frameworks/llamaindex): Framework integration.
+- [CrewAI](https://docs.latitude.so/telemetry/frameworks/crewai): Framework integration.
+- [DSPy](https://docs.latitude.so/telemetry/frameworks/dspy): Framework integration.
+- [Haystack](https://docs.latitude.so/telemetry/frameworks/haystack): Framework integration.
+
+## Examples
+
+### Connect a TypeScript app
+
+```ts
+import { initLatitude } from "@latitude-data/telemetry"
+import OpenAI from "openai"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
+
+await latitude.ready
+
+const openai = new OpenAI()
+const response = await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+})
+
+await latitude.shutdown()
+```
+
+### Connect a Python app
+
+```python
+from latitude_telemetry import init_latitude
+from openai import OpenAI
+
+latitude = init_latitude(
+    api_key="your-api-key",
+    project_slug="your-project-slug",
+    instrumentations=["openai"],
+)
+
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+### Group traces by user or session with `capture()`
+
+```ts
+import { initLatitude, capture } from "@latitude-data/telemetry"
+
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
+
+await capture(
+  { name: "support-agent", userId: "user_123", metadata: { tier: "pro" } },
+  async () => {
+    return openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "Refund please" }],
+    })
+  },
+)
+```
+
+### Attach to an existing OpenTelemetry pipeline
+
+```ts
+import { trace } from "@opentelemetry/api"
+import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+
+const provider = new NodeTracerProvider()
+provider.addSpanProcessor(
+  new LatitudeSpanProcessor({
+    apiKey: process.env.LATITUDE_API_KEY!,
+    projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  }),
+)
+provider.register()
+```
