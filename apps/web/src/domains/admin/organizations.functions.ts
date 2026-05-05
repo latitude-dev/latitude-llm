@@ -74,7 +74,8 @@ export interface AdminOrganizationBillingDto {
   stripeSubscriptionStatus: string | null
   periodStart: string
   periodEnd: string
-  includedCredits: number
+  /** `null` when entitlement is effectively unlimited over JSON/API (Enterprise logical allowance). */
+  includedCredits: number | null
   consumedCredits: number
   overageCredits: number
   overageAmountMicrocents: number
@@ -187,7 +188,7 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
           stripeSubscriptionStatus: subscription?.status ?? null,
           periodStart: orgPlan.periodStart.toISOString(),
           periodEnd: orgPlan.periodEnd.toISOString(),
-          includedCredits: orgPlan.plan.includedCredits,
+          includedCredits: Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null,
           consumedCredits: period?.consumedCredits ?? 0,
           overageCredits: period?.overageCredits ?? 0,
           overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,

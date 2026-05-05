@@ -1,4 +1,4 @@
-import { meterBillableAction } from "@domain/billing"
+import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
 import {
   type BaselineEvaluationResult,
   type CollectedEvaluationAlignmentExamples,
@@ -122,7 +122,7 @@ export const checkEvaluationGenerationBilling = (input: {
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),
         action: "eval-generation",
-        idempotencyKey: `eval-generation:${input.organizationId}:${input.billingOperationId}`,
+        idempotencyKey: buildBillingIdempotencyKey("eval-generation", [input.organizationId, input.billingOperationId]),
         skipIfBlocked: true,
         metadata: {
           evaluationId: input.evaluationId,

@@ -12,7 +12,29 @@ export const Route = createFileRoute("/_authenticated/settings/billing")({
     overview: await getBillingOverview(),
   }),
   component: BillingSettingsPage,
+  errorComponent: BillingUnavailableFallback,
 })
+
+function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: () => void }) {
+  return (
+    <Container className="flex flex-col gap-6 pt-14">
+      <div className="flex flex-col gap-2">
+        <Text.H4 weight="bold">Billing</Text.H4>
+        <Text.H6 color="foregroundMuted">
+          We couldn't load your billing data right now. This usually clears up after a refresh. If it keeps happening,
+          contact support.
+        </Text.H6>
+      </div>
+      <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-5">
+        <Text.H6 color="destructive">Billing data unavailable</Text.H6>
+        <Text.H6 color="foregroundMuted">{toUserMessage(error)}</Text.H6>
+      </div>
+      <div>
+        <Button onClick={() => reset()}>Try again</Button>
+      </div>
+    </Container>
+  )
+}
 
 const numberFormatter = new Intl.NumberFormat("en-US")
 const currencyFormatter = new Intl.NumberFormat("en-US", {

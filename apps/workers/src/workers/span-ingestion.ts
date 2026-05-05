@@ -1,4 +1,4 @@
-import { meterBillableAction, resolveEffectivePlan } from "@domain/billing"
+import { buildBillingIdempotencyKey, meterBillableAction, resolveEffectivePlan } from "@domain/billing"
 import type { EventsPublisher } from "@domain/events"
 import { type QueueConsumer, type QueuePublishError, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId, type StorageDiskPort, TraceId } from "@domain/shared"
@@ -62,11 +62,27 @@ export const createSpanIngestionWorker = ({
                     organizationId: OrganizationId(params.organizationId),
                     projectId: ProjectId(params.projectId),
                     action: "trace",
-                    idempotencyKey: `trace:${params.organizationId}:${params.projectId}:${t.traceId}`,
+                    idempotencyKey: buildBillingIdempotencyKey("trace", [
+                      params.organizationId,
+                      params.projectId,
+                      t.traceId,
+                    ]),
                     traceId: TraceId(t.traceId),
-                  }),
+                  }).pipe(
+                    Effect.tap((result) =>
+                      result.allowed
+                        ? Effect.void
+                        : Effect.sync(() =>
+                            logger.warn("Trace billing recorded as overshoot — billing limit reached", {
+                              organizationId: params.organizationId,
+                              projectId: params.projectId,
+                              traceId: t.traceId,
+                            }),
+                          ),
+                    ),
+                  ),
                 ),
-                { concurrency: "unbounded", discard: true },
+                { concurrency: 8, discard: true },
               )
             }).pipe(
               withPostgres(billingLayers, postgresClient, OrganizationId(params.organizationId)),
@@ -75,7 +91,16 @@ export const createSpanIngestionWorker = ({
             ),
           )
             .then(() => undefined)
-            .catch(() => undefined)
+            .catch((error) => {
+              logger.error("Trace billing recording failed after span persistence", {
+                organizationId: params.organizationId,
+                projectId: params.projectId,
+                traceCount: params.traces.length,
+                traceIds: params.traces.map((trace) => trace.traceId),
+                error,
+              })
+              return undefined
+            })
       : undefined
 
   const processSpans = processIngestedSpansUseCase({

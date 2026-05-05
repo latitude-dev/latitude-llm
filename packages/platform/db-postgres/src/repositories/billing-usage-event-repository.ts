@@ -1,16 +1,25 @@
 import { type BillingUsageEvent, BillingUsageEventRepository, UsageEventAlreadyRecordedError } from "@domain/billing"
 import {
+  causesIncludePostgresUniqueViolation,
   OrganizationId,
-  type OrganizationId as OrganizationIdType,
   ProjectId,
+  type RepositoryError,
   SqlClient,
   type SqlClientShape,
   TraceId,
 } from "@domain/shared"
-import { and, eq, gte, lt, sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { billingUsageEvents } from "../schema/billing.ts"
+
+const mapBillingEventIdempotencyViolation = (
+  error: RepositoryError,
+  idempotencyKey: string,
+): Effect.Effect<never, UsageEventAlreadyRecordedError | RepositoryError> =>
+  causesIncludePostgresUniqueViolation(error.cause)
+    ? Effect.fail(new UsageEventAlreadyRecordedError({ idempotencyKey }))
+    : Effect.fail(error)
 
 const toDomain = (row: typeof billingUsageEvents.$inferSelect): BillingUsageEvent => ({
   id: row.id,
@@ -33,8 +42,8 @@ export const BillingUsageEventRepositoryLive = Layer.effect(
       insert: (event: BillingUsageEvent) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          try {
-            yield* sqlClient.query((db) =>
+          yield* sqlClient
+            .query((db) =>
               db.insert(billingUsageEvents).values({
                 id: event.id,
                 organizationId: event.organizationId,
@@ -49,9 +58,11 @@ export const BillingUsageEventRepositoryLive = Layer.effect(
                 billingPeriodEnd: event.billingPeriodEnd,
               }),
             )
-          } catch {
-            return yield* new UsageEventAlreadyRecordedError({ idempotencyKey: event.idempotencyKey })
-          }
+            .pipe(
+              Effect.catchTag("RepositoryError", (repositoryError) =>
+                mapBillingEventIdempotencyViolation(repositoryError, event.idempotencyKey),
+              ),
+            )
         }),
 
       findByKey: (key: string) =>
@@ -61,24 +72,6 @@ export const BillingUsageEventRepositoryLive = Layer.effect(
             db.select().from(billingUsageEvents).where(eq(billingUsageEvents.idempotencyKey, key)).limit(1),
           )
           return result ? toDomain(result) : null
-        }),
-
-      countInPeriod: (params: { organizationId: OrganizationIdType; periodStart: Date; periodEnd: Date }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [result] = yield* sqlClient.query((db) =>
-            db
-              .select({ total: sql<number>`COALESCE(SUM(${billingUsageEvents.credits}), 0)` })
-              .from(billingUsageEvents)
-              .where(
-                and(
-                  eq(billingUsageEvents.organizationId, params.organizationId),
-                  gte(billingUsageEvents.happenedAt, params.periodStart),
-                  lt(billingUsageEvents.happenedAt, params.periodEnd),
-                ),
-              ),
-          )
-          return result?.total ?? 0
         }),
     }
   }),

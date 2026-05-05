@@ -1,7 +1,12 @@
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { generateId } from "@domain/shared"
 import { Effect } from "effect"
-import { ACTION_CREDITS, type ChargeableAction, calculateOverageAmountMicrocents } from "../constants.ts"
+import {
+  ACTION_CREDITS,
+  type ChargeableAction,
+  calculateOverageAmountMicrocents,
+  persistedIncludedCreditsForPlan,
+} from "../constants.ts"
 import type { BillingUsageEvent } from "../entities/billing-usage-event.ts"
 import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
@@ -41,7 +46,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
         planSlug: input.planSlug,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
-        includedCredits: input.includedCredits,
+        includedCredits: persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits),
         consumedCredits: 0,
         overageCredits: 0,
         reportedOverageCredits: 0,
@@ -70,45 +75,16 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
 
   yield* eventRepo.insert(event)
 
-  let period = yield* periodRepo.findByPeriod({
+  const persistedIncludedCredits = persistedIncludedCreditsForPlan(input.planSlug, input.includedCredits)
+
+  return yield* periodRepo.appendCreditsForBillingPeriod({
     organizationId: input.organizationId,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
+    planSlug: input.planSlug,
+    persistedIncludedCredits,
+    creditsDelta: credits,
   })
-
-  if (!period) {
-    period = {
-      organizationId: input.organizationId,
-      planSlug: input.planSlug,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      includedCredits: input.includedCredits,
-      consumedCredits: 0,
-      overageCredits: 0,
-      reportedOverageCredits: 0,
-      overageAmountMicrocents: 0,
-      updatedAt: now,
-    }
-  }
-
-  const newConsumed = period.consumedCredits + credits
-  let newOverage = period.overageCredits
-
-  if (newConsumed > period.includedCredits) {
-    newOverage = newConsumed - period.includedCredits
-  }
-
-  const updated: BillingUsagePeriod = {
-    ...period,
-    consumedCredits: newConsumed,
-    overageCredits: newOverage,
-    overageAmountMicrocents: calculateOverageAmountMicrocents(period.planSlug, newOverage),
-    updatedAt: now,
-  }
-
-  yield* periodRepo.upsert(updated)
-
-  return updated
 })
 
 export interface CheckCreditAvailabilityInput {

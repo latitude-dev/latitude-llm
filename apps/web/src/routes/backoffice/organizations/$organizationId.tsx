@@ -202,7 +202,10 @@ function BillingSummarySection({ billing }: { billing: AdminOrganizationBillingD
     {
       label: "Included / consumed",
       value: `${formatCredits(billing.includedCredits)} / ${numberFormatter.format(billing.consumedCredits)}`,
-      muted: `${numberFormatter.format(Math.max(billing.includedCredits - billing.consumedCredits, 0))} credits remaining`,
+      muted:
+        billing.includedCredits === null
+          ? "No fixed monthly bundle — entitlement scales with contract"
+          : `${numberFormatter.format(Math.max(billing.includedCredits - billing.consumedCredits, 0))} credits remaining`,
     },
     {
       label: "Overage",
@@ -364,7 +367,8 @@ function BillingOverrideSection({
   )
 }
 
-function formatCredits(value: number) {
+function formatCredits(value: number | null | undefined) {
+  if (value === null || value === undefined) return "Unlimited"
   return Number.isFinite(value) ? numberFormatter.format(value) : "Custom contract"
 }
 

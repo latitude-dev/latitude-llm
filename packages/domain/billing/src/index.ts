@@ -1,5 +1,7 @@
 export {
   ACTION_CREDITS,
+  BILLING_INCLUDED_CREDITS_PG_MAX,
+  buildBillingIdempotencyKey,
   CENT_TO_MICROCENTS,
   CHARGEABLE_ACTIONS,
   type ChargeableAction,
@@ -13,6 +15,7 @@ export {
   type PlanConfig,
   type PlanSlug,
   PRO_PLAN_CONFIG,
+  persistedIncludedCreditsForPlan,
   SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
   SELF_SERVE_PLAN_SLUGS,
 } from "./constants.ts"

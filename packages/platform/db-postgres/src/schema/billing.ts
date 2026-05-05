@@ -1,4 +1,4 @@
-import { bigint, integer, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import { bigint, index, integer, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
 export const billingOverrides = latitudeSchema.table(
@@ -31,7 +31,10 @@ export const billingUsageEvents = latitudeSchema.table(
     billingPeriodStart: tzTimestamp("billing_period_start").notNull(),
     billingPeriodEnd: tzTimestamp("billing_period_end").notNull(),
   },
-  () => [organizationRLSPolicy("billing_usage_events")],
+  (t) => [
+    organizationRLSPolicy("billing_usage_events"),
+    index("billing_usage_events_org_happened_at_idx").on(t.organizationId, t.happenedAt),
+  ],
 )
 
 export const billingUsagePeriods = latitudeSchema.table(

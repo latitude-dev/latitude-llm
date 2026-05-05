@@ -1,0 +1,1 @@
+CREATE INDEX "billing_usage_events_org_happened_at_idx" ON "latitude"."billing_usage_events" ("organization_id","happened_at");

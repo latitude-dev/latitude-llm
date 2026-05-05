@@ -2,7 +2,7 @@ import { QueuePublisher } from "@domain/queue"
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-import type { ChargeableAction } from "../constants.ts"
+import { type ChargeableAction, persistedIncludedCreditsForPlan } from "../constants.ts"
 import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
@@ -121,7 +121,7 @@ export const meterBillableAction = Effect.fn("billing.meterBillableAction")(func
             planSlug: orgPlan.plan.slug,
             periodStart: orgPlan.periodStart,
             periodEnd: orgPlan.periodEnd,
-            includedCredits: orgPlan.plan.includedCredits,
+            includedCredits: persistedIncludedCreditsForPlan(orgPlan.plan.slug, orgPlan.plan.includedCredits),
             consumedCredits: 0,
             overageCredits: 0,
             reportedOverageCredits: 0,
@@ -149,7 +149,7 @@ export const meterBillableAction = Effect.fn("billing.meterBillableAction")(func
           periodEnd: updated.periodEnd.toISOString(),
         },
         {
-          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}`,
+          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}:${updated.overageCredits}`,
           throttleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
           attempts: 10,
           backoff: { type: "exponential", delayMs: 1_000 },

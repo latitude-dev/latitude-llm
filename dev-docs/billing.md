@@ -73,9 +73,15 @@ Billing periods are resolved from the effective plan source:
 
 Billable runtime work is charged through `meterBillableAction`.
 
+Trace ingestion splits enforcement (HTTP) from attribution (worker):
+
+1. **Admission — `apps/ingest`**: `/v1/traces` resolves the effective plan, runs `checkCreditAvailabilityUseCase` (including **`hardCapped` for Free**), and returns **`402`** when the request itself would overshoot allowances. Assume every production OTLP ingest goes through this path.
+2. **Attribution — `span-ingestion` worker**: After spans are durable, the worker meters each distinct `{organizationId, projectId, traceId}` exactly once (`buildBillingIdempotencyKey("trace", …)`), using **`recordUsageEventUseCase`**. Period counters are incremented **atomically in Postgres** on `billing_usage_periods` (`appendCreditsForBillingPeriod`) so parallel trace batches cannot lose updates under concurrent workers.
+3. If metering fails **after persistence**, ingest remains available (prioritize telemetry durability): log loudly with org/project/trace context and reconcile or retry idempotently out-of-band—the same trace key stays idempotent once billing dependency is healthy again.
+
 Canonical charge points:
 
-- trace ingest: `apps/workers/src/workers/span-ingestion.ts` after span persistence, once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
+- trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` after span persistence, once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
 - LLM flagger scans: `apps/workflows/src/activities/flagger-activities.ts` before `draftAnnotate`
 - live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before hosted AI execution
 - eval generation: `apps/workflows/src/activities/evaluation-alignment-activities.ts` before expensive alignment generation/optimization work, keyed by `billingOperationId`
@@ -89,9 +95,9 @@ Free organizations are hard capped.
 Enforcement rules:
 
 - chargeable AI work (`flagger-scan`, `live-eval-scan`, `eval-generation`) is skipped before execution once no credits remain
-- ingest is intentionally softer: a coarse pre-check runs before accepting the request, but once accepted, the whole payload is stored and trace usage is computed afterward
+- ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
-That means the final accepted free-plan payload may overshoot slightly. The system never partially accepts only part of one ingest payload.
+The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.
 
 ## Pro Spending Limits
 

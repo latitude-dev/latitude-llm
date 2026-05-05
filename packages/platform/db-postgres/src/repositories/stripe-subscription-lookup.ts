@@ -1,6 +1,6 @@
 import { StripeSubscriptionLookup } from "@domain/billing"
 import { type OrganizationId as OrganizationIdType, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { subscriptions } from "../schema/better-auth.ts"
@@ -27,7 +27,7 @@ export const StripeSubscriptionLookupLive = Layer.effect(
                   inArray(subscriptions.status, ["active", "trialing"]),
                 ),
               )
-              .orderBy(subscriptions.periodEnd)
+              .orderBy(desc(subscriptions.periodEnd))
               .limit(1),
           )
 

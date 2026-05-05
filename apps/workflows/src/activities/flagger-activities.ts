@@ -1,4 +1,4 @@
-import { meterBillableAction } from "@domain/billing"
+import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
 import {
   draftFlaggerAnnotationUseCase,
   type FlaggerAnnotateOutput,
@@ -80,7 +80,11 @@ export const draftAnnotate = async (input: {
   readonly traceId: string
   readonly flaggerSlug: string
 }): Promise<DraftAnnotateOutput> => {
-  const idempotencyKey = `flagger-scan:${input.organizationId}:${input.flaggerSlug}:${input.traceId}`
+  const idempotencyKey = buildBillingIdempotencyKey("flagger-scan", [
+    input.organizationId,
+    input.flaggerSlug,
+    input.traceId,
+  ])
   const queuePublisher = await getQueuePublisher()
 
   const billingResult = await Effect.runPromise(
@@ -95,7 +99,15 @@ export const draftAnnotate = async (input: {
       Effect.provideService(QueuePublisher, queuePublisher),
       withTracing,
     ),
-  ).catch(() => ({ allowed: true }))
+  ).catch((error) => {
+    logger.error("Flagger billing check failed — treating as billing blocked", {
+      organizationId: input.organizationId,
+      traceId: input.traceId,
+      flaggerSlug: input.flaggerSlug,
+      error,
+    })
+    return { allowed: false as const }
+  })
 
   if (!billingResult.allowed) {
     logger.info("Flagger annotation blocked — billing limit reached", {

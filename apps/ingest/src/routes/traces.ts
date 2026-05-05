@@ -1,4 +1,4 @@
-import { checkCreditAvailabilityUseCase, resolveEffectivePlan } from "@domain/billing"
+import { checkCreditAvailabilityUseCase, NoCreditsRemainingError, resolveEffectivePlan } from "@domain/billing"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { ingestSpansUseCase } from "@domain/spans"
 import {
@@ -30,22 +30,23 @@ const traceIngestionBillingLayers = Layer.mergeAll(
   StripeSubscriptionLookupLive,
 )
 
-const canAcceptTraceIngestion = (organizationId: string) =>
-  resolveEffectivePlan(OrganizationId(organizationId)).pipe(
-    Effect.flatMap((plan) =>
-      checkCreditAvailabilityUseCase({
-        organizationId: OrganizationId(organizationId),
-        action: "trace",
-        planSlug: plan.plan.slug,
-        periodStart: plan.periodStart,
-        periodEnd: plan.periodEnd,
-        includedCredits: plan.plan.includedCredits,
-        hardCapped: plan.plan.hardCapped,
-        priceCents: plan.plan.priceCents,
-        spendingLimitCents: plan.plan.spendingLimitCents,
-      }),
-    ),
-  )
+const traceIngestionBillingGate = (organizationId: string) =>
+  Effect.gen(function* () {
+    const organization = OrganizationId(organizationId)
+    const plan = yield* resolveEffectivePlan(organization)
+    const allowed = yield* checkCreditAvailabilityUseCase({
+      organizationId: organization,
+      action: "trace",
+      planSlug: plan.plan.slug,
+      periodStart: plan.periodStart,
+      periodEnd: plan.periodEnd,
+      includedCredits: plan.plan.includedCredits,
+      hardCapped: plan.plan.hardCapped,
+      priceCents: plan.plan.priceCents,
+      spendingLimitCents: plan.plan.spendingLimitCents,
+    })
+    return { allowed, planSlug: plan.plan.slug }
+  })
 
 export const registerTracesRoute = ({ app }: TracesRouteContext) => {
   app.post("/v1/traces", authMiddleware, projectMiddleware, async (c) => {
@@ -81,15 +82,20 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const projectId = c.get("projectId")
     const apiKeyId = c.get("apiKeyId")
 
-    const billingAllowed = await Effect.runPromise(
-      canAcceptTraceIngestion(organizationId).pipe(
+    const billingGate = await Effect.runPromise(
+      traceIngestionBillingGate(organizationId).pipe(
         withPostgres(traceIngestionBillingLayers, getPostgresClient(), OrganizationId(organizationId)),
         withTracing,
       ),
     )
 
-    if (!billingAllowed) {
-      return c.json({ error: "Billing limit reached for the current billing period" }, 402)
+    if (!billingGate.allowed) {
+      const denial = new NoCreditsRemainingError({
+        organizationId,
+        planSlug: billingGate.planSlug,
+        action: "trace",
+      })
+      return c.json({ error: denial.httpMessage, _tag: denial._tag }, denial.httpStatus)
     }
 
     const disk = getStorageDisk()

@@ -261,6 +261,12 @@ Implementation rule:
 
 This handles the case where one real trace arrives across several ingest requests.
 
+Availability note:
+
+- trace billing should fail open after span persistence so billing outages do not block ingest
+- the failure must still be recorded in logs / observability with enough org, project, and trace context for support investigation
+- the preferred follow-up is a durable retry path that replays the same idempotent trace usage keys once billing dependencies recover
+
 ### 2. Scan Usage: LLM Flaggers
 
 The canonical charge point for LLM flagger scans is the flagger workflow's chargeable LLM annotate step.
@@ -690,5 +696,5 @@ Highest-risk billing tests are:
 
 ### Next to continue:
 
-1. **ClickHouse apply step**: run `pnpm --filter @platform/db-clickhouse ch:up` when you want the generated plan-aware retention migration applied locally
-2. **Follow-up**: revisit the Better Auth Stripe client-plugin import path. `@better-auth/stripe/client` did not resolve cleanly in the current app/toolchain, so the web billing UI currently calls the Better Auth Stripe endpoints directly instead of using the plugin helper.
+1. **Follow-up**: revisit the Better Auth Stripe client-plugin import path. `@better-auth/stripe/client` did not resolve cleanly in the current app/toolchain, so the web billing UI currently calls the Better Auth Stripe endpoints directly instead of using the plugin helper.
+2. **Billing outage follow-up**: add a durable retry / repair path for post-persistence trace metering failures so ingest remains fail-open, the failure is observable, and the same idempotent `trace:{organizationId}:{projectId}:{traceId}` usage keys can be replayed once billing dependencies recover.

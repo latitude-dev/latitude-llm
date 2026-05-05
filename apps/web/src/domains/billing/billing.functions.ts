@@ -4,11 +4,12 @@ import {
   PRO_PLAN_CONFIG,
   resolveEffectivePlan,
 } from "@domain/billing"
-import { updateOrganizationUseCase } from "@domain/organizations"
-import { OrganizationId, SettingsReader } from "@domain/shared"
+import { MembershipRepository, updateOrganizationUseCase } from "@domain/organizations"
+import { BadRequestError, OrganizationId, PermissionError, SettingsReader } from "@domain/shared"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  MembershipRepositoryLive,
   OrganizationRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -26,7 +27,8 @@ interface BillingOverviewDto {
   planSource: "override" | "subscription" | "free-fallback"
   periodStart: string
   periodEnd: string
-  includedCredits: number
+  /** `null` when the plan entitlement is intentionally unbounded over JSON (Enterprise). */
+  includedCredits: number | null
   consumedCredits: number
   overageCredits: number
   overageAmountMicrocents: number
@@ -63,7 +65,7 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
         planSource: orgPlan.source as BillingOverviewDto["planSource"],
         periodStart: orgPlan.periodStart.toISOString(),
         periodEnd: orgPlan.periodEnd.toISOString(),
-        includedCredits: orgPlan.plan.includedCredits,
+        includedCredits: Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null,
         consumedCredits: period?.consumedCredits ?? 0,
         overageCredits: period?.overageCredits ?? 0,
         overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,
@@ -84,14 +86,27 @@ const updateBillingSpendingLimitInputSchema = z.object({
 export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
   .inputValidator(updateBillingSpendingLimitInputSchema)
   .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     await Effect.runPromise(
       Effect.gen(function* () {
+        const membershipRepo = yield* MembershipRepository
+        const isBillingAdmin = yield* membershipRepo.isAdmin(OrganizationId(organizationId), userId)
+        if (!isBillingAdmin) {
+          return yield* Effect.fail(
+            new PermissionError({
+              message: "Only organization owners and admins can manage billing settings",
+              organizationId,
+            }),
+          )
+        }
+
         const orgPlan = yield* resolveEffectivePlan(OrganizationId(organizationId))
         if (orgPlan.plan.slug !== PRO_PLAN_CONFIG.slug) {
-          return yield* Effect.fail(new Error("Custom spending limits are only available on Pro plans"))
+          return yield* Effect.fail(
+            new BadRequestError({ message: "Custom spending limits are only available on Pro plans" }),
+          )
         }
 
         const spendingLimitCents =
@@ -99,7 +114,9 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
 
         if (spendingLimitCents !== null && spendingLimitCents < PRO_PLAN_CONFIG.priceCents) {
           return yield* Effect.fail(
-            new Error(`Spending limit must be at least $${(PRO_PLAN_CONFIG.priceCents / 100).toFixed(2)}`),
+            new BadRequestError({
+              message: `Spending limit must be at least $${(PRO_PLAN_CONFIG.priceCents / 100).toFixed(2)}`,
+            }),
           )
         }
 
@@ -122,6 +139,7 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
         withPostgres(
           Layer.mergeAll(
             BillingOverrideRepositoryLive,
+            MembershipRepositoryLive,
             OrganizationRepositoryLive,
             SettingsReaderLive,
             StripeSubscriptionLookupLive,

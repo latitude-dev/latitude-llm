@@ -50,8 +50,22 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
     const mappedSlug: PlanSlug | undefined = SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME[planName]
 
     if (!mappedSlug) {
-      log.error(`Unknown Stripe plan name`, { planName, organizationId })
-      return yield* new UnknownStripePlanError({ planName })
+      const error = new UnknownStripePlanError({ planName })
+      // Alertable: a Stripe subscription resolved to a plan name we do not know how to map.
+      // Failing closed prevents `paid => pro` inference. Ops should monitor on
+      // `event: "billing.unknown_stripe_plan"` to catch misconfigured Stripe plans early.
+      log.error("Unknown Stripe plan name", {
+        event: "billing.unknown_stripe_plan",
+        alert: true,
+        planName,
+        organizationId,
+        subscriptionStatus: subscription.status ?? null,
+      })
+      yield* Effect.annotateCurrentSpan({
+        "billing.alert": "unknown_stripe_plan",
+        "billing.stripe_plan_name": planName,
+      })
+      return yield* error
     }
 
     const plan = PLAN_CONFIGS[mappedSlug]

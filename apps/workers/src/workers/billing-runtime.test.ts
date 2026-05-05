@@ -312,7 +312,7 @@ describe("billing runtime integration", () => {
       expect(updatedPaidPeriod?.overageCredits).toBe(1)
       expect(updatedPaidPeriod?.overageAmountMicrocents).toBeGreaterThan(0)
       expect(
-        queue.getPublishedByDedupeKey("billing", `billing:reportOverage:${proOrgId}:2026-06-01T00:00:00.000Z`),
+        queue.getPublishedByDedupeKey("billing", `billing:reportOverage:${proOrgId}:2026-06-01T00:00:00.000Z:1`),
       ).toBeDefined()
     } finally {
       vi.useRealTimers()

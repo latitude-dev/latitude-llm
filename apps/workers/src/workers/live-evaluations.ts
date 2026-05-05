@@ -1,4 +1,4 @@
-import { meterBillableAction } from "@domain/billing"
+import { buildBillingIdempotencyKey, meterBillableAction } from "@domain/billing"
 import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/evaluations"
 import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
@@ -113,12 +113,15 @@ export const createLiveEvaluationsWorker = ({
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
   const executeEffect = (payload: ExecutePayload) => {
     const baseEffect = executeLiveEvaluation(payload, {
+      // Invariant: this `beforeExecute` runs the billing meter and resolves to `allowed` BEFORE
+      // the hosted AI execution starts. `runLiveEvaluationUseCase` must short-circuit when this
+      // returns `false`. Do not invert the ordering — billing must precede the chargeable AI call.
       beforeExecute: ({ organizationId, projectId, evaluationId, traceId }) =>
         meterBillableAction({
           organizationId: OrganizationId(organizationId),
           projectId: ProjectId(projectId),
           action: "live-eval-scan",
-          idempotencyKey: `live-eval-scan:${organizationId}:${evaluationId}:${traceId}`,
+          idempotencyKey: buildBillingIdempotencyKey("live-eval-scan", [organizationId, evaluationId, traceId]),
           skipIfBlocked: true,
           metadata: {
             evaluationId,

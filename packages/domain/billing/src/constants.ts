@@ -39,6 +39,9 @@ export const PRO_PLAN_CONFIG = {
   overagePriceCentsPerUnit: 2000,
 } as const
 
+/** Upper bound for `billing_usage_periods.included_credits` (Postgres `integer`). */
+export const BILLING_INCLUDED_CREDITS_PG_MAX = 2_147_483_647
+
 export const ENTERPRISE_PLAN_CONFIG = {
   slug: "enterprise" as const,
   selfServe: false,
@@ -78,6 +81,30 @@ export const calculateOverageAmountMicrocents = (planSlug: PlanSlug, overageCred
     (overageCredits * PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MICROCENTS) /
       PRO_PLAN_CONFIG.overageCreditsPerUnit,
   )
+}
+
+/**
+ * Maps logical plan allowances (including enterprise `Infinity`) to values safe to persist in PG `integer`.
+ */
+export const persistedIncludedCreditsForPlan = (planSlug: PlanSlug, logicalIncludedCredits: number): number => {
+  if (planSlug === "enterprise" || !Number.isFinite(logicalIncludedCredits)) {
+    return BILLING_INCLUDED_CREDITS_PG_MAX
+  }
+  if (logicalIncludedCredits > BILLING_INCLUDED_CREDITS_PG_MAX) {
+    return BILLING_INCLUDED_CREDITS_PG_MAX
+  }
+  return Math.trunc(logicalIncludedCredits)
+}
+
+export const buildBillingIdempotencyKey = (action: ChargeableAction, parts: readonly string[]): string => {
+  for (const part of parts) {
+    if (typeof part !== "string" || part.length === 0 || part.includes(":")) {
+      throw new Error(
+        `Invalid billing idempotency key part for action "${action}": parts must be non-empty and must not contain ":"`,
+      )
+    }
+  }
+  return [action, ...parts].join(":")
 }
 
 export const calculatePlanSpendMicrocents = (planSlug: PlanSlug, overageAmountMicrocents: number) => {
