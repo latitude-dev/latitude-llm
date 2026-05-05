@@ -253,11 +253,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
                   referenceId: string
                   action: string
                 }) => {
-                  const { eq: eq_ } = await import("drizzle-orm")
+                  const { and, eq: eq_ } = await import("drizzle-orm")
                   const memberRole = await config.client.db
                     .select({ role: members.role })
                     .from(members)
-                    .where(eq_(members.organizationId, referenceId) && eq_(members.userId, stripeUser.id))
+                    .where(and(eq_(members.organizationId, referenceId), eq_(members.userId, stripeUser.id)))
                     .limit(1)
                     .then((rows) => rows[0]?.role)
 
