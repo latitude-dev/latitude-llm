@@ -2,8 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [staging, main]
   workflow_dispatch:
     inputs:
       environment:
@@ -25,19 +24,42 @@ permissions:
   packages: write
 
 jobs:
+  validate-target:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate manual deployment branch
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            exit 0
+          fi
+
+          if [ "${{ inputs.environment }}" = "staging" ] && [ "${{ github.ref }}" != "refs/heads/staging" ]; then
+            echo "Manual staging deploys must be dispatched from the staging branch."
+            exit 1
+          fi
+
+          if [ "${{ inputs.environment }}" = "production" ] && [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Manual production deploys must be dispatched from the main branch."
+            exit 1
+          fi
+
   check:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
     uses: ./.github/workflows/check.yml
 
   typecheck:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
     uses: ./.github/workflows/typecheck.yml
 
   test:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
     uses: ./.github/workflows/test.yml
 
   # ── Staging ──────────────────────────────────────────────
 
   staging-build:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.environment == 'staging'
+    needs: validate-target
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (inputs.environment == 'staging' && github.ref == 'refs/heads/staging')
     uses: ./.github/workflows/build-images.yml
     with:
       environment: staging
@@ -409,8 +431,8 @@ jobs:
   # ── Production ───────────────────────────────────────────
 
   production-build:
-    needs: [check, typecheck, test]
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.environment == 'production'
+    needs: [validate-target, check, typecheck, test]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
     uses: ./.github/workflows/build-images.yml
     with:
       environment: production
@@ -777,4 +799,3 @@ jobs:
         env:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
-

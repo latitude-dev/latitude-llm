@@ -3,6 +3,7 @@ name: Python Telemetry CI
 on:
   pull_request:
     branches:
+      - staging
       - main
     paths:
       - packages/telemetry/python/**

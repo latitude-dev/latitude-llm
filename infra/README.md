@@ -118,36 +118,43 @@ GitHub Actions workflows:
 
 Deployment triggers:
 
-- **Staging**: push to `main` → build → migrate → deploy (no check gates)
-- **Production**: push a `v*` tag → checks must pass → build → migrate → deploy
+- **Staging**: push to `staging` → build → migrate → deploy
+- **Production**: push to `main` → checks pass → build → migrate → deploy
 - **Manual**: workflow_dispatch with environment selector
 
 ### Production Deployment Details
 
 To deploy to production:
 
-1. **Ensure all checks pass**: The deployment workflow requires the `build-checks` job to succeed. This includes:
-   - Type checking (`pnpm typecheck`)
-   - Linting (`pnpm lint`)
-   - Unit tests (`pnpm test:unit`)
-   - Integration tests (`pnpm test:integration`)
+1. **Promote `staging` into `main`**: open a PR from `staging` to `main` and merge it after review.
 
-2. **Create and push a version tag:**
-   ```bash
-   git tag v1.2.3
-   git push origin v1.2.3
-   ```
+2. **Ensure all checks pass**: The deployment workflow requires the CI jobs to succeed. This includes:
+    - Type checking (`pnpm typecheck`)
+    - Formatting and lint checks (`pnpm check`)
+    - Tests (`pnpm test`)
 
-3. **Monitor the deployment**: The workflow will:
-   - Run all checks in parallel
-   - Build and push container images to GHCR
-   - Execute database migrations via ECS task
-   - Deploy services to ECS Fargate with zero-downtime rolling updates
+3. **Merge to `main`**:
+    ```bash
+    gh pr create --base main --head staging --fill
+    ```
 
-4. **Verify deployment**: Check service health via their endpoints:
-   - `https://console.latitude.so/api/health`
-   - `https://api.latitude.so/health`
-   - `https://ingest.latitude.so/health`
+   Merging the PR triggers the production deployment automatically.
+
+4. **Monitor the deployment**: The workflow will:
+    - Run all checks in parallel
+    - Build and push container images to GHCR
+    - Execute database migrations via ECS task
+    - Deploy services to ECS Fargate with zero-downtime rolling updates
+
+5. **Verify deployment**: Check service health via their endpoints:
+    - `https://console.latitude.so/api/health`
+    - `https://api.latitude.so/health`
+    - `https://ingest.latitude.so/health`
+
+Manual deployments must be dispatched from the matching branch:
+
+- Dispatch from `staging` when deploying to the `staging` environment
+- Dispatch from `main` when deploying to the `production` environment
 
 The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
 
@@ -156,4 +163,3 @@ The deployment workflow uses OIDC authentication (no long-lived AWS credentials)
 - `better-auth-secret` and `encryption-key` are treated as long-lived immutable secrets in Pulumi.
 - Routine `pulumi up` runs do not rotate these values, preventing deployment-driven session invalidation and API key decryption breakage.
 - To rotate either value, perform an explicit Secrets Manager rotation/change as a planned operation.
-

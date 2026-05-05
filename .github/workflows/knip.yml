@@ -3,6 +3,7 @@ name: Knip
 on:
   pull_request:
     branches:
+      - staging
       - main
   workflow_call:
 
