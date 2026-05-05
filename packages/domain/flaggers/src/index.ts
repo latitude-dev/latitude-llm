@@ -63,6 +63,10 @@ export {
   draftFlaggerAnnotationUseCase,
 } from "./use-cases/draft-flagger-annotation.ts"
 export {
+  type DraftFlaggerAnnotationWithBillingInput,
+  draftFlaggerAnnotationWithBillingUseCase,
+} from "./use-cases/draft-flagger-annotation-with-billing.ts"
+export {
   type FlaggerAnnotateInput,
   type FlaggerAnnotateOutput,
   type FlaggerAnnotatorOutput,

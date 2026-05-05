@@ -1,4 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
+import type { QueuePublishError } from "@domain/queue"
 import {
   type ChSqlClient,
   getFromDisk,
@@ -8,7 +9,7 @@ import {
   StorageDisk,
   type StorageError,
 } from "@domain/shared"
-import { Effect } from "effect"
+import { Effect, Exit } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
@@ -149,14 +150,16 @@ interface TraceUsageRecord {
   readonly traceId: string
 }
 
+interface RecordTraceUsageParams {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly traces: readonly TraceUsageRecord[]
+  readonly context: TraceUsageContext
+}
+
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
-  readonly recordTraceUsage?: (params: {
-    organizationId: string
-    projectId: string
-    traces: readonly TraceUsageRecord[]
-    context: TraceUsageContext
-  }) => Promise<void>
+  readonly recordTraceUsage?: (params: RecordTraceUsageParams) => Effect.Effect<void, QueuePublishError>
 }
 
 export const processIngestedSpansUseCase =
@@ -204,13 +207,19 @@ export const processIngestedSpansUseCase =
 
       const traceUsageContext = input.traceUsage?.context
       if (recordTraceUsage && traceUsageContext) {
-        yield* Effect.promise(() =>
+        const publishExit = yield* Effect.exit(
           recordTraceUsage({
             organizationId: input.organizationId,
             projectId: input.projectId,
             traces: [...traceIds].map((traceId) => ({ traceId })),
             context: traceUsageContext,
           }),
-        ).pipe(Effect.ignore)
+        )
+        if (Exit.isFailure(publishExit)) {
+          yield* Effect.annotateCurrentSpan({
+            "billing.alert": "trace_usage_publish_failed",
+            "billing.trace_count": traceIds.size,
+          })
+        }
       }
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))

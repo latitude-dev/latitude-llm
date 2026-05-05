@@ -6,6 +6,8 @@ export interface StripeSubscriptionRow {
   status: string | null
   periodStart: Date | null
   periodEnd: Date | null
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
 }
 
 export class StripeSubscriptionLookup extends Context.Service<

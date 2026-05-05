@@ -16,6 +16,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/organizations": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@repo/observability": "workspace:*",

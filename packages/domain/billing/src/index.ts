@@ -77,3 +77,4 @@ export {
   recordUsageEventUseCase,
 } from "./use-cases/record-usage-event.ts"
 export { type EffectivePlanResolution, resolveEffectivePlan } from "./use-cases/resolve-effective-plan.ts"
+export { type UpdateSpendingLimitInput, updateSpendingLimitUseCase } from "./use-cases/update-spending-limit.ts"

@@ -5,6 +5,7 @@ import {
   PRO_PLAN_CONFIG,
   recordBillableActionUseCase,
   recordTraceUsageBatchUseCase,
+  StripeSubscriptionLookup,
 } from "@domain/billing"
 import { type QueueConsumer, QueuePublisher, type QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
@@ -183,9 +184,24 @@ export const createBillingWorker = ({ consumer, postgresClient, publisher }: Bil
             return
           }
 
+          const subscriptionLookup = yield* StripeSubscriptionLookup
+          const subscription = yield* subscriptionLookup.findActiveByOrganizationId(organizationId)
+
+          if (!subscription?.stripeSubscriptionId || !subscription.stripeCustomerId) {
+            logger.info("Billing overage sync skipped", {
+              organizationId: payload.organizationId,
+              periodStart: payload.periodStart,
+              periodEnd: payload.periodEnd,
+              reason: "subscription-not-found",
+            })
+            return
+          }
+
           const reporter = yield* BillingOverageReporter
           const result = yield* reporter.reportOverage({
             organizationId,
+            stripeCustomerId: subscription.stripeCustomerId,
+            stripeSubscriptionId: subscription.stripeSubscriptionId,
             periodStart,
             periodEnd,
             overageCreditsToReport: period.overageCredits - period.reportedOverageCredits,
@@ -216,7 +232,7 @@ export const createBillingWorker = ({ consumer, postgresClient, publisher }: Bil
           })
         }).pipe(
           withPostgres(
-            Layer.mergeAll(BillingOverageReporterLive, BillingUsagePeriodRepositoryLive),
+            Layer.mergeAll(BillingOverageReporterLive, BillingUsagePeriodRepositoryLive, StripeSubscriptionLookupLive),
             pgClient,
             OrganizationId(payload.organizationId),
           ),

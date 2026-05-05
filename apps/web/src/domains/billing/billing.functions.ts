@@ -1,6 +1,5 @@
-import { BillingUsagePeriodRepository, calculatePlanSpendMicrocents, PRO_PLAN_CONFIG } from "@domain/billing"
-import { MembershipRepository, updateOrganizationUseCase } from "@domain/organizations"
-import { BadRequestError, OrganizationId, PermissionError, SettingsReader } from "@domain/shared"
+import { BillingUsagePeriodRepository, calculatePlanSpendMicrocents, updateSpendingLimitUseCase } from "@domain/billing"
+import { OrganizationId, type UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
@@ -90,54 +89,16 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<void> => {
     const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const membershipRepo = yield* MembershipRepository
-        const isBillingAdmin = yield* membershipRepo.isAdmin(OrganizationId(organizationId), userId)
-        if (!isBillingAdmin) {
-          return yield* Effect.fail(
-            new PermissionError({
-              message: "Only organization owners and admins can manage billing settings",
-              organizationId,
-            }),
-          )
-        }
-
-        const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
-        if (orgPlan.plan.slug !== PRO_PLAN_CONFIG.slug) {
-          return yield* Effect.fail(
-            new BadRequestError({ message: "Custom spending limits are only available on Pro plans" }),
-          )
-        }
-
-        const spendingLimitCents =
-          data.spendingLimitDollars === null ? null : Math.round(data.spendingLimitDollars * 100)
-
-        if (spendingLimitCents !== null && spendingLimitCents < PRO_PLAN_CONFIG.priceCents) {
-          return yield* Effect.fail(
-            new BadRequestError({
-              message: `Spending limit must be at least $${(PRO_PLAN_CONFIG.priceCents / 100).toFixed(2)}`,
-            }),
-          )
-        }
-
-        const settingsReader = yield* SettingsReader
-        const currentSettings = (yield* settingsReader.getOrganizationSettings()) ?? {}
-        const currentBillingSettings = currentSettings.billing ?? {}
-        const { billing: _billing, ...settingsWithoutBilling } = currentSettings
-        const nextBillingSettings =
-          spendingLimitCents === null
-            ? Object.fromEntries(Object.entries(currentBillingSettings).filter(([key]) => key !== "spendingLimitCents"))
-            : { ...currentBillingSettings, spendingLimitCents }
-
-        const nextSettings = {
-          ...settingsWithoutBilling,
-          ...(Object.keys(nextBillingSettings).length > 0 ? { billing: nextBillingSettings } : {}),
-        }
-
-        yield* updateOrganizationUseCase({ settings: nextSettings })
-        yield* invalidateEffectivePlanCache(OrganizationId(organizationId))
+        yield* updateSpendingLimitUseCase({
+          organizationId: orgId,
+          userId: userId as UserId,
+          spendingLimitDollars: data.spendingLimitDollars,
+        })
+        yield* invalidateEffectivePlanCache(orgId)
       }).pipe(
         withPostgres(
           Layer.mergeAll(
@@ -148,7 +109,7 @@ export const updateBillingSpendingLimit = createServerFn({ method: "POST" })
             StripeSubscriptionLookupLive,
           ),
           client,
-          OrganizationId(organizationId),
+          orgId,
         ),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,

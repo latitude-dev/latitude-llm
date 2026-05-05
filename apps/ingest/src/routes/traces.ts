@@ -13,7 +13,7 @@ import {
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { StorageDiskLive } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect, Layer } from "effect"
+import { Cause, Duration, Effect, Layer } from "effect"
 import type { Hono } from "hono"
 import { getPostgresClient, getQueuePublisher, getRedisClient, getStorageDisk } from "../clients.ts"
 import { authMiddleware } from "../middleware/auth.ts"
@@ -35,12 +35,11 @@ const traceIngestionBillingLayers = Layer.mergeAll(
   StripeSubscriptionLookupLive,
 )
 
-const traceIngestionBillingGate = (organizationId: string) =>
+const traceIngestionBillingGate = (organizationId: OrganizationId) =>
   Effect.gen(function* () {
-    const organization = OrganizationId(organizationId)
-    const plan = yield* resolveEffectivePlanCached(organization)
+    const plan = yield* resolveEffectivePlanCached(organizationId)
     const allowed = yield* checkCreditAvailabilityUseCase({
-      organizationId: organization,
+      organizationId,
       action: "trace",
       planSlug: plan.plan.slug,
       periodStart: plan.periodStart,
@@ -50,53 +49,17 @@ const traceIngestionBillingGate = (organizationId: string) =>
       priceCents: plan.plan.priceCents,
       spendingLimitCents: plan.plan.spendingLimitCents,
     })
-    return { allowed, planSlug: plan.plan.slug }
+
+    if (!allowed) {
+      return yield* Effect.fail(
+        new NoCreditsRemainingError({
+          organizationId,
+          planSlug: plan.plan.slug,
+          action: "trace",
+        }),
+      )
+    }
   })
-
-type TraceIngestionBillingGateResult = {
-  readonly degraded: boolean
-  readonly allowed: boolean
-  readonly planSlug: "free" | "pro" | "enterprise" | null
-}
-
-const runTraceIngestionBillingGate = async (organizationId: string): Promise<TraceIngestionBillingGateResult> => {
-  let timeout: ReturnType<typeof setTimeout> | undefined
-  try {
-    const result = await Promise.race([
-      Effect.runPromise(
-        traceIngestionBillingGate(organizationId).pipe(
-          withPostgres(traceIngestionBillingLayers, getPostgresClient(), OrganizationId(organizationId)),
-          Effect.provide(RedisCacheStoreLive(getRedisClient())),
-          withTracing,
-        ),
-      ),
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(
-          () => reject(new Error("trace ingestion billing gate timed out")),
-          TRACE_INGESTION_BILLING_GATE_TIMEOUT_MS,
-        )
-      }),
-    ])
-    if (timeout) clearTimeout(timeout)
-
-    return {
-      degraded: false as const,
-      ...result,
-    }
-  } catch (error) {
-    if (timeout) clearTimeout(timeout)
-    logger.error("Trace ingestion billing gate degraded; failing open", {
-      organizationId,
-      error,
-    })
-
-    return {
-      degraded: true as const,
-      allowed: true,
-      planSlug: null,
-    }
-  }
-}
 
 export const registerTracesRoute = ({ app }: TracesRouteContext) => {
   app.post("/v1/traces", authMiddleware, projectMiddleware, async (c) => {
@@ -128,33 +91,47 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
       )
     }
 
-    const organizationId = c.get("organizationId")
-    const projectId = c.get("projectId")
+    const organization = OrganizationId(c.get("organizationId"))
+    const project = ProjectId(c.get("projectId"))
     const apiKeyId = c.get("apiKeyId")
-
-    const billingGate = await runTraceIngestionBillingGate(organizationId)
-
-    if (!billingGate.allowed) {
-      const denial = new NoCreditsRemainingError({
-        organizationId,
-        planSlug: billingGate.planSlug ?? "free",
-        action: "trace",
-      })
-      return c.json({ error: denial.httpMessage, _tag: denial._tag }, denial.httpStatus)
-    }
 
     const disk = getStorageDisk()
     const publisher = await getQueuePublisher()
+    const postgresClient = getPostgresClient()
+    const redisClient = getRedisClient()
 
-    await Effect.runPromise(
-      ingestSpansUseCase({
-        organizationId: OrganizationId(organizationId),
-        projectId: ProjectId(projectId),
+    const ingestionEffect = Effect.gen(function* () {
+      yield* traceIngestionBillingGate(organization).pipe(
+        Effect.timeout(Duration.millis(TRACE_INGESTION_BILLING_GATE_TIMEOUT_MS)),
+        Effect.catchTag("TimeoutError", () =>
+          Effect.sync(() => {
+            logger.error("Trace ingestion billing gate degraded; failing open", {
+              organizationId: organization,
+            })
+          }),
+        ),
+        withPostgres(traceIngestionBillingLayers, postgresClient, organization),
+        Effect.provide(RedisCacheStoreLive(redisClient)),
+      )
+
+      yield* ingestSpansUseCase({
+        organizationId: organization,
+        projectId: project,
         apiKeyId,
         payload: new Uint8Array(body),
         contentType,
-      }).pipe(Effect.provide(Layer.merge(StorageDiskLive(disk), QueuePublisherLive(publisher))), withTracing),
-    )
+      })
+    }).pipe(Effect.provide(Layer.merge(StorageDiskLive(disk), QueuePublisherLive(publisher))), withTracing)
+
+    const exit = await Effect.runPromiseExit(ingestionEffect)
+
+    if (exit._tag === "Failure") {
+      const failure = Cause.findErrorOption(exit.cause)
+      if (failure._tag === "Some" && failure.value instanceof NoCreditsRemainingError) {
+        return c.json({ error: failure.value.httpMessage, _tag: failure.value._tag }, failure.value.httpStatus)
+      }
+      throw new Error(Cause.pretty(exit.cause))
+    }
 
     return c.json({}, 202)
   })

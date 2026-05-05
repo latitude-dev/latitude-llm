@@ -4,6 +4,6 @@
 # create migrations in parallel, preventing incompatible
 # migrations from being merged without conflict resolution.
 #
-# Generated: 2026-05-05T11:24:17.235Z
-# Hash: 574082d2-4451-44e8-a417-9aa4d7a0ad07
+# Generated: 2026-05-05T13:28:37.645Z
+# Hash: 9f48d3f9-dfca-4174-a54f-d4d03e0b6e2a
 # Do not manually edit this file.

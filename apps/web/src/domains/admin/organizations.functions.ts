@@ -1,23 +1,20 @@
 import {
+  type AdminOrganizationBilling,
   type AdminOrganizationDetails,
   type AdminOrganizationUsageCursor,
   type AdminOrganizationUsageSummary,
   adminOrganizationUsageCursorSchema,
+  clearBillingOverrideUseCase,
   createDemoProjectUseCase,
+  getOrganizationBillingUseCase,
   getOrganizationDetailsUseCase,
   type ListOrganizationsByUsageOutput,
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
+  upsertBillingOverrideUseCase,
 } from "@domain/admin"
-import {
-  type BillingOverride,
-  BillingOverrideRepository,
-  BillingUsagePeriodRepository,
-  calculatePlanSpendMicrocents,
-  StripeSubscriptionLookup,
-} from "@domain/billing"
 import { WorkflowStarter } from "@domain/queue"
-import { generateId, OrganizationId, UserId } from "@domain/shared"
+import { OrganizationId, UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
@@ -164,6 +161,31 @@ export const adminGetOrganization = createServerFn({ method: "GET" })
     return toDto(details)
   })
 
+const toBillingDto = (billing: AdminOrganizationBilling): AdminOrganizationBillingDto => ({
+  effectivePlanSlug: billing.effectivePlanSlug,
+  effectivePlanSource: billing.effectivePlanSource,
+  stripeSubscriptionPlan: billing.stripeSubscriptionPlan,
+  stripeSubscriptionStatus: billing.stripeSubscriptionStatus,
+  periodStart: billing.periodStart.toISOString(),
+  periodEnd: billing.periodEnd.toISOString(),
+  includedCredits: billing.includedCredits,
+  consumedCredits: billing.consumedCredits,
+  overageCredits: billing.overageCredits,
+  overageAmountMicrocents: billing.overageAmountMicrocents,
+  retentionDays: billing.retentionDays,
+  currentSpendMicrocents: billing.currentSpendMicrocents,
+  spendingLimitCents: billing.spendingLimitCents,
+  override: billing.override
+    ? {
+        plan: billing.override.plan,
+        includedCredits: billing.override.includedCredits,
+        retentionDays: billing.override.retentionDays,
+        notes: billing.override.notes,
+        updatedAt: billing.override.updatedAt.toISOString(),
+      }
+    : null,
+})
+
 export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(adminGetOrganizationInputSchema)
@@ -171,47 +193,10 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
     const client = getAdminPostgresClient()
     const organizationId = OrganizationId(data.organizationId)
 
-    return await Effect.runPromise(
+    const billing = await Effect.runPromise(
       Effect.gen(function* () {
-        const orgPlan = yield* resolveEffectivePlanCached(organizationId)
-        const overrideRepo = yield* BillingOverrideRepository
-        const periodRepo = yield* BillingUsagePeriodRepository
-        const stripeLookup = yield* StripeSubscriptionLookup
-
-        const [override, period, subscription] = yield* Effect.all([
-          overrideRepo.findByOrganizationId(organizationId),
-          periodRepo.findByPeriod({
-            organizationId,
-            periodStart: orgPlan.periodStart,
-            periodEnd: orgPlan.periodEnd,
-          }),
-          stripeLookup.findActiveByOrganizationId(organizationId),
-        ])
-
-        return {
-          effectivePlanSlug: orgPlan.plan.slug,
-          effectivePlanSource: orgPlan.source as AdminOrganizationBillingDto["effectivePlanSource"],
-          stripeSubscriptionPlan: subscription?.plan ?? null,
-          stripeSubscriptionStatus: subscription?.status ?? null,
-          periodStart: orgPlan.periodStart.toISOString(),
-          periodEnd: orgPlan.periodEnd.toISOString(),
-          includedCredits: Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null,
-          consumedCredits: period?.consumedCredits ?? 0,
-          overageCredits: period?.overageCredits ?? 0,
-          overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,
-          retentionDays: orgPlan.plan.retentionDays,
-          currentSpendMicrocents: calculatePlanSpendMicrocents(orgPlan.plan.slug, period?.overageAmountMicrocents ?? 0),
-          spendingLimitCents: orgPlan.plan.spendingLimitCents,
-          override: override
-            ? {
-                plan: override.plan,
-                includedCredits: override.includedCredits,
-                retentionDays: override.retentionDays,
-                notes: override.notes,
-                updatedAt: override.updatedAt.toISOString(),
-              }
-            : null,
-        } satisfies AdminOrganizationBillingDto
+        const resolvedPlan = yield* resolveEffectivePlanCached(organizationId)
+        return yield* getOrganizationBillingUseCase({ organizationId, resolvedPlan })
       }).pipe(
         withPostgres(
           Layer.mergeAll(
@@ -226,6 +211,8 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
         withTracing,
       ),
     )
+
+    return toBillingDto(billing)
   })
 
 export const adminUpdateOrganizationBillingOverride = createServerFn({ method: "POST" })
@@ -237,22 +224,13 @@ export const adminUpdateOrganizationBillingOverride = createServerFn({ method: "
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* BillingOverrideRepository
-        const existing = yield* repo.findByOrganizationId(organizationId)
-        const now = new Date()
-
-        const override: BillingOverride = {
-          id: existing?.id ?? generateId(),
+        yield* upsertBillingOverrideUseCase({
           organizationId,
           plan: data.plan,
           includedCredits: data.includedCredits,
           retentionDays: data.retentionDays,
           notes: data.notes,
-          createdAt: existing?.createdAt ?? now,
-          updatedAt: now,
-        }
-
-        yield* repo.upsert(override)
+        })
         yield* invalidateEffectivePlanCache(organizationId)
       }).pipe(
         withPostgres(BillingOverrideRepositoryLive, client),
@@ -271,8 +249,7 @@ export const adminClearOrganizationBillingOverride = createServerFn({ method: "P
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* BillingOverrideRepository
-        yield* repo.deleteByOrganizationId(organizationId)
+        yield* clearBillingOverrideUseCase({ organizationId })
         yield* invalidateEffectivePlanCache(organizationId)
       }).pipe(
         withPostgres(BillingOverrideRepositoryLive, client),

@@ -795,6 +795,9 @@ importers:
 
   packages/domain/admin:
     dependencies:
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -919,6 +922,9 @@ importers:
 
   packages/domain/billing:
     dependencies:
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -1050,6 +1056,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events

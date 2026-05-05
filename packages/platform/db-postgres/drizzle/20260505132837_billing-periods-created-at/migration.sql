@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."billing_usage_periods" ADD COLUMN "created_at" timestamp with time zone DEFAULT now() NOT NULL;

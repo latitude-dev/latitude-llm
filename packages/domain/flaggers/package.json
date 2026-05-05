@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",

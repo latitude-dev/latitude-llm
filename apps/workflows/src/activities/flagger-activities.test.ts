@@ -3,41 +3,37 @@ import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
-  authorizeBillableActionMock,
-  draftFlaggerAnnotationUseCaseMock,
+  draftFlaggerAnnotationWithBillingUseCaseMock,
   loggerErrorMock,
   loggerInfoMock,
+  noCreditsRemainingErrorClass,
   runFlaggerUseCaseMock,
   saveFlaggerAnnotationUseCaseMock,
-} = vi.hoisted(() => ({
-  authorizeBillableActionMock: vi.fn(() =>
-    Effect.succeed({
-      allowed: true,
-      period: null,
-      context: {
-        planSlug: "free",
-        planSource: "free-fallback",
-        periodStart: new Date("2026-01-01T00:00:00.000Z"),
-        periodEnd: new Date("2026-02-01T00:00:00.000Z"),
-        includedCredits: 20_000,
-        overageAllowed: false,
-      },
-    }),
-  ),
-  draftFlaggerAnnotationUseCaseMock: vi.fn(),
-  loggerErrorMock: vi.fn(),
-  loggerInfoMock: vi.fn(),
-  runFlaggerUseCaseMock: vi.fn(),
-  saveFlaggerAnnotationUseCaseMock: vi.fn(),
-}))
+} = vi.hoisted(() => {
+  class NoCreditsRemainingError extends Error {
+    readonly _tag = "NoCreditsRemainingError"
+  }
+
+  return {
+    draftFlaggerAnnotationWithBillingUseCaseMock: vi.fn(),
+    loggerErrorMock: vi.fn(),
+    loggerInfoMock: vi.fn(),
+    noCreditsRemainingErrorClass: NoCreditsRemainingError,
+    runFlaggerUseCaseMock: vi.fn(),
+    saveFlaggerAnnotationUseCaseMock: vi.fn(),
+  }
+})
 
 vi.mock("@domain/billing", () => ({
-  authorizeBillableAction: authorizeBillableActionMock,
-  buildBillingIdempotencyKey: vi.fn(() => "flagger-scan:org-1:frustration:trace-1"),
+  NoCreditsRemainingError: noCreditsRemainingErrorClass,
+}))
+
+vi.mock("@domain/queue", () => ({
+  QueuePublisher: { key: "QueuePublisher" },
 }))
 
 vi.mock("@domain/flaggers", () => ({
-  draftFlaggerAnnotationUseCase: draftFlaggerAnnotationUseCaseMock,
+  draftFlaggerAnnotationWithBillingUseCase: draftFlaggerAnnotationWithBillingUseCaseMock,
   runFlaggerUseCase: runFlaggerUseCaseMock,
   saveFlaggerAnnotationUseCase: saveFlaggerAnnotationUseCaseMock,
 }))
@@ -61,10 +57,8 @@ vi.mock("@platform/db-postgres", () => ({
   AnnotationQueueItemRepositoryLive: {},
   AnnotationQueueRepositoryLive: {},
   BillingOverrideRepositoryLive: {},
-  BillingUsageEventRepositoryLive: {},
   BillingUsagePeriodRepositoryLive: {},
   OutboxEventWriterLive: {},
-  resolveEffectivePlanCached: vi.fn(() => Effect.succeed(null)),
   SettingsReaderLive: {},
   ScoreRepositoryLive: {},
   StripeSubscriptionLookupLive: {},
@@ -126,7 +120,7 @@ describe("flagger activities", () => {
       message: "AI generation failed",
       cause: null,
     })
-    draftFlaggerAnnotationUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
+    draftFlaggerAnnotationWithBillingUseCaseMock.mockReturnValueOnce(Effect.fail(providerError))
 
     const error = await draftAnnotate({
       organizationId: "org-1",
@@ -137,5 +131,21 @@ describe("flagger activities", () => {
 
     expect(error).toBe(providerError)
     expect(loggerErrorMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("logs info instead of error when blocked by billing limit", async () => {
+    const noCredits = new noCreditsRemainingErrorClass("Billing limit reached")
+    draftFlaggerAnnotationWithBillingUseCaseMock.mockReturnValueOnce(Effect.fail(noCredits))
+
+    const error = await draftAnnotate({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-1",
+      flaggerSlug: "frustration",
+    }).catch((thrown) => thrown)
+
+    expect(error).toBe(noCredits)
+    expect(loggerInfoMock).toHaveBeenCalledTimes(1)
+    expect(loggerErrorMock).not.toHaveBeenCalled()
   })
 })

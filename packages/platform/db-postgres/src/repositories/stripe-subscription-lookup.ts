@@ -19,6 +19,8 @@ export const StripeSubscriptionLookupLive = Layer.effect(
                 status: subscriptions.status,
                 periodStart: subscriptions.periodStart,
                 periodEnd: subscriptions.periodEnd,
+                stripeCustomerId: subscriptions.stripeCustomerId,
+                stripeSubscriptionId: subscriptions.stripeSubscriptionId,
               })
               .from(subscriptions)
               .where(
@@ -38,6 +40,8 @@ export const StripeSubscriptionLookupLive = Layer.effect(
             status: result.status,
             periodStart: result.periodStart,
             periodEnd: result.periodEnd,
+            stripeCustomerId: result.stripeCustomerId,
+            stripeSubscriptionId: result.stripeSubscriptionId,
           }
         }),
     }

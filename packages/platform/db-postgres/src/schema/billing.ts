@@ -1,17 +1,16 @@
 import { bigint, index, integer, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
-import { latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const billingOverrides = latitudeSchema.table(
   "billing_overrides",
   {
-    id: varchar("id", { length: 24 }).primaryKey(),
-    organizationId: varchar("organization_id", { length: 24 }).notNull().unique(),
+    id: cuid("id").primaryKey(),
+    organizationId: cuid("organization_id").notNull().unique(),
     plan: text("plan").notNull(),
     includedCredits: integer("included_credits"),
     retentionDays: integer("retention_days"),
     notes: text("notes"),
-    createdAt: tzTimestamp("created_at").notNull().defaultNow(),
-    updatedAt: tzTimestamp("updated_at").notNull().defaultNow(),
+    ...timestamps(),
   },
   () => [organizationRLSPolicy("billing_overrides")],
 )
@@ -19,9 +18,9 @@ export const billingOverrides = latitudeSchema.table(
 export const billingUsageEvents = latitudeSchema.table(
   "billing_usage_events",
   {
-    id: varchar("id", { length: 24 }).primaryKey(),
-    organizationId: varchar("organization_id", { length: 24 }).notNull(),
-    projectId: varchar("project_id", { length: 24 }).notNull(),
+    id: cuid("id").primaryKey(),
+    organizationId: cuid("organization_id").notNull(),
+    projectId: cuid("project_id").notNull(),
     action: text("action").notNull(),
     credits: integer("credits").notNull(),
     idempotencyKey: text("idempotency_key").notNull().unique(),
@@ -40,8 +39,8 @@ export const billingUsageEvents = latitudeSchema.table(
 export const billingUsagePeriods = latitudeSchema.table(
   "billing_usage_periods",
   {
-    id: varchar("id", { length: 24 }).primaryKey(),
-    organizationId: varchar("organization_id", { length: 24 }).notNull(),
+    id: cuid("id").primaryKey(),
+    organizationId: cuid("organization_id").notNull(),
     planSlug: varchar("plan_slug", { length: 50 }).notNull(),
     periodStart: tzTimestamp("period_start").notNull(),
     periodEnd: tzTimestamp("period_end").notNull(),
@@ -50,7 +49,7 @@ export const billingUsagePeriods = latitudeSchema.table(
     overageCredits: integer("overage_credits").notNull().default(0),
     reportedOverageCredits: integer("reported_overage_credits").notNull().default(0),
     overageAmountMicrocents: bigint("overage_amount_microcents", { mode: "number" }).notNull().default(0),
-    updatedAt: tzTimestamp("updated_at").notNull().defaultNow(),
+    ...timestamps(),
   },
   (t) => [
     organizationRLSPolicy("billing_usage_periods"),
