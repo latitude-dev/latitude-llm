@@ -271,6 +271,9 @@ const _registry = {
       readonly includedCredits: number
       readonly overageAllowed: boolean
     }
+  }>(),
+
+  "billing-overage": payloads<{
     reportOverage: {
       readonly organizationId: string
       readonly periodStart: string

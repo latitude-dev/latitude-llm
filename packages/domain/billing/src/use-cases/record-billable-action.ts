@@ -5,7 +5,7 @@ import type { ChargeableAction } from "../constants.ts"
 import type { AuthorizedBillableActionContext } from "./authorize-billable-action.ts"
 import { recordUsageEventUseCase } from "./record-usage-event.ts"
 
-const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5_000
+const BILLING_OVERAGE_SYNC_THROTTLE_MS = 60_000
 
 export interface RecordBillableActionInput {
   readonly organizationId: OrganizationId
@@ -44,7 +44,7 @@ export const recordBillableActionUseCase = Effect.fn("billing.recordBillableActi
     const queuePublisher = yield* QueuePublisher
     yield* queuePublisher
       .publish(
-        "billing",
+        "billing-overage",
         "reportOverage",
         {
           organizationId: input.organizationId,
@@ -52,7 +52,7 @@ export const recordBillableActionUseCase = Effect.fn("billing.recordBillableActi
           periodEnd: updated.periodEnd.toISOString(),
         },
         {
-          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}:${updated.overageCredits}`,
+          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}:${updated.periodEnd.toISOString()}`,
           throttleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
           attempts: 10,
           backoff: { type: "exponential", delayMs: 1_000 },

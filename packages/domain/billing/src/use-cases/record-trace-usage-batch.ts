@@ -8,7 +8,7 @@ import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
 
-const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5_000
+const BILLING_OVERAGE_SYNC_THROTTLE_MS = 60_000
 
 export interface RecordTraceUsageBatchInput {
   readonly organizationId: OrganizationId
@@ -102,7 +102,7 @@ export const recordTraceUsageBatchUseCase = Effect.fn("billing.recordTraceUsageB
     const queuePublisher = yield* QueuePublisher
     yield* queuePublisher
       .publish(
-        "billing",
+        "billing-overage",
         "reportOverage",
         {
           organizationId: input.organizationId,
@@ -110,7 +110,7 @@ export const recordTraceUsageBatchUseCase = Effect.fn("billing.recordTraceUsageB
           periodEnd: updated.periodEnd.toISOString(),
         },
         {
-          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}:${updated.overageCredits}`,
+          dedupeKey: `billing:reportOverage:${input.organizationId}:${updated.periodStart.toISOString()}:${updated.periodEnd.toISOString()}`,
           throttleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
           attempts: 10,
           backoff: { type: "exponential", delayMs: 1_000 },

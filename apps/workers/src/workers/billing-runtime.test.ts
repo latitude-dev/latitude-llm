@@ -334,7 +334,7 @@ describe("billing runtime integration", () => {
     expect(events).toHaveLength(2)
     expect(period?.consumedCredits).toBe(2)
     expect(period?.overageCredits).toBe(0)
-    expect(queue.published.filter((message) => message.queue === "billing")).toHaveLength(0)
+    expect(queue.published.filter((message) => message.queue === "billing-overage")).toHaveLength(0)
   })
 
   it("blocks exhausted free orgs but allows paid orgs to continue into overage", async () => {
@@ -457,7 +457,10 @@ describe("billing runtime integration", () => {
       expect(updatedPaidPeriod?.overageCredits).toBe(1)
       expect(updatedPaidPeriod?.overageAmountMicrocents).toBeGreaterThan(0)
       expect(
-        queue.getPublishedByDedupeKey("billing", `billing:reportOverage:${proOrgId}:2026-06-01T00:00:00.000Z:1`),
+        queue.getPublishedByDedupeKey(
+          "billing-overage",
+          `billing:reportOverage:${proOrgId}:2026-06-01T00:00:00.000Z:2026-07-01T00:00:00.000Z`,
+        ),
       ).toBeDefined()
     } finally {
       vi.useRealTimers()
@@ -534,7 +537,10 @@ describe("billing runtime integration", () => {
     expect(updatedPeriod?.consumedCredits).toBe(PLAN_CONFIGS.pro.includedCredits)
     expect(updatedPeriod?.overageCredits).toBe(0)
     expect(
-      queue.getPublishedByDedupeKey("billing", `billing:reportOverage:${organizationId}:2026-07-01T00:00:00.000Z`),
+      queue.getPublishedByDedupeKey(
+        "billing-overage",
+        `billing:reportOverage:${organizationId}:2026-07-01T00:00:00.000Z:2026-08-01T00:00:00.000Z`,
+      ),
     ).toBeUndefined()
   })
 

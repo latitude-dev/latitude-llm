@@ -156,7 +156,13 @@ export const createBillingWorker = ({ consumer, postgresClient, publisher }: Bil
 
         return batchEffect.pipe(Effect.provideService(QueuePublisher, publisher))
       },
+    },
+    { concurrency: 50 },
+  )
 
+  consumer.subscribe(
+    "billing-overage",
+    {
       reportOverage: (payload: ReportOveragePayload) =>
         Effect.gen(function* () {
           const organizationId = OrganizationId(payload.organizationId)
