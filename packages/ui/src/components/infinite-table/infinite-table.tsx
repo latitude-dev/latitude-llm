@@ -15,6 +15,7 @@ import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
 const EXPANDED_SKELETON_COUNT = 3
+const SELECTION_COLUMN_WIDTH = 48
 
 function nextSortDirection(current: SortDirection | null): SortDirection | null {
   if (current === null) return "desc"
@@ -164,7 +165,13 @@ export function InfiniteTable<T>({
               <tr>
                 {hasExpansion && <HeaderCell resizable={false} className="w-8" showSubheaderSlot={hasSubheaderRow} />}
                 {selection && (
-                  <HeaderCell resizable={false} className="w-10" showSubheaderSlot={hasSubheaderRow}>
+                  <HeaderCell
+                    resizable={false}
+                    width={SELECTION_COLUMN_WIDTH}
+                    minWidth={SELECTION_COLUMN_WIDTH}
+                    maxWidth={SELECTION_COLUMN_WIDTH}
+                    showSubheaderSlot={hasSubheaderRow}
+                  >
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
                   </HeaderCell>
                 )}
@@ -184,6 +191,7 @@ export function InfiniteTable<T>({
                       resizable={col.resizable !== false && i < columns.length - 1}
                       {...(col.minWidth !== undefined ? { minWidth: col.minWidth } : {})}
                       {...(col.width !== undefined ? { width: col.width } : {})}
+                      {...(col.maxWidth !== undefined ? { maxWidth: col.maxWidth } : {})}
                       showSubheaderSlot={hasSubheaderRow}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
                       {...(sortDir ? { sortDirection: sortDir } : {})}

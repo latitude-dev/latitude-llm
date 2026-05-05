@@ -18,6 +18,8 @@ export interface InfiniteTableColumn<T> {
   minWidth?: number
   /** Preferred starting width (px) for the first layout lock; the column can later be resized smaller. */
   width?: number
+  /** Maximum width (px); when set equal to `width`, the column stays fixed. */
+  maxWidth?: number
   sortKey?: string
   /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
   renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode

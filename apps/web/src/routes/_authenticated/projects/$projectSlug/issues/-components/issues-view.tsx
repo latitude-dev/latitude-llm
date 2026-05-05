@@ -247,7 +247,11 @@ export function IssuesView({
     },
   ]
 
-  const columns = allColumns.filter((column) => visibleColumnIds.includes(column.key as IssuesColumnId))
+  const columnsById = new Map(allColumns.map((column) => [column.key, column]))
+  const columns = visibleColumnIds.flatMap((columnId) => {
+    const column = columnsById.get(columnId)
+    return column ? [column] : []
+  })
 
   return (
     <Layout.Body>

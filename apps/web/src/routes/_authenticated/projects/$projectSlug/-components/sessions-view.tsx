@@ -36,6 +36,21 @@ const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: 
 
 const SESSION_TRACES_LIMIT = 25
 
+export const SESSION_COLUMN_OPTIONS = [
+  { id: "startTime", label: "Start Time", required: true },
+  { id: "name", label: "Name" },
+  { id: "tags", label: "Tags" },
+  { id: "duration", label: "Duration" },
+  { id: "ttft", label: "Time To First Token" },
+  { id: "cost", label: "Cost" },
+  { id: "sessionId", label: "Session ID" },
+  { id: "userId", label: "User ID" },
+  { id: "models", label: "Models" },
+  { id: "spans", label: "Spans" },
+] as const
+
+export type SessionColumnId = (typeof SESSION_COLUMN_OPTIONS)[number]["id"]
+
 function useExpandedSessionTraces(
   projectId: string,
   expandedIds: ReadonlySet<string>,
@@ -173,6 +188,7 @@ interface SessionsViewProps {
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
+  readonly visibleColumnIds: readonly SessionColumnId[]
 }
 
 export function SessionsView({
@@ -188,6 +204,7 @@ export function SessionsView({
   onFiltersClose,
   onActiveTraceChange,
   traceIdsRef,
+  visibleColumnIds,
 }: SessionsViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
@@ -209,7 +226,7 @@ export function SessionsView({
     ...(hasActiveFilters ? { filters } : {}),
   })
 
-  const columns = useMemo((): InfiniteTableColumn<SessionTableRow>[] => {
+  const allColumns = useMemo((): InfiniteTableColumn<SessionTableRow>[] => {
     return [
       {
         key: "startTime",
@@ -351,6 +368,14 @@ export function SessionsView({
       },
     ]
   }, [sessionMetrics, sessionMetricsLoading])
+
+  const columns = useMemo(() => {
+    const columnsById = new Map(allColumns.map((column) => [column.key, column]))
+    return visibleColumnIds.flatMap((columnId) => {
+      const column = columnsById.get(columnId)
+      return column ? [column] : []
+    })
+  }, [allColumns, visibleColumnIds])
 
   const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions, sorting)
 

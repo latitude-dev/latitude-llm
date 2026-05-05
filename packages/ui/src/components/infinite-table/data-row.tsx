@@ -5,6 +5,8 @@ import { Checkbox, type CheckedState } from "../checkbox/checkbox.tsx"
 import { Text } from "../text/text.tsx"
 import type { InfiniteTableColumn } from "./types.ts"
 
+const SELECTION_COLUMN_WIDTH = 48
+
 interface DataRowProps<T> {
   row: T
   rowKey: string
@@ -101,6 +103,7 @@ function DataRowInner<T>({
       )}
       {hasSelection && (
         <td
+          style={{ width: SELECTION_COLUMN_WIDTH, minWidth: SELECTION_COLUMN_WIDTH, maxWidth: SELECTION_COLUMN_WIDTH }}
           className={cn(
             "px-4 py-2",
             "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
@@ -122,6 +125,7 @@ function DataRowInner<T>({
         return (
           <td
             key={col.key}
+            {...(col.maxWidth !== undefined ? { style: { maxWidth: col.maxWidth } } : {})}
             className={cn(
               "px-4 py-2",
               "first:rounded-l-lg last:rounded-r-lg overflow-hidden",

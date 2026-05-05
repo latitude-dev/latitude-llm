@@ -27,6 +27,7 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
+import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { IssueDetailDrawer } from "./-components/issue-detail-drawer.tsx"
@@ -40,29 +41,11 @@ import {
 } from "./-components/issues-view.tsx"
 
 const DEFAULT_SORTING: IssuesTableSorting = { column: "lastSeen", direction: "desc" }
-const DEFAULT_COLUMNS: IssuesColumnId[] = ISSUES_COLUMN_OPTIONS.map((column) => column.id)
 const ISSUE_SEARCH_DEBOUNCE_MS = 300
 const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly IssuesTableSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly IssuesTableSorting["direction"][]
 const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|state):(asc|desc)$/
 const EMPTY_ISSUES: readonly IssueRecord[] = []
-
-function parseColumnIds(raw?: string): IssuesColumnId[] {
-  const values = raw
-    ?.split(",")
-    .map((value) => value.trim())
-    .filter((value): value is IssuesColumnId => ISSUES_COLUMN_OPTIONS.some((column) => column.id === value))
-
-  if (!values || values.length === 0) {
-    return [...DEFAULT_COLUMNS]
-  }
-
-  return values.includes("issue") ? values : ["issue", ...values]
-}
-
-function serializeColumnIds(columnIds: readonly IssuesColumnId[]): string {
-  return Array.from(new Set(["issue", ...columnIds])).join(",")
-}
 
 function serializeSorting(sorting: IssuesTableSorting): string {
   return `${sorting.column}:${sorting.direction}`
@@ -93,7 +76,6 @@ function IssuesPage() {
   const [lifecycleGroup, setLifecycleGroup] = useParamState("issuesLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
-  const [rawColumns, setRawColumns] = useParamState("issuesColumns", serializeColumnIds(DEFAULT_COLUMNS))
   const [timeFrom, setTimeFrom] = useParamState("issuesTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
@@ -123,7 +105,10 @@ function IssuesPage() {
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const visibleColumnIds = parseColumnIds(rawColumns || undefined)
+  const columnSettings = useTableColumnSettings<IssuesColumnId>({
+    storageKey: "projects.issues.columns.v1",
+    columns: ISSUES_COLUMN_OPTIONS,
+  })
   const timeRange =
     timeFrom || timeTo
       ? {
@@ -321,11 +306,6 @@ function IssuesPage() {
                   setTimeTo(to ?? "")
                 }}
               />
-              <ColumnsSelector
-                columns={ISSUES_COLUMN_OPTIONS}
-                selectedColumnIds={visibleColumnIds}
-                onChange={(nextColumnIds) => setRawColumns(serializeColumnIds(nextColumnIds as IssuesColumnId[]))}
-              />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
               <Tabs
@@ -356,6 +336,12 @@ function IssuesPage() {
                 />
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
+              <ColumnsSelector
+                columns={columnSettings.columns}
+                selectedColumnIds={columnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
+                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
+              />
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
@@ -404,7 +390,7 @@ function IssuesPage() {
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           occurrencesSum={occurrencesSum}
-          visibleColumnIds={visibleColumnIds}
+          visibleColumnIds={columnSettings.visibleColumnIds}
           activeIssueId={activeIssueId || undefined}
           selection={selection}
           onSortChange={setSorting}

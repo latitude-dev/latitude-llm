@@ -29,6 +29,7 @@ export function HeaderCell({
   resizable = true,
   minWidth = 60,
   width: preferredWidth,
+  maxWidth,
   className,
   sortable,
   sortDirection,
@@ -42,6 +43,8 @@ export function HeaderCell({
   minWidth?: number
   /** Preferred starting width (px); the first layout lock keeps at least this width. */
   width?: number
+  /** Maximum width (px); when set equal to `width`, the column stays fixed. */
+  maxWidth?: number
   className?: string
   sortable?: boolean
   sortDirection?: SortDirection | null
@@ -83,10 +86,13 @@ export function HeaderCell({
       ? ({
           width: preferredWidth,
           ...(minWidth > 60 ? { minWidth } : {}),
+          ...(maxWidth !== undefined ? { maxWidth } : {}),
         } as const)
       : minWidth > 60
-        ? ({ minWidth } as const)
-        : undefined
+        ? ({ minWidth, ...(maxWidth !== undefined ? { maxWidth } : {}) } as const)
+        : maxWidth !== undefined
+          ? ({ maxWidth } as const)
+          : undefined
 
   const headerBody = (
     <div className="flex min-h-0 w-full min-w-0 flex-col gap-0">
