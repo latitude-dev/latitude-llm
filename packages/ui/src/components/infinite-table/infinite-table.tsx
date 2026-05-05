@@ -181,6 +181,7 @@ export function InfiniteTable<T>({
                       resizable={col.resizable !== false && i < columns.length - 1}
                       {...(col.minWidth !== undefined ? { minWidth: col.minWidth } : {})}
                       {...(col.width !== undefined ? { width: col.width } : {})}
+                      {...(col.maxWidth !== undefined ? { maxWidth: col.maxWidth } : {})}
                       showSubheaderSlot={hasSubheaderRow}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
                       {...(sortDir ? { sortDirection: sortDir } : {})}

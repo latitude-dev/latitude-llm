@@ -28,7 +28,8 @@ export function resolveLockedHeaderLayout<T>({
 }: ResolveLockedHeaderLayoutParams<T>) {
   const lockedHeaderWidths = headerCells.map((headerCell, headerIndex) => {
     const column = columns[headerIndex - leadingColumnCount]
-    return Math.max(headerCell.offsetWidth, column?.width ?? 0)
+    const measuredWidth = Math.max(headerCell.offsetWidth, column?.width ?? 0)
+    return column?.maxWidth !== undefined ? Math.min(measuredWidth, column.maxWidth) : measuredWidth
   })
 
   return {
@@ -59,6 +60,7 @@ export function useHeaderLayoutLock<T>({
           col.align ?? "",
           col.minWidth ?? "",
           col.width ?? "",
+          col.maxWidth ?? "",
           col.resizable ?? "",
           col.sortKey ?? "",
           col.renderSubheader ? "1" : "0",

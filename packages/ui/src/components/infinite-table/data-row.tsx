@@ -122,6 +122,7 @@ function DataRowInner<T>({
         return (
           <td
             key={col.key}
+            {...(col.maxWidth !== undefined ? { style: { maxWidth: col.maxWidth } } : {})}
             className={cn(
               "px-4 py-2",
               "first:rounded-l-lg last:rounded-r-lg overflow-hidden",

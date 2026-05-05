@@ -17,18 +17,16 @@ import { EMPTY_SELECTION, type SelectionState } from "../../../../../lib/hooks/u
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "../-components/project-traces-table.tsx"
+import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "../-components/trace-detail-drawer.tsx"
 import {
-  DEFAULT_TRACE_COLUMNS,
   DEFAULT_TRACE_SORTING,
   getBulkSelection,
   getSelectedCount,
   getTimeFilterValue,
   parseFilters,
-  parseTraceColumnIds,
   serializeFilters,
-  serializeTraceColumnIds,
 } from "../-components/trace-page-state.ts"
 import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
@@ -63,10 +61,6 @@ function SearchPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  const [rawTraceColumns, setRawTraceColumns] = useParamState(
-    "traceColumns",
-    serializeTraceColumnIds(DEFAULT_TRACE_COLUMNS),
-  )
   const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
     validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
       v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
@@ -75,7 +69,10 @@ function SearchPage() {
   const traceIdsRef = useRef<string[]>([])
 
   const filters = parseFilters(rawFilters || undefined)
-  const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
+  const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
+    storageKey: "projects.search.traces.columns.v1",
+    columns: TRACE_COLUMN_OPTIONS,
+  })
   const hasSearchQuery = q.length > 0
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasContent = hasSearchQuery || hasActiveFilters
@@ -242,13 +239,6 @@ function SearchPage() {
                   setRawFilters(serializeFilters(next) ?? "")
                 }}
               />
-              <ColumnsSelector
-                columns={TRACE_COLUMN_OPTIONS}
-                selectedColumnIds={visibleTraceColumnIds}
-                onChange={(nextColumnIds) =>
-                  setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
-                }
-              />
               <Button
                 variant={filtersOpen ? "outline" : "ghost"}
                 size="sm"
@@ -269,6 +259,12 @@ function SearchPage() {
               ) : null}
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
+              <ColumnsSelector
+                columns={traceColumnSettings.columns}
+                selectedColumnIds={traceColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => traceColumnSettings.setVisibleColumnIds(nextColumnIds as TraceColumnId[])}
+                onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
+              />
               {loadedSavedSearch ? (
                 <SplitButton
                   variant="outline"
@@ -342,7 +338,7 @@ function SearchPage() {
           onFiltersClose={() => setFiltersOpen(false)}
           onActiveTraceChange={onActiveTraceChange}
           traceIdsRef={traceIdsRef}
-          visibleColumnIds={visibleTraceColumnIds}
+          visibleColumnIds={traceColumnSettings.visibleColumnIds}
           searchQuery={q}
         />
       ) : null}

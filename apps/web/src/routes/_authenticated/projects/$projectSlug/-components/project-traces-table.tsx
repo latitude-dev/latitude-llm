@@ -23,7 +23,7 @@ import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
 export const DEFAULT_TRACE_TABLE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
 export const TRACE_COLUMN_OPTIONS = [
-  { id: "indicators", label: "Indicators", required: true },
+  { id: "indicators", label: "Indicators" },
   { id: "startTime", label: "Start Time", required: true },
   { id: "name", label: "Name" },
   { id: "tags", label: "Tags" },
@@ -102,9 +102,10 @@ export function ProjectTracesTable({
     return [
       {
         key: "indicators",
-        header: "",
+        header: "Indicators",
         width: 88,
-        minWidth: 80,
+        minWidth: 88,
+        maxWidth: 88,
         resizable: false,
         ellipsis: false,
         cellClassName: "px-0",
@@ -310,10 +311,13 @@ export function ProjectTracesTable({
     annotationCountsPendingTraceIds,
   ])
 
-  const columns = useMemo(
-    () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
-    [allColumns, visibleColumnIds],
-  )
+  const columns = useMemo(() => {
+    const columnsById = new Map(allColumns.map((column) => [column.key, column]))
+    return visibleColumnIds.flatMap((columnId) => {
+      const column = columnsById.get(columnId)
+      return column ? [column] : []
+    })
+  }, [allColumns, visibleColumnIds])
 
   const handleTraceClick = useCallback(
     (trace: TraceRecord) => {

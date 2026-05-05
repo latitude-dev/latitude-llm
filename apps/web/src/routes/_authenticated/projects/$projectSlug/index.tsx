@@ -16,19 +16,17 @@ import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
-import { SessionsView } from "./-components/sessions-view.tsx"
+import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "./-components/sessions-view.tsx"
+import { useTableColumnSettings } from "./-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import {
-  DEFAULT_TRACE_COLUMNS,
   DEFAULT_TRACE_SORTING,
   getBulkSelection,
   getSelectedCount,
   getTimeFilterValue,
   parseFilters,
-  parseTraceColumnIds,
   serializeFilters,
-  serializeTraceColumnIds,
 } from "./-components/trace-page-state.ts"
 import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
@@ -58,11 +56,6 @@ function ProjectPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  const [rawTraceColumns, setRawTraceColumns] = useParamState(
-    "traceColumns",
-    serializeTraceColumnIds(DEFAULT_TRACE_COLUMNS),
-  )
-
   const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
     validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
       v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
@@ -72,7 +65,14 @@ function ProjectPage() {
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
-  const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
+  const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
+    storageKey: "projects.traces.columns.v1",
+    columns: TRACE_COLUMN_OPTIONS,
+  })
+  const sessionColumnSettings = useTableColumnSettings<SessionColumnId>({
+    storageKey: "projects.sessions.columns.v1",
+    columns: SESSION_COLUMN_OPTIONS,
+  })
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
@@ -254,14 +254,6 @@ function ProjectPage() {
                 setRawFilters(serializeFilters(next) ?? "")
               }}
             />
-            <ColumnsSelector
-              columns={TRACE_COLUMN_OPTIONS}
-              selectedColumnIds={visibleTraceColumnIds}
-              onChange={(nextColumnIds) =>
-                setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
-              }
-              disabled={activeTab !== "traces"}
-            />
             <Tooltip
               asChild
               trigger={
@@ -289,6 +281,25 @@ function ProjectPage() {
             )}
           </Layout.ActionRowItem>
           <Layout.ActionRowItem>
+            {activeTab === "sessions" ? (
+              <ColumnsSelector
+                columns={sessionColumnSettings.columns}
+                selectedColumnIds={sessionColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) =>
+                  sessionColumnSettings.setVisibleColumnIds(nextColumnIds as SessionColumnId[])
+                }
+                onOrderChange={(nextColumnIds) =>
+                  sessionColumnSettings.setColumnIds(nextColumnIds as SessionColumnId[])
+                }
+              />
+            ) : (
+              <ColumnsSelector
+                columns={traceColumnSettings.columns}
+                selectedColumnIds={traceColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => traceColumnSettings.setVisibleColumnIds(nextColumnIds as TraceColumnId[])}
+                onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
+              />
+            )}
             <Tabs
               variant="bordered"
               size="sm"
@@ -331,9 +342,9 @@ function ProjectPage() {
       </div>
 
       {activeTab === "traces" ? (
-        <TracesView {...sharedViewProps} visibleColumnIds={visibleTraceColumnIds} />
+        <TracesView {...sharedViewProps} visibleColumnIds={traceColumnSettings.visibleColumnIds} />
       ) : (
-        <SessionsView {...sharedViewProps} />
+        <SessionsView {...sharedViewProps} visibleColumnIds={sessionColumnSettings.visibleColumnIds} />
       )}
 
       {activeTraceId ? (

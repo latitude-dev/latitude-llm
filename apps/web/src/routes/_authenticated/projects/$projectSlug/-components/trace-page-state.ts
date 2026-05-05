@@ -1,14 +1,8 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
 import type { BulkSelection, SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
-import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./project-traces-table.tsx"
 
 export const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
-
-export const DEFAULT_TRACE_COLUMNS: TraceColumnId[] = TRACE_COLUMN_OPTIONS.map((column) => column.id)
-
-const getRequiredTraceColumnIds = (): TraceColumnId[] =>
-  TRACE_COLUMN_OPTIONS.filter((column) => "required" in column && column.required === true).map((column) => column.id)
 
 export function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
@@ -36,24 +30,6 @@ export function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): strin
   if (!conds) return undefined
   const match = conds.find((c) => c.op === op)
   return match ? String(match.value) : undefined
-}
-
-export function parseTraceColumnIds(raw?: string): TraceColumnId[] {
-  const requiredColumnIds = getRequiredTraceColumnIds()
-  const values = raw
-    ?.split(",")
-    .map((value) => value.trim())
-    .filter((value): value is TraceColumnId => TRACE_COLUMN_OPTIONS.some((column) => column.id === value))
-
-  if (!values || values.length === 0) {
-    return [...DEFAULT_TRACE_COLUMNS]
-  }
-
-  return Array.from(new Set([...requiredColumnIds, ...values]))
-}
-
-export function serializeTraceColumnIds(columnIds: readonly TraceColumnId[]): string {
-  return Array.from(new Set([...getRequiredTraceColumnIds(), ...columnIds])).join(",")
 }
 
 export function getSelectedCount(state: SelectionState<string>, total: number): number {
