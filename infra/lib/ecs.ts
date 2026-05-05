@@ -355,6 +355,8 @@ function createTaskDefinition(
       secrets["latitude-telemetry-project-slug"].arn,
       secrets["turnstile-secret-key"].arn,
       secrets["posthog-api-key"].arn,
+      secrets["v2-support-app-id"].arn,
+      secrets["v2-support-app-secret-key"].arn,
       secrets["bull-board-username"].arn,
       secrets["bull-board-password"].arn,
       s3Bucket.id,
@@ -391,6 +393,8 @@ function createTaskDefinition(
         latitudeTelemetryProjectSlugArn,
         turnstileSecretKeyArn,
         posthogApiKeyArn,
+        supportAppIdArn,
+        supportAppSecretKeyArn,
         bullBoardUsernameArn,
         bullBoardPasswordArn,
         s3BucketName,
@@ -503,8 +507,13 @@ function createTaskDefinition(
           { name: "LAT_BULL_BOARD_PASSWORD", valueFrom: bullBoardPasswordArn },
         ]
 
+        const supportSecrets = [
+          { name: "LAT_V2_SUPPORT_APP_ID", valueFrom: supportAppIdArn },
+          { name: "LAT_V2_SUPPORT_APP_SECRET_KEY", valueFrom: supportAppSecretKeyArn },
+        ]
+
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          web: [...oauthSecrets, temporalSecret],
+          web: [...oauthSecrets, temporalSecret, ...supportSecrets],
           workflows: [temporalSecret],
           workers: [temporalSecret, ...bullBoardSecrets],
         }

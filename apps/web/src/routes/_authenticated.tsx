@@ -1,10 +1,13 @@
-import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
+import { show as showIntercom } from "@intercom/messenger-js-sdk"
+import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
-import { ChevronsUpDown, HatGlassesIcon, Moon, ShieldAlertIcon, Sun } from "lucide-react"
+import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
+import { getSupportUserIdentity } from "../domains/support/support.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
 import { resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
@@ -48,10 +51,13 @@ export const Route = createFileRoute("/_authenticated")({
       })
     }
 
+    const supportIdentity = await getSupportUserIdentity()
+
     return {
       user: session.user,
       organizationId,
       impersonatedBy,
+      supportIdentity,
     }
   },
   component: AuthenticatedLayout,
@@ -80,8 +86,15 @@ function ThemeToggle() {
 
 function NavHeader() {
   const user = Route.useLoaderData({ select: (data) => data.user })
-  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
-  const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
+  const organizationId = Route.useLoaderData({
+    select: (data) => data.organizationId,
+  })
+  const impersonatedBy = Route.useLoaderData({
+    select: (data) => data.impersonatedBy,
+  })
+  const supportEnabled = Route.useLoaderData({
+    select: (data) => data.supportIdentity !== null,
+  })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
@@ -132,6 +145,16 @@ function NavHeader() {
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
+        {supportEnabled && (
+          <button
+            type="button"
+            onClick={() => showIntercom()}
+            className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors cursor-pointer"
+          >
+            <Icon icon={LifeBuoy} size="sm" />
+            <Text.H5>Help</Text.H5>
+          </button>
+        )}
         <a
           href="https://docs.latitude.so"
           target="_blank"
@@ -200,8 +223,15 @@ function NavHeader() {
 
 function AuthenticatedLayout() {
   const user = Route.useLoaderData({ select: (data) => data.user })
-  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
-  const impersonatedBy = Route.useLoaderData({ select: (data) => data.impersonatedBy })
+  const organizationId = Route.useLoaderData({
+    select: (data) => data.organizationId,
+  })
+  const impersonatedBy = Route.useLoaderData({
+    select: (data) => data.impersonatedBy,
+  })
+  const supportIdentity = Route.useLoaderData({
+    select: (data) => data.supportIdentity,
+  })
   const isProjectOnboarding = useRouterState({
     // `match.id` is unique per match instance (`routeId` + path + loader deps hash);
     // `routeId` is the stable file-route id from `createFileRoute(...)`.
@@ -211,26 +241,28 @@ function AuthenticatedLayout() {
   const org = allOrgs?.find((o) => o.id === organizationId)
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <PostHogIdentity
-        key={user.id}
-        userId={user.id}
-        userEmail={user.email}
-        userName={user.name}
-        organizationId={organizationId}
-        organizationName={org?.name}
-      />
-      {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-      {isProjectOnboarding ? null : <NavHeader />}
-      <main
-        className={
-          isProjectOnboarding
-            ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
-            : "relative h-full min-h-0 w-full grow overflow-y-auto"
-        }
-      >
-        <Outlet />
-      </main>
-    </div>
+    <IntercomProvider identity={supportIdentity} floatingButton="none">
+      <div className="flex h-screen flex-col overflow-hidden">
+        <PostHogIdentity
+          key={user.id}
+          userId={user.id}
+          userEmail={user.email}
+          userName={user.name}
+          organizationId={organizationId}
+          organizationName={org?.name}
+        />
+        {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
+        {isProjectOnboarding ? null : <NavHeader />}
+        <main
+          className={
+            isProjectOnboarding
+              ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+              : "relative h-full min-h-0 w-full grow overflow-y-auto"
+          }
+        >
+          <Outlet />
+        </main>
+      </div>
+    </IntercomProvider>
   )
 }

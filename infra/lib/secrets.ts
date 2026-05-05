@@ -350,6 +350,32 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["turnstile-secret-key"] = turnstileSecretKey.secret
   secretVersions["turnstile-secret-key"] = turnstileSecretKey.secretVersion
 
+  // Resource names are prefixed with `v2-` because the un-prefixed
+  // `support-app-id` / `support-app-secret-key` secrets are owned by the v1
+  // Latitude stack and must not be touched. The matching env vars in the
+  // container (`LAT_V2_SUPPORT_APP_*`) keep the same `_V2_` distinction.
+  const supportAppId = createSingleSecret(
+    baseName,
+    "v2-support-app-id",
+    "Intercom Workspace ID for the support chat widget",
+    process.env.LAT_V2_SUPPORT_APP_ID ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["v2-support-app-id"] = supportAppId.secret
+  secretVersions["v2-support-app-id"] = supportAppId.secretVersion
+
+  const supportAppSecretKey = createSingleSecret(
+    baseName,
+    "v2-support-app-secret-key",
+    "Intercom Identity Verification secret for HMAC-signing user emails",
+    process.env.LAT_V2_SUPPORT_APP_SECRET_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["v2-support-app-secret-key"] = supportAppSecretKey.secret
+  secretVersions["v2-support-app-secret-key"] = supportAppSecretKey.secretVersion
+
   const bullBoardUsername = createSingleSecret(
     baseName,
     "bull-board-username",
