@@ -93,7 +93,6 @@ function buildAllScoreRows(scope: SeedScope) {
   // reference users that actually exist on the target org. Bootstrap
   // path keeps the owner verbatim because
   // `bootstrapSeedScope.queueAssigneeUserIds[0] === SEED_OWNER_USER_ID`.
-  // biome-ignore lint/style/noNonNullAssertion: queueAssigneeUserIds non-empty by SeedScope contract
   const annotatorUserId = scope.queueAssigneeUserIds[0]!
 
   const evaluationWarrantyActiveId = EvaluationId(scope.cuid("evaluation:warranty-active"))

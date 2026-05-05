@@ -1053,7 +1053,7 @@ export const TraceRepositoryLive = Layer.effect(
                 Effect.map((rows) => {
                   const raw = rows[0]?.last_at ?? null
                   if (!raw) return null
-                  const parsed = new Date(raw.includes(" ") ? raw.replace(" ", "T") + "Z" : raw)
+                  const parsed = new Date(raw.includes(" ") ? `${raw.replace(" ", "T")}Z` : raw)
                   return Number.isNaN(parsed.getTime()) ? null : parsed
                 }),
                 Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
