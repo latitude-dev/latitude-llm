@@ -130,6 +130,25 @@ export const softDeleteEvaluation = (input: {
   }
 }
 
+export const updateEvaluationSampling = (input: {
+  readonly evaluation: Evaluation
+  readonly sampling: number
+  readonly updatedAt?: Date
+}): Evaluation => {
+  assertEvaluationNotDeleted(input.evaluation)
+
+  if (input.evaluation.trigger.sampling === input.sampling) {
+    return input.evaluation
+  }
+
+  const updatedAt = input.updatedAt ?? new Date()
+  return {
+    ...input.evaluation,
+    trigger: { ...input.evaluation.trigger, sampling: input.sampling },
+    updatedAt,
+  }
+}
+
 export const applyIssueResolutionToEvaluation = (input: {
   readonly evaluation: Evaluation
   readonly keepMonitoring: ResolvedSettings["keepMonitoring"]
