@@ -50,6 +50,18 @@ Filters support 10 operators:
 | `notIn` | Value is not in set | Status, tags, models, providers, services |
 | `contains` | Substring match (case-insensitive) | Text fields, metadata |
 | `notContains` | Substring does not match | Text fields, metadata |
+| `gtePercentile` | At or above the Pth percentile within the project | Cost, Duration, TTFT |
+
+### Percentile filtering
+
+Use `gtePercentile` to filter to the slowest, longest, or most expensive traces in your project without hard-coding absolute thresholds. The value is a number from 0 to 100, where `gtePercentile 95` matches traces in the top 5% of that field's distribution for the project.
+
+Percentiles are resolved against the project's full trace distribution (not narrowed by your other active filters), so the cutoff stays stable as you refine other criteria.
+
+Supported on:
+- **Cost** (e.g. p95 most expensive traces)
+- **Duration** (e.g. p99 slowest end-to-end)
+- **TTFT** (e.g. p90 slowest time-to-first-token)
 
 ## Custom Metadata Filters
 
