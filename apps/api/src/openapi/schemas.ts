@@ -1,3 +1,4 @@
+import { FILTER_OPERATORS, traceIdSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
 const ErrorSchema = z
@@ -5,6 +6,36 @@ const ErrorSchema = z
     error: z.string(),
   })
   .openapi("Error")
+
+// Trace ref + filter sub-schemas are rebuilt here (with the same semantics as
+// `@domain/shared.filterConditionSchema` / `filterSetSchema` and
+// `@domain/annotations.traceRefSchema`) so each level carries an `.openapi(...)`
+// component name. Without explicit names, Fern's TypeScript SDK generator
+// inlines anonymous types inside `Record<string, Array<Object>>` underneath a
+// discriminated union and emits broken `Item` references that fail typecheck.
+// We can't reuse the domain schemas: `.openapi()` returns a new instance, so
+// naming a top-level import doesn't propagate down to the un-named filter
+// schemas referenced inside the domain's discriminated union — the entire
+// chain has to be rebuilt with named instances.
+
+// `FilterConditionSchema` and `FilterSetSchema` aren't exported because nothing
+// imports them directly — they exist only as references in the `TraceRefSchema`
+// chain so each level emits as a named OpenAPI component.
+const FilterConditionSchema = z
+  .object({
+    op: z.enum(FILTER_OPERATORS),
+    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
+  })
+  .openapi("FilterCondition")
+
+const FilterSetSchema = z.record(z.string(), z.array(FilterConditionSchema)).openapi("FilterSet")
+
+export const TraceRefSchema = z
+  .discriminatedUnion("by", [
+    z.object({ by: z.literal("id"), id: traceIdSchema }),
+    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
+  ])
+  .openapi("TraceRef")
 
 // All protected endpoints are already org-scoped via the Bearer API key
 // (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),

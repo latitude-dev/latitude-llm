@@ -1,29 +1,39 @@
 import { ProjectRepository } from "@domain/projects"
 import {
-  baseWriteScoreInputSchema,
+  baseSubmitApiScoreSchema,
   type CustomScore,
   customScoreSchema,
   type EvaluationScore,
   evaluationScoreSchema,
-  type WriteScoreInput,
-  writeScoreUseCase,
+  type SubmitApiScoreInput,
+  submitApiScoreUseCase,
 } from "@domain/scores"
 import { cuidSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SpanRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import {
+  jsonBody,
+  openApiResponses,
+  PROTECTED_SECURITY,
+  ProjectParamsSchema,
+  TraceRefSchema,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
+// `trace` is overridden so the named `TraceRefSchema` is what the OpenAPI
+// emitter sees — the un-named domain version inlines the discriminated union
+// and trips a Fern name-mangling bug. See `../openapi/schemas.ts` for details.
 const ApiScoreBodyCommonSchema = z.object({
-  ...baseWriteScoreInputSchema.omit({
-    id: true,
-    projectId: true,
-    issueId: true,
-    draftedAt: true,
-  }).shape,
+  ...baseSubmitApiScoreSchema.shape,
+  trace: TraceRefSchema.optional(),
 })
 
 const CreateCustomScoreBodySchema = z
@@ -79,7 +89,8 @@ const route = createRoute({
   operationId: "scores.create",
   tags: ["Scores"],
   summary: "Create project score",
-  description: "Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.",
+  description:
+    "Creates a score grouped by a source. The optional `trace` field associates the score with a target trace (resolved by id or filter set, exactly-one-match required for filters); when omitted, the score persists as uninstrumented. Annotations use the separate `/annotations` endpoint.",
   security: PROTECTED_SECURITY,
   request: {
     params: ProjectParamsSchema,
@@ -144,48 +155,56 @@ export const createScoresRoutes = () => {
       Effect.gen(function* () {
         const projectRepository = yield* ProjectRepository
         const project = yield* projectRepository.findBySlug(projectSlug)
-        const projectId = project.id
 
-        const sharedWriteInput = {
-          projectId,
-          sourceId: body.sourceId,
-          sessionId: body.sessionId,
-          traceId: body.traceId,
-          spanId: body.spanId,
-          simulationId: body.simulationId,
-          value: body.value,
-          passed: body.passed,
-          feedback: body.feedback,
-          metadata: body.metadata,
-          error: body.error,
-          duration: body.duration,
-          tokens: body.tokens,
-          cost: body.cost,
-        }
-
-        const writeInput: WriteScoreInput =
+        // The route exposes `_evaluation: boolean` for the public OpenAPI shape;
+        // the use case takes the discriminated `source` shape used internally.
+        const submitInput: SubmitApiScoreInput & { organizationId: string; projectId: typeof project.id } =
           body._evaluation === true
             ? {
-                ...sharedWriteInput,
                 source: "evaluation",
+                sourceId: body.sourceId,
+                trace: body.trace,
+                simulationId: body.simulationId,
+                value: body.value,
+                passed: body.passed,
+                feedback: body.feedback,
                 metadata: body.metadata,
+                error: body.error,
+                duration: body.duration,
+                tokens: body.tokens,
+                cost: body.cost,
+                organizationId,
+                projectId: project.id,
               }
             : {
-                ...sharedWriteInput,
                 source: "custom",
+                sourceId: body.sourceId,
+                trace: body.trace,
+                simulationId: body.simulationId,
+                value: body.value,
+                passed: body.passed,
+                feedback: body.feedback,
                 metadata: body.metadata,
+                error: body.error,
+                duration: body.duration,
+                tokens: body.tokens,
+                cost: body.cost,
+                organizationId,
+                projectId: project.id,
               }
 
-        const score = yield* writeScoreUseCase(writeInput)
-
-        return score as ApiScore
+        return (yield* submitApiScoreUseCase(submitInput)) as ApiScore
       }).pipe(
         withPostgres(
           Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           organizationId,
         ),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
+        withClickHouse(
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+          c.var.clickhouse,
+          organizationId,
+        ),
         withTracing,
       ),
     )

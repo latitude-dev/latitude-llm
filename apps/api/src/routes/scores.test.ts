@@ -1,6 +1,9 @@
 import { defaultEvaluationTrigger, emptyEvaluationAlignment } from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
-import { queryClickhouse } from "@platform/db-clickhouse"
+import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { type SpanDetail, SpanRepository } from "@domain/spans"
+import { stubListSpan } from "@domain/spans/testing"
+import { queryClickhouse, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
 import { issues } from "@platform/db-postgres/schema/issues"
@@ -27,6 +30,46 @@ const createProjectRecord = async (
     slug,
   })
   return slug
+}
+
+const seedTrace = async ({
+  clickhouse,
+  organizationId,
+  projectId,
+  traceId,
+}: {
+  readonly clickhouse: ApiTestContext["clickhouse"]
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+}) => {
+  const span: SpanDetail = {
+    ...stubListSpan({
+      organizationId: OrganizationId(organizationId),
+      projectId: ProjectId(projectId),
+      traceId: TraceId(traceId),
+      sessionId: SessionId("session"),
+      spanId: SpanId("cccccccccccccccc"),
+      operation: "chat",
+      startTime: new Date("2026-03-24T00:00:00.000Z"),
+      endTime: new Date("2026-03-24T00:01:00.000Z"),
+    }),
+    inputMessages: [{ role: "user", parts: [{ type: "text", content: "hi" }] }],
+    outputMessages: [{ role: "assistant", parts: [{ type: "text", content: "hello" }] }],
+    systemInstructions: [],
+    toolDefinitions: [],
+    toolCallId: "",
+    toolName: "",
+    toolInput: "",
+    toolOutput: "",
+  }
+
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const spanRepository = yield* SpanRepository
+      yield* spanRepository.insert([span])
+    }).pipe(withClickHouse(SpanRepositoryLive, clickhouse, OrganizationId(organizationId))),
+  )
 }
 
 const queryAnalyticsScores = (clickhouse: ApiTestContext["clickhouse"], organizationId: string, scoreId: string) =>
@@ -56,7 +99,9 @@ describe("Scores Routes Integration", () => {
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
+    const traceId = "11111111111111111111111111111111"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedTrace({ clickhouse, organizationId: tenant.organizationId, projectId, traceId })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
@@ -67,9 +112,7 @@ describe("Scores Routes Integration", () => {
         },
         body: JSON.stringify({
           sourceId: "api-source",
-          sessionId: "session-123",
-          traceId: "11111111111111111111111111111111",
-          spanId: "aaaaaaaaaaaaaaaa",
+          trace: { by: "id", id: traceId },
           value: 0.87,
           passed: true,
           feedback: "Custom API score",
@@ -88,7 +131,7 @@ describe("Scores Routes Integration", () => {
     const body = await response.json()
     expect(body.source).toBe("custom")
     expect(body.sourceId).toBe("api-source")
-    expect(body.traceId).toBe("11111111111111111111111111111111")
+    expect(body.traceId).toBe(traceId)
     expect(body.createdAt).toBe(body.updatedAt)
 
     const persistedScores = await database.db
@@ -131,6 +174,12 @@ describe("Scores Routes Integration", () => {
     const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
     const evaluationId = "ffffffffffffffffffffffff"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: API_TEST_ANCHOR_TRACE_ID,
+    })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
@@ -142,9 +191,7 @@ describe("Scores Routes Integration", () => {
         body: JSON.stringify({
           _evaluation: true,
           sourceId: evaluationId,
-          sessionId: "session-456",
-          traceId: API_TEST_ANCHOR_TRACE_ID,
-          spanId: "bbbbbbbbbbbbbbbb",
+          trace: { by: "id", id: API_TEST_ANCHOR_TRACE_ID },
           value: 0.93,
           passed: true,
           feedback: "Latitude evaluation passed locally",
@@ -206,6 +253,12 @@ describe("Scores Routes Integration", () => {
     const evaluationId = "bb22bb22bb22bb22bb22bb22"
     const issueId = "ii33ii33ii33ii33ii33ii33"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: API_TEST_ANCHOR_TRACE_ID,
+    })
 
     await database.db.insert(issues).values({
       id: issueId,
@@ -242,8 +295,7 @@ describe("Scores Routes Integration", () => {
         body: JSON.stringify({
           _evaluation: true,
           sourceId: evaluationId,
-          traceId: API_TEST_ANCHOR_TRACE_ID,
-          spanId: "cccccccccccccccc",
+          trace: { by: "id", id: API_TEST_ANCHOR_TRACE_ID },
           value: 0.1,
           passed: false,
           feedback: "The agent hallucinated the date",
@@ -287,11 +339,18 @@ describe("Scores Routes Integration", () => {
   it<ApiTestContext>("requests discovery for failed evaluation scores even when the evaluation is missing", async ({
     app,
     database,
+    clickhouse,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "dd44dd44dd44dd44dd44dd44"
     const missingEvalId = "nn55nn55nn55nn55nn55nn55"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: API_TEST_ANCHOR_TRACE_ID,
+    })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/projects/${projectSlug}/scores`, {
@@ -303,8 +362,7 @@ describe("Scores Routes Integration", () => {
         body: JSON.stringify({
           _evaluation: true,
           sourceId: missingEvalId,
-          traceId: API_TEST_ANCHOR_TRACE_ID,
-          spanId: "dddddddddddddddd",
+          trace: { by: "id", id: API_TEST_ANCHOR_TRACE_ID },
           value: 0.05,
           passed: false,
           feedback: "Missing evaluation fallback test",
@@ -344,6 +402,12 @@ describe("Scores Routes Integration", () => {
     const evaluationId = "hh99hh99hh99hh99hh99hh99"
     const issueId = "kk00kk00kk00kk00kk00kk00"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: API_TEST_ANCHOR_TRACE_ID,
+    })
 
     await database.db.insert(issues).values({
       id: issueId,
@@ -380,8 +444,7 @@ describe("Scores Routes Integration", () => {
         body: JSON.stringify({
           _evaluation: true,
           sourceId: evaluationId,
-          traceId: API_TEST_ANCHOR_TRACE_ID,
-          spanId: "ffffffffffffffff",
+          trace: { by: "id", id: API_TEST_ANCHOR_TRACE_ID },
           value: 0.95,
           passed: true,
           feedback: "Passed linked evaluation should not become an issue occurrence",

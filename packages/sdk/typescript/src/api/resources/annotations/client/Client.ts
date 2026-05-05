@@ -35,17 +35,12 @@ export class AnnotationsClient {
      *
      * @example
      *     await client.annotations.create("projectSlug", {
-     *         value: 1,
+     *         value: 1.1,
      *         passed: true,
-     *         feedback: "Approved - the system annotator correctly flagged this as a refusal.",
+     *         feedback: "feedback",
      *         trace: {
-     *             by: "filters",
-     *             filters: {
-     *                 "metadata.scoreId": [{
-     *                         op: "eq",
-     *                         value: "abc123def456ghi789jkl012"
-     *                     }]
-     *             }
+     *             by: "id",
+     *             id: "id"
      *         }
      *     })
      */

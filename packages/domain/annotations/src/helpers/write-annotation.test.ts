@@ -24,7 +24,7 @@ const baseInput = {
 }
 
 describe("writeAnnotation", () => {
-  it("persists anchor metadata for a new annotation from flat fields", async () => {
+  it("persists anchor metadata for a new annotation", async () => {
     const sliceSource = "The refund policy says no returns after 30 days."
     const allMessages: GenAIMessage[] = [
       { role: "user", parts: [{ type: "text", content: "hi" }] },
@@ -38,10 +38,12 @@ describe("writeAnnotation", () => {
         {
           ...baseInput,
           feedback: "Issue with refund policy",
-          messageIndex: 2,
-          partIndex: 0,
-          startOffset: 10,
-          endOffset: 25,
+          anchor: {
+            messageIndex: 2,
+            partIndex: 0,
+            startOffset: 10,
+            endOffset: 25,
+          },
         },
         draftedAt,
       ).pipe(Effect.provide(layer)),
@@ -54,7 +56,7 @@ describe("writeAnnotation", () => {
     expect(score.metadata.rawFeedback).toBe("Issue with refund policy")
   })
 
-  it("when updating by id, ignores conflicting anchor and flat fields and preserves stored anchor metadata", async () => {
+  it("when updating by id, ignores conflicting anchor and preserves stored anchor metadata", async () => {
     const sliceSource = "The refund policy says no returns after 30 days."
     const allMessages: GenAIMessage[] = [
       { role: "user", parts: [{ type: "text", content: "hi" }] },
@@ -68,10 +70,12 @@ describe("writeAnnotation", () => {
         {
           ...baseInput,
           feedback: "Issue with refund policy",
-          messageIndex: 2,
-          partIndex: 0,
-          startOffset: 10,
-          endOffset: 25,
+          anchor: {
+            messageIndex: 2,
+            partIndex: 0,
+            startOffset: 10,
+            endOffset: 25,
+          },
         },
         draftedAt,
       ).pipe(Effect.provide(layer)),
@@ -85,10 +89,6 @@ describe("writeAnnotation", () => {
           value: 1,
           passed: true,
           feedback: "Updated comment only",
-          messageIndex: 0,
-          partIndex: 0,
-          startOffset: 1,
-          endOffset: 2,
           anchor: {
             messageIndex: 0,
             partIndex: 0,

@@ -1,7 +1,7 @@
 import { submitApiAnnotationInputSchema, submitApiAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
-import { cuidSchema, FILTER_OPERATORS, traceIdSchema } from "@domain/shared"
+import { cuidSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -15,68 +15,24 @@ import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, with
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import {
+  jsonBody,
+  openApiResponses,
+  PROTECTED_SECURITY,
+  ProjectParamsSchema,
+  TraceRefSchema,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-// Filter sub-schemas are redefined locally (with the same semantics as
-// `@domain/shared.filterConditionSchema`) so we can attach OpenAPI component
-// names via `.openapi(...)`. Without named components, the Fern TypeScript
-// generator inlines them and has trouble naming the anonymous array-item
-// types, producing a broken `Item` reference. The constants `FILTER_OPERATORS`
-// are imported from shared to keep both definitions in lockstep.
-const FilterConditionSchema = z
-  .object({
-    op: z.enum(FILTER_OPERATORS),
-    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
-  })
-  .openapi("FilterCondition")
-
-const FilterSetSchema = z.record(z.string(), z.array(FilterConditionSchema)).openapi("FilterSet")
-
-const TraceRefSchema = z
-  .discriminatedUnion("by", [
-    z.object({ by: z.literal("id"), id: traceIdSchema }),
-    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
-  ])
-  .openapi("TraceRef")
-
-/**
- * POST body: caller-supplied annotation data plus a `trace` ref (id or filters)
- * and an optional `draft` flag (default `false` = published). `projectId` comes
- * from the URL and `sourceId` is forced to `"API"`.
- *
- * We rebuild the schema here (rather than chaining `.openapi()` on the domain
- * export) for two reasons:
- *   1. Zod-OpenAPI's prototype augmentation does not survive schemas returned
- *      from `.omit().extend(...)` across package boundaries — the fresh
- *      `z.object` wrapper is the idiomatic way to attach an OpenAPI name.
- *   2. The nested `trace.filters` field needs a named `FilterCondition`
- *      component (declared above) so SDK generators emit a clean `$ref`
- *      rather than a broken inline anonymous type.
- */
+// `trace` is overridden so the named `TraceRefSchema` is what the OpenAPI emitter
+// sees — the un-named domain version inlines the discriminated union and trips
+// a Fern name-mangling bug. See `../openapi/schemas.ts` for details.
 const RequestSchema = z
   .object({
     ...submitApiAnnotationInputSchema.shape,
     trace: TraceRefSchema,
   })
-  .openapi("CreateAnnotationBody", {
-    // Example mirrors the Latitude dogfood flow: resolve the upstream LLM
-    // trace by the `metadata.scoreId` attribute the span carries (see PRD
-    // "Identity strategy"), then write a published annotation into the
-    // dogfood project. Also the canonical SDK usage for any caller who
-    // doesn't have the raw OTel trace id at hand.
-    example: {
-      value: 1,
-      passed: true,
-      feedback: "Approved - the system annotator correctly flagged this as a refusal.",
-      trace: {
-        by: "filters",
-        filters: {
-          "metadata.scoreId": [{ op: "eq", value: "abc123def456ghi789jkl012" }],
-        },
-      },
-    },
-  })
+  .openapi("CreateAnnotationBody")
 
 const ResponseSchema = z
   .object({

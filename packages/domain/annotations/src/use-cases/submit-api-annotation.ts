@@ -1,13 +1,38 @@
-import { BadRequestError, NotFoundError, OrganizationId, type ProjectId, TraceId } from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
+import { BadRequestError, type ProjectId } from "@domain/shared"
+import { resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
-import { submitApiAnnotationInputSchema, type TraceRef } from "../helpers/annotation-public-api-schema.ts"
+import { persistDraftAnnotationInputSchema } from "../helpers/annotation-draft-write-schema.ts"
 import { writeDraftAnnotationUseCase } from "./write-draft-annotation.ts"
 import { writePublishedAnnotationUseCase } from "./write-published-annotation.ts"
 
 /** The public annotations API always writes scores with `sourceId = "API"`. */
 const PUBLIC_API_SOURCE_ID = "API" as const
+
+/**
+ * Public-API annotation submission payload.
+ *
+ * Reuses `persistDraftAnnotationInputSchema` for annotator-authored score
+ * fields (value, passed, feedback, anchor, optional `id` for upsert) but
+ * replaces the flat `traceId` with the `trace` discriminated union and adds
+ * the `draft` opt-in (default `false` = publish immediately).
+ *
+ * Stripped from the accepted body:
+ *   - `projectId` — comes from the URL.
+ *   - `sourceId` — always forced to `"API"` by the use case below.
+ *   - `traceId` — replaced by `trace` (id or filters).
+ *   - `sessionId` / `spanId` — auto-resolved from the trace by
+ *     `resolveWriteAnnotationTraceContext` (session lifted from the trace,
+ *     span defaulted to the last LLM completion). Internal callers can still
+ *     pass concrete values via the lower-level `writeDraftAnnotationUseCase`
+ *     / `writePublishedAnnotationUseCase` primitives.
+ */
+export const submitApiAnnotationInputSchema = persistDraftAnnotationInputSchema
+  .omit({ projectId: true, sourceId: true, sessionId: true, traceId: true, spanId: true })
+  .extend({
+    trace: traceRefSchema,
+    draft: z.boolean().default(false),
+  })
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
@@ -26,53 +51,6 @@ interface SubmitApiAnnotationContext {
 }
 
 type SubmitApiAnnotationRequest = z.input<typeof submitApiAnnotationInputSchema> & SubmitApiAnnotationContext
-
-const resolveTraceId = (trace: TraceRef, ctx: SubmitApiAnnotationContext) =>
-  Effect.gen(function* () {
-    const traceRepository = yield* TraceRepository
-    const organizationId = OrganizationId(ctx.organizationId)
-
-    if (trace.by === "id") {
-      // Verify the trace exists within this organization + project before
-      // trusting the caller-supplied id. Without this, a caller could write an
-      // annotation against any traceId — including one owned by a different
-      // tenant. `matchesFiltersByTraceId` with no filters is a cheap scoped
-      // existence check (one count query).
-      const traceId = TraceId(trace.id)
-      const belongsToProject = yield* traceRepository.matchesFiltersByTraceId({
-        organizationId,
-        projectId: ctx.projectId,
-        traceId,
-      })
-      if (!belongsToProject) {
-        return yield* new NotFoundError({ entity: "Trace", id: trace.id })
-      }
-      return traceId
-    }
-
-    const page = yield* traceRepository.listByProjectId({
-      organizationId,
-      projectId: ctx.projectId,
-      options: { filters: trace.filters, limit: 2 },
-    })
-
-    if (page.items.length > 1) {
-      return yield* new BadRequestError({
-        message:
-          "Trace filter matched more than one trace in this project. Refine the filter set so it identifies exactly one trace.",
-      })
-    }
-
-    const [match] = page.items
-    if (match === undefined) {
-      return yield* new NotFoundError({
-        entity: "Trace",
-        id: "No trace in this project matches the provided filters",
-      })
-    }
-
-    return match.traceId
-  })
 
 /**
  * Public-API entry point for creating an annotation.
@@ -104,28 +82,27 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
     "Invalid annotation submission payload",
   )
 
-  const traceId = yield* resolveTraceId(parsed.trace, {
+  const traceId = yield* resolveTraceIdFromRef(parsed.trace, {
     organizationId: input.organizationId,
     projectId: input.projectId,
   })
 
+  // sessionId/spanId are intentionally null so the downstream resolver lifts
+  // the session from the trace and pins the annotation to the trace's last
+  // LLM completion span — the public API doesn't accept overrides for these.
   const commonInput = {
     id: parsed.id,
     projectId: input.projectId,
     sourceId: PUBLIC_API_SOURCE_ID,
-    sessionId: parsed.sessionId,
+    sessionId: null,
     traceId,
-    spanId: parsed.spanId,
+    spanId: null,
     simulationId: parsed.simulationId,
     issueId: parsed.issueId,
     annotatorId: parsed.annotatorId,
     value: parsed.value,
     passed: parsed.passed,
     feedback: parsed.feedback,
-    messageIndex: parsed.messageIndex,
-    partIndex: parsed.partIndex,
-    startOffset: parsed.startOffset,
-    endOffset: parsed.endOffset,
     anchor: parsed.anchor,
     organizationId: input.organizationId,
   }
