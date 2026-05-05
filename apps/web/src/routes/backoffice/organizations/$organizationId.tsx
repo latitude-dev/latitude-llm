@@ -1,3 +1,4 @@
+import { PRO_PLAN_CONFIG } from "@domain/billing"
 import { Avatar, Badge, Button, Input, Select, Text, Textarea, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
@@ -179,6 +180,11 @@ function BackofficeOrganizationDetailPage() {
 }
 
 function BillingSummarySection({ billing }: { billing: AdminOrganizationBillingDto }) {
+  const currentSpendLabel =
+    billing.currentSpendMicrocents === null
+      ? "Not tracked for this plan"
+      : currencyFormatter.format(billing.currentSpendMicrocents / 100_000_000)
+
   const summaryRows = [
     { label: "Effective plan", value: billing.effectivePlanSlug, muted: `Source: ${billing.effectivePlanSource}` },
     {
@@ -205,6 +211,15 @@ function BillingSummarySection({ billing }: { billing: AdminOrganizationBillingD
         billing.overageAmountMicrocents > 0
           ? currencyFormatter.format(billing.overageAmountMicrocents / 100_000_000)
           : "No overage reported",
+    },
+    {
+      label: "Spend cap",
+      value:
+        billing.spendingLimitCents === null ? "No cap" : currencyFormatter.format(billing.spendingLimitCents / 100),
+      muted:
+        billing.effectivePlanSlug === PRO_PLAN_CONFIG.slug
+          ? `Current spend: ${currentSpendLabel}`
+          : "Customer-managed spending caps only apply to self-serve Pro billing",
     },
   ] as const
 

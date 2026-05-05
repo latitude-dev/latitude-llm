@@ -1,7 +1,10 @@
 export {
   ACTION_CREDITS,
+  CENT_TO_MICROCENTS,
   CHARGEABLE_ACTIONS,
   type ChargeableAction,
+  calculateOverageAmountMicrocents,
+  calculatePlanSpendMicrocents,
   ENTERPRISE_PLAN_CONFIG,
   FREE_PLAN_CONFIG,
   OverageCreditUnit,

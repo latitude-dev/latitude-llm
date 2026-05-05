@@ -11,6 +11,7 @@ import {
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -46,6 +47,7 @@ export const createSpanIngestionWorker = ({
     BillingOverrideRepositoryLive,
     BillingUsageEventRepositoryLive,
     BillingUsagePeriodRepositoryLive,
+    SettingsReaderLive,
     StripeSubscriptionLookupLive,
   )
 

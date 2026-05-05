@@ -8,6 +8,8 @@ export const billingPlanSchema = z.object({
   retentionDays: z.number().int().positive(),
   overageAllowed: z.boolean(),
   hardCapped: z.boolean(),
+  priceCents: z.number().int().nonnegative().nullable(),
+  spendingLimitCents: z.number().int().positive().nullable(),
 })
 
 export type BillingPlan = z.infer<typeof billingPlanSchema>

@@ -1,4 +1,4 @@
-import type { OrganizationId } from "@domain/shared"
+import { type OrganizationId, SettingsReader } from "@domain/shared"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { PLAN_CONFIGS, type PlanSlug, SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME } from "../constants.ts"
@@ -14,7 +14,10 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
   yield* Effect.annotateCurrentSpan("organizationId", organizationId)
 
   const overrideRepo = yield* BillingOverrideRepository
+  const settingsReader = yield* SettingsReader
   const override = yield* overrideRepo.findByOrganizationId(organizationId)
+  const settings = (yield* settingsReader.getOrganizationSettings()) ?? {}
+  const spendingLimitCents = settings.billing?.spendingLimitCents ?? null
 
   if (override) {
     const plan = PLAN_CONFIGS[override.plan]
@@ -30,6 +33,8 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
         retentionDays: override.retentionDays ?? plan.retentionDays,
         overageAllowed: plan.overageAllowed,
         hardCapped: plan.hardCapped,
+        priceCents: plan.priceCents,
+        spendingLimitCents: plan.slug === "pro" ? spendingLimitCents : null,
       },
       source: "override",
       periodStart: monthStart,
@@ -59,6 +64,8 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
         retentionDays: plan.retentionDays,
         overageAllowed: plan.overageAllowed,
         hardCapped: plan.hardCapped,
+        priceCents: plan.priceCents,
+        spendingLimitCents: plan.slug === "pro" ? spendingLimitCents : null,
       },
       source: "subscription",
       periodStart: subscription.periodStart ?? new Date(),
@@ -79,6 +86,8 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
       retentionDays: freePlan.retentionDays,
       overageAllowed: freePlan.overageAllowed,
       hardCapped: freePlan.hardCapped,
+      priceCents: freePlan.priceCents,
+      spendingLimitCents: null,
     },
     source: "free-fallback",
     periodStart: monthStart,

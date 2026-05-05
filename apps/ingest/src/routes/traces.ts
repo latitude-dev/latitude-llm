@@ -4,6 +4,7 @@ import { ingestSpansUseCase } from "@domain/spans"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -25,6 +26,7 @@ interface TracesRouteContext {
 const traceIngestionBillingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
 )
 
@@ -34,10 +36,13 @@ const canAcceptTraceIngestion = (organizationId: string) =>
       checkCreditAvailabilityUseCase({
         organizationId: OrganizationId(organizationId),
         action: "trace",
+        planSlug: plan.plan.slug,
         periodStart: plan.periodStart,
         periodEnd: plan.periodEnd,
         includedCredits: plan.plan.includedCredits,
         hardCapped: plan.plan.hardCapped,
+        priceCents: plan.plan.priceCents,
+        spendingLimitCents: plan.plan.spendingLimitCents,
       }),
     ),
   )
@@ -84,7 +89,7 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     )
 
     if (!billingAllowed) {
-      return c.json({ error: "No credits remaining in current billing period" }, 402)
+      return c.json({ error: "Billing limit reached for the current billing period" }, 402)
     }
 
     const disk = getStorageDisk()

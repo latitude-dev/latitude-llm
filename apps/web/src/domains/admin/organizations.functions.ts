@@ -13,6 +13,7 @@ import {
   type BillingOverride,
   BillingOverrideRepository,
   BillingUsagePeriodRepository,
+  calculatePlanSpendMicrocents,
   resolveEffectivePlan,
   StripeSubscriptionLookup,
 } from "@domain/billing"
@@ -25,6 +26,7 @@ import {
   BillingUsagePeriodRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -77,6 +79,8 @@ export interface AdminOrganizationBillingDto {
   overageCredits: number
   overageAmountMicrocents: number
   retentionDays: number
+  currentSpendMicrocents: number | null
+  spendingLimitCents: number | null
   override: {
     plan: "free" | "pro" | "enterprise"
     includedCredits: number | null
@@ -188,6 +192,8 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
           overageCredits: period?.overageCredits ?? 0,
           overageAmountMicrocents: period?.overageAmountMicrocents ?? 0,
           retentionDays: orgPlan.plan.retentionDays,
+          currentSpendMicrocents: calculatePlanSpendMicrocents(orgPlan.plan.slug, period?.overageAmountMicrocents ?? 0),
+          spendingLimitCents: orgPlan.plan.spendingLimitCents,
           override: override
             ? {
                 plan: override.plan,
@@ -200,7 +206,12 @@ export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
         } satisfies AdminOrganizationBillingDto
       }).pipe(
         withPostgres(
-          Layer.mergeAll(BillingOverrideRepositoryLive, BillingUsagePeriodRepositoryLive, StripeSubscriptionLookupLive),
+          Layer.mergeAll(
+            BillingOverrideRepositoryLive,
+            BillingUsagePeriodRepositoryLive,
+            SettingsReaderLive,
+            StripeSubscriptionLookupLive,
+          ),
           client,
         ),
         withTracing,

@@ -44,6 +44,7 @@ vi.mock("@platform/db-postgres", () => ({
   BillingUsageEventRepositoryLive: {},
   BillingUsagePeriodRepositoryLive: {},
   OutboxEventWriterLive: {},
+  SettingsReaderLive: {},
   ScoreRepositoryLive: {},
   StripeSubscriptionLookupLive: {},
   withPostgres: () => (effect: unknown) => effect,

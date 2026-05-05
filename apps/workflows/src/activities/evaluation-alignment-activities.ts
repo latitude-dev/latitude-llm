@@ -29,6 +29,7 @@ import {
   EvaluationAlignmentExamplesRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -59,6 +60,7 @@ const evaluationGenerationBillingRepositoriesLive = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
 )
 
@@ -138,7 +140,7 @@ export const checkEvaluationGenerationBilling = (input: {
           result.allowed
             ? Effect.void
             : Effect.sync(() =>
-                logger.info("Evaluation generation blocked — no credits remaining", {
+                logger.info("Evaluation generation blocked — billing limit reached", {
                   organizationId: input.organizationId,
                   projectId: input.projectId,
                   evaluationId: input.evaluationId,

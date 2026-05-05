@@ -21,6 +21,7 @@ import {
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -134,6 +135,7 @@ export const createLiveEvaluationsWorker = ({
           BillingOverrideRepositoryLive,
           BillingUsageEventRepositoryLive,
           BillingUsagePeriodRepositoryLive,
+          SettingsReaderLive,
           StripeSubscriptionLookupLive,
         ),
         pgClient,

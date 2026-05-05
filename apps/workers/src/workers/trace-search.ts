@@ -20,6 +20,7 @@ import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "
 import {
   BillingOverrideRepositoryLive,
   type PostgresClient,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -237,7 +238,7 @@ export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceS
 
   return processRefreshTrace(payload).pipe(
     withPostgres(
-      Layer.mergeAll(BillingOverrideRepositoryLive, StripeSubscriptionLookupLive),
+      Layer.mergeAll(BillingOverrideRepositoryLive, SettingsReaderLive, StripeSubscriptionLookupLive),
       postgresClient,
       OrganizationId(payload.organizationId),
     ),

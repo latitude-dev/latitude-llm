@@ -2,6 +2,8 @@ export const PLAN_SLUGS = ["free", "pro", "enterprise"] as const
 
 export type PlanSlug = (typeof PLAN_SLUGS)[number]
 
+export const CENT_TO_MICROCENTS = 1_000_000
+
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
 export const CHARGEABLE_ACTIONS = ["trace", "flagger-scan", "live-eval-scan", "eval-generation"] as const
@@ -68,3 +70,19 @@ export const SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME: Record<string, PlanSlug> 
 } as const
 
 export const OverageCreditUnit = PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+export const calculateOverageAmountMicrocents = (planSlug: PlanSlug, overageCredits: number) => {
+  if (planSlug !== "pro") return 0
+
+  return Math.floor(
+    (overageCredits * PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MICROCENTS) /
+      PRO_PLAN_CONFIG.overageCreditsPerUnit,
+  )
+}
+
+export const calculatePlanSpendMicrocents = (planSlug: PlanSlug, overageAmountMicrocents: number) => {
+  const priceCents = PLAN_CONFIGS[planSlug].priceCents
+  if (priceCents === null) return null
+
+  return priceCents * CENT_TO_MICROCENTS + overageAmountMicrocents
+}

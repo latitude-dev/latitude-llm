@@ -2,7 +2,7 @@
 
 Billing is application-owned even when Stripe is the self-serve payment processor.
 
-Stripe remains the source of truth for checkout, customer portal, and subscription lifecycle synchronization. Latitude remains the source of truth for plan resolution, included credits, billable action accounting, overage classification, retention entitlements, and runtime enforcement.
+Stripe remains the source of truth for checkout, customer portal, and subscription lifecycle synchronization. Latitude remains the source of truth for plan resolution, included credits, billable action accounting, overage classification, spend-cap enforcement, retention entitlements, and runtime enforcement.
 
 ## Plans
 
@@ -17,7 +17,7 @@ Current plan slugs:
 Plan semantics:
 
 - `free`: hard capped, `20,000` included credits, `30` entitlement retention days
-- `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days
+- `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days, optional customer-managed period spending cap
 - `enterprise`: manual-only, override-driven included credits and retention by contract
 
 Chargeable actions:
@@ -46,6 +46,7 @@ Latitude-owned billing persistence covers the parts Stripe does not model for us
 - `billing_overrides`: manual enterprise / support overrides
 - `billing_usage_events`: append-only billable events with idempotency keys
 - `billing_usage_periods`: per-period consumption, overage, reporting progress, and entitlement snapshot state
+- `organizations.settings.billing.spendingLimitCents`: optional Pro spend cap chosen by the customer for the current and future billing periods
 
 `billing_usage_periods` is keyed by `(organization_id, period_start, period_end)`, not just by organization. That lets the app hold several historical periods safely and prevents a new cycle from overwriting the previous one.
 
@@ -92,6 +93,29 @@ Enforcement rules:
 
 That means the final accepted free-plan payload may overshoot slightly. The system never partially accepts only part of one ingest payload.
 
+## Pro Spending Limits
+
+Pro organizations may optionally set `organization.settings.billing.spendingLimitCents` from `/settings/billing`.
+
+The spend cap semantics are:
+
+- it applies only to effective `pro` plans
+- it is measured per billing period, using the same Stripe subscription period as Pro credit accounting
+- it includes the fixed Pro base subscription price plus the current period's metered overage amount
+- the minimum valid cap is the Pro base subscription price, because the base subscription is always billable once the organization is on Pro
+- clearing the setting removes the cap and restores normal overage continuation behavior
+
+Enforcement happens inside `meterBillableAction`, not in the UI. Before a new billable event is recorded, the billing domain projects the resulting period spend and blocks the action when that projection would exceed the configured cap.
+
+This applies to the same charge points as normal billing metering:
+
+- trace ingest pre-checks
+- LLM flagger scans
+- live evaluations
+- eval generation
+
+Like the free-plan ingest cap, trace ingestion remains intentionally coarse at the request boundary: the ingest API blocks clearly over-limit requests before accepting them, while already accepted payloads are still metered after persistence.
+
 ## Overage Reporting
 
 Paid self-serve plans continue after the included allotment is exhausted.
@@ -104,6 +128,8 @@ Overage flow:
 4. `apps/workers/src/workers/billing.ts` reports only the unreported delta to Stripe and then advances `reported_overage_credits`
 
 The Stripe adapter uses the configured Pro overage price and Stripe billing meter event name. If the overage price item is not already attached to the subscription, the adapter adds it before reporting usage.
+
+If a Pro spend cap is configured, paid plans continue into overage only until the projected period spend would exceed that cap. At that point, new billable actions are rejected with the same runtime billing gate used by the free-plan hard cap.
 
 ## Retention Entitlements
 
@@ -138,7 +164,8 @@ That surface shows:
 - included credits
 - consumed credits
 - overage credits and amount
-- action pricing
+- current period spend for priced plans
+- optional Pro spending-limit controls and remaining headroom
 - self-serve upgrade or billing-portal entry when applicable
 - enterprise/manual contract state when applicable
 
@@ -149,6 +176,7 @@ That surface shows:
 - effective plan and source
 - Stripe customer/subscription state
 - current usage-period summary
+- current spend and any customer-managed Pro spend cap
 - current override state
 - manual override controls for plan, included credits, retention, and notes
 
@@ -165,6 +193,7 @@ Latitude billing code owns:
 - explicit plan mapping from Stripe plan name to internal plan slug
 - credit accounting
 - free-cap enforcement
+- Pro spend-cap enforcement
 - overage calculations
 - retention entitlements
 - manual enterprise overrides

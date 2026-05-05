@@ -23,6 +23,7 @@ import {
   BillingUsagePeriodRepositoryLive,
   OutboxEventWriterLive,
   ScoreRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -69,6 +70,7 @@ const billingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  SettingsReaderLive,
   StripeSubscriptionLookupLive,
 )
 
@@ -96,12 +98,12 @@ export const draftAnnotate = async (input: {
   ).catch(() => ({ allowed: true }))
 
   if (!billingResult.allowed) {
-    logger.info("Flagger annotation blocked — no credits remaining", {
+    logger.info("Flagger annotation blocked — billing limit reached", {
       organizationId: input.organizationId,
       traceId: input.traceId,
       flaggerSlug: input.flaggerSlug,
     })
-    throw new Error("No credits remaining")
+    throw new Error("Billing limit reached for the current billing period")
   }
 
   return Effect.runPromise(

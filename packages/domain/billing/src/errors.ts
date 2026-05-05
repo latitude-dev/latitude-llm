@@ -15,7 +15,7 @@ export class NoCreditsRemainingError extends Data.TaggedError("NoCreditsRemainin
   readonly action: string
 }> {
   readonly httpStatus = 402
-  readonly httpMessage = "No credits remaining in current billing period"
+  readonly httpMessage = "Billing limit reached for the current billing period"
 }
 
 export class UsageEventAlreadyRecordedError extends Data.TaggedError("UsageEventAlreadyRecordedError")<{

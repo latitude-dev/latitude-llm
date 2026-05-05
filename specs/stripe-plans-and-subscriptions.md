@@ -31,6 +31,7 @@ Latitude uses a single credit system.
 - seats: unlimited
 - overage: `$20 / 10,000 credits`
 - behavior at limit: usage continues and overage is billed automatically
+- optional spending limit: customer-defined total period spend cap, inclusive of the base subscription and metered overage
 
 #### Enterprise
 
@@ -99,6 +100,7 @@ In scope:
 - application-owned usage metering and idempotent credit accounting
 - free-plan hard-cap enforcement
 - paid-plan overage accounting and Stripe reporting
+- customer-managed Pro spending limits and runtime enforcement
 - plan-aware retention configuration across telemetry storage
 - organization billing UI in `apps/web`
 - backoffice visibility and manual enterprise override controls
@@ -372,6 +374,25 @@ Stripe should invoice overage, but the app must remain the source of truth for:
 - overage credits
 - effective plan entitlements
 
+## Paid Plan Spending Limits
+
+Paid self-serve customers may optionally declare a maximum total spend for one billing period.
+
+For the current rollout, this applies to `pro` only.
+
+The system must:
+
+- store the configured amount as an organization-scoped setting
+- interpret it as a cap on `base subscription price + current period overage`
+- reject new billable work when the projected period spend would exceed the cap
+- allow the cap to be cleared so the org returns to normal overage continuation behavior
+
+Important semantics:
+
+- the minimum valid cap is the Pro base subscription price
+- enforcement belongs in the application-owned billing domain, not only in the UI
+- ingest remains request-level coarse, just like the free-plan pre-check
+
 ## Enterprise Handling
 
 Enterprise is manual-only.
@@ -457,7 +478,7 @@ Minimum UI responsibilities:
 - show included credits
 - show consumed credits
 - show overage credits and projected overage when applicable
-- show the credit-cost table for product actions
+- show current spend and any configured Pro spending limit when applicable
 - show upgrade CTA for free orgs
 - show billing portal CTA for self-serve paid orgs
 - show enterprise contact / contract state for enterprise orgs
@@ -471,6 +492,7 @@ Minimum responsibilities:
 - current effective plan
 - Stripe customer id and subscription state
 - current period usage summary
+- current spend and any configured customer-managed spending limit
 - manual enterprise override controls
 - custom included credits and retention overrides
 
@@ -483,6 +505,7 @@ Highest-risk billing tests are:
 - workflow retries do not double-charge eval generation
 - free-plan hard caps block LLM work after exhaustion
 - paid plans continue into overage
+- Pro spending limits block new billable work once the projected period spend crosses the configured cap
 - unknown Stripe plan names fail closed rather than mapping implicitly
 - usage period resolution is correct for free and paid plans
 - retention stamping feeds the correct TTL behavior
@@ -554,7 +577,7 @@ Highest-risk billing tests are:
 ### Phase 6 - Web And Backoffice Surfaces
 
 - [x] **P6-1**: Add a `/settings/billing` route and settings navigation entry.
-- [x] **P6-2**: Show effective plan, current period, included credits, used credits, overage, and action pricing in the billing UI.
+- [x] **P6-2**: Show effective plan, current period, included credits, used credits, overage, and spend visibility in the billing UI.
 - [x] **P6-3**: Add upgrade and billing-portal actions for self-serve plans.
 - [x] **P6-4**: Add enterprise contact / manual-contract state to the billing UI.
 - [x] **P6-5**: Add backoffice billing visibility and manual enterprise override controls.
@@ -575,11 +598,22 @@ Highest-risk billing tests are:
 
 - the billing system is covered at the correctness boundaries that would otherwise cause double-charging, under-charging, or plan-policy regressions
 
+### Phase 8 - Spending Limits
+
+- [x] **P8-1**: Add an organization-scoped Pro spending-limit setting that can be resolved alongside the effective billing plan.
+- [x] **P8-2**: Enforce the spending limit in the application-owned billing domain before new billable usage is recorded.
+- [x] **P8-3**: Expose spending-limit controls in `/settings/billing` and show spend-cap visibility in backoffice.
+- [x] **P8-4**: Add test coverage for the cap boundary and promote the durable behavior into `dev-docs/`.
+
+**Exit gate**:
+
+- Pro customers can self-serve a per-period spend cap, and billing enforcement blocks new chargeable work once the projected period spend would exceed it
+
 ---
 
-## Current Checkpoint (2026-05-05, Phase 7)
+## Current Checkpoint (2026-05-05, Phase 8)
 
-### Done (Phases 1-7 complete in code):
+### Done (Phases 1-8 complete in code):
 
 **New files created:**
 

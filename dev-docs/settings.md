@@ -2,11 +2,12 @@
 
 Reliability settings stay attached to owner entities. There is no standalone settings domain.
 
-Billing is the main exception for product surface placement: the settings area includes `/settings/billing`, but the billing rules and persistence model are documented separately in `./billing.md` because they are not stored in `organization.settings` or `projects.settings`.
+Billing is the main exception for product surface placement: the settings area includes `/settings/billing`, but the billing rules and runtime enforcement model are documented separately in `./billing.md`. Billing now also owns one organization-scoped settings field, `organization.settings.billing.spendingLimitCents`, for optional Pro spend caps.
 
 The settings model is intentionally phased:
 
-- MVP only needs organization/project `keepMonitoring`
+- MVP starts with organization/project `keepMonitoring`
+- billing adds `organization.settings.billing.spendingLimitCents` for customer-managed Pro spend caps
 - user-configurable provider/model execution is deferred to a post-MVP phase
 - user-scoped settings remain deferred until a concrete user preference exists
 
@@ -34,6 +35,9 @@ type ProjectSettings = {
 
 type OrganizationSettings = {
   keepMonitoring?: boolean // organization-wide default for post-resolution monitoring behavior
+  billing?: {
+    spendingLimitCents?: number // optional Pro-only spend cap including base subscription and metered overage
+  }
 }
 ```
 
@@ -57,6 +61,13 @@ Manual ignore behavior is separate:
 - `keepMonitoring` does not affect the manual ignore path
 
 Project flagger configuration does not live in `projects.settings`. It lives in the project-scoped `flaggers` table so users can enable or disable each provisioned flagger independently and inspect what each flagger does.
+
+The billing field is intentionally narrow:
+
+- it is organization-scoped, not project-scoped
+- it is used only for effective `pro` plans
+- it stores the cap in integer cents so the billing domain can enforce it without float rounding drift
+- it configures billing behavior but does not replace the application-owned billing tables that track usage periods, overage, or manual overrides
 
 ## Post-MVP Execution Settings
 
@@ -107,6 +118,7 @@ Organization scope owns the broadest reliability defaults.
 In MVP, that means:
 
 - `keepMonitoring`
+- `billing.spendingLimitCents` for optional Pro spend caps
 
 Post-MVP, it is also the home of shared provider execution configuration:
 

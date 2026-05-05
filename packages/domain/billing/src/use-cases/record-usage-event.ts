@@ -1,22 +1,11 @@
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { generateId } from "@domain/shared"
 import { Effect } from "effect"
-import { ACTION_CREDITS, type ChargeableAction, PRO_PLAN_CONFIG } from "../constants.ts"
+import { ACTION_CREDITS, type ChargeableAction, calculateOverageAmountMicrocents } from "../constants.ts"
 import type { BillingUsageEvent } from "../entities/billing-usage-event.ts"
 import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
-
-const CENT_TO_MICROCENTS = 1_000_000
-
-const calculateOverageAmountMicrocents = (planSlug: BillingUsagePeriod["planSlug"], overageCredits: number) => {
-  if (planSlug !== "pro") return 0
-
-  return Math.floor(
-    (overageCredits * PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MICROCENTS) /
-      PRO_PLAN_CONFIG.overageCreditsPerUnit,
-  )
-}
 
 export interface RecordUsageEventInput {
   readonly organizationId: OrganizationId
@@ -125,17 +114,18 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
 export interface CheckCreditAvailabilityInput {
   readonly organizationId: OrganizationId
   readonly action: ChargeableAction
+  readonly planSlug: BillingUsagePeriod["planSlug"]
   readonly periodStart: Date
   readonly periodEnd: Date
   readonly includedCredits: number
   readonly hardCapped: boolean
+  readonly priceCents: number | null
+  readonly spendingLimitCents: number | null
 }
 
 export const checkCreditAvailabilityUseCase = Effect.fn("billing.checkCreditAvailability")(function* (
   input: CheckCreditAvailabilityInput,
 ) {
-  if (!input.hardCapped) return true
-
   const credits = ACTION_CREDITS[input.action]
   const periodRepo = yield* BillingUsagePeriodRepository
   const period = yield* periodRepo.findByPeriod({
@@ -144,7 +134,22 @@ export const checkCreditAvailabilityUseCase = Effect.fn("billing.checkCreditAvai
     periodEnd: input.periodEnd,
   })
 
-  if (!period) return input.includedCredits >= credits
+  if (input.hardCapped) {
+    if (!period) return input.includedCredits >= credits
 
-  return period.consumedCredits + credits <= input.includedCredits
+    if (period.consumedCredits + credits > input.includedCredits) {
+      return false
+    }
+  }
+
+  if (input.spendingLimitCents === null || input.priceCents === null) {
+    return true
+  }
+
+  const projectedConsumed = (period?.consumedCredits ?? 0) + credits
+  const projectedOverage = Math.max(projectedConsumed - input.includedCredits, 0)
+  const projectedOverageAmountMicrocents = calculateOverageAmountMicrocents(input.planSlug, projectedOverage)
+  const projectedSpendMicrocents = input.priceCents * 1_000_000 + projectedOverageAmountMicrocents
+
+  return projectedSpendMicrocents <= input.spendingLimitCents * 1_000_000
 })

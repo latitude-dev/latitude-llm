@@ -3,8 +3,10 @@ import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import type { ChargeableAction } from "../constants.ts"
+import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
+import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
-import { recordUsageEventUseCase } from "./record-usage-event.ts"
+import { checkCreditAvailabilityUseCase, recordUsageEventUseCase } from "./record-usage-event.ts"
 import { resolveEffectivePlan } from "./resolve-effective-plan.ts"
 
 const log = createLogger("billing")
@@ -31,6 +33,18 @@ export interface MeterBillableActionResult {
   } | null
 }
 
+const toMeteredPeriod = (period: BillingUsagePeriod | null): MeterBillableActionResult["period"] => {
+  if (!period) return null
+
+  return {
+    start: period.periodStart,
+    end: period.periodEnd,
+    includedCredits: period.includedCredits,
+    consumedCredits: period.consumedCredits,
+    overageCredits: period.overageCredits,
+  }
+}
+
 export const meterBillableAction = Effect.fn("billing.meterBillableAction")(function* (
   input: MeterBillableActionInput,
 ) {
@@ -38,27 +52,46 @@ export const meterBillableAction = Effect.fn("billing.meterBillableAction")(func
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
 
   const orgPlan = yield* resolveEffectivePlan(input.organizationId)
+  const periodRepo = yield* BillingUsagePeriodRepository
+  const eventRepo = yield* BillingUsageEventRepository
 
-  if (input.skipIfBlocked && orgPlan.plan.hardCapped) {
-    const periodRepo = yield* BillingUsagePeriodRepository
+  const existingEvent = yield* eventRepo.findByKey(input.idempotencyKey)
+  if (existingEvent) {
     const current = yield* periodRepo.findByPeriod({
       organizationId: input.organizationId,
       periodStart: orgPlan.periodStart,
       periodEnd: orgPlan.periodEnd,
     })
-    const consumed = current?.consumedCredits ?? 0
-    if (consumed >= orgPlan.plan.includedCredits) {
+
+    return {
+      allowed: true,
+      period: toMeteredPeriod(current),
+    }
+  }
+
+  if (input.skipIfBlocked || orgPlan.plan.spendingLimitCents !== null) {
+    const current = yield* periodRepo.findByPeriod({
+      organizationId: input.organizationId,
+      periodStart: orgPlan.periodStart,
+      periodEnd: orgPlan.periodEnd,
+    })
+
+    const allowed = yield* checkCreditAvailabilityUseCase({
+      organizationId: input.organizationId,
+      action: input.action,
+      planSlug: orgPlan.plan.slug,
+      periodStart: orgPlan.periodStart,
+      periodEnd: orgPlan.periodEnd,
+      includedCredits: orgPlan.plan.includedCredits,
+      hardCapped: input.skipIfBlocked ? orgPlan.plan.hardCapped : false,
+      priceCents: orgPlan.plan.priceCents,
+      spendingLimitCents: orgPlan.plan.spendingLimitCents,
+    })
+
+    if (!allowed) {
       return {
         allowed: false,
-        period: current
-          ? {
-              start: current.periodStart,
-              end: current.periodEnd,
-              includedCredits: current.includedCredits,
-              consumedCredits: current.consumedCredits,
-              overageCredits: current.overageCredits,
-            }
-          : null,
+        period: toMeteredPeriod(current),
       }
     }
   }
@@ -77,7 +110,6 @@ export const meterBillableAction = Effect.fn("billing.meterBillableAction")(func
   }).pipe(
     Effect.catchTag("UsageEventAlreadyRecordedError", () =>
       Effect.gen(function* () {
-        const periodRepo = yield* BillingUsagePeriodRepository
         const current = yield* periodRepo.findByPeriod({
           organizationId: input.organizationId,
           periodStart: orgPlan.periodStart,

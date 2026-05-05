@@ -1,8 +1,8 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { Badge, Button, Container, Text, useToast } from "@repo/ui"
-import { createFileRoute } from "@tanstack/react-router"
+import { Badge, Button, Container, Input, Text, useToast } from "@repo/ui"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
-import { getBillingOverview } from "../../../domains/billing/billing.functions.ts"
+import { getBillingOverview, updateBillingSpendingLimit } from "../../../domains/billing/billing.functions.ts"
 import { AUTH_BASE_PATH } from "../../../lib/auth-config.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
@@ -22,6 +22,12 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 })
 
 const formatCredits = (value: number) => (Number.isFinite(value) ? numberFormatter.format(value) : "Custom contract")
+
+const formatCurrency = (dollars: number) => currencyFormatter.format(dollars)
+
+const formatCurrencyFromCents = (cents: number) => formatCurrency(cents / 100)
+
+const formatCurrencyFromMicrocents = (microcents: number) => formatCurrency(microcents / 100_000_000)
 
 const formatPeriodDate = (value: string) =>
   new Date(value).toLocaleDateString("en-US", {
@@ -86,7 +92,7 @@ function BillingOverviewCards() {
         : "Unlimited / custom allowance",
     },
     {
-      label: "Overage",
+      label: "Overage this period",
       value: numberFormatter.format(overview.overageCredits),
       detail: formatOverageAmount(overview.overageAmountMicrocents),
     },
@@ -214,6 +220,112 @@ function BillingActionsSection() {
   return freeState
 }
 
+function SpendingLimitSection() {
+  const overview = Route.useLoaderData({ select: (data) => data.overview })
+  const router = useRouter()
+  const { toast } = useToast()
+  const [spendingLimit, setSpendingLimit] = useState(
+    overview.spendingLimitCents === null ? "" : (overview.spendingLimitCents / 100).toFixed(2),
+  )
+  const [pendingAction, setPendingAction] = useState<"save" | "clear" | null>(null)
+
+  if (overview.planSlug !== "pro" || overview.currentSpendMicrocents === null) {
+    return null
+  }
+
+  const saveSpendingLimit = async () => {
+    setPendingAction("save")
+    try {
+      await updateBillingSpendingLimit({
+        data: {
+          spendingLimitDollars: spendingLimit.trim() ? Number(spendingLimit) : null,
+        },
+      })
+      await router.invalidate()
+      toast({ description: spendingLimit.trim() ? "Spending limit updated" : "Spending limit cleared" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const clearSpendingLimit = async () => {
+    setPendingAction("clear")
+    try {
+      await updateBillingSpendingLimit({ data: { spendingLimitDollars: null } })
+      await router.invalidate()
+      toast({ description: "Spending limit cleared" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  return (
+    <div
+      key={overview.spendingLimitCents ?? "no-limit"}
+      className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6"
+    >
+      <div className="flex flex-col gap-2">
+        <Text.H4 weight="bold">Spending limit</Text.H4>
+        <Text.H6 color="foregroundMuted">
+          Set a total spend cap for this billing period, including your{" "}
+          {formatCurrencyFromCents(PRO_PLAN_CONFIG.priceCents)}
+          /month base subscription. New billable actions stop once the projected period spend would exceed this cap.
+        </Text.H6>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background p-4">
+          <Text.H6 color="foregroundMuted">Current spend</Text.H6>
+          <Text.H4 weight="bold">{formatCurrencyFromMicrocents(overview.currentSpendMicrocents)}</Text.H4>
+          <Text.H6 color="foregroundMuted">
+            Overage billed so far: {formatOverageAmount(overview.overageAmountMicrocents)}
+          </Text.H6>
+        </div>
+        <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background p-4">
+          <Text.H6 color="foregroundMuted">Current cap</Text.H6>
+          <Text.H4 weight="bold">
+            {overview.spendingLimitCents === null ? "No cap" : formatCurrencyFromCents(overview.spendingLimitCents)}
+          </Text.H4>
+          <Text.H6 color="foregroundMuted">
+            {overview.spendingLimitCents === null
+              ? "Usage can continue into metered overage."
+              : `Remaining headroom: ${formatCurrencyFromCents(
+                  Math.max(overview.spendingLimitCents - Math.ceil(overview.currentSpendMicrocents / 1_000_000), 0),
+                )}`}
+          </Text.H6>
+        </div>
+      </div>
+
+      <Input
+        type="number"
+        step="0.01"
+        min={(PRO_PLAN_CONFIG.priceCents / 100).toFixed(2)}
+        label="Spend limit (USD)"
+        value={spendingLimit}
+        onChange={(event) => setSpendingLimit(event.target.value)}
+        placeholder="Leave empty to remove the cap"
+      />
+
+      <div className="flex flex-wrap gap-3">
+        <Button disabled={pendingAction !== null} onClick={() => void saveSpendingLimit()}>
+          {pendingAction === "save" ? "Saving..." : "Save spending limit"}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={pendingAction !== null || overview.spendingLimitCents === null}
+          onClick={() => void clearSpendingLimit()}
+        >
+          {pendingAction === "clear" ? "Clearing..." : "Clear limit"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function BillingSettingsPage() {
   const overview = Route.useLoaderData({ select: (data) => data.overview })
 
@@ -235,6 +347,7 @@ function BillingSettingsPage() {
 
       <BillingOverviewCards />
       <BillingActionsSection />
+      <SpendingLimitSection key={overview.spendingLimitCents ?? "no-limit"} />
     </Container>
   )
 }
