@@ -8,7 +8,7 @@ import { getSession } from "../domains/sessions/session.functions.ts"
 import { getSupportUserIdentity } from "../domains/support/support.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
-import { resetPostHog } from "../lib/posthog/posthog-client.ts"
+import { isLatitudeStaffEmail, resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
@@ -250,6 +250,7 @@ function AuthenticatedLayout() {
           userName={user.name}
           organizationId={organizationId}
           organizationName={org?.name}
+          excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
         />
         {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
         {isProjectOnboarding ? null : <NavHeader />}
