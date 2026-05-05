@@ -3,7 +3,6 @@ import { resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { persistDraftAnnotationInputSchema } from "../helpers/annotation-draft-write-schema.ts"
-import { writeDraftAnnotationUseCase } from "./write-draft-annotation.ts"
 import { writePublishedAnnotationUseCase } from "./write-published-annotation.ts"
 
 /** The public annotations API always writes scores with `sourceId = "API"`. */
@@ -13,9 +12,8 @@ const PUBLIC_API_SOURCE_ID = "API" as const
  * Public-API annotation submission payload.
  *
  * Reuses `persistDraftAnnotationInputSchema` for annotator-authored score
- * fields (value, passed, feedback, anchor, optional `id` for upsert) but
- * replaces the flat `traceId` with the `trace` discriminated union and adds
- * the `draft` opt-in (default `false` = publish immediately).
+ * fields (value, passed, feedback, anchor, optional `id` for upsert) and
+ * replaces the flat `traceId` with the `trace` discriminated union.
  *
  * Stripped from the accepted body:
  *   - `projectId` — comes from the URL.
@@ -26,12 +24,15 @@ const PUBLIC_API_SOURCE_ID = "API" as const
  *     span defaulted to the last LLM completion). Internal callers can still
  *     pass concrete values via the lower-level `writeDraftAnnotationUseCase`
  *     / `writePublishedAnnotationUseCase` primitives.
+ *
+ * The public API does not expose draft state: every API-submitted annotation
+ * is written as published. Internal callers that need a draft path go through
+ * `writeDraftAnnotationUseCase` directly (used by the managed UI).
  */
 export const submitApiAnnotationInputSchema = persistDraftAnnotationInputSchema
   .omit({ projectId: true, sourceId: true, sessionId: true, traceId: true, spanId: true })
   .extend({
     trace: traceRefSchema,
-    draft: z.boolean().default(false),
   })
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
@@ -55,15 +56,10 @@ type SubmitApiAnnotationRequest = z.input<typeof submitApiAnnotationInputSchema>
 /**
  * Public-API entry point for creating an annotation.
  *
- * Resolves the target trace (by id or by filter set) and then branches on the
- * caller-provided `draft` flag:
- *
- * - `draft: false` (default) → `writePublishedAnnotationUseCase` (writes with
- *   `draftedAt = null` and emits `ScoreCreated` with `status: "published"` in
- *   the same transaction, so the annotation enters issue discovery immediately).
- * - `draft: true` → `writeDraftAnnotationUseCase` (writes with `draftedAt` set;
- *   publication is later driven by the debounced `annotation-scores:publish`
- *   task path used by the managed UI).
+ * Resolves the target trace (by id or by filter set) and writes the annotation
+ * via `writePublishedAnnotationUseCase` — `draftedAt` is always `null` and
+ * `ScoreCreated` is emitted with `status: "published"` in the same
+ * transaction, so the annotation enters issue discovery immediately.
  *
  * `sourceId` is always forced to `"API"` for this entry point; the lower-level
  * `writeDraftAnnotationUseCase` / `writePublishedAnnotationUseCase` primitives
@@ -90,7 +86,7 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
   // sessionId/spanId are intentionally null so the downstream resolver lifts
   // the session from the trace and pins the annotation to the trace's last
   // LLM completion span — the public API doesn't accept overrides for these.
-  const commonInput = {
+  return yield* writePublishedAnnotationUseCase({
     id: parsed.id,
     projectId: input.projectId,
     sourceId: PUBLIC_API_SOURCE_ID,
@@ -105,9 +101,5 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
     feedback: parsed.feedback,
     anchor: parsed.anchor,
     organizationId: input.organizationId,
-  }
-
-  return parsed.draft
-    ? yield* writeDraftAnnotationUseCase(commonInput)
-    : yield* writePublishedAnnotationUseCase(commonInput)
+  })
 })

@@ -15,7 +15,6 @@ import type * as LatitudeApi from "../../../../index.js";
  *     }
  */
 export interface CreateAnnotationBody {
-    id?: string;
     simulationId?: string;
     issueId?: string;
     annotatorId?: string;
@@ -24,7 +23,6 @@ export interface CreateAnnotationBody {
     feedback: string;
     anchor?: CreateAnnotationBody.Anchor;
     trace: LatitudeApi.TraceRef;
-    draft?: boolean;
 }
 
 export namespace CreateAnnotationBody {

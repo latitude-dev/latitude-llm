@@ -23,7 +23,7 @@ export class AnnotationsClient {
     }
 
     /**
-     * Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).
+     * Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). Annotations created via the public API are always published immediately.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateAnnotationBody} request

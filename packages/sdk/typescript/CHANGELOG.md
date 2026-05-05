@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.2] - 2026-05-05
+
+### Breaking Changes
+
+- **`client.annotations.create` no longer accepts `id` or `draft` in the body.** The public annotations API is creation-only and always publishes immediately:
+  - `id` is gone — every submission creates a new annotation; client-supplied ids are no longer accepted. Editing an existing annotation is not exposed through the public API.
+  - `draft` is gone — every API-submitted annotation is written with `draftedAt = null` and emits `ScoreCreated` with `status: "published"`. Draft state is reserved for the managed UI's editing flow.
+
+  ```diff
+  - await client.annotations.create("my-project", {
+  -   value: 1, passed: true, feedback: "…",
+  -   trace: { by: "id", id: "…" },
+  -   draft: false,
+  - })
+  + await client.annotations.create("my-project", {
+  +   value: 1, passed: true, feedback: "…",
+  +   trace: { by: "id", id: "…" },
+  +   // `draft` is no longer accepted — annotations are always published.
+  + })
+  ```
+
 ## [6.0.0-alpha.1] - 2026-05-05
 
 ### Breaking Changes

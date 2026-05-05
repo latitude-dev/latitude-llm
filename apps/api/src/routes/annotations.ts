@@ -27,9 +27,12 @@ import type { OrganizationScopedEnv } from "../types.ts"
 // `trace` is overridden so the named `TraceRefSchema` is what the OpenAPI emitter
 // sees — the un-named domain version inlines the discriminated union and trips
 // a Fern name-mangling bug. See `../openapi/schemas.ts` for details.
+//
+// `id` is dropped: the public API doesn't expose annotation update — every
+// submission creates a new annotation.
 const RequestSchema = z
   .object({
-    ...submitApiAnnotationInputSchema.shape,
+    ...submitApiAnnotationInputSchema.omit({ id: true }).shape,
     trace: TraceRefSchema,
   })
   .openapi("CreateAnnotationBody")
@@ -53,7 +56,7 @@ const route = createRoute({
   tags: ["Annotations"],
   summary: "Create project annotation",
   description:
-    'Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).',
+    'Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).',
   security: PROTECTED_SECURITY,
   request: {
     params: ProjectParamsSchema,

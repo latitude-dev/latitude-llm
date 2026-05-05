@@ -921,11 +921,6 @@
       "CreateAnnotationBody": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24
-          },
           "simulationId": {
             "type": [
               "string",
@@ -994,10 +989,6 @@
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
-          },
-          "draft": {
-            "type": "boolean",
-            "default": false
           }
         },
         "required": [
@@ -1524,7 +1515,7 @@
           "Annotations"
         ],
         "summary": "Create project annotation",
-        "description": "Creates a human-reviewed annotation score. Published by default; pass `draft: true` to keep the annotation editable before publication. The target trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required).",
+        "description": "Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required). Annotations created via the public API are always published immediately.",
         "security": [
           {
             "ApiKeyAuth": []

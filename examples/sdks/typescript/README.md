@@ -1,12 +1,11 @@
 # `@latitude-data/sdk` — TypeScript example
 
 Minimal example that exercises the workspace-linked `@latitude-data/sdk`
-against a running Latitude API — local or production. Covers three flows:
+against a running Latitude API — local or production:
 
 | Script | What it shows |
 | --- | --- |
-| `pnpm annotate:byTraceId` | `client.annotations.create` by explicit `trace.id` (published by default) |
-| `pnpm annotate:draft` | Same, with `draft: true` — the server keeps `draftedAt` set until the publish job runs |
+| `pnpm annotate:byTraceId` | `client.annotations.create` by explicit `trace.id` (always published) |
 | `pnpm annotate:byFilter` | Resolve the trace by a `FilterSet` instead of an id (exactly one match required) |
 | `pnpm apiKeys:list` | `client.apiKeys.list` — lists API keys for the org (tokens omitted from the list response) |
 
@@ -95,8 +94,7 @@ Turbo, in a CI job, or when you don't want to `cd`).
 From this directory:
 
 ```bash
-pnpm annotate:byTraceId   # by-id, published
-pnpm annotate:draft       # by-id, draft
+pnpm annotate:byTraceId   # by-id
 pnpm annotate:byFilter    # by-filter (requires LATITUDE_SESSION_ID)
 pnpm apiKeys:list         # list API keys for the organization
 ```
@@ -105,7 +103,6 @@ From the repo root:
 
 ```bash
 pnpm --filter @examples/sdk-typescript annotate:byTraceId
-pnpm --filter @examples/sdk-typescript annotate:draft
 pnpm --filter @examples/sdk-typescript annotate:byFilter
 pnpm --filter @examples/sdk-typescript apiKeys:list
 ```

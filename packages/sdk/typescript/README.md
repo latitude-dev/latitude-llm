@@ -96,20 +96,6 @@ await client.annotations.create("my-project", {
 });
 ```
 
-### Creating a draft annotation
-
-Drafts stay editable until publication. The default is `draft: false` (publish immediately).
-
-```typescript
-await client.annotations.create("my-project", {
-  draft: true,
-  value: 0,
-  passed: false,
-  feedback: "Needs review.",
-  trace: { by: "id", id: "…" },
-});
-```
-
 ### Custom scores
 
 Pass a `trace` ref to associate the score with a target trace, or omit it for an uninstrumented score. `trace` accepts the same `{ by: "id", id }` / `{ by: "filters", filters }` shape as annotations; when present, `sessionId` and `spanId` are auto-resolved from the trace.
