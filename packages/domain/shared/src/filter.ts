@@ -15,6 +15,12 @@ export const FILTER_OPERATORS = [
   "notIn",
   "contains",
   "notContains",
+  /**
+   * "Field is at or above the Pth percentile of its distribution within the project."
+   * Value is a number in [0, 100]. Adapters resolve the percentile against the project's
+   * trace distribution (ignoring other user filters, for stability) and apply it as `>=`.
+   */
+  "gtePercentile",
 ] as const
 
 export type FilterOperator = (typeof FILTER_OPERATORS)[number]
@@ -79,10 +85,22 @@ const filterValueSchema = z.union([
   z.array(z.union([z.string().max(MAX_VALUE_LENGTH), z.number()])).max(MAX_ARRAY_LENGTH),
 ])
 
-export const filterConditionSchema = z.object({
-  op: z.enum(FILTER_OPERATORS),
-  value: filterValueSchema,
-})
+export const filterConditionSchema = z
+  .object({
+    op: z.enum(FILTER_OPERATORS),
+    value: filterValueSchema,
+  })
+  .superRefine((cond, ctx) => {
+    if (cond.op === "gtePercentile") {
+      if (typeof cond.value !== "number" || !Number.isFinite(cond.value) || cond.value < 0 || cond.value > 100) {
+        ctx.addIssue({
+          code: "custom",
+          message: "gtePercentile value must be a number in [0, 100]",
+          path: ["value"],
+        })
+      }
+    }
+  })
 
 function isValidMetadataKey(key: string): boolean {
   if (!key.startsWith("metadata.")) return true

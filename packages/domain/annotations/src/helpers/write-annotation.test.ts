@@ -25,7 +25,13 @@ const baseInput = {
 
 describe("writeAnnotation", () => {
   it("persists anchor metadata for a new annotation from flat fields", async () => {
-    const { layer } = createTestLayers()
+    const sliceSource = "The refund policy says no returns after 30 days."
+    const allMessages: GenAIMessage[] = [
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+      { role: "assistant", parts: [{ type: "text", content: "hello" }] },
+      { role: "assistant", parts: [{ type: "text", content: sliceSource }] },
+    ]
+    const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const score = await Effect.runPromise(
       writeAnnotation(

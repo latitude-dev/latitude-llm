@@ -42,7 +42,7 @@
     "tsx": "catalog:"
   },
   "devDependencies": {
-    "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "tsdown": "catalog:"
   }
 }

@@ -116,10 +116,11 @@ function WelcomePage() {
     try {
       await updateUser({ data: { name: userName } })
       const organization = await createOrganization({ data: { name: organizationName } })
-      await router.navigate({
-        to: "/projects/$projectSlug/onboarding",
-        params: { projectSlug: organization.defaultProject.slug },
+      await setActiveOrganization({
+        data: { organizationId: organization.id, organizationSlug: organization.slug },
       })
+      // Full navigation ensures project onboarding reads the freshly-updated auth session.
+      window.location.href = `/projects/${organization.defaultProject.slug}/onboarding`
     } catch (err) {
       setError(toUserMessage(err))
       setIsSubmitting(false)

@@ -1,5 +1,5 @@
 import type { ChSqlClient, DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
 import type { RowNotFoundError } from "../errors.ts"
 
@@ -90,6 +90,6 @@ export interface DatasetRowRepositoryShape {
   }): Effect.Effect<number, RepositoryError, ChSqlClient>
 }
 
-export class DatasetRowRepository extends ServiceMap.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(
+export class DatasetRowRepository extends Context.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(
   "@domain/datasets/DatasetRowRepository",
 ) {}

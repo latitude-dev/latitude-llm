@@ -172,7 +172,7 @@ type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
   Effect.gen(function* () {
     const DEFAULT_CONCURRENCY = 10
-    const services = yield* Effect.services<never>()
+    const services = yield* Effect.context<never>()
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, AnyTaskHandlers>()
     const concurrencyOverrides = new Map<QueueName, number>()

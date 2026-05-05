@@ -1,10 +1,18 @@
 import { exportSelectionSchema } from "@domain/exports"
-import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import {
+  filterSetSchema,
+  OrganizationId,
+  PERCENTILE_TRACE_FILTER_FIELDS,
+  type PercentileTraceFilterField,
+  ProjectId,
+  TraceId,
+} from "@domain/shared"
 import type {
   Trace,
   TraceCohortSummary,
   TraceDetail,
   TraceDistinctColumn,
+  TraceDistribution,
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
@@ -416,6 +424,33 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
     )
 
     return { type: "enqueued" }
+  })
+
+export const getTraceDistribution = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      field: z.enum(PERCENTILE_TRACE_FILTER_FIELDS),
+    }),
+  )
+  .handler(async ({ data }): Promise<TraceDistribution> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.getDistribution({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          field: data.field as PercentileTraceFilterField,
+        })
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
   })
 
 export const getTraceDistinctValues = createServerFn({ method: "GET" })

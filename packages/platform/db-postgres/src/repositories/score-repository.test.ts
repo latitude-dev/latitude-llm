@@ -18,6 +18,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
+import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -27,6 +28,8 @@ import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { ScoreRepositoryLive } from "./score-repository.ts"
+
+silenceLoggerInTests()
 
 const evaluationSourceId = "eeeeeeeeeeeeeeeeeeeeeeee"
 const customProjectId = ProjectId("pppppppppppppppppppppppp")
@@ -622,6 +625,82 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(customSourcePage.items).toHaveLength(1)
     expect(customSourcePage.items[0]?.source).toBe("custom")
     expect(customSourcePage.items[0]?.sourceId).toBe("api-source")
+  })
+
+  it("counts annotation scores by trace and sentiment", async () => {
+    const organizationId = "cccccccccccccccccccccccc"
+    const positiveTraceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    const mixedTraceId = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        source: "annotation",
+        sourceId: "UI",
+        traceId: positiveTraceId,
+        value: 0.9,
+        passed: true,
+        feedback: "Looks good",
+        metadata: { rawFeedback: "Looks good" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        source: "annotation",
+        sourceId: "UI",
+        traceId: mixedTraceId,
+        value: 0.1,
+        passed: false,
+        feedback: "Bad answer",
+        metadata: { rawFeedback: "Bad answer" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        source: "annotation",
+        sourceId: "UI",
+        traceId: mixedTraceId,
+        value: 0.8,
+        passed: true,
+        feedback: "Draft positive",
+        metadata: { rawFeedback: "Draft positive" },
+        draftedAt: new Date("2026-03-24T15:00:00.000Z"),
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        source: "custom",
+        sourceId: "api-source",
+        traceId: mixedTraceId,
+        value: 0.99,
+        passed: true,
+        feedback: "Custom score",
+        metadata: { channel: "api" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const counts = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countAnnotationsByTraceIds({
+          projectId: annotationProjectId,
+          traceIds: [positiveTraceId, mixedTraceId, TraceId("cccccccccccccccccccccccccccccccc")],
+          options: { draftMode: "include" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const countsByTraceId = new Map(counts.map((count) => [count.traceId, count]))
+
+    expect(countsByTraceId.get(positiveTraceId)).toMatchObject({ positiveCount: 1, negativeCount: 0 })
+    expect(countsByTraceId.get(mixedTraceId)).toMatchObject({ positiveCount: 1, negativeCount: 1 })
+    expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
   it("findPublishedSystemAnnotationByTraceAndFeedback finds existing system annotation score", async () => {

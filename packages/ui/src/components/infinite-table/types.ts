@@ -5,6 +5,11 @@ import type { CheckedState } from "../checkbox/checkbox.tsx"
 export interface InfiniteTableColumn<T> {
   key: string
   header: string
+  /**
+   * Optional tooltip content shown when hovering the header label. Useful for
+   * explaining why an aggregate is omitted, what a unit means, etc.
+   */
+  headerTooltip?: ReactNode
   /** `rowIndex` is the zero-based position of the row in the current `data` array (stable across virtualized windows). */
   render: (row: T, rowIndex: number) => ReactNode
   align?: "start" | "end"
@@ -18,6 +23,8 @@ export interface InfiniteTableColumn<T> {
   renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
   /** Whether to apply text ellipsis overflow on the cell. Defaults to `true`. */
   ellipsis?: boolean
+  /** Optional className applied to each body cell for this column. */
+  cellClassName?: string
 }
 
 export interface InfiniteTableSelection {

@@ -615,15 +615,16 @@ const seedScores: Seeder = {
     const built = buildAllAnalyticsRows(ctx.scope)
     return insertJsonEachRow(ctx.client, "scores", built.all).pipe(
       Effect.tap(() =>
-        Effect.sync(() =>
+        Effect.sync(() => {
+          if (ctx.quiet) return
           console.log(
             `  -> scores: ${built.all.length} analytics rows (${built.lifecycleAnalyticsRows.length} lifecycle, ${
               built.issue1AnnotationAnalyticsRows.length +
               built.issue2AnnotationAnalyticsRows.length +
               built.issue3AnnotationAnalyticsRows.length
             } annotations, ${built.issueOccurrenceAnalyticsRows.length} issue occurrences, ${built.alignmentAnalyticsRows.length} alignment, ${built.simulationAnalyticsRows.length} simulation, ${built.uiPolishAnalyticsRows.length} UI polish demo)`,
-          ),
-        ),
+          )
+        }),
       ),
     )
   },

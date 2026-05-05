@@ -1,9 +1,12 @@
 import { WorkflowAlreadyStartedError } from "@domain/queue"
+import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import type { Client } from "@temporalio/client"
 import { Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Cause, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { createTemporalClientEffect, createWorkflowStarter, TemporalConnectionError } from "./client.ts"
+
+silenceLoggerInTests()
 
 describe("createTemporalClientEffect", () => {
   it("maps connection failures to TemporalConnectionError", async () => {

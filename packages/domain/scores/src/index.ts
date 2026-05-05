@@ -62,6 +62,7 @@ export {
   ScoreRepository,
   type ScoreRepositoryShape,
   scoreDraftModeSchema,
+  type TraceAnnotationCounts,
 } from "./ports/score-repository.ts"
 export { deleteScoreAnalyticsUseCase } from "./use-cases/delete-score-analytics.ts"
 export {

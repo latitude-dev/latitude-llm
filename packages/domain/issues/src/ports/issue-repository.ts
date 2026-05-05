@@ -1,5 +1,5 @@
 import type { IssueId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 
 export interface IssueListPage {
@@ -30,6 +30,6 @@ export interface IssueRepositoryShape {
   list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError, SqlClient>
 }
 
-export class IssueRepository extends ServiceMap.Service<IssueRepository, IssueRepositoryShape>()(
+export class IssueRepository extends Context.Service<IssueRepository, IssueRepositoryShape>()(
   "@domain/issues/IssueRepository",
 ) {}

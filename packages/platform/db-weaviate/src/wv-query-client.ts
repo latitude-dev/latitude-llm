@@ -1,5 +1,5 @@
 import { type OrganizationId, type RepositoryError, toRepositoryError } from "@domain/shared"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Context, Effect, Layer } from "effect"
 import type { WeaviateClient } from "weaviate-client"
 
 interface WvQueryClientShape {
@@ -9,7 +9,7 @@ interface WvQueryClientShape {
   ) => Effect.Effect<T, RepositoryError>
 }
 
-export class WvQueryClient extends ServiceMap.Service<WvQueryClient, WvQueryClientShape>()(
+export class WvQueryClient extends Context.Service<WvQueryClient, WvQueryClientShape>()(
   "@platform/db-weaviate/WvQueryClient",
 ) {}
 

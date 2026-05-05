@@ -1,8 +1,11 @@
-import { AI, AIEmbed, AIError, AIGenerate, AIRerank, type GenerateInput } from "@domain/ai"
+import { AI, AIEmbed, AIGenerate, AIRerank, type GenerateInput } from "@domain/ai"
 import type { RedisClient } from "@platform/cache-redis"
+import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createAiLayer, withAi } from "./with-ai.ts"
+
+silenceLoggerInTests()
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -171,14 +174,15 @@ describe("withAi", () => {
     })
   })
 
-  it("maps cache read failures into AIError", async () => {
+  it("treats cache read failures as a cache miss", async () => {
+    const embedCalls = { count: 0 }
     const redis = createRedisClient({
       get: async () => {
         throw new Error("ECONNREFUSED")
       },
     })
 
-    const ai = await Effect.runPromise(getAI(createAiLayer(embedLayer({ count: 0 }), redis)))
+    const ai = await Effect.runPromise(getAI(createAiLayer(embedLayer(embedCalls), redis)))
 
     await expect(
       Effect.runPromise(
@@ -188,6 +192,31 @@ describe("withAi", () => {
           dimensions: 256,
         }),
       ),
-    ).rejects.toBeInstanceOf(AIError)
+    ).resolves.toEqual({ embedding: [3, 4] })
+
+    expect(embedCalls.count).toBe(1)
+  })
+
+  it("ignores cache write failures after a successful provider call", async () => {
+    const embedCalls = { count: 0 }
+    const redis = createRedisClient({
+      set: async () => {
+        throw new Error("ECONNREFUSED")
+      },
+    })
+
+    const ai = await Effect.runPromise(getAI(createAiLayer(embedLayer(embedCalls), redis)))
+
+    await expect(
+      Effect.runPromise(
+        ai.embed({
+          text: "hello",
+          model: "voyage-3-large",
+          dimensions: 256,
+        }),
+      ),
+    ).resolves.toEqual({ embedding: [3, 4] })
+
+    expect(embedCalls.count).toBe(1)
   })
 })

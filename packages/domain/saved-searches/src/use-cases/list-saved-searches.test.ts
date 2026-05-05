@@ -42,7 +42,7 @@ describe("listSavedSearches", () => {
     const result = await Effect.runPromise(
       listSavedSearches({ projectId: PROJECT_ID }).pipe(Effect.provide(makeLayer(seed))),
     )
-    expect(result.items.map((row) => row.slug)).toEqual(["newer", "older"])
+    expect(result.items.map((row: SavedSearch) => row.slug)).toEqual(["newer", "older"])
   })
 
   it("filters by assignedUserId", async () => {
@@ -62,7 +62,7 @@ describe("listSavedSearches", () => {
     const result = await Effect.runPromise(
       listSavedSearches({ projectId: PROJECT_ID, assignedUserId: ASSIGNEE }).pipe(Effect.provide(makeLayer(seed))),
     )
-    expect(result.items.map((row) => row.slug)).toEqual(["mine"])
+    expect(result.items.map((row: SavedSearch) => row.slug)).toEqual(["mine"])
   })
 
   it("isolates by project", async () => {
@@ -82,6 +82,6 @@ describe("listSavedSearches", () => {
     const result = await Effect.runPromise(
       listSavedSearches({ projectId: PROJECT_ID }).pipe(Effect.provide(makeLayer(seed))),
     )
-    expect(result.items.map((row) => row.slug)).toEqual(["current-project"])
+    expect(result.items.map((row: SavedSearch) => row.slug)).toEqual(["current-project"])
   })
 })

@@ -9,7 +9,7 @@ import type {
   SqlClient,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
@@ -27,6 +27,12 @@ export interface ScoreListPage {
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
+}
+
+export interface TraceAnnotationCounts {
+  readonly traceId: TraceId
+  readonly positiveCount: number
+  readonly negativeCount: number
 }
 
 export interface ScoreRepositoryShape {
@@ -75,6 +81,11 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  countAnnotationsByTraceIds(input: {
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly options?: Pick<ScoreListOptions, "draftMode">
+  }): Effect.Effect<readonly TraceAnnotationCounts[], RepositoryError, SqlClient>
   listBySessionId(input: {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
@@ -97,6 +108,6 @@ export interface ScoreRepositoryShape {
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
 }
 
-export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(
+export class ScoreRepository extends Context.Service<ScoreRepository, ScoreRepositoryShape>()(
   "@domain/scores/ScoreRepository",
 ) {}

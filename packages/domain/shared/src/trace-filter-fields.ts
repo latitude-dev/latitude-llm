@@ -6,6 +6,7 @@ export interface TraceFilterField {
   readonly label: string
   readonly placeholder?: string
   readonly tooltip?: string
+  readonly percentile?: boolean // Numeric fields with this flag also support `gtePercentile` filtering
 }
 
 export const TRACE_FILTER_FIELDS = [
@@ -19,9 +20,21 @@ export const TRACE_FILTER_FIELDS = [
   { field: "models", type: "multiSelect", label: "Models" },
   { field: "providers", type: "multiSelect", label: "Providers" },
   { field: "serviceNames", type: "multiSelect", label: "Services" },
-  { field: "duration", type: "numberRange", label: "Duration (ns)" },
-  { field: "ttft", type: "numberRange", label: "TTFT (ns)", tooltip: "Time to first token, measured in nanoseconds." },
-  { field: "cost", type: "numberRange", label: "Cost (microcents)" },
+  { field: "duration", type: "numberRange", label: "Duration (ns)", percentile: true },
+  {
+    field: "ttft",
+    type: "numberRange",
+    label: "TTFT (ns)",
+    tooltip: "Time to first token, measured in nanoseconds.",
+    percentile: true,
+  },
+  {
+    field: "cost",
+    type: "numberRange",
+    label: "Cost (µ$)",
+    tooltip: "Generation cost, measured in microcents.",
+    percentile: true,
+  },
   { field: "spanCount", type: "numberRange", label: "Span Count" },
   { field: "errorCount", type: "numberRange", label: "Error Count" },
   { field: "tokensInput", type: "numberRange", label: "Tokens Input" },
@@ -29,6 +42,19 @@ export const TRACE_FILTER_FIELDS = [
 ] as const satisfies readonly TraceFilterField[]
 
 export type TraceFilterFieldName = (typeof TRACE_FILTER_FIELDS)[number]["field"]
+
+/**
+ * Trace fields that support `gtePercentile` filtering.
+ * Listed explicitly so the union type stays a tight literal — adding a new
+ * percentile-eligible field requires touching this list (and the field above
+ * with `percentile: true`).
+ */
+export const PERCENTILE_TRACE_FILTER_FIELDS = ["duration", "ttft", "cost"] as const
+
+export type PercentileTraceFilterField = (typeof PERCENTILE_TRACE_FILTER_FIELDS)[number]
+
+export const isPercentileTraceFilterField = (value: string): value is PercentileTraceFilterField =>
+  (PERCENTILE_TRACE_FILTER_FIELDS as readonly string[]).includes(value)
 
 export const STATUS_OPTIONS = ["ok", "error", "unset"] as const
 export type TraceStatus = (typeof STATUS_OPTIONS)[number]

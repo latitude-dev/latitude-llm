@@ -64,6 +64,18 @@ const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIEr
     ),
   )
 
+const readCachedValue = (cache: CacheStoreShape, key: string) =>
+  cache.get(key).pipe(
+    Effect.tapError((error) => Effect.logWarning("AI cache read failed; treating as cache miss", error)),
+    Effect.orElseSucceed(() => null),
+  )
+
+const writeCachedValue = (cache: CacheStoreShape, key: string, value: string) =>
+  cache.set(key, value, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS }).pipe(
+    Effect.tapError((error) => Effect.logWarning("AI cache write failed; continuing without cache", error)),
+    Effect.orElseSucceed(() => undefined),
+  )
+
 /**
  * Applies cache-aside behavior to an existing `AI` implementation.
  *
@@ -84,7 +96,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
       const { schema: _, telemetry: _telemetry, ...hashable } = input
       const key = yield* cacheKey("generate", hashable)
 
-      const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
+      const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {
         return yield* Effect.try({
           try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached) as GenerateResult<T>,
@@ -97,9 +109,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
         try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(result as GenerateResult<unknown>),
         catch: toAIError("write"),
       })
-      yield* cache
-        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
-        .pipe(Effect.mapError(toAIError("write")))
+      yield* writeCachedValue(cache, key, encoded)
       return result
     }) as Effect.Effect<GenerateResult<T>, AIError | AICredentialError, never>,
 
@@ -108,7 +118,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
       const { telemetry: _telemetry, ...hashableEmbed } = input
       const key = yield* cacheKey("embed", hashableEmbed)
 
-      const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
+      const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {
         const decoded = yield* Effect.try({
           try: () => Schema.decodeUnknownSync(embedResultFromJsonStringSchema)(cached),
@@ -122,9 +132,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
         try: () => Schema.encodeSync(embedResultFromJsonStringSchema)(result),
         catch: toAIError("write"),
       })
-      yield* cache
-        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
-        .pipe(Effect.mapError(toAIError("write")))
+      yield* writeCachedValue(cache, key, encoded)
       return result
     }) as Effect.Effect<EmbedResult, AIError, never>,
 
@@ -133,7 +141,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
       const { telemetry: _telemetry, ...hashableRerank } = input
       const key = yield* cacheKey("rerank", hashableRerank)
 
-      const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
+      const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {
         return yield* Effect.try({
           try: () => Schema.decodeUnknownSync(rerankResultFromJsonStringSchema)(cached),
@@ -146,9 +154,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
         try: () => Schema.encodeSync(rerankResultFromJsonStringSchema)(result),
         catch: toAIError("write"),
       })
-      yield* cache
-        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
-        .pipe(Effect.mapError(toAIError("write")))
+      yield* writeCachedValue(cache, key, encoded)
       return result
     }) as Effect.Effect<readonly RerankResult[], AIError, never>,
 })

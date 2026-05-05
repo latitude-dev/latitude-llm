@@ -4,9 +4,15 @@ import {
   ChSqlClient,
   type ChSqlClientShape,
   ExternalUserId,
+  type FilterCondition,
   type FilterSet,
   isNotFoundError,
+  isPercentileTraceFilterField,
   NotFoundError,
+  type OrganizationId,
+  type PercentileTraceFilterField,
+  type ProjectId,
+  type RepositoryError,
   SessionId,
   SimulationId,
   SpanId,
@@ -19,12 +25,14 @@ import type {
   Trace,
   TraceCohortBaselineData,
   TraceDetail,
+  TraceDistribution,
   TraceListPage,
   TraceMetricPercentiles,
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import {
+  emptyTraceDistribution,
   emptyTraceMetrics,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MODEL,
@@ -499,6 +507,144 @@ function buildTraceFilterCondition(
   }
 }
 
+// ─── Percentile filter resolution ────────────────────────────────────────────
+//
+// `gtePercentile` filters carry a percentile (0–100) instead of a raw threshold.
+// They are resolved to a numeric `gte` filter by computing the actual quantile
+// against the project's trace distribution (one round-trip per request, batched
+// across all percentile conditions). Resolution intentionally ignores other
+// user filters so the threshold matches what the chart in the sidebar shows.
+
+interface PercentileColumnSpec {
+  /** Column expression (in the trace-aggregated subquery context). */
+  readonly column: string
+  /**
+   * Whether to ignore zero-valued rows when computing the percentile and when
+   * matching the resolved `gte` filter. Used for TTFT, where 0 is the
+   * "no LLM" sentinel and would otherwise distort the distribution.
+   */
+  readonly ignoreZeros: boolean
+}
+
+const PERCENTILE_FIELD_SPECS: Readonly<Record<PercentileTraceFilterField, PercentileColumnSpec>> = {
+  duration: { column: "duration_ns", ignoreZeros: false },
+  cost: { column: "cost_total_microcents", ignoreZeros: false },
+  ttft: { column: "time_to_first_token_ns", ignoreZeros: true },
+}
+
+function quantileExpr(spec: PercentileColumnSpec, levelParam: string): string {
+  return spec.ignoreZeros
+    ? `quantileTDigestIf({${levelParam}:Float64})(${spec.column}, ${spec.column} > 0)`
+    : `quantileTDigest({${levelParam}:Float64})(${spec.column})`
+}
+
+/**
+ * Sentinel threshold used when a percentile cannot be resolved (e.g. column has
+ * no non-zero data). Picked to be larger than any realistic value across our
+ * supported numeric fields so the filter matches no rows.
+ */
+const PERCENTILE_NO_MATCH_SENTINEL = Number.MAX_SAFE_INTEGER
+
+interface PercentileRequestEntry {
+  readonly field: PercentileTraceFilterField
+  readonly percentile: number
+  readonly conditionIndex: number
+  readonly conditions: FilterCondition[]
+}
+
+function collectPercentileRequests(filters: FilterSet | undefined): {
+  readonly requests: readonly PercentileRequestEntry[]
+  readonly cloned: Record<string, FilterCondition[]> | undefined
+} {
+  if (!filters) return { requests: [], cloned: undefined }
+
+  let cloned: Record<string, FilterCondition[]> | undefined
+  const requests: PercentileRequestEntry[] = []
+
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    const hasPct = conds.some((c) => c.op === "gtePercentile")
+    if (!hasPct) continue
+
+    if (!isPercentileTraceFilterField(field)) continue
+
+    if (!cloned) cloned = {}
+    const arr = [...conds] as FilterCondition[]
+    cloned[field] = arr
+    arr.forEach((c, idx) => {
+      if (c.op === "gtePercentile" && typeof c.value === "number") {
+        requests.push({ field, percentile: c.value, conditionIndex: idx, conditions: arr })
+      }
+    })
+  }
+
+  if (!cloned) return { requests: [], cloned: undefined }
+
+  // Carry over fields without percentile filters into the cloned set (immutable
+  // arrays — we only mutate the ones holding percentile conditions).
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    if (cloned[field]) continue
+    cloned[field] = conds as FilterCondition[]
+  }
+
+  return { requests, cloned }
+}
+
+const resolvePercentileFilters = (
+  organizationId: OrganizationId,
+  projectId: ProjectId,
+  filters: FilterSet | undefined,
+): Effect.Effect<FilterSet | undefined, RepositoryError, ChSqlClient> => {
+  const { requests, cloned } = collectPercentileRequests(filters)
+  if (requests.length === 0 || !cloned) return Effect.succeed(filters)
+
+  return Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+    const params: Record<string, unknown> = {
+      organizationId: organizationId as string,
+      projectId: projectId as string,
+    }
+    const aliases: string[] = []
+    requests.forEach((req, idx) => {
+      const spec = PERCENTILE_FIELD_SPECS[req.field]
+      const levelParam = `pct_lvl_${idx}`
+      params[levelParam] = Math.max(0, Math.min(1, req.percentile / 100))
+      aliases.push(`${quantileExpr(spec, levelParam)} AS pct_${idx}`)
+    })
+
+    const rows = yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `SELECT ${aliases.join(", ")}
+                  FROM (
+                    SELECT ${LIST_SELECT}
+                    FROM traces
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                    GROUP BY organization_id, project_id, trace_id
+                  )`,
+          query_params: params,
+          format: "JSONEachRow",
+        })
+        return result.json<Record<string, number | string | null>>()
+      })
+      .pipe(Effect.mapError((error) => toRepositoryError(error, "resolvePercentileFilters")))
+
+    const row = rows[0] ?? {}
+    requests.forEach((req, idx) => {
+      const raw = row[`pct_${idx}`]
+      const numeric =
+        typeof raw === "number" ? raw : raw != null && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : NaN
+      const threshold = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : PERCENTILE_NO_MATCH_SENTINEL
+      req.conditions[req.conditionIndex] = { op: "gte", value: threshold }
+    })
+
+    return cloned as FilterSet
+  })
+}
+
 const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 
 export const TraceRepositoryLive = Layer.effect(
@@ -686,7 +832,8 @@ export const TraceRepositoryLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const limit = options.limit ?? 50
 
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+        const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, options.filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         if (hasActiveSearchQuery(options.searchQuery)) {
@@ -851,7 +998,8 @@ export const TraceRepositoryLive = Layer.effect(
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
         const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -898,13 +1046,21 @@ export const TraceRepositoryLive = Layer.effect(
           return []
         }
 
+        // Resolve percentile filters per filter set (each gets its own quantile
+        // round-trip — saved filter sets rarely use percentiles in practice).
+        const resolvedSets = yield* Effect.forEach(filterSets, (fs) =>
+          resolvePercentileFilters(organizationId, projectId, fs.filters).pipe(
+            Effect.map((resolved) => ({ filterId: fs.filterId, filters: resolved })),
+          ),
+        )
+
         const queryParams: Record<string, unknown> = {
           organizationId: organizationId as string,
           projectId: projectId as string,
           traceId,
         }
 
-        const matchExpressions = filterSets.map(({ filterId, filters }, index) => {
+        const matchExpressions = resolvedSets.map(({ filterId, filters }, index) => {
           const { condition, params } = buildTraceFilterCondition(filters, `batch_${index}`)
           const filterIdParam = `filter_id_${index}`
 
@@ -950,7 +1106,8 @@ export const TraceRepositoryLive = Layer.effect(
       countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -1053,7 +1210,7 @@ export const TraceRepositoryLive = Layer.effect(
                 Effect.map((rows) => {
                   const raw = rows[0]?.last_at ?? null
                   if (!raw) return null
-                  const parsed = new Date(raw.includes(" ") ? raw.replace(" ", "T") + "Z" : raw)
+                  const parsed = new Date(raw.includes(" ") ? `${raw.replace(" ", "T")}Z` : raw)
                   return Number.isNaN(parsed.getTime()) ? null : parsed
                 }),
                 Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
@@ -1131,7 +1288,8 @@ export const TraceRepositoryLive = Layer.effect(
       aggregateMetricsByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -1253,7 +1411,8 @@ export const TraceRepositoryLive = Layer.effect(
       histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
           const bs = Math.floor(bucketSeconds)
@@ -1376,6 +1535,58 @@ export const TraceRepositoryLive = Layer.effect(
       listMatchingFilterIdsByTraceId,
 
       listByTraceIds,
+
+      getDistribution: ({ organizationId, projectId, field }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const spec = PERCENTILE_FIELD_SPECS[field]
+
+          // 101 hardcoded percentile levels (p0, p1, ..., p100). Interpolated
+          // directly into SQL because they are constants, not user input.
+          const levelsList = Array.from({ length: 101 }, (_, i) => (i / 100).toFixed(2)).join(", ")
+          const filterClause = spec.ignoreZeros ? `, ${spec.column} > 0` : ""
+          const quantilesFn = spec.ignoreZeros ? "quantilesTDigestIf" : "quantilesTDigest"
+          const countFn = spec.ignoreZeros ? `countIf(${spec.column} > 0)` : "count()"
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          ${countFn} AS cnt,
+                          ${quantilesFn}(${levelsList})(${spec.column}${filterClause}) AS pcts
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                          GROUP BY organization_id, project_id, trace_id
+                        )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ cnt: string | number; pcts: ReadonlyArray<number | string | null> }>()
+            })
+            .pipe(
+              Effect.map((rows): TraceDistribution => {
+                const row = rows[0]
+                if (!row) return emptyTraceDistribution()
+                const count = Number(row.cnt) || 0
+                if (count === 0) return emptyTraceDistribution()
+                const percentileValues = (row.pcts ?? []).map((v) => {
+                  const n = typeof v === "number" ? v : v != null ? Number(v) : 0
+                  return Number.isFinite(n) ? n : 0
+                })
+                // Pad/truncate to exactly 101 values defensively.
+                while (percentileValues.length < 101) percentileValues.push(percentileValues.at(-1) ?? 0)
+                if (percentileValues.length > 101) percentileValues.length = 101
+                return { count, percentileValues }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "getDistribution")),
+            )
+        }),
 
       distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) =>
         Effect.gen(function* () {

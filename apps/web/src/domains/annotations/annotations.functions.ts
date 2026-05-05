@@ -7,8 +7,8 @@ import {
 import { writeDraftAnnotationUseCase } from "@domain/annotations/src/use-cases/write-draft-annotation.ts"
 import { WorkflowStarter } from "@domain/queue"
 import type { AnnotationScore, ScoreListPage } from "@domain/scores"
-import { annotationAnchorSchema, scoreDraftModeSchema } from "@domain/scores"
-import { ProjectId, ScoreId } from "@domain/shared"
+import { annotationAnchorSchema, ScoreRepository, scoreDraftModeSchema } from "@domain/scores"
+import { ProjectId, ScoreId, TraceId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import {
@@ -71,6 +71,18 @@ const toListResult = (page: ScoreListPage) => ({
 })
 
 type AnnotationListResult = ReturnType<typeof toListResult>
+
+const toCountsRecord = (counts: {
+  readonly traceId: TraceId
+  readonly positiveCount: number
+  readonly negativeCount: number
+}) => ({
+  traceId: counts.traceId as string,
+  positiveCount: counts.positiveCount,
+  negativeCount: counts.negativeCount,
+})
+
+export type TraceAnnotationCountsRecord = ReturnType<typeof toCountsRecord>
 
 /** Annotations created from a queue must pass queue.id as sourceId; otherwise defaults to "UI". */
 const getSourceId = (queueId: string | undefined) => queueId ?? "UI"
@@ -214,6 +226,34 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
     )
 
     return toListResult(result)
+  })
+
+export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceIds: z.array(z.string().length(32)).max(100),
+      draftMode: scoreDraftModeSchema.optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly TraceAnnotationCountsRecord[]> => {
+    if (data.traceIds.length === 0) return []
+
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ScoreRepository
+        return yield* repo.countAnnotationsByTraceIds({
+          projectId: ProjectId(data.projectId),
+          traceIds: data.traceIds.map(TraceId),
+          options: { draftMode: data.draftMode ?? "include" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+    )
+
+    return result.map(toCountsRecord)
   })
 
 export const approveSystemAnnotation = createServerFn({ method: "POST" })

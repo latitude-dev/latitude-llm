@@ -4,10 +4,12 @@ export {
   TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS,
+  TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS,
   TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS,
@@ -57,6 +59,7 @@ export { SpanRepository } from "./ports/span-repository.ts"
 export type {
   NumericRollup,
   TraceDistinctColumn,
+  TraceDistribution,
   TraceHistogramMetric,
   TraceListCursor,
   TraceListOptions,
@@ -66,6 +69,7 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export {
+  emptyTraceDistribution,
   emptyTraceMetrics,
   emptyTraceTimeHistogramBucket,
   isTraceHistogramMetric,

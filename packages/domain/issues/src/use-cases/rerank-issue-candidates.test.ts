@@ -30,7 +30,7 @@ describe("rerankIssueCandidatesUseCase", () => {
 
     expect(aiCalls.rerank).toHaveLength(1)
     expect(aiCalls.rerank[0]?.model).toBe(ISSUE_DISCOVERY_RERANK_MODEL)
-    expect(aiCalls.rerank[0]?.documents).toEqual(["Title: Token leakage\n\nDescription: Agent exposed API tokens"])
+    expect(aiCalls.rerank[0]?.documents).toEqual(["Token leakage\n\nAgent exposed API tokens"])
     expect(result).toEqual({
       matchedIssueUuid: "issue-1",
       similarityScore: 0.92,

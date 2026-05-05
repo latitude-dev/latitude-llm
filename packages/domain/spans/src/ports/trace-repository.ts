@@ -3,11 +3,12 @@ import type {
   FilterSet,
   NotFoundError,
   OrganizationId,
+  PercentileTraceFilterField,
   ProjectId,
   RepositoryError,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { Context, type Effect } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 import type { TraceCohortBaselineData } from "../trace-cohorts.ts"
 
@@ -113,6 +114,18 @@ export interface TraceRepositoryShape {
     readonly limit?: number
     readonly search?: string
   }): Effect.Effect<readonly string[], RepositoryError, ChSqlClient>
+
+  /**
+   * Numeric distribution of one trace column for the project, sampled at every
+   * integer percentile (p0, p1, ..., p100 — 101 values). Intentionally ignores
+   * other user filters so the visualization is stable while the user picks a
+   * threshold; the threshold is then resolved against this same distribution.
+   */
+  getDistribution(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly field: PercentileTraceFilterField
+  }): Effect.Effect<TraceDistribution, RepositoryError, ChSqlClient>
 }
 
 export type TraceDistinctColumn = "tags" | "models" | "providers" | "serviceNames"
@@ -195,6 +208,24 @@ export type TraceHistogramMetric = (typeof TRACE_HISTOGRAM_METRICS)[number]
 export const isTraceHistogramMetric = (value: string): value is TraceHistogramMetric =>
   (TRACE_HISTOGRAM_METRICS as readonly string[]).includes(value)
 
+/**
+ * Per-percentile values for a single numeric trace column.
+ *
+ * `percentileValues[p]` (for `p` in 0..100) is the value at the p-th percentile
+ * of the project's trace distribution. Empty distributions return all zeros and
+ * `count: 0`; consumers should treat that as "no data, no filter possible".
+ */
+export interface TraceDistribution {
+  readonly count: number
+  readonly percentileValues: readonly number[]
+}
+
+/** Empty distribution (all-zero percentile values, count 0). */
+export const emptyTraceDistribution = (): TraceDistribution => ({
+  count: 0,
+  percentileValues: new Array(101).fill(0),
+})
+
 export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHistogramBucket => ({
   bucketStart,
   traceCount: 0,
@@ -205,6 +236,6 @@ export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHis
   timeToFirstTokenNsMedian: 0,
 })
 
-export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(
+export class TraceRepository extends Context.Service<TraceRepository, TraceRepositoryShape>()(
   "@domain/spans/TraceRepository",
 ) {}

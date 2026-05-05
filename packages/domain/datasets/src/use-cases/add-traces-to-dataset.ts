@@ -31,6 +31,10 @@ function mapTraceToRow(t: TraceDetail) {
       userId: t.userId,
       systemInstructions: t.systemInstructions,
       allMessages: t.allMessages,
+      // User-defined metadata captured at instrumentation time.
+      // Carries prompt template variables so golden datasets can be re-run
+      // through templated prompts without re-deriving inputs from messages.
+      traceMetadata: t.metadata,
     } as Record<string, unknown>,
   }
 }
