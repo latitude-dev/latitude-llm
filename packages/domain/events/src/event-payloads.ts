@@ -72,6 +72,19 @@ export interface EventPayloads {
     readonly userId: string
     readonly email: string
   }
+  /**
+   * Emitted when a user finishes the project-onboarding form (role + stack
+   * choice + free-text job title). Drives the Loops contact update so
+   * marketing has `jobTitle` and `userGroup` for newly-onboarded users. The
+   * outbox envelope's `organizationId` is `"system"` — onboarding spans the
+   * user's identity and isn't tied to a specific tenant. Job title itself is
+   * persisted on the `users` row; the worker re-fetches it instead of carrying
+   * mutable strings on the event payload.
+   */
+  UserOnboardingCompleted: {
+    readonly userId: string
+    readonly stackChoice: "coding-agent-machine" | "production-agent"
+  }
   MemberJoined: {
     readonly organizationId: string
     readonly userId: string

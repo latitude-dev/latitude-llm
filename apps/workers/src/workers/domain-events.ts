@@ -127,6 +127,11 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid)
     },
 
+    // OrganizationCreated and MemberJoined have no marketing-contacts side
+    // effect — the only thing that mattered was syncing organizationId onto
+    // each Loops contact, which we no longer do (members get telemetryEnabled
+    // fanned out individually on FirstTraceReceived). PostHog fan-out is
+    // applied automatically below because both events are on the whitelist.
     OrganizationCreated: () => Effect.void,
 
     ProjectCreated: (event) =>
@@ -134,15 +139,38 @@ export const createDomainEventsWorker = ({
         dedupeKey: `projects:provision:${event.payload.projectId}`,
       }),
 
-    UserSignedUp: () => Effect.void,
+    UserSignedUp: (event) =>
+      pub.publish(
+        "marketing-contacts",
+        "register-user",
+        { userId: event.payload.userId },
+        { dedupeKey: `marketing-contacts:register-user:${event.payload.userId}` },
+      ),
+
+    UserOnboardingCompleted: (event) =>
+      pub.publish(
+        "marketing-contacts",
+        "update-onboarding",
+        { userId: event.payload.userId, stackChoice: event.payload.stackChoice },
+        { dedupeKey: `marketing-contacts:update-onboarding:${event.payload.userId}` },
+      ),
+
     MemberJoined: () => Effect.void,
+
+    FirstTraceReceived: (event) =>
+      pub.publish(
+        "marketing-contacts",
+        "mark-telemetry-enabled",
+        { organizationId: event.payload.organizationId },
+        { dedupeKey: `marketing-contacts:mark-telemetry-enabled:${event.payload.organizationId}` },
+      ),
+
     MemberInvited: () => Effect.void,
     ApiKeyCreated: () => Effect.void,
     DatasetCreated: () => Effect.void,
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: () => Effect.void,
-    FirstTraceReceived: () => Effect.void,
     // Impersonation events are audit-only — their value is being
     // persisted in the outbox for support / compliance queries.
     // No downstream worker consumes them, so these handlers are no-ops.

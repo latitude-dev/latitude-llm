@@ -7,29 +7,59 @@
  * - ANTHROPIC_API_KEY
  *
  * Install: npm install @anthropic-ai/sdk
+ *
+ * Note: this example uses composable mode (NodeTracerProvider +
+ * registerLatitudeInstrumentations) instead of `initLatitude` because
+ * `initLatitude` doesn't forward a `modules` option, and the auto-require in
+ * `tryRequire` strips the module namespace down to the default export, which
+ * trips up traceloop's anthropic instrumentation. Passing the namespace
+ * explicitly via `modules: { anthropic: AnthropicNS }` avoids that.
+ *
+ * FIXME: Fix telemetry package to avoid needing this workaround.
  */
 
-import Anthropic from "@anthropic-ai/sdk"
-import { capture, initLatitude } from "../src"
+import * as AnthropicNS from "@anthropic-ai/sdk"
+import { context, propagation } from "@opentelemetry/api"
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
+import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+import { capture, LatitudeSpanProcessor, registerLatitudeInstrumentations } from "../src"
 
-const latitude = initLatitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  disableBatch: true,
-  instrumentations: ["anthropic"],
+const Anthropic = AnthropicNS.default
+
+const contextManager = new AsyncLocalStorageContextManager()
+contextManager.enable()
+context.setGlobalContextManager(contextManager)
+propagation.setGlobalPropagator(
+  new CompositePropagator({ propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()] }),
+)
+
+const provider = new NodeTracerProvider({
+  spanProcessors: [
+    new LatitudeSpanProcessor(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+      disableBatch: true,
+    }),
+  ],
 })
 
+const ready = registerLatitudeInstrumentations({
+  instrumentations: ["anthropic"],
+  modules: { anthropic: AnthropicNS },
+  tracerProvider: provider,
+})
+
+provider.register()
+
 async function main() {
-  // Wait for instrumentations to be ready
-  await latitude.ready
+  await ready
 
   const client = new Anthropic()
 
-  await capture(
+  const result = await capture(
     "anthropic-chat",
     async () => {
       const response = await client.messages.create({
-        model: "claude-3-5-haiku-latest",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 50,
         messages: [
           {
@@ -45,7 +75,9 @@ async function main() {
     { tags: ["test", "anthropic"], sessionId: "example" },
   )
 
-  await latitude.flush()
+  console.log("Anthropic response:", result)
+  await provider.forceFlush()
+  console.log("Flushed to Latitude.")
 }
 
 main().catch(console.error)

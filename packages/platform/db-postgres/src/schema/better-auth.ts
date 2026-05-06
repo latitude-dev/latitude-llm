@@ -47,6 +47,13 @@ export const users = latitudeSchema.table("users", {
   banReason: text("ban_reason"),
   banExpires: tzTimestamp("ban_expires"),
   stripeCustomerId: text("stripe_customer_id"),
+  /**
+   * Free-text job title collected during the project-onboarding form. Optional
+   * because v1 users imported into v2 may not have one, and the field is not
+   * required for sign-in or core product use. Synced to Loops as `jobTitle`
+   * when set.
+   */
+  jobTitle: text("job_title"),
   ...timestamps(),
 })
 

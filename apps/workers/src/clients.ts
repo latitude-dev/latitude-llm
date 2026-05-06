@@ -1,3 +1,4 @@
+import type { MarketingContactsPort } from "@domain/marketing"
 import type { ProductFeedbackClientShape } from "@domain/product-feedback"
 import type { WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
@@ -8,6 +9,7 @@ import { createPostgresClient, type PostgresClient } from "@platform/db-postgres
 import { createWeaviateClient, type WeaviateClient, type WeaviateConfig } from "@platform/db-weaviate"
 import { parseEnv } from "@platform/env"
 import { createLatitudeApiClient, loadLatitudeApiConfig } from "@platform/latitude-api"
+import { createLoopsContactsSender, loadLoopsConfig } from "@platform/loops"
 import { createStorageDisk } from "@platform/storage-object"
 import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
 import { Effect } from "effect"
@@ -21,6 +23,7 @@ let redisInstance: RedisClient | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let posthogClientInstance: PostHogClientShape | undefined
 let productFeedbackClientInstance: ProductFeedbackClientShape | undefined
+let marketingContactsSenderInstance: MarketingContactsPort | undefined
 
 export const getPostgresClient = (maxConnections?: number): PostgresClient => {
   if (!pgClientInstance) {
@@ -81,6 +84,15 @@ export const getPostHogClient = (): PostHogClientShape => {
   }
 
   return posthogClientInstance
+}
+
+export const getMarketingContactsSender = (): MarketingContactsPort => {
+  if (!marketingContactsSenderInstance) {
+    const config = Effect.runSync(loadLoopsConfig)
+    marketingContactsSenderInstance = createLoopsContactsSender(config)
+  }
+
+  return marketingContactsSenderInstance
 }
 
 export const getProductFeedbackClient = (): ProductFeedbackClientShape => {

@@ -1,5 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
+import type { JobTitle } from "@domain/users"
+import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -16,6 +17,8 @@ import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useSt
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
+import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -40,7 +43,7 @@ import {
   type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
-type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
+type OnboardingRole = JobTitle
 type OnboardingStep = "role" | "stack" | "telemetry"
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
@@ -407,9 +410,11 @@ export function OnboardingFlow({
   readonly projectSlug: string
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
+  const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
+  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
@@ -624,10 +629,18 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={stackChoice === null}
-                  onClick={() => {
-                    if (stackChoice === null) return
-                    setStep("telemetry")
+                  disabled={stackChoice === null || isSubmittingOnboarding}
+                  onClick={async () => {
+                    if (stackChoice === null || isSubmittingOnboarding) return
+                    setIsSubmittingOnboarding(true)
+                    try {
+                      await submitOnboarding({ data: { jobTitle: role, stackChoice } })
+                      setStep("telemetry")
+                    } catch (error) {
+                      toast({ variant: "destructive", description: toUserMessage(error) })
+                    } finally {
+                      setIsSubmittingOnboarding(false)
+                    }
                   }}
                 >
                   Continue
