@@ -7,51 +7,20 @@
  * - ANTHROPIC_API_KEY
  *
  * Install: npm install @anthropic-ai/sdk
- *
- * Note: this example uses composable mode (NodeTracerProvider +
- * registerLatitudeInstrumentations) instead of `initLatitude` because
- * `initLatitude` doesn't forward a `modules` option, and the auto-require in
- * `tryRequire` strips the module namespace down to the default export, which
- * trips up traceloop's anthropic instrumentation. Passing the namespace
- * explicitly via `modules: { anthropic: AnthropicNS }` avoids that.
- *
- * FIXME: Fix telemetry package to avoid needing this workaround.
  */
 
-import * as AnthropicNS from "@anthropic-ai/sdk"
-import { context, propagation } from "@opentelemetry/api"
-import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
-import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
-import { capture, LatitudeSpanProcessor, registerLatitudeInstrumentations } from "../src"
+import Anthropic from "@anthropic-ai/sdk"
+import { capture, initLatitude } from "../src"
 
-const Anthropic = AnthropicNS.default
-
-const contextManager = new AsyncLocalStorageContextManager()
-contextManager.enable()
-context.setGlobalContextManager(contextManager)
-propagation.setGlobalPropagator(
-  new CompositePropagator({ propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()] }),
-)
-
-const provider = new NodeTracerProvider({
-  spanProcessors: [
-    new LatitudeSpanProcessor(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
-      disableBatch: true,
-    }),
-  ],
-})
-
-const ready = registerLatitudeInstrumentations({
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  disableBatch: true,
   instrumentations: ["anthropic"],
-  modules: { anthropic: AnthropicNS },
-  tracerProvider: provider,
 })
-
-provider.register()
 
 async function main() {
-  await ready
+  await latitude.ready
 
   const client = new Anthropic()
 
@@ -64,7 +33,7 @@ async function main() {
         messages: [
           {
             role: "user",
-            content: "Say 'Hello from Anthropic!' in exactly 5 words.",
+            content: "Say 'Hello from Anthropic!' in exactly 10 words. No ending punctuation.",
           },
         ],
       })
@@ -76,8 +45,8 @@ async function main() {
   )
 
   console.log("Anthropic response:", result)
-  await provider.forceFlush()
-  console.log("Flushed to Latitude.")
+  await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

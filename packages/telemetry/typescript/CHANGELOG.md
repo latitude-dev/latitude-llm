@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.7] - 2026-05-06
+
+### Added
+
+- **OpenAI Agents SDK auto-instrumentation** — new `"openai-agents"` instrumentation type for `initLatitude()` / `registerLatitudeInstrumentations()`. Hooks into the Agents SDK's native tracing system via `addTraceProcessor` and translates agent, generation, response, function, handoff, guardrail, MCP, and audio spans into OpenTelemetry spans on Latitude's tracer with `gen_ai.*` semantic-convention attributes. Works regardless of whether agents use the Responses API (default) or Chat Completions, with no monkey-patching of the OpenAI client. `@openai/agents` is an optional peer dependency.
+
+### Fixed
+
+- **`openai@6` manual instrumentation** — `manuallyInstrument()` is now passed the `OpenAI` class (`moduleRef.OpenAI`) instead of the package namespace. `openai@6` only exposes `Chat`/`Completions` as static members of the `OpenAI` class, so the previous namespace-based call silently no-op'd for v6 consumers. Auto-instrumentation now works on `openai@4`, `@5`, and `@6` alike.
+
 ## [3.0.0-alpha.6] - 2026-04-23
 
 ### Changed

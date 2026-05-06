@@ -3,6 +3,7 @@ export const SCOPE_LATITUDE = "so.latitude.instrumentation"
 export enum InstrumentationScope {
   Manual = "manual",
   OpenAI = "openai",
+  OpenAIAgents = "openai-agents",
   Anthropic = "anthropic",
   AzureOpenAI = "azure",
   VercelAI = "vercelai",

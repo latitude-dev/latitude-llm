@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0-alpha.7",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -68,18 +68,25 @@
     "@google-cloud/vertexai": "^1.10.4",
     "@langchain/core": "^1.1.39",
     "@langchain/openai": "^1.4.1",
+    "@openai/agents": "^0.9.1",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "ai": "^6.0.168",
     "cohere-ai": "^7.21.0",
-    "langchain": "^1.2.39",
     "llamaindex": "^0.12.1",
     "openai": "^6.33.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   },
   "peerDependencies": {
+    "@openai/agents": ">=0.9.0",
     "typescript": "^6.0.3"
+  },
+  "peerDependenciesMeta": {
+    "@openai/agents": {
+      "optional": true
+    }
   }
 }

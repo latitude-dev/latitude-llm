@@ -27,7 +27,7 @@ latitude = init_latitude(
 @capture(
     "test-openai-completion",
     {
-        "tags": ["test"],
+        "tags": ["python"],
         "session_id": "example",
         "user_id": "user_123",
         "metadata": {"test_type": "completion", "environment": "local"},

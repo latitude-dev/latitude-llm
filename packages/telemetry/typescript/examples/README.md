@@ -84,6 +84,7 @@ These examples use `LatitudeTelemetry` — the simplest way to get started.
 | Provider | File | Required Package | Instrumentation |
 |----------|------|------------------|-----------------|
 | OpenAI | `test_openai.ts` | `openai` | `"openai"` |
+| OpenAI Agents SDK | `test_openai_agents.ts` | `@openai/agents` | `"openai-agents"` |
 | Anthropic | `test_anthropic.ts` | `@anthropic-ai/sdk` | `"anthropic"` |
 | Azure OpenAI | `test_azure.ts` | `openai` | `"openai"` |
 | Cohere | `test_cohere.ts` | `cohere-ai` | `"cohere"` |

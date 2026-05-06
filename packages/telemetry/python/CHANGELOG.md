@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.0.0a2] - 2026-04-17
+## [3.0.0a3] - 2026-05-06
+
+### Added
+
+- **OpenAI Agents SDK auto-instrumentation** — new `"openai-agents"` instrumentation type wires `openinference-instrumentation-openai-agents` (Arize OpenInference) into the SDK. Spans cover agent runs, generations, responses, function calls, handoffs, and guardrails. Pass `instrumentations=["openai-agents"]` to `init_latitude()` and install the `openai-agents` package in your project.
+
+
 
 ### Fixed
 
