@@ -61,13 +61,15 @@ const loadInstance = (): Promise<PostHog | null> => {
       const posthog = mod.posthog
       posthog.init(env.apiKey, {
         api_host: env.host,
-        // Per product decision: session recordings + autocapture + pageview.
-        // Masking uses PostHog defaults (passwords + [data-ph-mask]).
         capture_pageview: true,
         autocapture: true,
-        disable_session_recording: false,
-        // Start silent — syncPostHogSession opts in for real customers once the authenticated layout mounts
+        disable_session_recording: true,
         opt_out_capturing_by_default: true,
+        // Force opt-out on every init regardless of persisted cookie state.
+        // syncPostHogSession will explicitly opt in for non-staff users.
+        loaded: (ph) => {
+          ph.opt_out_capturing()
+        },
       })
       return posthog
     })
@@ -90,7 +92,9 @@ const setPostHogCaptureEnabled = async (enabled: boolean): Promise<void> => {
   if (!posthog) return
   if (enabled) {
     posthog.opt_in_capturing()
+    posthog.startSessionRecording()
   } else {
+    posthog.stopSessionRecording()
     posthog.opt_out_capturing()
   }
 }
