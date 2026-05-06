@@ -113,10 +113,12 @@ describe("persistDraftAnnotation", () => {
         value: 0,
         passed: false,
         feedback: "Issue with refund policy",
-        messageIndex: 2,
-        partIndex: 0,
-        startOffset: 10,
-        endOffset: 25,
+        anchor: {
+          messageIndex: 2,
+          partIndex: 0,
+          startOffset: 10,
+          endOffset: 25,
+        },
         organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )

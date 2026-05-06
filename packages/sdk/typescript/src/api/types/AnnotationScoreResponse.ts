@@ -35,5 +35,6 @@ export namespace AnnotationScoreResponse {
         partIndex?: number | undefined;
         startOffset?: number | undefined;
         endOffset?: number | undefined;
+        textFormat?: "pretty-json" | undefined;
     }
 }

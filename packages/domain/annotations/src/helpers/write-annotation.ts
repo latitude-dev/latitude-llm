@@ -9,7 +9,7 @@ import { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import type { z } from "zod"
 import { anchorFromExistingAnnotationScore } from "./anchor-from-existing-annotation-score.ts"
-import { anchorFromPersistDraftFlatFields, persistDraftAnnotationInputSchema } from "./annotation-draft-write-schema.ts"
+import { persistDraftAnnotationInputSchema } from "./annotation-draft-write-schema.ts"
 import { buildAnnotationScoreMetadata } from "./build-annotation-score-metadata.ts"
 import { resolveWriteAnnotationTraceContext } from "./resolve-write-annotation-trace-context.ts"
 
@@ -30,7 +30,7 @@ export const writeAnnotation = (
         anchor = anchorFromExistingAnnotationScore(existing)
       }
     } else {
-      anchor = parsed.anchor ?? anchorFromPersistDraftFlatFields(parsed)
+      anchor = parsed.anchor
     }
 
     const { sessionId, spanId } = yield* resolveWriteAnnotationTraceContext({

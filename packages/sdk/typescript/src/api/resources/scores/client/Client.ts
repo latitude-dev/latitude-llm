@@ -23,7 +23,7 @@ export class ScoresClient {
     }
 
     /**
-     * Creates a score grouped by a source. Annotations use the separate `/annotations` endpoint.
+     * Creates a score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). Annotations use the separate `/annotations` endpoint.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateScoreBody} request
@@ -38,6 +38,10 @@ export class ScoresClient {
      *         value: 1.1,
      *         passed: true,
      *         feedback: "feedback",
+     *         trace: {
+     *             by: "id",
+     *             id: "id"
+     *         },
      *         sourceId: "sourceId"
      *     })
      */
