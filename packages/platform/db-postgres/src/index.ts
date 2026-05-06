@@ -24,6 +24,7 @@ export {
   type PollingOutboxConsumerConfig,
 } from "./outbox-consumer.ts"
 export { createOutboxWriter, OutboxEventWriterLive } from "./outbox-writer.ts"
+export { AdminFeatureFlagRepositoryLive } from "./repositories/admin-feature-flag-repository.ts"
 export { AdminOrganizationRepositoryLive } from "./repositories/admin-organization-repository.ts"
 export { AdminProjectRepositoryLive } from "./repositories/admin-project-repository.ts"
 export { AdminUserRepositoryLive } from "./repositories/admin-user-repository.ts"
@@ -34,6 +35,7 @@ export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
+export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { IssueRepositoryLive } from "./repositories/issue-repository.ts"

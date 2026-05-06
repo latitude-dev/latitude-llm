@@ -1,6 +1,6 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, Building2, Search, ShieldAlertIcon } from "lucide-react"
+import { ArrowLeft, Building2, Flag, Search, ShieldAlertIcon } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 import { requireAdminSession } from "../../server/admin-auth.ts"
@@ -96,6 +96,13 @@ function BackofficeLayout() {
                 // shouldn't highlight the listing entry as if the user is
                 // browsing it.
                 active={pathname === "/backoffice/organizations" || pathname === "/backoffice/organizations/"}
+                collapsed={collapsed}
+              />
+              <NavItem
+                icon={Flag}
+                label="Feature Flags"
+                to="/backoffice/feature-flags"
+                active={pathname === "/backoffice/feature-flags" || pathname === "/backoffice/feature-flags/"}
                 collapsed={collapsed}
               />
             </>

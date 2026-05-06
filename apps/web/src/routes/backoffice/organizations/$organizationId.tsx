@@ -1,12 +1,21 @@
-import { Avatar, Text } from "@repo/ui"
+import { Avatar, Badge, CopyButton, Icon, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import { SparklesIcon } from "lucide-react"
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
+import { Flag, SparklesIcon } from "lucide-react"
+import { useMemo, useState } from "react"
+import {
+  type AdminOrganizationFeatureFlagDto,
+  type AdminOrganizationFeatureFlagsDto,
+  adminDisableFeatureFlagForOrganization,
+  adminEnableFeatureFlagForOrganization,
+  adminListOrganizationFeatureFlags,
+} from "../../../domains/admin/feature-flags.functions.ts"
 import {
   type AdminOrganizationMemberDto,
   type AdminOrganizationProjectDto,
   adminGetOrganization,
 } from "../../../domains/admin/organizations.functions.ts"
+import { toUserMessage } from "../../../lib/errors.ts"
 import {
   DashboardHero,
   DashboardSection,
@@ -24,8 +33,11 @@ import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 export const Route = createFileRoute("/backoffice/organizations/$organizationId")({
   loader: async ({ params }) => {
     try {
-      const organization = await adminGetOrganization({ data: { organizationId: params.organizationId } })
-      return { organization }
+      const [organization, featureFlags] = await Promise.all([
+        adminGetOrganization({ data: { organizationId: params.organizationId } }),
+        adminListOrganizationFeatureFlags({ data: { organizationId: params.organizationId } }),
+      ])
+      return { organization, featureFlags }
     } catch (error) {
       const tag = (error as { _tag?: string } | null | undefined)?._tag
       if (tag === "NotFoundError") {
@@ -39,6 +51,7 @@ export const Route = createFileRoute("/backoffice/organizations/$organizationId"
 
 function BackofficeOrganizationDetailPage() {
   const organization = Route.useLoaderData({ select: (data) => data.organization })
+  const featureFlags = Route.useLoaderData({ select: (data) => data.featureFlags })
 
   useTrackRecentBackofficeView({
     kind: "organization",
@@ -132,6 +145,8 @@ function BackofficeOrganizationDetailPage() {
         }
       />
 
+      <FeatureFlagsSection organizationId={organization.id} featureFlags={featureFlags} />
+
       <OrganizationActionsSection>
         <OrganizationActionRow
           icon={SparklesIcon}
@@ -142,6 +157,149 @@ function BackofficeOrganizationDetailPage() {
       </OrganizationActionsSection>
 
       <PropertiesStrip entries={propertyEntries} />
+    </div>
+  )
+}
+
+type FeatureFlagRowState = {
+  readonly flag: AdminOrganizationFeatureFlagDto
+  readonly isEnabled: boolean
+  readonly globalOnly: boolean
+}
+
+function FeatureFlagsSection({
+  organizationId,
+  featureFlags,
+}: {
+  readonly organizationId: string
+  readonly featureFlags: AdminOrganizationFeatureFlagsDto
+}) {
+  const rows = useMemo<FeatureFlagRowState[]>(() => {
+    const enabled: FeatureFlagRowState[] = featureFlags.enabled.map((flag) => ({
+      flag,
+      isEnabled: true,
+      globalOnly: false,
+    }))
+    const available: FeatureFlagRowState[] = featureFlags.available.map((flag) => ({
+      flag,
+      isEnabled: flag.enabledForAll,
+      globalOnly: flag.enabledForAll,
+    }))
+    return [...enabled, ...available].sort((a, b) => a.flag.identifier.localeCompare(b.flag.identifier))
+  }, [featureFlags])
+
+  return (
+    <DashboardSection
+      title={
+        <span className="flex items-center gap-2">
+          <Icon icon={Flag} size="sm" />
+          Feature Flags
+        </span>
+      }
+      count={rows.filter((row) => row.isEnabled).length}
+    >
+      {rows.length === 0 ? (
+        <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-4">
+          <Text.H6 weight="medium">No feature flags</Text.H6>
+          <Text.H6 color="foregroundMuted">
+            Active flags appear here once you create them on the Backoffice feature flags page.
+          </Text.H6>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {rows.map((row) => (
+            <FeatureFlagToggleRow key={row.flag.id} row={row} organizationId={organizationId} />
+          ))}
+        </div>
+      )}
+    </DashboardSection>
+  )
+}
+
+function FeatureFlagToggleRow({
+  row,
+  organizationId,
+}: {
+  readonly row: FeatureFlagRowState
+  readonly organizationId: string
+}) {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isPending, setIsPending] = useState(false)
+  const [optimisticEnabled, setOptimisticEnabled] = useState<boolean | null>(null)
+  const checked = optimisticEnabled ?? row.isEnabled
+
+  const handleToggle = async (next: boolean) => {
+    if (row.globalOnly) return
+    setOptimisticEnabled(next)
+    setIsPending(true)
+    try {
+      if (next) {
+        await adminEnableFeatureFlagForOrganization({
+          data: { organizationId, identifier: row.flag.identifier },
+        })
+        toast({ description: `Enabled "${row.flag.identifier}" for this organization.` })
+      } else {
+        await adminDisableFeatureFlagForOrganization({
+          data: { organizationId, identifier: row.flag.identifier },
+        })
+        toast({ description: `Disabled "${row.flag.identifier}" for this organization.` })
+      }
+      void router.invalidate()
+    } catch (error) {
+      setOptimisticEnabled(null)
+      toast({
+        variant: "destructive",
+        title: "Could not change feature flag",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  const switchEl = (
+    <Switch
+      checked={checked}
+      disabled={row.globalOnly || isPending}
+      loading={isPending}
+      onCheckedChange={(next) => void handleToggle(next)}
+      aria-label={`Toggle ${row.flag.identifier} for this organization`}
+    />
+  )
+
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background px-3 py-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {row.flag.name ? (
+            <Text.H5 weight="semibold" ellipsis>
+              {row.flag.name}
+            </Text.H5>
+          ) : null}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{row.flag.identifier}</code>
+          <CopyButton value={row.flag.identifier} tooltip="Copy identifier" />
+        </div>
+        {row.flag.description ? (
+          <Text.H6 color="foregroundMuted">{row.flag.description}</Text.H6>
+        ) : (
+          <Text.H6 color="foregroundMuted">No description.</Text.H6>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {row.globalOnly ? (
+          <Badge variant="outlineSuccessMuted" noWrap>
+            Global
+          </Badge>
+        ) : null}
+        {row.globalOnly ? (
+          <Tooltip asChild trigger={<span>{switchEl}</span>}>
+            <Text.Mono size="h6">Enabled for every organization. Manage from the global feature flags page.</Text.Mono>
+          </Tooltip>
+        ) : (
+          switchEl
+        )}
+      </div>
     </div>
   )
 }
