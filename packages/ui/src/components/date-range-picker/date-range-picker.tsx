@@ -266,7 +266,13 @@ export function DateRangePicker({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" disabled={disabled} className="w-auto justify-start gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          disabled={disabled}
+          className="w-auto justify-start gap-2"
+        >
           <span className="flex items-center gap-2">
             <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foreground"} />
             <span

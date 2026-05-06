@@ -308,6 +308,22 @@ function IssuesPage() {
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
+              <ColumnsSelector
+                columns={columnSettings.columns}
+                selectedColumnIds={columnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
+                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
+              />
+              <div className="relative">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search issues"
+                  size="sm"
+                  className="w-64 pl-8 rounded-lg"
+                />
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
               <Tabs
                 variant="bordered"
                 size="sm"
@@ -325,22 +341,6 @@ function IssuesPage() {
                 ]}
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
-              />
-              <div className="relative">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search issues"
-                  size="sm"
-                  className="w-64 pl-8"
-                />
-                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              </div>
-              <ColumnsSelector
-                columns={columnSettings.columns}
-                selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
               />
             </Layout.ActionRowItem>
           </Layout.ActionsRow>

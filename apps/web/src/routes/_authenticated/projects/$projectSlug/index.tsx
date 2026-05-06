@@ -259,7 +259,7 @@ function ProjectPage() {
               trigger={
                 <Button
                   variant={filtersOpen ? "outline" : "ghost"}
-                  size="sm"
+                  size="default"
                   onClick={() => setFiltersOpen(!filtersOpen)}
                 >
                   <FilterIcon className="h-4 w-4" />

@@ -241,7 +241,7 @@ function SearchPage() {
               />
               <Button
                 variant={filtersOpen ? "outline" : "ghost"}
-                size="sm"
+                size="default"
                 onClick={() => setFiltersOpen(!filtersOpen)}
               >
                 <Icon icon={FilterIcon} size="sm" />
@@ -268,7 +268,7 @@ function SearchPage() {
               {loadedSavedSearch ? (
                 <SplitButton
                   variant="outline"
-                  size="sm"
+                  size="default"
                   disabled={!hasDrift}
                   isLoading={updateSavedSearchMutation.isPending}
                   actions={[
@@ -299,7 +299,7 @@ function SearchPage() {
                   ]}
                 />
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setSaveModalOpen(true)}>
+                <Button variant="outline" size="default" onClick={() => setSaveModalOpen(true)}>
                   <Icon icon={PinIcon} size="sm" />
                   Save search
                 </Button>
