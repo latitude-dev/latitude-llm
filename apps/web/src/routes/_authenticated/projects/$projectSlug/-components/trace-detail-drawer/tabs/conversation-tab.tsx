@@ -1,9 +1,11 @@
-import { Conversation, ScrollNavigator, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
+import { Button, Conversation, Icon, ScrollNavigator, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { DownloadIcon } from "lucide-react"
 import { type RefObject, useCallback, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { useAuthenticatedUser } from "../../../../../-route-data.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -34,6 +36,24 @@ function ConversationContent({
   const navigatorRef = useRef<ScrollNavigatorHandle>(null)
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
   const clearSelectionRef = useRef<(() => void) | null>(null)
+
+  const user = useAuthenticatedUser()
+  const isDev = import.meta.env.DEV
+  const isAdmin = (user as { role?: string }).role === "admin"
+  const showDownload = isDev || isAdmin
+
+  const handleDownload = useCallback(() => {
+    const json = JSON.stringify(traceDetail.allMessages, null, 2)
+    const blob = new Blob([json], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `trace-${traceDetail.traceId.slice(0, 7)}-conversation.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [traceDetail])
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
@@ -155,7 +175,12 @@ function ConversationContent({
           }}
         />
       </div>
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {showDownload && (
+          <Button variant="ghost" size="sm" onClick={handleDownload} aria-label="Download conversation as JSON">
+            <Icon icon={DownloadIcon} size="sm" />
+          </Button>
+        )}
         <ScrollNavigator
           ref={navigatorRef}
           scrollContainerRef={scrollRef}
