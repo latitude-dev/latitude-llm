@@ -889,6 +889,31 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               Effect.mapError((error) => toRepositoryError(error, "listTracesByIssue")),
             )
         }),
+      countTracesByIssue: ({ organizationId, projectId, issueId, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT uniqExact(trace_id) AS total
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND issue_id = {issueId:FixedString(24)}
+                        AND trace_id != ''`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  issueId: issueId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<CountRow>()
+            })
+            .pipe(
+              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.mapError((error) => toRepositoryError(error, "countTracesByIssue")),
+            )
+        }),
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.
       delete: deleteScore,
     }

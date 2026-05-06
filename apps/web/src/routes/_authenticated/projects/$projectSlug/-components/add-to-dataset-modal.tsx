@@ -3,20 +3,25 @@ import { Alert, Button, CloseTrigger, Input, Modal, Select, type SelectOption, T
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-import { useDatasetsList } from "../../../../../../domains/datasets/datasets.collection.ts"
-import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
+import { useDatasetsList } from "../../../../../domains/datasets/datasets.collection.ts"
+import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
   addTracesToDatasetFunction,
   createDatasetFromTracesFunction,
-} from "../../../../../../domains/datasets/datasets.functions.ts"
-import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
-import { toUserMessage } from "../../../../../../lib/errors.ts"
-import type { BulkSelection } from "../../../../../../lib/hooks/useSelectableRows.ts"
+} from "../../../../../domains/datasets/datasets.functions.ts"
+import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
+import { toUserMessage } from "../../../../../lib/errors.ts"
+import type { BulkSelection } from "../../../../../lib/hooks/useSelectableRows.ts"
 
 interface AddToDatasetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
+  /**
+   * When set, "all" / "allExcept" selections resolve only against traces linked
+   * to this issue (via score analytics). Omit on the project-wide traces page.
+   */
+  issueId?: string
   selection: BulkSelection<string>
   selectedCount: number
   onSuccess: () => void
@@ -26,6 +31,7 @@ export function AddToDatasetModal({
   open,
   onOpenChange,
   projectId,
+  issueId,
   selection,
   selectedCount,
   onSuccess,
@@ -64,6 +70,7 @@ export function AddToDatasetModal({
             projectId,
             name: newDatasetName.trim(),
             selection,
+            ...(issueId ? { issueId } : {}),
           },
         })
         toast({
@@ -80,7 +87,12 @@ export function AddToDatasetModal({
       } else {
         if (!selectedDatasetId) return
         const result = await addTracesToDatasetFunction({
-          data: { projectId, datasetId: selectedDatasetId, selection },
+          data: {
+            projectId,
+            datasetId: selectedDatasetId,
+            selection,
+            ...(issueId ? { issueId } : {}),
+          },
         })
         toast({
           title: "Traces added to dataset",
@@ -106,6 +118,7 @@ export function AddToDatasetModal({
     selectedDatasetId,
     newDatasetName,
     projectId,
+    issueId,
     selection,
     selectedCount,
     toast,

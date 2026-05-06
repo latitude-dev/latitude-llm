@@ -19,6 +19,7 @@
   "dependencies": {
     "@domain/exports": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",

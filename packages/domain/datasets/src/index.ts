@@ -31,6 +31,7 @@ export {
   addTracesToDataset,
   createDatasetFromTraces,
   type TraceSelection,
+  type TraceSource,
 } from "./use-cases/add-traces-to-dataset.ts"
 export {
   type BuildDatasetExportInput,

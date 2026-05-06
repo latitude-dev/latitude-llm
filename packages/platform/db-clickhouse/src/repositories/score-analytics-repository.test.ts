@@ -727,6 +727,18 @@ describe("ScoreAnalyticsRepository", () => {
       expect(page.limit).toBe(1)
       expect(page.offset).toBe(0)
     })
+
+    it("counts distinct traces linked to one issue", async () => {
+      const total = await runCh(
+        repo.countTracesByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueA),
+        }),
+      )
+
+      expect(total).toBe(1)
+    })
   })
 
   // ------------------------------------------------------------------

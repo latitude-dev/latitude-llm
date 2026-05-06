@@ -20,20 +20,24 @@ import {
   ArrowDownRightIcon,
   ArrowUpIcon,
   CheckIcon,
+  DatabaseIcon,
   PauseIcon,
   PlayIcon,
   TextAlignStartIcon,
   XIcon,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
   invalidateIssueQueries,
   useIssueDetail,
+  useIssueTracesCount,
   useIssueTracesInfiniteScroll,
 } from "../../../../../../domains/issues/issues.collection.ts"
 import { applyIssueLifecycleAction } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { useSelectableRows } from "../../../../../../lib/hooks/useSelectableRows.ts"
+import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
 import {
   DEFAULT_TRACE_TABLE_SORTING,
   ProjectTracesTable,
@@ -170,6 +174,12 @@ export function IssueDetailDrawer({
   const [lifecycleConfirmAction, setLifecycleConfirmAction] = useState<LifecycleConfirmationAction | null>(null)
   const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
+  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+
+  const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
+  const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
+  const traceSelection = useSelectableRows({ rowIds: traceIds, totalRowCount: totalTraceCount })
+  const { selectedCount, bulkSelection, clearSelections } = traceSelection
   const hasActiveLinkedEvaluations =
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
@@ -419,6 +429,14 @@ export function IssueDetailDrawer({
             className="gap-1"
             contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
+            {selectedCount > 0 && (
+              <div className="flex items-center gap-2 pb-2">
+                <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+                  <Icon icon={DatabaseIcon} size="sm" />
+                  Add to Dataset ({selectedCount})
+                </Button>
+              </div>
+            )}
             <ProjectTracesTable
               projectId={projectId}
               data={traces}
@@ -430,6 +448,7 @@ export function IssueDetailDrawer({
               getTraceHref={getTraceHref}
               linkTarget="_blank"
               rowInteractionRole="link"
+              selection={traceSelection}
               infiniteScroll={infiniteScroll}
               blankSlate="This issue has not been seen on any traces yet."
               scrollAreaLayout="intrinsic"
@@ -438,6 +457,18 @@ export function IssueDetailDrawer({
           </DetailSection>
         </div>
       </DetailDrawer>
+
+      {bulkSelection && (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          issueId={issueId}
+          selection={bulkSelection}
+          selectedCount={selectedCount}
+          onSuccess={clearSelections}
+        />
+      )}
 
       <Modal.Root open={resolveModalOpen} onOpenChange={setResolveModalOpen}>
         <Modal.Content dismissible>

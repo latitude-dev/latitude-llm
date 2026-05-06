@@ -10,7 +10,7 @@ import type {
   IssueTracePageRecord,
   IssueTraceRecord,
 } from "./issues.functions.ts"
-import { getIssue, getIssueDetail, listIssues, listIssueTraces } from "./issues.functions.ts"
+import { countIssueTraces, getIssue, getIssueDetail, listIssues, listIssueTraces } from "./issues.functions.ts"
 
 const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
@@ -76,6 +76,9 @@ const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-t
 
 const getIssueTracesPageKey = (projectId: string, issueId: string, offset: number) =>
   ["issue-traces-page", projectId, issueId, offset] as const
+
+const getIssueTracesCountQueryKey = (projectId: string, issueId: string) =>
+  ["issue-traces-count", projectId, issueId] as const
 
 const buildListIssuesRequest = (input: IssuesKeyInput, offset: number) => ({
   projectId: input.projectId,
@@ -303,12 +306,32 @@ export function useIssueTracesInfiniteScroll({
   return { data, isLoading, infiniteScroll }
 }
 
+export function useIssueTracesCount({
+  projectId,
+  issueId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly enabled?: boolean
+}) {
+  const { data } = useQuery({
+    queryKey: getIssueTracesCountQueryKey(projectId, issueId),
+    queryFn: () => countIssueTraces({ data: { projectId, issueId } }),
+    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+
+  return data?.total ?? 0
+}
+
 const invalidateIssueDetailQueries = (projectId: string, issueId: string) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: getIssueQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: getIssueTracesQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: ["issue-traces-page", projectId, issueId] }),
+    queryClient.invalidateQueries({ queryKey: getIssueTracesCountQueryKey(projectId, issueId) }),
   ])
 
 export const invalidateIssueQueries = (projectId: string, issueId?: string) =>

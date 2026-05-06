@@ -9,12 +9,15 @@ import {
 } from "@domain/datasets"
 import { createFakeDatasetRepository } from "@domain/datasets/testing"
 import { OutboxEventWriter } from "@domain/events"
+import { ScoreAnalyticsRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { SqlClient, type SqlClientShape } from "@domain/shared"
 import {
   bootstrapSeedScope,
   type ChSqlClient,
   DatasetId,
   ExternalUserId,
+  IssueId,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -97,17 +100,27 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     )
   })
 
+  const defaultScoreAnalyticsRepo = createFakeScoreAnalyticsRepository().repository
+
   const runWithLive = <A, E>(
     effect: Effect.Effect<
       A,
       E,
-      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
+      | DatasetRepository
+      | DatasetRowRepository
+      | TraceRepository
+      | ScoreAnalyticsRepository
+      | ChSqlClient
+      | OutboxEventWriter
+      | SqlClient
     >,
+    scoreAnalyticsRepo: (typeof ScoreAnalyticsRepository)["Service"] = defaultScoreAnalyticsRepo,
   ) =>
     Effect.runPromise(
       effect.pipe(
         Effect.provideService(DatasetRepository, datasetRepo),
         Effect.provideService(DatasetRowRepository, rowRepo),
+        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepo),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, inertSqlClient),
         withClickHouse(TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer)), ch.client, ORG_ID),
@@ -119,7 +132,13 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     effect: Effect.Effect<
       A,
       E,
-      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
+      | DatasetRepository
+      | DatasetRowRepository
+      | TraceRepository
+      | ScoreAnalyticsRepository
+      | ChSqlClient
+      | OutboxEventWriter
+      | SqlClient
     >,
     services: {
       datasetRepo: (typeof DatasetRepository)["Service"]
@@ -132,6 +151,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         Effect.provideService(DatasetRepository, services.datasetRepo),
         Effect.provideService(DatasetRowRepository, services.rowRepo),
         Effect.provideService(TraceRepository, services.traceRepo),
+        Effect.provideService(ScoreAnalyticsRepository, defaultScoreAnalyticsRepo),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, inertSqlClient),
         Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
@@ -146,6 +166,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       addTracesToDataset({
         projectId: PROJECT_ID,
         datasetId: DATASET_ID,
+        source: { kind: "project" },
         selection: { mode: "selected", traceIds: [traceId] },
       }),
     )
@@ -170,6 +191,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       createDatasetFromTraces({
         projectId: PROJECT_ID,
         name: "from-traces-dataset",
+        source: { kind: "project" },
         selection: { mode: "selected", traceIds },
       }),
     )
@@ -235,6 +257,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       addTracesToDataset({
         projectId: PROJECT_ID,
         datasetId: DATASET_ID,
+        source: { kind: "project" },
         selection: { mode: "selected", traceIds: [TraceId("trace-meta-1")] },
       }),
       { datasetRepo, rowRepo, traceRepo: fakeTraceRepo },
@@ -319,6 +342,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         createDatasetFromTraces({
           projectId: PROJECT_ID,
           name: "rollback-on-fail",
+          source: { kind: "project" },
           selection: { mode: "selected", traceIds: [TraceId("trace-fail-1")] },
         }),
         {
@@ -336,5 +360,80 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     await expect(
       Effect.runPromise(capturingDatasetRepo.findById(id).pipe(Effect.provideService(SqlClient, inertSqlClient))),
     ).rejects.toBeInstanceOf(DatasetNotFoundError)
+  })
+
+  it("addTracesToDataset resolves traces from issue source via listTracesByIssue", async () => {
+    expect(seededTraceIds.length).toBeGreaterThanOrEqual(1)
+    const issueId = IssueId("issue-link-all")
+
+    const issueScoreRepo = createFakeScoreAnalyticsRepository({
+      listTracesByIssue: ({ limit = 25, offset = 0 }) =>
+        Effect.succeed({
+          items: seededTraceIds.map((traceId) => ({ traceId, lastSeenAt: new Date() })),
+          hasMore: false,
+          limit,
+          offset,
+        }),
+    }).repository
+
+    const result = await runWithLive(
+      addTracesToDataset({
+        projectId: PROJECT_ID,
+        datasetId: DATASET_ID,
+        source: { kind: "issue", issueId },
+        selection: { mode: "all" },
+      }),
+      issueScoreRepo,
+    )
+
+    expect(result.rowIds.length).toBe(seededTraceIds.length)
+
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: DATASET_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
+    expect(rows.length).toBe(seededTraceIds.length)
+    const rowTraceIds = new Set(rows.map((r) => (r.metadata as Record<string, unknown>).traceId))
+    for (const traceId of seededTraceIds) {
+      expect(rowTraceIds.has(traceId)).toBe(true)
+    }
+  })
+
+  // Excludes a synthetic trace id rather than a seeded one so the assertion holds
+  // even when the seed deduper produces a single distinct trace.
+  it("addTracesToDataset honors allExcept when source is an issue", async () => {
+    expect(seededTraceIds.length).toBeGreaterThanOrEqual(1)
+    const issueId = IssueId("issue-link-except")
+    const fabricatedExcluded = TraceId("fabricated-excluded-trace")
+
+    const issueScoreRepo = createFakeScoreAnalyticsRepository({
+      listTracesByIssue: ({ limit = 25, offset = 0 }) =>
+        Effect.succeed({
+          items: [
+            ...seededTraceIds.map((traceId) => ({ traceId, lastSeenAt: new Date() })),
+            { traceId: fabricatedExcluded, lastSeenAt: new Date() },
+          ],
+          hasMore: false,
+          limit,
+          offset,
+        }),
+    }).repository
+
+    const result = await runWithLive(
+      addTracesToDataset({
+        projectId: PROJECT_ID,
+        datasetId: DATASET_ID,
+        source: { kind: "issue", issueId },
+        selection: { mode: "allExcept", traceIds: [fabricatedExcluded] },
+      }),
+      issueScoreRepo,
+    )
+
+    expect(result.rowIds.length).toBe(seededTraceIds.length)
+
+    const { rows } = await Effect.runPromise(
+      rowRepo.list({ datasetId: DATASET_ID }).pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))),
+    )
+    const rowTraceIds = rows.map((r) => (r.metadata as Record<string, unknown>).traceId)
+    expect(rowTraceIds).not.toContain(fabricatedExcluded)
   })
 })
