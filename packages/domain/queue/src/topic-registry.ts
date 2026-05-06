@@ -233,6 +233,23 @@ const _registry = {
     }
   }>(),
 
+  // Outbound contact lifecycle sync to the marketing tool (Loops in v2). Each
+  // task targets a specific contact update; they are dispatched from
+  // `domain-events` as users move through signup, organization creation,
+  // onboarding, and first-trace.
+  "marketing-contacts": payloads<{
+    "register-user": {
+      readonly userId: string
+    }
+    "update-onboarding": {
+      readonly userId: string
+      readonly stackChoice: "coding-agent-machine" | "production-agent"
+    }
+    "mark-telemetry-enabled": {
+      readonly organizationId: string
+    }
+  }>(),
+
   "trace-search": payloads<{
     refreshTrace: {
       readonly organizationId: string

@@ -122,6 +122,14 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     // we do NOT need a separate `user.additionalFields.role` entry —
     // declaring both produces duplicate-field warnings. `input: false`
     // still holds: the role is read-only through sign-up / update APIs.
+    user: {
+      additionalFields: {
+        // Free-text job title captured during the project-onboarding form.
+        // `input: false` keeps it out of Better Auth's signup / update API
+        // surface — we write it via our own onboarding server function.
+        jobTitle: { type: "string", required: false, input: false },
+      },
+    },
     databaseHooks: {
       user: {
         create: {

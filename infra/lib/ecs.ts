@@ -355,6 +355,7 @@ function createTaskDefinition(
       secrets["latitude-telemetry-project-slug"].arn,
       secrets["turnstile-secret-key"].arn,
       secrets["posthog-api-key"].arn,
+      secrets["loops-api-key"].arn,
       secrets["v2-support-app-id"].arn,
       secrets["v2-support-app-secret-key"].arn,
       secrets["bull-board-username"].arn,
@@ -393,6 +394,7 @@ function createTaskDefinition(
         latitudeTelemetryProjectSlugArn,
         turnstileSecretKeyArn,
         posthogApiKeyArn,
+        loopsApiKeyArn,
         supportAppIdArn,
         supportAppSecretKeyArn,
         bullBoardUsernameArn,
@@ -466,6 +468,10 @@ function createTaskDefinition(
           // { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
           { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
+          // Loops sync is production-only. Injecting the placeholder secret in
+          // staging would defeat `loadLoopsConfig`'s "unset → no-op" gate and
+          // every marketing-contacts task would 401 against the Loops API.
+          ...(config.name === "production" ? [{ name: "LAT_LOOPS_API_KEY", valueFrom: loopsApiKeyArn }] : []),
         ]
 
         // Service-specific environment variables

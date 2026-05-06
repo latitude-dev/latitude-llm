@@ -7,8 +7,10 @@ import type { User } from "../entities/user.ts"
 export class UserRepository extends Context.Service<
   UserRepository,
   {
+    findById: (userId: string) => Effect.Effect<User, NotFoundError | RepositoryError, SqlClient>
     findByEmail: (email: string) => Effect.Effect<User, NotFoundError | RepositoryError, SqlClient>
     setNameIfMissing: (params: { userId: string; name: string }) => Effect.Effect<void, RepositoryError, SqlClient>
+    setJobTitle: (params: { userId: string; jobTitle: string }) => Effect.Effect<void, RepositoryError, SqlClient>
     delete: (userId: string) => Effect.Effect<void, RepositoryError, SqlClient>
   }
 >()("@domain/users/UserRepository") {}

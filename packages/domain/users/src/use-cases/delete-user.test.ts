@@ -22,6 +22,7 @@ const createTestUser = (id: string): User => ({
   id: UserId(id),
   email: `${id}@example.com`,
   name: "Test User",
+  jobTitle: null,
   emailVerified: true,
   image: null,
   role: "user",

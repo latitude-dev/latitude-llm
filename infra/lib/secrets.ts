@@ -317,6 +317,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["posthog-api-key"] = posthogApiKey.secret
   secretVersions["posthog-api-key"] = posthogApiKey.secretVersion
 
+  const loopsApiKey = createSingleSecret(
+    baseName,
+    "loops-api-key",
+    "Loops marketing API key for contact lifecycle sync (workers)",
+    process.env.LAT_LOOPS_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["loops-api-key"] = loopsApiKey.secret
+  secretVersions["loops-api-key"] = loopsApiKey.secretVersion
+
   const latitudeTelemetryApiKey = createSingleSecret(
     baseName,
     "latitude-telemetry-api-key",

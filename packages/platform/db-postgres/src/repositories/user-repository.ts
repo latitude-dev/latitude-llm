@@ -10,6 +10,7 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
   id: row.id as UserId,
   email: row.email,
   name: row.name ?? null,
+  jobTitle: row.jobTitle ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
@@ -23,6 +24,22 @@ export const UserRepositoryLive = Layer.effect(
   UserRepository,
   Effect.gen(function* () {
     return {
+      findById: (userId: string) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) => db.select().from(users).where(eq(users.id, userId)).limit(1))
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "User", id: userId }))
+                }
+                return Effect.succeed(toDomainUser(result))
+              }),
+            )
+        }),
+
       findByEmail: (email: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -54,6 +71,23 @@ export const UserRepositoryLive = Layer.effect(
               .where(
                 and(eq(users.id, userId), or(isNull(users.name), eq(users.name, ""), sql`trim(${users.name}) = ''`)),
               ),
+          )
+        }),
+
+      setJobTitle: ({ userId, jobTitle }: { userId: string; jobTitle: string }) =>
+        Effect.gen(function* () {
+          const trimmed = jobTitle.trim()
+          if (!trimmed) return
+
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db
+              .update(users)
+              .set({
+                jobTitle: trimmed,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, userId)),
           )
         }),
 
