@@ -28,6 +28,7 @@ export { AdminFeatureFlagRepositoryLive } from "./repositories/admin-feature-fla
 export { AdminOrganizationRepositoryLive } from "./repositories/admin-organization-repository.ts"
 export { AdminProjectRepositoryLive } from "./repositories/admin-project-repository.ts"
 export { AdminUserRepositoryLive } from "./repositories/admin-user-repository.ts"
+export { AlertIncidentRepositoryLive } from "./repositories/alert-incident-repository.ts"
 export { AnnotationQueueItemRepositoryLive } from "./repositories/annotation-queue-item-repository.ts"
 export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
