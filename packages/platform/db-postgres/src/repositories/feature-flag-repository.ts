@@ -16,7 +16,7 @@ import {
   type SqlClientShape,
   UserId,
 } from "@domain/shared"
-import { and, asc, eq, isNull } from "drizzle-orm"
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
@@ -47,6 +47,7 @@ const toFeatureFlag = (row: typeof featureFlags.$inferSelect): FeatureFlag =>
     identifier: row.identifier,
     name: row.name,
     description: row.description,
+    enabledForAll: row.enabledForAll,
     archivedAt: row.archivedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -96,9 +97,20 @@ export const FeatureFlagRepositoryLive = Layer.effect(
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select({ featureFlag: featureFlags })
-              .from(organizationFeatureFlags)
-              .innerJoin(featureFlags, eq(featureFlags.id, organizationFeatureFlags.featureFlagId))
-              .where(and(eq(organizationFeatureFlags.organizationId, organizationId), isNull(featureFlags.archivedAt)))
+              .from(featureFlags)
+              .leftJoin(
+                organizationFeatureFlags,
+                and(
+                  eq(organizationFeatureFlags.featureFlagId, featureFlags.id),
+                  eq(organizationFeatureFlags.organizationId, organizationId),
+                ),
+              )
+              .where(
+                and(
+                  isNull(featureFlags.archivedAt),
+                  or(eq(featureFlags.enabledForAll, true), sql`${organizationFeatureFlags.id} IS NOT NULL`),
+                ),
+              )
               .orderBy(asc(featureFlags.identifier)),
           )
 
@@ -110,20 +122,24 @@ export const FeatureFlagRepositoryLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ id: organizationFeatureFlags.id })
-              .from(organizationFeatureFlags)
-              .innerJoin(featureFlags, eq(featureFlags.id, organizationFeatureFlags.featureFlagId))
-              .where(
+              .select({
+                enabledForAll: featureFlags.enabledForAll,
+                organizationFeatureFlagId: organizationFeatureFlags.id,
+              })
+              .from(featureFlags)
+              .leftJoin(
+                organizationFeatureFlags,
                 and(
-                  eq(featureFlags.identifier, identifier),
+                  eq(organizationFeatureFlags.featureFlagId, featureFlags.id),
                   eq(organizationFeatureFlags.organizationId, organizationId),
-                  isNull(featureFlags.archivedAt),
                 ),
               )
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
               .limit(1),
           )
 
-          return row !== undefined
+          if (!row) return false
+          return row.enabledForAll || row.organizationFeatureFlagId !== null
         }),
 
       createFeatureFlag: (input) =>

@@ -19,6 +19,7 @@ export const featureFlagSchema = z.object({
   identifier: featureFlagIdentifierSchema,
   name: z.string().trim().min(1).max(FEATURE_FLAG_NAME_MAX_LENGTH).nullable(),
   description: z.string().trim().min(1).nullable(),
+  enabledForAll: z.boolean(),
   archivedAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -43,6 +44,7 @@ export const createFeatureFlag = (params: {
   readonly identifier: string
   readonly name?: string | null | undefined
   readonly description?: string | null | undefined
+  readonly enabledForAll?: boolean | undefined
   readonly archivedAt?: Date | null | undefined
   readonly createdAt?: Date
   readonly updatedAt?: Date
@@ -53,6 +55,7 @@ export const createFeatureFlag = (params: {
     identifier: params.identifier,
     name: normalizeNullableText(params.name),
     description: normalizeNullableText(params.description),
+    enabledForAll: params.enabledForAll ?? false,
     archivedAt: params.archivedAt ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,

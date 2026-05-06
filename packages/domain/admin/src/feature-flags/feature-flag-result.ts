@@ -14,7 +14,9 @@ export const adminFeatureFlagSummarySchema = z.object({
   identifier: z.string(),
   name: z.string().nullable(),
   description: z.string().nullable(),
+  enabledForAll: z.boolean(),
   enabledOrganizations: z.array(adminFeatureFlagEnabledOrganizationSchema),
+  archivedAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })

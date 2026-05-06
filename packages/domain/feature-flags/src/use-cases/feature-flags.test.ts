@@ -2,7 +2,11 @@ import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { DuplicateFeatureFlagIdentifierError, FeatureFlagNotFoundError } from "../errors.ts"
+import {
+  DuplicateFeatureFlagIdentifierError,
+  FeatureFlagNotFoundError,
+  InvalidFeatureFlagIdentifierError,
+} from "../errors.ts"
 import { FeatureFlagRepository } from "../ports/feature-flag-repository.ts"
 import { createFakeFeatureFlagRepository } from "../testing/fake-feature-flag-repository.ts"
 import { archiveFeatureFlagUseCase } from "./archive-feature-flag.ts"
@@ -17,12 +21,17 @@ const ORG_ID = OrganizationId("org-feature-flags-test".padEnd(24, "x").slice(0, 
 const OTHER_ORG_ID = OrganizationId("org-feature-flags-oth".padEnd(24, "x").slice(0, 24))
 const ADMIN_USER_ID = UserId("admin-feature-flags".padEnd(24, "x").slice(0, 24))
 
-function makeLayer(organizationId = ORG_ID) {
-  const { repository } = createFakeFeatureFlagRepository()
-  return Layer.mergeAll(
-    Layer.succeed(FeatureFlagRepository, repository),
+function makeLayerWithFake(organizationId = ORG_ID) {
+  const fake = createFakeFeatureFlagRepository()
+  const layer = Layer.mergeAll(
+    Layer.succeed(FeatureFlagRepository, fake.repository),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
+  return { layer, fake }
+}
+
+function makeLayer(organizationId = ORG_ID) {
+  return makeLayerWithFake(organizationId).layer
 }
 
 describe("feature flag use cases", () => {
@@ -41,6 +50,34 @@ describe("feature flag use cases", () => {
 
     expect(result.map((featureFlag) => featureFlag.identifier)).toEqual(["new-dashboard"])
     expect(result[0].name).toBe("New dashboard")
+  })
+
+  it.each([
+    ["empty", ""],
+    ["whitespace only", "   "],
+    ["containing space", "new dashboard"],
+    ["containing forbidden character", "new-dashboard!"],
+    ["containing colon", "billing:v2"],
+  ])("rejects identifiers that are %s", async (_label, identifier) => {
+    const layer = makeLayer()
+
+    await expect(
+      Effect.runPromise(createFeatureFlagUseCase({ identifier }).pipe(Effect.provide(layer))),
+    ).rejects.toBeInstanceOf(InvalidFeatureFlagIdentifierError)
+  })
+
+  it.each([
+    "new-dashboard",
+    "billing.v2",
+    "namespace/feature",
+    "feature_with_underscore",
+    "ABC123",
+  ])("accepts identifier %s", async (identifier) => {
+    const layer = makeLayer()
+
+    await expect(
+      Effect.runPromise(createFeatureFlagUseCase({ identifier }).pipe(Effect.provide(layer))),
+    ).resolves.toMatchObject({ identifier })
   })
 
   it("rejects duplicate feature flag identifiers", async () => {
@@ -129,6 +166,26 @@ describe("feature flag use cases", () => {
       hasFeatureFlagUseCase({ identifier: "new-dashboard" }).pipe(Effect.provide(otherOrgLayer)),
     )
     expect(otherOrgEnabled).toBe(false)
+  })
+
+  it("treats globally enabled feature flags as enabled for any organization", async () => {
+    const { layer, fake } = makeLayerWithFake()
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* createFeatureFlagUseCase({ identifier: "global-flag" })
+
+        const flag = fake.featureFlags.get("global-flag")
+        if (!flag) throw new Error("expected flag to exist")
+        fake.featureFlags.set("global-flag", { ...flag, enabledForAll: true })
+
+        const enabled = yield* hasFeatureFlagUseCase({ identifier: "global-flag" })
+        const list = yield* listEnabledFeatureFlagsUseCase()
+        return { enabled, list }
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.enabled).toBe(true)
+    expect(result.list.map((featureFlag) => featureFlag.identifier)).toEqual(["global-flag"])
   })
 
   it("treats archived feature flags like missing flags", async () => {

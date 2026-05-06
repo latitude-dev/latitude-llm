@@ -13,7 +13,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, asc, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { organizations } from "../schema/better-auth.ts"
@@ -44,6 +44,8 @@ const toOrganizationFeatureFlag = (row: typeof featureFlags.$inferSelect): Admin
   identifier: row.identifier,
   name: row.name ?? null,
   description: row.description ?? null,
+  enabledForAll: row.enabledForAll,
+  archivedAt: row.archivedAt,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -150,6 +152,80 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
             db
               .update(featureFlags)
               .set({ archivedAt: new Date(), updatedAt: new Date() })
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .returning({ id: featureFlags.id }),
+          )
+          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
+        }),
+
+      listArchived: () =>
+        Effect.gen(function* () {
+          const flagRows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(featureFlags)
+              .where(isNotNull(featureFlags.archivedAt))
+              .orderBy(desc(featureFlags.archivedAt)),
+          )
+          return flagRows.map((row) => toFeatureFlagSummary(row, []))
+        }),
+
+      update: (input) =>
+        Effect.gen(function* () {
+          const update: Partial<typeof featureFlags.$inferInsert> = { updatedAt: new Date() }
+          if (input.name !== undefined) update.name = input.name
+          if (input.description !== undefined) update.description = input.description
+
+          const [row] = yield* sqlClient.query((db) =>
+            db.update(featureFlags).set(update).where(eq(featureFlags.identifier, input.identifier)).returning(),
+          )
+          if (!row) return yield* new FeatureFlagNotFoundError({ identifier: input.identifier })
+          return toFeatureFlagSummary(row, [])
+        }),
+
+      unarchive: (identifier) =>
+        Effect.gen(function* () {
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .update(featureFlags)
+              .set({ archivedAt: null, updatedAt: new Date() })
+              .where(and(eq(featureFlags.identifier, identifier), isNotNull(featureFlags.archivedAt)))
+              .returning({ id: featureFlags.id }),
+          )
+          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
+        }),
+
+      delete: (identifier) =>
+        Effect.gen(function* () {
+          const [flagRow] = yield* sqlClient.query((db) =>
+            db.select({ id: featureFlags.id }).from(featureFlags).where(eq(featureFlags.identifier, identifier)),
+          )
+          if (!flagRow) return
+
+          yield* sqlClient.query((db) =>
+            db.delete(organizationFeatureFlags).where(eq(organizationFeatureFlags.featureFlagId, flagRow.id)),
+          )
+          yield* sqlClient.query((db) => db.delete(featureFlags).where(eq(featureFlags.id, flagRow.id)))
+        }),
+
+      enableForAll: (identifier) =>
+        Effect.gen(function* () {
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .update(featureFlags)
+              .set({ enabledForAll: true, updatedAt: new Date() })
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .returning({ id: featureFlags.id }),
+          )
+          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
+        }),
+
+      disableForAll: (identifier) =>
+        Effect.gen(function* () {
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .update(featureFlags)
+              .set({ enabledForAll: false, updatedAt: new Date() })
               .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
               .returning({ id: featureFlags.id }),
           )

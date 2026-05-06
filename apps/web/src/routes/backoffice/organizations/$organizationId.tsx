@@ -1,8 +1,8 @@
-import { Avatar, Badge, Button, CloseTrigger, Icon, Modal, Select, Text, useToast } from "@repo/ui"
+import { Avatar, Badge, CopyButton, Icon, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
-import { Flag, Plus, SparklesIcon } from "lucide-react"
-import { useState } from "react"
+import { Flag, SparklesIcon } from "lucide-react"
+import { useMemo, useState } from "react"
 import {
   type AdminOrganizationFeatureFlagDto,
   type AdminOrganizationFeatureFlagsDto,
@@ -161,6 +161,12 @@ function BackofficeOrganizationDetailPage() {
   )
 }
 
+type FeatureFlagRowState = {
+  readonly flag: AdminOrganizationFeatureFlagDto
+  readonly isEnabled: boolean
+  readonly globalOnly: boolean
+}
+
 function FeatureFlagsSection({
   organizationId,
   featureFlags,
@@ -168,30 +174,19 @@ function FeatureFlagsSection({
   readonly organizationId: string
   readonly featureFlags: AdminOrganizationFeatureFlagsDto
 }) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [removingIdentifier, setRemovingIdentifier] = useState<string | null>(null)
-
-  const handleRemove = async (featureFlag: AdminOrganizationFeatureFlagDto) => {
-    if (!window.confirm(`Remove feature flag "${featureFlag.identifier}" from this organization?`)) return
-
-    setRemovingIdentifier(featureFlag.identifier)
-    try {
-      await adminDisableFeatureFlagForOrganization({
-        data: { organizationId, identifier: featureFlag.identifier },
-      })
-      toast({ description: `Removed "${featureFlag.identifier}" from this organization.` })
-      void router.invalidate()
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Could not remove feature flag",
-        description: toUserMessage(error),
-      })
-    } finally {
-      setRemovingIdentifier(null)
-    }
-  }
+  const rows = useMemo<FeatureFlagRowState[]>(() => {
+    const enabled: FeatureFlagRowState[] = featureFlags.enabled.map((flag) => ({
+      flag,
+      isEnabled: true,
+      globalOnly: false,
+    }))
+    const available: FeatureFlagRowState[] = featureFlags.available.map((flag) => ({
+      flag,
+      isEnabled: flag.enabledForAll,
+      globalOnly: flag.enabledForAll,
+    }))
+    return [...enabled, ...available].sort((a, b) => a.flag.identifier.localeCompare(b.flag.identifier))
+  }, [featureFlags])
 
   return (
     <DashboardSection
@@ -201,48 +196,19 @@ function FeatureFlagsSection({
           Feature Flags
         </span>
       }
-      count={featureFlags.enabled.length}
-      aside={<AddFeatureFlagButton organizationId={organizationId} availableFlags={featureFlags.available} />}
+      count={rows.filter((row) => row.isEnabled).length}
     >
-      {featureFlags.enabled.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-4">
-          <Text.H6 weight="medium">No active feature flags</Text.H6>
+          <Text.H6 weight="medium">No feature flags</Text.H6>
           <Text.H6 color="foregroundMuted">
-            Enable a flag when this organization should get access to behavior that is still gated.
+            Active flags appear here once you create them on the Backoffice feature flags page.
           </Text.H6>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          {featureFlags.enabled.map((featureFlag) => (
-            <div
-              key={featureFlag.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
-            >
-              <div className="flex min-w-0 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{featureFlag.identifier}</code>
-                  <Badge variant="outlineSuccessMuted" noWrap>
-                    Enabled
-                  </Badge>
-                </div>
-                <Text.H6 color={featureFlag.name ? "foreground" : "foregroundMuted"} weight="medium">
-                  {featureFlag.name ?? "Unnamed flag"}
-                </Text.H6>
-                {featureFlag.description ? (
-                  <Text.H6 color="foregroundMuted">{featureFlag.description}</Text.H6>
-                ) : (
-                  <Text.H6 color="foregroundMuted">No description.</Text.H6>
-                )}
-              </div>
-              <Button
-                variant="destructive-soft"
-                size="sm"
-                disabled={removingIdentifier === featureFlag.identifier}
-                onClick={() => void handleRemove(featureFlag)}
-              >
-                {removingIdentifier === featureFlag.identifier ? "Removing…" : "Remove"}
-              </Button>
-            </div>
+          {rows.map((row) => (
+            <FeatureFlagToggleRow key={row.flag.id} row={row} organizationId={organizationId} />
           ))}
         </div>
       )}
@@ -250,123 +216,91 @@ function FeatureFlagsSection({
   )
 }
 
-function AddFeatureFlagButton({
+function FeatureFlagToggleRow({
+  row,
   organizationId,
-  availableFlags,
 }: {
+  readonly row: FeatureFlagRowState
   readonly organizationId: string
-  readonly availableFlags: AdminOrganizationFeatureFlagDto[]
 }) {
   const router = useRouter()
   const { toast } = useToast()
-  const [isOpen, setIsOpen] = useState(false)
-  const [selectedIdentifier, setSelectedIdentifier] = useState<string | undefined>()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const selectedFeatureFlag = availableFlags.find((featureFlag) => featureFlag.identifier === selectedIdentifier)
+  const [isPending, setIsPending] = useState(false)
+  const [optimisticEnabled, setOptimisticEnabled] = useState<boolean | null>(null)
+  const checked = optimisticEnabled ?? row.isEnabled
 
-  const options = availableFlags.map((featureFlag) => ({
-    label: featureFlag.name ? `${featureFlag.identifier} — ${featureFlag.name}` : featureFlag.identifier,
-    value: featureFlag.identifier,
-  }))
-
-  const handleAdd = async () => {
-    if (!selectedIdentifier) return
-
-    setIsSubmitting(true)
+  const handleToggle = async (next: boolean) => {
+    if (row.globalOnly) return
+    setOptimisticEnabled(next)
+    setIsPending(true)
     try {
-      await adminEnableFeatureFlagForOrganization({
-        data: { organizationId, identifier: selectedIdentifier },
-      })
-      toast({ description: `Enabled "${selectedIdentifier}" for this organization.` })
-      setIsOpen(false)
-      setSelectedIdentifier(undefined)
+      if (next) {
+        await adminEnableFeatureFlagForOrganization({
+          data: { organizationId, identifier: row.flag.identifier },
+        })
+        toast({ description: `Enabled "${row.flag.identifier}" for this organization.` })
+      } else {
+        await adminDisableFeatureFlagForOrganization({
+          data: { organizationId, identifier: row.flag.identifier },
+        })
+        toast({ description: `Disabled "${row.flag.identifier}" for this organization.` })
+      }
       void router.invalidate()
     } catch (error) {
+      setOptimisticEnabled(null)
       toast({
         variant: "destructive",
-        title: "Could not enable feature flag",
+        title: "Could not change feature flag",
         description: toUserMessage(error),
       })
     } finally {
-      setIsSubmitting(false)
+      setIsPending(false)
     }
   }
 
+  const switchEl = (
+    <Switch
+      checked={checked}
+      disabled={row.globalOnly || isPending}
+      loading={isPending}
+      onCheckedChange={(next) => void handleToggle(next)}
+      aria-label={`Toggle ${row.flag.identifier} for this organization`}
+    />
+  )
+
   return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
-        <Icon icon={Plus} size="sm" />
-        Add feature flag
-      </Button>
-      <Modal.Root
-        open={isOpen}
-        onOpenChange={(next) => {
-          if (!next) setSelectedIdentifier(undefined)
-          setIsOpen(next)
-        }}
-      >
-        <Modal.Content dismissible size="large">
-          <Modal.Header
-            title="Add feature flag"
-            description="Choose one active flag to enable for this organization."
-          />
-          <Modal.Body>
-            {availableFlags.length === 0 ? (
-              <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-4">
-                <Text.H6 weight="medium">No available feature flags</Text.H6>
-                <Text.H6 color="foregroundMuted">
-                  Every active flag is already enabled for this organization, or no active flags exist yet.
-                </Text.H6>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <Select
-                  name="featureFlag"
-                  label="Feature flag"
-                  options={options}
-                  value={selectedIdentifier}
-                  onChange={setSelectedIdentifier}
-                  placeholder="Select a feature flag"
-                  disabled={isSubmitting}
-                  searchable
-                  searchPlaceholder="Search feature flags..."
-                  searchableEmptyMessage="No matching feature flags."
-                  contentWidth="trigger"
-                />
-                {selectedFeatureFlag ? (
-                  <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code className="rounded bg-background px-1.5 py-0.5 font-mono text-sm">
-                        {selectedFeatureFlag.identifier}
-                      </code>
-                      <Text.H6 weight="medium">{selectedFeatureFlag.name ?? "Unnamed flag"}</Text.H6>
-                    </div>
-                    <Text.H6 color="foregroundMuted">{selectedFeatureFlag.description ?? "No description."}</Text.H6>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-3">
-                    <Text.H6 weight="medium">Select a flag to preview it</Text.H6>
-                    <Text.H6 color="foregroundMuted">
-                      The flag identifier, name, and description will be shown before enabling it.
-                    </Text.H6>
-                  </div>
-                )}
-              </div>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <CloseTrigger />
-            <Button
-              size="sm"
-              disabled={!selectedIdentifier || isSubmitting || availableFlags.length === 0}
-              onClick={() => void handleAdd()}
-            >
-              {isSubmitting ? "Enabling..." : "Enable feature flag"}
-            </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
-    </>
+    <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background px-3 py-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {row.flag.name ? (
+            <Text.H5 weight="semibold" ellipsis>
+              {row.flag.name}
+            </Text.H5>
+          ) : null}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{row.flag.identifier}</code>
+          <CopyButton value={row.flag.identifier} tooltip="Copy identifier" />
+        </div>
+        {row.flag.description ? (
+          <Text.H6 color="foregroundMuted">{row.flag.description}</Text.H6>
+        ) : (
+          <Text.H6 color="foregroundMuted">No description.</Text.H6>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {row.globalOnly ? (
+          <Badge variant="outlineSuccessMuted" noWrap>
+            Global
+          </Badge>
+        ) : null}
+        {row.globalOnly ? (
+          <Tooltip asChild trigger={<span>{switchEl}</span>}>
+            <Text.Mono size="h6">Enabled for every organization. Manage from the global feature flags page.</Text.Mono>
+          </Tooltip>
+        ) : (
+          switchEl
+        )}
+      </div>
+    </div>
   )
 }
 

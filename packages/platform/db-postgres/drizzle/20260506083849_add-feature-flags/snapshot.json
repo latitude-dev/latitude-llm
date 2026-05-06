@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7b9298e0-47f0-4ecc-a48f-dbceb53a5401",
+  "id": "1f792059-afdf-4fcc-bf3d-d66331d5b580",
   "prevIds": [
     "cd69d9ca-92c0-4784-838c-ecfd4b8b9da6"
   ],
@@ -2142,6 +2142,19 @@
       "generated": null,
       "identity": null,
       "name": "description",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "feature_flags"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "enabled_for_all",
       "entityType": "columns",
       "schema": "latitude",
       "table": "feature_flags"

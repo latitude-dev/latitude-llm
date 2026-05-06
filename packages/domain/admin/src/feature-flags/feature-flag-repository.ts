@@ -14,6 +14,12 @@ export interface AdminCreateFeatureFlagInput {
   readonly description?: string | null
 }
 
+export interface AdminUpdateFeatureFlagInput {
+  readonly identifier: string
+  readonly name?: string | null
+  readonly description?: string | null
+}
+
 export interface AdminEnableFeatureFlagForOrganizationInput {
   readonly organizationId: OrganizationId
   readonly identifier: string
@@ -27,10 +33,18 @@ export interface AdminDisableFeatureFlagForOrganizationInput {
 
 export interface AdminFeatureFlagRepositoryShape {
   list(): Effect.Effect<readonly AdminFeatureFlagSummary[], RepositoryError>
+  listArchived(): Effect.Effect<readonly AdminFeatureFlagSummary[], RepositoryError>
   create(
     input: AdminCreateFeatureFlagInput,
   ): Effect.Effect<AdminFeatureFlagSummary, DuplicateFeatureFlagIdentifierError | RepositoryError>
+  update(
+    input: AdminUpdateFeatureFlagInput,
+  ): Effect.Effect<AdminFeatureFlagSummary, FeatureFlagNotFoundError | RepositoryError>
   archive(identifier: string): Effect.Effect<void, FeatureFlagNotFoundError | RepositoryError>
+  unarchive(identifier: string): Effect.Effect<void, FeatureFlagNotFoundError | RepositoryError>
+  delete(identifier: string): Effect.Effect<void, RepositoryError>
+  enableForAll(identifier: string): Effect.Effect<void, FeatureFlagNotFoundError | RepositoryError>
+  disableForAll(identifier: string): Effect.Effect<void, FeatureFlagNotFoundError | RepositoryError>
   listForOrganization(
     organizationId: OrganizationId,
   ): Effect.Effect<AdminOrganizationFeatureFlags, NotFoundError | RepositoryError>

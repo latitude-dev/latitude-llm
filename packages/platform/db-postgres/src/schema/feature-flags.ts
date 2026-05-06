@@ -1,4 +1,4 @@
-import { index, text, unique, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const featureFlags = latitudeSchema.table(
@@ -8,6 +8,7 @@ export const featureFlags = latitudeSchema.table(
     identifier: varchar("identifier", { length: 128 }).notNull().unique(),
     name: varchar("name", { length: 256 }),
     description: text("description"),
+    enabledForAll: boolean("enabled_for_all").notNull().default(false),
     archivedAt: tzTimestamp("archived_at"),
     ...timestamps(),
   },

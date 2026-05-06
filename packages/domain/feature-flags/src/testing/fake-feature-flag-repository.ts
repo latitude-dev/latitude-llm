@@ -30,7 +30,8 @@ export const createFakeFeatureFlagRepository = () => {
         )
 
         return [...featureFlags.values()].filter(
-          (featureFlag) => featureFlag.archivedAt === null && enabledFeatureFlagIds.has(featureFlag.id),
+          (featureFlag) =>
+            featureFlag.archivedAt === null && (featureFlag.enabledForAll || enabledFeatureFlagIds.has(featureFlag.id)),
         )
       }),
 
@@ -39,6 +40,7 @@ export const createFakeFeatureFlagRepository = () => {
         const { organizationId } = yield* SqlClient
         const featureFlag = featureFlags.get(identifier)
         if (!featureFlag || featureFlag.archivedAt) return false
+        if (featureFlag.enabledForAll) return true
 
         return organizationFeatureFlags.has(enabledKey(organizationId, featureFlag.id))
       }),

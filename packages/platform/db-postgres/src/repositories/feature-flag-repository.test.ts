@@ -4,6 +4,7 @@ import {
   FeatureFlagRepository,
 } from "@domain/feature-flags"
 import { OrganizationId, type SqlClient, UserId } from "@domain/shared"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
@@ -167,6 +168,28 @@ describe("FeatureFlagRepositoryLive", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
+  })
+
+  it("treats globally enabled flags as enabled for any organization", async () => {
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* FeatureFlagRepository
+        yield* repo.createFeatureFlag({ identifier: "global-flag" })
+      }),
+    )
+    await pg.db.update(featureFlags).set({ enabledForAll: true }).where(eq(featureFlags.identifier, "global-flag"))
+
+    const result = await runWithLiveOtherOrg(
+      Effect.gen(function* () {
+        const repo = yield* FeatureFlagRepository
+        const enabled = yield* repo.isEnabledForOrganization("global-flag")
+        const list = yield* repo.listEnabledForOrganization()
+        return { enabled, list }
+      }),
+    )
+
+    expect(result.enabled).toBe(true)
+    expect(result.list.map((flag) => flag.identifier)).toEqual(["global-flag"])
   })
 
   it("treats archived feature flags like missing flags", async () => {

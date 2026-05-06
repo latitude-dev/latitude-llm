@@ -152,4 +152,80 @@ describe("AdminFeatureFlagRepositoryLive", () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundError)
   })
+
+  it("updates name and description without touching identifier", async () => {
+    const updated = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "new-dashboard", name: "Old", description: "Old desc." })
+        return yield* repo.update({ identifier: "new-dashboard", name: "New", description: "New desc." })
+      }),
+    )
+
+    expect(updated.identifier).toBe("new-dashboard")
+    expect(updated.name).toBe("New")
+    expect(updated.description).toBe("New desc.")
+  })
+
+  it("toggles enable-for-all on the flag", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "global-flag" })
+        yield* repo.enableForAll("global-flag")
+        const afterEnable = yield* repo.list()
+        yield* repo.disableForAll("global-flag")
+        const afterDisable = yield* repo.list()
+        return { afterEnable, afterDisable }
+      }),
+    )
+
+    expect(result.afterEnable[0].enabledForAll).toBe(true)
+    expect(result.afterDisable[0].enabledForAll).toBe(false)
+  })
+
+  it("lists archived flags via listArchived and unarchives them back", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "archived-flag" })
+        yield* repo.archive("archived-flag")
+        const archived = yield* repo.listArchived()
+        const activeBefore = yield* repo.list()
+        yield* repo.unarchive("archived-flag")
+        const activeAfter = yield* repo.list()
+        const archivedAfter = yield* repo.listArchived()
+        return { archived, activeBefore, activeAfter, archivedAfter }
+      }),
+    )
+
+    expect(result.archived.map((flag) => flag.identifier)).toEqual(["archived-flag"])
+    expect(result.activeBefore).toHaveLength(0)
+    expect(result.activeAfter.map((flag) => flag.identifier)).toEqual(["archived-flag"])
+    expect(result.archivedAfter).toHaveLength(0)
+  })
+
+  it("delete drops the flag and its organization enablements", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "doomed" })
+        yield* repo.enableForOrganization({
+          organizationId: ORG_ID,
+          identifier: "doomed",
+          enabledByAdminUserId: ADMIN_USER_ID,
+        })
+        yield* repo.archive("doomed")
+        yield* repo.delete("doomed")
+        const list = yield* repo.list()
+        const archived = yield* repo.listArchived()
+        return { list, archived }
+      }),
+    )
+
+    expect(result.list).toHaveLength(0)
+    expect(result.archived).toHaveLength(0)
+    const remainingEnablements = await pg.db.select().from(organizationFeatureFlags)
+    expect(remainingEnablements).toHaveLength(0)
+  })
 })
