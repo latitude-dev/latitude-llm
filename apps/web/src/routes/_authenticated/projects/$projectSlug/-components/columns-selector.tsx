@@ -91,7 +91,7 @@ export function ColumnsSelector({
   return (
     <DropdownMenuRoot>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button variant="outline" size="default" disabled={disabled}>
           <Icon icon={Columns2Icon} size="sm" />
           Columns
           <Icon icon={ChevronDown} size="sm" />
