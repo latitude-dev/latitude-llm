@@ -92,13 +92,13 @@ const STACK_CHOICE_OPTIONS: ReadonlyArray<{
   {
     id: "coding-agent-machine",
     title: "Coding agent",
-    description: "Receive traces and monitor issues in your Claude Code or OpenClaw agent",
+    description: "Monitor your Claude Code or OpenClaw agent",
     leading: { type: "logo", src: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
   },
   {
     id: "production-agent",
-    title: "Production agent traces",
-    description: "Set up Latitude directly in your project running on any available provider",
+    title: "Production app or agent",
+    description: "Track and debug LLM-powered features running in your own application",
     leading: { type: "icon", Icon: SquareDashedBottomCode },
   },
 ]
@@ -579,8 +579,8 @@ export function OnboardingFlow({
                   <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">Select your stack</Text.H2>
-                  <Text.H4 color="foregroundMuted">What do you want to monitor with Latitude?</Text.H4>
+                  <Text.H2 weight="medium">What do you want to monitor?</Text.H2>
+                  <Text.H4 color="foregroundMuted">Choose the type of AI system you want to observe with Latitude.</Text.H4>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
