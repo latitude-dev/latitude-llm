@@ -1,6 +1,7 @@
-import { BarChart, HistogramSkeleton, Skeleton, Text } from "@repo/ui"
+import { BarChart, Button, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useCallback, useMemo } from "react"
+import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
@@ -48,6 +49,9 @@ export function IssuesAnalyticsPanel({
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
+  const [collapsed, setCollapsed] = useState(false)
+  const [showLeftFade, setShowLeftFade] = useState(false)
+
   const histogramBarChartData = useMemo(
     () =>
       analytics.histogram.map((bucket) => ({
@@ -85,38 +89,65 @@ export function IssuesAnalyticsPanel({
   )
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary p-2">
-      <div className="flex flex-row flex-wrap gap-3 p-4">
-        {COUNT_CARDS.map((card) => (
-          <AggregationItem
-            key={card.key}
-            label={card.label}
-            value={formatCount(analytics.counts[card.key])}
-            isLoading={isLoading}
-            skeletonWidthClassName={card.key === "seenOccurrences" ? "w-20" : "w-16"}
-          />
-        ))}
+    <div className="flex flex-col rounded-lg bg-secondary">
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center gap-1.5">
+          <Icon icon={BarChart2} size="sm" color="foregroundMuted" />
+          <Text.H6 color="foregroundMuted">Issues statistics</Text.H6>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Expand statistics" : "Collapse statistics"}
+        >
+          <Icon icon={collapsed ? ChevronDown : ChevronUp} size="sm" />
+        </Button>
       </div>
+      {!collapsed && (
+        <div className="p-2">
+          <div className="relative">
+            <div
+              className="flex flex-row gap-3 overflow-x-auto p-4 pr-14"
+              onScroll={(e) => setShowLeftFade(e.currentTarget.scrollLeft > 0)}
+            >
+              {COUNT_CARDS.map((card) => (
+                <AggregationItem
+                  key={card.key}
+                  label={card.label}
+                  value={formatCount(analytics.counts[card.key])}
+                  isLoading={isLoading}
+                  skeletonWidthClassName={card.key === "seenOccurrences" ? "w-20" : "w-16"}
+                />
+              ))}
+            </div>
+            {showLeftFade && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-secondary to-transparent" />
+            )}
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-secondary to-transparent" />
+          </div>
 
-      {isLoading ? (
-        <div className="px-4 py-3">
-          <HistogramSkeleton height={160} />
-        </div>
-      ) : analytics.histogram.length === 0 || analytics.histogram.every((bucket) => bucket.count === 0) ? (
-        <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-          <Text.H6 color="foregroundMuted">No issue occurrences in this time window</Text.H6>
-        </div>
-      ) : (
-        <div className="px-4 py-3">
-          <BarChart
-            data={histogramBarChartData}
-            height={160}
-            showYAxis={false}
-            xAxisLabelFontSize={10}
-            ariaLabel="Issue occurrences by day"
-            formatTooltip={formatHistogramTooltip}
-            onSelect={onRangeSelect ? handleSelect : undefined}
-          />
+          {isLoading ? (
+            <div className="px-4 py-3">
+              <HistogramSkeleton height={160} />
+            </div>
+          ) : analytics.histogram.length === 0 || analytics.histogram.every((bucket) => bucket.count === 0) ? (
+            <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
+              <Text.H6 color="foregroundMuted">No issue occurrences in this time window</Text.H6>
+            </div>
+          ) : (
+            <div className="px-4 py-3">
+              <BarChart
+                data={histogramBarChartData}
+                height={160}
+                showYAxis={false}
+                xAxisLabelFontSize={10}
+                ariaLabel="Issue occurrences by day"
+                formatTooltip={formatHistogramTooltip}
+                onSelect={onRangeSelect ? handleSelect : undefined}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

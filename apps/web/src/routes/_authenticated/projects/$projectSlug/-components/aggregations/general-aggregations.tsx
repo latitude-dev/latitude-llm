@@ -1,6 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import type { TraceHistogramMetric } from "@domain/spans"
 import { cn, Skeleton, Text } from "@repo/ui"
+import { useState } from "react"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS, type HistogramMetricDefinition } from "./histogram-metrics.ts"
 
@@ -79,6 +80,8 @@ export function GeneralAggregations({
     (id) => HISTOGRAM_METRIC_DEFINITIONS[id],
   )
 
+  const [showLeftFade, setShowLeftFade] = useState(false)
+
   const renderValue = (def: HistogramMetricDefinition): string => {
     if (def.id === "traces") return def.formatBucket(totalCount)
     if (!traceMetrics) return DASH
@@ -86,18 +89,27 @@ export function GeneralAggregations({
   }
 
   return (
-    <div className="flex flex-row flex-wrap gap-1 p-2">
-      {visibleMetrics.map((def) => (
-        <AggregationItem
-          key={def.id}
-          label={def.label}
-          value={renderValue(def)}
-          isLoading={loading}
-          isSelected={selectedMetric === def.id}
-          skeletonWidthClassName={def.cardSkeletonWidthClassName}
-          onClick={() => onMetricSelect(def.id)}
-        />
-      ))}
+    <div className="relative">
+      <div
+        className="flex flex-row gap-1 overflow-x-auto p-2 pr-10"
+        onScroll={(e) => setShowLeftFade(e.currentTarget.scrollLeft > 0)}
+      >
+        {visibleMetrics.map((def) => (
+          <AggregationItem
+            key={def.id}
+            label={def.label}
+            value={renderValue(def)}
+            isLoading={loading}
+            isSelected={selectedMetric === def.id}
+            skeletonWidthClassName={def.cardSkeletonWidthClassName}
+            onClick={() => onMetricSelect(def.id)}
+          />
+        ))}
+      </div>
+      {showLeftFade && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-secondary to-transparent" />
+      )}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-secondary to-transparent" />
     </div>
   )
 }
