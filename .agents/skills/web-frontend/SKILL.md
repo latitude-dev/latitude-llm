@@ -43,6 +43,40 @@ function Input({ className, ref, ...props }: InputProps & { ref?: React.Ref<Reac
 - **Lucide icons:** import from `lucide-react` and pass the component to `@repo/ui`’s `Icon` via the `icon` prop (e.g. `<Icon icon={Pencil} size="sm" />`). Prefer that over raw `<Pencil />` so shared sizing and color tokens apply. Buttons and other primitives that accept an `icon` prop follow the same pattern; otherwise wrap with `Icon`.
 - **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
 
+## Modal: short form vs composition
+
+**Default to the short form** — `<Modal title=… description=… footer=… open dismissible onOpenChange={…}>{children}</Modal>`. It auto-wraps `children` in `Modal.Body` with the standard `px-6` padding and the same scroll behavior every other modal uses, so content inside it can't drift out of the design system. This is the shape `RenameProjectModal` (the form reference cited above) uses — treat it as the canonical pattern.
+
+```tsx
+<Modal
+  open
+  dismissible
+  onOpenChange={(next) => (!next ? onClose() : undefined)}
+  title="Change sampling rate"
+  description="Percentage of incoming traces this evaluation runs against."
+  footer={
+    <>
+      <CloseTrigger />
+      <Button onClick={() => void form.handleSubmit()}>Save</Button>
+    </>
+  }
+>
+  <form onSubmit={…}>{/* fields */}</form>
+</Modal>
+```
+
+Reach for the composition form (`Modal.Root` / `Modal.Content` / `Modal.Header` / `Modal.Body` / `Modal.Footer`) **only** when the short form can't express what you need:
+
+- Custom header JSX beyond a string `title` + `description` — render `<Modal.Header>{custom JSX}</Modal.Header>` directly.
+- Multiple body regions, or content that must opt out of the standard body padding / scroll.
+- Conditional rendering of header or footer that can't be driven by passing `undefined`.
+
+Notes:
+
+- `dismissible` defaults to `false` — pass it to show the close X.
+- `scrollable` defaults to `true`. For short bodies that shouldn't grow to fill height, pass `scrollable={false}`.
+- **Do not** wrap your children in your own `<Modal.Body>` while using the short form — children are already wrapped, double-wrapping nests padding.
+
 ## Route-level component organization
 
 Place React components close to the routes that use them, inside a `-components/` subfolder within the route directory. This keeps route files (which TanStack Router auto-discovers) clearly separated from supporting components.

@@ -1,5 +1,18 @@
-import { Button, CloseTrigger, Icon, Modal, Skeleton, Status, Text, Tooltip, useMountEffect, useToast } from "@repo/ui"
-import { BellPlusIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
+import {
+  Button,
+  CloseTrigger,
+  Icon,
+  Modal,
+  Skeleton,
+  Slider,
+  Status,
+  Text,
+  Tooltip,
+  useMountEffect,
+  useToast,
+} from "@repo/ui"
+import { useForm } from "@tanstack/react-form"
+import { BellPlusIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -8,6 +21,7 @@ import {
   softDeleteIssueEvaluation,
   startEvaluationAlignment,
   triggerManualEvaluationRealignment,
+  updateIssueEvaluationSampling,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -84,6 +98,91 @@ function AlignmentTooltipContent({
   )
 }
 
+function SamplingModal({
+  evaluation,
+  projectId,
+  issueId,
+  onClose,
+}: {
+  readonly evaluation: EvaluationSummaryRecord
+  readonly projectId: string
+  readonly issueId: string
+  readonly onClose: () => void
+}) {
+  const { toast } = useToast()
+  const form = useForm({
+    defaultValues: {
+      sampling: evaluation.trigger.sampling,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        await updateIssueEvaluationSampling({
+          data: {
+            projectId,
+            issueId,
+            evaluationId: evaluation.id,
+            sampling: value.sampling,
+          },
+        })
+        onClose()
+        await invalidateIssueQueries(projectId, issueId)
+        toast({ description: "Sampling updated." })
+      } catch (error) {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+      }
+    },
+  })
+
+  return (
+    <Modal
+      open
+      dismissible
+      scrollable={false}
+      onOpenChange={(open) => (!open ? onClose() : undefined)}
+      title="Change sampling rate"
+      description="Percentage of incoming traces this evaluation runs against."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button type="submit" onClick={() => void form.handleSubmit()} isLoading={form.state.isSubmitting}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <form.Field name="sampling">
+          {(field) => (
+            <div className="flex flex-col gap-3 pb-6">
+              <div className="flex items-baseline justify-between">
+                <Text.H6 color="foregroundMuted">Sampling</Text.H6>
+                <Text.H4M color="foreground">{field.state.value}%</Text.H4M>
+              </div>
+              <Slider
+                min={0}
+                max={100}
+                step={1}
+                value={[field.state.value]}
+                onValueChange={(values) => field.handleChange(values[0] ?? 0)}
+              />
+              <Text.H6 color="foregroundMuted">
+                {field.state.value === 0
+                  ? "0% pauses this evaluation."
+                  : `Evaluates ${field.state.value}% of incoming traces.`}
+              </Text.H6>
+            </div>
+          )}
+        </form.Field>
+      </form>
+    </Modal>
+  )
+}
+
 const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => {
   if (state.kind === "generating") {
     return { kind: "initial" }
@@ -117,6 +216,7 @@ export function IssueDrawerEvaluations({
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
   const [statsEvaluationId, setStatsEvaluationId] = useState<string | null>(null)
+  const [samplingEvaluationId, setSamplingEvaluationId] = useState<string | null>(null)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -365,14 +465,20 @@ export function IssueDrawerEvaluations({
                 <Tooltip
                   asChild
                   trigger={
-                    <span className="inline-flex">
+                    <button
+                      type="button"
+                      onClick={() => setSamplingEvaluationId(primaryEvaluation.id)}
+                      disabled={isActionPending}
+                      className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
-                    </span>
+                      <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                    </button>
                   }
                 >
                   <Text.H6 color="foregroundMuted">
-                    We monitor this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming
-                    traces
+                    Click to change. We monitor this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
+                    of the incoming traces.
                   </Text.H6>
                 </Tooltip>
               }
@@ -457,6 +563,21 @@ export function IssueDrawerEvaluations({
         }
         onClose={() => setStatsEvaluationId(null)}
       />
+
+      {samplingEvaluationId !== null
+        ? (() => {
+            const target = visibleEvaluations.find((evaluation) => evaluation.id === samplingEvaluationId)
+            if (!target) return null
+            return (
+              <SamplingModal
+                evaluation={target}
+                projectId={projectId}
+                issueId={issueId}
+                onClose={() => setSamplingEvaluationId(null)}
+              />
+            )
+          })()
+        : null}
     </>
   )
 }

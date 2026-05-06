@@ -33,6 +33,7 @@ import {
   toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
   unarchiveEvaluation,
+  updateEvaluationSampling,
 } from "./helpers.ts"
 import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 
@@ -146,6 +147,38 @@ describe("evaluation lifecycle helpers", () => {
 
     expect(() => archiveEvaluation({ evaluation: deleted })).toThrowError(EvaluationDeletedError)
     expect(() => unarchiveEvaluation({ evaluation: deleted })).toThrowError(EvaluationDeletedError)
+  })
+
+  it("updates the trigger sampling and bumps updatedAt", () => {
+    const updatedAt = new Date("2026-05-05T00:00:00.000Z")
+    const updated = updateEvaluationSampling({
+      evaluation: makeEvaluation(),
+      sampling: 50,
+      updatedAt,
+    })
+
+    expect(updated.trigger.sampling).toBe(50)
+    expect(updated.updatedAt).toEqual(updatedAt)
+  })
+
+  it("returns the same evaluation when sampling is unchanged", () => {
+    const evaluation = makeEvaluation()
+    expect(updateEvaluationSampling({ evaluation, sampling: evaluation.trigger.sampling })).toBe(evaluation)
+  })
+
+  it("rejects sampling updates on deleted evaluations", () => {
+    const deleted = makeEvaluation({
+      deletedAt: new Date("2026-04-04T00:00:00.000Z"),
+    })
+    expect(() => updateEvaluationSampling({ evaluation: deleted, sampling: 25 })).toThrowError(EvaluationDeletedError)
+  })
+
+  it("accepts the 0 and 100 boundary values", () => {
+    const paused = updateEvaluationSampling({ evaluation: makeEvaluation(), sampling: 0 })
+    expect(paused.trigger.sampling).toBe(0)
+
+    const full = updateEvaluationSampling({ evaluation: makeEvaluation(), sampling: 100 })
+    expect(full.trigger.sampling).toBe(100)
   })
 })
 
