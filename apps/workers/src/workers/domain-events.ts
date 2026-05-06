@@ -105,6 +105,20 @@ export const createDomainEventsWorker = ({
         throttleMs: ISSUE_REFRESH_THROTTLE_MS,
       }),
 
+    IssueCreated: (event) =>
+      pub.publish("alert-incidents", "issue-created", event.payload, {
+        dedupeKey: `alert-incidents:issue.new:${event.payload.issueId}`,
+      }),
+
+    IssueRegressed: (event) =>
+      pub.publish("alert-incidents", "issue-regressed", event.payload, {
+        dedupeKey: `alert-incidents:issue.regressed:${event.payload.issueId}:${event.payload.triggerScoreId}`,
+      }),
+
+    // PR 1 has no consumer for IncidentCreated. PR 2 (email channel) and
+    // PR 3 (in-app feed) will replace this no-op with channel fan-out.
+    IncidentCreated: () => Effect.void,
+
     AnnotationDeleted: (event) => {
       const { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt } = event.payload
 

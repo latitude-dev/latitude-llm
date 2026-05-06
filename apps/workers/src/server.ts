@@ -29,6 +29,7 @@ import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
+import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createMarketingContactsWorker } from "./workers/domain-events/marketing-contacts.ts"
@@ -153,6 +154,7 @@ const bootstrap = async () => {
     createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createMarketingContactsWorker(ctx)
+    createAlertIncidentsWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
     createExportsWorker(ctx)
