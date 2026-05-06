@@ -5,6 +5,7 @@ import {
   EvaluationRepository,
   isActiveEvaluation,
   softDeleteEvaluation,
+  updateEvaluationSampling,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import type { WorkflowAlreadyStartedError } from "@domain/queue"
@@ -32,6 +33,13 @@ const softDeleteEvaluationInputSchema = z.object({
   projectId: z.string(),
   issueId: z.string(),
   evaluationId: z.string(),
+})
+
+const updateEvaluationSamplingInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  evaluationId: z.string(),
+  sampling: z.number().int().min(0).max(100),
 })
 
 const issueAlignmentStateInputSchema = z.object({
@@ -304,6 +312,33 @@ export const softDeleteIssueEvaluation = createServerFn({ method: "POST" })
         yield* repository.save(deletedEvaluation)
 
         return toEvaluationSummaryRecord(deletedEvaluation)
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
+    )
+  })
+
+export const updateIssueEvaluationSampling = createServerFn({ method: "POST" })
+  .inputValidator(updateEvaluationSamplingInputSchema)
+  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationRepository
+        const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
+
+        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+          return yield* new BadRequestError({
+            message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
+          })
+        }
+
+        const updatedEvaluation = updateEvaluationSampling({ evaluation, sampling: data.sampling })
+        yield* repository.save(updatedEvaluation)
+
+        return toEvaluationSummaryRecord(updatedEvaluation)
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
   })

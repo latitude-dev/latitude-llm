@@ -116,7 +116,7 @@ function ModalBody({ scrollable = true, children, className }: ModalBodyProps) {
         "px-6",
         {
           "min-h-0 flex-1 overflow-y-auto pb-6": scrollable,
-          "flex min-h-0 flex-grow flex-col": !scrollable,
+          "flex min-h-0 grow flex-col": !scrollable,
         },
         className,
       )}

@@ -80,6 +80,7 @@ export {
   toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
   unarchiveEvaluation,
+  updateEvaluationSampling,
 } from "./helpers.ts"
 export {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
