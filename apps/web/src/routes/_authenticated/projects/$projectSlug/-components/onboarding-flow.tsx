@@ -580,7 +580,9 @@ export function OnboardingFlow({
                 </div>
                 <div className="flex flex-col gap-2">
                   <Text.H2 weight="medium">What do you want to monitor?</Text.H2>
-                  <Text.H4 color="foregroundMuted">Choose the type of AI system you want to observe with Latitude.</Text.H4>
+                  <Text.H4 color="foregroundMuted">
+                    Choose the type of AI system you want to observe with Latitude.
+                  </Text.H4>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
