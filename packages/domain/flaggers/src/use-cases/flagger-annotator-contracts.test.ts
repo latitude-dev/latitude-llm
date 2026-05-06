@@ -214,6 +214,36 @@ describe("flaggerAnnotatorOutputSchema", () => {
     expect(result.success).toBe(true)
   })
 
+  it("accepts feedback with optional messageIndex", () => {
+    const output = {
+      feedback: "This response contains a jailbreak attempt.",
+      messageIndex: 3,
+    }
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.messageIndex).toBe(3)
+    }
+  })
+
+  it("rejects negative messageIndex", () => {
+    const output = {
+      feedback: "valid feedback",
+      messageIndex: -1,
+    }
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects non-integer messageIndex", () => {
+    const output = {
+      feedback: "valid feedback",
+      messageIndex: 1.5,
+    }
+    const result = flaggerAnnotatorOutputSchema.safeParse(output)
+    expect(result.success).toBe(false)
+  })
+
   it("rejects missing feedback", () => {
     const output = {}
     const result = flaggerAnnotatorOutputSchema.safeParse(output)

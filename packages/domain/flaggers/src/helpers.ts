@@ -9,16 +9,21 @@ const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
 const ERROR_SNIPPET_MAX_LENGTH = 160
 
 export type DeterministicFlaggerMatch =
-  | { readonly matched: true; readonly feedback: string }
+  | { readonly matched: true; readonly feedback: string; readonly messageIndex?: number | undefined }
   | { readonly matched: false }
 
 const NO_MATCH: DeterministicFlaggerMatch = { matched: false }
-const match = (feedback: string): DeterministicFlaggerMatch => ({ matched: true, feedback })
+const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMatch => ({
+  matched: true,
+  feedback,
+  ...(messageIndex !== undefined ? { messageIndex } : {}),
+})
 
 export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
   const toolNameById = new Map<string, string>()
 
-  for (const message of trace.allMessages) {
+  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
+    const message = trace.allMessages[msgIdx]!
     for (const part of message.parts) {
       if (part.type === "tool_call") {
         const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
@@ -26,11 +31,11 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
 
         if (!toolCallId || !toolName) {
           const label = toolName ? `tool "${toolName}"` : "an unnamed tool"
-          return match(`Malformed tool call: ${label} with missing or empty tool_call id`)
+          return match(`Malformed tool call: ${label} with missing or empty tool_call id`, msgIdx)
         }
 
         if (toolNameById.has(toolCallId)) {
-          return match(`Duplicate tool_call id emitted for tool "${toolName}"`)
+          return match(`Duplicate tool_call id emitted for tool "${toolName}"`, msgIdx)
         }
 
         toolNameById.set(toolCallId, toolName)
@@ -41,13 +46,16 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
 
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       if (!toolCallId || !toolNameById.has(toolCallId)) {
-        return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`)
+        return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
       }
 
       if (responseIndicatesFailure(part.response)) {
         const toolName = toolNameById.get(toolCallId) ?? "<unknown>"
         const snippet = extractErrorSnippet(part.response)
-        return match(snippet ? `Tool "${toolName}" returned error: ${snippet}` : `Tool "${toolName}" returned an error`)
+        return match(
+          snippet ? `Tool "${toolName}" returned error: ${snippet}` : `Tool "${toolName}" returned an error`,
+          msgIdx,
+        )
       }
     }
   }
@@ -166,14 +174,16 @@ function responseIndicatesFailure(response: unknown): boolean {
 }
 
 export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
-  for (const message of trace.outputMessages) {
+  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
+    const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
     for (const part of message.parts) {
       if (part.type !== "text") continue
       const content = typeof part.content === "string" ? part.content.trim() : ""
       if (!content || (!content.startsWith("{") && !content.startsWith("["))) continue
 
-      if (content.endsWith(",")) return match("Assistant output ended with a trailing comma, suggesting truncated JSON")
+      if (content.endsWith(","))
+        return match("Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
 
       let inString = false
       let escaped = false
@@ -189,12 +199,13 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
         }
         if (char === '"') inString = !inString
       }
-      if (inString) return match("Assistant output contains an unclosed JSON string, suggesting truncated output")
+      if (inString)
+        return match("Assistant output contains an unclosed JSON string, suggesting truncated output", msgIdx)
 
       try {
         JSON.parse(content)
       } catch {
-        return match("Assistant output failed JSON parse (malformed or truncated structured output)")
+        return match("Assistant output failed JSON parse (malformed or truncated structured output)", msgIdx)
       }
     }
   }
@@ -203,7 +214,8 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
 }
 
 export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
-  for (const message of trace.outputMessages) {
+  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
+    const message = trace.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
 
     let hasToolCall = false
@@ -224,9 +236,9 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
 
     if (hasToolCall && !hasText) continue
     const accumulatedText = textParts.join("").trim()
-    if (accumulatedText === "") return match("Assistant response was empty or whitespace only")
+    if (accumulatedText === "") return match("Assistant response was empty or whitespace only", msgIdx)
     if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
-      return match(`Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`)
+      return match(`Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`, msgIdx)
     }
   }
 

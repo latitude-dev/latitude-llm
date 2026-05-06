@@ -63,9 +63,10 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
 }
 
 describe("runFlaggerAnnotatorUseCase", () => {
-  it("returns structured feedback from AI generation", async () => {
+  it("returns structured feedback from AI generation including optional messageIndex", async () => {
     const expectedFeedback =
       "This conversation shows a clear jailbreaking attempt where the user tries to bypass safety constraints."
+    const expectedMessageIndex = 0
 
     const { repository: traceRepo } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -86,7 +87,7 @@ describe("runFlaggerAnnotatorUseCase", () => {
     const { calls, layer: aiLayer } = createFakeAI({
       generate: <T>() =>
         Effect.succeed({
-          object: { feedback: expectedFeedback } as T,
+          object: { feedback: expectedFeedback, messageIndex: expectedMessageIndex } as T,
           tokens: 150,
           duration: 500_000_000,
         }),
@@ -109,6 +110,7 @@ describe("runFlaggerAnnotatorUseCase", () => {
       traceCreatedAt: "2026-01-01T00:00:00.000Z",
       sessionId: "session",
       simulationId: null,
+      messageIndex: expectedMessageIndex,
     })
     expect(calls.generate).toHaveLength(1)
 
@@ -118,6 +120,7 @@ describe("runFlaggerAnnotatorUseCase", () => {
     expect(generateCall.maxTokens).toBe(2048)
     expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
+    expect(generateCall.system).toContain("messageIndex")
     expect(generateCall.telemetry).toMatchObject({
       spanName: "flagger.draft",
       tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
@@ -210,12 +213,12 @@ describe("runFlaggerAnnotatorUseCase", () => {
       "Write about the underlying issue in plain language, not about the transcript formatting or what was omitted.",
     )
     expect(generateCall.prompt).toContain(
-      "[system]: You are Acme Support Bot. Help with orders and shipping. Be concise. Use tools when needed....",
+      "[m0 system]: You are Acme Support Bot. Help with orders and shipping. Be concise. Use tools when needed....",
     )
-    expect(generateCall.prompt).toContain("[user]: Where is order 12345?")
-    expect(generateCall.prompt).toContain("[assistant]: Let me check that for you.")
-    expect(generateCall.prompt).toContain("[toolcall]: lookup_order")
-    expect(generateCall.prompt).toContain("[toolresult]: error")
+    expect(generateCall.prompt).toContain("[m1 user]: Where is order 12345?")
+    expect(generateCall.prompt).toContain("[m2 assistant]: Let me check that for you.")
+    expect(generateCall.prompt).toContain("[m2 toolcall]: lookup_order")
+    expect(generateCall.prompt).toContain("[m3 toolresult]: error")
     expect(generateCall.prompt).not.toContain('"orderId":"12345"')
     expect(generateCall.prompt).not.toContain("timeout while looking up order 12345")
     expect(generateCall.prompt).not.toContain("sensitive payload")

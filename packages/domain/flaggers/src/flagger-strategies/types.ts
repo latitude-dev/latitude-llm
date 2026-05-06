@@ -16,7 +16,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
 
 export type DetectionResult =
-  | { readonly kind: "matched"; readonly feedback: string }
+  | { readonly kind: "matched"; readonly feedback: string; readonly messageIndex?: number | undefined }
   | { readonly kind: "no-match" }
   | { readonly kind: "ambiguous" }
 

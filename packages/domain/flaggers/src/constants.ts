@@ -32,5 +32,4 @@ export const FLAGGER_ANNOTATOR_MAX_TOKENS = 2048
 export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,
   value: 0,
-  hasAnchor: false,
 } as const

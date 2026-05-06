@@ -68,6 +68,7 @@ export const flaggerWorkflow = async (input: {
       feedback: draftResult.feedback,
       traceCreatedAt: draftResult.traceCreatedAt,
       scoreId: draftResult.scoreId,
+      messageIndex: draftResult.messageIndex,
     })
 
     log.info("Flagger save annotation completed", {

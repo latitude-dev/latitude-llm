@@ -23,6 +23,7 @@ export type FlaggerAnnotateOutput = z.infer<typeof flaggerAnnotateOutputSchema>
 
 export const flaggerAnnotatorOutputSchema = z.object({
   feedback: z.string().min(1),
+  messageIndex: z.number().int().nonnegative().optional(),
 })
 
 export type FlaggerAnnotatorOutput = z.infer<typeof flaggerAnnotatorOutputSchema>

@@ -22,8 +22,8 @@ function toolResponse(id: string, response: unknown): TraceMessage {
   }
 }
 
-function makeOutputTrace(outputMessages: TraceDetail["outputMessages"]): TraceDetail {
-  return { outputMessages } as TraceDetail
+function makeAssistantTrace(allMessages: TraceDetail["allMessages"]): TraceDetail {
+  return { allMessages } as TraceDetail
 }
 
 function assistantText(content: string): TraceDetail["outputMessages"][number] {
@@ -34,21 +34,26 @@ function assistantText(content: string): TraceDetail["outputMessages"][number] {
 }
 
 describe("detectToolCallErrorsFlagger", () => {
-  it("matches failed tool result payloads and includes the tool name + error snippet", () => {
+  it("matches failed tool result payloads and includes the tool name + error snippet + messageIndex", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { ok: false, error: "timeout" })]),
     )
 
-    expect(result).toEqual({ matched: true, feedback: 'Tool "get_weather" returned error: timeout' })
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe('Tool "get_weather" returned error: timeout')
+      expect(result.messageIndex).toBe(1)
+    }
   })
 
-  it("matches malformed tool interactions with empty tool_call id", () => {
+  it("matches malformed tool interactions with empty tool_call id and returns messageIndex 0", () => {
     const result = detectToolCallErrorsFlagger(makeTrace([assistantToolCall("")]))
 
     expect(result.matched).toBe(true)
     if (result.matched) {
       expect(result.feedback).toContain("Malformed tool call")
       expect(result.feedback).toContain("get_weather")
+      expect(result.messageIndex).toBe(0)
     }
   })
 
@@ -235,52 +240,53 @@ describe("detectToolCallErrorsFlagger", () => {
 
 describe("detectOutputSchemaValidationFlagger", () => {
   it("does not match when the assistant output is valid JSON", () => {
-    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"a": 1, "b": 2}')]))
+    const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText('{"a": 1, "b": 2}')]))
 
     expect(result).toEqual({ matched: false })
   })
 
   it("does not match when the assistant output is not JSON-looking", () => {
-    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText("Hello! The answer is 42.")]))
+    const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText("Hello! The answer is 42.")]))
 
     expect(result).toEqual({ matched: false })
   })
 
   it("matches with the trailing-comma message when JSON is truncated after a comma", () => {
-    // Order matters: the trailing-comma heuristic runs before JSON.parse so its
-    // specific clustering message takes precedence over the generic parse-failure one.
-    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"a": 1,')]))
+    const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText('{"a": 1,')]))
 
-    expect(result).toEqual({
-      matched: true,
-      feedback: "Assistant output ended with a trailing comma, suggesting truncated JSON",
-    })
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe("Assistant output ended with a trailing comma, suggesting truncated JSON")
+      expect(result.messageIndex).toBe(0)
+    }
   })
 
   it("matches with the unclosed-string message when JSON is truncated mid-string", () => {
-    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText('{"msg": "hello')]))
+    const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText('{"msg": "hello')]))
 
-    expect(result).toEqual({
-      matched: true,
-      feedback: "Assistant output contains an unclosed JSON string, suggesting truncated output",
-    })
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe("Assistant output contains an unclosed JSON string, suggesting truncated output")
+      expect(result.messageIndex).toBe(0)
+    }
   })
 
   it("ignores escaped quotes when detecting unclosed strings", () => {
     // The outer string is properly closed — the \" inside should not flip the balance.
     const result = detectOutputSchemaValidationFlagger(
-      makeOutputTrace([assistantText('{"msg": "quoted \\"ok\\" value"}')]),
+      makeAssistantTrace([assistantText('{"msg": "quoted \\"ok\\" value"}')]),
     )
 
     expect(result).toEqual({ matched: false })
   })
 
   it("falls back to the generic parse-failure message when JSON is malformed but not a truncation pattern", () => {
-    const result = detectOutputSchemaValidationFlagger(makeOutputTrace([assistantText("{not valid json}")]))
+    const result = detectOutputSchemaValidationFlagger(makeAssistantTrace([assistantText("{not valid json}")]))
 
-    expect(result).toEqual({
-      matched: true,
-      feedback: "Assistant output failed JSON parse (malformed or truncated structured output)",
-    })
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe("Assistant output failed JSON parse (malformed or truncated structured output)")
+      expect(result.messageIndex).toBe(0)
+    }
   })
 })
