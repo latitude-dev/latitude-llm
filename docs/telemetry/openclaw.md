@@ -332,7 +332,3 @@ openclaw config set 'plugins.allow' '["@latitude-data/openclaw-telemetry"]'
 
 **`openclaw config validate` fails after manual install.**
 Most likely a missing `hooks.allowConversationAccess` write or a quoting issue with the bracket-notation paths. Compare your `~/.openclaw/openclaw.json` against the [hand-edit template](#or-hand-edit-openclawopenclawjson) above.
-
-## License
-
-MIT. Source code lives at [`latitude-dev/latitude-llm`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw).
