@@ -941,15 +941,6 @@
             "maxLength": 24,
             "default": null
           },
-          "annotatorId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "default": null
-          },
           "value": {
             "type": "number",
             "minimum": 0,

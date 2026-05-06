@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`CreateAnnotationBody` no longer accepts `sessionId` or `spanId`.** Both fields are now auto-resolved server-side from the target trace: the session is lifted off the trace, and the span is pinned to the trace's last LLM completion. Callers that were passing either field should remove them — the resolved values are returned on the response. (Internal use cases keep accepting concrete values; only the public API was simplified.)
 
+- **`CreateAnnotationBody` no longer accepts `annotatorId`.** API keys are organization-scoped, not user-scoped, so there is no real Latitude user behind an API request. Annotations created via the public API persist with `annotatorId = null` to avoid letting any token holder attribute work to any teammate. Callers that were passing this field should remove it.
+
 - **`client.annotations.create` no longer accepts `id` or `draft` in the body.** The public annotations API is creation-only and always publishes immediately:
   - `id` is gone — every submission creates a new annotation; client-supplied ids are no longer accepted. Editing an existing annotation is not exposed through the public API.
   - `draft` is gone — every API-submitted annotation is written with `draftedAt = null` and emits `ScoreCreated` with `status: "published"`. Draft state is reserved for the managed UI's editing flow.
