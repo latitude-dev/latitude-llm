@@ -53,12 +53,7 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
         />
-        <Histogram
-          projectId={projectId}
-          filters={filters}
-          metric={selectedMetric}
-          onRangeSelect={onTimeRangeSelect}
-        />
+        <Histogram projectId={projectId} filters={filters} metric={selectedMetric} onRangeSelect={onTimeRangeSelect} />
       </div>
     </div>
   )

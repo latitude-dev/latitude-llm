@@ -1,6 +1,6 @@
 import type { FilterSet } from "@domain/shared"
 import type { TraceHistogramMetric } from "@domain/spans"
-import { Button, Icon, cn, Skeleton, Text } from "@repo/ui"
+import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
 import { ChevronUp } from "lucide-react"
 import { useState } from "react"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
@@ -115,13 +115,7 @@ export function GeneralAggregations({
         )}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-secondary to-transparent" />
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onCollapse}
-        aria-label="Collapse statistics"
-        className="shrink-0"
-      >
+      <Button variant="ghost" size="icon" onClick={onCollapse} aria-label="Collapse statistics" className="shrink-0">
         <Icon icon={ChevronUp} size="sm" />
       </Button>
     </div>
