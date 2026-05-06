@@ -315,4 +315,132 @@ describe("assignScoreToIssueUseCase", () => {
     expect(scores.get(score.id)?.issueId).toBeNull()
     expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
   })
+
+  describe("regression detection", () => {
+    it("clears resolvedAt and emits IssueRegressed when score is newer than the issue's resolution", async () => {
+      const resolvedAt = new Date("2026-04-01T00:00:00.000Z")
+      const existingIssue = makeIssue({ resolvedAt })
+      const { repository: scoreRepository, scores } = createFakeScoreRepository()
+      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const score = makeScore({ createdAt: new Date("2026-04-15T10:00:00.000Z") })
+      scores.set(score.id, score)
+      const writtenEvents: unknown[] = []
+
+      await Effect.runPromise(
+        assignScoreToIssueUseCase({
+          organizationId,
+          projectId,
+          scoreId: score.id,
+          issueId: existingIssue.id,
+          normalizedEmbedding: makeEmbedding(),
+        }).pipe(
+          Effect.provideService(ScoreRepository, scoreRepository),
+          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(OutboxEventWriter, {
+            write: (event) =>
+              Effect.sync(() => {
+                writtenEvents.push(event)
+              }),
+          }),
+          Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+          Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+          Effect.provideService(
+            IssueProjectionRepository,
+            createFakeIssueProjectionRepository({ organizationId }).service,
+          ),
+        ),
+      )
+
+      expect(issues.get(existingIssue.id)?.resolvedAt).toBeNull()
+      expect(writtenEvents).toContainEqual(
+        expect.objectContaining({
+          eventName: "IssueRegressed",
+          aggregateType: "issue",
+          aggregateId: existingIssue.id,
+          organizationId,
+          payload: expect.objectContaining({
+            organizationId,
+            projectId,
+            issueId: existingIssue.id,
+            triggerScoreId: score.id,
+            regressedAt: score.createdAt.toISOString(),
+          }),
+        }),
+      )
+    })
+
+    it("does not emit IssueRegressed and preserves resolvedAt when score predates resolution", async () => {
+      const resolvedAt = new Date("2026-04-15T00:00:00.000Z")
+      const existingIssue = makeIssue({ resolvedAt })
+      const { repository: scoreRepository, scores } = createFakeScoreRepository()
+      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const score = makeScore({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+      scores.set(score.id, score)
+      const writtenEvents: unknown[] = []
+
+      await Effect.runPromise(
+        assignScoreToIssueUseCase({
+          organizationId,
+          projectId,
+          scoreId: score.id,
+          issueId: existingIssue.id,
+          normalizedEmbedding: makeEmbedding(),
+        }).pipe(
+          Effect.provideService(ScoreRepository, scoreRepository),
+          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(OutboxEventWriter, {
+            write: (event) =>
+              Effect.sync(() => {
+                writtenEvents.push(event)
+              }),
+          }),
+          Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+          Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+          Effect.provideService(
+            IssueProjectionRepository,
+            createFakeIssueProjectionRepository({ organizationId }).service,
+          ),
+        ),
+      )
+
+      expect(issues.get(existingIssue.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+    })
+
+    it("does not emit IssueRegressed when the issue is not resolved", async () => {
+      const existingIssue = makeIssue({ resolvedAt: null })
+      const { repository: scoreRepository, scores } = createFakeScoreRepository()
+      const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+      const score = makeScore({ createdAt: new Date("2026-05-01T10:00:00.000Z") })
+      scores.set(score.id, score)
+      const writtenEvents: unknown[] = []
+
+      await Effect.runPromise(
+        assignScoreToIssueUseCase({
+          organizationId,
+          projectId,
+          scoreId: score.id,
+          issueId: existingIssue.id,
+          normalizedEmbedding: makeEmbedding(),
+        }).pipe(
+          Effect.provideService(ScoreRepository, scoreRepository),
+          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(OutboxEventWriter, {
+            write: (event) =>
+              Effect.sync(() => {
+                writtenEvents.push(event)
+              }),
+          }),
+          Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+          Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
+          Effect.provideService(
+            IssueProjectionRepository,
+            createFakeIssueProjectionRepository({ organizationId }).service,
+          ),
+        ),
+      )
+
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+    })
+  })
 })

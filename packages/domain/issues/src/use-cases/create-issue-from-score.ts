@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { generateId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
@@ -139,6 +140,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
       Effect.gen(function* () {
         const issueRepository = yield* IssueRepository
         const scoreRepository = yield* ScoreRepository
+        const outboxEventWriter = yield* OutboxEventWriter
 
         const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
         if (scoreResult.action === "already-assigned") {
@@ -179,6 +181,19 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         }
 
         yield* issueRepository.save(issue)
+
+        yield* outboxEventWriter.write({
+          eventName: "IssueCreated",
+          aggregateType: "issue",
+          aggregateId: issue.id,
+          organizationId: issue.organizationId,
+          payload: {
+            organizationId: issue.organizationId,
+            projectId: issue.projectId,
+            issueId: issue.id,
+            createdAt: issue.createdAt.toISOString(),
+          },
+        })
 
         return {
           action: "created",
