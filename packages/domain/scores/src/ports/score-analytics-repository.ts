@@ -257,6 +257,12 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly offset?: number
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<IssueTracePage, RepositoryError, ChSqlClient>
+  countTracesByIssue(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
 }
 
 export class ScoreAnalyticsRepository extends Context.Service<

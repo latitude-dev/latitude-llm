@@ -953,6 +953,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../exports
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

@@ -1,4 +1,5 @@
-import type { DatasetId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { ScoreAnalyticsRepository } from "@domain/scores"
+import type { DatasetId, IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { ChSqlClient } from "@domain/shared"
 import type { TraceDetail, TraceListCursor } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
@@ -14,6 +15,8 @@ export type TraceSelection =
   | { readonly mode: "selected"; readonly traceIds: readonly TraceId[] }
   | { readonly mode: "all" }
   | { readonly mode: "allExcept"; readonly traceIds: readonly TraceId[] }
+
+export type TraceSource = { readonly kind: "project" } | { readonly kind: "issue"; readonly issueId: IssueId }
 
 function mapTraceToRow(t: TraceDetail) {
   return {
@@ -40,8 +43,9 @@ function mapTraceToRow(t: TraceDetail) {
 }
 
 const PAGE_SIZE = 1_000
+const ISSUE_TRACE_PAGE_SIZE = 1_000
 
-function collectAllTraceIds(args: { readonly organizationId: OrganizationId; readonly projectId: ProjectId }) {
+function collectAllProjectTraceIds(args: { readonly organizationId: OrganizationId; readonly projectId: ProjectId }) {
   return Effect.gen(function* () {
     const repo = yield* TraceRepository
     const ids: TraceId[] = []
@@ -65,9 +69,55 @@ function collectAllTraceIds(args: { readonly organizationId: OrganizationId; rea
   })
 }
 
+function collectAllIssueTraceIds(args: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly issueId: IssueId
+}) {
+  return Effect.gen(function* () {
+    const repo = yield* ScoreAnalyticsRepository
+    const ids: TraceId[] = []
+    let offset = 0
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const page = yield* repo.listTracesByIssue({
+        organizationId: args.organizationId,
+        projectId: args.projectId,
+        issueId: args.issueId,
+        limit: ISSUE_TRACE_PAGE_SIZE,
+        offset,
+      })
+      for (const item of page.items) {
+        ids.push(item.traceId)
+      }
+      if (!page.hasMore) break
+      offset += page.limit
+    }
+
+    return ids
+  })
+}
+
+function collectAllTraceIds(args: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly source: TraceSource
+}) {
+  if (args.source.kind === "issue") {
+    return collectAllIssueTraceIds({
+      organizationId: args.organizationId,
+      projectId: args.projectId,
+      issueId: args.source.issueId,
+    })
+  }
+  return collectAllProjectTraceIds({ organizationId: args.organizationId, projectId: args.projectId })
+}
+
 function resolveTraceIds(args: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
+  readonly source: TraceSource
   readonly selection: TraceSelection
 }) {
   return Effect.gen(function* () {
@@ -76,6 +126,7 @@ function resolveTraceIds(args: {
     const allIds = yield* collectAllTraceIds({
       organizationId: args.organizationId,
       projectId: args.projectId,
+      source: args.source,
     })
 
     if (args.selection.mode === "all") return allIds
@@ -101,6 +152,7 @@ const EMPTY_RESULT = { versionId: "" as const, version: 0, rowIds: [] as string[
 export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(function* (args: {
   readonly projectId: ProjectId
   readonly datasetId: DatasetId
+  readonly source: TraceSource
   readonly selection: TraceSelection
 }) {
   yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
@@ -112,6 +164,7 @@ export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(funct
   const traceIds = yield* resolveTraceIds({
     organizationId: chSqlClient.organizationId,
     projectId: args.projectId,
+    source: args.source,
     selection: args.selection,
   })
   if (traceIds.length === 0) return EMPTY_RESULT
@@ -145,6 +198,7 @@ export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(funct
 export const createDatasetFromTraces = Effect.fn("datasets.createDatasetFromTraces")(function* (args: {
   readonly projectId: ProjectId
   readonly name: string
+  readonly source: TraceSource
   readonly selection: TraceSelection
 }) {
   yield* Effect.annotateCurrentSpan("projectId", args.projectId)
@@ -161,6 +215,7 @@ export const createDatasetFromTraces = Effect.fn("datasets.createDatasetFromTrac
     const traceIds = yield* resolveTraceIds({
       organizationId: chSqlClient.organizationId,
       projectId: args.projectId,
+      source: args.source,
       selection: args.selection,
     })
     if (traceIds.length === 0) {

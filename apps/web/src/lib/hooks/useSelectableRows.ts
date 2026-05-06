@@ -20,6 +20,32 @@ export const EMPTY_SELECTION: SelectionState<string> = {
   excludedIds: new Set(),
 }
 
+export function getSelectedCount<T extends string | number>(state: SelectionState<T>, total: number): number {
+  switch (state.mode) {
+    case "all":
+      return total - state.excludedIds.size
+    case "none":
+      return 0
+    case "partial":
+      return state.selectedIds.size
+    case "allExcept":
+      return total - state.excludedIds.size
+  }
+}
+
+export function getBulkSelection<T extends string | number>(state: SelectionState<T>): BulkSelection<T> | null {
+  switch (state.mode) {
+    case "all":
+      return { mode: "all" }
+    case "allExcept":
+      return { mode: "allExcept", rowIds: Array.from(state.excludedIds) }
+    case "partial":
+      return state.selectedIds.size > 0 ? { mode: "selected", rowIds: Array.from(state.selectedIds) } : null
+    case "none":
+      return null
+  }
+}
+
 export function useSelectableRows<T extends string | number>({
   rowIds,
   initialSelection = [],
