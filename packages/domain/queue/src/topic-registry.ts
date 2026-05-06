@@ -84,6 +84,22 @@ const _registry = {
     }
   }>(),
 
+  "alert-incidents": payloads<{
+    "issue-created": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly createdAt: string
+    }
+    "issue-regressed": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly regressedAt: string
+      readonly triggerScoreId: string
+    }
+  }>(),
+
   issues: payloads<{
     discovery: {
       readonly organizationId: string

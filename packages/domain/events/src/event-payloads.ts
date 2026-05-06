@@ -40,6 +40,45 @@ export interface EventPayloads {
     readonly projectId: string
     readonly issueId: string
   }
+  /**
+   * Emitted by `createIssueFromScoreUseCase` after the issue row is saved.
+   * Drives the alert pipeline's `issue.new` incident creation.
+   */
+  IssueCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly createdAt: string
+  }
+  /**
+   * Emitted by `assignScoreToIssueUseCase` when assigning a score whose
+   * `lastSeenAt` is later than the issue's `resolvedAt`. The use case clears
+   * `resolvedAt` on the same transaction (reifying the regression as a stored
+   * fact); idempotency on subsequent regression-causing scores is enforced by
+   * the cleared field, so a second event will not be emitted in the same cycle.
+   * `triggerScoreId` discriminates per regression cycle so a future regression
+   * after re-resolution is a distinct event.
+   */
+  IssueRegressed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly regressedAt: string
+    readonly triggerScoreId: string
+  }
+  /**
+   * Emitted by the alert-incidents worker after an `alert_incidents` row is
+   * inserted. PR 1 has no consumer (the dispatcher routes it to a no-op);
+   * PR 2 (email) and PR 3 (in-app) will subscribe.
+   */
+  IncidentCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly alertIncidentId: string
+    readonly kind: "issue.new" | "issue.regressed"
+    readonly sourceType: "issue"
+    readonly sourceId: string
+  }
   AnnotationDeleted: {
     readonly organizationId: string
     readonly projectId: string

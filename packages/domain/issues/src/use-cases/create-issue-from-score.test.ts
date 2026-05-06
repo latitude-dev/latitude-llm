@@ -1,5 +1,6 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
@@ -11,6 +12,17 @@ import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
+
+const createFakeOutboxEventWriter = () => {
+  const events: OutboxWriteEvent[] = []
+  const service = OutboxEventWriter.of({
+    write: (event) =>
+      Effect.sync(() => {
+        events.push(event)
+      }),
+  })
+  return { events, service }
+}
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -87,6 +99,7 @@ describe("createIssueFromScoreUseCase", () => {
     const { repository: issueRepository, issues } = createFakeIssueRepository()
     const score = makeScore()
     scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
 
     const result = await Effect.runPromise(
       createIssueFromScoreUseCase({
@@ -99,6 +112,7 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
         Effect.provideService(
           IssueProjectionRepository,
           createFakeIssueProjectionRepository({ organizationId }).service,
@@ -113,6 +127,15 @@ describe("createIssueFromScoreUseCase", () => {
     expect(issues.get(result.issueId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
     expect(issues.get(result.issueId)?.centroid.mass).toBeGreaterThan(0)
     expect(calls.generate).toHaveLength(1)
+
+    expect(outbox.events).toHaveLength(1)
+    expect(outbox.events[0]).toMatchObject({
+      eventName: "IssueCreated",
+      aggregateType: "issue",
+      aggregateId: result.issueId,
+      organizationId,
+      payload: { organizationId, projectId, issueId: result.issueId },
+    })
   })
 
   it("returns already-assigned before generation when the score already belongs to an issue", async () => {
@@ -135,6 +158,7 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
         Effect.provideService(
           IssueProjectionRepository,
           createFakeIssueProjectionRepository({ organizationId }).service,
@@ -186,6 +210,7 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
         Effect.provideService(
           IssueProjectionRepository,
           createFakeIssueProjectionRepository({ organizationId }).service,
@@ -248,6 +273,7 @@ describe("createIssueFromScoreUseCase", () => {
             Effect.provideService(ScoreRepository, scoreRepository),
             Effect.provideService(IssueRepository, issueRepository),
             Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+            Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
             Effect.provideService(
               IssueProjectionRepository,
               createFakeIssueProjectionRepository({ organizationId }).service,

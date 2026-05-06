@@ -80,7 +80,7 @@ const buildIssueWithAssignedScore = ({
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
   readonly assignedAt: Date
-}): Issue => {
+}): { readonly updatedIssue: Issue; readonly isRegression: boolean } => {
   const centroid = updateIssueCentroid({
     centroid: {
       ...issue.centroid,
@@ -95,11 +95,22 @@ const buildIssueWithAssignedScore = ({
     timestamp: assignedAt,
   })
 
+  // Reify regression at write time: a score newer than the issue's resolution
+  // means the issue is no longer resolved. Clearing `resolvedAt` here makes
+  // "is the issue regressed" a stored fact (and gives the regression event
+  // idempotency for free — a subsequent score in the same cycle won't see
+  // resolvedAt != null and won't re-emit).
+  const isRegression = issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
+
   return {
-    ...issue,
-    centroid,
-    clusteredAt: centroid.clusteredAt,
-    updatedAt: assignedAt,
+    updatedIssue: {
+      ...issue,
+      centroid,
+      clusteredAt: centroid.clusteredAt,
+      resolvedAt: isRegression ? null : issue.resolvedAt,
+      updatedAt: assignedAt,
+    },
+    isRegression,
   }
 }
 
@@ -147,7 +158,7 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
             }
 
             const assignedAt = new Date()
-            const updatedIssue = buildIssueWithAssignedScore({
+            const { updatedIssue, isRegression } = buildIssueWithAssignedScore({
               issue,
               score,
               normalizedEmbedding: input.normalizedEmbedding,
@@ -186,6 +197,22 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
                 issueId: issue.id,
               },
             })
+
+            if (isRegression) {
+              yield* outboxEventWriter.write({
+                eventName: "IssueRegressed",
+                aggregateType: "issue",
+                aggregateId: updatedIssue.id,
+                organizationId: updatedIssue.organizationId,
+                payload: {
+                  organizationId: updatedIssue.organizationId,
+                  projectId: updatedIssue.projectId,
+                  issueId: updatedIssue.id,
+                  regressedAt: score.createdAt.toISOString(),
+                  triggerScoreId: score.id,
+                },
+              })
+            }
 
             return {
               action: "assigned",

@@ -1,0 +1,67 @@
+import { type AlertIncidentKind, createAlertIncidentFromIssueEventUseCase } from "@domain/alerts"
+import type { QueueConsumer } from "@domain/queue"
+import { OrganizationId } from "@domain/shared"
+import { AlertIncidentRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { createLogger, withTracing } from "@repo/observability"
+import { Effect, Layer } from "effect"
+import { getPostgresClient } from "../../clients.ts"
+
+const logger = createLogger("alert-incidents")
+
+interface AlertIncidentsDeps {
+  consumer: QueueConsumer
+}
+
+const repoLayer = Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive)
+
+const createIncidentFor = (
+  kind: AlertIncidentKind,
+  payload: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly occurredAt: Date
+  },
+) => {
+  const pgClient = getPostgresClient()
+
+  return createAlertIncidentFromIssueEventUseCase({
+    kind,
+    organizationId: payload.organizationId,
+    projectId: payload.projectId,
+    issueId: payload.issueId,
+    occurredAt: payload.occurredAt,
+  }).pipe(
+    withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
+    Effect.tap((incident) =>
+      Effect.sync(() =>
+        logger.info(`alert_incident created kind=${incident.kind} issueId=${payload.issueId} id=${incident.id}`),
+      ),
+    ),
+    Effect.tapError((error) =>
+      Effect.sync(() => logger.error(`alert_incident creation failed kind=${kind} issueId=${payload.issueId}`, error)),
+    ),
+    Effect.asVoid,
+    withTracing,
+  )
+}
+
+export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => {
+  consumer.subscribe("alert-incidents", {
+    "issue-created": (payload) =>
+      createIncidentFor("issue.new", {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        issueId: payload.issueId,
+        occurredAt: new Date(payload.createdAt),
+      }),
+
+    "issue-regressed": (payload) =>
+      createIncidentFor("issue.regressed", {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        issueId: payload.issueId,
+        occurredAt: new Date(payload.regressedAt),
+      }),
+  })
+}
