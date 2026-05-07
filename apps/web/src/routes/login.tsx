@@ -151,7 +151,7 @@ function LoginPage() {
             <Text.H6 color="primary" weight="medium">
               Latitude V1 is still available, click to access
             </Text.H6>
-            <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+            <Icon icon={ArrowRight} size="xs" color="primary" />
           </a>
         </div>
 

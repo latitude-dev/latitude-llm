@@ -38,8 +38,14 @@ interface TooltipProps {
   side?: "top" | "right" | "bottom" | "left"
   sideOffset?: number
   delayDuration?: number
-  className?: string
+  align?: "start" | "center" | "end"
 }
+
+const textAlignMap = {
+  start: "text-left",
+  center: "text-center",
+  end: "text-right",
+} as const
 
 function Tooltip({
   children,
@@ -48,12 +54,12 @@ function Tooltip({
   side,
   sideOffset,
   delayDuration = 250,
-  className,
+  align,
 }: TooltipProps) {
   const contentProps: React.ComponentPropsWithoutRef<typeof TooltipContent> = {}
   if (side !== undefined) contentProps.side = side
   if (sideOffset !== undefined) contentProps.sideOffset = sideOffset
-  if (className !== undefined) contentProps.className = className
+  if (align !== undefined) contentProps.className = textAlignMap[align]
 
   return (
     <TooltipProvider>
