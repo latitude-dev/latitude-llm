@@ -13,7 +13,7 @@ export type AlertIncidentSourceType = z.infer<typeof alertIncidentSourceTypeSche
  * Namespaced kind. The prefix matches `sourceType` so kinds remain unambiguous
  * even when future source types add their own variants (e.g. `saved_search.threshold`).
  */
-export const ALERT_INCIDENT_KINDS = ["issue.new", "issue.regressed"] as const
+export const ALERT_INCIDENT_KINDS = ["issue.new", "issue.regressed", "issue.escalating"] as const
 export const alertIncidentKindSchema = z.enum(ALERT_INCIDENT_KINDS)
 export type AlertIncidentKind = z.infer<typeof alertIncidentKindSchema>
 
@@ -28,6 +28,7 @@ export type AlertSeverity = z.infer<typeof alertSeveritySchema>
 export const SEVERITY_FOR_KIND: Record<AlertIncidentKind, AlertSeverity> = {
   "issue.new": "medium",
   "issue.regressed": "high",
+  "issue.escalating": "high",
 }
 
 export const alertIncidentSchema = z.object({
