@@ -19,11 +19,19 @@ import { scores } from "../schema/scores.ts"
 // non-locking issue read. The two EXISTS subqueries are the system of record
 // for "is this issue currently escalating / regressed" — see
 // `deriveIssueLifecycleStates` in @domain/issues.
+//
+// `issues.id` is qualified via raw SQL because Drizzle's template renders
+// the bare column inside the EXISTS subquery as `"id"` (unqualified), which
+// collides with `alert_incidents.id` (the inner scope's PK) and silently
+// resolves to the wrong column. The fully qualified outer reference avoids
+// the shadowing.
+const outerIssueId = sql.raw(`"latitude"."issues"."id"`)
+
 const isEscalatingExpr = sql<boolean>`exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
-    and ${alertIncidents.sourceId} = ${issues.id}
+    and ${alertIncidents.sourceId} = ${outerIssueId}
     and ${alertIncidents.kind} = 'issue.escalating'
     and ${alertIncidents.endedAt} is null
 )`
@@ -32,7 +40,7 @@ const isRegressedExpr = sql<boolean>`exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
-    and ${alertIncidents.sourceId} = ${issues.id}
+    and ${alertIncidents.sourceId} = ${outerIssueId}
     and ${alertIncidents.kind} = 'issue.regressed'
 )`
 
