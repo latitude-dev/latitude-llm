@@ -26,13 +26,26 @@ const PUBLIC_API_SOURCE_ID = "API" as const
  *     span defaulted to the last LLM completion). Internal callers can still
  *     pass concrete values via the lower-level `writeDraftAnnotationUseCase`
  *     / `writePublishedAnnotationUseCase` primitives.
+ *   - `annotatorId` — API keys are organization-scoped, not user-scoped, so
+ *     there is no real Latitude user behind an API request. The use case
+ *     forces `annotatorId = null`; lying about authorship by accepting a
+ *     caller-supplied user id would let any token holder attribute work to
+ *     any teammate.
  *
  * The public API does not expose draft state: every API-submitted annotation
  * is written as published. Internal callers that need a draft path go through
  * `writeDraftAnnotationUseCase` directly (used by the managed UI).
  */
 export const submitApiAnnotationInputSchema = persistDraftAnnotationInputSchema
-  .omit({ id: true, projectId: true, sourceId: true, sessionId: true, traceId: true, spanId: true })
+  .omit({
+    id: true,
+    projectId: true,
+    sourceId: true,
+    sessionId: true,
+    traceId: true,
+    spanId: true,
+    annotatorId: true,
+  })
   .extend({
     trace: traceRefSchema,
   })
@@ -89,7 +102,8 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
   // the session from the trace and pins the annotation to the trace's last
   // LLM completion span — the public API doesn't accept overrides for these.
   // `id` is omitted entirely so `writeScoreUseCase` mints a fresh one — the
-  // public API is creation-only.
+  // public API is creation-only. `annotatorId` is forced to null — see the
+  // schema doc-block for the rationale.
   return yield* writePublishedAnnotationUseCase({
     projectId: input.projectId,
     sourceId: PUBLIC_API_SOURCE_ID,
@@ -98,7 +112,7 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
     spanId: null,
     simulationId: parsed.simulationId,
     issueId: parsed.issueId,
-    annotatorId: parsed.annotatorId,
+    annotatorId: null,
     value: parsed.value,
     passed: parsed.passed,
     feedback: parsed.feedback,

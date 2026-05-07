@@ -17,7 +17,6 @@ import type * as LatitudeApi from "../../../../index.js";
 export interface CreateAnnotationBody {
     simulationId?: string;
     issueId?: string;
-    annotatorId?: string;
     value: number;
     passed: boolean;
     feedback: string;
