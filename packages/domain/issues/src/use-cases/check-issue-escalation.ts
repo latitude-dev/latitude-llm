@@ -3,7 +3,7 @@ import { ScoreAnalyticsRepository } from "@domain/scores"
 import { type ChSqlClient, IssueId, OrganizationId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { IssueNotFoundForAssignmentError } from "../errors.ts"
-import { getEscalationExitThreshold, getEscalationOccurrenceThreshold } from "../helpers.ts"
+import { getEscalationExitThreshold, getEscalationOccurrenceThreshold, isIssueNew } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
 export interface CheckIssueEscalationInput {
@@ -24,12 +24,19 @@ export type CheckIssueEscalationError = RepositoryError | IssueNotFoundForAssign
 /**
  * Reify the (otherwise read-time-derived) escalating state on an issue.
  *
- * Entry: previously not escalating, `recentOccurrences >= entryThreshold`.
- * Sets `escalatedAt = now`, emits `IssueEscalated`.
+ * Entry: previously not escalating, the issue is no longer "new", and
+ * `recentOccurrences >= entryThreshold`. Sets `escalatedAt = now`, emits
+ * `IssueEscalated`.
  *
  * Exit: previously escalating, `recentOccurrences < exitThreshold` (lower
  * than the entry threshold by `ESCALATION_EXIT_THRESHOLD_FACTOR` to prevent
  * flapping at the boundary). Clears `escalatedAt`, emits `IssueEscalationEnded`.
+ *
+ * The `isIssueNew` guard mirrors `deriveIssueLifecycleStates`: new issues
+ * have no real baseline to compare against (the baseline window is days
+ * 1–8 ago, which hasn't filled in yet), so any volume above the floor
+ * would falsely trip the threshold. The discrete `issue.new` alert covers
+ * that case.
  *
  * Idempotent: the stored `escalatedAt` field gates re-emission, mirroring
  * the regression-detection pattern in `assign-score-to-issue.ts`.
@@ -72,8 +79,9 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
 
         const wasEscalating = issue.escalatedAt !== null
         const now = new Date()
+        const firstSeenAt = aggregate?.firstSeenAt ?? issue.createdAt
 
-        if (!wasEscalating && recent >= entryThreshold) {
+        if (!wasEscalating && !isIssueNew(firstSeenAt, now) && recent >= entryThreshold) {
           yield* issueRepository.save({ ...issue, escalatedAt: now, updatedAt: now })
           yield* outboxEventWriter.write({
             eventName: "IssueEscalated",

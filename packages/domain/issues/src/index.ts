@@ -57,6 +57,7 @@ export {
   deriveIssueLifecycleStates,
   getEscalationExitThreshold,
   getEscalationOccurrenceThreshold,
+  isIssueNew,
   normalizeEmbedding,
   normalizeIssueCentroid,
   type UpdateIssueCentroidInput,

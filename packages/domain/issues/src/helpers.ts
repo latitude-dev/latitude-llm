@@ -204,6 +204,16 @@ export const getEscalationOccurrenceThreshold = (baselineAvgOccurrences: number)
 export const getEscalationExitThreshold = (baselineAvgOccurrences: number): number =>
   Math.floor(getEscalationOccurrenceThreshold(baselineAvgOccurrences) * ESCALATION_EXIT_THRESHOLD_FACTOR)
 
+/**
+ * An issue is "new" while its first seen timestamp is within
+ * `NEW_ISSUE_AGE_DAYS` of `now`. New issues are excluded from escalation
+ * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
+ * filled in yet, so any volume above the floor would falsely trip the
+ * threshold. The discrete `issue.new` alert covers this case.
+ */
+export const isIssueNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
+  firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
+
 export const deriveIssueLifecycleStates = ({
   issue,
   occurrence,
@@ -212,26 +222,28 @@ export const deriveIssueLifecycleStates = ({
   const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
   const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
   const states = new Set<IssueStateValue>()
-  const isNew = firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
 
-  if (isNew) {
+  if (isIssueNew(firstSeenAt, now)) {
     states.add(IssueState.New)
   }
 
-  const recentOccurrences = occurrence?.recentOccurrences ?? 0
-  const baselineAverage = occurrence?.baselineAvgOccurrences ?? 0
-  if (!isNew && recentOccurrences >= getEscalationOccurrenceThreshold(baselineAverage)) {
+  // Escalating reads from the stored `escalatedAt` column rather than
+  // recomputing from the occurrence aggregate. The worker's
+  // `checkIssueEscalationUseCase` is the only writer, applies hysteresis,
+  // and gates on `isIssueNew` — trusting the stored value here keeps the
+  // read path consistent with what the alerts pipeline observed.
+  if (issue.escalatedAt !== null) {
     states.add(IssueState.Escalating)
   }
 
-  const isRegressed = issue.resolvedAt !== null && lastSeenAt.getTime() > issue.resolvedAt.getTime()
-  if (isRegressed) {
-    states.add(IssueState.Regressed)
-  }
-
+  // The `Regressed` state is no longer derived. Regression is reified at
+  // write time in `assign-score-to-issue` (clears `resolvedAt`, emits
+  // `IssueRegressed`), and the historical record lives in `alert_incidents`.
+  // Consumers that need to surface "this issue has regressed recently"
+  // should query that table.
   const isResolvedByInactivity =
     lastSeenAt.getTime() < now.getTime() - AUTO_RESOLVE_INACTIVITY_DAYS * MILLISECONDS_PER_DAY
-  if (!isRegressed && (issue.resolvedAt !== null || isResolvedByInactivity)) {
+  if (issue.resolvedAt !== null || isResolvedByInactivity) {
     states.add(IssueState.Resolved)
   }
 

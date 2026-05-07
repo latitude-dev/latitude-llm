@@ -51,6 +51,7 @@ const provideTestLayers = (params: {
   readonly baselineAvgOccurrences?: number
   readonly events: OutboxWriteEvent[]
   readonly issueOverrides?: Parameters<typeof createFakeIssueRepository>[1]
+  readonly firstSeenAt?: Date
 }) => {
   const { repository: issueRepository, issues } = createFakeIssueRepository([params.issue], params.issueOverrides)
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
@@ -61,7 +62,7 @@ const provideTestLayers = (params: {
           totalOccurrences: params.recentOccurrences,
           recentOccurrences: params.recentOccurrences,
           baselineAvgOccurrences: params.baselineAvgOccurrences ?? 0,
-          firstSeenAt: new Date("2026-04-29T10:00:00.000Z"),
+          firstSeenAt: params.firstSeenAt ?? new Date("2026-04-01T10:00:00.000Z"),
           lastSeenAt: new Date("2026-05-07T10:00:00.000Z"),
         },
       ]),
@@ -93,10 +94,19 @@ const provideTestLayers = (params: {
 
 describe("checkIssueEscalationUseCase", () => {
   it("enters escalation when recent crosses entryThreshold", async () => {
-    const issue = makeIssue({ escalatedAt: null })
+    // Issue is well past the new-issue window so the isNew guard does not block entry.
+    const issue = makeIssue({
+      escalatedAt: null,
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+    })
     const events: OutboxWriteEvent[] = []
     const recent = getEscalationOccurrenceThreshold(0) // baseline 0 → entry = 20
-    const { issues, apply } = provideTestLayers({ issue, recentOccurrences: recent, events })
+    const { issues, apply } = provideTestLayers({
+      issue,
+      recentOccurrences: recent,
+      events,
+      firstSeenAt: new Date("2026-04-01T10:00:00.000Z"),
+    })
 
     const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
 
@@ -110,6 +120,30 @@ describe("checkIssueEscalationUseCase", () => {
       aggregateId: issueId,
       payload: { organizationId, projectId, issueId },
     })
+  })
+
+  it("does not enter escalation while the issue is still new even if recent crosses entryThreshold", async () => {
+    // New issue (firstSeenAt within NEW_ISSUE_AGE_DAYS) — the isNew guard
+    // should block the entry transition. Mirrors deriveIssueLifecycleStates
+    // and avoids alerting on issues whose baseline window has not filled in.
+    const issue = makeIssue({
+      escalatedAt: null,
+      createdAt: new Date("2026-05-05T10:00:00.000Z"),
+    })
+    const events: OutboxWriteEvent[] = []
+    const { issues, apply } = provideTestLayers({
+      issue,
+      recentOccurrences: getEscalationOccurrenceThreshold(0) + 50,
+      events,
+      firstSeenAt: new Date("2026-05-05T10:00:00.000Z"),
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("none")
+    expect(result.currentlyEscalating).toBe(false)
+    expect(issues.get(issueId)?.escalatedAt).toBeNull()
+    expect(events).toHaveLength(0)
   })
 
   it("does not transition when not escalating and recent below entryThreshold", async () => {

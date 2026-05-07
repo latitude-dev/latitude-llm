@@ -226,12 +226,13 @@ describe("issue lifecycle helpers", () => {
     expect(states).toEqual([IssueState.New])
   })
 
-  it("marks older issues as escalating when they exceed the escalation threshold", () => {
+  it("marks issues with escalatedAt set as escalating", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-20T08:00:00.000Z"),
         updatedAt: new Date("2026-03-20T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+        escalatedAt: new Date("2026-04-09T18:00:00.000Z"),
       }),
       occurrence: makeOccurrence({
         firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
@@ -243,6 +244,26 @@ describe("issue lifecycle helpers", () => {
     })
 
     expect(states).toEqual([IssueState.Escalating])
+  })
+
+  it("does not derive escalating from runtime threshold when escalatedAt is null", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-03-20T08:00:00.000Z"),
+        updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+        clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+        escalatedAt: null,
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
+        recentOccurrences: 100,
+        baselineAvgOccurrences: 2,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.Ongoing])
   })
 
   it("marks issues resolved after 14 days of inactivity", () => {
@@ -264,7 +285,14 @@ describe("issue lifecycle helpers", () => {
     expect(states).toEqual([IssueState.Resolved])
   })
 
-  it("marks resolved issues as regressed when new occurrences appear later", () => {
+  it("does not derive regressed state — regression is reified at write time and lives in alert_incidents", () => {
+    // Pre-PR1 derive returned Regressed when an issue had `resolvedAt` set
+    // and activity after that timestamp. Post-PR1, the assign-score-to-issue
+    // path clears `resolvedAt` when regression fires and emits an
+    // `IssueRegressed` event consumed by the alerts pipeline. The derive
+    // helper now treats issues with `resolvedAt` set as Resolved
+    // unconditionally; "this issue regressed recently" is answered by
+    // querying alert_incidents.
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-01T08:00:00.000Z"),
@@ -281,7 +309,7 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Regressed])
+    expect(states).toEqual([IssueState.Resolved])
   })
 
   it("falls back to issue timestamps when analytics have not caught up yet", () => {
