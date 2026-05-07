@@ -1,4 +1,11 @@
-import { type ProjectId, type RepositoryError, type SqlClient, toSlug } from "@domain/shared"
+import {
+  generateSlug,
+  type InvalidSlugInputError,
+  type ProjectId,
+  type RepositoryError,
+  type SqlClient,
+  toSlug,
+} from "@domain/shared"
 import { Data, Effect } from "effect"
 import {
   type AnnotationQueue,
@@ -30,7 +37,7 @@ export interface UpdateQueueResult {
   readonly queue: AnnotationQueue
 }
 
-export type UpdateQueueError = RepositoryError | QueueNotFoundError
+export type UpdateQueueError = RepositoryError | QueueNotFoundError | InvalidSlugInputError
 
 export const updateQueueUseCase = (
   input: UpdateQueueInput,
@@ -68,7 +75,16 @@ export const updateQueueUseCase = (
     } else {
       const newName = input.name
       const nameChanged = newName !== undefined && newName !== existing.name
-      const newSlug = nameChanged ? toSlug(newName) : existing.slug
+      // Slug regenerates only when the name change actually affects the slug
+      // form (e.g. capitalization-only edits keep the slug stable so URLs
+      // don't churn).
+      const newSlug =
+        nameChanged && toSlug(newName) !== existing.slug
+          ? yield* generateSlug({
+              name: newName,
+              count: (slug) => repo.countBySlug({ projectId: input.projectId, slug, excludeQueueId: existing.id }),
+            })
+          : existing.slug
 
       const mergedSettings: AnnotationQueueSettings = {
         ...existing.settings,

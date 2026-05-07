@@ -19,6 +19,7 @@ const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: st
   id: DatasetId(row.id),
   organizationId: OrganizationId(row.organizationId),
   projectId: ProjectId(row.projectId),
+  slug: row.slug,
   name: row.name,
   description: row.description ?? null,
   fileKey: row.fileKey ?? null,
@@ -93,6 +94,7 @@ export const DatasetRepositoryLive = Layer.effect(
                 ...(args.id ? { id: args.id } : {}),
                 organizationId: sqlClient.organizationId,
                 projectId: args.projectId,
+                slug: args.slug,
                 name: args.name,
                 description: args.description ?? null,
                 fileKey: args.fileKey ?? null,
@@ -194,13 +196,29 @@ export const DatasetRepositoryLive = Layer.effect(
           return row !== undefined
         }),
 
+      countBySlug: (args) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const conditions = and(
+            eq(datasets.organizationId, sqlClient.organizationId),
+            eq(datasets.projectId, args.projectId),
+            eq(datasets.slug, args.slug),
+            isNull(datasets.deletedAt),
+            ...(args.excludeDatasetId ? [ne(datasets.id, args.excludeDatasetId)] : []),
+          )
+          const [row] = yield* sqlClient.query((db) =>
+            db.select({ count: sql<number>`count(*)::int` }).from(datasets).where(conditions),
+          )
+          return row?.count ?? 0
+        }),
+
       updateName: (args) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
-              .set({ name: args.name })
+              .set({ name: args.name, slug: args.slug })
               .where(
                 and(
                   eq(datasets.organizationId, sqlClient.organizationId),
@@ -224,7 +242,7 @@ export const DatasetRepositoryLive = Layer.effect(
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
-              .set({ name: args.name, description: args.description })
+              .set({ name: args.name, slug: args.slug, description: args.description })
               .where(
                 and(
                   eq(datasets.organizationId, sqlClient.organizationId),

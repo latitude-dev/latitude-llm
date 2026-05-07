@@ -49,6 +49,16 @@ export interface IssueRepositoryShape {
     readonly projectId: ProjectId
     readonly uuid: string
   }): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+  /**
+   * Returns the number of non-deleted issues with this slug in the project,
+   * scoped to the active organization (issues aren't soft-deleted, so this
+   * is a simple COUNT). Powers the `exists` callback of `generateSlug`.
+   */
+  countBySlug(input: {
+    readonly projectId: ProjectId
+    readonly slug: string
+    readonly excludeIssueId?: IssueId
+  }): Effect.Effect<number, RepositoryError, SqlClient>
   save(issue: Issue): Effect.Effect<void, RepositoryError, SqlClient>
   list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError, SqlClient>
 }

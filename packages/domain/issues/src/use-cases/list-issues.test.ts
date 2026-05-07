@@ -33,6 +33,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   uuid: "11111111-1111-4111-8111-111111111111",
   organizationId: organizationId as string,
   projectId: projectId as string,
+  slug: "test-issue",
   name: "Issue candidate",
   description: "Repeated assistant failure",
   source: "annotation",

@@ -1,4 +1,10 @@
-import { type ProjectId, type RepositoryError, type SqlClient, toSlug } from "@domain/shared"
+import {
+  generateSlug,
+  type InvalidSlugInputError,
+  type ProjectId,
+  type RepositoryError,
+  type SqlClient,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { LIVE_QUEUE_DEFAULT_SAMPLING } from "../constants.ts"
 import {
@@ -22,7 +28,7 @@ export interface CreateQueueResult {
   readonly queue: AnnotationQueue
 }
 
-export type CreateQueueError = RepositoryError
+export type CreateQueueError = RepositoryError | InvalidSlugInputError
 
 export const createQueueUseCase = (
   input: CreateQueueInput,
@@ -34,7 +40,10 @@ export const createQueueUseCase = (
     const repo = yield* AnnotationQueueRepository
 
     const now = new Date()
-    const slug = toSlug(input.name)
+    const slug = yield* generateSlug({
+      name: input.name,
+      count: (slug) => repo.countBySlug({ projectId: input.projectId, slug }),
+    })
 
     const rawSettings: AnnotationQueueSettings = input.settings ?? {}
     const normalizedSettings = normalizeQueueSettings(rawSettings)

@@ -12,7 +12,7 @@ export const annotationQueues = latitudeSchema.table(
     // (orphan system queues from before the flaggers refactor) are confirmed safe to delete.
     system: boolean("system").notNull().default(false),
     name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
-    slug: varchar("slug", { length: 140 }).notNull(), // unique queue slug within the project
+    slug: varchar("slug", { length: 128 }).notNull(), // unique queue slug within the project. Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug` (system-wide cap for user-derived slugs).
     description: text("description").notNull(),
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling

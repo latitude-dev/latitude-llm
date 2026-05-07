@@ -30,6 +30,7 @@ export class DatasetRepository extends Context.Service<
     create(args: {
       readonly id?: DatasetId
       readonly projectId: ProjectId
+      readonly slug: string
       readonly name: string
       readonly description?: string
       readonly fileKey?: string
@@ -48,14 +49,22 @@ export class DatasetRepository extends Context.Service<
       readonly excludeDatasetId?: DatasetId
     }): Effect.Effect<boolean, RepositoryError, SqlClient>
 
+    countBySlug(args: {
+      readonly projectId: ProjectId
+      readonly slug: string
+      readonly excludeDatasetId?: DatasetId
+    }): Effect.Effect<number, RepositoryError, SqlClient>
+
     updateName(args: {
       readonly id: DatasetId
       readonly name: string
+      readonly slug: string
     }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
     updateDetails(args: {
       readonly id: DatasetId
       readonly name: string
+      readonly slug: string
       readonly description: string | null
     }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 

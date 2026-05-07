@@ -14,8 +14,8 @@ export const LIVE_QUEUE_DEFAULT_SAMPLING = 10
 
 export const ANNOTATION_QUEUE_NAME_MAX_LENGTH = 128
 
-/** Slug can be slightly larger than name to accommodate URL-friendly transformations */
-export const ANNOTATION_QUEUE_SLUG_MAX_LENGTH = 140
+// Slug length is centralized as `SLUG_MAX_LENGTH` in `@domain/shared/slug`
+// — same cap (128) for every entity that has a user-derived slug.
 
 // ---------------------------------------------------------------------------
 // Hotkey bindings for the focused queue-review screen

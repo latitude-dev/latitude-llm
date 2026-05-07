@@ -128,7 +128,7 @@ export const SavedSearchRepositoryLive = Layer.effect(
           return toSavedSearch(row)
         }),
 
-      existsBySlug: ({ projectId, slug, excludeId }) =>
+      countBySlug: ({ projectId, slug, excludeId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = and(
@@ -139,9 +139,9 @@ export const SavedSearchRepositoryLive = Layer.effect(
             ...(excludeId ? [ne(savedSearches.id, excludeId)] : []),
           )
           const [row] = yield* sqlClient.query((db) =>
-            db.select({ one: sql<number>`1` }).from(savedSearches).where(conditions).limit(1),
+            db.select({ count: sql<number>`count(*)::int` }).from(savedSearches).where(conditions),
           )
-          return row !== undefined
+          return row?.count ?? 0
         }),
 
       listByProject: ({ projectId, assignedUserId }) =>

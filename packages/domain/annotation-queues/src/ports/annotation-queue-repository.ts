@@ -61,6 +61,15 @@ export interface AnnotationQueueRepositoryShape {
   }): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
   findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError, SqlClient>
   /**
+   * Number of non-deleted queues with this slug in the project, scoped to the
+   * active organization. Powers the `count` callback of `generateSlug`.
+   */
+  countBySlug(input: {
+    projectId: ProjectId
+    slug: string
+    excludeQueueId?: string
+  }): Effect.Effect<number, RepositoryError, SqlClient>
+  /**
    * List all non-deleted live queues (queues with `settings.filter` present) for a project.
    */
   listLiveQueuesByProject(
