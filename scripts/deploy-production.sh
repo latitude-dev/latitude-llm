@@ -27,8 +27,26 @@ if [ "$release_commits" -eq 0 ]; then
 fi
 
 echo "Development is ${release_commits} commit(s) ahead of main:"
-git log --oneline origin/main..origin/development
+git --no-pager log --oneline origin/main..origin/development
 echo ""
+
+main_commits_not_on_development=$(git cherry -v origin/development origin/main | awk '$1=="+"')
+if [ -n "$main_commits_not_on_development" ]; then
+  echo "Warning: main has commits whose changes are not on development:"
+  printf '%s\n' "$main_commits_not_on_development" | sed 's/^+ /  /'
+  echo ""
+  echo "These will likely cause merge conflicts when promoting development → main."
+  echo "Back-merge main into development first, or proceed and resolve conflicts in the PR."
+  echo ""
+  read -r -p "Continue anyway? [y/N] " continue_anyway
+  case "$continue_anyway" in
+    y | Y | yes | YES) ;;
+    *)
+      echo "Aborted."
+      exit 0
+      ;;
+  esac
+fi
 
 existing_pr=$(gh pr list \
   --base main \
