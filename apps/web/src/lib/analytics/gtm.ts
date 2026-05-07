@@ -9,13 +9,18 @@ export const gtmHeadScripts = (): Array<{ children: string }> =>
       ]
     : []
 
+// `_gl` is intentionally excluded: Google's cross-domain linker uses `*` as a
+// delimiter (e.g. `1*abc*_ga*xyz`), and asterisks fail Better Auth's
+// relative-path regex when forwarded as `callbackURL` / `newUserCallbackURL`,
+// causing /api/auth/magic-link/verify to reject the link with
+// INVALID_CALLBACK_URL. `_gl` only matters for cross-domain GA handoff, which
+// our same-origin auth flow does not need.
 export const TRACKING_PARAM_KEYS = [
   "gclid",
   "fbclid",
   "ttclid",
   "li_fat_id",
   "msclkid",
-  "_gl",
   "utm_source",
   "utm_medium",
   "utm_campaign",
