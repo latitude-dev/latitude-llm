@@ -30,10 +30,10 @@ echo "Development is ${release_commits} commit(s) ahead of main:"
 git --no-pager log --oneline origin/main..origin/development
 echo ""
 
-unapplied_on_main=$(git cherry -v origin/development origin/main | awk '$1=="+"')
-if [ -n "$unapplied_on_main" ]; then
+main_commits_not_on_development=$(git cherry -v origin/development origin/main | awk '$1=="+"')
+if [ -n "$main_commits_not_on_development" ]; then
   echo "Warning: main has commits whose changes are not on development:"
-  echo "$unapplied_on_main" | sed 's/^+ /  /'
+  printf '%s\n' "$main_commits_not_on_development" | sed 's/^+ /  /'
   echo ""
   echo "These will likely cause merge conflicts when promoting development → main."
   echo "Back-merge main into development first, or proceed and resolve conflicts in the PR."
