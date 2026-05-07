@@ -67,6 +67,31 @@ export interface EventPayloads {
     readonly triggerScoreId: string
   }
   /**
+   * Emitted by `checkIssueEscalationUseCase` when an issue transitions into
+   * the escalating state. The use case sets `issues.escalated_at` in the same
+   * transaction (reifying the derived state as a stored fact); a re-run won't
+   * re-emit because the prior condition no longer holds. Drives the
+   * `issue.escalating` incident's open transition.
+   */
+  IssueEscalated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly escalatedAt: string
+  }
+  /**
+   * Emitted by `checkIssueEscalationUseCase` when an escalating issue's
+   * recent occurrence count drops below the hysteresis exit threshold. The
+   * use case clears `issues.escalated_at` in the same transaction. Drives
+   * the `issue.escalating` incident's close transition (`ended_at` update).
+   */
+  IssueEscalationEnded: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly endedAt: string
+  }
+  /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row is
    * inserted. PR 1 has no consumer (the dispatcher routes it to a no-op);
    * PR 2 (email) and PR 3 (in-app) will subscribe.
@@ -75,7 +100,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: "issue.new" | "issue.regressed"
+    readonly kind: "issue.new" | "issue.regressed" | "issue.escalating"
     readonly sourceType: "issue"
     readonly sourceId: string
   }

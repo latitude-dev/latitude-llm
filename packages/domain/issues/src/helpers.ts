@@ -5,6 +5,7 @@ import {
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_EXIT_THRESHOLD_FACTOR,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_STATES,
@@ -193,6 +194,15 @@ export const getEscalationOccurrenceThreshold = (baselineAvgOccurrences: number)
     ESCALATION_MIN_OCCURRENCES_THRESHOLD,
     Math.floor(Math.max(0, baselineAvgOccurrences) * ESCALATION_THRESHOLD_FACTOR) + 1,
   )
+
+/**
+ * Hysteresis exit threshold: an escalating issue exits only when its recent
+ * occurrence count drops below this value. Always strictly less than
+ * `getEscalationOccurrenceThreshold(baselineAvgOccurrences)` so the entry
+ * and exit conditions cannot both hold simultaneously at the same baseline.
+ */
+export const getEscalationExitThreshold = (baselineAvgOccurrences: number): number =>
+  Math.floor(getEscalationOccurrenceThreshold(baselineAvgOccurrences) * ESCALATION_EXIT_THRESHOLD_FACTOR)
 
 export const deriveIssueLifecycleStates = ({
   issue,

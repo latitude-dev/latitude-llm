@@ -4,7 +4,10 @@ export {
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_CHECK_THROTTLE_MS,
+  ESCALATION_EXIT_THRESHOLD_FACTOR,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
+  ESCALATION_RECHECK_DELAY_MS,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
@@ -52,6 +55,7 @@ export {
   createIssueCentroid,
   type DeriveIssueLifecycleStatesInput,
   deriveIssueLifecycleStates,
+  getEscalationExitThreshold,
   getEscalationOccurrenceThreshold,
   normalizeEmbedding,
   normalizeIssueCentroid,
@@ -93,6 +97,13 @@ export {
   buildIssuesExportUseCase,
 } from "./use-cases/build-issues-export.ts"
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
+export {
+  type CheckIssueEscalationError,
+  type CheckIssueEscalationInput,
+  type CheckIssueEscalationResult,
+  type CheckIssueEscalationTransition,
+  checkIssueEscalationUseCase,
+} from "./use-cases/check-issue-escalation.ts"
 export {
   type CreateIssueFromScoreError,
   type CreateIssueFromScoreInput,

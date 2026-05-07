@@ -17,6 +17,31 @@ export const ESCALATION_THRESHOLD_FACTOR = 1.33
 /** Escalating issues must clear at least this many recent occurrences. */
 export const ESCALATION_MIN_OCCURRENCES_THRESHOLD = 20
 
+/**
+ * Hysteresis exit factor: an escalating issue is considered "no longer
+ * escalating" only when the recent occurrence count drops below
+ * `entryThreshold * ESCALATION_EXIT_THRESHOLD_FACTOR`. Prevents flapping at
+ * the boundary by requiring a meaningful return below the entry threshold
+ * before closing the incident.
+ */
+export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
+
+/**
+ * Throttle window for the per-issue escalation-state recheck task triggered
+ * by `ScoreAssignedToIssue`. Caps the rate of `recentOccurrences`
+ * recomputation per issue. Trades off detection latency for compute.
+ */
+export const ESCALATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
+
+/**
+ * Delay for the self-rescheduling escalation recheck enqueued by the
+ * `issues:checkEscalation` worker while an issue is currently escalating.
+ * Catches escalation exits when scoring activity stops (no more push
+ * triggers): the recent occurrence count organically drops as time passes,
+ * and this delayed recheck eventually detects the exit.
+ */
+export const ESCALATION_RECHECK_DELAY_MS = 60 * 60 * 1000
+
 /** An issue with no occurrences in this many days is auto-resolved. */
 export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
 
