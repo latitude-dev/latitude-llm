@@ -3,6 +3,7 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
@@ -37,6 +38,9 @@ import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Traces</BreadcrumbText>,
+  },
   component: ProjectPage,
 })
 

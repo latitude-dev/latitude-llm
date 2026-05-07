@@ -8,10 +8,36 @@ import {
   Switch,
   Tabs,
   Text,
+  Tooltip,
   toast,
   useValueWithDefault,
 } from "@repo/ui"
+import { lazy, Suspense } from "react"
 import { createFileRoute } from "@tanstack/react-router"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
+
+const IssuesLottie = lazy(() => import("./-components/issues-lottie.tsx"))
+
+function IssuesBreadcrumb() {
+  return (
+    <span className="flex items-center gap-0">
+      <BreadcrumbText variant="current">Issues</BreadcrumbText>
+      <Tooltip
+        side="bottom"
+        className="text-center"
+        trigger={
+          <span className="flex items-center cursor-default">
+            <Suspense>
+              <IssuesLottie />
+            </Suspense>
+          </span>
+        }
+      >
+        Latitude is always scanning for common issues
+      </Tooltip>
+    </span>
+  )
+}
 import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
@@ -66,6 +92,9 @@ function parseSorting(raw: string): IssuesTableSorting {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
+  staticData: {
+    breadcrumb: IssuesBreadcrumb,
+  },
   component: IssuesPage,
 })
 

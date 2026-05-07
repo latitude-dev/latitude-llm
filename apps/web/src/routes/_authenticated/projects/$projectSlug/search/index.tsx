@@ -2,6 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import {
@@ -40,6 +41,9 @@ import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
 const SEARCH_QUERY_MAX_LENGTH = 500
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/search/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Search</BreadcrumbText>,
+  },
   component: SearchPage,
 })
 

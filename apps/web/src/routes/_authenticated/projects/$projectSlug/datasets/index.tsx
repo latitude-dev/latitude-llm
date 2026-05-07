@@ -12,6 +12,7 @@ import {
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute } from "@tanstack/react-router"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -23,6 +24,9 @@ import { useRouteProject } from "../-route-data.ts"
 import { DatasetsEmptyState } from "./-components/datasets-empty-state.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Datasets</BreadcrumbText>,
+  },
   component: DatasetsPage,
 })
 
