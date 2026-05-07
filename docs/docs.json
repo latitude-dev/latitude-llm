@@ -100,6 +100,7 @@
               "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/langchain",
               "telemetry/frameworks/llamaindex",
+              "telemetry/frameworks/mastra",
               "telemetry/frameworks/crewai",
               "telemetry/frameworks/dspy",
               "telemetry/frameworks/haystack"
