@@ -40,11 +40,43 @@ export const pickTrackingParams = (search: URLSearchParams | string): Record<str
   return out
 }
 
+// Better Auth's `originCheck` middleware validates `callbackURL` /
+// `newUserCallbackURL` / `errorCallbackURL` against a regex that allows only
+// `[\w\-.+/=&%@]` in the query, then runs `decodeURIComponent` on the already
+// URL-decoded value (double-decode) before validating. To survive that, every
+// unsafe char in the raw value must become `%XX` *before* it reaches
+// `URLSearchParams.toString()`: that call adds one `%`→`%25` layer, Better
+// Auth's own `searchParams.set` adds another, and the two server-side decodes
+// reverse them — leaving `%XX` visible to the regex (which accepts `%` and hex
+// digits). Without this, `*`, `(`, `:` etc. round-trip back to themselves and
+// the verify endpoint rejects the link with INVALID_CALLBACK_URL.
+const CALLBACK_SAFE_CHAR = /^[\w\-.+/=&%@]$/
+
+const percentEncodeChar = (ch: string): string => {
+  let out = ""
+  for (const byte of new TextEncoder().encode(ch)) {
+    out += `%${byte.toString(16).toUpperCase().padStart(2, "0")}`
+  }
+  return out
+}
+
+const sanitizeForCallback = (value: string): string => {
+  let out = ""
+  for (const ch of value) {
+    out += CALLBACK_SAFE_CHAR.test(ch) ? ch : percentEncodeChar(ch)
+  }
+  return out
+}
+
 export const appendTrackingParams = (path: string, params: Record<string, string>): string => {
   const entries = Object.entries(params)
   if (entries.length === 0) return path
+  const sanitized: Record<string, string> = {}
+  for (const [key, value] of entries) {
+    sanitized[key] = sanitizeForCallback(value)
+  }
   const separator = path.includes("?") ? "&" : "?"
-  const query = new URLSearchParams(params).toString()
+  const query = new URLSearchParams(sanitized).toString()
   return `${path}${separator}${query}`
 }
 
