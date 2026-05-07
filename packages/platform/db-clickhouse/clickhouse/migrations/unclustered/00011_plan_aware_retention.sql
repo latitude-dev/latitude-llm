@@ -8,10 +8,46 @@ ALTER TABLE spans
 DROP VIEW IF EXISTS traces_mv;
 
 ALTER TABLE traces
-    ADD COLUMN IF NOT EXISTS retention_days SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
+    ADD COLUMN IF NOT EXISTS retention_days SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1));
+
+ALTER TABLE traces
     MODIFY TTL toDateTime(min_start_time) + toIntervalDay(retention_days + 30) DELETE;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS traces_mv TO traces
+(
+    organization_id,
+    project_id,
+    trace_id,
+    span_count,
+    error_count,
+    min_start_time,
+    max_end_time,
+    time_of_first_token,
+    tokens_input,
+    tokens_output,
+    tokens_cache_read,
+    tokens_cache_create,
+    tokens_reasoning,
+    tokens_total,
+    cost_input_microcents,
+    cost_output_microcents,
+    cost_total_microcents,
+    session_id,
+    user_id,
+    tags,
+    metadata,
+    simulation_id,
+    models,
+    providers,
+    service_names,
+    root_span_id,
+    root_span_name,
+    input_messages,
+    last_input_messages,
+    output_messages,
+    system_instructions,
+    retention_days
+)
 AS SELECT
     organization_id,
     project_id,
@@ -44,7 +80,6 @@ AS SELECT
     groupUniqArrayArray(tags)                                       AS tags,
     maxMap(metadata)                                                AS metadata,
     argMaxIfState(simulation_id, start_time, simulation_id != '')   AS simulation_id,
-    max(retention_days)                                             AS retention_days,
 
     groupUniqArrayIfState(model, model != '')                       AS models,
     groupUniqArrayIfState(provider, provider != '')                 AS providers,
@@ -55,7 +90,8 @@ AS SELECT
     argMinIfState(spans.input_messages, start_time, spans.input_messages != '') AS input_messages,
     argMaxIfState(spans.input_messages, end_time, spans.output_messages != '')  AS last_input_messages,
     argMaxIfState(spans.output_messages, end_time, spans.output_messages != '') AS output_messages,
-    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions
+    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions,
+    max(retention_days)                                             AS retention_days
 
 FROM spans
 GROUP BY organization_id, project_id, trace_id;
@@ -87,6 +123,39 @@ ALTER TABLE traces
     DROP COLUMN IF EXISTS retention_days;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS traces_mv TO traces
+(
+    organization_id,
+    project_id,
+    trace_id,
+    span_count,
+    error_count,
+    min_start_time,
+    max_end_time,
+    time_of_first_token,
+    tokens_input,
+    tokens_output,
+    tokens_cache_read,
+    tokens_cache_create,
+    tokens_reasoning,
+    tokens_total,
+    cost_input_microcents,
+    cost_output_microcents,
+    cost_total_microcents,
+    session_id,
+    user_id,
+    tags,
+    metadata,
+    simulation_id,
+    models,
+    providers,
+    service_names,
+    root_span_id,
+    root_span_name,
+    input_messages,
+    last_input_messages,
+    output_messages,
+    system_instructions
+)
 AS SELECT
     organization_id,
     project_id,
