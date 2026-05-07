@@ -17,6 +17,7 @@ import {
   getSelectedCount,
   type SelectionState,
 } from "../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { AddToDatasetModal } from "./-components/add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
@@ -37,6 +38,9 @@ import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Traces</BreadcrumbText>,
+  },
   component: ProjectPage,
 })
 

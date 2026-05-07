@@ -19,10 +19,14 @@ import { createDatasetMutation } from "../../../../../domains/datasets/datasets.
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { DatasetsEmptyState } from "./-components/datasets-empty-state.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Datasets</BreadcrumbText>,
+  },
   component: DatasetsPage,
 })
 

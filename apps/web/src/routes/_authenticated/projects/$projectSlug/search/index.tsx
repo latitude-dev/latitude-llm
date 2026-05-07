@@ -19,6 +19,7 @@ import {
   getSelectedCount,
   type SelectionState,
 } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { AddToDatasetModal } from "../-components/add-to-dataset-modal.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
@@ -40,6 +41,9 @@ import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
 const SEARCH_QUERY_MAX_LENGTH = 500
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/search/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Search</BreadcrumbText>,
+  },
   component: SearchPage,
 })
 

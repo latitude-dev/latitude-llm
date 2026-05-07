@@ -18,9 +18,13 @@ import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functi
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Settings</BreadcrumbText>,
+  },
   component: ProjectSettingsPage,
 })
 

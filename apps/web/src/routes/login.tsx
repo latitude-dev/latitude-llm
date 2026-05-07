@@ -1,6 +1,6 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { AlertCircle, Mail } from "lucide-react"
+import { AlertCircle, ArrowRight, Mail } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
 import z from "zod"
 import { Turnstile } from "../components/turnstile.tsx"
@@ -138,12 +138,21 @@ function LoginPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <GtmNoScript />
       <SignupCompleteWatcher />
-      <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
-        <div className="flex flex-col items-center justify-center gap-y-6">
+      <div className="flex flex-col gap-y-8 max-w-[22rem] w-full">
+        <div className="flex flex-col items-center justify-center gap-y-2">
           <LatitudeLogo />
-          <div className="flex flex-col items-center justify-center gap-y-2">
-            <Text.H3 align="center">Welcome to Latitude</Text.H3>
-          </div>
+          <Text.H3 align="center">Welcome to Latitude</Text.H3>
+          <a
+            href="https://app.latitude.so"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 mt-1 bg-primary-muted hover:bg-primary-muted/80 transition-colors rounded-xl py-0.5 pl-3 pr-1.5"
+          >
+            <Text.H6 color="primary" weight="medium">
+              Latitude V1 is still available, click to access
+            </Text.H6>
+            <Icon icon={ArrowRight} size="xs" color="primary" />
+          </a>
         </div>
 
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
