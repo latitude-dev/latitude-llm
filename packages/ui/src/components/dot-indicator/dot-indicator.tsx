@@ -39,25 +39,13 @@ function DotIndicator({
 
   if (ping) {
     return (
-      <span
-        ref={ref}
-        aria-hidden={ariaHidden}
-        className={cn(dotClass, "relative inline-flex", className)}
-        {...props}
-      >
+      <span ref={ref} aria-hidden={ariaHidden} className={cn(dotClass, "relative inline-flex", className)} {...props}>
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-inherit opacity-75" />
       </span>
     )
   }
 
-  return (
-    <span
-      ref={ref}
-      aria-hidden={ariaHidden}
-      className={cn(dotClass, className)}
-      {...props}
-    />
-  )
+  return <span ref={ref} aria-hidden={ariaHidden} className={cn(dotClass, className)} {...props} />
 }
 
 export { DotIndicator }
