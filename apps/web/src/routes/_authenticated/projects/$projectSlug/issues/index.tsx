@@ -1,6 +1,7 @@
 import {
   Button,
   CloseTrigger,
+  DotIndicator,
   Icon,
   Input,
   Label,
@@ -36,10 +37,7 @@ function IssuesBreadcrumb() {
           align="center"
           trigger={
             <span className="flex h-5 w-5 items-center justify-center cursor-default">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
+              <DotIndicator variant="primary" size="md" ping />
             </span>
           }
         >

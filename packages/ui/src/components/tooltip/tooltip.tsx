@@ -47,15 +47,7 @@ const textAlignMap = {
   end: "text-right",
 } as const
 
-function Tooltip({
-  children,
-  trigger,
-  asChild = false,
-  side,
-  sideOffset,
-  delayDuration = 250,
-  align,
-}: TooltipProps) {
+function Tooltip({ children, trigger, asChild = false, side, sideOffset, delayDuration = 250, align }: TooltipProps) {
   const contentProps: React.ComponentPropsWithoutRef<typeof TooltipContent> = {}
   if (side !== undefined) contentProps.side = side
   if (sideOffset !== undefined) contentProps.sideOffset = sideOffset
