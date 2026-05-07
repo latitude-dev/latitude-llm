@@ -219,7 +219,6 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
     if (message.role !== "assistant") continue
 
     let hasToolCall = false
-    let hasText = false
     const textParts: string[] = []
 
     for (const part of message.parts) {
@@ -228,13 +227,12 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
         continue
       }
       if (part.type === "text") {
-        hasText = true
         const content = (part as { content?: unknown }).content
         if (typeof content === "string") textParts.push(content)
       }
     }
 
-    if (hasToolCall && !hasText) continue
+    if (hasToolCall) continue
     const accumulatedText = textParts.join("").trim()
     if (accumulatedText === "") return match("Assistant response was empty or whitespace only", msgIdx)
     if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
