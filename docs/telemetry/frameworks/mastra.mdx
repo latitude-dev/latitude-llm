@@ -1,0 +1,118 @@
+---
+title: Mastra
+description: Connect your Mastra-powered application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Mastra**.
+
+Mastra has built-in observability support via `@mastra/observability` and `@mastra/otel-exporter`. It emits standard OpenTelemetry `gen_ai.*` spans, so you can point Mastra's OTel exporter directly at Latitude's OTLP ingestion endpoint — no Latitude SDK required.
+
+<Check>
+  You'll keep using Mastra exactly as you do today. The exporter simply
+  sends your traces to Latitude alongside any other observability backend.
+</Check>
+
+<Note>
+  The Mastra integration is **TypeScript only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Node.js project that uses **Mastra** (`@mastra/core`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @mastra/observability @mastra/otel-exporter @opentelemetry/exporter-trace-otlp-proto
+      ```
+
+      ```bash pnpm
+      pnpm add @mastra/observability @mastra/otel-exporter @opentelemetry/exporter-trace-otlp-proto
+      ```
+
+      ```bash yarn
+      yarn add @mastra/observability @mastra/otel-exporter @opentelemetry/exporter-trace-otlp-proto
+      ```
+
+      ```bash bun
+      bun add @mastra/observability @mastra/otel-exporter @opentelemetry/exporter-trace-otlp-proto
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure observability">
+    Create an `OtelExporter` with a `custom` provider pointed at Latitude's OTLP endpoint, then pass it to Mastra's `Observability` config:
+
+    ```ts
+    import { Mastra } from "@mastra/core"
+    import { Agent } from "@mastra/core/agent"
+    import { Observability } from "@mastra/observability"
+    import { OtelExporter } from "@mastra/otel-exporter"
+
+    const otelExporter = new OtelExporter({
+      provider: {
+        custom: {
+          endpoint: "https://ingest.latitude.so/v1/traces",
+          protocol: "http/protobuf",
+          headers: {
+            Authorization: `Bearer ${process.env.LATITUDE_API_KEY!}`,
+            "X-Latitude-Project": process.env.LATITUDE_PROJECT_SLUG!,
+          },
+        },
+      },
+    })
+
+    const agent = new Agent({
+      id: "my-agent",
+      name: "My Agent",
+      model: { provider: "OPEN_AI", name: "gpt-4o" },
+      instructions: "You are a helpful assistant.",
+    })
+
+    const mastra = new Mastra({
+      agents: { "my-agent": agent },
+      observability: new Observability({
+        configs: {
+          otel: {
+            serviceName: "my-mastra-app",
+            exporters: [otelExporter],
+          },
+        },
+      }),
+    })
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+3. Mastra agent runs, tool executions, and workflow steps appear as child spans
+
+---
+
+## That's It
+
+No changes to your Mastra agents or tools: just configure the OTel exporter with Latitude's endpoint and your traces flow in automatically. For more details on the OTLP endpoint and advanced options, see the [OpenTelemetry Exporter](../otel-exporter) page.
