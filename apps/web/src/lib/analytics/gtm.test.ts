@@ -23,11 +23,13 @@ const simulateBetterAuthValidatedValue = (callbackValue: string): string => {
 }
 
 describe("pickTrackingParams", () => {
-  it("excludes _gl since its '*' delimiters fail Better Auth's callbackURL regex", () => {
-    expect(TRACKING_PARAM_KEYS).not.toContain("_gl")
+  it("includes _gl: its '*' delimiters are escaped by appendTrackingParams to survive Better Auth", () => {
+    expect(TRACKING_PARAM_KEYS).toContain("_gl")
     const picked = pickTrackingParams("?_gl=1*rre81b*_gcl_au*MTgzNDAyNDE3My4xNzc4MTU4NDU5&gclid=abc123")
-    expect(picked).not.toHaveProperty("_gl")
-    expect(picked).toEqual({ gclid: "abc123" })
+    expect(picked).toEqual({
+      _gl: "1*rre81b*_gcl_au*MTgzNDAyNDE3My4xNzc4MTU4NDU5",
+      gclid: "abc123",
+    })
   })
 
   it("collects supported tracking keys and ignores unrelated ones", () => {
@@ -116,7 +118,7 @@ describe("appendTrackingParams", () => {
 
   it("preserves the original tracking value end-to-end after the browser's final decode on /welcome", () => {
     const newUserCallbackURL = appendTrackingParams("/welcome", {
-      gclid: "1*foo*bar",
+      _gl: "1*rre81b*_gcl_au*MTgzNDAyNDE3My4xNzc4MTU4NDU5",
       utm_source: "spring(2026)",
       signup: "email",
     })
@@ -124,7 +126,7 @@ describe("appendTrackingParams", () => {
     // After validation, Better Auth redirects to `validated` and the browser
     // does the final URLSearchParams decode on /welcome.
     const finalUrl = new URL(validated, "https://example.com")
-    expect(finalUrl.searchParams.get("gclid")).toBe("1*foo*bar")
+    expect(finalUrl.searchParams.get("_gl")).toBe("1*rre81b*_gcl_au*MTgzNDAyNDE3My4xNzc4MTU4NDU5")
     expect(finalUrl.searchParams.get("utm_source")).toBe("spring(2026)")
     expect(finalUrl.searchParams.get("signup")).toBe("email")
   })
