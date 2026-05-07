@@ -35,11 +35,31 @@ export const pickTrackingParams = (search: URLSearchParams | string): Record<str
   return out
 }
 
+// RFC 3986 strict percent-encoding. `encodeURIComponent` intentionally leaves
+// the legacy "mark" chars `!'()*~` unencoded, so we re-encode them by hand.
+//
+// Why this layer exists: Better Auth's `originCheck` middleware validates
+// `callbackURL` / `newUserCallbackURL` / `errorCallbackURL` against a regex
+// that only allows `[\w\-.+/=&%@]` in the query, and it runs
+// `decodeURIComponent` on the already URL-decoded value (double-decode) before
+// validating. Strict-encoding here means the raw value is `%XX` before it
+// reaches `URLSearchParams.toString()`, which adds one `%`→`%25` layer; Better
+// Auth's own `searchParams.set` adds another; the two server-side decodes
+// reverse them, leaving `%XX` visible to the regex (which accepts `%` and hex
+// digits). Without it, `*`, `(`, `:` etc. round-trip back to themselves and
+// the verify endpoint rejects the link with INVALID_CALLBACK_URL.
+const strictEncode = (value: string): string =>
+  encodeURIComponent(value).replace(/[!'()*~]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)
+
 export const appendTrackingParams = (path: string, params: Record<string, string>): string => {
   const entries = Object.entries(params)
   if (entries.length === 0) return path
+  const encoded: Record<string, string> = {}
+  for (const [key, value] of entries) {
+    encoded[key] = strictEncode(value)
+  }
   const separator = path.includes("?") ? "&" : "?"
-  const query = new URLSearchParams(params).toString()
+  const query = new URLSearchParams(encoded).toString()
   return `${path}${separator}${query}`
 }
 
