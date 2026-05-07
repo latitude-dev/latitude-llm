@@ -1,0 +1,170 @@
+---
+title: OpenAI Agents SDK
+description: Connect your OpenAI Agents SDK application to Latitude for observability.
+---
+
+<Warning>
+  **Work in progress:** Telemetry documentation is still being updated. Integration steps and APIs may be incomplete or out of date. Verify against your SDK versions and check back for revisions.
+</Warning>
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **OpenAI Agents SDK** (`@openai/agents` for TypeScript, `openai-agents` for Python).
+
+The Agents SDK uses the OpenAI **Responses API**, which is not covered by the standard `openai` instrumentation. Latitude hooks into the Agents SDK's native tracing system instead, so you get spans for every agent run, generation, response, function call, handoff, and guardrail — automatically.
+
+<Check>
+  You'll keep calling the Agents SDK exactly as you do today. Telemetry observes
+  agent runs, tool calls, and handoffs as they happen.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **OpenAI Agents SDK**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry @openai/agents
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry @openai/agents
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry @openai/agents
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry @openai/agents
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry openai-agents
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry openai-agents
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry openai-agents
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Initialize and use">
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { Agent, run, tool } from "@openai/agents"
+        import { z } from "zod"
+
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["openai-agents"],
+        })
+
+        await latitude.ready
+
+        const getWeather = tool({
+          name: "get_weather",
+          description: "Returns the current weather for a city.",
+          parameters: z.object({ city: z.string() }),
+          execute: async ({ city }) => `The weather in ${city} is sunny.`,
+        })
+
+        const agent = new Agent({
+          name: "Weather agent",
+          instructions: "Answer weather questions using get_weather.",
+          tools: [getWeather],
+          model: "gpt-4o-mini",
+        })
+
+        await capture("weather-agent-run", () =>
+          run(agent, "What's the weather in Barcelona?"),
+        )
+
+        await latitude.shutdown()
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import init_latitude, capture
+        from agents import Agent, Runner
+
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["openai-agents"],
+        )
+
+        agent = Agent(
+            name="Weather agent",
+            instructions="Answer weather questions concisely.",
+            model="gpt-4o-mini",
+        )
+
+        async def weather_agent_run():
+            return await Runner.run(agent, "What's the weather in Barcelona?")
+
+        capture("weather-agent-run", weather_agent_run)
+
+        latitude.shutdown()
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+Each agent run shows up as a trace with nested spans:
+
+- **Agent spans** — agent name, configured tools, handoff targets, output type
+- **Generation / Response spans** — model, input/output messages, token usage, response id
+- **Function spans** — tool calls with input arguments and output
+- **Handoff spans** — `from_agent` → `to_agent`
+- **Guardrail spans** — guardrail name and whether it triggered
+- **MCP spans** — listed tools per server
+
+Wrap a request or job with `capture()` to attach a `userId`, `sessionId`, `tags`, or `metadata` to every span produced inside.
+
+---
+
+## How it works
+
+Latitude registers a `TracingProcessor` with the Agents SDK (via `addTraceProcessor` in TypeScript, the OpenInference instrumentor in Python) and translates the SDK's spans into OpenTelemetry spans on Latitude's tracer. No monkey-patching of the OpenAI client is required, so this works regardless of whether your agents use the Responses API (default) or the Chat Completions API.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each agent run shows the full hierarchy of agent → generation/response → tool calls and handoffs
+3. Token usage and latency are aggregated at every level

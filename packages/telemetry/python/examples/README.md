@@ -21,7 +21,7 @@ Then load it before running tests:
 
 ```bash
 # Using dotenv
-uv run --env-file .env python examples/test_openai.py
+uv run --env-file examples/.env python examples/test_openai.py
 
 # Or source it manually
 set -a && source examples/.env && set +a
@@ -97,7 +97,8 @@ uv run python examples/test_openai.py
 
 | Provider     | File                   | Required Package                         |
 | ------------ | ---------------------- | ---------------------------------------- |
-| OpenAI       | `test_openai.py`       | `openai`                                 |
+| OpenAI       | `test_openai.py`        | `openai`                                 |
+| OpenAI Agents | `test_openai_agents.py` | `openai-agents`                          |
 | Anthropic    | `test_anthropic.py`    | `anthropic`                              |
 | Groq         | `test_groq.py`         | `groq`                                   |
 | Mistral      | `test_mistral.py`      | `mistralai`                              |

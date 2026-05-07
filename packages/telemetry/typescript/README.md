@@ -262,6 +262,7 @@ Registers patch-based AI SDK instrumentations against a specific tracer provider
 ```typescript
 type InstrumentationType =
   | "openai"
+  | "openai-agents"
   | "anthropic"
   | "bedrock"
   | "cohere"
@@ -369,10 +370,11 @@ Sentry.validateOpenTelemetrySetup();
 
 ## Supported AI Providers
 
-| Identifier     | Package                           |
-| -------------- | --------------------------------- |
-| `"openai"`     | `openai`                          |
-| `"anthropic"`  | `@anthropic-ai/sdk`               |
+| Identifier        | Package                           |
+| ----------------- | --------------------------------- |
+| `"openai"`        | `openai`                          |
+| `"openai-agents"` | `@openai/agents`                  |
+| `"anthropic"`     | `@anthropic-ai/sdk`               |
 | `"bedrock"`    | `@aws-sdk/client-bedrock-runtime` |
 | `"cohere"`     | `cohere-ai`                       |
 | `"langchain"`  | `langchain`                       |
