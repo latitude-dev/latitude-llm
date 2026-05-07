@@ -140,6 +140,13 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         jobTitle: { type: "string", required: false, input: false },
       },
     },
+    /**
+     * `create.after` hooks run **after** the surrounding transaction commits
+     * (Better Auth ≥ 1.6.0). If the outbox write below fails, the user/member
+     * row is already persisted and no event is emitted — we accept that
+     * trade-off because the alternative (running side effects inside the auth
+     * transaction) holds DB locks and risks deadlocks on retries.
+     */
     databaseHooks: {
       user: {
         create: {

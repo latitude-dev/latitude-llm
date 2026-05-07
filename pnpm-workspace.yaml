@@ -7,30 +7,32 @@ packages:
   - examples/**
 
 catalog:
-  '@biomejs/biome': 2.4.6
-  '@clickhouse/client': 1.18.3
-  '@hono/node-server': 1.19.13
-  '@opentelemetry/api': ^1.9.0
-  '@paralleldrive/cuid2': 3.3.0
-  '@temporalio/activity': 1.17.0
-  '@temporalio/client': 1.17.0
-  '@temporalio/worker': 1.17.0
-  '@temporalio/workflow': 1.17.0
-  '@types/node': 22.14.1
-  '@types/pg': 8.16.0
-  '@types/react': 19.2.14
-  '@types/react-dom': 19.2.3
-  '@typescript/native-preview': 7.0.0-dev.20260421.2
-  '@vitejs/plugin-react': 6.0.1
-  better-auth: 1.5.6
-  '@bull-board/api': 6.12.1
-  '@bull-board/hono': 6.12.1
+  "@biomejs/biome": 2.4.6
+  "@clickhouse/client": 1.18.3
+  "@hono/node-server": 1.19.13
+  "@opentelemetry/api": ^1.9.0
+  "@paralleldrive/cuid2": 3.3.0
+  "@temporalio/activity": 1.17.0
+  "@temporalio/client": 1.17.0
+  "@temporalio/worker": 1.17.0
+  "@temporalio/workflow": 1.17.0
+  "@types/node": 22.14.1
+  "@types/pg": 8.16.0
+  "@types/react": 19.2.14
+  "@types/react-dom": 19.2.3
+  "@typescript/native-preview": 7.0.0-dev.20260421.2
+  "@vitejs/plugin-react": 6.0.1
+  better-auth: 1.6.9
+  "@better-auth/core": 1.6.9
+  "@better-auth/stripe": 1.6.9
+  "@bull-board/api": 6.12.1
+  "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-beta.21-b0c345d
   fast-json-stable-stringify: 2.1.0
-  '@effect/opentelemetry': 4.0.0-beta.57
+  "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
   hono: 4.12.15
   ioredis: 5.10.1
@@ -48,14 +50,15 @@ catalog:
   zod: 4.3.6
   voyageai: 0.2.1
   weaviate-client: 3.11.0
+  # "@modelcontextprotocol/sdk": 1.29.0
 
 ignoredBuiltDependencies:
-  - '@prisma/engines'
+  - "@prisma/engines"
   - msw
   - prisma
   - protobufjs
 
 onlyBuiltDependencies:
-  - '@biomejs/biome'
+  - "@biomejs/biome"
   - chdb
   - esbuild

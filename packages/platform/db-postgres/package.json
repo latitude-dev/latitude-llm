@@ -21,15 +21,15 @@
     "pg:seed": "node --import tsx src/seeds/run.ts",
     "billing:usage-events:maintain": "node --import tsx scripts/maintain-billing-usage-events.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
-    "auth:generate-schema-reference": "better-auth generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
+    "auth:generate-schema-reference": "pnpm dlx @better-auth/cli@1.4.22 generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@better-auth/core": "1.5.6",
-    "@better-auth/stripe": "1.5.6",
+    "@better-auth/core": "catalog:",
+    "@better-auth/stripe": "catalog:",
     "@domain/admin": "workspace:*",
     "@domain/alerts": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
@@ -62,7 +62,6 @@
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
-    "@better-auth/cli": "^1.4.22",
     "@electric-sql/pglite": "0.3.15",
     "@types/pg": "catalog:",
     "dotenv": "catalog:",
