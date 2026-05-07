@@ -1,4 +1,9 @@
-import { discoverIssueUseCase, refreshIssueDetailsUseCase, removeScoreFromIssueUseCase } from "@domain/issues"
+import {
+  checkIssueEscalationUseCase,
+  discoverIssueUseCase,
+  refreshIssueDetailsUseCase,
+  removeScoreFromIssueUseCase,
+} from "@domain/issues"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -97,6 +102,36 @@ export const createIssuesWorker = async ({
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Issue refresh failed for ${payload.projectId}/${payload.issueId}`, error)),
         ),
+        Effect.asVoid,
+      ),
+    // Evaluate escalation state from the analytics aggregate + the current
+    // `alert_incidents`-derived `lifecycle.isEscalating` flag, and emit the
+    // matching transition event. The use case does not write the issue —
+    // the open/closed `alert_incidents` row is the stored truth. The
+    // alert-incidents worker inserts/closes that row in response to
+    // `IssueEscalated` / `IssueEscalationEnded`. Fan-out-driven: entries are
+    // caught by the throttled `issues:check-escalation` publish, exits by
+    // the debounced `issues:check-escalation-recheck` publish (both wired
+    // in `domain-events.ts` from `ScoreAssignedToIssue`).
+    checkEscalation: (payload) =>
+      checkIssueEscalationUseCase(payload).pipe(
+        withPostgres(
+          Layer.mergeAll(IssueRepositoryLive, OutboxEventWriterLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.tap((result) =>
+          Effect.sync(() =>
+            logger.info(
+              `Escalation check for ${payload.projectId}/${payload.issueId}: transition=${result.transition} currentlyEscalating=${result.currentlyEscalating}`,
+            ),
+          ),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`Escalation check failed for ${payload.projectId}/${payload.issueId}`, error)),
+        ),
+        withTracing,
         Effect.asVoid,
       ),
     removeScore: (payload) =>

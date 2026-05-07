@@ -8,6 +8,7 @@ import {
 import { IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
 import { issues as issuesTable } from "../schema/issues.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
@@ -117,6 +118,7 @@ describe("IssueRepositoryLive", () => {
   })
 
   beforeEach(async () => {
+    await database.db.delete(alertIncidentsTable)
     await database.db.delete(scoresTable)
     await database.db.delete(issuesTable)
   })
@@ -362,5 +364,182 @@ describe("IssueRepositoryLive", () => {
     )
 
     expect(lockedIssue).toEqual(issue)
+  })
+
+  describe("lifecycle JOIN", () => {
+    it("findById attaches isEscalating=true when an open issue.escalating row exists", async () => {
+      const issue = makeIssue()
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* repository.save(issue)
+        }).pipe(makeProvider(database)),
+      )
+
+      await database.db.insert(alertIncidentsTable).values({
+        id: "ai-esc-open-aaaaaaaaaaa",
+        organizationId,
+        projectId: issue.projectId,
+        sourceType: "issue",
+        sourceId: issue.id,
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-04-15T00:00:00.000Z"),
+        endedAt: null,
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          return yield* repository.findById(issue.id)
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(result.lifecycle.isEscalating).toBe(true)
+      expect(result.lifecycle.isRegressed).toBe(false)
+    })
+
+    it("findById attaches isEscalating=false when the escalating row is closed", async () => {
+      const issue = makeIssue()
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* repository.save(issue)
+        }).pipe(makeProvider(database)),
+      )
+
+      await database.db.insert(alertIncidentsTable).values({
+        id: "ai-esc-clos-aaaaaaaaaaa",
+        organizationId,
+        projectId: issue.projectId,
+        sourceType: "issue",
+        sourceId: issue.id,
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-04-15T00:00:00.000Z"),
+        endedAt: new Date("2026-04-16T00:00:00.000Z"),
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          return yield* repository.findById(issue.id)
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(result.lifecycle.isEscalating).toBe(false)
+    })
+
+    it("findById attaches isRegressed=true when any issue.regressed row exists", async () => {
+      const issue = makeIssue()
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* repository.save(issue)
+        }).pipe(makeProvider(database)),
+      )
+
+      await database.db.insert(alertIncidentsTable).values({
+        id: "ai-reg-row-aaaaaaaaaaaa",
+        organizationId,
+        projectId: issue.projectId,
+        sourceType: "issue",
+        sourceId: issue.id,
+        kind: "issue.regressed",
+        severity: "high",
+        startedAt: new Date("2026-04-15T00:00:00.000Z"),
+        endedAt: null,
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          return yield* repository.findById(issue.id)
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(result.lifecycle.isRegressed).toBe(true)
+    })
+
+    it("list and findByIds populate the same lifecycle flags as findById", async () => {
+      const escalatingIssue = makeIssue()
+      const regressedIssue = makeIssue({
+        id: otherIssueId,
+        uuid: "22222222-2222-4222-8222-222222222222",
+        name: "Incorrect refusal",
+      })
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* repository.save(escalatingIssue)
+          yield* repository.save(regressedIssue)
+        }).pipe(makeProvider(database)),
+      )
+
+      // Add three annotation scores to each issue so they pass the
+      // visibility threshold in `list`.
+      const baseDate = new Date("2026-04-15T00:00:00.000Z")
+      for (const target of [escalatingIssue, regressedIssue]) {
+        for (let index = 0; index < 3; index++) {
+          await database.db.insert(scoresTable).values(
+            makeAnnotationScoreRow({
+              id: `${target.id.slice(0, 6)}score${index}`.padEnd(24, "x"),
+              projectId: target.projectId,
+              issueId: target.id,
+              createdAt: baseDate,
+            }),
+          )
+        }
+      }
+
+      await database.db.insert(alertIncidentsTable).values([
+        {
+          id: "ai-esc-list-aaaaaaaaaaaa",
+          organizationId,
+          projectId: escalatingIssue.projectId,
+          sourceType: "issue",
+          sourceId: escalatingIssue.id,
+          kind: "issue.escalating",
+          severity: "high",
+          startedAt: baseDate,
+          endedAt: null,
+        },
+        {
+          id: "ai-reg-list-aaaaaaaaaaaa",
+          organizationId,
+          projectId: regressedIssue.projectId,
+          sourceType: "issue",
+          sourceId: regressedIssue.id,
+          kind: "issue.regressed",
+          severity: "high",
+          startedAt: baseDate,
+          endedAt: null,
+        },
+      ])
+
+      const { listResult, findByIdsResult } = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          const listResult = yield* repository.list({ projectId, limit: 50, offset: 0 })
+          const findByIdsResult = yield* repository.findByIds({
+            projectId,
+            issueIds: [escalatingIssue.id, regressedIssue.id],
+          })
+          return { listResult, findByIdsResult }
+        }).pipe(makeProvider(database)),
+      )
+
+      const listFlags = new Map(listResult.items.map((item) => [item.id, item.lifecycle] as const))
+      expect(listFlags.get(escalatingIssue.id)).toEqual({ isEscalating: true, isRegressed: false })
+      expect(listFlags.get(regressedIssue.id)).toEqual({ isEscalating: false, isRegressed: true })
+
+      const findByIdsFlags = new Map(findByIdsResult.map((item) => [item.id, item.lifecycle] as const))
+      expect(findByIdsFlags.get(escalatingIssue.id)).toEqual({ isEscalating: true, isRegressed: false })
+      expect(findByIdsFlags.get(regressedIssue.id)).toEqual({ isEscalating: false, isRegressed: true })
+    })
   })
 })

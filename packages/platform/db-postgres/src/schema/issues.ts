@@ -14,8 +14,8 @@ export const issues = latitudeSchema.table(
     source: varchar("source", { length: 32 }).$type<IssueSource>().notNull(), // provenance of the first creating score
     centroid: jsonb("centroid").$type<IssueCentroid>().notNull(), // running weighted sum of clustered score feedback embeddings; do not add JSONB indexes — centroid search is served by the Weaviate projection
     clusteredAt: tzTimestamp("clustered_at").notNull(), // last time the centroid/cluster state was refreshed; used as the authoritative decay anchor (not updatedAt)
-    escalatedAt: tzTimestamp("escalated_at"), // latest escalation transition timestamp
-    resolvedAt: tzTimestamp("resolved_at"), // issue resolved automatically (inactivity) or manually
+    escalatedAt: tzTimestamp("escalated_at"), // DORMANT: not maintained by the system. "Currently escalating" is derived from open `alert_incidents` rows. Kept for backward compatibility; always null in practice.
+    resolvedAt: tzTimestamp("resolved_at"), // issue resolved manually
     ignoredAt: tzTimestamp("ignored_at"), // issue ignored manually
     ...timestamps(),
   },

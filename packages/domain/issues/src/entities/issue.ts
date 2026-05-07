@@ -46,8 +46,8 @@ export const issueSchema = z.object({
   source: issueSourceSchema, // provenance of the first creating score
   centroid: issueCentroidSchema, // running weighted sum of clustered score feedback embeddings; drives semantic matching in Weaviate
   clusteredAt: z.date(), // last time the centroid/cluster state was refreshed; authoritative decay anchor (not updatedAt)
-  escalatedAt: z.date().nullable(), // latest escalation transition timestamp
-  resolvedAt: z.date().nullable(), // issue resolved automatically or manually
+  escalatedAt: z.date().nullable(), // DORMANT: not maintained by the system. "Currently escalating" is derived from open `alert_incidents` rows. Kept on the entity for backward compatibility; always null in practice.
+  resolvedAt: z.date().nullable(), // issue resolved manually
   ignoredAt: z.date().nullable(), // issue ignored manually
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time

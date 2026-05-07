@@ -17,8 +17,30 @@ export const ESCALATION_THRESHOLD_FACTOR = 1.33
 /** Escalating issues must clear at least this many recent occurrences. */
 export const ESCALATION_MIN_OCCURRENCES_THRESHOLD = 20
 
-/** An issue with no occurrences in this many days is auto-resolved. */
-export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
+/**
+ * Hysteresis exit factor: an escalating issue is considered "no longer
+ * escalating" only when the recent occurrence count drops below
+ * `entryThreshold * ESCALATION_EXIT_THRESHOLD_FACTOR`. Prevents flapping at
+ * the boundary by requiring a meaningful return below the entry threshold
+ * before closing the incident.
+ */
+export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
+
+/**
+ * Throttle window for the per-issue escalation-state recheck task triggered
+ * by `ScoreAssignedToIssue`. Caps the rate of `recentOccurrences`
+ * recomputation per issue. Trades off detection latency for compute.
+ */
+export const ESCALATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
+
+/**
+ * Debounce window for the escalation recheck published from
+ * `ScoreAssignedToIssue`. Each occurrence extends the timer; the recheck
+ * fires only after this much quiet on the same issue, by which point the
+ * recent occurrence count has had time to organically drop. Catches
+ * escalation exits when scoring activity stops (no more push triggers).
+ */
+export const ESCALATION_RECHECK_DELAY_MS = 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Centroid configuration

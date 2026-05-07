@@ -416,7 +416,8 @@ export const getIssueDetail = createServerFn({ method: "GET" })
           issue,
           states: deriveIssueLifecycleStates({
             issue,
-            occurrence,
+            isEscalating: issue.lifecycle.isEscalating,
+            isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
           firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,

@@ -20,6 +20,7 @@ function createTestLayers() {
         Effect.sync(() => {
           inserted.push(incident)
         }),
+      closeOpen: () => Effect.void,
     }),
   )
 

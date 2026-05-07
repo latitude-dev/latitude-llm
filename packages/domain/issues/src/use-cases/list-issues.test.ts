@@ -339,11 +339,16 @@ describe("listIssuesUseCase", () => {
         states: [IssueState.New],
       },
       {
+        // The regressed lifecycle state is no longer derived from
+        // (resolvedAt + lastSeenAt) — regression is reified at write time
+        // (which clears resolvedAt) and lives in alert_incidents. An issue
+        // with resolvedAt still set derives as Resolved. The "regressed
+        // recently" view is a UI follow-up against alert_incidents.
         id: regressedIssue.id,
-        states: [IssueState.Regressed],
+        states: [IssueState.Resolved],
       },
     ])
-    expect(result.analytics.counts.regressedIssues).toBe(1)
+    expect(result.analytics.counts.regressedIssues).toBe(0)
     expect(result.analytics.counts.seenOccurrences).toBe(12)
     expect(result.totalCount).toBe(3)
     expect(result.hasMore).toBe(true)
@@ -474,23 +479,28 @@ describe("listIssuesUseCase", () => {
     )
 
     expect(calls).toEqual([])
-    expect(result.analytics.counts.resolvedIssues).toBe(1)
-    expect(result.analytics.counts.regressedIssues).toBe(1)
+    // Regression is no longer derived; the previously "regressed" fixture
+    // (resolvedAt still set in this fixture) now derives as Resolved and
+    // therefore drops out of the lifecycleGroup="active" page along with
+    // the archived issue. Regression history is reified at write time and
+    // tracked via alert_incidents; UI hydration of "regressed recently"
+    // will use that table as a follow-up.
+    expect(result.analytics.counts.resolvedIssues).toBe(2)
+    expect(result.analytics.counts.regressedIssues).toBe(0)
     expect(result.analytics.counts.ongoingIssues).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
-    expect(result.items.map((item) => item.states)).toEqual([[IssueState.Ongoing], [IssueState.Regressed]])
-    expect(result.items.map((item) => item.id)).toEqual([activeIssue.id, regressedIssue.id])
-    expect(result.occurrencesSum).toBe(9)
+    expect(result.items.map((item) => item.states)).toEqual([[IssueState.Ongoing]])
+    expect(result.items.map((item) => item.id)).toEqual([activeIssue.id])
+    expect(result.occurrencesSum).toBe(5)
     expect(result.items[0]?.affectedTracesPercent).toBe(0.5)
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])
-    expect(result.items[1]?.evaluations).toEqual([])
     expect(result.analytics.histogram).toHaveLength(7)
     expect(result.items[0]?.trend).toHaveLength(14)
-    expect(listByIssueIdsCalls).toEqual([[activeIssue.id, regressedIssue.id]])
+    expect(listByIssueIdsCalls).toEqual([[activeIssue.id]])
     expect(histogramInputs[0]?.issueIds).toEqual([activeIssue.id, regressedIssue.id, archivedIssue.id])
     expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-04T00:00:00.000Z")
     expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
-    expect(trendInputs[0]?.issueIds).toEqual([activeIssue.id, regressedIssue.id])
+    expect(trendInputs[0]?.issueIds).toEqual([activeIssue.id])
     expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-28T00:00:00.000Z")
     expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
   })

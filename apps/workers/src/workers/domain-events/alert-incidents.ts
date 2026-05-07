@@ -1,4 +1,8 @@
-import { type AlertIncidentKind, createAlertIncidentFromIssueEventUseCase } from "@domain/alerts"
+import {
+  type AlertIncidentKind,
+  closeAlertIncidentFromIssueEventUseCase,
+  createAlertIncidentFromIssueEventUseCase,
+} from "@domain/alerts"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { AlertIncidentRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
@@ -46,6 +50,31 @@ const createIncidentFor = (
   )
 }
 
+const closeIncidentFor = (
+  kind: AlertIncidentKind,
+  payload: {
+    readonly organizationId: string
+    readonly issueId: string
+    readonly endedAt: Date
+  },
+) => {
+  const pgClient = getPostgresClient()
+
+  return closeAlertIncidentFromIssueEventUseCase({
+    kind,
+    issueId: payload.issueId,
+    endedAt: payload.endedAt,
+  }).pipe(
+    withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
+    Effect.tap(() => Effect.sync(() => logger.info(`alert_incident closed kind=${kind} issueId=${payload.issueId}`))),
+    Effect.tapError((error) =>
+      Effect.sync(() => logger.error(`alert_incident close failed kind=${kind} issueId=${payload.issueId}`, error)),
+    ),
+    Effect.asVoid,
+    withTracing,
+  )
+}
+
 export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => {
   consumer.subscribe("alert-incidents", {
     "issue-created": (payload) =>
@@ -62,6 +91,21 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         projectId: payload.projectId,
         issueId: payload.issueId,
         occurredAt: new Date(payload.regressedAt),
+      }),
+
+    "issue-escalated": (payload) =>
+      createIncidentFor("issue.escalating", {
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        issueId: payload.issueId,
+        occurredAt: new Date(payload.escalatedAt),
+      }),
+
+    "issue-escalation-ended": (payload) =>
+      closeIncidentFor("issue.escalating", {
+        organizationId: payload.organizationId,
+        issueId: payload.issueId,
+        endedAt: new Date(payload.endedAt),
       }),
   })
 }

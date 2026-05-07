@@ -7,7 +7,7 @@ import {
   updateIssueCentroid,
 } from "@domain/issues"
 import { IssueId } from "@domain/shared"
-import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
+import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS, type SeedScope } from "@domain/shared/seeding"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { VoyageAIClient } from "voyageai"
@@ -35,7 +35,7 @@ const NAMED_ISSUE_KEYS = [
   "flagger",
 ] as const
 
-const fixtureScopedId = (index: number, scope: SeedScope): string =>
+export const fixtureScopedId = (index: number, scope: SeedScope): string =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.cuid(`issue:${NAMED_ISSUE_KEYS[index]}`)
     : scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`)
@@ -44,6 +44,11 @@ const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.uuid(`issue:${NAMED_ISSUE_KEYS[index]}:uuid`)
     : scope.uuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}:uuid`)
+
+/** Stable key per fixture index — used to namespace cross-seeder ids
+ * (e.g. alert_incidents rows that reference these issues). */
+export const fixtureScopedKey = (index: number): string =>
+  index < NAMED_ISSUE_KEYS.length ? (NAMED_ISSUE_KEYS[index] as string) : `extra:${index - NAMED_ISSUE_KEYS.length}`
 
 function hashString(input: string): number {
   let hash = 1779033703 ^ input.length
@@ -189,7 +194,7 @@ function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueC
   }
 }
 
-function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
+export function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
   return {
     createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
     clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
@@ -231,6 +236,14 @@ function buildIssueRow(input: {
     ].filter((date): date is Date => date !== null),
   )
 
+  // Regression-demo issues are kept un-resolved on purpose: the
+  // `Regressed` derived state requires `resolvedAt IS NULL` plus an
+  // `issue.regressed` alert_incident, which the alert-incidents seeder
+  // inserts for these ids. Production behavior is the same — when
+  // `assign-score-to-issue` reifies a regression it clears `resolvedAt`.
+  const isRegressedDemo = SEED_REGRESSED_ISSUE_IDS.includes(input.issueId)
+  const resolvedAt = isRegressedDemo ? null : fixtureDates.resolvedAt
+
   return {
     id: IssueId(input.issueId),
     uuid: input.issueUuid,
@@ -241,8 +254,11 @@ function buildIssueRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    escalatedAt: fixtureDates.escalatedAt,
-    resolvedAt: fixtureDates.resolvedAt,
+    // escalatedAt is intentionally not written: the column is dormant and
+    // "currently escalating" is sourced from open `alert_incidents` rows
+    // by `IssueRepository`.
+    escalatedAt: null,
+    resolvedAt,
     ignoredAt: fixtureDates.ignoredAt,
     createdAt,
     updatedAt,

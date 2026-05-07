@@ -1,3 +1,4 @@
+import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
@@ -29,6 +30,10 @@ export const contentSeeders: readonly Seeder[] = [
   ...scoreSeeders,
   ...annotationQueueSeeders,
   ...flaggerSeeders,
+  // Runs after issues + scores so it can derive "currently escalating"
+  // from real occurrence patterns in the seeded data via the same
+  // threshold the production worker uses, instead of a fixture flag.
+  ...alertIncidentSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [

@@ -1,6 +1,6 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "@domain/billing"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
+import { ESCALATION_CHECK_THROTTLE_MS, ESCALATION_RECHECK_DELAY_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -145,12 +145,31 @@ export const createDomainEventsWorker = ({
 
     // Throttled: the first assignment schedules the refresh for `now + 8h`,
     // and subsequent assignments within the window are dropped so a constant
-    // annotation stream cannot starve the refresh.
+    // annotation stream cannot starve the refresh. The escalation check fans
+    // out twice in tandem: a 15-min throttled push (catches escalation
+    // STARTS quickly while activity is high) and a debounced recheck that
+    // only fires after `ESCALATION_RECHECK_DELAY_MS` of quiet on the same
+    // issue (catches escalation ENDS once scoring stops — the recent
+    // occurrence count organically drops below the exit threshold). Different
+    // dedupeKeys so the throttle and the debounce don't collide.
     ScoreAssignedToIssue: (event) =>
-      pub.publish("issues", "refresh", event.payload, {
-        dedupeKey: `issues:refresh:${event.payload.issueId}`,
-        throttleMs: ISSUE_REFRESH_THROTTLE_MS,
-      }),
+      Effect.all(
+        [
+          pub.publish("issues", "refresh", event.payload, {
+            dedupeKey: `issues:refresh:${event.payload.issueId}`,
+            throttleMs: ISSUE_REFRESH_THROTTLE_MS,
+          }),
+          pub.publish("issues", "checkEscalation", event.payload, {
+            dedupeKey: `issues:check-escalation:${event.payload.issueId}`,
+            throttleMs: ESCALATION_CHECK_THROTTLE_MS,
+          }),
+          pub.publish("issues", "checkEscalation", event.payload, {
+            dedupeKey: `issues:check-escalation-recheck:${event.payload.issueId}`,
+            debounceMs: ESCALATION_RECHECK_DELAY_MS,
+          }),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     IssueCreated: (event) =>
       pub.publish("alert-incidents", "issue-created", event.payload, {
@@ -160,6 +179,16 @@ export const createDomainEventsWorker = ({
     IssueRegressed: (event) =>
       pub.publish("alert-incidents", "issue-regressed", event.payload, {
         dedupeKey: `alert-incidents:issue.regressed:${event.payload.issueId}:${event.payload.triggerScoreId}`,
+      }),
+
+    IssueEscalated: (event) =>
+      pub.publish("alert-incidents", "issue-escalated", event.payload, {
+        dedupeKey: `alert-incidents:issue.escalating:${event.payload.issueId}:${event.payload.escalatedAt}`,
+      }),
+
+    IssueEscalationEnded: (event) =>
+      pub.publish("alert-incidents", "issue-escalation-ended", event.payload, {
+        dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.issueId}:${event.payload.endedAt}`,
       }),
 
     // PR 1 has no consumer for IncidentCreated. PR 2 (email channel) and

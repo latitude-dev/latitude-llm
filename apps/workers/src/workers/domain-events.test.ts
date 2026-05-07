@@ -1,6 +1,6 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
-import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
+import { ESCALATION_CHECK_THROTTLE_MS, ESCALATION_RECHECK_DELAY_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -209,7 +209,7 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes ScoreAssignedToIssue to issues:refresh with dedupe and debounce", async () => {
+  it("fans ScoreAssignedToIssue out to refresh + throttled and debounced escalation checks", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ScoreAssignedToIssue", {
@@ -220,17 +220,29 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("issues")
-    expect(published[0]?.task).toBe("refresh")
-    expect(published[0]?.payload).toEqual({
+    expect(published).toHaveLength(3)
+
+    const refresh = published.find((p) => p.task === "refresh")
+    expect(refresh?.queue).toBe("issues")
+    expect(refresh?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       issueId: "issue-42",
     })
-    expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[0]?.options?.throttleMs).toBe(ISSUE_REFRESH_THROTTLE_MS)
-    expect(published[0]?.options?.debounceMs).toBeUndefined()
+    expect(refresh?.options?.dedupeKey).toBe("issues:refresh:issue-42")
+    expect(refresh?.options?.throttleMs).toBe(ISSUE_REFRESH_THROTTLE_MS)
+    expect(refresh?.options?.debounceMs).toBeUndefined()
+
+    const escalationChecks = published.filter((p) => p.task === "checkEscalation")
+    expect(escalationChecks).toHaveLength(2)
+
+    const throttled = escalationChecks.find((p) => p.options?.dedupeKey === "issues:check-escalation:issue-42")
+    expect(throttled?.options?.throttleMs).toBe(ESCALATION_CHECK_THROTTLE_MS)
+    expect(throttled?.options?.debounceMs).toBeUndefined()
+
+    const debounced = escalationChecks.find((p) => p.options?.dedupeKey === "issues:check-escalation-recheck:issue-42")
+    expect(debounced?.options?.debounceMs).toBe(ESCALATION_RECHECK_DELAY_MS)
+    expect(debounced?.options?.throttleMs).toBeUndefined()
   })
 
   it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {

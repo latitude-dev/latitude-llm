@@ -14,8 +14,16 @@ export {
   alertSeveritySchema,
   SEVERITY_FOR_KIND,
 } from "./entities/alert-incident.ts"
-export type { AlertIncidentRepositoryShape } from "./ports/alert-incident-repository.ts"
+export type {
+  AlertIncidentRepositoryShape,
+  CloseOpenAlertIncidentInput,
+} from "./ports/alert-incident-repository.ts"
 export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
+export type {
+  CloseAlertIncidentFromIssueEventError,
+  CloseAlertIncidentFromIssueEventInput,
+} from "./use-cases/close-alert-incident-from-issue-event.ts"
+export { closeAlertIncidentFromIssueEventUseCase } from "./use-cases/close-alert-incident-from-issue-event.ts"
 export type {
   CreateAlertIncidentFromIssueEventError,
   CreateAlertIncidentFromIssueEventInput,

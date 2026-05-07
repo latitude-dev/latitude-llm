@@ -75,6 +75,33 @@ export interface EventPayloads {
     readonly triggerScoreId: string
   }
   /**
+   * Emitted by `checkIssueEscalationUseCase` when an issue transitions into
+   * the escalating state. The use case does not write the issue itself —
+   * idempotency comes from `IssueRepository`'s joined `lifecycle.isEscalating`
+   * flag (which reads the open `alert_incidents` row). Drives the
+   * `issue.escalating` incident's open transition (the alert-incidents
+   * worker inserts the new row).
+   */
+  IssueEscalated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly escalatedAt: string
+  }
+  /**
+   * Emitted by `checkIssueEscalationUseCase` when an escalating issue's
+   * recent occurrence count drops below the hysteresis exit threshold.
+   * Drives the `issue.escalating` incident's close transition — the
+   * alert-incidents worker sets `ended_at` on the open row, which is what
+   * flips `lifecycle.isEscalating` back to `false` on subsequent reads.
+   */
+  IssueEscalationEnded: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly endedAt: string
+  }
+  /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row is
    * inserted. PR 1 has no consumer (the dispatcher routes it to a no-op);
    * PR 2 (email) and PR 3 (in-app) will subscribe.
@@ -83,7 +110,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: "issue.new" | "issue.regressed"
+    readonly kind: "issue.new" | "issue.regressed" | "issue.escalating"
     readonly sourceType: "issue"
     readonly sourceId: string
   }
