@@ -38,6 +38,12 @@ export type SeedIssueFixture = {
   readonly createdDaysAgo: number
   readonly clusteredDaysAgo: number
   readonly updatedDaysAgo: number
+  /**
+   * DORMANT: not consumed by the seeder. "Currently escalating" is now
+   * derived from the actual occurrence pattern via `alert_incidents`. The
+   * field is kept on the fixture shape only because removing it would touch
+   * every fixture entry; new fixtures should set it to `null`.
+   */
   readonly escalatedDaysAgo: number | null
   readonly resolvedDaysAgo: number | null
   readonly ignoredDaysAgo: number | null
@@ -2251,8 +2257,218 @@ const extraIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = extraIss
   }))
 })
 
+// Today-bursts make a curated set of issues genuinely escalating per the
+// production threshold (recent >= max(20, baseline*1.33+1)). Without these
+// the seed data has very few naturally-escalating issues, and the alert
+// pipeline's data-driven labels would leave the demo nearly empty.
+const curatedIssueTodayBurstRows: readonly SeedIssueOccurrenceFixture[] = [
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_EVALUATION_ID,
+    idPrefix: "wt",
+    evaluationHash: SEED_WARRANTY_EVALUATION_HASH,
+    daysAgo: 0,
+    count: 25,
+    startHour: 6,
+    startMinute: 0,
+    minuteStep: 30,
+    value: 0.07,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Warranty monitor caught another rooftop reframe — the assistant offered coverage on an unsupported install in the last 24 hours.",
+    metadata: {
+      evaluationHash: SEED_WARRANTY_EVALUATION_HASH,
+      scenario: "today-warranty-spike",
+      severity: "high",
+      burstLabel: "warranty-today-spike",
+    },
+    duration: 760_000_000,
+    tokens: 1_640,
+    cost: 236_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "ct",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 0,
+    count: 25,
+    startHour: 5,
+    startMinute: 15,
+    minuteStep: 30,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase: "Combination monitor flagged a fresh wave of unsafe-product-pairing suggestions today.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "today-combination-spike",
+      severity: "high",
+      burstLabel: "combination-today-spike",
+    },
+    duration: 790_000_000,
+    tokens: 1_720,
+    cost: 247_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_BILLING_ISSUE_ID,
+    source: "custom",
+    sourceId: "billing-monitor",
+    idPrefix: "bt",
+    evaluationHash: null,
+    daysAgo: 0,
+    count: 25,
+    startHour: 3,
+    startMinute: 45,
+    minuteStep: 30,
+    value: 0.07,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Billing audit caught the assistant inventing courtesy credits and retroactive fee waivers in a fresh batch of conversations today.",
+    metadata: {
+      scenario: "today-billing-spike",
+      severity: "high",
+      burstLabel: "billing-today-spike",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "at",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 0,
+    count: 25,
+    startHour: 2,
+    startMinute: 0,
+    minuteStep: 30,
+    value: 0.06,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase: "Access monitor detected another wave of weak-proof account-recovery escalations today.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "today-access-spike",
+      severity: "critical",
+      burstLabel: "access-today-spike",
+    },
+    duration: 812_000_000,
+    tokens: 1_910,
+    cost: 269_000,
+  }),
+]
+
+// Recent occurrences for issues designated as the regression demo. These
+// land 2–4 days ago — enough activity for the trend chart to show recent
+// hits, but well below the escalation threshold so they don't double-fire.
+// The issues seeder forces `resolvedAt = null` for these, and the
+// alert-incidents seeder inserts an `issue.regressed` row pointing at them.
+const curatedIssueRecentRegressionRows: readonly SeedIssueOccurrenceFixture[] = [
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_GENERATE_ISSUE_ID,
+    source: "custom",
+    sourceId: "logistics-monitor",
+    idPrefix: "lr",
+    evaluationHash: null,
+    daysAgo: 2,
+    count: 4,
+    startHour: 9,
+    startMinute: 30,
+    minuteStep: 90,
+    value: 0.1,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Logistics monitor caught the assistant inventing a guaranteed cliffside delivery option after the issue was thought resolved.",
+    metadata: {
+      scenario: "post-resolve-logistics-return",
+      severity: "high",
+      burstLabel: "logistics-regression",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "installation-monitor",
+    idPrefix: "ir",
+    evaluationHash: null,
+    daysAgo: 3,
+    count: 5,
+    startHour: 8,
+    startMinute: 0,
+    minuteStep: 75,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Installation monitor saw a fresh certified-installer override after the team thought the issue had been resolved.",
+    metadata: {
+      scenario: "post-resolve-installation-return",
+      severity: "high",
+      burstLabel: "installation-regression",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_FLAGGER_ISSUE_ID,
+    source: "custom",
+    sourceId: "flagger-monitor",
+    idPrefix: "fr",
+    evaluationHash: null,
+    daysAgo: 4,
+    count: 4,
+    startHour: 11,
+    startMinute: 15,
+    minuteStep: 60,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase: "Flagger monitor saw the empty-response pattern resurface in a small batch of new conversations.",
+    metadata: {
+      scenario: "post-resolve-flagger-return",
+      severity: "medium",
+      burstLabel: "flagger-regression",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+]
+
 export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixture[] = [
   ...curatedIssueOccurrenceRows,
   ...curatedIssueOccurrenceBurstRows,
+  ...curatedIssueTodayBurstRows,
+  ...curatedIssueRecentRegressionRows,
   ...extraIssueOccurrenceRows,
+] as const
+
+/**
+ * Issue ids that the alert-incidents seeder treats as "currently regressed":
+ * the issues seeder forces `resolvedAt = null` for these, and an
+ * `issue.regressed` row is inserted so the read path derives Regressed.
+ */
+export const SEED_REGRESSED_ISSUE_IDS: readonly string[] = [
+  SEED_GENERATE_ISSUE_ID,
+  SEED_INSTALLATION_ISSUE_ID,
+  SEED_FLAGGER_ISSUE_ID,
 ] as const

@@ -25,14 +25,15 @@ import type { Seeder } from "./types.ts"
 export const contentSeeders: readonly Seeder[] = [
   ...datasetSeeders,
   ...issueSeeders,
-  // Must run after issueSeeders — references the issue ids derived for
-  // each fixture and writes `alert_incidents` rows pointing at them.
-  ...alertIncidentSeeders,
   ...evaluationSeeders,
   ...simulationSeeders,
   ...scoreSeeders,
   ...annotationQueueSeeders,
   ...flaggerSeeders,
+  // Runs after issues + scores so it can derive "currently escalating"
+  // from real occurrence patterns in the seeded data via the same
+  // threshold the production worker uses, instead of a fixture flag.
+  ...alertIncidentSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [

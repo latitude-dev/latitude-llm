@@ -7,7 +7,7 @@ import {
   updateIssueCentroid,
 } from "@domain/issues"
 import { IssueId } from "@domain/shared"
-import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
+import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS, type SeedScope } from "@domain/shared/seeding"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { VoyageAIClient } from "voyageai"
@@ -236,6 +236,14 @@ function buildIssueRow(input: {
     ].filter((date): date is Date => date !== null),
   )
 
+  // Regression-demo issues are kept un-resolved on purpose: the
+  // `Regressed` derived state requires `resolvedAt IS NULL` plus an
+  // `issue.regressed` alert_incident, which the alert-incidents seeder
+  // inserts for these ids. Production behavior is the same — when
+  // `assign-score-to-issue` reifies a regression it clears `resolvedAt`.
+  const isRegressedDemo = SEED_REGRESSED_ISSUE_IDS.includes(input.issueId)
+  const resolvedAt = isRegressedDemo ? null : fixtureDates.resolvedAt
+
   return {
     id: IssueId(input.issueId),
     uuid: input.issueUuid,
@@ -248,11 +256,9 @@ function buildIssueRow(input: {
     clusteredAt: centroid.clusteredAt,
     // escalatedAt is intentionally not written: the column is dormant and
     // "currently escalating" is sourced from open `alert_incidents` rows
-    // by `IssueRepository`. Escalation seeding lives in the alert-incidents
-    // seeder, which inserts an open `issue.escalating` row for fixtures
-    // whose `escalatedDaysAgo !== null`.
+    // by `IssueRepository`.
     escalatedAt: null,
-    resolvedAt: fixtureDates.resolvedAt,
+    resolvedAt,
     ignoredAt: fixtureDates.ignoredAt,
     createdAt,
     updatedAt,
