@@ -41,6 +41,7 @@ export {
   IssueDiscoveryLockUnavailableError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
+  IssueNotFoundForEscalationCheckError,
   isEligibilityError,
   MissingIssueOccurrencesForDetailsGenerationError,
   MissingScoreFeedbackForDiscoveryError,

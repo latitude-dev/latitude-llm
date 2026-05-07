@@ -85,6 +85,13 @@ export class IssueNotFoundForAssignmentError extends Data.TaggedError("IssueNotF
   readonly httpMessage = "Issue not found for assignment"
 }
 
+export class IssueNotFoundForEscalationCheckError extends Data.TaggedError("IssueNotFoundForEscalationCheckError")<{
+  readonly issueId: string
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "Issue not found for escalation check"
+}
+
 export class IssueDiscoveryLockUnavailableError extends Data.TaggedError("IssueDiscoveryLockUnavailableError")<{
   readonly projectId: string
   readonly lockKey: string

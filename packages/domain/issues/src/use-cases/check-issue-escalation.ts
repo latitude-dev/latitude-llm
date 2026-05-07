@@ -9,7 +9,7 @@ import {
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { IssueNotFoundForAssignmentError } from "../errors.ts"
+import { IssueNotFoundForEscalationCheckError } from "../errors.ts"
 import { getEscalationExitThreshold, getEscalationOccurrenceThreshold, isIssueNew } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
@@ -26,7 +26,7 @@ export interface CheckIssueEscalationResult {
   readonly currentlyEscalating: boolean
 }
 
-export type CheckIssueEscalationError = RepositoryError | IssueNotFoundForAssignmentError
+export type CheckIssueEscalationError = RepositoryError | IssueNotFoundForEscalationCheckError
 
 /**
  * Decide whether an issue's escalation state has transitioned and emit the
@@ -66,7 +66,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
       .findById(IssueId(input.issueId))
       .pipe(
         Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
+          Effect.fail(new IssueNotFoundForEscalationCheckError({ issueId: input.issueId })),
         ),
       )
 
