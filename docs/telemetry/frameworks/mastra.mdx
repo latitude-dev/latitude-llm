@@ -71,7 +71,7 @@ Mastra has built-in observability support via `@mastra/observability` and `@mast
           endpoint: "https://ingest.latitude.so/v1/traces",
           protocol: "http/protobuf",
           headers: {
-            Authorization: `Bearer ${process.env.LATITUDE_API_KEY}`,
+            Authorization: `Bearer ${process.env.LATITUDE_API_KEY!}`,
             "X-Latitude-Project": process.env.LATITUDE_PROJECT_SLUG!,
           },
         },
