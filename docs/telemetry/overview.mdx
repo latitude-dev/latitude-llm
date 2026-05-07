@@ -7,7 +7,33 @@ Latitude Telemetry instruments your AI application and sends traces to Latitude.
 
 Once connected, every LLM execution becomes a trace in Latitude that you can inspect in the **Traces** view, enrich with **scores and annotations**, and evaluate with [Evaluations](../evaluations/overview).
 
-## Quick Start
+## Agentic installation
+
+The fastest way to add Latitude is to let your coding agent (Claude Code, Cursor, Windsurf, etc.) install it for you. The [Latitude skill](https://github.com/latitude-dev/skills) guides the agent through codebase discovery (existing OpenTelemetry, conflicting LLM-observability vendors, which LLM SDKs are in use, where LLM calls actually happen), picks the right install path, places initialization correctly, and verifies that traces land in your project.
+
+### Ask your coding agent
+
+Paste this prompt into your agent:
+
+> Install the Latitude AI skill from github.com/latitude-dev/skills and use it to add tracing to this application with Latitude following best practices.
+
+The agent will fetch the skill, read your codebase, ask only the questions it can't answer from the code, and produce a working install.
+
+### Install the skill manually
+
+If you prefer to install the skill ahead of time (no global setup needed — `npx` runs it directly):
+
+```bash
+npx skills add latitude-dev/skills --skill "latitude-telemetry"
+```
+
+Then in your agent:
+
+> Add tracing to this application with Latitude following best practices.
+
+The skill covers TypeScript and Python, the providers and frameworks listed in [Supported Integrations](#supported-integrations), and audits existing OpenTelemetry setups for compatibility.
+
+## Manual installation
 
 One function sets up everything: auto-instrumentation, the Latitude exporter, and async context propagation:
 
@@ -59,7 +85,7 @@ One function sets up everything: auto-instrumentation, the Latitude exporter, an
         messages=[{"role": "user", "content": "Hello"}],
     )
 
-    latitude.shutdown()
+    latitude["shutdown"]()
     ```
   </Tab>
 </Tabs>
@@ -127,7 +153,7 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
         },
     )
 
-    latitude.shutdown()
+    latitude["shutdown"]()
     ```
   </Tab>
 </Tabs>
