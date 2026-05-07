@@ -35,36 +35,21 @@ export const pickTrackingParams = (search: URLSearchParams | string): Record<str
   return out
 }
 
-// Better Auth's `originCheck` middleware validates `callbackURL` /
-// `newUserCallbackURL` / `errorCallbackURL` against a regex that allows only
-// `[\w\-.+/=&%@]` in the query, then runs `decodeURIComponent` on the already
-// URL-decoded value (double-decode) before validating. To survive that, every
-// unsafe char in the raw value must become `%XX` *before* it reaches
-// `URLSearchParams.toString()`: that call adds one `%`→`%25` layer, Better
-// Auth's own `searchParams.set` adds another, and the two server-side decodes
-// reverse them — leaving `%XX` visible to the regex (which accepts `%` and hex
-// digits). Without this, `*`, `(`, `:` etc. round-trip back to themselves and
+// RFC 3986 strict percent-encoding. `encodeURIComponent` intentionally leaves
+// the legacy "mark" chars `!'()*~` unencoded, so we re-encode them by hand.
+//
+// Why this layer exists: Better Auth's `originCheck` middleware validates
+// `callbackURL` / `newUserCallbackURL` / `errorCallbackURL` against a regex
+// that only allows `[\w\-.+/=&%@]` in the query, and it runs
+// `decodeURIComponent` on the already URL-decoded value (double-decode) before
+// validating. Strict-encoding here means the raw value is `%XX` before it
+// reaches `URLSearchParams.toString()`, which adds one `%`→`%25` layer; Better
+// Auth's own `searchParams.set` adds another; the two server-side decodes
+// reverse them, leaving `%XX` visible to the regex (which accepts `%` and hex
+// digits). Without it, `*`, `(`, `:` etc. round-trip back to themselves and
 // the verify endpoint rejects the link with INVALID_CALLBACK_URL.
-const CALLBACK_SAFE_CHAR = /^[\w\-.+/=&%@]$/
-
-const TEXT_ENCODER = new TextEncoder()
-
-const percentEncodeChar = (ch: string): string => {
-  const bytes = TEXT_ENCODER.encode(ch)
-  const parts: string[] = new Array(bytes.length)
-  for (let i = 0; i < bytes.length; i++) {
-    parts[i] = `%${bytes[i].toString(16).toUpperCase().padStart(2, "0")}`
-  }
-  return parts.join("")
-}
-
-const sanitizeForCallback = (value: string): string => {
-  const parts: string[] = []
-  for (const ch of value) {
-    parts.push(CALLBACK_SAFE_CHAR.test(ch) ? ch : percentEncodeChar(ch))
-  }
-  return parts.join("")
-}
+const strictEncode = (value: string): string =>
+  encodeURIComponent(value).replace(/[!'()*~]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)
 
 export const appendTrackingParams = (path: string, params: Record<string, string>): string => {
   const entries = Object.entries(params)
@@ -75,12 +60,12 @@ export const appendTrackingParams = (path: string, params: Record<string, string
   const hashIdx = path.indexOf("#")
   const base = hashIdx >= 0 ? path.slice(0, hashIdx) : path
   const fragment = hashIdx >= 0 ? path.slice(hashIdx) : ""
-  const sanitized: Record<string, string> = {}
+  const encoded: Record<string, string> = {}
   for (const [key, value] of entries) {
-    sanitized[key] = sanitizeForCallback(value)
+    encoded[key] = strictEncode(value)
   }
   const separator = base.includes("?") ? "&" : "?"
-  const query = new URLSearchParams(sanitized).toString()
+  const query = new URLSearchParams(encoded).toString()
   return `${base}${separator}${query}${fragment}`
 }
 
