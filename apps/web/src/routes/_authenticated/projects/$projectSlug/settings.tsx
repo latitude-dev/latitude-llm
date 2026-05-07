@@ -11,7 +11,6 @@ import {
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
-import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
@@ -19,6 +18,7 @@ import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functi
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({

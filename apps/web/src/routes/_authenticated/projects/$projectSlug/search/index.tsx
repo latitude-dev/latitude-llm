@@ -2,7 +2,6 @@ import type { FilterSet } from "@domain/shared"
 import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import {
@@ -20,6 +19,7 @@ import {
   getSelectedCount,
   type SelectionState,
 } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { AddToDatasetModal } from "../-components/add-to-dataset-modal.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"

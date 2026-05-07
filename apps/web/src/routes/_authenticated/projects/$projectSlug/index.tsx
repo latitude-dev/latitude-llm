@@ -3,7 +3,6 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
@@ -18,6 +17,7 @@ import {
   getSelectedCount,
   type SelectionState,
 } from "../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { AddToDatasetModal } from "./-components/add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./-components/columns-selector.tsx"

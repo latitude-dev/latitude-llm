@@ -41,7 +41,15 @@ interface TooltipProps {
   className?: string
 }
 
-function Tooltip({ children, trigger, asChild = false, side, sideOffset, delayDuration = 250, className }: TooltipProps) {
+function Tooltip({
+  children,
+  trigger,
+  asChild = false,
+  side,
+  sideOffset,
+  delayDuration = 250,
+  className,
+}: TooltipProps) {
   const contentProps: React.ComponentPropsWithoutRef<typeof TooltipContent> = {}
   if (side !== undefined) contentProps.side = side
   if (sideOffset !== undefined) contentProps.sideOffset = sideOffset
