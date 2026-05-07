@@ -2,7 +2,6 @@ import type { TraceDetail } from "@domain/spans"
 
 type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
-const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
 const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
@@ -20,7 +19,7 @@ const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMat
 })
 
 export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
-  const toolNameById = new Map<string, string>()
+  const callById = new Map<string, { name: string; messageIndex: number }>()
 
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
@@ -34,27 +33,27 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
           return match(`Malformed tool call: ${label} with missing or empty tool_call id`, msgIdx)
         }
 
-        if (toolNameById.has(toolCallId)) {
+        if (callById.has(toolCallId)) {
           return match(`Duplicate tool_call id emitted for tool "${toolName}"`, msgIdx)
         }
 
-        toolNameById.set(toolCallId, toolName)
+        callById.set(toolCallId, { name: toolName, messageIndex: msgIdx })
         continue
       }
 
       if (part.type !== "tool_call_response") continue
 
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
-      if (!toolCallId || !toolNameById.has(toolCallId)) {
+      const call = toolCallId ? callById.get(toolCallId) : undefined
+      if (!call) {
         return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
       }
 
       if (responseIndicatesFailure(part.response)) {
-        const toolName = toolNameById.get(toolCallId) ?? "<unknown>"
         const snippet = extractErrorSnippet(part.response)
         return match(
-          snippet ? `Tool "${toolName}" returned error: ${snippet}` : `Tool "${toolName}" returned an error`,
-          msgIdx,
+          snippet ? `Tool "${call.name}" returned error: ${snippet}` : `Tool "${call.name}" returned an error`,
+          call.messageIndex,
         )
       }
     }
@@ -155,7 +154,7 @@ function responseIndicatesFailure(response: unknown): boolean {
     try {
       return responseIndicatesFailure(JSON.parse(trimmed))
     } catch {
-      return TOOL_RESULT_ERROR_TEXT.test(trimmed)
+      return false
     }
   }
   if (Array.isArray(response)) return response.some(responseIndicatesFailure)

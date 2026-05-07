@@ -34,7 +34,7 @@ function assistantText(content: string): TraceDetail["outputMessages"][number] {
 }
 
 describe("detectToolCallErrorsFlagger", () => {
-  it("matches failed tool result payloads and includes the tool name + error snippet + messageIndex", () => {
+  it("matches failed tool result payloads and anchors to the assistant message that issued the call", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { ok: false, error: "timeout" })]),
     )
@@ -42,8 +42,42 @@ describe("detectToolCallErrorsFlagger", () => {
     expect(result.matched).toBe(true)
     if (result.matched) {
       expect(result.feedback).toBe('Tool "get_weather" returned error: timeout')
+      expect(result.messageIndex).toBe(0)
+    }
+  })
+
+  it("anchors to the original call message when other messages sit between the call and its response", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        { role: "user", parts: [{ type: "text", content: "Check the weather." }] },
+        assistantToolCall("call-weather"),
+        { role: "user", parts: [{ type: "text", content: "Tool loaded." }] },
+        toolResponse("call-weather", { ok: false, error: "timeout" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
       expect(result.messageIndex).toBe(1)
     }
+  })
+
+  it("does not match shell-style multi-line outputs even when they contain error-adjacent words", () => {
+    const lsOutput = [
+      "README.md",
+      "articles",
+      "prompts",
+      "tracker.md",
+      "01-best-ai-eval-platform-multi-turn",
+      "02-best-tool-detecting-failure-modes",
+      "05-best-tool-detecting-regressions-model-updates",
+    ].join("\n")
+
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([assistantToolCall("call-bash", "Bash"), toolResponse("call-bash", lsOutput)]),
+    )
+
+    expect(result).toEqual({ matched: false })
   })
 
   it("matches malformed tool interactions with empty tool_call id and returns messageIndex 0", () => {
@@ -128,7 +162,7 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
-  it("matches plain-string error responses and quotes the string as the snippet", () => {
+  it("does not match plain-string responses by keyword (only structured signals count)", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
         assistantToolCall("call-weather"),
@@ -136,10 +170,7 @@ describe("detectToolCallErrorsFlagger", () => {
       ]),
     )
 
-    expect(result.matched).toBe(true)
-    if (result.matched) {
-      expect(result.feedback).toBe('Tool "get_weather" returned error: BookingUnavailableError: no rooms available')
-    }
+    expect(result).toEqual({ matched: false })
   })
 
   it("matches stringified JSON responses with failure status", () => {
