@@ -54,19 +54,13 @@ const strictEncode = (value: string): string =>
 export const appendTrackingParams = (path: string, params: Record<string, string>): string => {
   const entries = Object.entries(params)
   if (entries.length === 0) return path
-  // Split off any fragment so the query lands between path and `#fragment` (a
-  // user-supplied `?redirect=/foo#bar` would otherwise produce `/foo#bar?gclid=…`,
-  // which the browser interprets as part of the fragment).
-  const hashIdx = path.indexOf("#")
-  const base = hashIdx >= 0 ? path.slice(0, hashIdx) : path
-  const fragment = hashIdx >= 0 ? path.slice(hashIdx) : ""
   const encoded: Record<string, string> = {}
   for (const [key, value] of entries) {
     encoded[key] = strictEncode(value)
   }
-  const separator = base.includes("?") ? "&" : "?"
+  const separator = path.includes("?") ? "&" : "?"
   const query = new URLSearchParams(encoded).toString()
-  return `${base}${separator}${query}${fragment}`
+  return `${path}${separator}${query}`
 }
 
 export type SignupMethod = "email" | "google" | "github"

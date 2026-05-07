@@ -62,18 +62,6 @@ describe("appendTrackingParams", () => {
     expect(appendTrackingParams("/welcome?foo=1", { signup: "email" })).toBe("/welcome?foo=1&signup=email")
   })
 
-  it("inserts the query before any '#fragment' so user-supplied redirects with a hash stay valid", () => {
-    expect(appendTrackingParams("/welcome#pricing", { signup: "email" })).toBe("/welcome?signup=email#pricing")
-    expect(appendTrackingParams("/welcome?foo=1#pricing", { signup: "email" })).toBe(
-      "/welcome?foo=1&signup=email#pricing",
-    )
-    expect(appendTrackingParams("/welcome#", { signup: "email" })).toBe("/welcome?signup=email#")
-  })
-
-  it("returns the path including its fragment unchanged when no params are provided", () => {
-    expect(appendTrackingParams("/welcome#pricing", {})).toBe("/welcome#pricing")
-  })
-
   it("leaves regex-safe values untouched (no spurious encoding for typical tracking IDs)", () => {
     const url = appendTrackingParams("/welcome", {
       gclid: "Cj0KCQiAxxxx",
