@@ -1,4 +1,5 @@
 import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
+import { extractLeadingEmoji } from "@repo/utils"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -13,12 +14,14 @@ import { toUserMessage } from "../../lib/errors.ts"
 
 function OrgAvatar({ name }: { name: string }) {
   const { style, className } = useHashColor(name)
+  const [emoji] = extractLeadingEmoji(name)
+  const display = emoji ?? Array.from(name.trim())[0]?.toUpperCase() ?? "?"
   return (
     <div
       className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
       style={style}
     >
-      {name.charAt(0).toUpperCase()}
+      {display}
     </div>
   )
 }
