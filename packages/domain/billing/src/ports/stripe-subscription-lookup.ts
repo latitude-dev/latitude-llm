@@ -1,0 +1,20 @@
+import type { OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
+import { Context, type Effect } from "effect"
+
+export interface StripeSubscriptionRow {
+  plan: string
+  status: string | null
+  periodStart: Date | null
+  periodEnd: Date | null
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+}
+
+export class StripeSubscriptionLookup extends Context.Service<
+  StripeSubscriptionLookup,
+  {
+    findOptionalActiveByOrganizationId: (
+      organizationId: OrganizationId,
+    ) => Effect.Effect<StripeSubscriptionRow | null, RepositoryError, SqlClient>
+  }
+>()("@domain/billing/StripeSubscriptionLookup") {}

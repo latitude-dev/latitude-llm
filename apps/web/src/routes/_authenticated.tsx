@@ -1,12 +1,17 @@
+import { PRO_PLAN_CONFIG } from "@domain/billing"
 import { show as showIntercom } from "@intercom/messenger-js-sdk"
-import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Avatar, Button, cn, DropdownMenu, Icon, LatitudeLogo, Text, Tooltip, useToast } from "@repo/ui"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, ShieldAlertIcon, Sun } from "lucide-react"
+import { useState } from "react"
+import { createBillingCheckoutSession, getBillingOverview } from "../domains/billing/billing.functions.ts"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { getSupportUserIdentity } from "../domains/support/support.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { toUserMessage } from "../lib/errors.ts"
 import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
 import { isLatitudeStaffEmail, resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
@@ -17,6 +22,10 @@ import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-on
 import { useRootThemePreference } from "./-root-route-data.ts"
 
 const projectOnboardingRouteId = "/_authenticated/projects/$projectSlug/onboarding" as const
+const numberFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 })
+const BILLING_COUNTER_RADIUS = 8
+const BILLING_COUNTER_CIRCUMFERENCE = 2 * Math.PI * BILLING_COUNTER_RADIUS
+const FREE_PLAN_UPGRADE_USAGE_THRESHOLD = 0.8
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -84,6 +93,109 @@ function ThemeToggle() {
   )
 }
 
+function BillingCreditCounter({ organizationId }: { readonly organizationId: string }) {
+  const { toast } = useToast()
+  const [isUpgradePending, setIsUpgradePending] = useState(false)
+  const { data: overview } = useQuery({
+    queryKey: ["billing", "overview", organizationId],
+    queryFn: () => getBillingOverview(),
+    staleTime: 30_000,
+  })
+
+  if (!overview) return null
+
+  const includedCredits = overview.includedCredits
+  const totalUsedCredits = overview.consumedCredits + overview.overageCredits
+  const hasIncludedCredits = includedCredits !== null && includedCredits > 0
+  const progress = hasIncludedCredits ? Math.min(totalUsedCredits / includedCredits, 1) : 1
+  const isOverage = overview.overageCredits > 0
+  const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - progress)
+  const consumedLabel = numberFormatter.format(totalUsedCredits)
+  const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
+  const usageLabel =
+    includedCredits === null ? `${consumedLabel} credits` : `${consumedLabel} / ${includedLabel} credits`
+  const tooltip = isOverage
+    ? `${numberFormatter.format(totalUsedCredits)} credits used: ${numberFormatter.format(overview.consumedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
+    : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
+  const showUpgradeCta =
+    overview.planSlug === "free" &&
+    hasIncludedCredits &&
+    totalUsedCredits / includedCredits >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
+
+  const openUpgrade = async () => {
+    setIsUpgradePending(true)
+    try {
+      const data = await createBillingCheckoutSession({
+        data: { plan: PRO_PLAN_CONFIG.slug, returnUrl: "/settings/billing" },
+      })
+
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsUpgradePending(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {showUpgradeCta ? (
+        <Button size="sm" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
+          Upgrade now
+        </Button>
+      ) : null}
+      <Tooltip
+        asChild
+        trigger={
+          <Link
+            to="/settings/billing"
+            aria-label={tooltip}
+            className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground transition-colors hover:bg-muted"
+          >
+            <span className="relative flex h-5 w-5 items-center justify-center" aria-hidden="true">
+              <svg aria-hidden="true" className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
+                <circle
+                  cx="10"
+                  cy="10"
+                  r={BILLING_COUNTER_RADIUS}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted"
+                />
+                <circle
+                  cx="10"
+                  cy="10"
+                  r={BILLING_COUNTER_RADIUS}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
+                  strokeDashoffset={strokeOffset}
+                  className={cn("transition-colors", {
+                    "text-primary": !isOverage,
+                    "text-destructive": isOverage,
+                  })}
+                />
+              </svg>
+            </span>
+            <div className="flex items-baseline gap-1">
+              <Text.H6 weight="medium" color={isOverage ? "destructive" : "foreground"}>
+                {usageLabel}
+              </Text.H6>
+            </div>
+          </Link>
+        }
+      >
+        {tooltip}
+      </Tooltip>
+    </div>
+  )
+}
+
 function NavHeader() {
   const user = Route.useLoaderData({ select: (data) => data.user })
   const organizationId = Route.useLoaderData({
@@ -144,6 +256,7 @@ function NavHeader() {
         <BreadcrumbTrail />
       </div>
       <div className="flex items-center gap-4">
+        <BillingCreditCounter organizationId={organizationId} />
         <ThemeToggle />
         {supportEnabled && (
           <button

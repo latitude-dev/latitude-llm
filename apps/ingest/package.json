@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/projects": "workspace:^",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

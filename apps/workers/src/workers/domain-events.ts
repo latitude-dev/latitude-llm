@@ -1,3 +1,4 @@
+import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "@domain/billing"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
@@ -29,8 +30,10 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
-  const buildSpanIngestedDedupeKey = (prefix: string, payload: EventPayloads["SpanIngested"]) =>
-    `${prefix}:${payload.organizationId}:${payload.projectId}:${payload.traceId}`
+  const buildTraceIngestedDedupeKey = (
+    prefix: string,
+    input: { organizationId: string; projectId: string; traceId: string },
+  ) => `${prefix}:${input.organizationId}:${input.projectId}:${input.traceId}`
 
   const publishScoreCreatedFanOut = (payload: EventPayloads["ScoreCreated"]) =>
     Effect.all(
@@ -73,26 +76,70 @@ export const createDomainEventsWorker = ({
         dedupeKey: `users:deletion:${event.payload.userId}`,
       }),
 
-    SpanIngested: (event) =>
-      Effect.all(
+    TracesIngested: (event) => {
+      const [firstTraceId] = event.payload.traceIds
+      return Effect.all(
         [
-          pub.publish("trace-end", "run", event.payload, {
-            dedupeKey: buildSpanIngestedDedupeKey("trace-end:run", event.payload),
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish(
-            "projects",
-            "checkFirstTrace",
-            {
-              organizationId: event.payload.organizationId,
-              projectId: event.payload.projectId,
-              traceId: event.payload.traceId,
-            },
-            { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+          ...event.payload.traceIds.map((traceId) =>
+            pub.publish(
+              "trace-end",
+              "run",
+              {
+                organizationId: event.payload.organizationId,
+                projectId: event.payload.projectId,
+                traceId,
+              },
+              {
+                dedupeKey: buildTraceIngestedDedupeKey("trace-end:run", {
+                  organizationId: event.payload.organizationId,
+                  projectId: event.payload.projectId,
+                  traceId,
+                }),
+                debounceMs: TRACE_END_DEBOUNCE_MS,
+              },
+            ),
           ),
+          ...(firstTraceId
+            ? [
+                pub.publish(
+                  "projects",
+                  "checkFirstTrace",
+                  {
+                    organizationId: event.payload.organizationId,
+                    projectId: event.payload.projectId,
+                    traceId: firstTraceId,
+                  },
+                  { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+                ),
+              ]
+            : []),
+          ...(event.payload.billing
+            ? [
+                pub.publish(
+                  "billing",
+                  "recordTraceUsageBatch",
+                  {
+                    organizationId: event.payload.organizationId,
+                    projectId: event.payload.projectId,
+                    traceIds: event.payload.traceIds,
+                    planSlug: event.payload.billing.planSlug,
+                    planSource: event.payload.billing.planSource,
+                    periodStart: event.payload.billing.periodStart,
+                    periodEnd: event.payload.billing.periodEnd,
+                    includedCredits: event.payload.billing.includedCredits,
+                    overageAllowed: event.payload.billing.overageAllowed,
+                  },
+                  {
+                    attempts: 10,
+                    backoff: { type: "exponential", delayMs: 1_000 },
+                  },
+                ),
+              ]
+            : []),
         ],
         { concurrency: "unbounded" },
-      ).pipe(Effect.asVoid),
+      ).pipe(Effect.asVoid)
+    },
 
     ScoreCreated: (event) => publishScoreCreatedFanOut(event.payload),
 
@@ -168,6 +215,40 @@ export const createDomainEventsWorker = ({
         { userId: event.payload.userId, stackChoice: event.payload.stackChoice },
         { dedupeKey: `marketing-contacts:update-onboarding:${event.payload.userId}` },
       ),
+
+    BillingUsagePeriodUpdated: (event) => {
+      if (
+        event.payload.planSource !== "subscription" ||
+        !event.payload.overageAllowed ||
+        event.payload.overageCredits <= event.payload.reportedOverageCredits
+      ) {
+        return Effect.void
+      }
+
+      const periodStart = new Date(event.payload.periodStart)
+      const periodEnd = new Date(event.payload.periodEnd)
+
+      return pub.publish(
+        "billing-overage",
+        "reportOverage",
+        {
+          organizationId: event.payload.organizationId,
+          periodStart: event.payload.periodStart,
+          periodEnd: event.payload.periodEnd,
+          snapshotOverageCredits: event.payload.overageCredits,
+        },
+        {
+          dedupeKey: buildBillingOverageDedupeKey({
+            organizationId: event.payload.organizationId,
+            periodStart,
+            periodEnd,
+          }),
+          latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
+          attempts: 10,
+          backoff: { type: "exponential", delayMs: 1_000 },
+        },
+      )
+    },
 
     MemberJoined: () => Effect.void,
 

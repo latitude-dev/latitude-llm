@@ -79,7 +79,7 @@ ScoreCreated: (event) =>
 
 **`debounceMs`** — fires after `N` ms of quiet on the dedupe key. Each publish within the window pushes the fire time forward and replaces the pending payload (BullMQ `extend: true, replace: true`). Use when the task should **wait for a stream of events to settle**.
 
-*Example:* `trace-end:run` after `SpanIngested`. Every new span for a trace resets the clock; end-of-trace work fires once the trace is actually idle. If spans keep arriving every few seconds, that means the trace is still active — not firing is correct.
+*Example:* `trace-end:run` after `TracesIngested`. The batch event fans out one publish per deduped trace id; every new publish for the same trace resets the clock, so end-of-trace work fires once that trace is actually idle. If spans keep arriving every few seconds, that means the trace is still active — not firing is correct.
 
 **`throttleMs`** — fires **at most once per `N` ms per dedupe key**. The first publish schedules the fire time; subsequent publishes within the window are dropped (BullMQ `extend: false, replace: false`). Requires `dedupeKey`. Use when you need a **hard upper bound** on fire latency and a cap on frequency, and where starvation under a continuous publish stream would be a product bug.
 

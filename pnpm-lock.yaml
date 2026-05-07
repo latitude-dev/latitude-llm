@@ -264,6 +264,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../packages/domain/billing
       '@domain/projects':
         specifier: workspace:^
         version: link:../../packages/domain/projects
@@ -331,6 +334,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../packages/domain/billing
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
@@ -545,6 +551,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../packages/domain/billing
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
@@ -675,6 +684,9 @@ importers:
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../packages/domain/billing
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
@@ -804,6 +816,9 @@ importers:
 
   packages/domain/admin:
     dependencies:
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -945,6 +960,24 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
+  packages/domain/billing:
+    dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/datasets:
     dependencies:
       '@domain/events':
@@ -1015,6 +1048,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -1075,6 +1111,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -1301,6 +1340,9 @@ importers:
 
   packages/domain/spans:
     dependencies:
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@domain/events':
         specifier: workspace:*
         version: link:../events
@@ -1524,6 +1566,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../domain/billing
       '@domain/issues':
         specifier: workspace:*
         version: link:../../domain/issues
@@ -1615,6 +1660,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../domain/api-keys
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../../domain/billing
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
@@ -1684,6 +1732,9 @@ importers:
       voyageai:
         specifier: 'catalog:'
         version: 0.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@better-auth/cli':
         specifier: ^1.4.22
@@ -8634,8 +8685,8 @@ packages:
   exponential-backoff@3.1.3:
     resolution: {integrity: sha512-ZgEeZXj30q+I0EN+CbSSpIyPaJ5HVQD18Z1m+u1FXbAeT94mr1zw50q4q6jiiC447Nl/YTcIYSAftiGqetwXCA==}
 
-  express-rate-limit@8.5.0:
-    resolution: {integrity: sha512-XKhFohWaSBdVJNTi5TaHziqnPkv04I9UQV6q1Wy7Ui6GGQZVW12ojDFwqer14EvCXxjvPG0CyWXx7cAXpALB4Q==}
+  express-rate-limit@8.5.1:
+    resolution: {integrity: sha512-5O6KYmyJEpuPJV5hNTXKbAHWRqrzyu+OI3vUnSd2kXFubIVpG7ezpgxQy76Zo5GQZtrQBg86hF+CM/NX+cioiQ==}
     engines: {node: '>= 16'}
     peerDependencies:
       express: '>= 4.11'
@@ -9123,6 +9174,10 @@ packages:
 
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
+    engines: {node: '>= 12'}
+
+  ip-address@10.2.0:
+    resolution: {integrity: sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==}
     engines: {node: '>= 12'}
 
   ipaddr.js@1.9.1:
@@ -14260,7 +14315,7 @@ snapshots:
       eventsource: 3.0.7
       eventsource-parser: 3.0.8
       express: 5.2.1
-      express-rate-limit: 8.5.0(express@5.2.1)
+      express-rate-limit: 8.5.1(express@5.2.1)
       hono: 4.12.15
       jose: 6.2.2
       json-schema-typed: 8.0.2
@@ -18981,10 +19036,10 @@ snapshots:
 
   exponential-backoff@3.1.3: {}
 
-  express-rate-limit@8.5.0(express@5.2.1):
+  express-rate-limit@8.5.1(express@5.2.1):
     dependencies:
       express: 5.2.1
-      ip-address: 10.1.0
+      ip-address: 10.2.0
     optional: true
 
   express@5.2.1:
@@ -19590,6 +19645,9 @@ snapshots:
       - supports-color
 
   ip-address@10.1.0: {}
+
+  ip-address@10.2.0:
+    optional: true
 
   ipaddr.js@1.9.1:
     optional: true

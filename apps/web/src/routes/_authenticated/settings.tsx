@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
-import { Building2, Key, UserRound, Users } from "lucide-react"
+import { Building2, CreditCard, Key, UserRound, Users } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 import { ProjectBreadcrumbSegment } from "./-components/project-breadcrumb-segment.tsx"
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 const navItems = [
   { label: "Organization", to: "/settings/organization", icon: Building2 },
   { label: "Members", to: "/settings/members", icon: Users },
+  { label: "Billing", to: "/settings/billing", icon: CreditCard },
   { label: "API Keys", to: "/settings/api-keys", icon: Key },
   { label: "Account", to: "/settings/account", icon: UserRound },
 ] as const

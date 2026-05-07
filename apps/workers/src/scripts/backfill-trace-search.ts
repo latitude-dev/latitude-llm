@@ -3,7 +3,7 @@ import type { RedisClient } from "@platform/cache-redis"
 import { closeClickhouse, queryClickhouse } from "@platform/db-clickhouse"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getRedisClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { runTraceSearchRefresh } from "../workers/trace-search.ts"
 
 const USAGE = `
@@ -107,6 +107,7 @@ const limit = values.limit ? parsePositiveInteger(values.limit, "--limit") : und
 
 const clickhouse = getClickhouseClient()
 const redis = getRedisClient()
+const postgres = getPostgresClient()
 
 void Effect.runPromise(
   Effect.gen(function* () {
@@ -134,6 +135,7 @@ void Effect.runPromise(
 
         return runTraceSearchRefresh(payload, {
           clickhouseClient: clickhouse,
+          postgresClient: postgres,
           redisClient: redis,
         }).pipe(
           Effect.tap(() =>

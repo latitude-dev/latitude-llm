@@ -4,7 +4,7 @@ import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
-import type { RedisClient } from "@platform/cache-redis"
+import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
   ScoreAnalyticsRepositoryLive,
@@ -12,16 +12,20 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("live-evaluations")
 const LIVE_EVALUATIONS_QUEUE = "live-evaluations" as const
@@ -38,9 +42,9 @@ type LiveEvaluationsLogger = Pick<ReturnType<typeof createLogger>, "info" | "err
 
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
-  postgresClient?: PostgresClient
-  clickhouseClient?: ClickHouseClient
-  redisClient?: RedisClient
+  postgresClient: PostgresClient
+  clickhouseClient: ClickHouseClient
+  redisClient: RedisClient
   runLiveEvaluation?: typeof runLiveEvaluationUseCase
   logger?: LiveEvaluationsLogger
 }
@@ -85,6 +89,37 @@ const buildExecutePersistedLogContext = (
   ...(result.summary.sessionId !== null ? { sessionId: result.summary.sessionId } : {}),
 })
 
+const logExecuteResult = (
+  liveEvaluationsLogger: LiveEvaluationsLogger,
+  payload: ExecutePayload,
+  result: RunLiveEvaluationResult,
+) =>
+  Effect.sync(() => {
+    if (result.action === "skipped") {
+      liveEvaluationsLogger.info("Live evaluation execute skipped", {
+        ...buildExecuteLogContext(payload),
+        ...buildExecuteSkippedLogContext(result),
+      })
+      return
+    }
+
+    liveEvaluationsLogger.info("Live evaluation execute completed", {
+      ...buildExecuteLogContext(payload),
+      ...buildExecutePersistedLogContext(result),
+    })
+  })
+
+const logExecuteFailure = (liveEvaluationsLogger: LiveEvaluationsLogger, payload: ExecutePayload, error: unknown) =>
+  // Logging is intentionally best-effort and stays in `tapError` so operational log failures
+  // never replace the underlying worker error or alter retry behavior.
+  Effect.sync(() =>
+    liveEvaluationsLogger.error("Live evaluation execute failed", {
+      ...buildExecuteLogContext(payload),
+      outcome: "failed",
+      error,
+    }),
+  )
+
 // TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
 // approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
 export const createLiveEvaluationsWorker = ({
@@ -95,56 +130,46 @@ export const createLiveEvaluationsWorker = ({
   runLiveEvaluation,
   logger: injectedLogger,
 }: LiveEvaluationsDeps) => {
-  const pgClient = postgresClient ?? getPostgresClient()
-  const chClient = clickhouseClient ?? getClickhouseClient()
+  const pgClient = postgresClient
+  const chClient = clickhouseClient
+  const rdClient = redisClient
   const liveEvaluationsLogger = injectedLogger ?? logger
-  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) => {
-    const rdClient = redisClient ?? getRedisClient()
-    return effect.pipe(withAi(AIGenerateLive, rdClient))
-  }
+  const withDefaultAi = <A, E, R>(effect: Effect.Effect<A, E, R>) => effect.pipe(withAi(AIGenerateLive, rdClient))
   const executeLiveEvaluation = runLiveEvaluation ?? runLiveEvaluationUseCase
+  const executeEffect = (payload: ExecutePayload) => {
+    const baseEffect = executeLiveEvaluation(payload).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          EvaluationRepositoryLive,
+          IssueRepositoryLive,
+          OutboxEventWriterLive,
+          ScoreRepositoryLive,
+          BillingOverrideRepositoryLive,
+          BillingUsageEventRepositoryLive,
+          BillingUsagePeriodRepositoryLive,
+          SettingsReaderLive,
+          StripeSubscriptionLookupLive,
+        ),
+        pgClient,
+        OrganizationId(payload.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(rdClient)),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        chClient,
+        OrganizationId(payload.organizationId),
+      ),
+      withDefaultAi,
+      withTracing,
+      Effect.tap((result) => logExecuteResult(liveEvaluationsLogger, payload, result)),
+      Effect.tapError((error) => logExecuteFailure(liveEvaluationsLogger, payload, error)),
+      Effect.asVoid,
+    )
+
+    return baseEffect
+  }
 
   consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
-    execute: (payload: ExecutePayload) =>
-      executeLiveEvaluation(payload).pipe(
-        withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
-          chClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withDefaultAi,
-        withTracing,
-        Effect.tap((result) =>
-          Effect.sync(() => {
-            if (result.action === "skipped") {
-              liveEvaluationsLogger.info("Live evaluation execute skipped", {
-                ...buildExecuteLogContext(payload),
-                ...buildExecuteSkippedLogContext(result),
-              })
-              return
-            }
-
-            liveEvaluationsLogger.info("Live evaluation execute completed", {
-              ...buildExecuteLogContext(payload),
-              ...buildExecutePersistedLogContext(result),
-            })
-          }),
-        ),
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            liveEvaluationsLogger.error("Live evaluation execute failed", {
-              ...buildExecuteLogContext(payload),
-              outcome: "failed",
-              error,
-            }),
-          ),
-        ),
-        Effect.asVoid,
-      ),
+    execute: executeEffect,
   })
 }

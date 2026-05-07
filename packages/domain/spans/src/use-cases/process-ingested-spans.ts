@@ -67,6 +67,17 @@ export interface ProcessIngestedSpansInput {
   readonly apiKeyId: string
   readonly contentType: string
   readonly ingestedAt: Date
+  readonly retentionDays?: number
+  readonly traceUsage?: {
+    readonly context?: {
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: Date
+      readonly periodEnd: Date
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
+  }
   readonly inlinePayload: string | null
   readonly fileKey: string | null
 }
@@ -144,23 +155,42 @@ export const processIngestedSpansUseCase =
 
       const payload = yield* resolvePayload(input)
       const spans = yield* decodeAndTransform(payload, input)
+      const persistedSpans =
+        input.retentionDays === undefined
+          ? spans
+          : spans.map((span) => ({
+              ...span,
+              retentionDays: input.retentionDays,
+            }))
 
-      if (spans.length === 0) {
+      if (persistedSpans.length === 0) {
         return
       }
 
       const repo = yield* SpanRepository
-      yield* repo.insert(spans)
+      yield* repo.insert(persistedSpans)
 
-      const traceIds = new Set(spans.map((s) => s.traceId))
-      yield* Effect.all(
-        [...traceIds].map((traceId) =>
-          eventsPublisher.publish({
-            name: "SpanIngested",
-            organizationId: input.organizationId,
-            payload: { organizationId: input.organizationId, projectId: input.projectId, traceId },
-          } satisfies DomainEvent),
-        ),
-        { concurrency: "unbounded" },
-      )
+      const traceIds = [...new Set(persistedSpans.map((span) => span.traceId))]
+
+      yield* eventsPublisher.publish({
+        name: "TracesIngested",
+        organizationId: input.organizationId,
+        payload: {
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          traceIds,
+          ...(input.traceUsage?.context
+            ? {
+                billing: {
+                  planSlug: input.traceUsage.context.planSlug,
+                  planSource: input.traceUsage.context.planSource,
+                  periodStart: input.traceUsage.context.periodStart.toISOString(),
+                  periodEnd: input.traceUsage.context.periodEnd.toISOString(),
+                  includedCredits: input.traceUsage.context.includedCredits,
+                  overageAllowed: input.traceUsage.context.overageAllowed,
+                },
+              }
+            : {}),
+        },
+      } satisfies DomainEvent)
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))

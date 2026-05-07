@@ -2,6 +2,8 @@
 
 Organizations remain the top ownership boundary for reliability.
 
+Billing is also organization-scoped. See `./billing.md` for the full billing model.
+
 ## Reliability Additions
 
 Organizations gain organization-scoped reliability settings.
@@ -59,3 +61,5 @@ Organization-wide reliability settings belong in:
 - the home dashboard UI
 - matching public API contracts
 - post-MVP provider credential/default provider-model management alongside the same organization-scoped settings surface
+
+Organization billing management lives on the authenticated settings route `/settings/billing`, while cross-tenant support and manual enterprise override controls live in backoffice organization detail.

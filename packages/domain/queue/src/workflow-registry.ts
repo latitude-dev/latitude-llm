@@ -15,6 +15,7 @@ const _registry = {
     readonly issueId: string
     readonly evaluationId: string | null
     readonly jobId: string
+    readonly billingOperationId: string
   }>(),
   issueDiscoveryWorkflow: input<{
     readonly organizationId: string
@@ -32,6 +33,12 @@ const _registry = {
     readonly projectId: string
     readonly scoreId: string
     readonly preEnrichedFeedback?: string
+  }>(),
+  billingOverageWorkflow: input<{
+    readonly organizationId: string
+    readonly periodStart: string
+    readonly periodEnd: string
+    readonly snapshotOverageCredits: number
   }>(),
   flaggerWorkflow: input<{
     readonly organizationId: string

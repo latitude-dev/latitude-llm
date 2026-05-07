@@ -276,6 +276,54 @@ const _registry = {
     }
   }>(),
 
+  billing: payloads<{
+    recordBillableAction: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+      readonly idempotencyKey: string
+      readonly context: {
+        readonly planSlug: "free" | "pro" | "enterprise"
+        readonly planSource: "override" | "subscription" | "free-fallback"
+        readonly periodStart: string
+        readonly periodEnd: string
+        readonly includedCredits: number
+        readonly overageAllowed: boolean
+      }
+      readonly traceId?: string
+      readonly metadata?: Record<string, unknown>
+    }
+    recordTraceUsageBatch: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceIds: readonly string[]
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
+  }>(),
+
+  "billing-overage": payloads<{
+    reportOverage: {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+      /**
+       * Cumulative `overageCredits` observed when this report was enqueued.
+       * The worker reports up to this value (not "current O at job-read time")
+       * so retries are stable: the Stripe meter-event identifier is derived
+       * from this snapshot, and bullmq retries reuse the same payload, which
+       * makes Stripe deduplicate retries even after additional accrual. The
+       * pending job may be replaced with a newer snapshot before it fires, but
+       * the fired payload stays stable across retries.
+       */
+      readonly snapshotOverageCredits: number
+    }
+  }>(),
+
   // Writes annotations into the Latitude-owned dogfood project via
   // @platform/latitude-api. The worker is fire-and-forget from the reviewer's
   // perspective — the web route 202s immediately on enqueue, and BullMQ's

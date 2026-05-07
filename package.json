@@ -29,10 +29,10 @@
     "@biomejs/biome": "catalog:",
     "@effect/language-service": "^0.84.2",
     "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "fern-api": "4.80.1",
     "knip": "^6.1.0",
     "turbo": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

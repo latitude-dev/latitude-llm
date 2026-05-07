@@ -87,9 +87,9 @@ export interface PublishOptions {
    * Debounce window in ms. Each publish within the window extends the TTL
    * and replaces the pending payload, so the task fires after `debounceMs`
    * of quiet on this `dedupeKey`. Appropriate when you want to wait for a
-   * stream of events to settle (e.g. `trace-end:run` after `SpanIngested`).
+   * stream of events to settle (e.g. `trace-end:run` after `TracesIngested`).
    *
-   * Mutually exclusive with `throttleMs`.
+   * Mutually exclusive with `throttleMs` and `latestThrottleMs`.
    */
   readonly debounceMs?: number
   /**
@@ -101,9 +101,19 @@ export interface PublishOptions {
    * when you want a predictable "at most once per N" cadence even under a
    * constant flow of publishes (e.g. annotation-driven alignment refresh).
    *
-   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`.
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs` and `latestThrottleMs`.
    */
   readonly throttleMs?: number
+  /**
+   * Latest-throttle window in ms. The first publish schedules the task for
+   * `now + latestThrottleMs`; subsequent publishes within the window replace
+   * the pending payload without extending the fire time. Guarantees a hard
+   * upper bound of `latestThrottleMs` on fire latency from the first publish,
+   * while using the latest payload seen in that window.
+   *
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs` and `throttleMs`.
+   */
+  readonly latestThrottleMs?: number
   /**
    * Total attempts BullMQ should make before the job is considered failed
    * (inclusive of the first try). Set alongside `backoff` to get bounded

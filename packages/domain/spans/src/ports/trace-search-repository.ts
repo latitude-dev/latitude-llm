@@ -9,6 +9,7 @@ export interface TraceSearchDocumentRow {
   readonly rootSpanName: string
   readonly searchText: string
   readonly contentHash: string
+  readonly retentionDays?: number
 }
 
 export interface TraceSearchEmbeddingRow {
@@ -19,6 +20,7 @@ export interface TraceSearchEmbeddingRow {
   readonly contentHash: string
   readonly embeddingModel: string
   readonly embedding: readonly number[]
+  readonly retentionDays?: number
 }
 
 /**

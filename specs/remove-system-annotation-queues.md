@@ -277,7 +277,7 @@ Per-project sampling is read from `flagger.sampling`. Default is `FLAGGER_DEFAUL
 
 Deterministic match path:
 
-1. `processFlaggersUseCase` runs the strategy's deterministic detector on `SpanIngested → trace-end`.
+1. `processFlaggersUseCase` runs the strategy's deterministic detector on `TracesIngested → trace-end`.
 2. On `matched`, it writes a published score (`source: "annotation"`, `sourceId: "SYSTEM"`, `draftedAt: null`).
 3. `ScoreCreated` fan-out publishes to `issues:discovery`.
 4. `discoverIssueUseCase` either creates a new issue (`source: "annotation"`) or attaches to an existing one.

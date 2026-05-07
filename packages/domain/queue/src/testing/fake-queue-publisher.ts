@@ -22,6 +22,9 @@ export interface FakeQueuePublisherHandle {
    *   → the **latest** payload wins.
    * - `throttleMs` (first-publish-wins, `extend: false, replace: false` in
    *   BullMQ) → the **first** payload wins and later publishes are dropped.
+   * - `latestThrottleMs` (fixed fire time, latest payload, `extend: false,
+   *   replace: true` in BullMQ) → the **latest** payload wins without sliding
+   *   the window.
    *
    * Plain `dedupeKey` with no window defaults to debounce-style overwrite
    * so existing tests keep their prior semantics.
@@ -55,8 +58,8 @@ export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape
         // Throttle semantics: first publish wins. Mirrors BullMQ's
         // `extend: false, replace: false` — subsequent publishes within the
         // window are dropped and the pending payload is not touched.
-        // Debounce semantics (and plain `dedupeKey` with no window) fall
-        // through to the overwrite path — `extend: true, replace: true`.
+        // Debounce/latest-throttle semantics (and plain `dedupeKey` with no
+        // window) fall through to the overwrite path — latest payload wins.
         if (options.throttleMs !== undefined) {
           if (!deduped.has(key)) {
             deduped.set(key, message)

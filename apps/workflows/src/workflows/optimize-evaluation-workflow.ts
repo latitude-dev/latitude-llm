@@ -8,10 +8,12 @@ type OptimizeEvaluationWorkflowInput = {
   readonly issueId: string
   readonly evaluationId: string | null
   readonly jobId: string
+  readonly billingOperationId: string
 }
 
 export type OptimizeEvaluationWorkflowResult =
   | { readonly status: "inactive" }
+  | { readonly status: "blocked"; readonly reason: "no-credits-remaining" }
   | {
       readonly status: "optimized"
       readonly evaluationId: string
@@ -24,13 +26,16 @@ export type OptimizeEvaluationWorkflowResult =
 // evaluation passes are not clipped mid-run. No activity heartbeats (grep
 // confirms none exist), so Temporal can only detect a hang when the full
 // `startToCloseTimeout` elapses.
-const { loadEvaluationAlignmentStateOrInactive, persistEvaluationAlignmentResult } = proxyActivities<typeof activities>(
-  {
-    // Postgres reads/writes only.
-    startToCloseTimeout: "1 minute",
-    retry: defaultActivityRetryPolicy,
-  },
-)
+const {
+  authorizeEvaluationGenerationBilling,
+  loadEvaluationAlignmentStateOrInactive,
+  persistEvaluationAlignmentResult,
+  recordEvaluationGenerationUsage,
+} = proxyActivities<typeof activities>({
+  // Postgres reads/writes only.
+  startToCloseTimeout: "1 minute",
+  retry: defaultActivityRetryPolicy,
+})
 
 const { collectEvaluationAlignmentExamples, generateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
   // Example collection plus a single-shot LLM call for the baseline script.
@@ -83,6 +88,20 @@ export const optimizeEvaluationWorkflow = async (
     }
   }
 
+  const billingAllowed = await authorizeEvaluationGenerationBilling({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluationId,
+    billingOperationId: input.billingOperationId,
+  })
+
+  if (!billingAllowed) {
+    return {
+      status: "blocked",
+      reason: "no-credits-remaining",
+    }
+  }
+
   const collected = await collectEvaluationAlignmentExamples({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -108,6 +127,19 @@ export const optimizeEvaluationWorkflow = async (
     issueDescription: collected.issueDescription,
     positiveExamples: collected.positiveExamples,
     negativeExamples: collected.negativeExamples,
+  })
+
+  // Charge once the optimization (the bulk of the AI work and the activity
+  // most likely to fail) has succeeded, instead of up-front. A workflow that
+  // never reaches this point — because of a worker crash, queue restart, or
+  // dataset failure — does not incur the 1000-credit charge. The Redis
+  // reservation taken at authorize time still gates the spending cap, and
+  // the idempotency key prevents double-charge on Temporal activity retries.
+  await recordEvaluationGenerationUsage({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluationId,
+    billingOperationId: input.billingOperationId,
   })
 
   const baselineEvaluation = await evaluateBaselineEvaluationDraft({

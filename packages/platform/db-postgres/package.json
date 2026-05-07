@@ -19,6 +19,7 @@
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "pg:seed": "node --import tsx src/seeds/run.ts",
+    "billing:usage-events:maintain": "node --import tsx scripts/maintain-billing-usage-events.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
     "auth:generate-schema-reference": "better-auth generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
@@ -33,6 +34,7 @@
     "@domain/alerts": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
@@ -55,7 +57,8 @@
     "effect": "catalog:",
     "pg": "catalog:",
     "stripe": "^22.0.1",
-    "voyageai": "catalog:"
+    "voyageai": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
