@@ -52,32 +52,41 @@ export const pickTrackingParams = (search: URLSearchParams | string): Record<str
 // the verify endpoint rejects the link with INVALID_CALLBACK_URL.
 const CALLBACK_SAFE_CHAR = /^[\w\-.+/=&%@]$/
 
+const TEXT_ENCODER = new TextEncoder()
+
 const percentEncodeChar = (ch: string): string => {
-  let out = ""
-  for (const byte of new TextEncoder().encode(ch)) {
-    out += `%${byte.toString(16).toUpperCase().padStart(2, "0")}`
+  const bytes = TEXT_ENCODER.encode(ch)
+  const parts: string[] = new Array(bytes.length)
+  for (let i = 0; i < bytes.length; i++) {
+    parts[i] = `%${bytes[i].toString(16).toUpperCase().padStart(2, "0")}`
   }
-  return out
+  return parts.join("")
 }
 
 const sanitizeForCallback = (value: string): string => {
-  let out = ""
+  const parts: string[] = []
   for (const ch of value) {
-    out += CALLBACK_SAFE_CHAR.test(ch) ? ch : percentEncodeChar(ch)
+    parts.push(CALLBACK_SAFE_CHAR.test(ch) ? ch : percentEncodeChar(ch))
   }
-  return out
+  return parts.join("")
 }
 
 export const appendTrackingParams = (path: string, params: Record<string, string>): string => {
   const entries = Object.entries(params)
   if (entries.length === 0) return path
+  // Split off any fragment so the query lands between path and `#fragment` (a
+  // user-supplied `?redirect=/foo#bar` would otherwise produce `/foo#bar?gclid=…`,
+  // which the browser interprets as part of the fragment).
+  const hashIdx = path.indexOf("#")
+  const base = hashIdx >= 0 ? path.slice(0, hashIdx) : path
+  const fragment = hashIdx >= 0 ? path.slice(hashIdx) : ""
   const sanitized: Record<string, string> = {}
   for (const [key, value] of entries) {
     sanitized[key] = sanitizeForCallback(value)
   }
-  const separator = path.includes("?") ? "&" : "?"
+  const separator = base.includes("?") ? "&" : "?"
   const query = new URLSearchParams(sanitized).toString()
-  return `${path}${separator}${query}`
+  return `${base}${separator}${query}${fragment}`
 }
 
 export type SignupMethod = "email" | "google" | "github"
