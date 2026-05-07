@@ -18,10 +18,10 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type Issue, type IssueSource, IssueState } from "../entities/issue.ts"
+import { type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { type IssueProjectionCandidate, IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { IssueRepository, type IssueWithLifecycle } from "../ports/issue-repository.ts"
 
 export const issuesLifecycleGroupSchema = z.enum(["active", "archived"])
 export type IssuesLifecycleGroup = z.infer<typeof issuesLifecycleGroupSchema>
@@ -115,7 +115,7 @@ export interface ListIssuesResult {
 }
 
 interface AnalyticsCandidate {
-  readonly issue: Issue
+  readonly issue: IssueWithLifecycle
   readonly windowMetric: IssueWindowMetric
   readonly lifecycleStates: readonly string[]
   readonly similarityScore: number | null
@@ -337,7 +337,7 @@ const sortCandidates = (
   })
 
 const toCandidate = (input: {
-  readonly issue: Issue
+  readonly issue: IssueWithLifecycle
   readonly windowMetric: IssueWindowMetric
   readonly occurrence: IssueOccurrenceAggregate | null
   readonly similarityScore: number | null
@@ -345,7 +345,8 @@ const toCandidate = (input: {
 }): AnalyticsCandidate => {
   const lifecycleStates = deriveIssueLifecycleStates({
     issue: input.issue,
-    occurrence: input.occurrence,
+    isEscalating: input.issue.lifecycle.isEscalating,
+    isRegressed: input.issue.lifecycle.isRegressed,
     now: input.now,
   })
 

@@ -1,11 +1,51 @@
 import { EvaluationIssueRepository } from "@domain/evaluations"
-import { type Issue, IssueRepository, issueSchema, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
+import {
+  type Issue,
+  type IssueLifecycleFlags,
+  IssueRepository,
+  type IssueWithLifecycle,
+  issueSchema,
+  MIN_OCCURRENCES_FOR_VISIBILITY,
+} from "@domain/issues"
 import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
+import { alertIncidents } from "../schema/alert-incidents.ts"
 import { issues } from "../schema/issues.ts"
 import { scores } from "../schema/scores.ts"
+
+// Lifecycle flags derived from `alert_incidents` are joined onto every
+// non-locking issue read. The two EXISTS subqueries are the system of record
+// for "is this issue currently escalating / regressed" — see
+// `deriveIssueLifecycleStates` in @domain/issues.
+const isEscalatingExpr = sql<boolean>`exists (
+  select 1
+  from ${alertIncidents}
+  where ${alertIncidents.sourceType} = 'issue'
+    and ${alertIncidents.sourceId} = ${issues.id}
+    and ${alertIncidents.kind} = 'issue.escalating'
+    and ${alertIncidents.endedAt} is null
+)`
+
+const isRegressedExpr = sql<boolean>`exists (
+  select 1
+  from ${alertIncidents}
+  where ${alertIncidents.sourceType} = 'issue'
+    and ${alertIncidents.sourceId} = ${issues.id}
+    and ${alertIncidents.kind} = 'issue.regressed'
+)`
+
+const issueColumnsWithLifecycle = {
+  ...getTableColumns(issues),
+  isEscalating: isEscalatingExpr,
+  isRegressed: isRegressedExpr,
+} as const
+
+type IssueRowWithLifecycle = typeof issues.$inferSelect & {
+  readonly isEscalating: boolean
+  readonly isRegressed: boolean
+}
 
 const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
   issueSchema.parse({
@@ -24,6 +64,15 @@ const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
+
+const toIssueWithLifecycle = (row: IssueRowWithLifecycle): IssueWithLifecycle => {
+  const issue = toDomainIssue(row)
+  const lifecycle: IssueLifecycleFlags = {
+    isEscalating: row.isEscalating,
+    isRegressed: row.isRegressed,
+  }
+  return Object.assign({}, issue, { lifecycle })
+}
 
 const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
   id: issue.id,
@@ -67,7 +116,7 @@ const issueRepositoryCoreLive = Layer.effect(
               ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
 
               return db
-                .select()
+                .select(issueColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
@@ -82,7 +131,7 @@ const issueRepositoryCoreLive = Layer.effect(
             })
             .pipe(
               Effect.map((rows) => ({
-                items: rows.slice(0, limit).map(toDomainIssue),
+                items: rows.slice(0, limit).map(toIssueWithLifecycle),
                 hasMore: rows.length > limit,
                 limit,
                 offset,
@@ -96,7 +145,7 @@ const issueRepositoryCoreLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select()
+                .select(issueColumnsWithLifecycle)
                 .from(issues)
                 .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
                 .limit(1),
@@ -105,7 +154,7 @@ const issueRepositoryCoreLive = Layer.effect(
               Effect.flatMap((rows) => {
                 const row = rows[0]
                 if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
-                return Effect.succeed(toDomainIssue(row))
+                return Effect.succeed(toIssueWithLifecycle(row))
               }),
             )
         }),
@@ -137,11 +186,11 @@ const issueRepositoryCoreLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) => {
               if (issueIds.length === 0) {
-                return db.select().from(issues).where(sql`1 = 0`) // Return empty result
+                return db.select(issueColumnsWithLifecycle).from(issues).where(sql`1 = 0`) // Return empty result
               }
 
               return db
-                .select()
+                .select(issueColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
@@ -151,7 +200,7 @@ const issueRepositoryCoreLive = Layer.effect(
                   ),
                 )
             })
-            .pipe(Effect.map((rows) => rows.map(toDomainIssue)))
+            .pipe(Effect.map((rows) => rows.map(toIssueWithLifecycle)))
         }),
 
       findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
@@ -160,7 +209,7 @@ const issueRepositoryCoreLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select()
+                .select(issueColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
@@ -175,7 +224,7 @@ const issueRepositoryCoreLive = Layer.effect(
               Effect.flatMap((rows) => {
                 const row = rows[0]
                 if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: uuid }))
-                return Effect.succeed(toDomainIssue(row))
+                return Effect.succeed(toIssueWithLifecycle(row))
               }),
             )
         }),

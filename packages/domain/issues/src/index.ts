@@ -1,5 +1,4 @@
 export {
-  AUTO_RESOLVE_INACTIVITY_DAYS,
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
@@ -76,7 +75,14 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
-export { IssueRepository } from "./ports/issue-repository.ts"
+export {
+  type IssueLifecycleFlags,
+  type IssueListPage,
+  IssueRepository,
+  type IssueRepositoryShape,
+  type IssueWithLifecycle,
+  type ListIssuesRepositoryInput,
+} from "./ports/issue-repository.ts"
 export {
   type ApplyIssueLifecycleCommandError,
   type ApplyIssueLifecycleCommandInput,

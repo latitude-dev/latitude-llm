@@ -42,9 +42,6 @@ export const ESCALATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
  */
 export const ESCALATION_RECHECK_DELAY_MS = 60 * 60 * 1000
 
-/** An issue with no occurrences in this many days is auto-resolved. */
-export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
-
 // ---------------------------------------------------------------------------
 // Centroid configuration
 // ---------------------------------------------------------------------------

@@ -1,6 +1,13 @@
 import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import { type ChSqlClient, IssueId, OrganizationId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import {
+  type ChSqlClient,
+  IssueId,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  type SqlClient,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { IssueNotFoundForAssignmentError } from "../errors.ts"
 import { getEscalationExitThreshold, getEscalationOccurrenceThreshold, isIssueNew } from "../helpers.ts"
@@ -22,36 +29,49 @@ export interface CheckIssueEscalationResult {
 export type CheckIssueEscalationError = RepositoryError | IssueNotFoundForAssignmentError
 
 /**
- * Reify the (otherwise read-time-derived) escalating state on an issue.
+ * Decide whether an issue's escalation state has transitioned and emit the
+ * matching event. The "currently escalating" truth lives on the
+ * `alert_incidents` table — read here via `IssueRepository.findById`'s
+ * joined `lifecycle.isEscalating` flag — and on/off transitions are
+ * actuated by emitting `IssueEscalated` / `IssueEscalationEnded`. The
+ * downstream alert-incidents worker is what creates / closes the
+ * `alert_incidents` row, so this use case never writes the issue itself.
  *
- * Entry: previously not escalating, the issue is no longer "new", and
- * `recentOccurrences >= entryThreshold`. Sets `escalatedAt = now`, emits
- * `IssueEscalated`.
+ * Entry: not currently escalating, the issue is no longer "new", and
+ * `recentOccurrences >= entryThreshold`.
  *
- * Exit: previously escalating, `recentOccurrences < exitThreshold` (lower
- * than the entry threshold by `ESCALATION_EXIT_THRESHOLD_FACTOR` to prevent
- * flapping at the boundary). Clears `escalatedAt`, emits `IssueEscalationEnded`.
+ * Exit: currently escalating and `recentOccurrences < exitThreshold`
+ * (lower than entry by `ESCALATION_EXIT_THRESHOLD_FACTOR` to prevent
+ * flapping). Sustained-but-not-rising volume keeps the incident open
+ * until the rolling baseline catches up.
  *
- * The `isIssueNew` guard mirrors `deriveIssueLifecycleStates`: new issues
- * have no real baseline to compare against (the baseline window is days
- * 1–8 ago, which hasn't filled in yet), so any volume above the floor
- * would falsely trip the threshold. The discrete `issue.new` alert covers
- * that case.
+ * The `isIssueNew` guard mirrors `deriveIssueLifecycleStates` — new issues
+ * have no real baseline (the baseline window is days 1–8 ago, not yet
+ * filled in), so any volume above the floor would falsely trip entry.
  *
- * Idempotent: the stored `escalatedAt` field gates re-emission, mirroring
- * the regression-detection pattern in `assign-score-to-issue.ts`.
+ * Idempotent: the open `issue.escalating` row in `alert_incidents` (read
+ * via the lifecycle flag) gates re-emission. A re-run after a transition
+ * sees the flipped state and no-ops.
  */
 export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
-    const sqlClient = yield* SqlClient
+    const issueRepository = yield* IssueRepository
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+    const outboxEventWriter = yield* OutboxEventWriter
 
-    // Aggregate is read from ClickHouse outside the Postgres transaction —
-    // it's a read-only analytics query that doesn't need transactional
-    // consistency with the issue write below.
+    const issueWithLifecycle = yield* issueRepository
+      .findById(IssueId(input.issueId))
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
+        ),
+      )
+
+    const wasEscalating = issueWithLifecycle.lifecycle.isEscalating
+
     const aggregates = yield* scoreAnalyticsRepository.aggregateByIssues({
       organizationId: OrganizationId(input.organizationId),
       projectId: ProjectId(input.projectId),
@@ -60,73 +80,54 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
     const aggregate = aggregates[0]
     const recent = aggregate?.recentOccurrences ?? 0
     const baseline = aggregate?.baselineAvgOccurrences ?? 0
+    const firstSeenAt = aggregate?.firstSeenAt ?? issueWithLifecycle.createdAt
 
     const entryThreshold = getEscalationOccurrenceThreshold(baseline)
     const exitThreshold = getEscalationExitThreshold(baseline)
+    const now = new Date()
 
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
-        const outboxEventWriter = yield* OutboxEventWriter
+    if (!wasEscalating && !isIssueNew(firstSeenAt, now) && recent >= entryThreshold) {
+      yield* outboxEventWriter.write({
+        eventName: "IssueEscalated",
+        aggregateType: "issue",
+        aggregateId: issueWithLifecycle.id,
+        organizationId: issueWithLifecycle.organizationId,
+        payload: {
+          organizationId: issueWithLifecycle.organizationId,
+          projectId: issueWithLifecycle.projectId,
+          issueId: issueWithLifecycle.id,
+          escalatedAt: now.toISOString(),
+        },
+      })
+      return {
+        transition: "entered",
+        currentlyEscalating: true,
+      } satisfies CheckIssueEscalationResult
+    }
 
-        const issue = yield* issueRepository
-          .findByIdForUpdate(IssueId(input.issueId))
-          .pipe(
-            Effect.catchTag("NotFoundError", () =>
-              Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
-            ),
-          )
+    if (wasEscalating && recent < exitThreshold) {
+      yield* outboxEventWriter.write({
+        eventName: "IssueEscalationEnded",
+        aggregateType: "issue",
+        aggregateId: issueWithLifecycle.id,
+        organizationId: issueWithLifecycle.organizationId,
+        payload: {
+          organizationId: issueWithLifecycle.organizationId,
+          projectId: issueWithLifecycle.projectId,
+          issueId: issueWithLifecycle.id,
+          endedAt: now.toISOString(),
+        },
+      })
+      return {
+        transition: "exited",
+        currentlyEscalating: false,
+      } satisfies CheckIssueEscalationResult
+    }
 
-        const wasEscalating = issue.escalatedAt !== null
-        const now = new Date()
-        const firstSeenAt = aggregate?.firstSeenAt ?? issue.createdAt
-
-        if (!wasEscalating && !isIssueNew(firstSeenAt, now) && recent >= entryThreshold) {
-          yield* issueRepository.save({ ...issue, escalatedAt: now, updatedAt: now })
-          yield* outboxEventWriter.write({
-            eventName: "IssueEscalated",
-            aggregateType: "issue",
-            aggregateId: issue.id,
-            organizationId: issue.organizationId,
-            payload: {
-              organizationId: issue.organizationId,
-              projectId: issue.projectId,
-              issueId: issue.id,
-              escalatedAt: now.toISOString(),
-            },
-          })
-          return {
-            transition: "entered",
-            currentlyEscalating: true,
-          } satisfies CheckIssueEscalationResult
-        }
-
-        if (wasEscalating && recent < exitThreshold) {
-          yield* issueRepository.save({ ...issue, escalatedAt: null, updatedAt: now })
-          yield* outboxEventWriter.write({
-            eventName: "IssueEscalationEnded",
-            aggregateType: "issue",
-            aggregateId: issue.id,
-            organizationId: issue.organizationId,
-            payload: {
-              organizationId: issue.organizationId,
-              projectId: issue.projectId,
-              issueId: issue.id,
-              endedAt: now.toISOString(),
-            },
-          })
-          return {
-            transition: "exited",
-            currentlyEscalating: false,
-          } satisfies CheckIssueEscalationResult
-        }
-
-        return {
-          transition: "none",
-          currentlyEscalating: wasEscalating,
-        } satisfies CheckIssueEscalationResult
-      }),
-    )
+    return {
+      transition: "none",
+      currentlyEscalating: wasEscalating,
+    } satisfies CheckIssueEscalationResult
   }).pipe(Effect.withSpan("issues.checkIssueEscalation")) as Effect.Effect<
     CheckIssueEscalationResult,
     CheckIssueEscalationError,

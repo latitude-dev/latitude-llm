@@ -51,7 +51,7 @@ describe("resolveMatchedIssueUseCase", () => {
     const { repository: issueRepository } = createFakeIssueRepository([issue], {
       findByUuid: (input) => {
         findByUuidCalls.push(input)
-        return Effect.succeed(issue)
+        return Effect.succeed({ ...issue, lifecycle: { isEscalating: false, isRegressed: false } })
       },
     })
 

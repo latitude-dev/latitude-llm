@@ -5,7 +5,7 @@ import { ChSqlClient, IssueId, OrganizationId, SqlClient, type SqlClientShape } 
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS, ESCALATION_MIN_OCCURRENCES_THRESHOLD } from "../constants.ts"
+import { ESCALATION_MIN_OCCURRENCES_THRESHOLD } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid, getEscalationExitThreshold, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -15,8 +15,6 @@ import { checkIssueEscalationUseCase } from "./check-issue-escalation.ts"
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 const issueId = "iiiiiiiiiiiiiiiiiiiiiiii"
-
-void CENTROID_EMBEDDING_DIMENSIONS // imported for completeness
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId(issueId),
@@ -47,13 +45,15 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 
 const provideTestLayers = (params: {
   readonly issue: Issue
+  readonly isEscalating?: boolean
   readonly recentOccurrences: number
   readonly baselineAvgOccurrences?: number
   readonly events: OutboxWriteEvent[]
-  readonly issueOverrides?: Parameters<typeof createFakeIssueRepository>[1]
   readonly firstSeenAt?: Date
 }) => {
-  const { repository: issueRepository, issues } = createFakeIssueRepository([params.issue], params.issueOverrides)
+  const { repository: issueRepository } = createFakeIssueRepository([params.issue], undefined, {
+    lifecycle: new Map([[params.issue.id, { isEscalating: params.isEscalating ?? false, isRegressed: false }]]),
+  })
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
     aggregateByIssues: () =>
       Effect.succeed([
@@ -69,7 +69,6 @@ const provideTestLayers = (params: {
   })
 
   return {
-    issues,
     apply: <A, E>(
       effect: Effect.Effect<
         A,
@@ -93,17 +92,13 @@ const provideTestLayers = (params: {
 }
 
 describe("checkIssueEscalationUseCase", () => {
-  it("enters escalation when recent crosses entryThreshold", async () => {
-    // Issue is well past the new-issue window so the isNew guard does not block entry.
-    const issue = makeIssue({
-      escalatedAt: null,
-      createdAt: new Date("2026-04-01T10:00:00.000Z"),
-    })
+  it("emits IssueEscalated when an older issue crosses the entryThreshold", async () => {
+    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
-    const recent = getEscalationOccurrenceThreshold(0) // baseline 0 → entry = 20
-    const { issues, apply } = provideTestLayers({
+    const { apply } = provideTestLayers({
       issue,
-      recentOccurrences: recent,
+      isEscalating: false,
+      recentOccurrences: getEscalationOccurrenceThreshold(0),
       events,
       firstSeenAt: new Date("2026-04-01T10:00:00.000Z"),
     })
@@ -112,7 +107,6 @@ describe("checkIssueEscalationUseCase", () => {
 
     expect(result.transition).toBe("entered")
     expect(result.currentlyEscalating).toBe(true)
-    expect(issues.get(issueId)?.escalatedAt).not.toBeNull()
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
       eventName: "IssueEscalated",
@@ -122,17 +116,13 @@ describe("checkIssueEscalationUseCase", () => {
     })
   })
 
-  it("does not enter escalation while the issue is still new even if recent crosses entryThreshold", async () => {
-    // New issue (firstSeenAt within NEW_ISSUE_AGE_DAYS) — the isNew guard
-    // should block the entry transition. Mirrors deriveIssueLifecycleStates
-    // and avoids alerting on issues whose baseline window has not filled in.
-    const issue = makeIssue({
-      escalatedAt: null,
-      createdAt: new Date("2026-05-05T10:00:00.000Z"),
-    })
+  it("does not emit IssueEscalated while the issue is still new", async () => {
+    // firstSeenAt within NEW_ISSUE_AGE_DAYS of now → isNew guard blocks entry.
+    const issue = makeIssue({ createdAt: new Date("2026-05-05T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
-    const { issues, apply } = provideTestLayers({
+    const { apply } = provideTestLayers({
       issue,
+      isEscalating: false,
       recentOccurrences: getEscalationOccurrenceThreshold(0) + 50,
       events,
       firstSeenAt: new Date("2026-05-05T10:00:00.000Z"),
@@ -142,15 +132,14 @@ describe("checkIssueEscalationUseCase", () => {
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(false)
-    expect(issues.get(issueId)?.escalatedAt).toBeNull()
     expect(events).toHaveLength(0)
   })
 
-  it("does not transition when not escalating and recent below entryThreshold", async () => {
-    const issue = makeIssue({ escalatedAt: null })
+  it("does not transition when not escalating and recent is below entryThreshold", async () => {
     const events: OutboxWriteEvent[] = []
-    const { issues, apply } = provideTestLayers({
-      issue,
+    const { apply } = provideTestLayers({
+      issue: makeIssue(),
+      isEscalating: false,
       recentOccurrences: ESCALATION_MIN_OCCURRENCES_THRESHOLD - 1,
       events,
     })
@@ -159,21 +148,22 @@ describe("checkIssueEscalationUseCase", () => {
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(false)
-    expect(issues.get(issueId)?.escalatedAt).toBeNull()
     expect(events).toHaveLength(0)
   })
 
-  it("exits escalation when recent drops below exitThreshold", async () => {
-    const issue = makeIssue({ escalatedAt: new Date("2026-05-06T10:00:00.000Z") })
+  it("emits IssueEscalationEnded when recent drops below exitThreshold", async () => {
     const events: OutboxWriteEvent[] = []
-    const exitT = getEscalationExitThreshold(0)
-    const { issues, apply } = provideTestLayers({ issue, recentOccurrences: exitT - 1, events })
+    const { apply } = provideTestLayers({
+      issue: makeIssue(),
+      isEscalating: true,
+      recentOccurrences: getEscalationExitThreshold(0) - 1,
+      events,
+    })
 
     const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
 
     expect(result.transition).toBe("exited")
     expect(result.currentlyEscalating).toBe(false)
-    expect(issues.get(issueId)?.escalatedAt).toBeNull()
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
       eventName: "IssueEscalationEnded",
@@ -184,9 +174,8 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("holds the escalating state inside the hysteresis band (between exit and entry)", async () => {
-    const issue = makeIssue({ escalatedAt: new Date("2026-05-06T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
-    // Use a non-zero baseline so exit < entry (with baseline=0 they're 14 vs 20).
+    // baseline > 0 so exit < entry strictly (with baseline=0 they're 14 vs 20).
     const baseline = 5
     const entry = getEscalationOccurrenceThreshold(baseline)
     const exit = getEscalationExitThreshold(baseline)
@@ -194,8 +183,9 @@ describe("checkIssueEscalationUseCase", () => {
     expect(between).toBeGreaterThanOrEqual(exit)
     expect(between).toBeLessThan(entry)
 
-    const { issues, apply } = provideTestLayers({
-      issue,
+    const { apply } = provideTestLayers({
+      issue: makeIssue(),
+      isEscalating: true,
       recentOccurrences: between,
       baselineAvgOccurrences: baseline,
       events,
@@ -205,16 +195,14 @@ describe("checkIssueEscalationUseCase", () => {
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(true)
-    expect(issues.get(issueId)?.escalatedAt).not.toBeNull()
     expect(events).toHaveLength(0)
   })
 
-  it("does not re-emit when already escalating and still above entry", async () => {
-    const previouslyEscalatedAt = new Date("2026-05-06T10:00:00.000Z")
-    const issue = makeIssue({ escalatedAt: previouslyEscalatedAt })
+  it("does not re-emit IssueEscalated when already escalating and still above entry", async () => {
     const events: OutboxWriteEvent[] = []
-    const { issues, apply } = provideTestLayers({
-      issue,
+    const { apply } = provideTestLayers({
+      issue: makeIssue(),
+      isEscalating: true,
       recentOccurrences: getEscalationOccurrenceThreshold(0) + 5,
       events,
     })
@@ -223,7 +211,6 @@ describe("checkIssueEscalationUseCase", () => {
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(true)
-    expect(issues.get(issueId)?.escalatedAt?.getTime()).toBe(previouslyEscalatedAt.getTime())
     expect(events).toHaveLength(0)
   })
 })

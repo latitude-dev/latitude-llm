@@ -1,6 +1,5 @@
-import type { IssueOccurrenceAggregate, ScoreSource } from "@domain/scores"
+import type { ScoreSource } from "@domain/scores"
 import {
-  AUTO_RESOLVE_INACTIVITY_DAYS,
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
@@ -185,7 +184,9 @@ export const normalizeEmbedding = (embedding: readonly number[]): number[] => {
 
 export interface DeriveIssueLifecycleStatesInput {
   readonly issue: Issue
-  readonly occurrence?: IssueOccurrenceAggregate | null
+  /** Lifecycle flags joined from `alert_incidents` by `IssueRepository` reads. */
+  readonly isEscalating: boolean
+  readonly isRegressed: boolean
   readonly now?: Date
 }
 
@@ -216,34 +217,31 @@ export const isIssueNew = (firstSeenAt: Date, now: Date = new Date()): boolean =
 
 export const deriveIssueLifecycleStates = ({
   issue,
-  occurrence,
+  isEscalating,
+  isRegressed,
   now = new Date(),
 }: DeriveIssueLifecycleStatesInput): readonly IssueStateValue[] => {
-  const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
-  const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
   const states = new Set<IssueStateValue>()
 
-  if (isIssueNew(firstSeenAt, now)) {
+  if (isIssueNew(issue.createdAt, now)) {
     states.add(IssueState.New)
   }
 
-  // Escalating reads from the stored `escalatedAt` column rather than
-  // recomputing from the occurrence aggregate. The worker's
-  // `checkIssueEscalationUseCase` is the only writer, applies hysteresis,
-  // and gates on `isIssueNew` — trusting the stored value here keeps the
-  // read path consistent with what the alerts pipeline observed.
-  if (issue.escalatedAt !== null) {
+  // Escalating and regressed flags are sourced from `alert_incidents` rows
+  // joined onto the issue read by `IssueRepository`. They're authoritative
+  // — consumers don't recompute them from the occurrence aggregate.
+  if (isEscalating) {
     states.add(IssueState.Escalating)
   }
 
-  // The `Regressed` state is no longer derived. Regression is reified at
-  // write time in `assign-score-to-issue` (clears `resolvedAt`, emits
-  // `IssueRegressed`), and the historical record lives in `alert_incidents`.
-  // Consumers that need to surface "this issue has regressed recently"
-  // should query that table.
-  const isResolvedByInactivity =
-    lastSeenAt.getTime() < now.getTime() - AUTO_RESOLVE_INACTIVITY_DAYS * MILLISECONDS_PER_DAY
-  if (issue.resolvedAt !== null || isResolvedByInactivity) {
+  // Regressed only when the issue has actually-active regression history
+  // AND the user hasn't re-resolved it. `resolvedAt` set wins: it means
+  // the user has acknowledged the regression by resolving again.
+  if (issue.resolvedAt === null && isRegressed) {
+    states.add(IssueState.Regressed)
+  }
+
+  if (issue.resolvedAt !== null) {
     states.add(IssueState.Resolved)
   }
 

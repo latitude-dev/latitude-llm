@@ -1,4 +1,3 @@
-import type { IssueOccurrenceAggregate } from "@domain/scores"
 import { IssueId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_HALF_LIFE_SECONDS, CENTROID_SOURCE_WEIGHTS } from "./constants.ts"
@@ -50,16 +49,6 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   ignoredAt: null,
   createdAt: new Date("2026-04-01T00:00:00.000Z"),
   updatedAt: new Date("2026-04-01T00:00:00.000Z"),
-  ...overrides,
-})
-
-const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): IssueOccurrenceAggregate => ({
-  issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  totalOccurrences: 3,
-  recentOccurrences: 1,
-  baselineAvgOccurrences: 1,
-  firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
-  lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
   ...overrides,
 })
 
@@ -207,92 +196,71 @@ describe("issue lifecycle helpers", () => {
     expect(getEscalationOccurrenceThreshold(16)).toBe(22)
   })
 
-  it("does not mark new issues as escalating even when they exceed the escalation threshold", () => {
+  it("marks recently created issues as new", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-04-05T08:00:00.000Z"),
         updatedAt: new Date("2026-04-05T08:00:00.000Z"),
         clusteredAt: new Date("2026-04-05T08:00:00.000Z"),
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-04-05T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 20,
-        baselineAvgOccurrences: 2,
-      }),
+      isEscalating: false,
+      isRegressed: false,
       now,
     })
 
     expect(states).toEqual([IssueState.New])
   })
 
-  it("marks issues with escalatedAt set as escalating", () => {
+  it("marks the issue as escalating when the lifecycle flag is true", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-20T08:00:00.000Z"),
         updatedAt: new Date("2026-03-20T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
-        escalatedAt: new Date("2026-04-09T18:00:00.000Z"),
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 20,
-        baselineAvgOccurrences: 2,
-      }),
+      isEscalating: true,
+      isRegressed: false,
       now,
     })
 
     expect(states).toEqual([IssueState.Escalating])
   })
 
-  it("does not derive escalating from runtime threshold when escalatedAt is null", () => {
+  it("does not mark as escalating when the flag is false", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-20T08:00:00.000Z"),
         updatedAt: new Date("2026-03-20T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
-        escalatedAt: null,
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 100,
-        baselineAvgOccurrences: 2,
-      }),
+      isEscalating: false,
+      isRegressed: false,
       now,
     })
 
     expect(states).toEqual([IssueState.Ongoing])
   })
 
-  it("marks issues resolved after 14 days of inactivity", () => {
+  it("marks the issue as regressed when isRegressed is true and resolvedAt is null", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-01T08:00:00.000Z"),
         updatedAt: new Date("2026-03-01T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
+        resolvedAt: null,
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-03-01T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-03-20T08:00:00.000Z"),
-        recentOccurrences: 0,
-        baselineAvgOccurrences: 0,
-      }),
+      isEscalating: false,
+      isRegressed: true,
       now,
     })
 
-    expect(states).toEqual([IssueState.Resolved])
+    expect(states).toEqual([IssueState.Regressed])
   })
 
-  it("does not derive regressed state — regression is reified at write time and lives in alert_incidents", () => {
-    // Pre-PR1 derive returned Regressed when an issue had `resolvedAt` set
-    // and activity after that timestamp. Post-PR1, the assign-score-to-issue
-    // path clears `resolvedAt` when regression fires and emits an
-    // `IssueRegressed` event consumed by the alerts pipeline. The derive
-    // helper now treats issues with `resolvedAt` set as Resolved
-    // unconditionally; "this issue regressed recently" is answered by
-    // querying alert_incidents.
+  it("treats explicitly resolved issues as resolved even if a regression incident exists", () => {
+    // resolvedAt being set means the user has acknowledged the regression
+    // by resolving again. Take that signal as authoritative — the regression
+    // history still lives in alert_incidents for surfacing separately.
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-03-01T08:00:00.000Z"),
@@ -300,19 +268,15 @@ describe("issue lifecycle helpers", () => {
         clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
         resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-03-01T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
-        recentOccurrences: 0,
-        baselineAvgOccurrences: 0,
-      }),
+      isEscalating: false,
+      isRegressed: true,
       now,
     })
 
     expect(states).toEqual([IssueState.Resolved])
   })
 
-  it("falls back to issue timestamps when analytics have not caught up yet", () => {
+  it("derives both new and ignored when the issue is brand new and ignored", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-04-06T08:00:00.000Z"),
@@ -320,7 +284,8 @@ describe("issue lifecycle helpers", () => {
         clusteredAt: new Date("2026-04-06T08:00:00.000Z"),
         ignoredAt: new Date("2026-04-08T08:00:00.000Z"),
       }),
-      occurrence: null,
+      isEscalating: false,
+      isRegressed: false,
       now,
     })
 
@@ -334,12 +299,8 @@ describe("issue lifecycle helpers", () => {
         updatedAt: new Date("2026-03-15T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-15T08:00:00.000Z"),
       }),
-      occurrence: makeOccurrence({
-        firstSeenAt: new Date("2026-03-15T08:00:00.000Z"),
-        lastSeenAt: new Date("2026-04-08T08:00:00.000Z"),
-        recentOccurrences: 2,
-        baselineAvgOccurrences: 1,
-      }),
+      isEscalating: false,
+      isRegressed: false,
       now,
     })
 
