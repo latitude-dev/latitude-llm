@@ -199,9 +199,7 @@ describe("domain-events dispatcher", () => {
     expect(throttled?.options?.throttleMs).toBe(ESCALATION_CHECK_THROTTLE_MS)
     expect(throttled?.options?.debounceMs).toBeUndefined()
 
-    const debounced = escalationChecks.find(
-      (p) => p.options?.dedupeKey === "issues:check-escalation-recheck:issue-42",
-    )
+    const debounced = escalationChecks.find((p) => p.options?.dedupeKey === "issues:check-escalation-recheck:issue-42")
     expect(debounced?.options?.debounceMs).toBe(ESCALATION_RECHECK_DELAY_MS)
     expect(debounced?.options?.throttleMs).toBeUndefined()
   })
