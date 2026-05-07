@@ -348,6 +348,11 @@ function createTaskDefinition(
       secrets["google-oauth-client-secret"].arn,
       secrets["github-oauth-client-id"].arn,
       secrets["github-oauth-client-secret"].arn,
+      secrets["stripe-secret-key"].arn,
+      secrets["stripe-webhook-secret"].arn,
+      secrets["stripe-pro-price-id"].arn,
+      secrets["stripe-pro-overage-price-id"].arn,
+      secrets["stripe-pro-overage-meter-event-name"].arn,
       secrets["temporal-api-key"].arn,
       secrets["datadog-api-key"].arn,
       secrets["datadog-site"].arn,
@@ -387,6 +392,11 @@ function createTaskDefinition(
         googleOauthClientSecretArn,
         githubOauthClientIdArn,
         githubOauthClientSecretArn,
+        stripeSecretKeyArn,
+        stripeWebhookSecretArn,
+        stripeProPriceIdArn,
+        stripeProOveragePriceIdArn,
+        stripeProOverageMeterEventNameArn,
         temporalApiKeyArn,
         datadogApiKeyArn,
         datadogSiteArn,
@@ -508,6 +518,18 @@ function createTaskDefinition(
 
         const temporalSecret = { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }
 
+        const stripeSelfServeSecrets = [
+          { name: "LAT_STRIPE_SECRET_KEY", valueFrom: stripeSecretKeyArn },
+          { name: "LAT_STRIPE_WEBHOOK_SECRET", valueFrom: stripeWebhookSecretArn },
+          { name: "LAT_STRIPE_PRO_PRICE_ID", valueFrom: stripeProPriceIdArn },
+        ]
+
+        const stripeOverageSecrets = [
+          { name: "LAT_STRIPE_SECRET_KEY", valueFrom: stripeSecretKeyArn },
+          { name: "LAT_STRIPE_PRO_OVERAGE_PRICE_ID", valueFrom: stripeProOveragePriceIdArn },
+          { name: "LAT_STRIPE_PRO_OVERAGE_METER_EVENT_NAME", valueFrom: stripeProOverageMeterEventNameArn },
+        ]
+
         const bullBoardSecrets = [
           { name: "LAT_BULL_BOARD_USERNAME", valueFrom: bullBoardUsernameArn },
           { name: "LAT_BULL_BOARD_PASSWORD", valueFrom: bullBoardPasswordArn },
@@ -519,8 +541,8 @@ function createTaskDefinition(
         ]
 
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          web: [...oauthSecrets, temporalSecret, ...supportSecrets],
-          workflows: [temporalSecret],
+          web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets],
+          workflows: [temporalSecret, ...stripeOverageSecrets],
           workers: [temporalSecret, ...bullBoardSecrets],
         }
 
