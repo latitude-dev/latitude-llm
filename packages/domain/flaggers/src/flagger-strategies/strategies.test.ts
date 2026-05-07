@@ -571,7 +571,10 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
 
     it("no-match when assistant has tool call WITH empty text part", () => {
       // This is the key regression test: previously this would incorrectly match as "empty response"
-      const trace = makeTrace([user("check the weather"), assistantToolCallWithText("get_weather", { city: "NYC" }, "")])
+      const trace = makeTrace([
+        user("check the weather"),
+        assistantToolCallWithText("get_weather", { city: "NYC" }, ""),
+      ])
       expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
     })
 
