@@ -34,11 +34,11 @@ export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
 export const ESCALATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
 
 /**
- * Delay for the self-rescheduling escalation recheck enqueued by the
- * `issues:checkEscalation` worker while an issue is currently escalating.
- * Catches escalation exits when scoring activity stops (no more push
- * triggers): the recent occurrence count organically drops as time passes,
- * and this delayed recheck eventually detects the exit.
+ * Debounce window for the escalation recheck published from
+ * `ScoreAssignedToIssue`. Each occurrence extends the timer; the recheck
+ * fires only after this much quiet on the same issue, by which point the
+ * recent occurrence count has had time to organically drop. Catches
+ * escalation exits when scoring activity stops (no more push triggers).
  */
 export const ESCALATION_RECHECK_DELAY_MS = 60 * 60 * 1000
 

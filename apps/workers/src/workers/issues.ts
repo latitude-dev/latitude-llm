@@ -1,7 +1,6 @@
 import {
   checkIssueEscalationUseCase,
   discoverIssueUseCase,
-  ESCALATION_RECHECK_DELAY_MS,
   refreshIssueDetailsUseCase,
   removeScoreFromIssueUseCase,
 } from "@domain/issues"
@@ -106,10 +105,10 @@ export const createIssuesWorker = async ({
         Effect.asVoid,
       ),
     // Reify the (otherwise read-time-derived) escalating state on the issue
-    // and emit transition events. While the issue is currently escalating,
-    // schedule a delayed self-recheck so escalation EXITS still get detected
-    // when scoring activity stops (no more push triggers, recent count
-    // organically drops below the exit threshold).
+    // and emit transition events. The handler is fan-out-driven — entries
+    // are caught by the throttled `issues:check-escalation` publish, exits
+    // by the debounced `issues:check-escalation-recheck` publish (both
+    // wired in `domain-events.ts` from `ScoreAssignedToIssue`).
     checkEscalation: (payload) =>
       checkIssueEscalationUseCase(payload).pipe(
         withPostgres(
@@ -118,19 +117,6 @@ export const createIssuesWorker = async ({
           OrganizationId(payload.organizationId),
         ),
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
-        // While the issue is currently escalating, schedule a self-recheck.
-        // `throttleMs` here is used as a "fire after N" delay (semantics: first
-        // publish on a fresh dedupeKey schedules for now+throttleMs, subsequent
-        // publishes within the window are dropped). Recurses naturally: each
-        // run that lands "still escalating" re-arms a fresh recheck.
-        Effect.tap((result) =>
-          result.currentlyEscalating
-            ? publisher.publish("issues", "checkEscalation", payload, {
-                dedupeKey: `issues:check-escalation-recheck:${payload.issueId}`,
-                throttleMs: ESCALATION_RECHECK_DELAY_MS,
-              })
-            : Effect.void,
-        ),
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info(
