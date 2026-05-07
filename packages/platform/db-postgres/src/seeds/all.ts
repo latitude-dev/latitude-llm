@@ -1,3 +1,4 @@
+import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
@@ -24,6 +25,9 @@ import type { Seeder } from "./types.ts"
 export const contentSeeders: readonly Seeder[] = [
   ...datasetSeeders,
   ...issueSeeders,
+  // Must run after issueSeeders — references the issue ids derived for
+  // each fixture and writes `alert_incidents` rows pointing at them.
+  ...alertIncidentSeeders,
   ...evaluationSeeders,
   ...simulationSeeders,
   ...scoreSeeders,

@@ -35,7 +35,7 @@ const NAMED_ISSUE_KEYS = [
   "flagger",
 ] as const
 
-const fixtureScopedId = (index: number, scope: SeedScope): string =>
+export const fixtureScopedId = (index: number, scope: SeedScope): string =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.cuid(`issue:${NAMED_ISSUE_KEYS[index]}`)
     : scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`)
@@ -44,6 +44,11 @@ const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.uuid(`issue:${NAMED_ISSUE_KEYS[index]}:uuid`)
     : scope.uuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}:uuid`)
+
+/** Stable key per fixture index — used to namespace cross-seeder ids
+ * (e.g. alert_incidents rows that reference these issues). */
+export const fixtureScopedKey = (index: number): string =>
+  index < NAMED_ISSUE_KEYS.length ? (NAMED_ISSUE_KEYS[index] as string) : `extra:${index - NAMED_ISSUE_KEYS.length}`
 
 function hashString(input: string): number {
   let hash = 1779033703 ^ input.length
@@ -189,7 +194,7 @@ function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueC
   }
 }
 
-function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
+export function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
   return {
     createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
     clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
@@ -241,7 +246,12 @@ function buildIssueRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    escalatedAt: fixtureDates.escalatedAt,
+    // escalatedAt is intentionally not written: the column is dormant and
+    // "currently escalating" is sourced from open `alert_incidents` rows
+    // by `IssueRepository`. Escalation seeding lives in the alert-incidents
+    // seeder, which inserts an open `issue.escalating` row for fixtures
+    // whose `escalatedDaysAgo !== null`.
+    escalatedAt: null,
     resolvedAt: fixtureDates.resolvedAt,
     ignoredAt: fixtureDates.ignoredAt,
     createdAt,
