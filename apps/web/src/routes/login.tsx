@@ -148,7 +148,9 @@ function LoginPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-1 mt-1 bg-primary-muted hover:bg-primary-muted/80 transition-colors rounded-xl py-0.5 pl-3 pr-1.5"
           >
-            <Text.H6 color="primary" weight="medium">Latitude V1 is still available, click to access</Text.H6>
+            <Text.H6 color="primary" weight="medium">
+              Latitude V1 is still available, click to access
+            </Text.H6>
             <ArrowRight className="h-3 w-3 text-primary shrink-0" />
           </a>
         </div>
@@ -253,7 +255,6 @@ function LoginPage() {
             .
           </Text.H6>
         </div>
-
       </div>
     </div>
   )
