@@ -104,11 +104,15 @@ export const createIssuesWorker = async ({
         ),
         Effect.asVoid,
       ),
-    // Reify the (otherwise read-time-derived) escalating state on the issue
-    // and emit transition events. The handler is fan-out-driven — entries
-    // are caught by the throttled `issues:check-escalation` publish, exits
-    // by the debounced `issues:check-escalation-recheck` publish (both
-    // wired in `domain-events.ts` from `ScoreAssignedToIssue`).
+    // Evaluate escalation state from the analytics aggregate + the current
+    // `alert_incidents`-derived `lifecycle.isEscalating` flag, and emit the
+    // matching transition event. The use case does not write the issue —
+    // the open/closed `alert_incidents` row is the stored truth. The
+    // alert-incidents worker inserts/closes that row in response to
+    // `IssueEscalated` / `IssueEscalationEnded`. Fan-out-driven: entries are
+    // caught by the throttled `issues:check-escalation` publish, exits by
+    // the debounced `issues:check-escalation-recheck` publish (both wired
+    // in `domain-events.ts` from `ScoreAssignedToIssue`).
     checkEscalation: (payload) =>
       checkIssueEscalationUseCase(payload).pipe(
         withPostgres(

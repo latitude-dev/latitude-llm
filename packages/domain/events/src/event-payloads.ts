@@ -68,10 +68,11 @@ export interface EventPayloads {
   }
   /**
    * Emitted by `checkIssueEscalationUseCase` when an issue transitions into
-   * the escalating state. The use case sets `issues.escalated_at` in the same
-   * transaction (reifying the derived state as a stored fact); a re-run won't
-   * re-emit because the prior condition no longer holds. Drives the
-   * `issue.escalating` incident's open transition.
+   * the escalating state. The use case does not write the issue itself —
+   * idempotency comes from `IssueRepository`'s joined `lifecycle.isEscalating`
+   * flag (which reads the open `alert_incidents` row). Drives the
+   * `issue.escalating` incident's open transition (the alert-incidents
+   * worker inserts the new row).
    */
   IssueEscalated: {
     readonly organizationId: string
@@ -81,9 +82,10 @@ export interface EventPayloads {
   }
   /**
    * Emitted by `checkIssueEscalationUseCase` when an escalating issue's
-   * recent occurrence count drops below the hysteresis exit threshold. The
-   * use case clears `issues.escalated_at` in the same transaction. Drives
-   * the `issue.escalating` incident's close transition (`ended_at` update).
+   * recent occurrence count drops below the hysteresis exit threshold.
+   * Drives the `issue.escalating` incident's close transition — the
+   * alert-incidents worker sets `ended_at` on the open row, which is what
+   * flips `lifecycle.isEscalating` back to `false` on subsequent reads.
    */
   IssueEscalationEnded: {
     readonly organizationId: string
