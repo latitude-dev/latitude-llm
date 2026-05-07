@@ -110,8 +110,8 @@ export const stagingConfig: EnvironmentConfig = {
     services: [
       {
         name: "web",
-        cpu: 256,
-        memory: 512,
+        cpu: 512,
+        memory: 1024,
         port: 8080,
         healthCheckPath: "/api/health",
         desiredCount: 1,
@@ -140,8 +140,8 @@ export const stagingConfig: EnvironmentConfig = {
       },
       {
         name: "workers",
-        cpu: 512,
-        memory: 1024,
+        cpu: 1024,
+        memory: 2048,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
@@ -211,8 +211,8 @@ export const productionConfig: EnvironmentConfig = {
     services: [
       {
         name: "web",
-        cpu: 512,
-        memory: 1024,
+        cpu: 1024,
+        memory: 2048,
         port: 8080,
         healthCheckPath: "/api/health",
         desiredCount: 1,
@@ -241,8 +241,8 @@ export const productionConfig: EnvironmentConfig = {
       },
       {
         name: "workers",
-        cpu: 512,
-        memory: 1024,
+        cpu: 1024,
+        memory: 2048,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
