@@ -33,6 +33,7 @@
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/marketing": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

@@ -1,0 +1,58 @@
+import {
+  ALERT_INCIDENT_KINDS,
+  cuidSchema,
+  notificationIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+} from "@domain/shared"
+import { z } from "zod"
+
+/**
+ * High-level system identifier for the notification. Each type owns its own
+ * `payload` shape and (optionally) a `source_id` pointing at an entity.
+ *
+ * Adding a new system that needs to surface notifications = add a new value
+ * here + a renderer entry on the web side. The schema doesn't change.
+ */
+export const NOTIFICATION_TYPES = ["incident", "custom_message"] as const
+export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES)
+export type NotificationType = z.infer<typeof notificationTypeSchema>
+
+/**
+ * Discriminator for incident notifications: opening vs closing the incident.
+ * The same `alert_incident` row produces one `opened` and (for sustained
+ * kinds) one `closed` notification, distinguished only by this field.
+ */
+export const INCIDENT_NOTIFICATION_EVENTS = ["opened", "closed"] as const
+export const incidentNotificationEventSchema = z.enum(INCIDENT_NOTIFICATION_EVENTS)
+export type IncidentNotificationEvent = z.infer<typeof incidentNotificationEventSchema>
+
+export const incidentNotificationPayloadSchema = z.object({
+  event: incidentNotificationEventSchema,
+  incidentKind: z.enum(ALERT_INCIDENT_KINDS),
+})
+export type IncidentNotificationPayload = z.infer<typeof incidentNotificationPayloadSchema>
+
+export const customMessageNotificationPayloadSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  link: z.string().optional(),
+})
+export type CustomMessageNotificationPayload = z.infer<typeof customMessageNotificationPayloadSchema>
+
+/**
+ * Storage shape — `payload` is loosely typed at this layer since the row is
+ * polymorphic on `type`. Per-type narrowing happens at the renderer / use
+ * case via the discriminated payload schemas above.
+ */
+export const notificationSchema = z.object({
+  id: notificationIdSchema,
+  organizationId: organizationIdSchema,
+  userId: userIdSchema,
+  type: notificationTypeSchema,
+  sourceId: cuidSchema.nullable(),
+  payload: z.record(z.string(), z.unknown()),
+  createdAt: z.date(),
+  seenAt: z.date().nullable(),
+})
+export type Notification = z.infer<typeof notificationSchema>

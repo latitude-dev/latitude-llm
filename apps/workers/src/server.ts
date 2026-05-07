@@ -48,6 +48,7 @@ import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createNotificationsWorker } from "./workers/notifications.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
@@ -170,6 +171,7 @@ const bootstrap = async () => {
     createUserDeletionWorker(ctx)
     createMarketingContactsWorker(ctx)
     createAlertIncidentsWorker(ctx)
+    createNotificationsWorker(ctx)
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })

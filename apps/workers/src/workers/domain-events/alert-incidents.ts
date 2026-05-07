@@ -51,9 +51,10 @@ const createIncidentFor = (
 }
 
 const closeIncidentFor = (
-  kind: AlertIncidentKind,
+  kind: "issue.escalating",
   payload: {
     readonly organizationId: string
+    readonly projectId: string
     readonly issueId: string
     readonly endedAt: Date
   },
@@ -62,6 +63,8 @@ const closeIncidentFor = (
 
   return closeAlertIncidentFromIssueEventUseCase({
     kind,
+    organizationId: payload.organizationId,
+    projectId: payload.projectId,
     issueId: payload.issueId,
     endedAt: payload.endedAt,
   }).pipe(
@@ -104,6 +107,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
     "issue-escalation-ended": (payload) =>
       closeIncidentFor("issue.escalating", {
         organizationId: payload.organizationId,
+        projectId: payload.projectId,
         issueId: payload.issueId,
         endedAt: new Date(payload.endedAt),
       }),
