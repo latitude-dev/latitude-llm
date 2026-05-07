@@ -1,6 +1,8 @@
 import type { FilterSet } from "@domain/shared"
 import type { TraceHistogramMetric } from "@domain/spans"
-import { cn, Skeleton, Text } from "@repo/ui"
+import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
+import { ChevronUp } from "lucide-react"
+import { useState } from "react"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS, type HistogramMetricDefinition } from "./histogram-metrics.ts"
 
@@ -51,11 +53,13 @@ export function GeneralAggregations({
   filters,
   selectedMetric,
   onMetricSelect,
+  onCollapse,
 }: {
   readonly projectId: string
   readonly filters: FilterSet
   readonly selectedMetric: TraceHistogramMetric
   readonly onMetricSelect: (metric: TraceHistogramMetric) => void
+  readonly onCollapse: () => void
 }) {
   const hasActiveFilters = Object.keys(filters).length > 0
   const filterOpts = hasActiveFilters ? { filters } : {}
@@ -79,6 +83,8 @@ export function GeneralAggregations({
     (id) => HISTOGRAM_METRIC_DEFINITIONS[id],
   )
 
+  const [showLeftFade, setShowLeftFade] = useState(false)
+
   const renderValue = (def: HistogramMetricDefinition): string => {
     if (def.id === "traces") return def.formatBucket(totalCount)
     if (!traceMetrics) return DASH
@@ -86,18 +92,32 @@ export function GeneralAggregations({
   }
 
   return (
-    <div className="flex flex-row flex-wrap gap-1 p-2">
-      {visibleMetrics.map((def) => (
-        <AggregationItem
-          key={def.id}
-          label={def.label}
-          value={renderValue(def)}
-          isLoading={loading}
-          isSelected={selectedMetric === def.id}
-          skeletonWidthClassName={def.cardSkeletonWidthClassName}
-          onClick={() => onMetricSelect(def.id)}
-        />
-      ))}
+    <div className="flex items-start gap-1 pr-2">
+      <div className="relative min-w-0 flex-1">
+        <div
+          className="flex flex-row gap-1 overflow-x-auto p-2"
+          onScroll={(e) => setShowLeftFade(e.currentTarget.scrollLeft > 0)}
+        >
+          {visibleMetrics.map((def) => (
+            <AggregationItem
+              key={def.id}
+              label={def.label}
+              value={renderValue(def)}
+              isLoading={loading}
+              isSelected={selectedMetric === def.id}
+              skeletonWidthClassName={def.cardSkeletonWidthClassName}
+              onClick={() => onMetricSelect(def.id)}
+            />
+          ))}
+        </div>
+        {showLeftFade && (
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-secondary to-transparent" />
+        )}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-secondary to-transparent" />
+      </div>
+      <Button variant="ghost" size="icon" onClick={onCollapse} aria-label="Collapse statistics" className="shrink-0">
+        <Icon icon={ChevronUp} size="sm" />
+      </Button>
     </div>
   )
 }
