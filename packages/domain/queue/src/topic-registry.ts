@@ -98,6 +98,18 @@ const _registry = {
       readonly regressedAt: string
       readonly triggerScoreId: string
     }
+    "issue-escalated": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly escalatedAt: string
+    }
+    "issue-escalation-ended": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly endedAt: string
+    }
   }>(),
 
   issues: payloads<{
@@ -108,6 +120,11 @@ const _registry = {
       readonly issueId: string | null
     }
     refresh: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+    }
+    checkEscalation: {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string

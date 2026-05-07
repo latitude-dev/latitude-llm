@@ -1,5 +1,5 @@
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import { ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
+import { ESCALATION_CHECK_THROTTLE_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -98,12 +98,23 @@ export const createDomainEventsWorker = ({
 
     // Throttled: the first assignment schedules the refresh for `now + 8h`,
     // and subsequent assignments within the window are dropped so a constant
-    // annotation stream cannot starve the refresh.
+    // annotation stream cannot starve the refresh. The escalation check runs
+    // alongside on a much tighter throttle (15min) — it's cheap (single CH
+    // aggregate + maybe one Postgres update) and detection latency matters.
     ScoreAssignedToIssue: (event) =>
-      pub.publish("issues", "refresh", event.payload, {
-        dedupeKey: `issues:refresh:${event.payload.issueId}`,
-        throttleMs: ISSUE_REFRESH_THROTTLE_MS,
-      }),
+      Effect.all(
+        [
+          pub.publish("issues", "refresh", event.payload, {
+            dedupeKey: `issues:refresh:${event.payload.issueId}`,
+            throttleMs: ISSUE_REFRESH_THROTTLE_MS,
+          }),
+          pub.publish("issues", "checkEscalation", event.payload, {
+            dedupeKey: `issues:check-escalation:${event.payload.issueId}`,
+            throttleMs: ESCALATION_CHECK_THROTTLE_MS,
+          }),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     IssueCreated: (event) =>
       pub.publish("alert-incidents", "issue-created", event.payload, {
@@ -113,6 +124,16 @@ export const createDomainEventsWorker = ({
     IssueRegressed: (event) =>
       pub.publish("alert-incidents", "issue-regressed", event.payload, {
         dedupeKey: `alert-incidents:issue.regressed:${event.payload.issueId}:${event.payload.triggerScoreId}`,
+      }),
+
+    IssueEscalated: (event) =>
+      pub.publish("alert-incidents", "issue-escalated", event.payload, {
+        dedupeKey: `alert-incidents:issue.escalating:${event.payload.issueId}:${event.payload.escalatedAt}`,
+      }),
+
+    IssueEscalationEnded: (event) =>
+      pub.publish("alert-incidents", "issue-escalation-ended", event.payload, {
+        dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.issueId}:${event.payload.endedAt}`,
       }),
 
     // PR 1 has no consumer for IncidentCreated. PR 2 (email channel) and
