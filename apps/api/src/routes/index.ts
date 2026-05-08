@@ -1,11 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { mountWithMcp } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
-import { createApiKeysRoutes } from "./api-keys.ts"
+import { apiKeysEndpoints } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
@@ -44,7 +45,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route("/projects", createProjectsRoutes())
   routes.route("/projects/:projectSlug/scores", createScoresRoutes())
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
-  routes.route("/api-keys", createApiKeysRoutes())
+  mountWithMcp(routes, "/api-keys", apiKeysEndpoints)
 
   v1.route("/", routes)
 

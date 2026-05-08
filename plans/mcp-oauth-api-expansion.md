@@ -347,9 +347,9 @@ protectedApp.all("/v1/mcp", async (c) => {
 })
 ```
 
-### `pnpm generate:mcp`
+### `pnpm mcp:emit`
 
-Mirrors `pnpm generate:sdk`. Boots the route registry with stub clients (same pattern as `openapi:emit`), walks `endpointRegistry`, writes `apps/api/mcp.json` with `{ name, version, tools: [{ name, title, description, inputSchema }, ...] }`. CI guards drift the same way `openapi.json` is guarded.
+Mirrors `pnpm openapi:emit`. Boots the route registry with stub clients, walks `endpointRegistry`, writes `apps/api/mcp.json` with `{ name, version, tools: [{ name, title, description, inputSchema }, ...] }`. CI guards drift the same way `openapi.json` is guarded.
 
 ## Settings UI changes (web app)
 
@@ -412,7 +412,7 @@ Foundational pieces with zero user-visible surface change.
 **MCP scaffolding** (no tools yet):
 - `apps/api/src/mcp/{define-endpoint,flatten-input,registry,server,index}.ts` — ~350 lines.
 - Uncomment `@modelcontextprotocol/sdk` in `pnpm-workspace.yaml`. Add `@modelcontextprotocol/sdk` and `zod-to-json-schema` to `apps/api/package.json` via the catalog reference.
-- `apps/api/scripts/emit-mcp-manifest.ts` + `pnpm generate:mcp` script. CI drift check.
+- `apps/api/scripts/emit-mcp.ts` + `pnpm mcp:emit` script. CI drift check.
 
 **Auth scaffolding**:
 - `packages/platform/db-postgres/src/create-better-auth.ts` — extend the drizzle adapter `schema` with `oauthApplication`, `oauthAccessToken`, `oauthConsent`. Add the OIDC tables to the schema barrel so `apps/api` can import the Drizzle definitions for read-only queries without depending on BA. Do **not** install `mcp()` plugin in the shared factory (caller-controlled — only the web caller will install it in M2).
@@ -448,7 +448,7 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
 - The web BA hook handles `loa_` / `lor_` prefixes for OAuth tokens (above).
 
 **Migrate one route to `defineApiEndpoint`** (proof of concept):
-- `apps/api/src/routes/api-keys.ts` — wrap existing routes (list/create/revoke) in `defineApiEndpoint`. Add `name` and `description` fields to each `createRoute` call (replace `operationId`). Verify `pnpm openapi:emit` produces a clean diff (just `operationId` field renames). Verify `pnpm generate:mcp` lists 3 tools.
+- `apps/api/src/routes/api-keys.ts` — wrap existing routes (list/create/revoke) in `defineApiEndpoint`. Add `name` and `description` fields to each `createRoute` call (replace `operationId`). Verify `pnpm openapi:emit` produces a clean diff (just `operationId` field renames). Verify `pnpm mcp:emit` lists 3 tools.
 
 **No reverse proxy task** — dropped; not needed (see "Local-dev story" above).
 
@@ -533,7 +533,7 @@ These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 - `apps/api/src/routes/{well-known,account,members,traces,saved-searches,issues,datasets}.ts`
 - `apps/api/src/openapi/pagination.ts`
 - `apps/api/src/openapi/entities/{account,api-key,member,project,trace,saved-search,issue,dataset}.ts`
-- `apps/api/scripts/emit-mcp-manifest.ts`
+- `apps/api/scripts/emit-mcp.ts`
 - `packages/platform/oauth-token-auth/` (new package — pure Drizzle, no BA dep)
 - `packages/platform/db-postgres/src/schema/oauth.ts`
 - `packages/domain/account/` (new package, or co-locate in `@domain/users`)
@@ -587,7 +587,7 @@ Per milestone, run from repo root:
 pnpm typecheck                           # whole-workspace tsgo (NOT tsc — see CLAUDE.md)
 pnpm --filter @latitude-data/api test    # vitest
 pnpm openapi:emit                        # diff apps/api/openapi.json — should change only as expected
-pnpm generate:mcp                        # diff apps/api/mcp.json — same drift guard
+pnpm mcp:emit                        # diff apps/api/mcp.json — same drift guard
 pnpm generate:sdk                        # confirm Fern produces a clean SDK delta
 ```
 
@@ -605,4 +605,4 @@ End-to-end (M2 onward), no proxy needed — vanilla web on `localhost:3000` and 
 CI:
 - Existing typecheck + test jobs gate the PR.
 - New job: `pnpm openapi:emit && git diff --exit-code apps/api/openapi.json` — fails on drift.
-- Same for `pnpm generate:mcp && git diff --exit-code apps/api/mcp.json`.
+- Same for `pnpm mcp:emit && git diff --exit-code apps/api/mcp.json`.
