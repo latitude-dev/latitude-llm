@@ -206,12 +206,12 @@ export const getBetterAuth = () => {
       extraPlugins: [
         tanstackStartCookies(),
         // OAuth2/OIDC authorization server for MCP clients (Claude Code,
-        // Cursor, …). Issues `loa_…` access + `lor_…` refresh tokens that
-        // the API resource server validates via `@platform/oauth-token-auth`.
+        // Cursor, …). Issues opaque random access + refresh tokens that the
+        // API resource server validates via `@platform/oauth-token-auth`.
         // The consent page binds the issued token to a specific organization;
-        // until that route ships, the default BA consent UI renders and tokens
-        // get issued with `oauth_applications.organization_id IS NULL`, which
-        // the API auth middleware rejects (so no usable tokens leak out).
+        // until that route ships, the default BA consent UI renders and
+        // tokens get issued with `oauth_applications.organization_id IS NULL`,
+        // which the API auth middleware rejects (so no usable tokens leak out).
         mcp({
           loginPage: `${webUrl}/login`,
           oidcConfig: {

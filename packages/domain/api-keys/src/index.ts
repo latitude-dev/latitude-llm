@@ -1,14 +1,11 @@
 export { DEFAULT_API_KEY_NAME } from "./constants.ts"
 export {
-  API_KEY_TOKEN_PREFIX,
   type ApiKey,
   apiKeySchema,
-  applyApiKeyTokenPrefix,
   createApiKey,
   generateApiKeyToken,
   isActive,
   revoke,
-  stripApiKeyTokenPrefix,
   touch,
 } from "./entities/api-key.ts"
 export { ApiKeyAlreadyRevokedError, ApiKeyNotFoundError, InvalidApiKeyNameError } from "./errors.ts"

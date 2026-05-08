@@ -18,8 +18,8 @@ Stack confirmed: `better-auth@1.6.9` (catalog), `@better-auth/core@1.6.9`, `@bet
 | - | - | - |
 | D1 | **Keep our custom API-key system; add OAuth2 alongside.** Add a code-level `TODO` referencing migration to better-auth's `apiKey` plugin once we're ready. | BA's `apiKey` plugin (per docs) supports **organization-owned API keys** via `references` config. Our keys today are already org-scoped; migrating would unify under one auth backend. Out of scope for this plan. |
 | D2 | **MCP at `/v1/mcp` inside `apps/api`.** Not a separate process. | Reuses existing middleware chain (validation, rate-limit, auth, org-context), Effect layers, and Zod schemas. |
-| D3 | **Better Auth lives only on the web app.** The API does **not** mount BA. The web's existing BA instance gains the `mcp()` plugin (so `/api/auth/mcp/authorize`, `/api/auth/mcp/token`, `/api/auth/mcp/register`, `/api/auth/oauth2/consent`, and `/api/auth/.well-known/*` are all served by the web). The API only serves `/v1/mcp` plus a tiny static `/.well-known/oauth-protected-resource` advertising the web origin as the AS. Token validation on the API reads `oauth_access_token` directly from shared Postgres via Drizzle — no BA call. | RFC 9728 explicitly allows the AS to live on a different origin than the protected resource. Keeping OAuth on the web origin means the user's browser never crosses origins during sign-in/consent — the existing session cookie on the web is reused as-is. The MCP client only crosses origins for the final `Authorization: Bearer loa_…` API call, which is a header (not a cookie). **No reverse proxy needed in dev or prod.** |
-| D4 | **Token prefixes are a boundary concern, not stored.** API keys → `lak_<raw>`, OAuth access tokens → `loa_<raw>`, OAuth refresh tokens → `lor_<raw>` (avoiding `lat_` which can read as "Latitude"). The DB stores the raw value the validator hashes / BA looks up against; the prefix is added when surfacing the token to a caller (API-key repo on read, OAuth response rewriter on `POST /api/auth/mcp/token`) and stripped when consuming it (API-key + OAuth validators strip before hash/lookup; web request rewriter strips inbound `refresh_token` before BA's refresh-grant query). Existing un-prefixed API keys keep working: `stripApiKeyTokenPrefix` is a pass-through for un-prefixed input, so the hash matches the historical row without migration. The auth middleware still classifies by prefix to dispatch to the right validator (`lak_` → API-key only, `loa_` → OAuth only, un-prefixed → legacy fallback). | Cheap routing on the wire, accurate error messages, *and* no in-DB prefix coupling — the persisted shape stays exactly what BA / our hashing logic produces, so BA-internal flows (refresh-token grant, etc.) work without adapter wraps or generic-hook plumbing. |
+| D3 | **Better Auth lives only on the web app.** The API does **not** mount BA. The web's existing BA instance gains the `mcp()` plugin (so `/api/auth/mcp/authorize`, `/api/auth/mcp/token`, `/api/auth/mcp/register`, `/api/auth/oauth2/consent`, and `/api/auth/.well-known/*` are all served by the web). The API only serves `/v1/mcp` plus a tiny static `/.well-known/oauth-protected-resource` advertising the web origin as the AS. Token validation on the API reads `oauth_access_token` directly from shared Postgres via Drizzle — no BA call. | RFC 9728 explicitly allows the AS to live on a different origin than the protected resource. Keeping OAuth on the web origin means the user's browser never crosses origins during sign-in/consent — the existing session cookie on the web is reused as-is. The MCP client only crosses origins for the final `Authorization: Bearer …` API call, which is a header (not a cookie). **No reverse proxy needed in dev or prod.** |
+| D4 | **No token prefixes — fall-through dispatch instead.** API keys and OAuth access tokens are both opaque random strings stored verbatim in their respective tables. The auth middleware tries the API-key validator first, falls through to the OAuth validator, and 401s if neither matches. No `lak_` / `loa_` / `lor_` prefixes anywhere — no request rewriters, no response rewriters, no repository-level apply/strip helpers, no validator-level strip. | Simpler everything: one extra Redis + DB round-trip on the OAuth happy path is the entire trade-off, and both validators have a short negative-cache TTL so a known-bad bearer only hits the DB once per cache window. Avoids the in-DB-vs-on-wire mismatch (BA stores raw, BA refresh-grant looks up raw — anything else needs adapter wraps or wire rewriters that we'd have to keep symmetric). |
 | D5 | **OAuth org binding via a typed `organization_id` column on `oauth_applications`** — not a new join table, and not the BA `metadata` JSON. At consent time, the web's `/auth/consent` page writes the picked org id directly into the `organization_id` column. The API's auth middleware joins `oauth_access_tokens → oauth_applications` and reads `a.organization_id` from shared Postgres. | Mirrors the existing `api_keys.organization_id + RLS` pattern (single column + FK + soft-delete-aware RLS policy). RLS is enabled scoped by `organization_id`: the settings/keys page on web reads through the regular tenant-scoped connection and only sees MCP clients bound to the active org; abandoned `/api/auth/mcp/register` rows (NULL `organization_id`) are invisible to all tenant queries by design. Token validation on the API uses the admin Postgres connection (same as `api_keys.findByTokenHash`) so it can resolve the bound org without any `set_organization_id` precondition. The two related tables (`oauth_access_tokens`, `oauth_consents`) stay RLS-free because they're only read either via the admin-bypass path (token validation) or via JOIN through the RLS-protected application — defense in depth without RLS-via-EXISTS overhead on the hot path. |
 | D6 | **Custom consent page at `${webUrl}/auth/consent`** (NOT `/oauth/consent`). The MCP plugin's `oidcConfig.consentPage` redirects there. The page is a TanStack Start route that reads `?consent_code=…&client_id=…&scope=…`, lists the user's orgs, lets them pick one, then runs a server fn that (a) validates user is a member of the chosen org, (b) updates `oauth_applications.organization_id` for the matching `client_id` (via Drizzle on the web's admin Postgres connection — admin needed to bypass RLS while writing the very binding RLS will check against), and (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process. | All on web — no cross-process call, no API involvement. `/auth/*` is the existing non-reserved namespace on the web app (`/auth/invite` lives there); `/api/auth/*` is reserved for the BA HTTP handler. |
 | D7 | **Slugs regenerate on rename.** Saved-searches already does this (`update-saved-search.ts:62-71` regenerates the slug when the name changes). Apply the same to **projects, organizations, issues, datasets** — anywhere a slug is derived from a name. | URL stability is sacrificed in exchange for slug-tracks-name semantics. Matches the existing pattern; consistency wins. |
@@ -83,8 +83,8 @@ The MCP discovery flow (RFC 9728 + RFC 8414):
 5. BA mints a `consent_code` and redirects to `https://app.latitude.so/auth/consent?consent_code=…&client_id=…&scope=…`. Same origin still.
 6. User picks an org, clicks Approve. The web server fn (a) validates membership, (b) sets `oauth_applications.organization_id` for the matching `client_id` via the admin Drizzle connection, (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process.
 7. BA returns the auth code to the MCP client's redirect URI.
-8. MCP client → `POST https://app.latitude.so/api/auth/mcp/token` (server-to-server, no cookies) → returns `loa_…` access token.
-9. MCP client → `https://api.latitude.so/v1/mcp` with `Authorization: Bearer loa_…`. The API's auth middleware queries shared Postgres (admin connection, RLS-bypass) for the token, joins to `oauth_applications.organization_id`, sets `c.var.auth` and `c.var.organization`. Tool dispatch proceeds.
+8. MCP client → `POST https://app.latitude.so/api/auth/mcp/token` (server-to-server, no cookies) → returns an opaque access token.
+9. MCP client → `https://api.latitude.so/v1/mcp` with `Authorization: Bearer …`. The API's auth middleware tries the API-key validator first, falls through to the OAuth validator, queries shared Postgres (admin connection, RLS-bypass) for the token, joins to `oauth_applications.organization_id`, sets `c.var.auth` and `c.var.organization`. Tool dispatch proceeds.
 
 The browser only ever talks to `app.latitude.so` (the web origin). The MCP client (CLI agent) talks to both origins via plain HTTPS — no CORS or cookies in play. Local dev: `localhost:3000` web ↔ `localhost:3001` API works as-is, no proxy needed.
 
@@ -121,7 +121,7 @@ mcp({
 })
 ```
 
-Plus the boundary rewriters at `apps/web/src/server/oauth-token-prefix-rewriter.ts` — `rewriteOAuthTokenResponse` adds `loa_` / `lor_` to outbound tokens on `POST /api/auth/mcp/token`, and `stripIncomingOAuthRefreshTokenPrefix` strips `lor_` from inbound `refresh_token` so BA's refresh-grant lookup matches the raw value the DB holds.
+No request / response rewriting on `/api/auth/mcp/token` — BA's plugin issues opaque tokens, stores them raw, and looks them up raw on refresh. Token prefixes (D4) are out.
 
 Optional convenience: a root-level redirect `app.latitude.so/.well-known/oauth-authorization-server` → `app.latitude.so/api/auth/.well-known/oauth-authorization-server` for MCP clients that try the AS root. RFC 8414 supports the path-prefixed form (`<host>/<path>` issuer), so this is belt-and-suspenders.
 
@@ -130,14 +130,12 @@ Optional convenience: a root-level redirect `app.latitude.so/.well-known/oauth-a
 ```
 authenticate(c) -> AuthContext | 401
   bearer = extractBearerToken(c) ?? throw 401
-  switch classifyTokenByPrefix(bearer):
-    case "api-key" (lak_…):  return authenticateWithApiKey(bearer) ?? 401
-    case "oauth"   (loa_…):  return authenticateWithOAuth(bearer)  ?? 401
-    default:                 # legacy unprefixed
-      return authenticateWithApiKey(bearer)
-          ?? authenticateWithOAuth(bearer)
-          ?? 401
+  return authenticateWithApiKey(bearer)
+      ?? authenticateWithOAuth(bearer)
+      ?? 401
 ```
+
+Bearer tokens are opaque — there's no prefix to dispatch on, so we just try both validators in sequence. Both have a short negative-cache TTL (~5s), so an unknown bearer or an OAuth-shaped bearer hits each underlying DB at most once per cache window.
 
 #### Why we don't call Better Auth for verification
 
@@ -226,20 +224,6 @@ export type AuthContext =
 ```
 
 `expiresAt` is on the OAuth variant only (API keys don't expire). The middleware writes the chosen variant onto `c.var.auth`.
-
-### Token-prefix mechanism — boundary, not storage
-
-We **don't** store prefixes in the DB. The persisted token (in `oauth_access_tokens.access_token`, `oauth_access_tokens.refresh_token`, and `api_keys.token`) is the raw value BA generates / our `generateApiKeyToken()` produces. Prefixes get added when handing the token to its consumer and stripped when reading it back. Three pieces:
-
-1. **Response rewriter** on the web — wraps `POST /api/auth/mcp/token` and prepends `loa_` to `access_token` and `lor_` to `refresh_token` in the JSON body. Pass-through for non-token URLs, error bodies, GET requests, non-JSON content, and already-prefixed values. (`apps/web/src/server/oauth-token-prefix-rewriter.ts > rewriteOAuthTokenResponse`.)
-
-2. **Request rewriter** on the web — strips `lor_` from inbound `refresh_token` form / JSON params on `POST /api/auth/mcp/token` so BA's refresh-grant lookup matches the raw value in the DB. Same file: `stripIncomingOAuthRefreshTokenPrefix`.
-
-3. **Validator strips** — `validateApiKey` strips `lak_` before hashing; `validateOAuthAccessToken` strips `loa_` before the `eq(oauthAccessTokens.accessToken, …)` lookup. Pass-through for un-prefixed input, so existing API keys (issued before the prefix rolled out) keep authenticating without migration. The `tokenHash` stored in `api_keys` is the hash of the raw token, computed at generation time after the use-case has the raw value but before the entity is constructed.
-
-For API keys specifically, the `lak_` prefix is added by the repository — `toDomainApiKey` in `api-key-repository.ts` calls `applyApiKeyTokenPrefix` after decryption, and `toInsertRow` calls `stripApiKeyTokenPrefix` before encrypting. Use-cases see the prefixed shape on every read; the on-disk shape stays raw.
-
-Why not store the prefix? Two reasons. (a) BA's OIDC plugin calls `ctx.context.adapter.create({ model: "oauthAccessToken", … })` directly — bypassing the documented `databaseHooks` layer (verified in `better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:431-453`) — so a write-time prefix would have required wrapping the adapter, which obscures BA's shape and couples our infra package to OAuth domain semantics. (b) BA's refresh-grant flow looks up by `oauth_access_tokens.refresh_token`; if the DB held `lor_xyz` but the incoming refresh request also held `lor_xyz`, the round-trip would only work because both sides agreed on the prefix — fragile coupling. Stripping at the boundary keeps BA's storage layer pristine and pushes the prefix knowledge to the two HTTP edges where it belongs.
 
 ### Local-dev story — no proxy needed
 
@@ -447,10 +431,6 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
     },
   })
   ```
-- `apps/web/src/server/oauth-token-prefix-rewriter.ts` — two helpers fronting the BA handler at `apps/web/src/routes/api/auth/$.ts`:
-  - `rewriteOAuthTokenResponse(request, response)` — wraps `POST /api/auth/mcp/token` 200 JSON responses and prepends `loa_`/`lor_` to `access_token`/`refresh_token`. Pass-through for everything else (errors, GET, non-token URLs, non-JSON bodies, already-prefixed values).
-  - `stripIncomingOAuthRefreshTokenPrefix(request)` — strips `lor_` from inbound `refresh_token` form / JSON params on the same endpoint so BA's refresh-grant lookup matches the raw value the DB holds. Pass-through everywhere else.
-  - The BA route handler runs them as `stripped = strip(request); response = ba.handler(stripped); return rewriteOAuthTokenResponse(stripped, response)`.
 - `apps/web/src/routes/auth.consent.tsx` — new TanStack route. Reads `consent_code` + `client_id` from query, fetches user's orgs, renders org-picker. Approve runs a server fn that:
   1. Validates user is a member of the chosen org.
   2. Updates `oauth_applications.organization_id` for the matching `client_id` via Drizzle on the admin connection (admin needed because the RLS policy this row will satisfy is scoped to the very org id we're about to write).
@@ -459,16 +439,10 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
 
 **API changes** (resource server only):
 - `apps/api/src/routes/well-known.ts` — new file. Serves `GET /.well-known/oauth-protected-resource` returning a static `{ resource: <apiUrl>, authorization_servers: [<webUrl> + "/api/auth"] }`. Public route (RING 1).
-- `apps/api/src/middleware/auth.ts` — rewrite `authenticate()` per D4. Validates `loa_…` tokens via `validateOAuthAccessToken` (the M1 platform package) — pure Drizzle, no BA. Extend `AuthContext` type per D14.
+- `apps/api/src/middleware/auth.ts` — extend `authenticate()` to fall through to OAuth (D4): try the API-key validator first, then `validateOAuthAccessToken` (the M1 platform package — pure Drizzle, no BA), then 401. Extend `AuthContext` type per D14.
 - `apps/api/src/routes/index.ts` — three-ring restructure; mount `/.well-known/oauth-protected-resource` in RING 1.
 
-**Token prefixing** — boundary, not storage. See "Token-prefix mechanism — boundary, not storage" above for the full reasoning.
-- `packages/domain/api-keys/src/entities/api-key.ts` — `generateApiKeyToken()` returns the raw UUID. `applyApiKeyTokenPrefix` / `stripApiKeyTokenPrefix` exported alongside.
-- `packages/domain/api-keys/src/use-cases/generate-api-key.ts` — hashes the raw token, stores `applyApiKeyTokenPrefix(rawToken)` on the entity for the one-time creation response.
-- `packages/platform/db-postgres/src/repositories/api-key-repository.ts` — `toDomainApiKey` calls `applyApiKeyTokenPrefix` after decryption; `toInsertRow` calls `stripApiKeyTokenPrefix` before encrypting.
-- `packages/platform/api-key-auth/src/validate-api-key.ts` — strips `lak_` before `hash(token)`. Pass-through for un-prefixed legacy input.
-- `packages/platform/oauth-token-auth/src/validate-oauth-token.ts` — strips `loa_` before the DB lookup.
-- The web rewriters (above) cover the OAuth issuance side.
+**No token prefixing** (D4). Bearer tokens are opaque random strings throughout — `crypto.randomUUID()` for API keys, `generateRandomString(32, …)` for OAuth tokens. Storage, transport, and lookup all use the raw value. The auth middleware's two-validator fall-through (API-key → OAuth → 401) replaces the prefix-based dispatch.
 
 **Migrate one route to `defineApiEndpoint`** (proof of concept):
 - `apps/api/src/routes/api-keys.ts` — wrap existing routes (list/create/revoke) in `defineApiEndpoint`. Add `name` and `description` fields to each `createRoute` call (replace `operationId`). Verify `pnpm openapi:emit` produces a clean diff (just `operationId` field renames). Verify `pnpm mcp:emit` lists 3 tools.
@@ -584,7 +558,7 @@ These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 - `packages/domain/issues/src/{ports/issue-repository,use-cases/create-issue-from-score,use-cases/discover-issue}.ts`
 - `packages/domain/datasets/src/{ports/dataset-repository,use-cases/{create,rename,update-details}-dataset}.ts`
 - `packages/domain/projects/src/use-cases/update-project.ts` — slug-on-rename
-- `packages/domain/api-keys/src/entities/api-key.ts` — `generateApiKeyToken()` returns raw UUID; `applyApiKeyTokenPrefix` / `stripApiKeyTokenPrefix` exported for the repo + validator
+- `packages/domain/api-keys/src/entities/api-key.ts` — `generateApiKeyToken()` returns plain UUID; no prefix helpers
 - `apps/web/src/server/clients.ts` — install `mcp()` plugin in `getBetterAuth()` extraPlugins
 - `apps/web/src/domains/evaluations/evaluation-alignment.functions.ts` — delegate to new use-cases
 - `apps/web/src/routes/_authenticated/settings/account.tsx` — Sessions section
@@ -592,7 +566,6 @@ These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 ## Risks / unknowns
 
 - **BA `mcp` plugin is documented as deprecated in favor of an OAuth Provider plugin** (per the BA mcp.md docs page). Both share the OIDC schema, so migration cost is low later. Confirm in M2 which to use; if a non-deprecated equivalent exists in 1.6.9 prefer that.
-- **Custom access-token prefix (`loa_`)**: resolved by the boundary-rewrite design described in "Token-prefix mechanism — boundary, not storage". The OIDC Provider plugin calls `ctx.context.adapter.create(...)` directly (verified in `better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:431-453`), bypassing the documented `databaseHooks` layer entirely — so any hook-based prefix wouldn't fire. Boundary rewriters on the web (response prefix outbound, request strip on refresh inbound) plus prefix-strip in the validators cover the round-trip without touching BA's storage shape.
 - **MCP-client AS discovery quirks**: some MCP clients strictly fetch `<as>/.well-known/oauth-authorization-server` at the AS root rather than honoring the path-prefixed issuer (`<webUrl>/api/auth`). Add the root-level redirect on the web app (covered in M2). If a particular client still fails, document the workaround.
 - **`WebStandardStreamableHttpServerTransport` API shape** — newer than the README example (`StreamableHTTPServerTransport`). Verify constructor + method names against the installed `@modelcontextprotocol/sdk@1.29.0` source.
 - **Zod-v4 `.openapi()` metadata propagating into MCP tool inputSchema** via `zod-to-json-schema` — different package than `@asteasolutions/zod-to-openapi`. Need a unit test confirming descriptions survive; if not, add a small reflection helper that copies metadata into `.describe(...)` before MCP registration.
@@ -617,8 +590,8 @@ pnpm generate:sdk                        # confirm Fern produces a clean SDK del
 End-to-end (M2 onward), no proxy needed — vanilla web on `localhost:3000` and API on `localhost:3001`:
 
 1. `GET http://localhost:3001/.well-known/oauth-protected-resource` → returns `{ resource: "http://localhost:3001", authorization_servers: ["http://localhost:3000/api/auth"] }`.
-2. `GET http://localhost:3001/v1/account` with a `lak_` API key → 200, returns `{ organization, role: null, user: null }`.
-3. Run `npx @modelcontextprotocol/inspector http://localhost:3001/v1/mcp` → discovery hops to the web AS → user signs in on `localhost:3000` (existing magic-link flow) → org picker on `localhost:3000/auth/consent` → consent → MCP client receives `loa_…` token → tool list returns ≥3 tools after M2.
+2. `GET http://localhost:3001/v1/account` with an organization API key → 200, returns `{ organization, role: null, user: null }`.
+3. Run `npx @modelcontextprotocol/inspector http://localhost:3001/v1/mcp` → discovery hops to the web AS → user signs in on `localhost:3000` (existing magic-link flow) → org picker on `localhost:3000/auth/consent` → consent → MCP client receives an opaque access token → tool list returns ≥3 tools after M2.
 4. Issue `tools/call listApiKeys` from the inspector → 200 returns the org's keys (masked).
 5. Issue `tools/call getApiKey { id }` → 200 returns full unmasked token.
 6. After M3: `account_get`, `members_*`, `projects_*` tool calls succeed with org-bound OAuth token.

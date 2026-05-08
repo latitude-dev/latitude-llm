@@ -2,7 +2,7 @@ import type { RedisClient } from "@platform/cache-redis"
 // `eq` is re-exported by `@platform/db-postgres` to keep all consumers on one
 // drizzle-orm version (peer-dep collisions cause private-property typecheck
 // errors otherwise).
-import { eq, type PostgresClient, stripOAuthAccessTokenPrefix } from "@platform/db-postgres"
+import { eq, type PostgresClient } from "@platform/db-postgres"
 import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -222,15 +222,9 @@ export const validateOAuthAccessToken = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    // Bearer tokens come in with the `loa_` prefix that the web's response
-    // rewriter added on issuance. The DB stores the raw value BA wrote, so we
-    // strip the prefix once here and let every downstream step (hash, lookup,
-    // cache key) work off the raw form. Hashing is stable across prefixed /
-    // un-prefixed input because we hash the stripped value either way.
-    const rawToken = stripOAuthAccessTokenPrefix(token)
     // Hash for the Redis key only — the DB stores the raw access_token (BA's
     // schema). We don't put raw bearer tokens in Redis as defense in depth.
-    const tokenHash = yield* hash(rawToken)
+    const tokenHash = yield* hash(token)
 
     const cached = yield* getCached(redis, tokenHash)
 
@@ -248,7 +242,7 @@ export const validateOAuthAccessToken = (
     }
 
     const row = yield* Effect.tryPromise({
-      try: () => lookupByToken(adminClient, rawToken),
+      try: () => lookupByToken(adminClient, token),
       catch: () => undefined,
     }).pipe(Effect.orDie)
 
