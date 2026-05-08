@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.8] - 2026-05-08
+
+### Changed
+
+- **Default exporter URL is now always `https://ingest.latitude.so`** — the SDK no longer inspects `NODE_ENV` to decide between production and localhost. Previously, the default URL was `http://localhost:3002` whenever `NODE_ENV` was anything other than exactly `production`, which silently dropped traces for consumers who didn't set `NODE_ENV=production` or who used values like `staging`. Production ingest is now the only default; point at a different ingest by setting `LATITUDE_TELEMETRY_URL` explicitly (e.g. `LATITUDE_TELEMETRY_URL=http://localhost:3002` for local development).
+
 ## [3.0.0-alpha.7] - 2026-05-06
 
 ### Added
