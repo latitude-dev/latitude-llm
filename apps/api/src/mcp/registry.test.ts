@@ -138,12 +138,12 @@ describe("registry", () => {
       expect(tool?.output).toBeTruthy()
     })
 
-    it("returns null `output` for routes whose success response has no body (204)", () => {
+    it("returns undefined `output` for routes whose success response has no body (204)", () => {
       const parent = new OpenAPIHono<TestEnv>()
       mountWithMcp(parent, "/items", [deleteEp])
 
       const [tool] = collectToolDescriptors()
-      expect(tool?.output).toBeNull()
+      expect(tool?.output).toBeUndefined()
     })
 
     it("falls back to `name` when `summary` is absent", () => {

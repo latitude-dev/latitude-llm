@@ -1,7 +1,7 @@
-import { OpenAPIHono, type z } from "@hono/zod-openapi"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import type { Env } from "hono"
 import type { AnyApiEndpoint } from "./define-endpoint.ts"
-import { extractOutputSchema } from "./extract-output.ts"
+import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
 import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
 
 /**
@@ -74,11 +74,11 @@ interface ToolDescriptor {
   /** Flattened Zod input schema + per-field source map for HTTP dispatch. */
   readonly input: FlatInput
   /**
-   * Zod schema for the route's primary 2xx response, or `null` for routes whose
-   * success response carries no body (204) or no JSON content. Maps to the MCP
-   * tool's optional `outputSchema`.
+   * Object Zod schema for the route's primary 2xx JSON response. Omitted for routes
+   * whose success response carries no body (204), no JSON content, or a non-object
+   * shape. Maps to the MCP tool's optional `outputSchema`.
    */
-  readonly output: z.ZodType | null
+  readonly output?: ExtractedOutput | undefined
   /** Path prefix the route's sub-app was mounted at, used to rebuild the dispatch URL. */
   readonly routerPrefix: string
   /** Path template inside the sub-app (OpenAPI `{name}` placeholder syntax). */

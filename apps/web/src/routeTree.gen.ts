@@ -25,6 +25,7 @@ import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as AuthConsentRouteImport } from './routes/auth/consent'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from './routes/[.well-known]/openid-configuration'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
@@ -41,6 +42,8 @@ import { Route as AuthenticatedSettingsBillingRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_authenticated/settings/api-keys'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
+import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
+import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
@@ -130,6 +133,12 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const Char91DotwellKnownChar93OpenidConfigurationRoute =
+  Char91DotwellKnownChar93OpenidConfigurationRouteImport.update({
+    id: '/.well-known/openid-configuration',
+    path: '/.well-known/openid-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
   Char91DotwellKnownChar93OauthAuthorizationServerRouteImport.update({
     id: '/.well-known/oauth-authorization-server',
@@ -224,6 +233,18 @@ const AuthenticatedProjectsProjectSlugRoute =
     path: '/projects/$projectSlug',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const Char91DotwellKnownChar93OpenidConfigurationSplatRoute =
+  Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => Char91DotwellKnownChar93OpenidConfigurationRoute,
+  } as any)
+const Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute =
+  Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => Char91DotwellKnownChar93OauthAuthorizationServerRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugIndexRoute =
   AuthenticatedProjectsProjectSlugIndexRouteImport.update({
     id: '/',
@@ -282,7 +303,8 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
-  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
+  '/.well-known/openid-configuration': typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
@@ -294,6 +316,8 @@ export interface FileRoutesByFullPath {
   '/backoffice/': typeof BackofficeIndexRoute
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
+  '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
+  '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
@@ -321,7 +345,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
+  '/.well-known/openid-configuration': typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
@@ -333,6 +358,8 @@ export interface FileRoutesByTo {
   '/backoffice': typeof BackofficeIndexRoute
   '/design-system': typeof DesignSystemIndexRoute
   '/welcome': typeof WelcomeIndexRoute
+  '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
+  '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
@@ -363,7 +390,8 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
+  '/.well-known/openid-configuration': typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/consent': typeof AuthConsentRoute
@@ -376,6 +404,8 @@ export interface FileRoutesById {
   '/backoffice/': typeof BackofficeIndexRoute
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
+  '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
+  '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
@@ -409,6 +439,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/.well-known/oauth-authorization-server'
+    | '/.well-known/openid-configuration'
     | '/settings'
     | '/api/health'
     | '/auth/consent'
@@ -420,6 +451,8 @@ export interface FileRouteTypes {
     | '/backoffice/'
     | '/design-system/'
     | '/welcome/'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/openid-configuration/$'
     | '/projects/$projectSlug'
     | '/settings/account'
     | '/settings/api-keys'
@@ -448,6 +481,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/.well-known/oauth-authorization-server'
+    | '/.well-known/openid-configuration'
     | '/api/health'
     | '/auth/consent'
     | '/auth/invite'
@@ -459,6 +493,8 @@ export interface FileRouteTypes {
     | '/backoffice'
     | '/design-system'
     | '/welcome'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/openid-configuration/$'
     | '/settings/account'
     | '/settings/api-keys'
     | '/settings/billing'
@@ -489,6 +525,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/.well-known/oauth-authorization-server'
+    | '/.well-known/openid-configuration'
     | '/_authenticated/settings'
     | '/api/health'
     | '/auth/consent'
@@ -501,6 +538,8 @@ export interface FileRouteTypes {
     | '/backoffice/'
     | '/design-system/'
     | '/welcome/'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/openid-configuration/$'
     | '/_authenticated/projects/$projectSlug'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/api-keys'
@@ -532,7 +571,8 @@ export interface RootRouteChildren {
   DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
-  Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
+  Char91DotwellKnownChar93OpenidConfigurationRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
@@ -659,6 +699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/.well-known/openid-configuration': {
+      id: '/.well-known/openid-configuration'
+      path: '/.well-known/openid-configuration'
+      fullPath: '/.well-known/openid-configuration'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/oauth-authorization-server': {
       id: '/.well-known/oauth-authorization-server'
       path: '/.well-known/oauth-authorization-server'
@@ -770,6 +817,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/.well-known/openid-configuration/$': {
+      id: '/.well-known/openid-configuration/$'
+      path: '/$'
+      fullPath: '/.well-known/openid-configuration/$'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport
+      parentRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRoute
+    }
+    '/.well-known/oauth-authorization-server/$': {
+      id: '/.well-known/oauth-authorization-server/$'
+      path: '/$'
+      fullPath: '/.well-known/oauth-authorization-server/$'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport
+      parentRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
     }
     '/_authenticated/projects/$projectSlug/': {
       id: '/_authenticated/projects/$projectSlug/'
@@ -951,13 +1012,45 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface Char91DotwellKnownChar93OauthAuthorizationServerRouteChildren {
+  Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
+}
+
+const Char91DotwellKnownChar93OauthAuthorizationServerRouteChildren: Char91DotwellKnownChar93OauthAuthorizationServerRouteChildren =
+  {
+    Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute:
+      Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute,
+  }
+
+const Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren =
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute._addFileChildren(
+    Char91DotwellKnownChar93OauthAuthorizationServerRouteChildren,
+  )
+
+interface Char91DotwellKnownChar93OpenidConfigurationRouteChildren {
+  Char91DotwellKnownChar93OpenidConfigurationSplatRoute: typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
+}
+
+const Char91DotwellKnownChar93OpenidConfigurationRouteChildren: Char91DotwellKnownChar93OpenidConfigurationRouteChildren =
+  {
+    Char91DotwellKnownChar93OpenidConfigurationSplatRoute:
+      Char91DotwellKnownChar93OpenidConfigurationSplatRoute,
+  }
+
+const Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren =
+  Char91DotwellKnownChar93OpenidConfigurationRoute._addFileChildren(
+    Char91DotwellKnownChar93OpenidConfigurationRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   BackofficeRouteRoute: BackofficeRouteRouteWithChildren,
   DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   Char91DotwellKnownChar93OauthAuthorizationServerRoute:
-    Char91DotwellKnownChar93OauthAuthorizationServerRoute,
+    Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren,
+  Char91DotwellKnownChar93OpenidConfigurationRoute:
+    Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,

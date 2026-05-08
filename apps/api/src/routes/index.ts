@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { mountWithMcp } from "../mcp/index.ts"
+import { API_VERSION } from "../constants.ts"
+import { mountWithMcp, registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
@@ -20,7 +21,6 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   const routes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute({ app })
-  // Public discovery routes (no auth) — see `well-known.ts`.
   registerWellKnownRoutes({ app })
 
   v1.use("*", async (c, next) => {
@@ -41,8 +41,6 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
       logTouchBuffer: options.logTouchBuffer,
     }),
   )
-  // The org entity is loaded on every protected request from the API key's
-  // resolved org id. No path param feeds into it — see the middleware.
   routes.use("*", createOrganizationContextMiddleware())
 
   routes.route("/projects", createProjectsRoutes())
@@ -50,7 +48,9 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
   mountWithMcp(routes, "/api-keys", apiKeysEndpoints)
 
+  registerMcpRoute(app, routes, "/mcp")
+
   v1.route("/", routes)
 
-  app.route("/v1", v1)
+  app.route(`/${API_VERSION}`, v1)
 }
