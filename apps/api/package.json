@@ -11,7 +11,7 @@
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
     "openapi:emit": "tsx scripts/emit-openapi.ts",
-    "generate:mcp": "tsx scripts/emit-mcp-manifest.ts"
+    "mcp:emit": "tsx scripts/emit-mcp.ts"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
