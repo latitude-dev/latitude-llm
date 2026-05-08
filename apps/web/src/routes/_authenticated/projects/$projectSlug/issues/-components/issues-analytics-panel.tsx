@@ -4,8 +4,8 @@ import { BarChart2, ChevronDown, ChevronUp, ShieldAlertIcon, ShieldOffIcon } fro
 import { useCallback, useMemo, useState } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
+import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
-import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
@@ -55,7 +55,8 @@ export function IssuesAnalyticsPanel({
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showLeftFade, setShowLeftFade] = useState(false)
-  const [showIncidents, setShowIncidents] = useParamState("showIncidents", false)
+  const { flagEnabled: incidentsFlagEnabled, showIncidents, setShowIncidents } = useShowIncidentsOverlay()
+  const incidentsActive = incidentsFlagEnabled && showIncidents
 
   const bucketSeconds = analytics.histogramBucketSeconds
   const bucketWidthMs = bucketSeconds * 1000
@@ -91,11 +92,11 @@ export function IssuesAnalyticsPanel({
     // Filter to issue-sourced incidents only — the histogram is about issues, not other future
     // alert sources (saved-search thresholds, etc.).
     sourceType: "issue",
-    enabled: showIncidents && incidentRange !== null,
+    enabled: incidentsActive && incidentRange !== null,
   })
 
   const { overlay, incidentsByBucketIndex } = useMemo(() => {
-    if (!showIncidents || incidents.length === 0 || analytics.histogram.length === 0 || !incidentRange) {
+    if (!incidentsActive || incidents.length === 0 || analytics.histogram.length === 0 || !incidentRange) {
       return { overlay: undefined, incidentsByBucketIndex: new Map() }
     }
     const bucketStartsMs = analytics.histogram.map((b) => Date.parse(b.bucket))
@@ -110,7 +111,7 @@ export function IssuesAnalyticsPanel({
       overlay: result.overlay,
       incidentsByBucketIndex: result.incidentsByBucketIndex,
     }
-  }, [showIncidents, incidents, analytics.histogram, histogramBarChartData, incidentRange])
+  }, [incidentsActive, incidents, analytics.histogram, histogramBarChartData, incidentRange, bucketWidthMs])
 
   const formatHistogramTooltip = useCallback(
     (category: string, value: number, dataIndex: number) => {
@@ -203,24 +204,26 @@ export function IssuesAnalyticsPanel({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-end gap-2 px-4 -mb-1">
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowIncidents((prev) => !prev)}
-                    aria-pressed={showIncidents}
-                  >
-                    <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
-                    Incidents
-                  </Button>
-                }
-              >
-                Overlay incidents on the timeline
-              </Tooltip>
-            </div>
+            {incidentsFlagEnabled ? (
+              <div className="flex items-center justify-end gap-2 px-4 -mb-1">
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowIncidents((prev) => !prev)}
+                      aria-pressed={showIncidents}
+                    >
+                      <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                      Incidents
+                    </Button>
+                  }
+                >
+                  Overlay incidents on the timeline
+                </Tooltip>
+              </div>
+            ) : null}
             <div className="px-4 py-3">
               <BarChart
                 data={histogramBarChartData}

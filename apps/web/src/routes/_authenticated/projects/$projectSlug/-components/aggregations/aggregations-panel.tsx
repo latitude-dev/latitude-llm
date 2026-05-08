@@ -3,6 +3,7 @@ import { isTraceHistogramMetric, type TraceHistogramMetric } from "@domain/spans
 import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { BarChart2, ChevronDown, ShieldAlertIcon, ShieldOffIcon } from "lucide-react"
 import { useCallback, useState } from "react"
+import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { GeneralAggregations } from "./general-aggregations.tsx"
 import { Histogram } from "./histogram.tsx"
@@ -25,7 +26,7 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
     validate: isTraceHistogramMetric,
   })
 
-  const [showIncidents, setShowIncidents] = useParamState("showIncidents", false)
+  const { flagEnabled: incidentsFlagEnabled, showIncidents, setShowIncidents } = useShowIncidentsOverlay()
 
   const onMetricSelect = useCallback((metric: TraceHistogramMetric) => setSelectedMetric(metric), [setSelectedMetric])
 
@@ -55,29 +56,31 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
         />
-        <div className="flex items-center justify-end gap-2 px-4 -mb-1">
-          <Tooltip
-            asChild
-            trigger={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowIncidents((prev) => !prev)}
-                aria-pressed={showIncidents}
-              >
-                <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
-                Incidents
-              </Button>
-            }
-          >
-            Overlay incidents on the timeline
-          </Tooltip>
-        </div>
+        {incidentsFlagEnabled ? (
+          <div className="flex items-center justify-end gap-2 px-4 -mb-1">
+            <Tooltip
+              asChild
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowIncidents((prev) => !prev)}
+                  aria-pressed={showIncidents}
+                >
+                  <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                  Incidents
+                </Button>
+              }
+            >
+              Overlay incidents on the timeline
+            </Tooltip>
+          </div>
+        ) : null}
         <Histogram
           projectId={projectId}
           filters={filters}
           metric={selectedMetric}
-          showIncidents={showIncidents}
+          showIncidents={incidentsFlagEnabled && showIncidents}
           onRangeSelect={onTimeRangeSelect}
         />
       </div>

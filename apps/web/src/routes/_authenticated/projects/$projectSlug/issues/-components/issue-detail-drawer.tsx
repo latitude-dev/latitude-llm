@@ -29,6 +29,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
+import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import {
   invalidateIssueQueries,
   useIssueDetail,
@@ -198,13 +199,17 @@ export function IssueDetailDrawer({
     }
   }, [issue?.trend, issue?.trendBucketSeconds])
 
+  // The drawer's per-issue trend always shows incidents when the org has the feature flag —
+  // there's no toggle here, but we still respect the same flag the histograms gate on so the
+  // overlay vanishes everywhere consistently when the flag flips off.
+  const { flagEnabled: incidentsFlagEnabled } = useShowIncidentsOverlay()
   const { data: trendIncidents } = useProjectAlertIncidentsInRange({
     projectId,
     fromIso: trendIncidentRange?.fromIso ?? "",
     toIso: trendIncidentRange?.toIso ?? "",
     sourceType: "issue",
     sourceId: issueId,
-    enabled: trendIncidentRange !== null,
+    enabled: incidentsFlagEnabled && trendIncidentRange !== null,
   })
   const { selectedCount, bulkSelection, clearSelections } = traceSelection
   const hasActiveLinkedEvaluations =
