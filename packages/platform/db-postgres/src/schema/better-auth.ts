@@ -2,6 +2,7 @@ import type { OrganizationSettings } from "@domain/shared"
 import { boolean, index, integer, jsonb, text, varchar } from "drizzle-orm/pg-core"
 import {
   cuid,
+  cuidRef,
   latitudeSchema,
   organizationRLSPolicy,
   subscriptionReferenceRLSPolicy,
@@ -213,8 +214,8 @@ export const oauthApplications = latitudeSchema.table(
     redirectUrls: text("redirect_urls"),
     type: text("type"),
     disabled: boolean("disabled").default(false),
-    userId: cuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    organizationId: cuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    userId: cuidRef("user_id").references(() => users.id, { onDelete: "cascade" }),
+    organizationId: cuidRef("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
     ...timestamps(),
   },
   (t) => [
@@ -240,7 +241,7 @@ export const oauthAccessTokens = latitudeSchema.table(
     accessTokenExpiresAt: tzTimestamp("access_token_expires_at"),
     refreshTokenExpiresAt: tzTimestamp("refresh_token_expires_at"),
     clientId: text("client_id").references(() => oauthApplications.clientId, { onDelete: "cascade" }),
-    userId: cuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: cuidRef("user_id").references(() => users.id, { onDelete: "cascade" }),
     scopes: text("scopes"),
     ...timestamps(),
   },
@@ -257,7 +258,7 @@ export const oauthConsents = latitudeSchema.table(
   {
     id: cuid("id").primaryKey(),
     clientId: text("client_id").references(() => oauthApplications.clientId, { onDelete: "cascade" }),
-    userId: cuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: cuidRef("user_id").references(() => users.id, { onDelete: "cascade" }),
     scopes: text("scopes"),
     consentGiven: boolean("consent_given"),
     ...timestamps(),

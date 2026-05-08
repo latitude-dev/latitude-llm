@@ -44,3 +44,18 @@ export function timestamps() {
 export function cuid(name: string) {
   return varchar(name, { length: 24 }).$defaultFn(() => createId())
 }
+
+/**
+ * Foreign-key column holding a CUID2 written by the caller (or left NULL).
+ * Same physical shape as {@link cuid} — `varchar(24)` — but without the
+ * `$defaultFn`. The default would fire on `column: undefined` and Drizzle
+ * would insert a fresh CUID2 that can't possibly satisfy the FK constraint.
+ *
+ * Use for FK columns where the value is set by something outside our control
+ * (e.g. Better Auth's adapter picks `userId` from the session, leaving the
+ * field undefined when there is no session). With this helper, `undefined`
+ * inserts as `NULL` and the FK accepts it.
+ */
+export function cuidRef(name: string) {
+  return varchar(name, { length: 24 })
+}
