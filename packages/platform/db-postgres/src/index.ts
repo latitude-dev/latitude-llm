@@ -15,6 +15,11 @@ export {
   type User,
 } from "./create-better-auth.ts"
 export { healthcheckPostgres } from "./health.ts"
+export {
+  OAUTH_ACCESS_TOKEN_PREFIX,
+  OAUTH_REFRESH_TOKEN_PREFIX,
+  wrapAdapterForOAuthTokenPrefix,
+} from "./oauth-token-prefix.ts"
 // Outbox consumer for reliable event publishing
 export {
   createPollingOutboxConsumer,

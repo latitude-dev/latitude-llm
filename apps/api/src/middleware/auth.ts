@@ -2,21 +2,17 @@ import { API_KEY_TOKEN_PREFIX } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import { validateApiKey } from "@platform/api-key-auth"
 import type { PostgresClient } from "@platform/db-postgres"
-import { type OAuthTokenAuthResult, validateOAuthAccessToken } from "@platform/oauth-token-auth"
+import {
+  OAUTH_ACCESS_TOKEN_PREFIX,
+  type OAuthTokenAuthResult,
+  validateOAuthAccessToken,
+} from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getAdminPostgresClient } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
-
-/**
- * Token prefix for OAuth access tokens. Set by the Better Auth `mcp` plugin's
- * `databaseHooks.oauthAccessToken.create.before` hook on the web app. Mirrors
- * the `lak_` prefix on API keys: cheap routing, no double lookups, accurate
- * error messages.
- */
-const OAUTH_TOKEN_PREFIX = "loa_"
 
 const extractBearerToken = (c: Context): string | undefined => {
   const authHeader = c.req.header("Authorization")
@@ -109,7 +105,7 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
       return yield* new UnauthorizedError({ message: "Invalid API key" })
     }
 
-    if (bearerToken.startsWith(OAUTH_TOKEN_PREFIX)) {
+    if (bearerToken.startsWith(OAUTH_ACCESS_TOKEN_PREFIX)) {
       const ctx = yield* authenticateWithOAuth(redis, bearerToken, options)
       if (ctx) return ctx
       return yield* new UnauthorizedError({ message: "Invalid OAuth access token" })
