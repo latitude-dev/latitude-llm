@@ -140,11 +140,17 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
     // endpoints from `auth.api` — the plugin is at runtime, but TS can't see
     // it. Cast through a narrow shape rather than `any` so the body / return
     // contract stays explicit.
+    //
+    // Return shape comes from `better-auth@1.6.9/dist/plugins/oidc-provider/
+    // index.mjs` — both the accept branch (line 358) and the deny branch
+    // (line 331) call `ctx.json({ redirectURI })`, so the field is
+    // `redirectURI`, not the more familiar `{ redirect, url }` pair BA uses
+    // elsewhere for browser-fetch responses.
     interface OAuthConsentApi {
       readonly oAuthConsent: (params: {
         body: { accept: boolean; consent_code?: string }
         headers: Headers
-      }) => Promise<{ redirect: boolean; url: string } | Response>
+      }) => Promise<{ redirectURI: string }>
     }
     const api = getBetterAuth().api as unknown as OAuthConsentApi
     const result = await api.oAuthConsent({
@@ -152,8 +158,8 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
       headers: new Headers(headers),
     })
 
-    if (typeof result === "object" && result !== null && "url" in result && typeof result.url === "string") {
-      return { redirectUrl: result.url }
+    if (typeof result?.redirectURI === "string" && result.redirectURI.length > 0) {
+      return { redirectUrl: result.redirectURI }
     }
     throw new UnauthorizedError({ message: "OAuth consent did not return a redirect URL" })
   })
