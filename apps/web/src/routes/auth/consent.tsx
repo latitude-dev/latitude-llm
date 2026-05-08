@@ -91,9 +91,11 @@ function OAuthConsentPage() {
           organizationId,
         },
       })
-      // BA's redirect URL points to the MCP client's `redirect_uri` (a different
-      // origin in prod), so use a full navigation, not router.navigate.
-      window.location.href = redirectUrl
+      // Full navigation (BA's redirect URL is the OAuth client's `redirect_uri`,
+      // a different origin in prod) — and `replace` so the consent page is gone
+      // from history. If the user clicks "back" from the OAuth client app they
+      // should leave the flow, not land on a stale consent screen.
+      window.location.replace(redirectUrl)
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
       setIsSubmitting(false)
@@ -107,7 +109,9 @@ function OAuthConsentPage() {
       const { redirectUrl } = await decideOAuthConsent({
         data: { accept: false, consentCode: consent_code },
       })
-      window.location.href = redirectUrl
+      // Same `replace` rationale as the authorize path — browser-back should
+      // not land on the now-dead consent page.
+      window.location.replace(redirectUrl)
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
       setIsSubmitting(false)
