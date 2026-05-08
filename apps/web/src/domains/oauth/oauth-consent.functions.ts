@@ -29,7 +29,7 @@
 import { MembershipRepository } from "@domain/organizations"
 import { OrganizationId, UnauthorizedError } from "@domain/shared"
 import { eq, MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { oauthApplications } from "@platform/db-postgres/schema/better-auth"
+import { oauthApplications, verifications } from "@platform/db-postgres/schema/better-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
@@ -56,6 +56,7 @@ const consentDecisionSchema = z
 
 const consentRequestSchema = z.object({
   clientId: z.string().min(1),
+  consentCode: z.string().min(1),
 })
 
 interface OAuthConsentRedirect {
@@ -76,12 +77,32 @@ interface OAuthConsentRequestData {
  * Look up display data for the consent page: the requesting OAuth client (so
  * the page can show "<client name> wants to access your account") and the
  * caller's organizations (so they can pick one to bind the token to).
+ *
+ * Also validates the `consent_code` is still alive in BA's `verifications`
+ * table — once the user accepts or denies, BA either rewrites or deletes the
+ * row, so visiting the page again via browser-back leaves the URL pointing at
+ * a code BA can no longer resolve. Surfacing the staleness here means we
+ * never render an apparently-functional consent UI that would 401 the moment
+ * the user clicks anything.
  */
 export const getOAuthConsentRequest = createServerFn({ method: "GET" })
   .inputValidator(consentRequestSchema)
   .handler(async ({ data }): Promise<OAuthConsentRequestData> => {
     await requireUserSession()
     const adminClient = getAdminPostgresClient()
+
+    const [verification] = await adminClient.db
+      .select({ identifier: verifications.identifier, expiresAt: verifications.expiresAt })
+      .from(verifications)
+      .where(eq(verifications.identifier, data.consentCode))
+      .limit(1)
+    if (!verification || verification.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedError({
+        message:
+          "This authorization request has already been used or has expired. Start a new sign-in from your MCP client.",
+      })
+    }
+
     const [client] = await adminClient.db
       .select({ clientId: oauthApplications.clientId, name: oauthApplications.name, icon: oauthApplications.icon })
       .from(oauthApplications)
@@ -153,10 +174,25 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
       }) => Promise<{ redirectURI: string }>
     }
     const api = getBetterAuth().api as unknown as OAuthConsentApi
-    const result = await api.oAuthConsent({
-      body: { accept: data.accept, consent_code: data.consentCode },
-      headers: new Headers(headers),
-    })
+
+    let result: { redirectURI: string }
+    try {
+      result = await api.oAuthConsent({
+        body: { accept: data.accept, consent_code: data.consentCode },
+        headers: new Headers(headers),
+      })
+    } catch {
+      // BA throws `APIError("UNAUTHORIZED", { error: "invalid_request" })` when
+      // the consent_code points at a verification that's already been used or
+      // deleted (the deny path deletes; accept rotates to a new identifier).
+      // Re-raise as a typed app error so the UI can render a clear message
+      // instead of letting TanStack Start's runtime turn the throw into an
+      // anonymous 500.
+      throw new UnauthorizedError({
+        message:
+          "This authorization request has already been used or has expired. Start a new sign-in from your MCP client.",
+      })
+    }
 
     if (typeof result?.redirectURI === "string" && result.redirectURI.length > 0) {
       return { redirectUrl: result.redirectURI }

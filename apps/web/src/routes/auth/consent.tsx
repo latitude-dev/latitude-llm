@@ -17,9 +17,9 @@
  * redirects to `/login` with the consent URL as the post-login `redirect`
  * search param so the flow resumes after sign-in.
  */
-import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
+import { Button, cn, LatitudeLogo, Text, useHashColor, useToast } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { AlertCircle, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import { decideOAuthConsent, getOAuthConsentRequest } from "../../domains/oauth/oauth-consent.functions.ts"
@@ -47,7 +47,9 @@ export const Route = createFileRoute("/auth/consent")({
       throw redirect({ to: "/login", search: { redirect: consentPath } })
     }
 
-    const consent = await getOAuthConsentRequest({ data: { clientId: deps.client_id } })
+    const consent = await getOAuthConsentRequest({
+      data: { clientId: deps.client_id, consentCode: deps.consent_code },
+    })
     return { consent }
   },
   component: OAuthConsentPage,
@@ -72,7 +74,7 @@ function OAuthConsentPage() {
   const { consent_code } = Route.useSearch()
   const { consent } = Route.useLoaderData()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string>()
+  const { toast } = useToast()
 
   const clientName = consent.client.name ?? "An MCP client"
   const noOrgs = consent.organizations.length === 0
@@ -80,7 +82,6 @@ function OAuthConsentPage() {
   const authorizeForOrg = async (organizationId: string) => {
     if (isSubmitting) return
     setIsSubmitting(true)
-    setError(undefined)
     try {
       const { redirectUrl } = await decideOAuthConsent({
         data: {
@@ -94,7 +95,7 @@ function OAuthConsentPage() {
       // origin in prod), so use a full navigation, not router.navigate.
       window.location.href = redirectUrl
     } catch (err) {
-      setError(toUserMessage(err))
+      toast({ variant: "destructive", description: toUserMessage(err) })
       setIsSubmitting(false)
     }
   }
@@ -102,14 +103,13 @@ function OAuthConsentPage() {
   const deny = async () => {
     if (isSubmitting) return
     setIsSubmitting(true)
-    setError(undefined)
     try {
       const { redirectUrl } = await decideOAuthConsent({
         data: { accept: false, consentCode: consent_code },
       })
       window.location.href = redirectUrl
     } catch (err) {
-      setError(toUserMessage(err))
+      toast({ variant: "destructive", description: toUserMessage(err) })
       setIsSubmitting(false)
     }
   }
@@ -162,13 +162,6 @@ function OAuthConsentPage() {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <Icon icon={AlertCircle} className="h-4 w-4" />
-              <Text.H5 color="destructive">{error}</Text.H5>
             </div>
           )}
 
