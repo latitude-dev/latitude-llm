@@ -186,11 +186,11 @@ span.SetAttributes(
 
 Latitude follows the **[OpenTelemetry Semantic Conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/)** (v1.37+). When your spans include `gen_ai.*` attributes, the Latitude UI displays full LLM call details: the provider, model, input/output messages, token usage, cost, and latency.
 
-Refer to the [GenAI span semconv spec](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/) for the full attribute list. The message content attributes use a Latitude-specific format documented below.
+Refer to the [GenAI span semconv spec](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/) for the full attribute list. The message content attributes use the standard OpenTelemetry GenAI **parts-based** message format, shown below.
 
 ### Message Format
 
-Latitude expects the **parts-based** GenAI message format. Each message has a `role` and an array of `parts`:
+Latitude expects the standard **parts-based** GenAI message format. Each message has a `role` and an array of `parts`:
 
 **`gen_ai.input.messages`** (JSON string):
 
