@@ -34,7 +34,7 @@ export interface ListSavedSearchesRepoInput {
   readonly assignedUserId?: UserId
 }
 
-export interface ExistsBySlugRepoInput {
+export interface CountBySlugRepoInput {
   readonly projectId: ProjectId
   readonly slug: string
   readonly excludeId?: SavedSearchId
@@ -49,7 +49,7 @@ export interface SavedSearchRepositoryShape {
     readonly projectId: ProjectId
     readonly slug: string
   }): Effect.Effect<SavedSearch, SavedSearchNotFoundError | RepositoryError, SqlClient>
-  existsBySlug(args: ExistsBySlugRepoInput): Effect.Effect<boolean, RepositoryError, SqlClient>
+  countBySlug(args: CountBySlugRepoInput): Effect.Effect<number, RepositoryError, SqlClient>
   listByProject(args: ListSavedSearchesRepoInput): Effect.Effect<SavedSearchListPage, RepositoryError, SqlClient>
   update(
     args: UpdateSavedSearchRepoInput,

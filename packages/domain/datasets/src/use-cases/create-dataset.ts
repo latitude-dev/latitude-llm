@@ -1,5 +1,5 @@
 import { OutboxEventWriter } from "@domain/events"
-import type { DatasetId, ProjectId } from "@domain/shared"
+import { type DatasetId, generateSlug, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { validateDatasetNameInProject } from "./validate-dataset-name.ts"
@@ -19,7 +19,11 @@ export const createDataset = Effect.fn("datasets.createDataset")(function* (args
     projectId: args.projectId,
     name: args.name,
   })
-  const dataset = yield* repo.create({ ...args, name })
+  const slug = yield* generateSlug({
+    name,
+    count: (slug) => repo.countBySlug({ projectId: args.projectId, slug }),
+  })
+  const dataset = yield* repo.create({ ...args, name, slug })
 
   const outboxEventWriter = yield* OutboxEventWriter
   yield* outboxEventWriter.write({

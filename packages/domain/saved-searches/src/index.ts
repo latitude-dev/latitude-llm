@@ -1,9 +1,4 @@
-export {
-  SAVED_SEARCH_NAME_MAX_LENGTH,
-  SAVED_SEARCH_QUERY_MAX_LENGTH,
-  SAVED_SEARCH_SLUG_COLLISION_LIMIT,
-  SAVED_SEARCH_SLUG_MAX_LENGTH,
-} from "./constants.ts"
+export { SAVED_SEARCH_NAME_MAX_LENGTH, SAVED_SEARCH_QUERY_MAX_LENGTH } from "./constants.ts"
 export { isEmptySearch, type SavedSearch, savedSearchSchema } from "./entities/saved-search.ts"
 export {
   DuplicateSavedSearchSlugError,

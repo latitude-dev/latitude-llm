@@ -6,6 +6,7 @@ import {
   type ProjectSettings,
   projectIdSchema,
   projectSettingsSchema,
+  SLUG_MAX_LENGTH,
 } from "@domain/shared"
 import { z } from "zod"
 
@@ -13,7 +14,7 @@ export const projectSchema = z.object({
   id: projectIdSchema,
   organizationId: organizationIdSchema,
   name: z.string().min(1),
-  slug: z.string().min(1),
+  slug: z.string().min(1).max(SLUG_MAX_LENGTH),
   settings: projectSettingsSchema.nullable(),
   firstTraceAt: z.date().nullable(),
   deletedAt: z.date().nullable(),

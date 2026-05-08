@@ -27,6 +27,7 @@ const toPublic = (row: FakeDataset): Dataset => ({
   id: row.id,
   organizationId: row.organizationId,
   projectId: row.projectId,
+  slug: row.slug,
   name: row.name,
   description: row.description,
   fileKey: row.fileKey,
@@ -77,6 +78,7 @@ export const createFakeDatasetRepository = (
           id,
           organizationId,
           projectId: args.projectId,
+          slug: args.slug,
           name: args.name,
           description: args.description ?? null,
           fileKey: args.fileKey ?? null,
@@ -141,11 +143,23 @@ export const createFakeDatasetRepository = (
         ),
       ),
 
+    countBySlug: (args) =>
+      Effect.sync(
+        () =>
+          [...datasets.values()].filter(
+            (d) =>
+              d.projectId === args.projectId &&
+              d.slug === args.slug &&
+              !d.deletedAt &&
+              (!args.excludeDatasetId || d.id !== args.excludeDatasetId),
+          ).length,
+      ),
+
     updateName: (args) =>
       Effect.gen(function* () {
         const row = liveById(args.id)
         if (!row) return yield* new DatasetNotFoundError({ datasetId: args.id })
-        const updated: FakeDataset = { ...row, name: args.name, updatedAt: new Date() }
+        const updated: FakeDataset = { ...row, name: args.name, slug: args.slug, updatedAt: new Date() }
         datasets.set(args.id, updated)
         return toPublic(updated)
       }),
@@ -154,7 +168,13 @@ export const createFakeDatasetRepository = (
       Effect.gen(function* () {
         const row = liveById(args.id)
         if (!row) return yield* new DatasetNotFoundError({ datasetId: args.id })
-        const updated: FakeDataset = { ...row, name: args.name, description: args.description, updatedAt: new Date() }
+        const updated: FakeDataset = {
+          ...row,
+          name: args.name,
+          slug: args.slug,
+          description: args.description,
+          updatedAt: new Date(),
+        }
         datasets.set(args.id, updated)
         return toPublic(updated)
       }),

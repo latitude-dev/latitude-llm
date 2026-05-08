@@ -5,7 +5,7 @@ import {
   issueSchema,
   MIN_OCCURRENCES_FOR_VISIBILITY,
 } from "@domain/issues"
-import { IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
@@ -35,15 +35,18 @@ const issueBase = {
   updatedAt: new Date("2026-04-01T00:00:00.000Z"),
 }
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
-  issueSchema.parse({
+const makeIssue = (overrides: Partial<Issue> = {}): Issue => {
+  const name = overrides.name ?? "Secret leakage"
+  return issueSchema.parse({
     id: issueId,
     uuid: "11111111-1111-4111-8111-111111111111",
-    name: "Secret leakage",
+    slug: toSlug(name),
+    name,
     description: "The agent exposes sensitive secrets.",
     ...issueBase,
     ...overrides,
   })
+}
 
 const makeProvider = (database: InMemoryPostgres) =>
   withPostgres(IssueRepositoryLive, database.appPostgresClient, organizationId)

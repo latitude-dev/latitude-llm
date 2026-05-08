@@ -9,7 +9,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { projects } from "../schema/projects.ts"
@@ -187,20 +187,24 @@ export const ProjectRepositoryLive = Layer.effect(
             .pipe(Effect.map((results) => results[0] !== undefined))
         }),
 
-      existsBySlug: (slug: string) =>
+      countBySlug: (slug: string, excludeProjectId?: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select({ id: projects.id })
+                .select({ count: sql<number>`count(*)::int` })
                 .from(projects)
                 .where(
-                  and(eq(projects.organizationId, organizationId), eq(projects.slug, slug), isNull(projects.deletedAt)),
-                )
-                .limit(1),
+                  and(
+                    eq(projects.organizationId, organizationId),
+                    eq(projects.slug, slug),
+                    isNull(projects.deletedAt),
+                    ...(excludeProjectId ? [ne(projects.id, excludeProjectId)] : []),
+                  ),
+                ),
             )
-            .pipe(Effect.map((results) => results[0] !== undefined))
+            .pipe(Effect.map((results) => results[0]?.count ?? 0))
         }),
     }
   }),

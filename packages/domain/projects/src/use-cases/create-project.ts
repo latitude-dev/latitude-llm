@@ -1,11 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
   type ConflictError,
+  generateSlug,
   type ProjectId,
   type RepositoryError,
   SqlClient,
   toRepositoryError,
-  toSlug,
   type ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
@@ -43,44 +43,19 @@ export const createProjectUseCase = Effect.fn("projects.createProject")(function
     })
   }
 
-  const trimmedSlug = toSlug(trimmedName)
-  if (!trimmedSlug || trimmedSlug.length === 0) {
-    return yield* new InvalidProjectNameError({
-      field: trimmedSlug,
-      message: "Slug cannot be empty",
-    })
-  }
-
-  if (trimmedSlug.length > 256) {
-    return yield* new InvalidProjectNameError({
-      field: trimmedSlug,
-      message: "Slug exceeds 256 characters, try with a shorter project name.",
-    })
-  }
-
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
       const outboxEventWriter = yield* OutboxEventWriter
 
-      // Generate unique slug by appending numbers if needed
-      let uniqueSlug = trimmedSlug
-      let found = false
-      for (let i = 1; i <= 100; i++) {
-        const exists = yield* repo.existsBySlug(uniqueSlug)
-        if (!exists) {
-          found = true
-          break
-        }
-        uniqueSlug = `${trimmedSlug}-${i}`
-      }
-
-      if (!found) {
-        return yield* new InvalidProjectNameError({
-          field: trimmedSlug,
-          message: "Could not generate a unique project slug, try with a different project name.",
-        })
-      }
+      const uniqueSlug = yield* generateSlug({
+        name: trimmedName,
+        count: (slug) => repo.countBySlug(slug),
+      }).pipe(
+        Effect.catchTag("InvalidSlugInputError", (error) =>
+          Effect.fail(new InvalidProjectNameError({ field: input.name, message: error.reason })),
+        ),
+      )
 
       const project = createProject({
         id: input.id,

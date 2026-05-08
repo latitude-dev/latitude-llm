@@ -72,7 +72,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
           softDelete: () => Effect.die(new Error("unused")),
           hardDelete: () => Effect.die(new Error("unused")),
           existsByName: () => Effect.succeed(false),
-          existsBySlug: () => Effect.succeed(false),
+          countBySlug: () => Effect.succeed(0),
         }),
       ),
     )

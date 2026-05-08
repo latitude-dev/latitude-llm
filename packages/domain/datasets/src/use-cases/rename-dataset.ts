@@ -1,4 +1,4 @@
-import type { DatasetId } from "@domain/shared"
+import { type DatasetId, generateSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { validateDatasetNameInProject } from "./validate-dataset-name.ts"
@@ -20,5 +20,11 @@ export const renameDataset = Effect.fn("datasets.renameDataset")(function* (args
     excludeDatasetId: args.datasetId,
   })
 
-  return yield* repo.updateName({ id: args.datasetId, name })
+  // Slug regenerates whenever the name changes (matches saved-searches semantics).
+  const slug = yield* generateSlug({
+    name,
+    count: (slug) => repo.countBySlug({ projectId: dataset.projectId, slug, excludeDatasetId: args.datasetId }),
+  })
+
+  return yield* repo.updateName({ id: args.datasetId, name, slug })
 })

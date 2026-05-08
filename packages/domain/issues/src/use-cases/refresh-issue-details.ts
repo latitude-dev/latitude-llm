@@ -1,7 +1,7 @@
 import { ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import { generateSlug, IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { type GenerateIssueDetailsError, generateIssueDetailsUseCase } from "./generate-issue-details.ts"
@@ -118,8 +118,23 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
           } satisfies RefreshIssueDetailsResult
         }
 
+        // Slug regenerates only when the name actually changed; description-only refreshes keep the slug.
+        const slug =
+          issue.name === generatedDetailsResult.details.name
+            ? issue.slug
+            : yield* generateSlug({
+                name: generatedDetailsResult.details.name,
+                count: (slug) =>
+                  issueRepository.countBySlug({
+                    projectId: ProjectId(issue.projectId),
+                    slug,
+                    excludeIssueId: issue.id,
+                  }),
+              })
+
         yield* issueRepository.save({
           ...issue,
+          slug,
           name: generatedDetailsResult.details.name,
           description: generatedDetailsResult.details.description,
           updatedAt: new Date(),
