@@ -411,7 +411,7 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="success"
-              indicator={<Icon icon={ThumbsUpIcon} size="xs" />}
+              indicator={<Icon icon={ThumbsUpIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(positiveCount)}
               className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
               aria-label={`${positiveCount} positive ${positiveCount === 1 ? "annotation" : "annotations"}`}
@@ -428,7 +428,7 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="destructive"
-              indicator={<Icon icon={ThumbsDownIcon} size="xs" />}
+              indicator={<Icon icon={ThumbsDownIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(negativeCount)}
               className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
               aria-label={`${negativeCount} negative ${negativeCount === 1 ? "annotation" : "annotations"}`}
@@ -445,7 +445,7 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="warning"
-              indicator={<Icon icon={TriangleAlertIcon} size="xs" />}
+              indicator={<Icon icon={TriangleAlertIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(errorCount)}
               className={showIconOnly ? "gap-0 px-1.5" : onErrorClick ? "cursor-pointer" : undefined}
               aria-label={`${errorCount} ${errorCount === 1 ? "error" : "errors"} in this trace`}
