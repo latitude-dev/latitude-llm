@@ -42,6 +42,7 @@ import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
+import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
@@ -229,6 +230,11 @@ const AuthenticatedProjectsProjectSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const ApiAuthMcpAuthorizeRoute = ApiAuthMcpAuthorizeRouteImport.update({
+  id: '/api/auth/mcp/authorize',
+  path: '/api/auth/mcp/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
   id: '/api/auth/$provider/start',
   path: '/api/auth/$provider/start',
@@ -306,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/projects/$projectSlug/'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets/'
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets'
@@ -508,6 +519,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/_authenticated/projects/$projectSlug/'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
     | '/_authenticated/projects/$projectSlug/datasets/'
@@ -530,6 +542,7 @@ export interface RootRouteChildren {
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
   ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
   ApiAuthProviderStartRoute: typeof ApiAuthProviderStartRoute
+  ApiAuthMcpAuthorizeRoute: typeof ApiAuthMcpAuthorizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -765,6 +778,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/api/auth/mcp/authorize': {
+      id: '/api/auth/mcp/authorize'
+      path: '/api/auth/mcp/authorize'
+      fullPath: '/api/auth/mcp/authorize'
+      preLoaderRoute: typeof ApiAuthMcpAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$provider/start': {
       id: '/api/auth/$provider/start'
       path: '/api/auth/$provider/start'
@@ -947,6 +967,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
   ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
   ApiAuthProviderStartRoute: ApiAuthProviderStartRoute,
+  ApiAuthMcpAuthorizeRoute: ApiAuthMcpAuthorizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
