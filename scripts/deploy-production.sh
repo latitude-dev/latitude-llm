@@ -40,11 +40,11 @@ if [ -n "$main_commits_not_on_development" ]; then
   echo ""
   read -r -p "Continue anyway? [y/N] " continue_anyway
   case "$continue_anyway" in
-    y | Y | yes | YES) ;;
-    *)
-      echo "Aborted."
-      exit 0
-      ;;
+  y | Y | yes | YES) ;;
+  *)
+    echo "Aborted."
+    exit 0
+    ;;
   esac
 fi
 
@@ -65,11 +65,11 @@ fi
 
 read -r -p "Open a production deploy PR now? [y/N] " confirm
 case "$confirm" in
-  y | Y | yes | YES) ;;
-  *)
-    echo "Aborted."
-    exit 0
-    ;;
+y | Y | yes | YES) ;;
+*)
+  echo "Aborted."
+  exit 0
+  ;;
 esac
 
 timestamp=$(TZ=Europe/Madrid date +%d-%m-%Y-%H-%M)
