@@ -763,9 +763,8 @@ export const TraceRepositoryLive = Layer.effect(
      */
     const planSearch = (parsed: ParsedSearchQuery): Effect.Effect<SearchPlan, never> =>
       Effect.gen(function* () {
-        const queryEmbedding = parsed.semanticPrompt.length > 0
-          ? yield* generateQueryEmbedding(parsed.semanticPrompt)
-          : undefined
+        const queryEmbedding =
+          parsed.semanticPrompt.length > 0 ? yield* generateQueryEmbedding(parsed.semanticPrompt) : undefined
         return buildSearchPlan(parsed, queryEmbedding)
       })
 

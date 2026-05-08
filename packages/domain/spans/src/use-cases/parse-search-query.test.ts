@@ -42,7 +42,7 @@ describe("parseSearchQuery", () => {
     })
   })
 
-  it("drops empty phrases (`\"\"`)", () => {
+  it('drops empty phrases (`""`)', () => {
     expect(parseSearchQuery('"" billing')).toEqual({
       phrases: [],
       semanticPrompt: "billing",
