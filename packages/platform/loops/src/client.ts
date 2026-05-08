@@ -26,8 +26,7 @@ const omitUndefined = (input: Record<string, string | number | boolean | null | 
   return out
 }
 
-const isAlreadyOnListError = (error: unknown): boolean =>
-  error instanceof APIError && error.statusCode === 409
+const isAlreadyOnListError = (error: unknown): boolean => error instanceof APIError && error.statusCode === 409
 
 const NOOP_SENDER: MarketingContactsPort = {
   createContact: () => Effect.void,
