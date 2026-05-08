@@ -41,6 +41,24 @@
           "status"
         ]
       },
+      "OAuthProtectedResourceMetadata": {
+        "type": "object",
+        "properties": {
+          "resource": {
+            "type": "string"
+          },
+          "authorization_servers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "resource",
+          "authorization_servers"
+        ]
+      },
       "Project": {
         "type": "object",
         "properties": {
@@ -1134,6 +1152,28 @@
         }
       }
     },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "operationId": "wellKnown.oauthProtectedResource",
+        "tags": [
+          "Well-known"
+        ],
+        "summary": "OAuth protected resource metadata",
+        "description": "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+        "responses": {
+          "200": {
+            "description": "Protected resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthProtectedResourceMetadata"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects": {
       "post": {
         "operationId": "projects.create",
@@ -1582,7 +1622,6 @@
     },
     "/v1/api-keys": {
       "post": {
-        "operationId": "apiKeys.create",
         "tags": [
           "API Keys"
         ],
@@ -1595,6 +1634,7 @@
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "createApiKey",
         "requestBody": {
           "required": true,
           "content": {
@@ -1649,7 +1689,6 @@
         }
       },
       "get": {
-        "operationId": "apiKeys.list",
         "tags": [
           "API Keys"
         ],
@@ -1662,6 +1701,7 @@
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "listApiKeys",
         "responses": {
           "200": {
             "description": "List of API keys",
@@ -1688,7 +1728,6 @@
     },
     "/v1/api-keys/{id}": {
       "delete": {
-        "operationId": "apiKeys.revoke",
         "tags": [
           "API Keys"
         ],
@@ -1701,6 +1740,7 @@
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "revokeApiKey",
         "parameters": [
           {
             "schema": {

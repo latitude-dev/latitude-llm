@@ -20,8 +20,8 @@ Stack confirmed: `better-auth@1.6.9` (catalog), `@better-auth/core@1.6.9`, `@bet
 | D2 | **MCP at `/v1/mcp` inside `apps/api`.** Not a separate process. | Reuses existing middleware chain (validation, rate-limit, auth, org-context), Effect layers, and Zod schemas. |
 | D3 | **Better Auth lives only on the web app.** The API does **not** mount BA. The web's existing BA instance gains the `mcp()` plugin (so `/api/auth/mcp/authorize`, `/api/auth/mcp/token`, `/api/auth/mcp/register`, `/api/auth/oauth2/consent`, and `/api/auth/.well-known/*` are all served by the web). The API only serves `/v1/mcp` plus a tiny static `/.well-known/oauth-protected-resource` advertising the web origin as the AS. Token validation on the API reads `oauth_access_token` directly from shared Postgres via Drizzle — no BA call. | RFC 9728 explicitly allows the AS to live on a different origin than the protected resource. Keeping OAuth on the web origin means the user's browser never crosses origins during sign-in/consent — the existing session cookie on the web is reused as-is. The MCP client only crosses origins for the final `Authorization: Bearer loa_…` API call, which is a header (not a cookie). **No reverse proxy needed in dev or prod.** |
 | D4 | **Token prefixes**: new API keys → `lak_<random>`; OAuth access tokens → `loa_<random>` (avoiding `lat_` which can read as "Latitude"). Existing un-prefixed API keys keep working via the legacy fallback path (try API-key validator first, then OAuth, then 401). No forced rotation. | Cheap routing, no double lookups, accurate error messages. |
-| D5 | **OAuth org binding via the `oauthApplication.metadata` JSON column** — not a new join table. At consent time, the web's `/auth/consent` page writes `{ "organizationId": "..." }` into `oauthApplication.metadata` for the OAuth client being authorized. The API's auth middleware joins `oauthAccessToken → oauthApplication` and reads `metadata->>'organizationId'` from shared Postgres. | The OIDC Provider plugin (which the MCP plugin uses) gives us `oauthApplication.metadata` as a documented free-form extension point. Confirmed in the BA docs. **No new `oauth_client_org_bindings` table.** Postgres can index `((metadata::jsonb)->>'organizationId')` if the auth-path query becomes hot, but the per-token Redis cache (5 min TTL) makes this rare. |
-| D6 | **Custom consent page at `${webUrl}/auth/consent`** (NOT `/oauth/consent`). The MCP plugin's `oidcConfig.consentPage` redirects there. The page is a TanStack Start route that reads `?consent_code=…&client_id=…&scope=…`, lists the user's orgs, lets them pick one, then runs a server fn that (a) validates user is a member of the chosen org, (b) updates `oauthApplication.metadata` with the org id (via Drizzle on the web's admin Postgres connection), and (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process. | All on web — no cross-process call, no API involvement. `/auth/*` is the existing non-reserved namespace on the web app (`/auth/invite` lives there); `/api/auth/*` is reserved for the BA HTTP handler. |
+| D5 | **OAuth org binding via a typed `organization_id` column on `oauth_applications`** — not a new join table, and not the BA `metadata` JSON. At consent time, the web's `/auth/consent` page writes the picked org id directly into the `organization_id` column. The API's auth middleware joins `oauth_access_tokens → oauth_applications` and reads `a.organization_id` from shared Postgres. | Mirrors the existing `api_keys.organization_id + RLS` pattern (single column + FK + soft-delete-aware RLS policy). RLS is enabled scoped by `organization_id`: the settings/keys page on web reads through the regular tenant-scoped connection and only sees MCP clients bound to the active org; abandoned `/api/auth/mcp/register` rows (NULL `organization_id`) are invisible to all tenant queries by design. Token validation on the API uses the admin Postgres connection (same as `api_keys.findByTokenHash`) so it can resolve the bound org without any `set_organization_id` precondition. The two related tables (`oauth_access_tokens`, `oauth_consents`) stay RLS-free because they're only read either via the admin-bypass path (token validation) or via JOIN through the RLS-protected application — defense in depth without RLS-via-EXISTS overhead on the hot path. |
+| D6 | **Custom consent page at `${webUrl}/auth/consent`** (NOT `/oauth/consent`). The MCP plugin's `oidcConfig.consentPage` redirects there. The page is a TanStack Start route that reads `?consent_code=…&client_id=…&scope=…`, lists the user's orgs, lets them pick one, then runs a server fn that (a) validates user is a member of the chosen org, (b) updates `oauth_applications.organization_id` for the matching `client_id` (via Drizzle on the web's admin Postgres connection — admin needed to bypass RLS while writing the very binding RLS will check against), and (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process. | All on web — no cross-process call, no API involvement. `/auth/*` is the existing non-reserved namespace on the web app (`/auth/invite` lives there); `/api/auth/*` is reserved for the BA HTTP handler. |
 | D7 | **Slugs regenerate on rename.** Saved-searches already does this (`update-saved-search.ts:62-71` regenerates the slug when the name changes). Apply the same to **projects, organizations, issues, datasets** — anywhere a slug is derived from a name. | URL stability is sacrificed in exchange for slug-tracks-name semantics. Matches the existing pattern; consistency wins. |
 | D8 | **`TracesRefSchema` (plural-form sibling of `TraceRefSchema`)** in `packages/domain/spans/src/helpers/trace-ref.ts`. Mirrors the single-trace shape but swaps `by: "id"` → `by: "ids"` and the request-body field name `trace` → `traces`. **No hard cap on resolved trace count** — the UI exports up to 178k today, so the API must not be more restrictive. (A future cap can live in the UI if needed.) | New `resolveTraceIdsFromRef(tracesRef, ctx)` returns `Effect<readonly TraceId[]>`. For `by: "filters"`, paginate through `TraceRepository.listByProjectId` until exhausted. |
 | D9 | **Per-route rate-limit tiers** keyed on `c.var.organization.id`. Four presets: `low` 100/min, `medium` (default) 60/min, `high` 15/min, `critical` 3/min. Applied at the route-mount site (`routes.use(prefix, createTierRateLimiter("high"))`). | Org-keyed (not IP) so one tenant can't starve another. Lower than my earlier defaults — the user knows their throughput envelope. |
@@ -81,10 +81,10 @@ The MCP discovery flow (RFC 9728 + RFC 8414):
 3. MCP client → `https://app.latitude.so/api/auth/.well-known/oauth-authorization-server` → BA-served metadata listing the authorize/token/register endpoints (all on the web origin).
 4. MCP client opens the user's browser at `https://app.latitude.so/api/auth/mcp/authorize?…`. **Same origin as the existing session cookie** — BA reads it directly. If no session, BA redirects to `/login`, user signs in (existing flow), BA continues the authorize step.
 5. BA mints a `consent_code` and redirects to `https://app.latitude.so/auth/consent?consent_code=…&client_id=…&scope=…`. Same origin still.
-6. User picks an org, clicks Approve. The web server fn (a) validates membership, (b) updates `oauthApplication.metadata.organizationId` via Drizzle, (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process.
+6. User picks an org, clicks Approve. The web server fn (a) validates membership, (b) sets `oauth_applications.organization_id` for the matching `client_id` via the admin Drizzle connection, (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process.
 7. BA returns the auth code to the MCP client's redirect URI.
 8. MCP client → `POST https://app.latitude.so/api/auth/mcp/token` (server-to-server, no cookies) → returns `loa_…` access token.
-9. MCP client → `https://api.latitude.so/v1/mcp` with `Authorization: Bearer loa_…`. The API's auth middleware queries shared Postgres for the token, joins to `oauthApplication.metadata->>'organizationId'`, sets `c.var.auth` and `c.var.organization`. Tool dispatch proceeds.
+9. MCP client → `https://api.latitude.so/v1/mcp` with `Authorization: Bearer loa_…`. The API's auth middleware queries shared Postgres (admin connection, RLS-bypass) for the token, joins to `oauth_applications.organization_id`, sets `c.var.auth` and `c.var.organization`. Tool dispatch proceeds.
 
 The browser only ever talks to `app.latitude.so` (the web origin). The MCP client (CLI agent) talks to both origins via plain HTTPS — no CORS or cookies in play. Local dev: `localhost:3000` web ↔ `localhost:3001` API works as-is, no proxy needed.
 
@@ -150,10 +150,10 @@ SELECT  t.user_id,
         t.client_id,
         t.scopes,
         t.access_token_expires_at,
-        a.disabled                              AS application_disabled,
-        (a.metadata::jsonb)->>'organizationId'  AS organization_id
-FROM    oauth_access_token t
-JOIN    oauth_application a ON a.client_id = t.client_id
+        a.disabled         AS application_disabled,
+        a.organization_id  AS organization_id
+FROM    oauth_access_tokens t
+JOIN    oauth_applications a ON a.client_id = t.client_id
 WHERE   t.access_token = $1
 LIMIT   1
 ```
@@ -211,7 +211,7 @@ Three behaviors worth calling out:
 1. **Cache key is `oauth:${sha256(token)}`** — never the raw token. Same as `apikey:${tokenHash}`. Defense in depth against a Redis dump leaking secrets.
 2. **TTL is bounded by token expiry**: `min(300s, secondsUntilExpiry)`. A token expiring in 30s gets cached for 30s, not 5 min. Avoids the "cache served an expired token" failure mode.
 3. **Expiry is re-checked on cache hit** (the `cached.expiresAt < now()` branch). Belt-and-suspenders — even if the TTL math is wrong, the in-memory check catches it.
-4. **Touch-buffer**: optional `onTokenValidated(id)` hook lets us track `lastUsedAt` per OAuth token via the same in-memory batched-write pattern API keys use (`apps/api/src/middleware/touch-buffer.ts`). Useful for the "MCP Keys" settings table in M-Settings ("last used 3 minutes ago").
+4. **Touch-buffer**: optional `onTokenValidated(id)` hook lets us track `lastUsedAt` per OAuth token via the same in-memory batched-write pattern API keys use (`apps/api/src/middleware/touch-buffer.ts`). Useful for the "OAuth Keys" settings table in M-Settings ("last used 3 minutes ago").
 5. **Fail-open on Redis errors** — same as API-key path: Redis timeout → fall through to DB. DB is source of truth.
 
 The platform package is pure: it imports Drizzle table definitions from `@platform/db-postgres` and a `RedisClient` from `@platform/cache-redis`. No `better-auth` dependency anywhere on the API side.
@@ -347,9 +347,9 @@ protectedApp.all("/v1/mcp", async (c) => {
 })
 ```
 
-### `pnpm generate:mcp`
+### `pnpm mcp:emit`
 
-Mirrors `pnpm generate:sdk`. Boots the route registry with stub clients (same pattern as `openapi:emit`), walks `endpointRegistry`, writes `apps/api/mcp.json` with `{ name, version, tools: [{ name, title, description, inputSchema }, ...] }`. CI guards drift the same way `openapi.json` is guarded.
+Mirrors `pnpm openapi:emit`. Boots the route registry with stub clients, walks `endpointRegistry`, writes `apps/api/mcp.json` with `{ name, version, tools: [{ name, title, description, inputSchema }, ...] }`. CI guards drift the same way `openapi.json` is guarded.
 
 ## Settings UI changes (web app)
 
@@ -368,7 +368,7 @@ Above the existing "Delete account" section, add a **Sessions** section:
 
 Two sections, two tables:
 
-1. **MCP Keys** — lists rows from `oauthApplication` joined to `oauthAccessToken` for the current org (i.e. `oauthApplication.metadata->>'organizationId' = current`), one row per `(client, user)`. Columns: client name + icon, the user who authorized it, `lastUsedAt` (touch-buffer like API keys), `createdAt`. Action: **Revoke** — deletes the access tokens for that `(clientId, userId)` and disables the application if no other tokens remain. No "create" button — these are created via the OAuth flow.
+1. **OAuth Keys** — lists rows from `oauth_applications` joined to `oauth_access_tokens` for the current org. Org scoping is automatic: the regular tenant-scoped Postgres connection only sees rows where `oauth_applications.organization_id = get_current_organization_id()` (RLS), so the page query is just `SELECT … FROM oauth_applications LEFT JOIN …` with no manual org filter. One row per `(client, user)`. Columns: client name + icon, the user who authorized it, `lastUsedAt` (touch-buffer like API keys), `createdAt`. Action: **Revoke** — deletes the access tokens for that `(clientId, userId)` and disables the application if no other tokens remain. No "create" button — these are created via the OAuth flow.
 2. **API Keys** — existing list (masked tokens, copy-on-create-or-detail, rename, delete). Unchanged in feature set; renamed in URL.
 
 Both sections live behind the existing `settings/keys` route (rename `settings/api-keys.tsx` → `settings/keys.tsx`, redirect old path).
@@ -384,7 +384,7 @@ Foundational pieces with zero user-visible surface change.
 **Migrations** (`packages/platform/db-postgres/drizzle/...`):
 - Add `slug VARCHAR(80)` to `latitude.issues` (nullable → backfill → NOT NULL + unique on `(organization_id, project_id, slug)`).
 - Same for `latitude.datasets`.
-- Drizzle definitions for `oauthApplication`, `oauthAccessToken`, `oauthConsent` per the OIDC Provider plugin schema (`packages/platform/db-postgres/src/schema/oauth.ts`, new file). RLS-disabled (admin-only access path); the `metadata` column is `jsonb`. Add a partial GIN index on `oauthApplication ((metadata->>'organizationId'))` if/when the cache miss rate justifies it.
+- Drizzle definitions for `oauth_applications`, `oauth_access_tokens`, `oauth_consents` per the OIDC Provider plugin schema, added directly to `packages/platform/db-postgres/src/schema/better-auth.ts` next to the existing BA tables. App extension: `oauth_applications.organization_id` (CUID FK to `organizations`, nullable until consent binds it) plus an RLS policy scoped by `organization_id`. Token validation runs through the admin Postgres connection (RLS-bypass) so it can read across orgs to resolve the binding; tenant-scoped reads (settings/keys page) only see MCP clients bound to the active org. The two related tables (`oauth_access_tokens`, `oauth_consents`) stay RLS-free — they're either accessed via admin (validation) or via JOIN through the RLS-protected application.
 
 **Schema changes**:
 - `packages/platform/db-postgres/src/schema/issues.ts` — add slug column + unique index.
@@ -412,7 +412,7 @@ Foundational pieces with zero user-visible surface change.
 **MCP scaffolding** (no tools yet):
 - `apps/api/src/mcp/{define-endpoint,flatten-input,registry,server,index}.ts` — ~350 lines.
 - Uncomment `@modelcontextprotocol/sdk` in `pnpm-workspace.yaml`. Add `@modelcontextprotocol/sdk` and `zod-to-json-schema` to `apps/api/package.json` via the catalog reference.
-- `apps/api/scripts/emit-mcp-manifest.ts` + `pnpm generate:mcp` script. CI drift check.
+- `apps/api/scripts/emit-mcp.ts` + `pnpm mcp:emit` script. CI drift check.
 
 **Auth scaffolding**:
 - `packages/platform/db-postgres/src/create-better-auth.ts` — extend the drizzle adapter `schema` with `oauthApplication`, `oauthAccessToken`, `oauthConsent`. Add the OIDC tables to the schema barrel so `apps/api` can import the Drizzle definitions for read-only queries without depending on BA. Do **not** install `mcp()` plugin in the shared factory (caller-controlled — only the web caller will install it in M2).
@@ -433,7 +433,7 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
   Plus `databaseHooks.oauthAccessToken.create.before` to prepend `loa_` to access tokens, `lor_` to refresh tokens.
 - `apps/web/src/routes/auth.consent.tsx` — new TanStack route. Reads `consent_code` + `client_id` from query, fetches user's orgs, renders org-picker. Approve runs a server fn that:
   1. Validates user is a member of the chosen org.
-  2. Updates `oauthApplication.metadata = jsonb_set(coalesce(metadata, '{}'), '{organizationId}', $1)` via Drizzle on the admin connection.
+  2. Updates `oauth_applications.organization_id` for the matching `client_id` via Drizzle on the admin connection (admin needed because the RLS policy this row will satisfy is scoped to the very org id we're about to write).
   3. Calls `getBetterAuth().api.oauth2Consent({ accept: true, consent_code })` in-process.
 - Optional: a response-rewriter Hono middleware fronting `/api/auth/mcp/token` if the BA before-create hook approach doesn't prefix the on-the-wire token. Prototype both in M2; pick the simpler one.
 - Root-level redirect `/.well-known/oauth-authorization-server` → `/api/auth/.well-known/oauth-authorization-server` for MCP clients that try the AS root.
@@ -448,7 +448,7 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
 - The web BA hook handles `loa_` / `lor_` prefixes for OAuth tokens (above).
 
 **Migrate one route to `defineApiEndpoint`** (proof of concept):
-- `apps/api/src/routes/api-keys.ts` — wrap existing routes (list/create/revoke) in `defineApiEndpoint`. Add `name` and `description` fields to each `createRoute` call (replace `operationId`). Verify `pnpm openapi:emit` produces a clean diff (just `operationId` field renames). Verify `pnpm generate:mcp` lists 3 tools.
+- `apps/api/src/routes/api-keys.ts` — wrap existing routes (list/create/revoke) in `defineApiEndpoint`. Add `name` and `description` fields to each `createRoute` call (replace `operationId`). Verify `pnpm openapi:emit` produces a clean diff (just `operationId` field renames). Verify `pnpm mcp:emit` lists 3 tools.
 
 **No reverse proxy task** — dropped; not needed (see "Local-dev story" above).
 
@@ -523,8 +523,8 @@ Account, Members, finish API Keys, finish Projects (incl. pagination migration +
 These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 
 - `apps/web/src/routes/_authenticated/settings/account.tsx` — add Sessions section above Delete Account (uses BA `listSessions`, `revokeSession`, `revokeOtherSessions`).
-- Rename `apps/web/src/routes/_authenticated/settings/api-keys.tsx` → `apps/web/src/routes/_authenticated/settings/keys.tsx`. Add MCP Keys section + redirect from old URL.
-- Add a "Revoke MCP key" server fn that deletes `oauthAccessToken` rows by `(clientId, userId)` and disables the `oauthApplication` if no other tokens remain.
+- Rename `apps/web/src/routes/_authenticated/settings/api-keys.tsx` → `apps/web/src/routes/_authenticated/settings/keys.tsx`. Add OAuth Keys section + redirect from old URL.
+- Add a "Revoke OAuth key" server fn that deletes `oauth_access_tokens` rows by `(client_id, user_id)` and disables the `oauth_applications` row if no other tokens remain.
 
 ## Critical files
 
@@ -533,7 +533,7 @@ These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 - `apps/api/src/routes/{well-known,account,members,traces,saved-searches,issues,datasets}.ts`
 - `apps/api/src/openapi/pagination.ts`
 - `apps/api/src/openapi/entities/{account,api-key,member,project,trace,saved-search,issue,dataset}.ts`
-- `apps/api/scripts/emit-mcp-manifest.ts`
+- `apps/api/scripts/emit-mcp.ts`
 - `packages/platform/oauth-token-auth/` (new package — pure Drizzle, no BA dep)
 - `packages/platform/db-postgres/src/schema/oauth.ts`
 - `packages/domain/account/` (new package, or co-locate in `@domain/users`)
@@ -575,8 +575,8 @@ These can ship in a single PR after M2 is merged (so the BA OAuth tables exist).
 - **Zod-v4 `.openapi()` metadata propagating into MCP tool inputSchema** via `zod-to-json-schema` — different package than `@asteasolutions/zod-to-openapi`. Need a unit test confirming descriptions survive; if not, add a small reflection helper that copies metadata into `.describe(...)` before MCP registration.
 - **Internal `app.fetch(...)` rate-limit IP**: forward `X-Forwarded-For` from outer MCP request explicitly; otherwise the rate limiter falls back to `"unknown"`.
 - **`oauthApplication` registration is unauthenticated** by spec — rate-limit `/api/auth/mcp/register` (on the web) aggressively and add a periodic prune for orphan registrations (no token + no consent + no metadata.organizationId after 1 hour).
-- **Token revocation**: BA's MCP plugin has no `/revoke` endpoint. The "Revoke MCP key" server fn (M-Settings) implements it ourselves on the web app: `DELETE FROM oauth_access_token WHERE client_id = ? AND user_id = ?`, set `oauth_application.disabled = true` if no tokens remain. The API's auth middleware honors this immediately because validation hits the DB.
-- **Hot-path JSON read on `oauthApplication.metadata`**: Postgres can index `((metadata::jsonb)->>'organizationId')` if the auth-path query becomes hot. Per-token Redis cache (5 min) makes this rare. Decide based on prod metrics.
+- **Token revocation**: BA's MCP plugin has no `/revoke` endpoint. The "Revoke OAuth key" server fn (M-Settings) implements it ourselves on the web app: `DELETE FROM oauth_access_tokens WHERE client_id = ? AND user_id = ?`, set `oauth_applications.disabled = true` if no tokens remain. The API's auth middleware honors this immediately because validation hits the DB.
+- **Auth-path query latency**: token validation joins `oauth_access_tokens → oauth_applications` on `client_id`. Both columns are indexed; with the per-token Redis cache (5 min) the hot path is one Redis GET. Cold-path measurements should land in the same order as `validateApiKey`.
 - **Cross-origin DB schema sharing**: the API process imports Drizzle table definitions for `oauthApplication` / `oauthAccessToken` from `@platform/db-postgres` to query them, but the **write path** for those tables stays on the web (BA owns it). Schema migrations always go through the standard process; both apps automatically pick up new columns. Mental model: web is the system of record, API is a read-only consumer.
 
 ## Verification
@@ -587,7 +587,7 @@ Per milestone, run from repo root:
 pnpm typecheck                           # whole-workspace tsgo (NOT tsc — see CLAUDE.md)
 pnpm --filter @latitude-data/api test    # vitest
 pnpm openapi:emit                        # diff apps/api/openapi.json — should change only as expected
-pnpm generate:mcp                        # diff apps/api/mcp.json — same drift guard
+pnpm mcp:emit                        # diff apps/api/mcp.json — same drift guard
 pnpm generate:sdk                        # confirm Fern produces a clean SDK delta
 ```
 
@@ -600,9 +600,9 @@ End-to-end (M2 onward), no proxy needed — vanilla web on `localhost:3000` and 
 5. Issue `tools/call getApiKey { id }` → 200 returns full unmasked token.
 6. After M3: `account_get`, `members_*`, `projects_*` tool calls succeed with org-bound OAuth token.
 7. After M4: trace export tool kicks off the export queue; recipient email arrives with download link. Reject when recipient is not an org member.
-8. After M-Settings: `/settings/account` lists active sessions; revoking one ejects that session. `/settings/keys` shows MCP Keys + API Keys; revoking an MCP key invalidates subsequent tool calls.
+8. After M-Settings: `/settings/account` lists active sessions; revoking one ejects that session. `/settings/keys` shows OAuth Keys + API Keys; revoking an OAuth key invalidates subsequent tool calls.
 
 CI:
 - Existing typecheck + test jobs gate the PR.
 - New job: `pnpm openapi:emit && git diff --exit-code apps/api/openapi.json` — fails on drift.
-- Same for `pnpm generate:mcp && git diff --exit-code apps/api/mcp.json`.
+- Same for `pnpm mcp:emit && git diff --exit-code apps/api/mcp.json`.

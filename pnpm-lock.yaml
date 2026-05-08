@@ -230,6 +230,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/oauth-token-auth
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
@@ -1857,6 +1860,31 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/platform/oauth-token-auth:
+    dependencies:
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../db-postgres
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+    devDependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
+      '@platform/testkit':
+        specifier: workspace:*
+        version: link:../testkit
       vitest:
         specifier: 'catalog:'
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))

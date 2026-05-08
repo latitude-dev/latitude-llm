@@ -15,7 +15,7 @@
 import { stripe } from "@better-auth/stripe"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { magicLink, organization } from "better-auth/plugins"
+import { magicLink, mcp, organization } from "better-auth/plugins"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import Stripe from "stripe"
@@ -31,6 +31,7 @@ export const auth = betterAuth({
   plugins: [
     organization(),
     magicLink({ sendMagicLink: async () => {} }),
+    mcp({ loginPage: "/dummy" }),
     stripe({
       stripeClient,
       stripeWebhookSecret: "whsec_dummy",

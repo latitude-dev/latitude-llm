@@ -6,11 +6,12 @@ import {
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { createRoute, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
+import { type AnyApiEndpoint, defineApiEndpoint } from "../mcp/index.ts"
 import {
   errorResponse,
   IdParamsSchema,
@@ -98,49 +99,6 @@ const apiKeysFernGroup = (methodName: string) =>
     "x-fern-sdk-method-name": methodName,
   }) as const
 
-const generateRoute = createRoute({
-  method: "post",
-  path: "/",
-  operationId: "apiKeys.create",
-  tags: ["API Keys"],
-  ...apiKeysFernGroup("create"),
-  summary: "Generate API key",
-  description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
-  security: PROTECTED_SECURITY,
-  request: {
-    body: jsonBody(RequestSchema),
-  },
-  responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
-})
-
-const listRoute = createRoute({
-  method: "get",
-  path: "/",
-  operationId: "apiKeys.list",
-  tags: ["API Keys"],
-  ...apiKeysFernGroup("list"),
-  summary: "List API keys",
-  description: "Returns all API keys for the organization. Tokens are not included in the list response.",
-  security: PROTECTED_SECURITY,
-  responses: {
-    200: jsonResponse(ListResponseSchema, "List of API keys"),
-    401: errorResponse("Unauthorized"),
-  },
-})
-
-const revokeRoute = createRoute({
-  method: "delete",
-  path: "/{id}",
-  operationId: "apiKeys.revoke",
-  tags: ["API Keys"],
-  ...apiKeysFernGroup("revoke"),
-  summary: "Revoke API key",
-  description: "Soft-deletes an API key, immediately invalidating it.",
-  security: PROTECTED_SECURITY,
-  request: { params: IdParamsSchema },
-  responses: openApiNoContentResponses({ description: "API key revoked" }),
-})
-
 const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
   delete: (tokenHash: string) =>
     Effect.tryPromise({
@@ -151,10 +109,24 @@ const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
     }).pipe(Effect.orDie),
 })
 
-export const createApiKeysRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>()
+const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>()
 
-  app.openapi(generateRoute, async (c) => {
+const createApiKey = apiKeyEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/",
+    name: "createApiKey",
+    tags: ["API Keys"],
+    ...apiKeysFernGroup("create"),
+    summary: "Generate API key",
+    description: "Generates a new API key for the organization. The token is only returned once — store it securely.",
+    security: PROTECTED_SECURITY,
+    request: {
+      body: jsonBody(RequestSchema),
+    },
+    responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
+  }),
+  handler: async (c) => {
     const { name } = c.req.valid("json")
 
     const apiKey = await Effect.runPromise(
@@ -168,9 +140,25 @@ export const createApiKeysRoutes = () => {
       ),
     )
     return c.json(toResponse(apiKey), 201)
-  })
+  },
+})
 
-  app.openapi(listRoute, async (c) => {
+const listApiKeys = apiKeyEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/",
+    name: "listApiKeys",
+    tags: ["API Keys"],
+    ...apiKeysFernGroup("list"),
+    summary: "List API keys",
+    description: "Returns all API keys for the organization. Tokens are not included in the list response.",
+    security: PROTECTED_SECURITY,
+    responses: {
+      200: jsonResponse(ListResponseSchema, "List of API keys"),
+      401: errorResponse("Unauthorized"),
+    },
+  }),
+  handler: async (c) => {
     const apiKeys = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
@@ -178,9 +166,23 @@ export const createApiKeysRoutes = () => {
       }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
     return c.json({ apiKeys: apiKeys.map(toListItemResponse) }, 200)
-  })
+  },
+})
 
-  app.openapi(revokeRoute, async (c) => {
+const revokeApiKey = apiKeyEndpoint({
+  route: createRoute({
+    method: "delete",
+    path: "/{id}",
+    name: "revokeApiKey",
+    tags: ["API Keys"],
+    ...apiKeysFernGroup("revoke"),
+    summary: "Revoke API key",
+    description: "Soft-deletes an API key, immediately invalidating it.",
+    security: PROTECTED_SECURITY,
+    request: { params: IdParamsSchema },
+    responses: openApiNoContentResponses({ description: "API key revoked" }),
+  }),
+  handler: async (c) => {
     const { id: idParam } = c.req.valid("param")
 
     await Effect.runPromise(
@@ -191,7 +193,7 @@ export const createApiKeysRoutes = () => {
       ),
     )
     return c.body(null, 204)
-  })
+  },
+})
 
-  return app
-}
+export const apiKeysEndpoints: readonly AnyApiEndpoint[] = [createApiKey, listApiKeys, revokeApiKey]

@@ -8,18 +8,35 @@ import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
 /**
  * Authentication context set by the auth middleware.
  *
- * This context is available on all protected routes after successful
- * authentication. It provides the authenticated user's ID, the
- * organization context for the request, and the authentication method used.
+ * Discriminated on `method`:
+ *
+ * - `api-key` — request authenticated via an organization-scoped API key
+ *   (Bearer `lak_…` or a legacy unprefixed UUID). `userId` is a synthetic
+ *   `api-key:<keyId>` value because API keys aren't tied to a real user.
+ * - `oauth` — request authenticated via an OAuth access token (`Bearer loa_…`)
+ *   issued through the Better Auth `mcp` plugin on the web app. Carries the
+ *   real `userId` of the granting user, the `oauthClientId` of the MCP client,
+ *   the granted `scopes`, and the `expiresAt` of the access token.
  */
-export interface AuthContext {
-  /** The authenticated user's ID */
-  readonly userId: UserId
-  /** The organization ID for this request (from URL param or API key) */
-  readonly organizationId: OrganizationId
-  /** The authentication method that was used */
-  readonly method: "api-key"
-}
+export type AuthContext =
+  | {
+      readonly method: "api-key"
+      /** Synthetic `api-key:<keyId>` — API keys aren't tied to a real user. */
+      readonly userId: UserId
+      readonly organizationId: OrganizationId
+    }
+  | {
+      readonly method: "oauth"
+      /** Real user id of the user who granted consent to the OAuth client. */
+      readonly userId: UserId
+      /** Org the OAuth client was bound to at consent time. */
+      readonly organizationId: OrganizationId
+      /** `oauth_applications.client_id` of the requesting MCP client. */
+      readonly oauthClientId: string
+      readonly scopes: ReadonlyArray<string>
+      /** Underlying access token's `accessTokenExpiresAt`. */
+      readonly expiresAt: Date
+    }
 
 /**
  * Root-level Hono env. Every request has access to these variables
