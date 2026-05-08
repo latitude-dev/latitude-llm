@@ -74,6 +74,25 @@ interface OAuthConsentRequestData {
 }
 
 /**
+ * Narrow shape of the BA `mcp` plugin's `oAuthConsent` endpoint contract.
+ *
+ * The plugin is installed via `extraPlugins` in `getBetterAuth()`, and
+ * `createBetterAuth` erases extra-plugin endpoints from the inferred
+ * `auth.api` type — the call below has to go through an explicit cast.
+ *
+ * Return shape: BA returns `{ redirectURI }` from both branches — accept
+ * (`better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:358`) and deny
+ * (`oidc-provider/index.mjs:331`). Different from BA's `{ redirect, url }`
+ * pair, which is for browser-fetch responses on the authorize endpoint.
+ */
+interface OAuthConsentApi {
+  readonly oAuthConsent: (params: {
+    body: { accept: boolean; consent_code?: string }
+    headers: Headers
+  }) => Promise<{ redirectURI: string }>
+}
+
+/**
  * Look up display data for the consent page: the requesting OAuth client (so
  * the page can show "<client name> wants to access your account") and the
  * caller's organizations (so they can pick one to bind the token to).
@@ -156,23 +175,8 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
         .where(eq(oauthApplications.clientId, data.clientId))
     }
 
-    // `oAuthConsent` is contributed by the BA `mcp` plugin (which we install
-    // via `extraPlugins`). `createBetterAuth` typing erases extra-plugin
-    // endpoints from `auth.api` — the plugin is at runtime, but TS can't see
-    // it. Cast through a narrow shape rather than `any` so the body / return
-    // contract stays explicit.
-    //
-    // Return shape comes from `better-auth@1.6.9/dist/plugins/oidc-provider/
-    // index.mjs` — both the accept branch (line 358) and the deny branch
-    // (line 331) call `ctx.json({ redirectURI })`, so the field is
-    // `redirectURI`, not the more familiar `{ redirect, url }` pair BA uses
-    // elsewhere for browser-fetch responses.
-    interface OAuthConsentApi {
-      readonly oAuthConsent: (params: {
-        body: { accept: boolean; consent_code?: string }
-        headers: Headers
-      }) => Promise<{ redirectURI: string }>
-    }
+    // See {@link OAuthConsentApi} for why we cast — extra-plugin endpoints
+    // aren't visible on `auth.api` at the type level.
     const api = getBetterAuth().api as unknown as OAuthConsentApi
 
     let result: { redirectURI: string }
