@@ -20,15 +20,31 @@ if ! git rev-parse --verify origin/development >/dev/null 2>&1; then
   exit 1
 fi
 
-release_commits=$(git rev-list --count origin/main..origin/development)
-if [ "$release_commits" -eq 0 ]; then
+if git diff --quiet origin/main..origin/development; then
   echo "No commits to promote from development to main."
   exit 0
 fi
 
-echo "Development is ${release_commits} commit(s) ahead of main:"
-git --no-pager log --oneline origin/main..origin/development
+echo "Development differs from main:"
+git diff --shortstat origin/main..origin/development
 echo ""
+
+main_only_commits=$(git log \
+  --format='%h %s' \
+  --right-only \
+  --invert-grep \
+  --grep='^Deploy production' \
+  --grep='^Release -' \
+  origin/development...origin/main)
+
+if [ -n "$main_only_commits" ]; then
+  echo "main has non-release commits that development does not contain:"
+  printf '%s\n' "$main_only_commits"
+  echo ""
+  echo "Promoting development would remove these changes from production."
+  echo "Cherry-pick or merge them into development first, then run this script again."
+  exit 1
+fi
 
 existing_pr=$(gh pr list \
   --base main \
@@ -57,8 +73,11 @@ esac
 timestamp=$(TZ=Europe/Madrid date +%d-%m-%Y-%H-%M)
 branch="release/${timestamp}"
 
-echo "Creating branch ${branch} from origin/development..."
-git push origin "origin/development:refs/heads/${branch}"
+echo "Creating production snapshot ${branch} from origin/development with origin/main as parent..."
+snapshot_commit=$(git commit-tree "$(git rev-parse 'origin/development^{tree}')" \
+  -p origin/main \
+  -m "Release - ${timestamp}")
+git push origin "${snapshot_commit}:refs/heads/${branch}"
 
 commits=$(git log --pretty=format:'- %h %s' origin/main..origin/development | head -50)
 body=$(
