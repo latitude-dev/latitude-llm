@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { mountWithMcp, resetEndpointRegistry } from "../mcp/index.ts"
+import { mountWithMcp } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
@@ -15,12 +15,6 @@ import { createScoresRoutes } from "./scores.ts"
  * Register all API routes with versioning.
  */
 export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) => {
-  // Reset the MCP endpoint registry so a fresh boot (real server, tests, emit
-  // script) starts from an empty registry. The registry is module-global, and
-  // multiple calls to `registerRoutes` in the same process (notably across
-  // test files in the same vitest worker) would otherwise accumulate entries.
-  resetEndpointRegistry()
-
   const v1 = new OpenAPIHono<AppEnv>()
   const routes = new OpenAPIHono<ProtectedEnv>()
 

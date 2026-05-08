@@ -51,8 +51,10 @@ export const mountWithMcp = <ParentEnv extends Env, SubEnv extends Env>(
 }
 
 /**
- * Drops every registered endpoint. Called at the top of `registerRoutes` so each
- * call (real boot, test boot, emit script) starts from a clean slate.
+ * Drops every registered endpoint. Used by the test harness (`setupTestApi`) so
+ * multiple test files in the same vitest worker don't accumulate stale entries
+ * across `registerRoutes` calls. Production boot doesn't call it — `registerRoutes`
+ * runs once per process, so the registry starts empty either way.
  */
 export const resetEndpointRegistry = (): void => {
   endpointRegistry.length = 0
