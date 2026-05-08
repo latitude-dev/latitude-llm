@@ -36,6 +36,10 @@ const tools = collectToolDescriptors().map((tool) => ({
   title: tool.title,
   description: tool.description,
   inputSchema: z.toJSONSchema(tool.input.schema, { target: "draft-2020-12" }),
+  // `outputSchema` is optional in the MCP spec; we omit the property entirely
+  // (rather than emitting `null`) for 204 / no-JSON-body routes so clients can
+  // rely on `"outputSchema" in tool` to mean "structured output is available".
+  ...(tool.output ? { outputSchema: z.toJSONSchema(tool.output, { target: "draft-2020-12" }) } : {}),
 }))
 
 const manifest = {
