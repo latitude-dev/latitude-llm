@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { isTraceHistogramMetric, type TraceHistogramMetric } from "@domain/spans"
-import { Button, Icon, Text } from "@repo/ui"
-import { BarChart2, ChevronDown } from "lucide-react"
+import { Button, Icon, Text, Tooltip } from "@repo/ui"
+import { BarChart2, ChevronDown, ShieldAlertIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { GeneralAggregations } from "./general-aggregations.tsx"
@@ -24,6 +24,8 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
   const [selectedMetric, setSelectedMetric] = useParamState("histogramMetric", DEFAULT_HISTOGRAM_METRIC, {
     validate: isTraceHistogramMetric,
   })
+
+  const [showIncidents, setShowIncidents] = useParamState("showIncidents", false)
 
   const onMetricSelect = useCallback((metric: TraceHistogramMetric) => setSelectedMetric(metric), [setSelectedMetric])
 
@@ -53,7 +55,31 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
         />
-        <Histogram projectId={projectId} filters={filters} metric={selectedMetric} onRangeSelect={onTimeRangeSelect} />
+        <div className="flex items-center justify-end gap-2 px-4 -mb-1">
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant={showIncidents ? "outline" : "ghost"}
+                size="sm"
+                onClick={() => setShowIncidents((prev) => !prev)}
+                aria-pressed={showIncidents}
+              >
+                <Icon icon={ShieldAlertIcon} size="sm" />
+                Incidents
+              </Button>
+            }
+          >
+            Overlay alert incidents on the timeline
+          </Tooltip>
+        </div>
+        <Histogram
+          projectId={projectId}
+          filters={filters}
+          metric={selectedMetric}
+          showIncidents={showIncidents}
+          onRangeSelect={onTimeRangeSelect}
+        />
       </div>
     </div>
   )

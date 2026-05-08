@@ -21,6 +21,7 @@ function createTestLayers() {
           inserted.push(incident)
         }),
       closeOpen: () => Effect.void,
+      listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )
 

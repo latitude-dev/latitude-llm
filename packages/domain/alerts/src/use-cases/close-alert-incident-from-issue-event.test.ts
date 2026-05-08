@@ -19,6 +19,7 @@ function createTestLayers() {
         Effect.sync(() => {
           closed.push(input)
         }),
+      listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )
 

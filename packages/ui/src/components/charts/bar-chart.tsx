@@ -6,10 +6,17 @@ import { useCallback, useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
-import { buildBarChartOption } from "./bar-chart-option.ts"
+import {
+  type BarChartOverlay,
+  type BarChartOverlayArea,
+  type BarChartOverlayLine,
+  buildBarChartOption,
+} from "./bar-chart-option.ts"
 import { chartThemeFallback } from "./chart-css-theme.ts"
 import { echarts } from "./register-echarts.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
+
+export type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayLine }
 
 export type BarChartDataPoint = {
   readonly category: string
@@ -28,11 +35,13 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
    * (useful for embedded previews with a forced theme).
    */
   readonly colorScheme?: "light" | "dark"
-  readonly formatTooltip?: (category: string, value: number) => string
+  readonly formatTooltip?: (category: string, value: number, dataIndex: number) => string
   /** When false, hides y-axis tick labels and frees left grid margin (tooltip still shows values). */
   readonly showYAxis?: boolean
   /** Optional x-axis label font size override in pixels. */
   readonly xAxisLabelFontSize?: number
+  /** Visual overlays drawn over the bar series — vertical mark lines and shaded ranges. */
+  readonly overlay?: BarChartOverlay
   /**
    * Called when user selects a range via brush (e.g., drag on the histogram).
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
@@ -65,6 +74,7 @@ function BarChart({
   formatTooltip,
   showYAxis = true,
   xAxisLabelFontSize,
+  overlay,
   onSelect,
   className,
   ...rest
@@ -97,8 +107,9 @@ function BarChart({
         showYAxis,
         hasBrush,
         xAxisLabelFontSize,
+        overlay,
       ),
-    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize],
+    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize, overlay],
   )
 
   // Stable event handlers that read the latest onSelect from a ref.

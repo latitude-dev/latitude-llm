@@ -37,6 +37,9 @@ export {
 } from "./components/card/card.tsx"
 export type {
   BarChartDataPoint,
+  BarChartOverlay,
+  BarChartOverlayArea,
+  BarChartOverlayLine,
   BarChartProps,
 } from "./components/charts/bar-chart.tsx"
 export type {
