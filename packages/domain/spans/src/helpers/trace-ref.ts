@@ -11,7 +11,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { TraceRepository } from "../ports/trace-repository.ts"
+import { type TraceListCursor, TraceRepository } from "../ports/trace-repository.ts"
 
 /**
  * Discriminated union identifying a target trace for public-API write paths.
@@ -82,4 +82,74 @@ export const resolveTraceIdFromRef = (
     }
 
     return match.traceId
+  })
+
+/**
+ * Plural sibling of {@link traceRefSchema} for bulk endpoints (export traces,
+ * import-from-traces into a dataset, etc).
+ *
+ * - `{ by: "ids", ids }` — explicit list of trace ids. Each id is verified
+ *   against the project before being trusted; ids that don't belong to the
+ *   project are silently dropped (the caller learns about it via the returned
+ *   count, not via an error).
+ * - `{ by: "filters", filters }` — resolves to **every** trace in the project
+ *   matching the filter set. Pagination happens internally; no upper bound is
+ *   enforced at this layer (callers/UIs may impose their own).
+ */
+export const tracesRefSchema = z.discriminatedUnion("by", [
+  z.object({ by: z.literal("ids"), ids: z.array(traceIdSchema).min(1) }),
+  z.object({ by: z.literal("filters"), filters: filterSetSchema }),
+])
+
+export type TracesRef = z.infer<typeof tracesRefSchema>
+
+const RESOLVE_PAGE_SIZE = 1000
+
+/**
+ * Resolve a {@link TracesRef} to the concrete list of `TraceId`s in this
+ * organization + project.
+ *
+ * For the `ids` variant we round-trip through `listByTraceIds` which already
+ * filters by `(organizationId, projectId)` server-side, so any id the caller
+ * doesn't own is dropped from the result.
+ *
+ * For the `filters` variant we walk every page until the cursor is exhausted.
+ * No hard cap is applied here — bulk endpoints that consume the result are
+ * expected to either accept large fan-outs (export → email) or impose their
+ * own limit before invoking this function.
+ */
+export const resolveTraceIdsFromRef = (
+  ref: TracesRef,
+  ctx: { readonly organizationId: string; readonly projectId: ProjectId },
+): Effect.Effect<readonly TraceId[], RepositoryError, TraceRepository | ChSqlClient> =>
+  Effect.gen(function* () {
+    const traceRepository = yield* TraceRepository
+    const organizationId = OrganizationId(ctx.organizationId)
+
+    if (ref.by === "ids") {
+      const found = yield* traceRepository.listByTraceIds({
+        organizationId,
+        projectId: ctx.projectId,
+        traceIds: ref.ids,
+      })
+      return found.map((trace) => trace.traceId)
+    }
+
+    const ids: TraceId[] = []
+    let cursor: TraceListCursor | undefined
+    while (true) {
+      const page = yield* traceRepository.listByProjectId({
+        organizationId,
+        projectId: ctx.projectId,
+        options: {
+          filters: ref.filters,
+          limit: RESOLVE_PAGE_SIZE,
+          ...(cursor ? { cursor } : {}),
+        },
+      })
+      for (const trace of page.items) ids.push(trace.traceId)
+      if (!page.hasMore || !page.nextCursor) break
+      cursor = page.nextCursor
+    }
+    return ids
   })
