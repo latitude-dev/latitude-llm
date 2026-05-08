@@ -1,6 +1,7 @@
 export { DEFAULT_API_KEY_NAME } from "./constants.ts"
 export {
   type ApiKey,
+  API_KEY_TOKEN_PREFIX,
   apiKeySchema,
   createApiKey,
   generateApiKeyToken,

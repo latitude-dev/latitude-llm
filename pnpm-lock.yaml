@@ -230,6 +230,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/oauth-token-auth
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
