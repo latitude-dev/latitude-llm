@@ -221,6 +221,19 @@ export const getBetterAuth = () => {
             loginPage: `${webUrl}/login`,
             consentPage: `${webUrl}/auth/consent`,
             requirePKCE: true,
+            // RFC 7591 dynamic client registration. MCP clients (Claude Code,
+            // Cursor, ...) hit `POST /api/auth/mcp/register` before any user
+            // has signed in — they're bootstrapping themselves. Without this
+            // flag the BA endpoint requires a session (see
+            // `better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:830`)
+            // and every MCP client registration would 401. Enabling it is
+            // safe: registered clients only become useful once a user
+            // completes the consent flow at `/auth/consent`, which is what
+            // binds the application to an organization. Until that binding
+            // happens `oauth_applications.organization_id IS NULL` and the
+            // API auth middleware rejects any tokens issued against the
+            // unbound row.
+            allowDynamicClientRegistration: true,
           },
         }),
       ],

@@ -437,7 +437,14 @@ Ship the OAuth layer end-to-end with one migrated route as a smoke test. **All B
   ```ts
   mcp({
     loginPage: `${webUrl}/login`,
-    oidcConfig: { consentPage: `${webUrl}/auth/consent`, requirePKCE: true },
+    oidcConfig: {
+      consentPage: `${webUrl}/auth/consent`,
+      requirePKCE: true,
+      // Without this, `/api/auth/mcp/register` requires a session (BA source
+      // `oidc-provider/index.mjs:830`). MCP clients register before any user
+      // signs in — they're machines bootstrapping themselves.
+      allowDynamicClientRegistration: true,
+    },
   })
   ```
 - `apps/web/src/server/oauth-token-prefix-rewriter.ts` — two helpers fronting the BA handler at `apps/web/src/routes/api/auth/$.ts`:
