@@ -78,12 +78,28 @@ const seedIncidentNotifications: Seeder = {
         const projectSlug = projectRow?.slug
 
         // Pick the first escalating incident as the target for an extra
-        // synthetic "closed" notification — gives the seed a closed-event
-        // card without needing a second incident or a real close transition.
+        // "closed" notification — gives the seed a closed-event card
+        // without needing a second incident. We do a TRUE close on the
+        // underlying alert_incident row so:
+        //   1. the issue's `lifecycle.isEscalating` becomes false → the
+        //      status badge on the closed card shows the live (post-close)
+        //      state instead of "Escalating",
+        //   2. `getIncidentTrend` gets a real `endedAt` anchor so the
+        //      ±1 day window contains the today-burst occurrences.
         const closedDemoIncident = orgIncidents.find((i) => i.kind === "issue.escalating")
+        const now = new Date()
+        // Close it 30 minutes ago — recent enough that the trend window
+        // still contains the today-burst, far enough that the close feels
+        // like a finished event rather than "happening now".
+        const closedAt = new Date(now.getTime() - 30 * 60 * 1000)
+        if (closedDemoIncident) {
+          await ctx.db
+            .update(alertIncidents)
+            .set({ endedAt: closedAt })
+            .where(eq(alertIncidents.id, closedDemoIncident.id))
+        }
 
         const rows: (typeof notifications.$inferInsert)[] = []
-        const now = new Date()
 
         for (const incident of orgIncidents) {
           const issueName = issueNameById.get(incident.sourceId)
@@ -117,7 +133,7 @@ const seedIncidentNotifications: Seeder = {
                 type: "incident",
                 sourceId: incident.id,
                 payload: closedPayload,
-                createdAt: now,
+                createdAt: closedAt,
                 seenAt: null,
               })
             }
