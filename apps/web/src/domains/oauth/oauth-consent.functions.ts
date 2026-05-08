@@ -99,7 +99,7 @@ export const getOAuthConsentRequest = createServerFn({ method: "GET" })
     if (!verification || verification.expiresAt.getTime() <= Date.now()) {
       throw new UnauthorizedError({
         message:
-          "This authorization request has already been used or has expired. Start a new sign-in from your MCP client.",
+          "This authorization request has already been used or has expired. Start a new sign-in from your OAuth client.",
       })
     }
 
@@ -190,7 +190,7 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
       // anonymous 500.
       throw new UnauthorizedError({
         message:
-          "This authorization request has already been used or has expired. Start a new sign-in from your MCP client.",
+          "This authorization request has already been used or has expired. Start a new sign-in from your OAuth client.",
       })
     }
 

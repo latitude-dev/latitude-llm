@@ -76,7 +76,7 @@ function OAuthConsentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  const clientName = consent.client.name ?? "An MCP client"
+  const clientName = consent.client.name ?? "An OAuth client"
   const noOrgs = consent.organizations.length === 0
 
   const authorizeForOrg = async (organizationId: string) => {
