@@ -484,15 +484,22 @@ describe("TraceRepository", () => {
     })
   })
 
-  describe("listByProjectId with searchQuery (hybrid path)", () => {
-    // These test traces are inserted fresh in each test (no shared seeder),
-    // so their IDs don't collide with the fixed/scored seeders above.
-    const HYBRID_TRACE = TraceId(`${"a".repeat(31)}0`) // lexical + semantic match
-    const LEX_ONLY_TRACE = TraceId(`${"b".repeat(31)}0`) // lexical match, no embedding
-    const SEM_ONLY_TRACE = TraceId(`${"c".repeat(31)}0`) // no lexical, aligned embedding
-    const NOISE_TRACE = TraceId(`${"d".repeat(31)}0`) // anti-parallel embedding → below floor
+  describe("listByProjectId with searchQuery (mode dispatch)", () => {
+    // Fresh test traces, IDs distinct from the seeded ones above.
+    //
+    // Layout:
+    //   - HYBRID_TRACE    : phrase match `handOffToHuman` AND aligned embedding.
+    //   - LEX_ONLY_TRACE  : phrase match, no embedding.
+    //   - SEM_ONLY_TRACE  : no phrase match, aligned embedding.
+    //   - NOISE_TRACE     : no phrase match, anti-parallel embedding.
+    //   - PHRASE_NOEMB_TRACE : matches a different phrase (`property search`),
+    //     no embedding — used to exercise multi-token phrase filters.
+    const HYBRID_TRACE = TraceId(`${"a".repeat(31)}0`)
+    const LEX_ONLY_TRACE = TraceId(`${"b".repeat(31)}0`)
+    const SEM_ONLY_TRACE = TraceId(`${"c".repeat(31)}0`)
+    const NOISE_TRACE = TraceId(`${"d".repeat(31)}0`)
+    const PHRASE_NOEMB_TRACE = TraceId(`${"e".repeat(31)}0`)
     const DIMS = 2048
-    const QUERY = "needle"
 
     // Mock AI returns [0.1, 0.1, ...]; cosineSimilarity against:
     //   aligned  [0.1, 0.1, ...]   → 1.0
@@ -502,7 +509,8 @@ describe("TraceRepository", () => {
 
     const insertSearchRows = async () => {
       const startTime = new Date(Date.UTC(2026, 0, 1, 0, 0, 0))
-      const spans = [HYBRID_TRACE, LEX_ONLY_TRACE, SEM_ONLY_TRACE, NOISE_TRACE].map((traceId, i) =>
+      const traces = [HYBRID_TRACE, LEX_ONLY_TRACE, SEM_ONLY_TRACE, NOISE_TRACE, PHRASE_NOEMB_TRACE]
+      const spans = traces.map((traceId, i) =>
         makeSpanRow({
           traceId,
           spanId: `${i.toString(16).padStart(2, "0")}${"e".repeat(14)}`,
@@ -514,11 +522,15 @@ describe("TraceRepository", () => {
       )
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", spans))
 
+      // Whitespace shape mirrors LAT-562: indexed bytes are compact JSON, so a
+      // user typing `"handOffToHuman": true` (with a space) must still match.
+      // The text-index tokenizer drops `:` and whitespace identically.
       const docs = [
-        { traceId: HYBRID_TRACE, text: `customer ${QUERY} in checkout` },
-        { traceId: LEX_ONLY_TRACE, text: `audit review mentions ${QUERY}` },
-        { traceId: SEM_ONLY_TRACE, text: "unrelated routine diagnostic" },
-        { traceId: NOISE_TRACE, text: "unrelated noise text" },
+        { traceId: HYBRID_TRACE, text: `{"handOffToHuman":true,"replyBody":"customer needle in checkout"}` },
+        { traceId: LEX_ONLY_TRACE, text: `{"handOffToHuman":true,"replyBody":"audit review"}` },
+        { traceId: SEM_ONLY_TRACE, text: `{"handOffToHuman":false,"replyBody":"customer needle clarification"}` },
+        { traceId: NOISE_TRACE, text: `{"handOffToHuman":false,"replyBody":"unrelated noise"}` },
+        { traceId: PHRASE_NOEMB_TRACE, text: `pricing complaint about property search billing` },
       ]
       await Effect.runPromise(
         insertJsonEachRow(
@@ -573,52 +585,131 @@ describe("TraceRepository", () => {
       )
     }
 
-    it("ranks lexical+semantic, lexical-only, and semantic-only hits above the floor and drops antiparallel noise", async () => {
+    // ─── Shape 1: ≥1 phrases, empty semantic — pure lexical filter ────────
+    it("phrase-only: AND-filters by hasAllTokens, ignores embeddings, no relevance ordering", async () => {
       await insertSearchRows()
 
       const page = await runCh(
         repo.listByProjectId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          options: { searchQuery: QUERY },
+          options: { searchQuery: '"handOffToHuman" "true"' },
         }),
       )
 
       const ids = page.items.map((t) => t.traceId)
-
-      // HYBRID_TRACE (score 1.0) and SEM_ONLY_TRACE (0.7) are semantic-ranked
-      // above LEX_ONLY_TRACE (0.3). NOISE_TRACE (-0.7) is cut by the HAVING
-      // floor. This is also the UNION-ALL/FULL-OUTER-JOIN regression test:
-      // SEM_ONLY_TRACE has no lexical row, and with FULL OUTER JOIN its
-      // FixedString(32) trace_id would coalesce to zero bytes and drop out
-      // of the downstream inner join against `traces`. UNION ALL preserves it.
+      // Both phrases must be present. NOISE_TRACE has `handOffToHuman:false`,
+      // so although both `handofftohuman` and `false` tokens are present,
+      // `true` is not — it's filtered out. SEM_ONLY_TRACE same reasoning.
       expect(ids).toContain(HYBRID_TRACE)
       expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+      expect(ids).not.toContain(PHRASE_NOEMB_TRACE)
+    })
+
+    it("phrase-only with whitespace asymmetry: copy-pasted prettified JSON still matches compact-indexed text", async () => {
+      await insertSearchRows()
+
+      // The user copies a prettified field name with surrounding whitespace
+      // and a colon — the same shape `prettifyCompactJson` shows. Tokenizer
+      // drops both space and `:`, so it still matches the compact indexed bytes.
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"handOffToHuman: true"' },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+    })
+
+    // ─── Shape 2: empty phrases, ≥1 semantic — pure semantic ranking ──────
+    it("semantic-only: ranks by cosine similarity and applies the relevance floor", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "needle" },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      // Aligned embeddings clear the floor; anti-parallel does not. Traces
+      // with no embedding (LEX_ONLY, PHRASE_NOEMB) don't surface — semantic
+      // only.
+      expect(ids).toContain(HYBRID_TRACE)
       expect(ids).toContain(SEM_ONLY_TRACE)
       expect(ids).not.toContain(NOISE_TRACE)
+      expect(ids).not.toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(PHRASE_NOEMB_TRACE)
+    })
 
-      // HYBRID > SEM_ONLY > LEX_ONLY by relevance, regardless of trace_id tie-break.
-      expect(ids.indexOf(HYBRID_TRACE)).toBeLessThan(ids.indexOf(SEM_ONLY_TRACE))
-      expect(ids.indexOf(SEM_ONLY_TRACE)).toBeLessThan(ids.indexOf(LEX_ONLY_TRACE))
+    // ─── Shape 3: ≥1 phrases, ≥1 semantic — phrase filter + semantic rank ─
+    it("hybrid: phrase filter narrows the set, semantic ranks within; phrase-only matches stay in", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"handOffToHuman" "true" customer needle' },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      // Phrase gates: only HYBRID and LEX_ONLY pass (both have handOffToHuman
+      // AND `:true`). Within those, HYBRID's aligned embedding ranks it above
+      // LEX_ONLY, which has no embedding (relevance_score = 0). No semantic
+      // floor in hybrid mode — phrase matches without an embedding stay in.
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+      expect(ids.indexOf(HYBRID_TRACE)).toBeLessThan(ids.indexOf(LEX_ONLY_TRACE))
+    })
+
+    it("multi-token phrase: every token in the phrase must be present", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"property search"' },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      expect(ids).toEqual([PHRASE_NOEMB_TRACE])
     })
 
     it("keeps count / metrics / histogram consistent with the list", async () => {
       await insertSearchRows()
+
+      const SEARCH = '"handOffToHuman" "true"'
 
       const [page, count, metrics, histogram] = await Promise.all([
         runCh(
           repo.listByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            options: { searchQuery: QUERY },
+            options: { searchQuery: SEARCH },
           }),
         ),
-        runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: QUERY })),
+        runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery: SEARCH })),
         runCh(
           repo.aggregateMetricsByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            searchQuery: QUERY,
+            searchQuery: SEARCH,
           }),
         ),
         runCh(
@@ -626,22 +717,19 @@ describe("TraceRepository", () => {
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
             bucketSeconds: 3600,
-            searchQuery: QUERY,
+            searchQuery: SEARCH,
           }),
         ),
       ])
 
-      // All four agree on the same 3-trace result set (hybrid, lexical-only,
-      // semantic-only — the antiparallel noise row is below the floor).
       const histogramCount = histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)
       const histogramSpanSum = histogram.reduce((sum, bucket) => sum + bucket.spanCountSum, 0)
       const histogramTokenSum = histogram.reduce((sum, bucket) => sum + bucket.tokensTotalSum, 0)
       const histogramCostSum = histogram.reduce((sum, bucket) => sum + bucket.costTotalMicrocentsSum, 0)
-      expect(page.items).toHaveLength(3)
-      expect(count).toBe(3)
-      expect(metrics.spanCount.sum).toBe(3)
-      expect(histogramCount).toBe(3)
-      // Per-bucket sums collapse back to the project-wide sums computed by aggregateMetricsByProjectId.
+      expect(page.items).toHaveLength(2)
+      expect(count).toBe(2)
+      expect(metrics.spanCount.sum).toBe(2)
+      expect(histogramCount).toBe(2)
       expect(histogramSpanSum).toBe(metrics.spanCount.sum)
       expect(histogramTokenSum).toBe(metrics.tokensTotal.sum)
       expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)

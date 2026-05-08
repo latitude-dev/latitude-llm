@@ -134,26 +134,26 @@ A small inline help affordance (`?` button or tooltip) links to a one-paragraph 
 
 ### Phase 1 — Schema migration
 
-- [ ] **P1-1**: Validate text-index features against the upgraded local CH 26.2 container. Confirm `system.settings` shows no `experimental_*` flag gating, that `ALTER ... ADD INDEX TYPE text(...)` succeeds on the existing replicated table shape, and that `preprocessor = lower(col)` is the working syntax.
-- [ ] **P1-2**: Author migration `00011_text_index_search_documents.sql` via `pnpm --filter @platform/db-clickhouse ch:create text_index_search_documents`. Add the `text` index and the `MATERIALIZE INDEX` statement.
-- [ ] **P1-3**: Run migration locally; verify with sample `hasPhrase(search_text, '...')` queries that match the expected trace counts pulled via the MCP for the LAT-562 repro project.
+- [x] **P1-1**: Validate text-index features against the upgraded local CH 26.2 container. Confirm `system.settings` shows no `experimental_*` flag gating, that `ALTER ... ADD INDEX TYPE text(...)` succeeds on the existing replicated table shape, and that `preprocessor = lower(col)` is the working syntax. (Verified on 26.2.1.235 cloud and 26.2.17.31 Docker; `enable_full_text_index` and `allow_experimental_full_text_index` already on by default. `hasPhrase` was added in **26.4** (PR ClickHouse/ClickHouse#101997) — it is **not** available on prod's 26.2, so the implementation uses `hasTokenCaseInsensitive` AND-ed across phrase tokens. Trade-off: token-bag match instead of contiguous-tokens match for multi-token phrases. Exact for the LAT-562 motivating case (single-token phrases like `"handOffToHuman"` and `"true"`); when prod upgrades to 26.4+, swap the predicate generator over to `hasPhrase` to recover phrase-order semantics.)
+- [x] **P1-2**: Author migration `00012_text_index_search_documents.sql` via `pnpm --filter @platform/db-clickhouse ch:create text_index_search_documents`. Add the `text` index and the `MATERIALIZE INDEX` statement. (Numbered 00012, not 00011, since `00011_plan_aware_retention.sql` had already landed on `development` by the time this spec was implemented.)
+- [x] **P1-3**: Run migration locally; verify with sample `hasTokenCaseInsensitive(search_text, '...')` queries that match the expected trace counts pulled via the MCP for the LAT-562 repro project.
 
 **Exit gate**: migration runs cleanly on a fresh CH and on a CH already populated with the prior schema; `hasPhrase` returns the expected set against real data.
 
 ### Phase 2 — Query parser + repo rewrite
 
-- [ ] **P2-1**: Implement `parseSearchQuery(raw)` in `@domain/spans` with the parser rules above. Pure function; no I/O.
-- [ ] **P2-2**: Tests for the parser: empty input, single phrase, multiple phrases, mixed, unbalanced trailing quote, unbalanced leading quote, empty phrase (`""`), nested quote characters inside content (best-effort lenient handling).
-- [ ] **P2-3**: Rewrite `buildLexicalSearchSubquery` in `trace-repository.ts` to consume `phrases` and emit AND-ed `hasPhrase` predicates with parameter binding.
-- [ ] **P2-4**: Rewrite `buildHybridSearchSubquery` to dispatch on `(phrases.length, semanticPrompt)` per the table above. Remove the weighted-score formula and the `HYBRID_SEARCH_CONFIG` constant.
-- [ ] **P2-5**: Update `listByProjectId` (and any other callers of the hybrid subquery builder) to pass through the parsed structure instead of the raw string.
-- [ ] **P2-6**: Update / add tests in `trace-repository.test.ts` for the four query shapes.
+- [x] **P2-1**: Implement `parseSearchQuery(raw)` in `@domain/spans` with the parser rules above. Pure function; no I/O.
+- [x] **P2-2**: Tests for the parser: empty input, single phrase, multiple phrases, mixed, unbalanced trailing quote, unbalanced leading quote, empty phrase (`""`).
+- [x] **P2-3**: Rewrite `buildLexicalSearchSubquery` in `trace-repository.ts` to consume `phrases` and emit AND-ed token predicates with parameter binding. (Uses `hasTokenCaseInsensitive` per token — see P1-1.)
+- [x] **P2-4**: Replace `buildHybridSearchSubquery` with `buildSearchPlan` that dispatches on `(phrases.length, semanticPrompt)` per the table above. The weighted-score formula and the `HYBRID_SEARCH_CONFIG` constant are removed. The plan carries a `ranked` flag so callers know whether to ORDER BY relevance or by the default sort.
+- [x] **P2-5**: `listByProjectId` (and `countByProjectId`, `findLastTraceAt`, `countAnnotatedByProjectId`, `aggregateMetricsByProjectId`, `histogramByProjectId`) parse `searchQuery` once and feed the parsed structure plus the (optional) embedding into `buildSearchPlan`. The embedder is only called when `semanticPrompt` is non-empty — phrase-only queries never round-trip to Voyage.
+- [x] **P2-6**: `trace-repository.test.ts` now exercises all four query shapes (phrase-only, semantic-only, hybrid, multi-token phrase) plus the LAT-562 whitespace-asymmetry regression and a list/count/metrics/histogram consistency check on the phrase-only path.
 
 **Exit gate**: existing search-related tests pass; new tests assert each of the four query-shape combinations; the lexical side no longer contributes a numeric score in the explain plan.
 
 ### Phase 3 — UI
 
-- [ ] **P3-1**: Update the search-bar placeholder in the trace-search route in `apps/web` to the new text.
+- [x] **P3-1**: Update the search-bar placeholder in the trace-search route in `apps/web` to the new text.
 - [ ] **P3-2**: Add an inline help affordance with a one-paragraph syntax explainer (placement TBD with design).
 
 **Exit gate**: a user landing on the trace-search page sees the new placeholder; the help affordance is reachable.

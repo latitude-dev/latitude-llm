@@ -140,6 +140,8 @@ export type {
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
+export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type {
