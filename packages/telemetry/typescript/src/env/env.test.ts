@@ -21,33 +21,17 @@ describe("getExporterUrl", () => {
     }
   })
 
-  it("returns LATITUDE_TELEMETRY_URL when set, regardless of NODE_ENV", () => {
+  it("returns LATITUDE_TELEMETRY_URL when set", () => {
     process.env.LATITUDE_TELEMETRY_URL = "https://custom.example.com"
-    process.env.NODE_ENV = "development"
     expect(getExporterUrl()).toBe("https://custom.example.com")
   })
 
-  it("returns localhost when NODE_ENV is development", () => {
+  it("ignores NODE_ENV and returns production ingest by default", () => {
     process.env.NODE_ENV = "development"
-    expect(getExporterUrl()).toBe("http://localhost:3002")
-  })
-
-  it("returns localhost when NODE_ENV is test", () => {
-    process.env.NODE_ENV = "test"
-    expect(getExporterUrl()).toBe("http://localhost:3002")
-  })
-
-  it("returns production ingest when NODE_ENV is production", () => {
-    process.env.NODE_ENV = "production"
     expect(getExporterUrl()).toBe("https://ingest.latitude.so")
   })
 
-  it("returns production ingest when NODE_ENV is unset", () => {
-    expect(getExporterUrl()).toBe("https://ingest.latitude.so")
-  })
-
-  it("returns production ingest for unknown NODE_ENV values like staging", () => {
-    process.env.NODE_ENV = "staging"
+  it("returns production ingest when no env vars are set", () => {
     expect(getExporterUrl()).toBe("https://ingest.latitude.so")
   })
 })
