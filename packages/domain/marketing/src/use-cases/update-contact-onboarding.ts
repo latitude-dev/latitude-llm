@@ -33,6 +33,7 @@ export const updateContactOnboarding = ({ marketingContacts }: { readonly market
 
     yield* marketingContacts.updateContact({
       userId: input.userId,
+      email: user.email,
       firstName: user.name,
       jobTitle: user.jobTitle,
       userGroup: stackChoiceToUserGroup(input.stackChoice),
