@@ -242,7 +242,7 @@ export const ExternalIntegrationConfiguration = forwardRef<
           )}
         </>
       )}
-      {authDetection.checked && !authDetection.requiresOAuth && (
+      {authDetection.checked && (
         <CollapsibleBox
           title='Advanced configuration'
           icon='settings'
