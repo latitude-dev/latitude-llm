@@ -21,7 +21,7 @@ inputs:
     description: GitHub release name prefix (e.g. TypeScript Telemetry).
     required: true
   npm_token:
-    description: npm publish token (pass ${{ secrets.NPM_TOKEN }}).
+    description: npm publish token (pass secrets.NPM_TOKEN from the caller workflow).
     required: true
 
 runs:
