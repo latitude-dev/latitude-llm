@@ -61,8 +61,8 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
   const userFixture = await Effect.runPromise(createUserFixture(db))
   const userId = userFixture.id
   const clientId = `client-${generateId()}`
-  const accessToken = `loa_${generateId()}_${generateId()}`
-  const refreshToken = `lor_${generateId()}_${generateId()}`
+  const accessToken = `${generateId()}_${generateId()}`
+  const refreshToken = `${generateId()}_${generateId()}`
   const tokenRowId = generateId()
 
   await db.insert(oauthApplications).values({
@@ -146,7 +146,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     const redis = createFakeRedis()
 
     const result = await Effect.runPromise(
-      validateOAuthAccessToken("loa_unknown_token", {
+      validateOAuthAccessToken("unknown_token", {
         redis,
         adminClient: database.adminPostgresClient,
       }),

@@ -23,6 +23,7 @@ import {
   loadTemporalConfig,
 } from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
+import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 
@@ -202,7 +203,40 @@ export const getBetterAuth = () => {
       ...(stripeSecretKey ? { stripeSecretKey } : {}),
       ...(stripeWebhookSecret ? { stripeWebhookSecret } : {}),
       ...(selfServePlans.length > 0 ? { subscriptionPlans: selfServePlans } : {}),
-      extraPlugins: [tanstackStartCookies()],
+      extraPlugins: [
+        tanstackStartCookies(),
+        // OAuth2/OIDC authorization server for MCP clients (Claude Code,
+        // Cursor, …). Issues opaque random access + refresh tokens that the
+        // API resource server validates via `@platform/oauth-token-auth`.
+        // The consent page binds the issued token to a specific organization;
+        // until that route ships, the default BA consent UI renders and
+        // tokens get issued with `oauth_applications.organization_id IS NULL`,
+        // which the API auth middleware rejects (so no usable tokens leak out).
+        mcp({
+          loginPage: `${webUrl}/login`,
+          oidcConfig: {
+            // BA's `OIDCOptions` type requires `loginPage` here too even though
+            // the `mcp` plugin already takes one at the top level. Pass the
+            // same value so consent redirects use the same login URL.
+            loginPage: `${webUrl}/login`,
+            consentPage: `${webUrl}/auth/consent`,
+            requirePKCE: true,
+            // RFC 7591 dynamic client registration. MCP clients (Claude Code,
+            // Cursor, ...) hit `POST /api/auth/mcp/register` before any user
+            // has signed in — they're bootstrapping themselves. Without this
+            // flag the BA endpoint requires a session (see
+            // `better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:830`)
+            // and every MCP client registration would 401. Enabling it is
+            // safe: registered clients only become useful once a user
+            // completes the consent flow at `/auth/consent`, which is what
+            // binds the application to an organization. Until that binding
+            // happens `oauth_applications.organization_id IS NULL` and the
+            // API auth middleware rejects any tokens issued against the
+            // unbound row.
+            allowDynamicClientRegistration: true,
+          },
+        }),
+      ],
       onUserCreated: async (user) => {
         await Effect.runPromise(
           outboxWriter

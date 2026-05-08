@@ -687,7 +687,7 @@ export function OnboardingFlow({
                     Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set
                     up Latitude telemetry in your project.
                   </Text.H5>
-                  <CodeBlock value={codingAgentPrompt} copyable wrapLines={false} />
+                  <CodeBlock value={codingAgentPrompt} copyable wrapLines />
                 </div>
               ) : (
                 <>
