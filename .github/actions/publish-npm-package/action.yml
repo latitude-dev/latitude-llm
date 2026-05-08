@@ -1,0 +1,123 @@
+name: Publish NPM Package
+description: >-
+  Compare the repo version against npm and, if different, install/build/test,
+  publish, and cut a GitHub Release. No-ops when versions match. Assumes the
+  repository has already been checked out by the caller.
+
+inputs:
+  package_path:
+    description: Path to the package directory (e.g. packages/telemetry/typescript).
+    required: true
+  npm_package:
+    description: Full npm package name (e.g. @latitude-data/telemetry).
+    required: true
+  pnpm_filter:
+    description: pnpm filter for the package — usually identical to npm_package.
+    required: true
+  tag_prefix:
+    description: GitHub release tag prefix (e.g. typescript-telemetry).
+    required: true
+  release_name:
+    description: GitHub release name prefix (e.g. TypeScript Telemetry).
+    required: true
+  npm_token:
+    description: npm publish token (pass ${{ secrets.NPM_TOKEN }}).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Get package version
+      id: get_version
+      shell: bash
+      run: |
+        CURRENT_VERSION=$(jq -r .version "${{ inputs.package_path }}/package.json")
+        echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check version on npm
+      id: check_version
+      shell: bash
+      run: |
+        NPM_VERSION=$(npm view ${{ inputs.npm_package }} version 2>/dev/null || echo "0.0.0")
+        if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_publish=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install pnpm
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 25
+        cache: pnpm
+        registry-url: https://registry.npmjs.org
+
+    - name: Install dependencies
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Build
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm --filter ${{ inputs.pnpm_filter }} build
+
+    - name: Typecheck
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm --filter ${{ inputs.pnpm_filter }} typecheck
+
+    - name: Lint
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm --filter ${{ inputs.pnpm_filter }} check
+
+    - name: Test
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm --filter ${{ inputs.pnpm_filter }} test
+
+    - name: Publish to npm
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm publish --access public --filter ${{ inputs.pnpm_filter }} --no-git-checks
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm_token }}
+
+    - name: Extract changelog
+      if: steps.check_version.outputs.should_publish == 'true'
+      id: changelog
+      shell: bash
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        CHANGELOG="${{ inputs.package_path }}/CHANGELOG.md"
+        if [ -f "$CHANGELOG" ]; then
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+            found { print }
+          ' "$CHANGELOG" > release_notes.md
+        fi
+        if [ ! -s release_notes.md ]; then
+          echo "Package updates and improvements" > release_notes.md
+        fi
+        {
+          echo "body<<EOF"
+          cat release_notes.md
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.tag_prefix }}-${{ steps.get_version.outputs.version }}
+        name: ${{ inputs.release_name }} v${{ steps.get_version.outputs.version }}
+        body: ${{ steps.changelog.outputs.body }}
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}
+        token: ${{ github.token }}
