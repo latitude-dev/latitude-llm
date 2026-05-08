@@ -23,6 +23,42 @@ export const TRACE_SEARCH_DOCUMENT_MAX_LENGTH =
   TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS * TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE
 
 /**
+ * Per-chunk soft cap (~500 tokens at 4 chars/token). One conversation turn
+ * fits in one chunk if it's under this size; longer turns split into multiple
+ * chunks with overlap; multiple short turns greedily pack into one chunk.
+ */
+export const TRACE_SEARCH_CHUNK_MAX_CHARS = 2_000
+
+/**
+ * Overlap applied only when a single turn exceeds `TRACE_SEARCH_CHUNK_MAX_CHARS`
+ * and has to be sliced. Keeps cross-boundary phrases inside at least one chunk.
+ */
+export const TRACE_SEARCH_CHUNK_OVERLAP_CHARS = 200
+
+/**
+ * Soft cap for the **tail** half of a long-trace head+tail split. The tail is
+ * the bigger half because it carries more retrieval signal (resolution,
+ * handoff, final answer) than the head (the user's framing).
+ *
+ * Walked tail-first; the turn that crosses the threshold is still embedded
+ * fully (atomic-turn rule) before the walk stops.
+ */
+export const TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS = 12_000
+
+/**
+ * Soft cap for the **head** half of a long-trace head+tail split. Combined
+ * with `TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS` it sums to
+ * `TRACE_SEARCH_DOCUMENT_MAX_LENGTH` so total chunked text per trace stays
+ * roughly bounded.
+ *
+ * The head walk runs second and is hard-skipped if the tail walk already
+ * claimed every turn — except for turn 0, which the chunker force-includes
+ * so the opening of the conversation never fully drops out (see the
+ * "head guarantee" in `specs/trace-search-chunking.md`).
+ */
+export const TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS = 8_000
+
+/**
  * Retention window for embeddings. Enforced via ClickHouse TTL on the
  * `trace_search_embeddings` table (see the migration). Shorter than the
  * document window because embeddings are the expensive side.

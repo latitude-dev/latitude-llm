@@ -44,6 +44,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
                 organization_id: row.organizationId as string,
                 project_id: row.projectId as string,
                 trace_id: row.traceId,
+                chunk_index: row.chunkIndex,
                 start_time: toClickhouseDateTime(row.startTime),
                 content_hash: row.contentHash,
                 embedding_model: row.embeddingModel,
@@ -61,6 +62,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
       organizationId,
       projectId,
       traceId,
+      chunkIndex,
       contentHash,
     ) =>
       chSqlClient
@@ -70,12 +72,14 @@ export const TraceSearchRepositoryLive = Layer.effect(
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
                       AND trace_id = {traceId:FixedString(32)}
+                      AND chunk_index = {chunkIndex:UInt16}
                       AND content_hash = {contentHash:String}
                     LIMIT 1`,
             query_params: {
               organizationId: organizationId as string,
               projectId: projectId as string,
               traceId,
+              chunkIndex,
               contentHash,
             },
             format: "JSONEachRow",
@@ -85,10 +89,39 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "hasEmbeddingWithHash")))
 
+    const deleteChunksAtOrAbove: TraceSearchRepositoryShape["deleteChunksAtOrAbove"] = (
+      organizationId,
+      projectId,
+      traceId,
+      chunkIndexFloor,
+    ) =>
+      chSqlClient
+        .query(async (client) => {
+          // Lightweight DELETE — `ALTER TABLE ... DELETE WHERE` is a mutation
+          // and would be too heavy per-trace at write rate. Use the
+          // lightweight `DELETE FROM` (CH 23.3+, supported on
+          // ReplicatedReplacingMergeTree).
+          await client.command({
+            query: `DELETE FROM trace_search_embeddings
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND trace_id = {traceId:FixedString(32)}
+                      AND chunk_index >= {chunkIndexFloor:UInt16}`,
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              traceId,
+              chunkIndexFloor,
+            },
+          })
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "deleteChunksAtOrAbove")))
+
     return {
       upsertDocument,
       upsertEmbedding,
       hasEmbeddingWithHash,
+      deleteChunksAtOrAbove,
     } satisfies TraceSearchRepositoryShape
   }),
 )

@@ -54,12 +54,15 @@ import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-sub
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Cap on the semantic-side candidate pool. Cosine scan is linear over the
- * embeddings table; above ~10k per project latency becomes user-visible. The
- * cap trades recall on the long tail for bounded query time — realistic
- * projects stay well under this in a 30-day TTL window.
+ * Cap on the semantic-side **chunk-row** candidate pool. Each trace can carry
+ * multiple chunks now (see `specs/trace-search-chunking.md`), so the cap is
+ * sized for chunks, not traces. Cosine scan stays linear over the embeddings
+ * table; above ~30k chunk rows per project latency becomes user-visible. The
+ * cap trades recall on the long tail for bounded query time — at the average
+ * ~3-chunks-per-trace ratio that's ~10k traces, comfortably above realistic
+ * project sizes inside the 30-day TTL window.
  */
-const SEMANTIC_SCAN_LIMIT = 10_000
+const SEMANTIC_SCAN_LIMIT = 30_000
 
 /**
  * Tokenize a phrase the same way the `search_text` text index does at
@@ -127,8 +130,13 @@ function buildLexicalSearchSubquery(phrases: readonly string[]): {
 }
 
 /**
- * Builds a subquery for semantic search candidates using pre-computed query embedding.
- * Cosine distance is converted to a similarity score: 1 - distance.
+ * Builds a subquery for semantic search candidates using a pre-computed query
+ * embedding. The embedding table holds one row per trace **chunk**, so we
+ * compute per-chunk cosine similarity and roll up to a per-trace score via
+ * `max(...) GROUP BY trace_id` — a trace's relevance is its best-matching
+ * chunk's similarity. The inner `ORDER BY cosineDistance ASC LIMIT N` bounds
+ * the per-project cosine scan cost; the outer rollup collapses surviving
+ * chunks back into one row per trace for the downstream join.
  */
 function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
   subquery: string
@@ -136,13 +144,19 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
 } {
   return {
     subquery: `SELECT
-                CAST(trace_id AS String) AS trace_id,
-                (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
-              FROM trace_search_embeddings
-              WHERE organization_id = {organizationId:String}
-                AND project_id = {projectId:String}
-              ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
-              LIMIT {semanticScanLimit:UInt32}`,
+                trace_id,
+                max(semantic_score) AS semantic_score
+              FROM (
+                SELECT
+                  CAST(trace_id AS String) AS trace_id,
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                FROM trace_search_embeddings
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
+                LIMIT {semanticScanLimit:UInt32}
+              )
+              GROUP BY trace_id`,
     params: {
       queryEmbedding: [...queryEmbedding],
       semanticScanLimit: SEMANTIC_SCAN_LIMIT,

@@ -55,6 +55,7 @@ describe("TraceSearchRepository", () => {
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           traceId: TEST_TRACE_ID,
+          chunkIndex: 0,
           startTime: new Date(),
           contentHash: "abc123".repeat(8),
           embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
@@ -69,21 +70,21 @@ describe("TraceSearchRepository", () => {
   describe("hasEmbeddingWithHash", () => {
     it("should return false when no embedding exists", async () => {
       const result = await Effect.runPromise(
-        repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, "nonexistenthash"),
+        repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 0, "nonexistenthash"),
       )
 
       expect(result).toBe(false)
     })
 
-    it("should return true when embedding with matching hash exists", async () => {
+    it("should return true when an embedding row matches trace + chunk_index + hash", async () => {
       const contentHash = "hash123".repeat(8)
 
-      // First insert an embedding
       await Effect.runPromise(
         repo.upsertEmbedding({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           traceId: TEST_TRACE_ID,
+          chunkIndex: 2,
           startTime: new Date(),
           contentHash,
           embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
@@ -91,9 +92,48 @@ describe("TraceSearchRepository", () => {
         }),
       )
 
-      const result = await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, contentHash))
+      // Same chunk + hash → match.
+      expect(
+        await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 2, contentHash)),
+      ).toBe(true)
+      // Same hash but different chunk_index → no match (each chunk dedupes
+      // independently).
+      expect(
+        await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 0, contentHash)),
+      ).toBe(false)
+    })
+  })
 
-      expect(result).toBe(true)
+  describe("deleteChunksAtOrAbove", () => {
+    it("removes only the trailing chunks above the floor", async () => {
+      const baseHash = "delc123".repeat(8) + "x"
+      // Seed three chunks for one trace.
+      for (const chunkIndex of [0, 1, 2]) {
+        await Effect.runPromise(
+          repo.upsertEmbedding({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TEST_TRACE_ID,
+            chunkIndex,
+            startTime: new Date(),
+            contentHash: baseHash,
+            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+            embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1),
+          }),
+        )
+      }
+
+      await Effect.runPromise(repo.deleteChunksAtOrAbove(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 1))
+
+      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 0, baseHash))).toBe(
+        true,
+      )
+      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 1, baseHash))).toBe(
+        false,
+      )
+      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 2, baseHash))).toBe(
+        false,
+      )
     })
   })
 })
