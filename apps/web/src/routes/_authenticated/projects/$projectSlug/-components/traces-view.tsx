@@ -6,6 +6,7 @@ import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotation
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { DEFAULT_TRACE_TABLE_SORTING, ProjectTracesTable, type TraceColumnId } from "./project-traces-table.tsx"
@@ -82,11 +83,29 @@ export function TracesView({
     onStateChange: onSelectionChange,
   })
 
+  const [, setTraceDetailTab] = useParamState("traceDetailTab", "trace")
+
   const handleTraceClick = useCallback(
     (trace: TraceRecord) => {
       onActiveTraceChange(trace.traceId === activeTraceId ? undefined : trace.traceId)
     },
     [activeTraceId, onActiveTraceChange],
+  )
+
+  const handleErrorClick = useCallback(
+    (trace: TraceRecord) => {
+      onActiveTraceChange(trace.traceId)
+      setTraceDetailTab("spans")
+    },
+    [onActiveTraceChange, setTraceDetailTab],
+  )
+
+  const handleAnnotationClick = useCallback(
+    (trace: TraceRecord) => {
+      onActiveTraceChange(trace.traceId)
+      setTraceDetailTab("annotations")
+    },
+    [onActiveTraceChange, setTraceDetailTab],
   )
 
   const getRowAriaLabel = useCallback(
@@ -140,6 +159,8 @@ export function TracesView({
           isLoading={isLoading}
           visibleColumnIds={visibleColumnIds}
           onTraceClick={handleTraceClick}
+          onErrorClick={handleErrorClick}
+          onAnnotationClick={handleAnnotationClick}
           getTraceRowAriaLabel={getRowAriaLabel}
           {...(activeTraceId ? { activeTraceId } : {})}
           selection={selection}

@@ -160,6 +160,7 @@ export {
   Icon,
   type IconProps,
   type IconSize,
+  type IconWeight,
 } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
 export {
