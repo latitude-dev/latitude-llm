@@ -16,7 +16,7 @@ const sizeMap = {
 
 export type IconSize = keyof typeof sizeMap
 
-const weightMap = { // default if unset is 2px
+const weightMap = {
   XS: 1,
   S: 1.5,
   L: 2.5,
