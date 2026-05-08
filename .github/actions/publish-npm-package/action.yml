@@ -23,10 +23,6 @@ inputs:
   npm_token:
     description: npm publish token (pass ${{ secrets.NPM_TOKEN }}).
     required: true
-  github_token:
-    description: GitHub token for cutting releases.
-    required: false
-    default: ${{ github.token }}
 
 runs:
   using: composite
@@ -42,8 +38,11 @@ runs:
       id: check_version
       shell: bash
       run: |
-        NPM_VERSION=$(curl -fsSL "https://registry.npmjs.org/${{ inputs.npm_package }}/latest" 2>/dev/null | jq -r .version)
-        if [ -z "$NPM_VERSION" ] || [ "$NPM_VERSION" = "null" ]; then
+        # `-sS` (no `-f`) so 4xx responses don't fail the step under
+        # `set -eo pipefail`; `jq '.version // empty'` + `|| true` keeps
+        # us happy when the package doesn't exist yet (first publish).
+        NPM_VERSION=$(curl -sS "https://registry.npmjs.org/${{ inputs.npm_package }}/latest" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)
+        if [ -z "$NPM_VERSION" ]; then
           NPM_VERSION="0.0.0"
         fi
         if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
@@ -127,4 +126,4 @@ runs:
         body: ${{ steps.changelog.outputs.body }}
         draft: false
         prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}
-        token: ${{ inputs.github_token }}
+        token: ${{ github.token }}
