@@ -1,0 +1,54 @@
+{
+  "name": "Latitude API",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "createApiKey",
+      "title": "Generate API key",
+      "description": "Generates a new API key for the organization. The token is only returned once — store it securely.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listApiKeys",
+      "title": "List API keys",
+      "description": "Returns all API keys for the organization. Tokens are not included in the list response.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "revokeApiKey",
+      "title": "Revoke API key",
+      "description": "Soft-deletes an API key, immediately invalidating it.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
