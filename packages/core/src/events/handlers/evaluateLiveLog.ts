@@ -178,12 +178,23 @@ export const evaluateLiveLogJob = async ({
       await evaluationsQueue.add('runEvaluationV2Job', payload, {
         jobId: debounceJobId,
         delay: debounceMs,
+        attempts: LIVE_EVAL_RUN_ATTEMPTS,
         deduplication: { id: runEvaluationV2JobKey(payload) },
       })
     } else {
       await evaluationsQueue.add('runEvaluationV2Job', payload, {
+        attempts: LIVE_EVAL_RUN_ATTEMPTS,
         deduplication: { id: runEvaluationV2JobKey(payload) },
       })
     }
   }
 }
+
+/**
+ * Bumped from the queue default (3) to absorb OTel ingestion races where the
+ * completion span lands a few seconds after the prompt's spanCreated event.
+ * Combined with the queue's exponential backoff (1s base) this gives ~15s of
+ * cumulative buffer (1s + 2s + 4s + 8s) before a job is marked permanently
+ * failed.
+ */
+const LIVE_EVAL_RUN_ATTEMPTS = 5

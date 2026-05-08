@@ -272,6 +272,70 @@ describe('runEvaluationV2Job', () => {
       expect(evaluationErrorSpy).not.toHaveBeenCalled()
     })
 
+    describe('trace assembly retry', () => {
+      const TRACE_ASSEMBLY_MESSAGES = [
+        'Cannot assemble trace',
+        'Cannot find completion span',
+        'Completion span metadata is missing',
+      ]
+
+      const buildJobWithAttempts = (
+        attemptsMade: number,
+        attempts: number,
+      ): Job<RunEvaluationV2JobData> =>
+        ({
+          ...jobData,
+          attemptsMade,
+          opts: { attempts },
+        }) as Job<RunEvaluationV2JobData>
+
+      for (const message of TRACE_ASSEMBLY_MESSAGES) {
+        it(`re-throws "${message}" while attempts remain so BullMQ retries`, async () => {
+          runEvaluationV2Spy.mockResolvedValueOnce(
+            Result.error(new UnprocessableEntityError(message)),
+          )
+
+          const job = buildJobWithAttempts(0, 5)
+
+          await expect(runEvaluationV2Job(job)).rejects.toThrowError(
+            new UnprocessableEntityError(message),
+          )
+
+          expect(evaluationErrorSpy).not.toHaveBeenCalled()
+          expect(evaluationFinishedSpy).not.toHaveBeenCalled()
+        })
+      }
+
+      it('captures the exception and updates experiment status on the final attempt', async () => {
+        runEvaluationV2Spy.mockResolvedValueOnce(
+          Result.error(
+            new UnprocessableEntityError('Cannot find completion span'),
+          ),
+        )
+
+        const job = buildJobWithAttempts(4, 5)
+
+        await runEvaluationV2Job(job)
+
+        expect(evaluationErrorSpy).toHaveBeenCalledWith(span.documentLogUuid!)
+        expect(evaluationFinishedSpy).not.toHaveBeenCalled()
+      })
+
+      it('does not retry unrelated UnprocessableEntityError messages', async () => {
+        runEvaluationV2Spy.mockResolvedValueOnce(
+          Result.error(
+            new UnprocessableEntityError('Some other unrelated reason'),
+          ),
+        )
+
+        const job = buildJobWithAttempts(0, 5)
+
+        await runEvaluationV2Job(job)
+
+        expect(evaluationErrorSpy).toHaveBeenCalledWith(span.documentLogUuid!)
+      })
+    })
+
     it('does not run evaluation if experiment is finished', async () => {
       await completeExperiment({ experiment }).then((r) => r.unwrap())
       runEvaluationV2Spy.mockResolvedValueOnce(
