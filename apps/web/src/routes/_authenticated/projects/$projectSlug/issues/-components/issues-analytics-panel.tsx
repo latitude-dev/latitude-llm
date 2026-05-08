@@ -1,8 +1,11 @@
-import { BarChart, Button, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
+import { BarChart, Button, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
+import { BarChart2, ChevronDown, ChevronUp, ShieldAlertIcon, ShieldOffIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
+import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
@@ -41,30 +44,78 @@ function AggregationItem({
 }
 
 export function IssuesAnalyticsPanel({
+  projectId,
   analytics,
   isLoading,
   onRangeSelect,
 }: {
+  readonly projectId: string
   readonly analytics: IssuesListResultRecord["analytics"]
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showLeftFade, setShowLeftFade] = useState(false)
+  const [showIncidents, setShowIncidents] = useParamState("showIncidents", false)
 
   const histogramBarChartData = useMemo(
     () =>
       analytics.histogram.map((bucket) => ({
-        category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", "\u00A0"),
+        category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", " "),
         tooltipCategory: formatDayBucketTooltipLabel(bucket.bucket),
         value: bucket.count,
       })),
     [analytics.histogram],
   )
 
+  // Incidents are queried over the SAME UTC-day window the histogram already paints, so the
+  // range derives from the first/last bucket keys rather than the page's filter state.
+  const incidentRange = useMemo(() => {
+    if (analytics.histogram.length === 0) return null
+    const firstBucket = analytics.histogram[0]
+    const lastBucket = analytics.histogram[analytics.histogram.length - 1]
+    if (!firstBucket || !lastBucket) return null
+    return {
+      fromIso: `${firstBucket.bucket}T00:00:00.000Z`,
+      toIso: new Date(Date.parse(`${lastBucket.bucket}T00:00:00.000Z`) + ISSUE_HISTOGRAM_BUCKET_MS - 1).toISOString(),
+    }
+  }, [analytics.histogram])
+
+  const { data: incidents } = useProjectAlertIncidentsInRange({
+    projectId,
+    fromIso: incidentRange?.fromIso ?? "",
+    toIso: incidentRange?.toIso ?? "",
+    // Filter to issue-sourced incidents only — the histogram is about issues, not other future
+    // alert sources (saved-search thresholds, etc.).
+    sourceType: "issue",
+    enabled: showIncidents && incidentRange !== null,
+  })
+
+  const { overlay, incidentsByBucketIndex } = useMemo(() => {
+    if (!showIncidents || incidents.length === 0 || analytics.histogram.length === 0 || !incidentRange) {
+      return { overlay: undefined, incidentsByBucketIndex: new Map() }
+    }
+    const bucketStartsMs = analytics.histogram.map((b) => Date.parse(`${b.bucket}T00:00:00.000Z`))
+    const result = buildIncidentMarkers({
+      bucketStartsMs,
+      bucketWidthMs: ISSUE_HISTOGRAM_BUCKET_MS,
+      categories: histogramBarChartData.map((d) => d.category),
+      incidents,
+      nowMs: Date.parse(incidentRange.toIso),
+    })
+    return {
+      overlay: result.overlay,
+      incidentsByBucketIndex: result.incidentsByBucketIndex,
+    }
+  }, [showIncidents, incidents, analytics.histogram, histogramBarChartData, incidentRange])
+
   const formatHistogramTooltip = useCallback(
-    (category: string, value: number) => `${category}<br/><b>${formatCount(value)}</b> occurrences`,
-    [],
+    (category: string, value: number, dataIndex: number) => {
+      const base = `${category}<br/><b>${formatCount(value)}</b> occurrences`
+      const inBucket = incidentsByBucketIndex.get(dataIndex) ?? []
+      return base + renderIncidentsTooltipBlock(inBucket)
+    },
+    [incidentsByBucketIndex],
   )
 
   const handleSelect = useCallback(
@@ -148,17 +199,38 @@ export function IssuesAnalyticsPanel({
             <Text.H6 color="foregroundMuted">No issue occurrences in this time window</Text.H6>
           </div>
         ) : (
-          <div className="px-4 py-3">
-            <BarChart
-              data={histogramBarChartData}
-              height={160}
-              showYAxis={false}
-              xAxisLabelFontSize={10}
-              ariaLabel="Issue occurrences by day"
-              formatTooltip={formatHistogramTooltip}
-              onSelect={onRangeSelect ? handleSelect : undefined}
-            />
-          </div>
+          <>
+            <div className="flex items-center justify-end gap-2 px-4 -mb-1">
+              <Tooltip
+                asChild
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowIncidents((prev) => !prev)}
+                    aria-pressed={showIncidents}
+                  >
+                    <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                    Incidents
+                  </Button>
+                }
+              >
+                Overlay incidents on the timeline
+              </Tooltip>
+            </div>
+            <div className="px-4 py-3">
+              <BarChart
+                data={histogramBarChartData}
+                height={160}
+                showYAxis={false}
+                xAxisLabelFontSize={10}
+                ariaLabel="Issue occurrences by day"
+                formatTooltip={formatHistogramTooltip}
+                onSelect={onRangeSelect ? handleSelect : undefined}
+                {...(overlay ? { overlay } : {})}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -415,6 +415,7 @@ function IssuesPage() {
         )}
         <div className="px-6">
           <IssuesAnalyticsPanel
+            projectId={project.id}
             analytics={analytics}
             isLoading={showSkeletons}
             onRangeSelect={(range) => {

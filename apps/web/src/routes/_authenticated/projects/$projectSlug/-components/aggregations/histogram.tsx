@@ -4,20 +4,25 @@ import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
 import { useCallback, useMemo } from "react"
 
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
+import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
-import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "./incident-markers.ts"
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 interface HistogramProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly metric: TraceHistogramMetric
-  /** When true, fetch and overlay alert incidents on the histogram. */
+  /** When true, fetch and overlay incidents on the histogram. */
   readonly showIncidents: boolean
   /** Called when user selects a time range via brush on the histogram. */
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
@@ -61,13 +66,16 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
       return { overlay: undefined, incidentsByBucketIndex: new Map() }
     }
     const result = buildIncidentMarkers({
-      buckets: denseBuckets,
-      bucketSeconds,
+      bucketStartsMs: denseBuckets.map((b) => Date.parse(b.bucketStart)),
+      bucketWidthMs: bucketSeconds * 1000,
       categories: chartData.map((d) => d.category),
       incidents,
-      nowIso: rangeEndIso,
+      nowMs: Date.parse(rangeEndIso),
     })
-    return { overlay: result.overlay, incidentsByBucketIndex: result.incidentsByBucketIndex }
+    return {
+      overlay: result.overlay,
+      incidentsByBucketIndex: result.incidentsByBucketIndex,
+    }
   }, [showIncidents, incidents, denseBuckets, bucketSeconds, chartData, rangeEndIso])
 
   const handleSelect = useCallback(

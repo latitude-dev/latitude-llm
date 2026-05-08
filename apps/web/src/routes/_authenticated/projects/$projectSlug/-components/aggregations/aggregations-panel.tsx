@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { isTraceHistogramMetric, type TraceHistogramMetric } from "@domain/spans"
 import { Button, Icon, Text, Tooltip } from "@repo/ui"
-import { BarChart2, ChevronDown, ShieldAlertIcon } from "lucide-react"
+import { BarChart2, ChevronDown, ShieldAlertIcon, ShieldOffIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { GeneralAggregations } from "./general-aggregations.tsx"
@@ -60,17 +60,17 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
             asChild
             trigger={
               <Button
-                variant={showIncidents ? "outline" : "ghost"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowIncidents((prev) => !prev)}
                 aria-pressed={showIncidents}
               >
-                <Icon icon={ShieldAlertIcon} size="sm" />
+                <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
                 Incidents
               </Button>
             }
           >
-            Overlay alert incidents on the timeline
+            Overlay incidents on the timeline
           </Tooltip>
         </div>
         <Histogram

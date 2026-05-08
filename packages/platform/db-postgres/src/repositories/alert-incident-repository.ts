@@ -47,7 +47,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               ),
           )
         }),
-      listByProjectInRange: ({ organizationId, projectId, from, to }) =>
+      listByProjectInRange: ({ organizationId, projectId, from, to, sourceType, sourceId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db) =>
@@ -60,6 +60,8 @@ export const AlertIncidentRepositoryLive = Layer.effect(
                   eq(alertIncidents.projectId, projectId),
                   lte(alertIncidents.startedAt, to),
                   or(isNull(alertIncidents.endedAt), gte(alertIncidents.endedAt, from)),
+                  sourceType ? eq(alertIncidents.sourceType, sourceType) : undefined,
+                  sourceId ? eq(alertIncidents.sourceId, sourceId) : undefined,
                 ),
               )
               .orderBy(asc(alertIncidents.startedAt)),

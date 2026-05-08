@@ -16,6 +16,13 @@ export interface ListAlertIncidentsByProjectInRangeInput {
   readonly from: Date
   /** Inclusive end of the window. */
   readonly to: Date
+  /** Restrict to a single source type (e.g., `"issue"`). When omitted, all source types are returned. */
+  readonly sourceType?: AlertIncidentSourceType
+  /**
+   * Restrict to incidents tied to a single source entity (e.g., a specific issue id). Combine with
+   * `sourceType` so the same id namespace is unambiguous when future source types are added.
+   */
+  readonly sourceId?: string
 }
 
 export interface AlertIncidentRepositoryShape {

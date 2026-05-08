@@ -1,4 +1,10 @@
-import { type AlertIncident, type AlertIncidentKind, AlertIncidentRepository, type AlertSeverity } from "@domain/alerts"
+import {
+  ALERT_INCIDENT_SOURCE_TYPES,
+  type AlertIncident,
+  type AlertIncidentKind,
+  AlertIncidentRepository,
+  type AlertSeverity,
+} from "@domain/alerts"
 import { IssueRepository, type IssueWithLifecycle } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { AlertIncidentRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -13,6 +19,8 @@ const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
   fromIso: z.iso.datetime(),
   toIso: z.iso.datetime(),
+  sourceType: z.enum(ALERT_INCIDENT_SOURCE_TYPES).optional(),
+  sourceId: z.string().min(1).optional(),
 })
 
 export interface AlertIncidentRecord {
@@ -44,12 +52,14 @@ const toRecord = (incident: AlertIncident, issue: IssueWithLifecycle | undefined
 })
 
 /**
- * Returns alert incidents for the project whose lifetime overlaps `[fromIso, toIso]`,
+ * Returns incidents for the project whose lifetime overlaps `[fromIso, toIso]`,
  * enriched with the issue's name/uuid so the histogram tooltip can show a human label
  * without a follow-up request per incident. Issue lookup is best-effort — incidents
  * whose source issue has been deleted still come back, with `issueName: null`.
  */
-export const listProjectAlertIncidentsInRange = createServerFn({ method: "GET" })
+export const listProjectAlertIncidentsInRange = createServerFn({
+  method: "GET",
+})
   .inputValidator(listProjectAlertIncidentsInRangeInputSchema)
   .handler(async ({ data }): Promise<{ readonly items: readonly AlertIncidentRecord[] }> => {
     const { organizationId } = await requireSession()
@@ -67,6 +77,8 @@ export const listProjectAlertIncidentsInRange = createServerFn({ method: "GET" }
           projectId,
           from: new Date(data.fromIso),
           to: new Date(data.toIso),
+          ...(data.sourceType ? { sourceType: data.sourceType } : {}),
+          ...(data.sourceId ? { sourceId: data.sourceId } : {}),
         })
 
         const issueIds = Array.from(
