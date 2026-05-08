@@ -38,13 +38,7 @@ runs:
       id: check_version
       shell: bash
       run: |
-        # `-sS` (no `-f`) so 4xx responses don't fail the step under
-        # `set -eo pipefail`; `jq '.version // empty'` + `|| true` keeps
-        # us happy when the package doesn't exist yet (first publish).
-        NPM_VERSION=$(curl -sS "https://registry.npmjs.org/${{ inputs.npm_package }}/latest" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)
-        if [ -z "$NPM_VERSION" ]; then
-          NPM_VERSION="0.0.0"
-        fi
+        NPM_VERSION=$(npm view ${{ inputs.npm_package }} version 2>/dev/null || echo "0.0.0")
         if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
           echo "should_publish=true" >> $GITHUB_OUTPUT
         else
