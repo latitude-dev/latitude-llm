@@ -53,17 +53,17 @@ existing_pr=$(gh pr list \
   --state open \
   --limit 100 \
   --json number,headRefName,url \
-  --jq '[.[] | select(.headRefName | startswith("deploy/production-"))]')
+  --jq '[.[] | select(.headRefName | startswith("release/"))]')
 
 if [ "$(echo "$existing_pr" | jq 'length')" -gt 0 ]; then
   url=$(echo "$existing_pr" | jq -r '.[0].url')
   branch=$(echo "$existing_pr" | jq -r '.[0].headRefName')
-  echo "A production deploy PR is already open: $url ($branch)"
+  echo "A release PR is already open: $url ($branch)"
   echo "Merge or close it before opening a new one."
   exit 1
 fi
 
-read -r -p "Open a production deploy PR now? [y/N] " confirm
+read -r -p "Open a release PR now? [y/N] " confirm
 case "$confirm" in
 y | Y | yes | YES) ;;
 *)
@@ -73,7 +73,7 @@ y | Y | yes | YES) ;;
 esac
 
 timestamp=$(TZ=Europe/Madrid date +%d-%m-%Y-%H-%M)
-branch="deploy/production-${timestamp}"
+branch="release/${timestamp}"
 
 echo "Creating branch ${branch} from origin/development..."
 git push origin "origin/development:refs/heads/${branch}"
@@ -81,7 +81,7 @@ git push origin "origin/development:refs/heads/${branch}"
 commits=$(git log --pretty=format:'- %h %s' origin/main..origin/development | head -50)
 body=$(
   cat <<EOF
-Promotes \`development\` to \`main\` to deploy to production.
+Promotes \`development\` to \`main\` for a release.
 
 ## Commits
 
@@ -92,5 +92,5 @@ EOF
 gh pr create \
   --base main \
   --head "$branch" \
-  --title "Deploy production — ${timestamp}" \
+  --title "Release ${timestamp}" \
   --body "$body"
