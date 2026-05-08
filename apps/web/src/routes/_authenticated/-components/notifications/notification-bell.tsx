@@ -8,6 +8,7 @@ import {
   listNotifications,
   markAllNotificationsSeen,
 } from "../../../../domains/notifications/notifications.functions.ts"
+import { NotificationFeedProvider } from "./notification-feed-context.tsx"
 import { NotificationItem } from "./notification-item.tsx"
 
 const NOTIFICATIONS_FEATURE_FLAG = "notifications"
@@ -35,6 +36,7 @@ export function NotificationBell() {
 function NotificationBellEnabled() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [openedAt, setOpenedAt] = useState<Date | null>(null)
 
   const { data: unreadData } = useQuery({
     queryKey: UNREAD_QUERY_KEY,
@@ -67,7 +69,12 @@ function NotificationBellEnabled() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (!next) {
+        if (next) {
+          // Snapshot when this open started so the feed can decide which rows
+          // to render as "unseen for this open" vs "seen on a previous open".
+          // Reset every open so the highlight state is fresh each time.
+          setOpenedAt(new Date())
+        } else {
           // Discard cached pages so reopening starts fresh from the top.
           queryClient.removeQueries({ queryKey: LIST_QUERY_KEY })
         }
@@ -94,7 +101,11 @@ function NotificationBellEnabled() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="w-[360px] p-0">
-        {open ? <NotificationFeed /> : null}
+        {open ? (
+          <NotificationFeedProvider value={{ openedAt }}>
+            <NotificationFeed />
+          </NotificationFeedProvider>
+        ) : null}
       </PopoverContent>
     </Popover>
   )
@@ -163,8 +174,8 @@ function NotificationFeed() {
   }
 
   return (
-    <div className="max-h-[420px] overflow-y-auto">
-      <ul className="divide-y divide-border">
+    <div className="max-h-[420px] overflow-y-auto px-3 py-2">
+      <ul>
         {items.map((n) => (
           <li key={n.id}>
             <NotificationItem notification={n} />
@@ -177,6 +188,11 @@ function NotificationFeed() {
           <Text.H6 color="foregroundMuted">Loading…</Text.H6>
         </div>
       ) : null}
+      {!hasNextPage && (
+        <div className="p-2 text-center">
+          <Text.H6 color="foregroundMuted">No more notifications</Text.H6>
+        </div>
+      )}
     </div>
   )
 }

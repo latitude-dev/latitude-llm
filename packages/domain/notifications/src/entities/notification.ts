@@ -35,7 +35,7 @@ export type IncidentNotificationPayload = z.infer<typeof incidentNotificationPay
 
 export const customMessageNotificationPayloadSchema = z.object({
   title: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
   link: z.string().optional(),
 })
 export type CustomMessageNotificationPayload = z.infer<typeof customMessageNotificationPayloadSchema>
