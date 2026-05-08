@@ -212,11 +212,17 @@ export interface ScoreAnalyticsRepositoryShape {
   }): Effect.Effect<readonly IssueTagsAggregate[], RepositoryError, ChSqlClient>
 
   // -- Issue occurrence time-series ------------------------------------------
+  /**
+   * Per-issue trend over the last `days` (default 30) bucketed by `bucketSeconds`. Bucket keys
+   * are emitted as ISO-8601 UTC timestamps (`YYYY-MM-DDTHH:MM:SS.000Z`) regardless of interval —
+   * the consumer is responsible for any shorter-form formatting in the UI.
+   */
   trendByIssue(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly issueId: IssueId
     readonly days?: number // default 30
+    readonly bucketSeconds: number
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError, ChSqlClient>
   listIssueWindowMetrics(input: {
@@ -227,12 +233,17 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueIds?: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueWindowMetric[], RepositoryError, ChSqlClient>
+  /**
+   * Project-wide issue-occurrence histogram bucketed by `bucketSeconds`. Bucket keys are emitted
+   * as ISO-8601 UTC timestamps (`YYYY-MM-DDTHH:MM:SS.000Z`) regardless of interval.
+   */
   histogramByIssues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly issueIds: readonly IssueId[]
     readonly filters?: FilterSet
     readonly timeRange: ScoreAnalyticsTimeRange
+    readonly bucketSeconds: number
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError, ChSqlClient>
   trendByIssues(input: {

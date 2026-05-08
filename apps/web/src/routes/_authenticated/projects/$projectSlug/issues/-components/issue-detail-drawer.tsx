@@ -181,20 +181,22 @@ export function IssueDetailDrawer({
   const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
   const traceSelection = useSelectableRows({ rowIds: traceIds, totalRowCount: totalTraceCount })
 
-  // Window the incident query to the same UTC-day range that the trend chart paints. Falls back
-  // to an empty window when the issue hasn't loaded — the hook short-circuits via `enabled`.
+  // Window the incident query to the same range that the trend chart paints. Bucket keys are
+  // ISO timestamps now (12h-aligned), and `trendBucketSeconds` tells us the cell width so we can
+  // include the full last bucket in the upper bound. Falls back to an empty window when the
+  // issue hasn't loaded — the hook short-circuits via `enabled`.
   const trendIncidentRange = useMemo(() => {
     const trend = issue?.trend
     if (!trend || trend.length === 0) return null
     const firstBucket = trend[0]
     const lastBucket = trend[trend.length - 1]
     if (!firstBucket || !lastBucket) return null
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000
+    const bucketWidthMs = (issue?.trendBucketSeconds ?? 24 * 60 * 60) * 1000
     return {
-      fromIso: `${firstBucket.bucket}T00:00:00.000Z`,
-      toIso: new Date(Date.parse(`${lastBucket.bucket}T00:00:00.000Z`) + ONE_DAY_MS - 1).toISOString(),
+      fromIso: new Date(Date.parse(firstBucket.bucket)).toISOString(),
+      toIso: new Date(Date.parse(lastBucket.bucket) + bucketWidthMs - 1).toISOString(),
     }
-  }, [issue?.trend])
+  }, [issue?.trend, issue?.trendBucketSeconds])
 
   const { data: trendIncidents } = useProjectAlertIncidentsInRange({
     projectId,
@@ -417,6 +419,7 @@ export function IssueDetailDrawer({
               <div className="px-4 py-3">
                 <IssueTrendBar
                   buckets={issue?.trend ?? []}
+                  bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
                   height={120}
                   isLoading={isLoading}
                   labelLayout="floating"

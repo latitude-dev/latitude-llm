@@ -7,7 +7,7 @@ import {
   groupIncidentsByBucket,
   INCIDENT_SEVERITY_COLOR,
 } from "../../../../../../domains/alerts/incident-markers.ts"
-import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
+import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
 
 const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
 const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
@@ -20,11 +20,21 @@ const ESCALATING_BAR_CLASSES = "bg-yellow-500/75 dark:bg-yellow-300/85"
 const DEFAULT_ROW_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
 const DEFAULT_BACKGROUND_GUIDE_CLASSES = "border-border/60 dark:border-muted-foreground/30"
 const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
-const ISSUE_TREND_BUCKET_MS = 24 * 60 * 60 * 1000
+const DEFAULT_BUCKET_SECONDS = 24 * 60 * 60
 const SEVERITY_RANK: Record<AlertSeverity, number> = { medium: 1, high: 2 }
 
-function toBucketEndMs(bucket: string): number {
-  return new Date(`${bucket}T23:59:59.999Z`).getTime()
+/**
+ * Parses either an ISO timestamp (sub-day or aligned) or a legacy `YYYY-MM-DD` string into
+ * the bucket's start ms. The latter shape is still emitted by the per-issue list mini-bar;
+ * the detail trend now uses ISO 12h timestamps.
+ */
+function parseBucketStartMs(bucket: string): number {
+  return Date.parse(bucket.length === 10 ? `${bucket}T00:00:00.000Z` : bucket)
+}
+
+function toBucketEndMs(bucket: string, bucketWidthMs: number): number {
+  const startMs = parseBucketStartMs(bucket)
+  return Number.isFinite(startMs) ? startMs + bucketWidthMs - 1 : Number.NaN
 }
 
 function resolveBarClasses(input: {
@@ -89,13 +99,14 @@ const EMPTY_INCIDENT_INFO: IncidentBucketInfo = {
 function buildIncidentInfoByBucket(
   bucketKeys: readonly string[],
   incidents: readonly AlertIncidentRecord[],
+  bucketWidthMs: number,
 ): readonly IncidentBucketInfo[] {
   if (incidents.length === 0 || bucketKeys.length === 0) {
     return bucketKeys.map(() => EMPTY_INCIDENT_INFO)
   }
   const grouping = groupIncidentsByBucket({
-    bucketStartsMs: bucketKeys.map((key) => Date.parse(`${key}T00:00:00.000Z`)),
-    bucketWidthMs: ISSUE_TREND_BUCKET_MS,
+    bucketStartsMs: bucketKeys.map(parseBucketStartMs),
+    bucketWidthMs,
     incidents,
     nowMs: Date.now(),
   })
@@ -209,6 +220,7 @@ export function IssueTrendBar({
   escalationOccurrenceThreshold = null,
   showEscalationThresholdGuide = false,
   incidents = [],
+  bucketSeconds = DEFAULT_BUCKET_SECONDS,
 }: {
   readonly buckets: readonly {
     readonly bucket: string
@@ -231,6 +243,11 @@ export function IssueTrendBar({
    * the relevant issue (`sourceId`) — the component doesn't filter again.
    */
   readonly incidents?: readonly AlertIncidentRecord[]
+  /**
+   * Width (seconds) of each bucket. Defaults to 24h to match the daily list mini-bar; the
+   * issue detail drawer passes 12h so incident overlays can land in the right half-day.
+   */
+  readonly bucketSeconds?: number
 }) {
   if (isLoading) {
     return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
@@ -244,16 +261,16 @@ export function IssueTrendBar({
     )
   }
 
+  const bucketWidthMs = bucketSeconds * 1000
   const chartBuckets = buckets.map((bucket) => ({
     key: bucket.bucket,
-    label: formatDayBucketLabel(bucket.bucket),
-    tooltipLabel: formatDayBucketTooltipLabel(bucket.bucket),
+    label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
+    tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
     count: bucket.count,
   }))
   const visibleBucketLabelIndices = getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels)
   const maxCount = Math.max(...chartBuckets.map((bucket) => bucket.count), 1)
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
-  const resolvedDayBucketKey = resolvedAt ? resolvedAt.slice(0, 10) : null
   const isRegressedIssue = states.includes("regressed")
   const isEscalatingIssue = states.includes("escalating")
   const escalationGuideCount =
@@ -269,25 +286,35 @@ export function IssueTrendBar({
     ? buildIncidentInfoByBucket(
         chartBuckets.map((b) => b.key),
         incidents,
+        bucketWidthMs,
       )
     : null
   const visualBuckets = chartBuckets.map((bucket, index) => {
     const heightPercent = toVisibleHeightPercent(bucket.count, maxCount)
+    const bucketStartMs = parseBucketStartMs(bucket.key)
+    const bucketEndMs = toBucketEndMs(bucket.key, bucketWidthMs)
     const isRegressedBucket =
-      isRegressedIssue && resolvedAtMs !== null && bucket.count > 0 && toBucketEndMs(bucket.key) > resolvedAtMs
+      isRegressedIssue && resolvedAtMs !== null && bucket.count > 0 && bucketEndMs > resolvedAtMs
     const isEscalatingBucket =
       !isRegressedBucket &&
       isEscalatingIssue &&
       escalationOccurrenceThreshold !== null &&
       bucket.count >= escalationOccurrenceThreshold
+    // The "this bucket contains the resolved-at moment" marker — works for both daily and
+    // sub-day buckets since we just check whether resolvedAt falls in the bucket's [start, end).
+    const isResolvedBoundaryBucket =
+      isRegressedIssue &&
+      resolvedAtMs !== null &&
+      Number.isFinite(bucketStartMs) &&
+      resolvedAtMs >= bucketStartMs &&
+      resolvedAtMs <= bucketEndMs
 
     return {
       ...bucket,
       heightPercent,
       isRegressedBucket,
       isEscalatingBucket,
-      isResolvedBoundaryBucket:
-        isRegressedIssue && resolvedDayBucketKey !== null && bucket.key === resolvedDayBucketKey,
+      isResolvedBoundaryBucket,
       incidentInfo: incidentInfoByBucket?.[index] ?? EMPTY_INCIDENT_INFO,
     }
   })

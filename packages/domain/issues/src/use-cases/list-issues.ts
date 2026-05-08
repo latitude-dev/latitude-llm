@@ -16,6 +16,7 @@ import {
   type RepositoryError,
   type SqlClient,
 } from "@domain/shared"
+import { pickTraceHistogramBucketSeconds } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { type IssueSource, IssueState } from "../entities/issue.ts"
@@ -77,6 +78,12 @@ export interface IssueListAnalyticsCounts {
 export interface IssueListAnalytics {
   readonly counts: IssueListAnalyticsCounts
   readonly histogram: readonly IssueOccurrenceBucket[]
+  /**
+   * Width (seconds) of each `histogram` bucket. Adaptive — picked from the time range so a
+   * 6-day default lands at ~3h–4h bars and longer ranges step up to 12h, 1d, 1w. Bucket keys
+   * are ISO-8601 UTC timestamps (`YYYY-MM-DDTHH:MM:SS.000Z`).
+   */
+  readonly histogramBucketSeconds: number
   readonly totalTraces: number
 }
 
@@ -219,6 +226,10 @@ const toScoreAnalyticsTimeRange = (
   return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
+/**
+ * Daily UTC scaffold producing `YYYY-MM-DD` keys. Used by the table mini-bar trend (always 14
+ * days, daily) — kept as-is so the row-level trend stays compact and readable.
+ */
 const buildBucketScaffold = (input: { readonly from: Date; readonly to: Date }): readonly string[] => {
   const buckets: string[] = []
   const cursor = new Date(input.from)
@@ -230,6 +241,28 @@ const buildBucketScaffold = (input: { readonly from: Date; readonly to: Date }):
   }
 
   return buckets
+}
+
+/**
+ * Sub-day-aware scaffold aligned to UTC bucket boundaries. Emits ISO-8601 UTC timestamps
+ * (`YYYY-MM-DDTHH:MM:SS.000Z`) — same shape the CH layer returns for the analytics histogram.
+ * The scaffold starts at `floor(from / bucketWidth) * bucketWidth` and steps by `bucketSeconds`
+ * up to and including the bucket containing `to`.
+ */
+const buildHistogramBucketScaffold = (input: {
+  readonly from: Date
+  readonly to: Date
+  readonly bucketSeconds: number
+}): readonly string[] => {
+  const widthMs = input.bucketSeconds * 1000
+  if (widthMs <= 0) return []
+  const startMs = Math.floor(input.from.getTime() / widthMs) * widthMs
+  const endMs = input.to.getTime()
+  const out: string[] = []
+  for (let cursor = startMs; cursor <= endMs; cursor += widthMs) {
+    out.push(new Date(cursor).toISOString())
+  }
+  return out
 }
 
 const fillBuckets = (input: {
@@ -422,7 +455,18 @@ export const listIssuesUseCase = (
       timeRange: parsed.timeRange,
       now,
     })
-    const histogramScaffold = buildBucketScaffold(histogramTimeRange)
+    // Pick a "nice" bucket width adaptively so a 6-day default window lands at ~3h–4h bars while
+    // longer user-selected ranges step up to 6h, 12h, 1d, etc. Same helper the Traces histogram
+    // uses, keeping the two views visually consistent.
+    const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
+      histogramTimeRange.from.getTime(),
+      histogramTimeRange.to.getTime(),
+    )
+    const histogramScaffold = buildHistogramBucketScaffold({
+      from: histogramTimeRange.from,
+      to: histogramTimeRange.to,
+      bucketSeconds: histogramBucketSeconds,
+    })
 
     if (candidateIssueIds.length === 0) {
       return {
@@ -436,6 +480,7 @@ export const listIssuesUseCase = (
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
+          histogramBucketSeconds,
           totalTraces,
         },
         items: [],
@@ -497,6 +542,7 @@ export const listIssuesUseCase = (
             projectId: parsed.projectId,
             issueIds: matchedIssueIds,
             timeRange: histogramTimeRange,
+            bucketSeconds: histogramBucketSeconds,
           })
 
     const tableCandidates = sortCandidates(
@@ -578,6 +624,7 @@ export const listIssuesUseCase = (
           scaffold: histogramScaffold,
           buckets: analyticsHistogram,
         }),
+        histogramBucketSeconds,
         totalTraces,
       },
       items: pageCandidates.map((candidate) => ({

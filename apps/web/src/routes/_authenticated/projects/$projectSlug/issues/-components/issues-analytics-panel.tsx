@@ -6,7 +6,7 @@ import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alert
 import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
-import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
+import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
   { key: "newIssues", label: "New" },
@@ -16,7 +16,6 @@ const COUNT_CARDS = [
   { key: "resolvedIssues", label: "Resolved" },
   { key: "seenOccurrences", label: "Occurrences" },
 ] as const
-const ISSUE_HISTOGRAM_BUCKET_MS = 24 * 60 * 60 * 1000
 
 function AggregationItem({
   label,
@@ -58,28 +57,32 @@ export function IssuesAnalyticsPanel({
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showIncidents, setShowIncidents] = useParamState("showIncidents", false)
 
+  const bucketSeconds = analytics.histogramBucketSeconds
+  const bucketWidthMs = bucketSeconds * 1000
+
   const histogramBarChartData = useMemo(
     () =>
       analytics.histogram.map((bucket) => ({
-        category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", " "),
-        tooltipCategory: formatDayBucketTooltipLabel(bucket.bucket),
+        category: formatHistogramBucketLabel(bucket.bucket, bucketSeconds).replaceAll(" ", " "),
+        tooltipCategory: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
         value: bucket.count,
       })),
-    [analytics.histogram],
+    [analytics.histogram, bucketSeconds],
   )
 
-  // Incidents are queried over the SAME UTC-day window the histogram already paints, so the
-  // range derives from the first/last bucket keys rather than the page's filter state.
+  // Incidents are queried over the SAME window the histogram already paints, so the range
+  // derives from the first/last bucket keys (now ISO timestamps) rather than the page's filter
+  // state.
   const incidentRange = useMemo(() => {
     if (analytics.histogram.length === 0) return null
     const firstBucket = analytics.histogram[0]
     const lastBucket = analytics.histogram[analytics.histogram.length - 1]
     if (!firstBucket || !lastBucket) return null
     return {
-      fromIso: `${firstBucket.bucket}T00:00:00.000Z`,
-      toIso: new Date(Date.parse(`${lastBucket.bucket}T00:00:00.000Z`) + ISSUE_HISTOGRAM_BUCKET_MS - 1).toISOString(),
+      fromIso: new Date(Date.parse(firstBucket.bucket)).toISOString(),
+      toIso: new Date(Date.parse(lastBucket.bucket) + bucketWidthMs - 1).toISOString(),
     }
-  }, [analytics.histogram])
+  }, [analytics.histogram, bucketWidthMs])
 
   const { data: incidents } = useProjectAlertIncidentsInRange({
     projectId,
@@ -95,10 +98,10 @@ export function IssuesAnalyticsPanel({
     if (!showIncidents || incidents.length === 0 || analytics.histogram.length === 0 || !incidentRange) {
       return { overlay: undefined, incidentsByBucketIndex: new Map() }
     }
-    const bucketStartsMs = analytics.histogram.map((b) => Date.parse(`${b.bucket}T00:00:00.000Z`))
+    const bucketStartsMs = analytics.histogram.map((b) => Date.parse(b.bucket))
     const result = buildIncidentMarkers({
       bucketStartsMs,
-      bucketWidthMs: ISSUE_HISTOGRAM_BUCKET_MS,
+      bucketWidthMs,
       categories: histogramBarChartData.map((d) => d.category),
       incidents,
       nowMs: Date.parse(incidentRange.toIso),
@@ -131,12 +134,12 @@ export function IssuesAnalyticsPanel({
       const endBucket = analytics.histogram[range.endIndex]
       if (!startBucket || !endBucket) return
 
-      const from = `${startBucket.bucket}T00:00:00.000Z`
-      const to = new Date(Date.parse(`${endBucket.bucket}T00:00:00.000Z`) + ISSUE_HISTOGRAM_BUCKET_MS - 1).toISOString()
+      const from = new Date(Date.parse(startBucket.bucket)).toISOString()
+      const to = new Date(Date.parse(endBucket.bucket) + bucketWidthMs - 1).toISOString()
 
       onRangeSelect({ from, to })
     },
-    [analytics.histogram, onRangeSelect],
+    [analytics.histogram, onRangeSelect, bucketWidthMs],
   )
 
   if (collapsed) {

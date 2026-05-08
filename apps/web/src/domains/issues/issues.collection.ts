@@ -26,6 +26,7 @@ const EMPTY_ISSUES_ANALYTICS: IssuesListResultRecord["analytics"] = {
     seenOccurrences: 0,
   },
   histogram: [],
+  histogramBucketSeconds: 24 * 60 * 60,
   totalTraces: 0,
 }
 const DEFAULT_ISSUES_SORTING = {
