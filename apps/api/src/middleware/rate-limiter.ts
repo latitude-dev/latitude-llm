@@ -3,14 +3,17 @@ import { Effect } from "effect"
 import type { Context, Next } from "hono"
 
 /**
- * Redis-backed rate limiter for authentication endpoints.
+ * Redis-backed rate limiter.
  *
  * Uses Redis INCR and EXPIRE for atomic counter operations.
  * Supports distributed deployments across multiple API instances.
  *
- * Default limits:
- * - 5 attempts per 15 minutes per IP address for sign-in
- * - 3 attempts per hour per IP address for sign-up
+ * Two consumers today:
+ * 1. {@link createAuthRateLimiter} — IP-keyed brute-force guard applied
+ *    globally before the auth middleware runs.
+ * 2. {@link createTierRateLimiter} — organization-keyed quota tier applied
+ *    per route group (low / medium / high / critical), used to give cheap
+ *    endpoints more headroom and expensive ones tighter limits.
  */
 
 interface RateLimitConfig {
@@ -115,5 +118,46 @@ export const createAuthRateLimiter = () => {
       return ip.split(",")[0].trim()
     },
     errorMessage: "Too many authentication attempts. Please try again later.",
+  })
+}
+
+type RateLimitTier = "low" | "medium" | "high" | "critical"
+
+const TIER_LIMITS: Record<RateLimitTier, { readonly maxRequests: number; readonly windowSeconds: number }> = {
+  low: { maxRequests: 100, windowSeconds: 60 },
+  medium: { maxRequests: 60, windowSeconds: 60 },
+  high: { maxRequests: 15, windowSeconds: 60 },
+  critical: { maxRequests: 3, windowSeconds: 60 },
+}
+
+/**
+ * Per-route rate-limit tiers, keyed by the authenticated organization id.
+ *
+ * Tiers are sized so that one greedy tenant can't starve another's quota:
+ * - `low` ............ 100 req / min — list/get reads, the cheap stuff
+ * - `medium` (default) 60 req / min — most mutations and single-row writes
+ * - `high` ............ 15 req / min — bulk reads with filter/search/semantic load
+ * - `critical` ......... 3 req / min — bulk imports, exports, monitor-issue (workflow-kicking)
+ *
+ * Apply at the routing site, before the matching subrouter is mounted, e.g.
+ * `routes.use("/projects/:projectSlug/traces", createTierRateLimiter("high"))`.
+ *
+ * The auth middleware must have already populated `c.var.organization` before
+ * this runs, otherwise the limiter falls back to a single shared `unknown`
+ * bucket — fine for unauthenticated requests because the auth middleware will
+ * reject them anyway.
+ *
+ * @public Public API surface for the API expansion plan; consumed by route
+ * mounts in subsequent PRs. Marked `@public` so knip doesn't flag it as
+ * unused while it's waiting for its first consumer.
+ */
+export const createTierRateLimiter = (tier: RateLimitTier) => {
+  const { maxRequests, windowSeconds } = TIER_LIMITS[tier]
+  return createRedisRateLimiter({
+    maxRequests,
+    windowSeconds,
+    keyPrefix: `ratelimit:tier:${tier}:org`,
+    keyGenerator: (c: Context) => c.get("organization")?.id ?? "unknown",
+    errorMessage: `Rate limit exceeded for ${tier}-tier endpoints. Please slow down.`,
   })
 }

@@ -37,6 +37,23 @@ export const TraceRefSchema = z
   ])
   .openapi("TraceRef")
 
+/**
+ * Plural sibling of {@link TraceRefSchema} for bulk endpoints (export traces,
+ * import-from-traces into a dataset, etc). Mirrors `tracesRefSchema` from
+ * `@domain/spans` but rebuilt with `.openapi(...)` names — same Fern-generator
+ * workaround as `TraceRefSchema` above.
+ *
+ * @public Public API surface for the API expansion plan; consumed by bulk
+ * route definitions in subsequent PRs. Marked `@public` so knip doesn't flag
+ * it as unused while it's waiting for its first consumer.
+ */
+export const TracesRefSchema = z
+  .discriminatedUnion("by", [
+    z.object({ by: z.literal("ids"), ids: z.array(traceIdSchema).min(1) }),
+    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
+  ])
+  .openapi("TracesRef")
+
 // All protected endpoints are already org-scoped via the Bearer API key
 // (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),
 // so the path schemas carry only resource identifiers — not the organization.
