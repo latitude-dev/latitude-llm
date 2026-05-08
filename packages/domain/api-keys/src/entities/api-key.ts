@@ -5,10 +5,8 @@ import { z } from "zod"
  * API Key entity - authenticates organization-bound requests.
  *
  * API keys are scoped to an organization and provide token-based
- * authentication for API access. New tokens are prefixed with `lak_` to let
- * the API auth middleware route to the API-key validator without a double
- * lookup. Tokens issued before the prefix rollout (plain UUIDs) are still
- * accepted via the legacy fallback path; no forced rotation.
+ * authentication for API access. Tokens are UUIDs generated
+ * using crypto.randomUUID().
  *
  * The token is encrypted at the application level (AES-256-GCM)
  * and a SHA-256 hex hash of the UTF-8 token bytes (tokenHash) is stored for indexed
@@ -57,23 +55,10 @@ export const createApiKey = (params: {
 }
 
 /**
- * Token prefix for newly issued API keys. The API auth middleware uses it to
- * dispatch directly to the API-key validator (vs. OAuth or legacy fallback)
- * without paying for a Redis miss + DB lookup against the wrong validator.
- *
- * `lak` (Latitude API Key) is intentionally three letters and avoids `lat_`,
- * which reads ambiguously as "Latitude" rather than the credential type.
- */
-export const API_KEY_TOKEN_PREFIX = "lak_"
-
-/**
- * Generate a new API key token. Format: `lak_<UUID v4>`.
- *
- * Legacy un-prefixed UUID tokens issued before this rollout still authenticate
- * — see `apps/api/src/middleware/auth.ts` for the legacy fallback dispatch.
+ * Generate a new API key token (UUID v4).
  */
 export const generateApiKeyToken = (): string => {
-  return `${API_KEY_TOKEN_PREFIX}${crypto.randomUUID()}`
+  return crypto.randomUUID()
 }
 
 /**

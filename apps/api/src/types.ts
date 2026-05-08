@@ -10,13 +10,13 @@ import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
  *
  * Discriminated on `method`:
  *
- * - `api-key` — request authenticated via an organization-scoped API key
- *   (Bearer `lak_…` or a legacy unprefixed UUID). `userId` is a synthetic
- *   `api-key:<keyId>` value because API keys aren't tied to a real user.
- * - `oauth` — request authenticated via an OAuth access token (`Bearer loa_…`)
- *   issued through the Better Auth `mcp` plugin on the web app. Carries the
- *   real `userId` of the granting user, the `oauthClientId` of the MCP client,
- *   the granted `scopes`, and the `expiresAt` of the access token.
+ * - `api-key` — request authenticated via an organization-scoped API key.
+ *   `userId` is a synthetic `api-key:<keyId>` value because API keys aren't
+ *   tied to a real user.
+ * - `oauth` — request authenticated via an OAuth access token issued through
+ *   the Better Auth `mcp` plugin on the web app. Carries the real `userId` of
+ *   the granting user, the `oauthClientId` of the MCP client, the granted
+ *   `scopes`, and the `expiresAt` of the access token.
  */
 export type AuthContext =
   | {
