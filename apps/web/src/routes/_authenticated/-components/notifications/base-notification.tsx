@@ -8,7 +8,7 @@ interface BaseNotificationProps {
   readonly icon?: ReactNode
   readonly title?: ReactNode
   readonly description?: ReactNode
-  readonly url?: string
+  readonly url?: string | undefined
   readonly children?: ReactNode
 }
 

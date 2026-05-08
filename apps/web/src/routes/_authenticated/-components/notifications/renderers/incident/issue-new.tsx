@@ -1,28 +1,28 @@
 import type { IncidentNotificationPayload } from "@domain/notifications"
-import { Text } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
-import { SparklesIcon } from "lucide-react"
+import { ShieldAlertIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
+import { buildIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
+import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
 export function IssueNewNotification({
   notification,
-  payload: _payload,
+  payload,
 }: {
   readonly notification: NotificationRecord
   readonly payload: IncidentNotificationPayload
 }) {
-  const createdAt = new Date(notification.createdAt)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+  const live = useLiveIssueSummary(payload)
+  const issueName = live?.name ?? payload.issueName
+  // Snapshot status for issue.new is always "new"; the live lookup may
+  // upgrade this if the issue moved on (resolved, escalated, etc.).
+  const states = live?.states ?? ["new"]
+  const url = buildIssueUrl(payload)
 
   return (
-    <BaseNotification
-      seenAt={seenAt}
-      icon={<SparklesIcon className="h-4 w-4 text-foreground-muted" />}
-      title="New issue detected"
-      description="An evaluation flagged a new failure pattern in this project."
-    >
-      <Text.H6 color="foregroundMuted">{relativeTime(createdAt)}</Text.H6>
+    <BaseNotification seenAt={seenAt} icon={<ShieldAlertIcon />} title="A new issue has been detected." url={url}>
+      {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
     </BaseNotification>
   )
 }

@@ -343,6 +343,45 @@ export const getIssue = createServerFn({ method: "GET" })
     )
   })
 
+export interface IssueLifecycleSummaryRecord {
+  readonly id: string
+  readonly name: string
+  readonly states: readonly string[]
+}
+
+/**
+ * Tiny "name + current status" lookup used by the in-app notifications card
+ * to refresh the snapshot the bell stored at notification-creation time.
+ * Cheap on purpose — no occurrences/trend/evaluations like getIssueDetail.
+ */
+export const getIssueLifecycleSummary = createServerFn({ method: "GET" })
+  .inputValidator(issueInputSchema)
+  .handler(async ({ data }): Promise<IssueLifecycleSummaryRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+    const now = new Date()
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const issueRepository = yield* IssueRepository
+        const issues = yield* issueRepository.findByIds({ projectId, issueIds: [issueId] })
+        const issue = issues[0]
+        if (!issue) return null
+
+        const states = deriveIssueLifecycleStates({
+          issue,
+          isEscalating: issue.lifecycle.isEscalating,
+          isRegressed: issue.lifecycle.isRegressed,
+          now,
+        })
+        return { id: issue.id, name: issue.name, states: [...states] }
+      }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withTracing),
+    )
+  })
+
 export const getIssueDetail = createServerFn({ method: "GET" })
   .inputValidator(issueDetailInputSchema)
   .handler(async ({ data }): Promise<IssueDetailRecord | null> => {

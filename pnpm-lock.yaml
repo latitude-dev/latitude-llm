@@ -334,6 +334,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
+      '@domain/alerts':
+        specifier: workspace:*
+        version: link:../../packages/domain/alerts
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -1223,9 +1226,15 @@ importers:
       '@domain/alerts':
         specifier: workspace:*
         version: link:../alerts
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../issues
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

@@ -1,8 +1,11 @@
 import { AlertIncidentRepository } from "@domain/alerts"
+import { IssueRepository } from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
+import { ProjectRepository } from "@domain/projects"
 import {
   AlertIncidentId,
   generateId,
+  IssueId,
   isAlertNotificationEnabled,
   type NotFoundError,
   NotificationId,
@@ -11,7 +14,7 @@ import {
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import type { IncidentNotificationEvent, Notification } from "../entities/notification.ts"
+import type { IncidentNotificationEvent, IncidentNotificationPayload, Notification } from "../entities/notification.ts"
 import { resolveRecipients } from "../helpers/resolve-recipients.ts"
 import { NotificationRepository } from "../ports/notification-repository.ts"
 
@@ -48,6 +51,19 @@ export const createIncidentNotificationsUseCase = (input: CreateIncidentNotifica
       return { inserted: 0, skipped: true as const }
     }
 
+    // Snapshot the issue + project identity into the notification payload so
+    // the renderer can paint instantly without a live lookup. Lookups failing
+    // shouldn't block notification delivery — fall back to undefined fields
+    // and let the renderer handle the missing-snapshot case.
+    const issueRepo = yield* IssueRepository
+    const projectRepo = yield* ProjectRepository
+    const issue = yield* issueRepo
+      .findById(IssueId(incident.sourceId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    const project = yield* projectRepo
+      .findById(incident.projectId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
     const recipients = yield* resolveRecipients({
       organizationId: incident.organizationId,
       projectId: incident.projectId,
@@ -58,6 +74,13 @@ export const createIncidentNotificationsUseCase = (input: CreateIncidentNotifica
       return { inserted: 0, skipped: false as const }
     }
 
+    const payload: IncidentNotificationPayload = {
+      event: input.event,
+      incidentKind: incident.kind,
+      ...(issue ? { issueId: issue.id, issueName: issue.name } : {}),
+      ...(project ? { projectId: project.id, projectSlug: project.slug } : {}),
+    }
+
     const now = new Date()
     const rows: Notification[] = recipients.map((userId) => ({
       id: NotificationId(generateId()),
@@ -65,7 +88,7 @@ export const createIncidentNotificationsUseCase = (input: CreateIncidentNotifica
       userId,
       type: "incident",
       sourceId: incident.id,
-      payload: { event: input.event, incidentKind: incident.kind },
+      payload,
       createdAt: now,
       seenAt: null,
     }))
@@ -77,5 +100,11 @@ export const createIncidentNotificationsUseCase = (input: CreateIncidentNotifica
   }).pipe(Effect.withSpan("notifications.createIncidentNotifications")) as Effect.Effect<
     { readonly inserted: number; readonly skipped: boolean },
     CreateIncidentNotificationsError,
-    SqlClient | AlertIncidentRepository | MembershipRepository | NotificationRepository | SettingsReader
+    | SqlClient
+    | AlertIncidentRepository
+    | IssueRepository
+    | MembershipRepository
+    | NotificationRepository
+    | ProjectRepository
+    | SettingsReader
   >

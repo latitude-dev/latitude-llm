@@ -1,10 +1,18 @@
+// Lifecycle helpers (`getLifecycleStatesForDisplay`, `getPrimaryLifecycleState`,
+// `formatLifecycleLabel`) moved to a shared location so the in-app
+// notifications UI can reuse them. Re-exported here so existing in-route
+// imports keep working unchanged.
+export {
+  formatLifecycleLabel,
+  getLifecycleStatesForDisplay,
+  getPrimaryLifecycleState,
+} from "../../../../../../components/issues/lifecycle-formatters.ts"
+
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
-const lifecycleDisplayOrder = ["regressed", "escalating", "new", "ongoing", "resolved", "ignored"] as const
-const lifecycleDisplayOrderSet = new Set<string>(lifecycleDisplayOrder)
 
 function formatCompactElapsed(elapsedMs: number): string {
   if (elapsedMs < HOUR_MS) {
@@ -82,38 +90,4 @@ export function formatDayBucketTooltipLabel(bucket: string): string {
     month: "long",
     day: "numeric",
   })
-}
-
-export function getLifecycleStatesForDisplay(states: readonly string[]): readonly string[] {
-  const stateSet = new Set(states)
-
-  return [
-    ...lifecycleDisplayOrder.filter((state) => stateSet.has(state)),
-    ...states.filter((state) => !lifecycleDisplayOrderSet.has(state)),
-  ]
-}
-
-// Mirrors the backend's `getPrimaryStatePriority` so the table can display the
-// same single state used for sorting by status.
-export function getPrimaryLifecycleState(states: readonly string[]): string | undefined {
-  return getLifecycleStatesForDisplay(states)[0]
-}
-
-export function formatLifecycleLabel(state: string): string {
-  switch (state) {
-    case "new":
-      return "New"
-    case "escalating":
-      return "Escalating"
-    case "ongoing":
-      return "Ongoing"
-    case "resolved":
-      return "Resolved"
-    case "regressed":
-      return "Regressed"
-    case "ignored":
-      return "Ignored"
-    default:
-      return state
-  }
 }

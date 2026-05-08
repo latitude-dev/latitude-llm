@@ -1,28 +1,34 @@
 import type { IncidentNotificationPayload } from "@domain/notifications"
-import { Text } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
-import { ArrowDownRightIcon } from "lucide-react"
+import { ShieldAlertIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
+import { buildIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
+import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
 export function IssueRegressedNotification({
   notification,
-  payload: _payload,
+  payload,
 }: {
   readonly notification: NotificationRecord
   readonly payload: IncidentNotificationPayload
 }) {
-  const createdAt = new Date(notification.createdAt)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+  const live = useLiveIssueSummary(payload)
+  const issueName = live?.name ?? payload.issueName
+  // Snapshot status for issue.regressed is "regressed". If the user has
+  // already re-resolved the issue by the time they read the notification,
+  // the live lookup will upgrade the badge to "resolved".
+  const states = live?.states ?? ["regressed"]
+  const url = buildIssueUrl(payload)
 
   return (
     <BaseNotification
       seenAt={seenAt}
-      icon={<ArrowDownRightIcon className="h-4 w-4 text-destructive" />}
-      title="Issue regressed"
-      description="A resolved issue is producing failures again."
+      icon={<ShieldAlertIcon />}
+      title="A resolved issue has regressed."
+      {...(url ? { url } : {})}
     >
-      <Text.H6 color="foregroundMuted">{relativeTime(createdAt)}</Text.H6>
+      {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
     </BaseNotification>
   )
 }

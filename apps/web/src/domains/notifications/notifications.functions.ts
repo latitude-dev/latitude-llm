@@ -1,16 +1,21 @@
+import { AlertIncidentRepository } from "@domain/alerts"
 import {
   getUnreadNotificationCountUseCase,
+  INCIDENT_NOTIFICATION_EVENTS,
   listNotificationsUseCase,
   markAllNotificationsSeenUseCase,
   type Notification,
 } from "@domain/notifications"
-import { NotificationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
+import { AlertIncidentId, IssueId } from "@domain/shared"
+import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { AlertIncidentRepositoryLive, NotificationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 
 const notificationCursorSchema = z.object({
   createdAt: z.iso.datetime(),
@@ -104,3 +109,59 @@ export const markAllNotificationsSeen = createServerFn({ method: "POST" }).handl
     ),
   )
 })
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+interface IncidentTrendResult {
+  readonly buckets: readonly IssueOccurrenceBucket[]
+}
+
+/**
+ * Returns the per-day trend buckets for the issue tied to an alert incident,
+ * scoped to a tight window around the moment the notification cares about:
+ *   - `event: "opened"` → ±1 day around `incident.startedAt`
+ *   - `event: "closed"` → ±1 day around `incident.endedAt`
+ *
+ * The window is clamped to `[incident.startedAt, now]` so we never query
+ * before the incident's lifetime started or past the present.
+ */
+export const getIncidentTrend = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      alertIncidentId: z.string(),
+      event: z.enum(INCIDENT_NOTIFICATION_EVENTS),
+    }),
+  )
+  .handler(async ({ data }): Promise<IncidentTrendResult> => {
+    const { organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+    const chClient = getClickhouseClient()
+
+    const incident = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* AlertIncidentRepository
+        return yield* repo.findById(AlertIncidentId(data.alertIncidentId))
+      }).pipe(withPostgres(AlertIncidentRepositoryLive, pgClient, organizationId), withTracing),
+    )
+
+    const now = Date.now()
+    const center = (data.event === "closed" ? incident.endedAt?.getTime() : incident.startedAt.getTime()) ?? now
+    // Clamp: never query before the incident started, or past now.
+    const from = new Date(Math.max(center - DAY_MS, incident.startedAt.getTime()))
+    const to = new Date(Math.min(center + DAY_MS, now))
+
+    const buckets = await Effect.runPromise(
+      Effect.gen(function* () {
+        const analytics = yield* ScoreAnalyticsRepository
+        return yield* analytics.histogramByIssues({
+          organizationId: incident.organizationId,
+          projectId: incident.projectId,
+          issueIds: [IssueId(incident.sourceId)],
+          timeRange: { from, to },
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, organizationId), withTracing),
+    )
+
+    return { buckets }
+  })
+

@@ -4,9 +4,13 @@ import {
   type AlertIncidentRepositoryShape,
   alertIncidentSchema,
 } from "@domain/alerts"
+import { type Issue, IssueRepository, type IssueWithLifecycle, issueSchema } from "@domain/issues"
+import type { MembershipRole } from "@domain/organizations"
 import { type Membership, MembershipRepository, type MemberWithUser } from "@domain/organizations"
+import { type Project, ProjectRepository } from "@domain/projects"
 import {
   AlertIncidentId,
+  IssueId,
   NotFoundError,
   OrganizationId,
   type ProjectId,
@@ -14,6 +18,7 @@ import {
   type ProjectSettings,
   SettingsReader,
   SqlClient,
+  UserId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -75,8 +80,8 @@ function setup(opts: SetupOpts = {}) {
           (m): Membership => ({
             id: m.id as Membership["id"],
             organizationId: m.organizationId as Membership["organizationId"],
-            userId: m.userId,
-            role: m.role,
+            userId: UserId(m.userId),
+            role: m.role as MembershipRole,
             createdAt: m.createdAt,
           }),
         ),
@@ -95,11 +100,75 @@ function setup(opts: SetupOpts = {}) {
     getProjectSettings: (_pid: ProjectId) => Effect.succeed(opts.projectSettings ?? null),
   })
 
+  const issue: Issue = issueSchema.parse({
+    id: IssueId(cuid("i")),
+    uuid: "11111111-1111-4111-8111-111111111111",
+    organizationId: orgId,
+    projectId,
+    name: "Sample issue",
+    description: "Sample description",
+    source: "annotation",
+    centroid: {
+      base: [],
+      mass: 0,
+      model: "test",
+      decay: 60,
+      weights: { evaluation: 0, annotation: 0, custom: 0 },
+    },
+    clusteredAt: new Date("2026-05-01T00:00:00Z"),
+    escalatedAt: null,
+    resolvedAt: null,
+    ignoredAt: null,
+    createdAt: new Date("2026-05-01T00:00:00Z"),
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+  })
+
+  const issueWithLifecycle: IssueWithLifecycle = {
+    ...issue,
+    lifecycle: { isEscalating: false, isRegressed: false },
+  }
+
+  const issueRepo = IssueRepository.of({
+    findById: () => Effect.succeed(issueWithLifecycle),
+    findByIdForUpdate: () => Effect.die("not used"),
+    findByIds: () => Effect.die("not used"),
+    findByUuid: () => Effect.die("not used"),
+    save: () => Effect.die("not used"),
+    list: () => Effect.die("not used"),
+  })
+
+  const project: Project = {
+    id: projectId,
+    organizationId: orgId,
+    name: "Sample project",
+    slug: "sample-project",
+    settings: null,
+    firstTraceAt: null,
+    lastEditedAt: new Date("2026-05-01T00:00:00Z"),
+    deletedAt: null,
+    createdAt: new Date("2026-05-01T00:00:00Z"),
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+  }
+
+  const projectRepo = ProjectRepository.of({
+    findById: () => Effect.succeed(project),
+    findBySlug: () => Effect.die("not used"),
+    list: () => Effect.die("not used"),
+    listIncludingDeleted: () => Effect.die("not used"),
+    save: () => Effect.die("not used"),
+    softDelete: () => Effect.die("not used"),
+    hardDelete: () => Effect.die("not used"),
+    existsByName: () => Effect.die("not used"),
+    existsBySlug: () => Effect.die("not used"),
+  })
+
   const { repo: notificationRepo, rows } = createFakeNotificationRepository()
 
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
+    Layer.succeed(IssueRepository, issueRepo),
     Layer.succeed(MembershipRepository, memberships),
+    Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(SettingsReader, settings),
     Layer.succeed(NotificationRepository, notificationRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
@@ -110,7 +179,7 @@ function setup(opts: SetupOpts = {}) {
 
 describe("createIncidentNotificationsUseCase", () => {
   it("inserts one notification per org member with the right payload", async () => {
-    const { incidentId, rows, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")] })
+    const { incidentId, projectId, rows, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")] })
 
     const result = await Effect.runPromise(
       createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
@@ -123,7 +192,14 @@ describe("createIncidentNotificationsUseCase", () => {
       // source_id points at the incident itself, not the underlying issue —
       // see notification entity / schema design.
       expect(row.sourceId).toBe(incidentId)
-      expect(row.payload).toEqual({ event: "opened", incidentKind: "issue.new" })
+      expect(row.payload).toEqual({
+        event: "opened",
+        incidentKind: "issue.new",
+        issueId: cuid("i"),
+        issueName: "Sample issue",
+        projectId,
+        projectSlug: "sample-project",
+      })
     }
   })
 

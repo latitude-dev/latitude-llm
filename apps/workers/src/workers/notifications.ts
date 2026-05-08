@@ -3,8 +3,10 @@ import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
   AlertIncidentRepositoryLive,
+  IssueRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
+  ProjectRepositoryLive,
   SettingsReaderLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -20,8 +22,10 @@ interface NotificationsDeps {
 
 const repoLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
+  IssueRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
+  ProjectRepositoryLive,
   SettingsReaderLive,
 )
 

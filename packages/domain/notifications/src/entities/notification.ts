@@ -27,9 +27,27 @@ export const INCIDENT_NOTIFICATION_EVENTS = ["opened", "closed"] as const
 export const incidentNotificationEventSchema = z.enum(INCIDENT_NOTIFICATION_EVENTS)
 export type IncidentNotificationEvent = z.infer<typeof incidentNotificationEventSchema>
 
+/**
+ * Snapshot of issue + project identity captured at notification-creation
+ * time. The renderer uses these for instant first paint (no live lookup
+ * needed) and for navigation. They're optional because:
+ *   - existing rows from before this field landed don't have them, and
+ *   - if the underlying issue/project lookup fails at creation we'd rather
+ *     write the notification with no snapshot than block delivery.
+ *
+ * The renderer should still issue a live `getIssue` query to refresh the
+ * name + status — `issueName` here is a frozen-at-creation fallback that
+ * survives issue deletion. IDs use cuids (matching the rest of the app's
+ * deep-link patterns) so the renderer can both navigate and re-fetch
+ * without a new uuid-keyed lookup.
+ */
 export const incidentNotificationPayloadSchema = z.object({
   event: incidentNotificationEventSchema,
   incidentKind: z.enum(ALERT_INCIDENT_KINDS),
+  issueId: z.string().optional(),
+  issueName: z.string().optional(),
+  projectId: z.string().optional(),
+  projectSlug: z.string().optional(),
 })
 export type IncidentNotificationPayload = z.infer<typeof incidentNotificationPayloadSchema>
 
