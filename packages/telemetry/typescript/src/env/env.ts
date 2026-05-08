@@ -1,7 +1,7 @@
 const LOCAL_EXPORTER_URL = "http://localhost:3002"
 const PRODUCTION_EXPORTER_URL = "https://ingest.latitude.so"
 
-function getExporterUrl() {
+export function getExporterUrl() {
   if (process.env.LATITUDE_TELEMETRY_URL) {
     return process.env.LATITUDE_TELEMETRY_URL
   }
