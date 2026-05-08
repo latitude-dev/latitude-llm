@@ -13,6 +13,9 @@ import {
   accounts,
   invitations,
   members,
+  oauthAccessTokens,
+  oauthApplications,
+  oauthConsents,
   organizations,
   sessions,
   subscriptions,
@@ -117,6 +120,14 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       members,
       invitations,
       subscriptions,
+      // OIDC Provider plugin tables — required when the caller installs the
+      // `mcp` (or `oidcProvider`) plugin via `extraPlugins`. Including them
+      // in the shared adapter is harmless when the plugin is not installed:
+      // the tables exist in the DB regardless, and BA only writes to them
+      // when the plugin runs.
+      oauthApplications,
+      oauthAccessTokens,
+      oauthConsents,
     },
   }) as unknown as DBAdapter
 
