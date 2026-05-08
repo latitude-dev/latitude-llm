@@ -22,7 +22,7 @@
  */
 const MCP_AUTHORIZE_PATH = "/api/auth/mcp/authorize"
 
-export const ensureConsentPromptOnMcpAuthorize = (request: Request): Request => {
+export const forceOAuthConsent = (request: Request): Request => {
   if (request.method !== "GET") return request
   const url = new URL(request.url)
   if (url.pathname !== MCP_AUTHORIZE_PATH) return request
