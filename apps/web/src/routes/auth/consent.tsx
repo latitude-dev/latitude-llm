@@ -17,9 +17,9 @@
  * redirects to `/login` with the consent URL as the post-login `redirect`
  * search param so the flow resumes after sign-in.
  */
-import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { AlertCircle, KeyRound } from "lucide-react"
+import { AlertCircle, ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import { decideOAuthConsent, getOAuthConsentRequest } from "../../domains/oauth/oauth-consent.functions.ts"
@@ -53,36 +53,43 @@ export const Route = createFileRoute("/auth/consent")({
   component: OAuthConsentPage,
 })
 
+// Mirrors the org selector used at `/welcome` (avatar, name, arrow).
+// Same `useHashColor` for the avatar tile so the visual is consistent across
+// the two surfaces a user picks an org on.
+function OrgAvatar({ name }: { name: string }) {
+  const { style, className } = useHashColor(name)
+  return (
+    <div
+      className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
+      style={style}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
 function OAuthConsentPage() {
-  const { consent_code, scope } = Route.useSearch()
+  const { consent_code } = Route.useSearch()
   const { consent } = Route.useLoaderData()
-  const [selectedOrgId, setSelectedOrgId] = useState<string>(consent.organizations[0]?.id ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string>()
 
-  const requestedScopes = (scope ?? "").split(/\s+/).filter(Boolean)
   const clientName = consent.client.name ?? "An MCP client"
+  const noOrgs = consent.organizations.length === 0
 
-  const submit = async (decision: "accept" | "deny") => {
+  const authorizeForOrg = async (organizationId: string) => {
     if (isSubmitting) return
-    if (decision === "accept" && !selectedOrgId) {
-      setError("Please select an organization to grant access to.")
-      return
-    }
     setIsSubmitting(true)
     setError(undefined)
     try {
-      const { redirectUrl } =
-        decision === "accept"
-          ? await decideOAuthConsent({
-              data: {
-                accept: true,
-                consentCode: consent_code,
-                clientId: consent.client.clientId,
-                organizationId: selectedOrgId,
-              },
-            })
-          : await decideOAuthConsent({ data: { accept: false, consentCode: consent_code } })
+      const { redirectUrl } = await decideOAuthConsent({
+        data: {
+          accept: true,
+          consentCode: consent_code,
+          clientId: consent.client.clientId,
+          organizationId,
+        },
+      })
       // BA's redirect URL points to the MCP client's `redirect_uri` (a different
       // origin in prod), so use a full navigation, not router.navigate.
       window.location.href = redirectUrl
@@ -92,7 +99,20 @@ function OAuthConsentPage() {
     }
   }
 
-  const noOrgs = consent.organizations.length === 0
+  const deny = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setError(undefined)
+    try {
+      const { redirectUrl } = await decideOAuthConsent({
+        data: { accept: false, consentCode: consent_code },
+      })
+      window.location.href = redirectUrl
+    } catch (err) {
+      setError(toUserMessage(err))
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
@@ -108,86 +128,59 @@ function OAuthConsentPage() {
         </div>
 
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Icon icon={KeyRound} className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-
-          {requestedScopes.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <Text.H6 weight="medium">Permissions requested</Text.H6>
-              <ul className="flex flex-col gap-1">
-                {requestedScopes.map((scopeName: string) => (
-                  <li key={scopeName}>
-                    <Text.H6 color="foregroundMuted">• {scopeName}</Text.H6>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <Text.H5 color="foregroundMuted">
+            <Text.H5 weight="medium">{clientName}</Text.H5> will act on your behalf and have full access to the
+            organization you choose below. You can revoke this access at any time from your organization's{" "}
+            <Text.H5 weight="medium">OAuth Keys</Text.H5> settings.
+          </Text.H5>
 
           {noOrgs ? (
-            <div className="flex flex-col gap-2">
-              <Text.H6 color="destructive">
-                You don't belong to any organization yet. Create one before authorizing this client.
-              </Text.H6>
-            </div>
+            <Text.H5 color="destructive">
+              You don't belong to any organization yet. Create one before authorizing this client.
+            </Text.H5>
           ) : (
-            <fieldset className="flex flex-col gap-2">
-              <Text.H6 weight="medium">Choose an organization</Text.H6>
-              <Text.H6 color="foregroundMuted">
-                {clientName} will be granted access to this organization. The token can't be moved later — disconnect
-                and reconnect to switch organizations.
-              </Text.H6>
-              <div className="flex flex-col gap-2 mt-2">
-                {consent.organizations.map((org: { id: string; name: string }) => (
-                  <label
+            <div className="flex flex-col gap-2">
+              <Text.H5 weight="medium">Choose an organization</Text.H5>
+              <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
+                {consent.organizations.map((org: { id: string; name: string }, index: number) => (
+                  <button
                     key={org.id}
-                    className="flex items-center gap-3 rounded-lg border border-input bg-background px-3 py-2 cursor-pointer hover:bg-muted/50"
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => authorizeForOrg(org.id)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 bg-background hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer",
+                      index > 0 && "border-t border-border",
+                    )}
                   >
-                    <input
-                      type="radio"
-                      name="organization"
-                      value={org.id}
-                      checked={selectedOrgId === org.id}
-                      onChange={(e) => setSelectedOrgId(e.target.value)}
-                      className="h-4 w-4"
-                    />
-                    <Text.H6 weight="medium">{org.name}</Text.H6>
-                  </label>
+                    <OrgAvatar name={org.name} />
+                    <Text.H5 weight="medium" className="flex-1 text-left">
+                      {org.name}
+                    </Text.H5>
+                    <Text.H5 color="foregroundMuted">Authorize</Text.H5>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 ))}
               </div>
-            </fieldset>
+            </div>
           )}
 
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive">
               <Icon icon={AlertCircle} className="h-4 w-4" />
-              <Text.H6 color="destructive">{error}</Text.H6>
+              <Text.H5 color="destructive">{error}</Text.H5>
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <Button
-              size="full"
-              type="button"
-              disabled={isSubmitting || noOrgs}
-              onClick={() => submit("accept")}
-              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-px active:shadow-none transition-all"
-            >
-              {isSubmitting ? "Authorizing…" : "Authorize"}
-            </Button>
-            <Button
-              variant="ghost"
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => submit("deny")}
-              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
-            >
-              Deny
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            type="button"
+            disabled={isSubmitting}
+            onClick={deny}
+            className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
+          >
+            Deny
+          </Button>
         </div>
       </div>
     </div>
