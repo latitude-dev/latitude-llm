@@ -12,6 +12,7 @@ export interface BuildTracesExportInput {
   readonly projectId: ProjectId
   readonly filters?: FilterSet
   readonly selection?: ExportSelection
+  readonly searchQuery?: string
 }
 
 export interface BuildTracesExportResult {
@@ -137,6 +138,7 @@ export const buildTracesExportUseCase = Effect.fn("spans.buildTracesExport")(fun
           limit: BATCH_SIZE,
           ...(cursor ? { cursor } : {}),
           ...(input.filters ? { filters: input.filters } : {}),
+          ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
           sortBy: "startTime",
           sortDirection: "desc",
         },

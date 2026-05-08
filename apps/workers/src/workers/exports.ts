@@ -128,13 +128,18 @@ function generateTracesExport(
   projectId: ProjectIdType,
   filters?: FilterSet,
   selection?: Extract<ExportPayload, { kind: "traces" }>["selection"],
+  searchQuery?: string,
 ) {
   return buildTracesExportUseCase({
     organizationId,
     projectId,
     ...(filters ? { filters } : {}),
     ...(selection ? { selection } : {}),
-  }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), organizationId))
+    ...(searchQuery ? { searchQuery } : {}),
+  }).pipe(
+    withClickHouse(TraceRepositoryLive, getClickhouseClient(), organizationId),
+    withAi(AIEmbedLive, getRedisClient()),
+  )
 }
 
 function generateIssuesExport(
@@ -206,7 +211,7 @@ function dispatchExport(payload: ExportPayload) {
     case "dataset":
       return generateDatasetExport(organizationId, DatasetId(payload.datasetId), payload.selection)
     case "traces":
-      return generateTracesExport(organizationId, projectId, payload.filters, payload.selection)
+      return generateTracesExport(organizationId, projectId, payload.filters, payload.selection, payload.searchQuery)
     case "issues":
       return generateIssuesExport(organizationId, projectId, {
         ...(payload.selection ? { selection: payload.selection } : {}),
