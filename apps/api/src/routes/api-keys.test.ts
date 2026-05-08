@@ -1,3 +1,4 @@
+import { API_KEY_TOKEN_PREFIX } from "@domain/api-keys"
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
@@ -71,8 +72,13 @@ describe("API Keys Routes Integration", () => {
     expect(response.status).toBe(201)
     const body = await response.json()
     expect(body.name).toBe("new-key-from-post")
+    // The freshly-issued token is surfaced with the `lak_` prefix the API
+    // dispatch layer expects on subsequent requests. The DB row holds the raw
+    // value (and `tokenHash` is the hash of the raw value); the prefix is
+    // applied by the repository when hydrating the entity.
     expect(typeof body.token).toBe("string")
-    expect(body.token.length).toBeGreaterThan(0)
+    expect(body.token.startsWith(API_KEY_TOKEN_PREFIX)).toBe(true)
+    expect(body.token.length).toBeGreaterThan(API_KEY_TOKEN_PREFIX.length)
   })
 
   it<ApiTestContext>("DELETE /v1/api-keys/:id cannot revoke cross-tenant keys", async ({ app, database }) => {

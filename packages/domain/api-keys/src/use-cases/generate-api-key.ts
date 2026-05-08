@@ -2,7 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
-import { createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
+import { applyApiKeyTokenPrefix, createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
 import { InvalidApiKeyNameError } from "../errors.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
@@ -28,12 +28,15 @@ export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(functio
     return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name exceeds 256 characters" })
   }
 
-  const token = generateApiKeyToken()
-  const tokenHash = yield* hash(token)
+  // Hash the raw token (un-prefixed), so the stored hash matches what the
+  // validator computes after stripping `lak_` from the incoming bearer. The
+  // entity carries the prefixed token for the one-time creation response.
+  const rawToken = generateApiKeyToken()
+  const tokenHash = yield* hash(rawToken)
   const apiKey = createApiKey({
     id: input.id,
     organizationId,
-    token,
+    token: applyApiKeyTokenPrefix(rawToken),
     tokenHash,
     name: input.name.trim(),
   })

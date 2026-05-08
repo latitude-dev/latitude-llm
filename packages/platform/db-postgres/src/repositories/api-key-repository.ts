@@ -1,5 +1,5 @@
 import type { ApiKey } from "@domain/api-keys"
-import { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyRepository, applyApiKeyTokenPrefix, stripApiKeyTokenPrefix } from "@domain/api-keys"
 import {
   ApiKeyId,
   type ApiKeyId as ApiKeyIdType,
@@ -40,13 +40,18 @@ const getEncryptionKey = () =>
     return key
   })
 
+// The DB stores the raw token (un-prefixed) — see entity docs in
+// `@domain/api-keys/entities/api-key.ts`. Repo bridges between the on-disk
+// shape and the domain shape (prefixed for callers).
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const token = yield* decrypt(row.token, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "decrypt")))
+    const rawToken = yield* decrypt(row.token, encryptionKey).pipe(
+      Effect.mapError((e) => toRepositoryError(e, "decrypt")),
+    )
     const apiKey: ApiKey = {
       id: ApiKeyId(row.id),
       organizationId: OrganizationId(row.organizationId),
-      token,
+      token: applyApiKeyTokenPrefix(rawToken),
       tokenHash: row.tokenHash,
       name: row.name,
       lastUsedAt: row.lastUsedAt,
@@ -59,9 +64,11 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer)
 
 const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const token = yield* encrypt(apiKey.token, encryptionKey).pipe(
-      Effect.mapError((e) => toRepositoryError(e, "encrypt")),
-    )
+    // The entity carries `lak_<raw>`; the on-disk column holds just `<raw>`
+    // (encrypted). Strip the prefix before handing off to AES-GCM so a
+    // round-trip through `toDomainApiKey` reproduces the original entity.
+    const rawToken = stripApiKeyTokenPrefix(apiKey.token)
+    const token = yield* encrypt(rawToken, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "encrypt")))
     return {
       id: apiKey.id,
       organizationId: apiKey.organizationId,

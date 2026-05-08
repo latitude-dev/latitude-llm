@@ -8,7 +8,6 @@ import { admin as adminPlugin, captcha, magicLink, organization as organizationP
 import { Effect } from "effect"
 import Stripe from "stripe"
 import type { PostgresClient } from "./client.ts"
-import { wrapAdapterForOAuthTokenPrefix } from "./oauth-token-prefix.ts"
 
 import {
   accounts,
@@ -109,7 +108,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         })
       : null
 
-  const innerDatabase = drizzleAdapter(config.client.db, {
+  const database = drizzleAdapter(config.client.db, {
     provider: "pg",
     usePlural: true,
     schema: {
@@ -131,12 +130,6 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       oauthConsents,
     },
   }) as unknown as DBAdapter
-
-  // The OIDC plugin writes `oauth_access_tokens` rows via the raw adapter
-  // (bypassing `databaseHooks`), so token-prefixing has to happen at the
-  // adapter layer. Wrap is a no-op for every other model. See
-  // `oauth-token-prefix.ts` for the full reasoning.
-  const database = wrapAdapterForOAuthTokenPrefix(innerDatabase)
 
   return betterAuth({
     database,

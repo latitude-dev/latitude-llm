@@ -18,7 +18,8 @@ export { healthcheckPostgres } from "./health.ts"
 export {
   OAUTH_ACCESS_TOKEN_PREFIX,
   OAUTH_REFRESH_TOKEN_PREFIX,
-  wrapAdapterForOAuthTokenPrefix,
+  stripOAuthAccessTokenPrefix,
+  stripOAuthRefreshTokenPrefix,
 } from "./oauth-token-prefix.ts"
 // Outbox consumer for reliable event publishing
 export {

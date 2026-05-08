@@ -1,4 +1,8 @@
-import { OAUTH_ACCESS_TOKEN_PREFIX, OAUTH_REFRESH_TOKEN_PREFIX } from "@platform/db-postgres"
+import {
+  OAUTH_ACCESS_TOKEN_PREFIX,
+  OAUTH_REFRESH_TOKEN_PREFIX,
+  stripOAuthRefreshTokenPrefix,
+} from "@platform/db-postgres"
 
 /**
  * The Better Auth `mcp` plugin's token endpoint. The plugin's `path` value is
@@ -20,14 +24,11 @@ interface OAuthTokenResponseBody {
  * Wraps a Better Auth response so MCP clients receive `loa_…`-prefixed access
  * tokens and `lor_…`-prefixed refresh tokens on the wire.
  *
- * Why a rewriter, not a hook: the OIDC Provider plugin's token endpoint
- * generates the random token string in-memory (`generateRandomString(32, …)`),
- * persists it via `adapter.create({ model: "oauthAccessToken", … })`, then
- * returns the same in-memory variable in the JSON response. Our adapter wrap
- * (in `@platform/db-postgres/oauth-token-prefix.ts`) prefixes the persisted
- * value, but the in-memory variable is already gone by the time it reaches
- * the JSON encoder — so the wire response would carry the un-prefixed string
- * and the round-trip would fail. The rewriter closes that gap.
+ * Why a rewriter and not stored-prefixed values: the prefix is a routing /
+ * presentation concern, not part of the token's identity. The DB stores the
+ * raw value Better Auth generated; we add the prefix when handing tokens to
+ * the client and strip it on the way back in. Same on API keys — see
+ * `@domain/api-keys.API_KEY_TOKEN_PREFIX`.
  *
  * Pure function: given a Request and a Response, returns a new Response if
  * mutation is needed, otherwise the original. Safe to invoke for every
@@ -78,4 +79,84 @@ const shouldRewrite = (request: Request, response: Response): boolean => {
   if (url.pathname !== MCP_TOKEN_PATH) return false
   const contentType = response.headers.get("content-type") ?? ""
   return contentType.toLowerCase().includes("application/json")
+}
+
+/**
+ * Strips the `lor_` prefix from `refresh_token` on incoming
+ * `POST /api/auth/mcp/token` requests so Better Auth's refresh-grant lookup
+ * matches the raw token stored in the DB. Pass-through for everything else.
+ *
+ * Symmetric counterpart to {@link rewriteOAuthTokenResponse}: that function
+ * adds the prefix on the way out, this one removes it on the way in. Without
+ * this strip, the refresh round-trip breaks — the client stores `lor_xxx` but
+ * BA queries `oauth_access_tokens.refresh_token` for the literal `lor_xxx`,
+ * which doesn't exist in the DB (we never wrote the prefix there).
+ *
+ * Reads the body as text and re-encodes it; the returned Request is otherwise
+ * identical (same method, headers, URL). Safe to call for every request.
+ */
+export const stripIncomingOAuthRefreshTokenPrefix = async (request: Request): Promise<Request> => {
+  if (request.method !== "POST") return request
+  const url = new URL(request.url)
+  if (url.pathname !== MCP_TOKEN_PATH) return request
+
+  const contentType = (request.headers.get("content-type") ?? "").toLowerCase()
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    return rewriteFormBody(request)
+  }
+  if (contentType.includes("application/json")) {
+    return rewriteJsonBody(request)
+  }
+  return request
+}
+
+const rewriteFormBody = async (request: Request): Promise<Request> => {
+  const text = await request.text()
+  const params = new URLSearchParams(text)
+  const refresh = params.get("refresh_token")
+  if (!refresh || !refresh.startsWith(OAUTH_REFRESH_TOKEN_PREFIX)) {
+    // Body already consumed — rebuild the request unchanged so downstream
+    // handlers can read it.
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: text,
+    })
+  }
+  params.set("refresh_token", stripOAuthRefreshTokenPrefix(refresh))
+  return new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: params.toString(),
+  })
+}
+
+const rewriteJsonBody = async (request: Request): Promise<Request> => {
+  const text = await request.text()
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(text) as Record<string, unknown>
+  } catch {
+    // Malformed JSON — leave for BA to reject. Rebuild the request so the
+    // already-consumed body is readable downstream.
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: text,
+    })
+  }
+  const refresh = parsed.refresh_token
+  if (typeof refresh !== "string" || !refresh.startsWith(OAUTH_REFRESH_TOKEN_PREFIX)) {
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: text,
+    })
+  }
+  parsed.refresh_token = stripOAuthRefreshTokenPrefix(refresh)
+  return new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: JSON.stringify(parsed),
+  })
 }

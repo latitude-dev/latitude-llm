@@ -37,7 +37,10 @@ const createFakeRedis = (): RedisClient => {
 }
 
 interface OAuthSetup {
-  readonly accessToken: string
+  /** The raw value as it sits in `oauth_access_tokens.access_token` (no prefix). */
+  readonly rawAccessToken: string
+  /** The bearer the client would present (raw value with `loa_` prefix added). */
+  readonly bearerAccessToken: string
   readonly tokenRowId: string
   readonly clientId: string
   readonly userId: string
@@ -61,8 +64,10 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
   const userFixture = await Effect.runPromise(createUserFixture(db))
   const userId = userFixture.id
   const clientId = `client-${generateId()}`
-  const accessToken = `loa_${generateId()}_${generateId()}`
-  const refreshToken = `lor_${generateId()}_${generateId()}`
+  // BA stores the raw token; the validator strips the `loa_` prefix before
+  // its DB lookup, so the test mirrors production by storing un-prefixed.
+  const rawAccessToken = `${generateId()}_${generateId()}`
+  const refreshToken = `${generateId()}_${generateId()}`
   const tokenRowId = generateId()
 
   await db.insert(oauthApplications).values({
@@ -82,7 +87,7 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
   const expiresAt = options.accessTokenExpiresAt ?? new Date(Date.now() + 5 * 60_000)
   await db.insert(oauthAccessTokens).values({
     id: tokenRowId,
-    accessToken,
+    accessToken: rawAccessToken,
     refreshToken,
     accessTokenExpiresAt: expiresAt,
     refreshTokenExpiresAt: new Date(expiresAt.getTime() + 60 * 60_000),
@@ -92,7 +97,8 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
   })
 
   return {
-    accessToken,
+    rawAccessToken,
+    bearerAccessToken: `loa_${rawAccessToken}`,
     tokenRowId,
     clientId,
     userId,
@@ -127,7 +133,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     const touched: string[] = []
 
     const result = await Effect.runPromise(
-      validateOAuthAccessToken(setup.accessToken, {
+      validateOAuthAccessToken(setup.bearerAccessToken, {
         redis,
         adminClient: database.adminPostgresClient,
         onTokenValidated: (id) => touched.push(id),
@@ -165,7 +171,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     const redis = createFakeRedis()
 
     const result = await Effect.runPromise(
-      validateOAuthAccessToken(setup.accessToken, {
+      validateOAuthAccessToken(setup.bearerAccessToken, {
         redis,
         adminClient: database.adminPostgresClient,
       }),
@@ -184,7 +190,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     const redis = createFakeRedis()
 
     const result = await Effect.runPromise(
-      validateOAuthAccessToken(setup.accessToken, {
+      validateOAuthAccessToken(setup.bearerAccessToken, {
         redis,
         adminClient: database.adminPostgresClient,
       }),
@@ -204,7 +210,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     const redis = createFakeRedis()
 
     const result = await Effect.runPromise(
-      validateOAuthAccessToken(setup.accessToken, {
+      validateOAuthAccessToken(setup.bearerAccessToken, {
         redis,
         adminClient: database.adminPostgresClient,
       }),
@@ -228,11 +234,11 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     }
 
     // First call — DB hit, touch fires.
-    await Effect.runPromise(validateOAuthAccessToken(setup.accessToken, deps))
+    await Effect.runPromise(validateOAuthAccessToken(setup.bearerAccessToken, deps))
     expect(touched).toEqual([setup.tokenRowId])
 
     // Second call — cache hit, no second touch.
-    const cached = await Effect.runPromise(validateOAuthAccessToken(setup.accessToken, deps))
+    const cached = await Effect.runPromise(validateOAuthAccessToken(setup.bearerAccessToken, deps))
     expect(cached?.userId).toBe(setup.userId)
     expect(touched).toEqual([setup.tokenRowId])
   })

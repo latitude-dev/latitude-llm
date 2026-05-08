@@ -1,6 +1,6 @@
 import { OAUTH_ACCESS_TOKEN_PREFIX, OAUTH_REFRESH_TOKEN_PREFIX } from "@platform/db-postgres"
 import { describe, expect, it } from "vitest"
-import { rewriteOAuthTokenResponse } from "./oauth-token-prefix-rewriter.ts"
+import { rewriteOAuthTokenResponse, stripIncomingOAuthRefreshTokenPrefix } from "./oauth-token-prefix-rewriter.ts"
 
 const tokenEndpoint = "https://app.example.com/api/auth/mcp/token"
 
@@ -131,5 +131,127 @@ describe("rewriteOAuthTokenResponse", () => {
     const body = (await rewritten.json()) as Record<string, unknown>
     expect(body.access_token).toBe(`${OAUTH_ACCESS_TOKEN_PREFIX}raw`)
     expect(body).not.toHaveProperty("refresh_token")
+  })
+})
+
+describe("stripIncomingOAuthRefreshTokenPrefix", () => {
+  it("strips `lor_` from form-urlencoded refresh_token on POST /api/auth/mcp/token", async () => {
+    const params = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: `${OAUTH_REFRESH_TOKEN_PREFIX}abc456`,
+      client_id: "client-1",
+    })
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    const body = await stripped.text()
+    const out = new URLSearchParams(body)
+    expect(out.get("refresh_token")).toBe("abc456")
+    expect(out.get("grant_type")).toBe("refresh_token")
+    expect(out.get("client_id")).toBe("client-1")
+  })
+
+  it("strips `lor_` from JSON refresh_token on POST /api/auth/mcp/token", async () => {
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: `${OAUTH_REFRESH_TOKEN_PREFIX}abc456`,
+        client_id: "client-1",
+      }),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    const body = (await stripped.json()) as Record<string, unknown>
+    expect(body.refresh_token).toBe("abc456")
+    expect(body.grant_type).toBe("refresh_token")
+    expect(body.client_id).toBe("client-1")
+  })
+
+  it("returns the request unchanged when the refresh_token has no prefix", async () => {
+    const params = new URLSearchParams({ grant_type: "refresh_token", refresh_token: "raw-already" })
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    const body = await stripped.text()
+    const out = new URLSearchParams(body)
+    expect(out.get("refresh_token")).toBe("raw-already")
+  })
+
+  it("returns the request unchanged when no refresh_token field is present (auth-code grant)", async () => {
+    const params = new URLSearchParams({ grant_type: "authorization_code", code: "abc", client_id: "client-1" })
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    const body = await stripped.text()
+    expect(new URLSearchParams(body).get("code")).toBe("abc")
+  })
+
+  it("passes through requests with non-token URLs", async () => {
+    const request = new Request("https://app.example.com/api/auth/get-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: `${OAUTH_REFRESH_TOKEN_PREFIX}should-not-touch` }),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    expect(stripped).toBe(request)
+  })
+
+  it("passes through GET requests", async () => {
+    const request = new Request(tokenEndpoint, { method: "GET" })
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    expect(stripped).toBe(request)
+  })
+
+  it("passes through requests with unsupported content-types", async () => {
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: `refresh_token=${OAUTH_REFRESH_TOKEN_PREFIX}xyz`,
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    expect(stripped).toBe(request)
+  })
+
+  it("rebuilds the request even when the form has no `lor_` prefix so downstream can read the body", async () => {
+    // The request body is a one-shot stream. Once we consume it to inspect, we
+    // have to rebuild with the same body so BA can still parse it. Verify the
+    // returned request's body matches the input.
+    const params = new URLSearchParams({ grant_type: "authorization_code", code: "auth-code-xxx" })
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    expect(await stripped.text()).toBe(params.toString())
+  })
+
+  it("rebuilds the request when the JSON body is malformed so BA can produce its own error", async () => {
+    const malformed = "{ not valid json"
+    const request = new Request(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: malformed,
+    })
+
+    const stripped = await stripIncomingOAuthRefreshTokenPrefix(request)
+    expect(await stripped.text()).toBe(malformed)
   })
 })

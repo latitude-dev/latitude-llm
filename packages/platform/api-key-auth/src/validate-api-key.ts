@@ -1,4 +1,4 @@
-import { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyRepository, stripApiKeyTokenPrefix } from "@domain/api-keys"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -100,7 +100,11 @@ export const validateApiKey = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = yield* hash(token)
+    // The DB stores the raw UUID (no `lak_`); the prefix is added by the repo
+    // when surfacing tokens to callers and stripped here on the way back in.
+    // Pass-through for un-prefixed legacy tokens — they hash to the same value
+    // they always did, so existing keys keep authenticating without migration.
+    const tokenHash = yield* hash(stripApiKeyTokenPrefix(token))
 
     const cached = yield* getCachedApiKey(redis, tokenHash)
 

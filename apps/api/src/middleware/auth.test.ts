@@ -1,5 +1,11 @@
-import { API_KEY_TOKEN_PREFIX, generateApiKeyToken } from "@domain/api-keys"
+import {
+  API_KEY_TOKEN_PREFIX,
+  applyApiKeyTokenPrefix,
+  generateApiKeyToken,
+  stripApiKeyTokenPrefix,
+} from "@domain/api-keys"
 import { generateId } from "@domain/shared"
+import { OAUTH_ACCESS_TOKEN_PREFIX } from "@platform/db-postgres"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import type { InMemoryPostgres } from "@platform/testkit"
@@ -13,9 +19,14 @@ import {
   TEST_ENCRYPTION_KEY,
 } from "../test-utils/create-test-app.ts"
 
+// Inserts a row with the raw (un-prefixed) token, mirroring how the production
+// repository persists. Pass either the prefixed bearer or the raw form — this
+// helper strips before hashing/encrypting so the on-disk shape matches
+// production regardless.
 const insertApiKey = async (database: InMemoryPostgres, organizationId: string, token: string) => {
-  const tokenHash = await Effect.runPromise(hash(token))
-  const encryptedToken = await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY))
+  const rawToken = stripApiKeyTokenPrefix(token)
+  const tokenHash = await Effect.runPromise(hash(rawToken))
+  const encryptedToken = await Effect.runPromise(encrypt(rawToken, TEST_ENCRYPTION_KEY))
   const id = generateId()
   await database.db.insert(apiKeys).values({
     id,
@@ -27,11 +38,15 @@ const insertApiKey = async (database: InMemoryPostgres, organizationId: string, 
   return { id }
 }
 
+// Mirrors the production write path: BA stores the raw access_token (no
+// `loa_` prefix). The bearer the client receives is `loa_<rawToken>` thanks
+// to the response rewriter on the web; the validator strips the prefix before
+// the lookup, so the row only ever holds the raw value.
 const insertOAuthApplicationAndToken = async (
   database: InMemoryPostgres,
   organizationId: string,
   userId: string,
-  accessToken: string,
+  rawAccessToken: string,
 ) => {
   const clientId = `mcp-client-${generateId()}`
   await database.db.insert(oauthApplications).values({
@@ -44,7 +59,7 @@ const insertOAuthApplicationAndToken = async (
   })
   await database.db.insert(oauthAccessTokens).values({
     id: generateId(),
-    accessToken,
+    accessToken: rawAccessToken,
     clientId,
     userId,
     accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
@@ -58,13 +73,16 @@ describe("auth middleware dispatch", () => {
 
   it<ApiTestContext>("authenticates a `lak_`-prefixed token via the API-key validator", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const lakToken = generateApiKeyToken()
-    expect(lakToken.startsWith(API_KEY_TOKEN_PREFIX)).toBe(true)
-    await insertApiKey(database, tenant.organizationId, lakToken)
+    // `generateApiKeyToken()` returns the raw value (UUID); the bearer carries
+    // the prefix. Storage and validation operate on the raw value internally.
+    const rawToken = generateApiKeyToken()
+    const bearer = applyApiKeyTokenPrefix(rawToken)
+    expect(bearer.startsWith(API_KEY_TOKEN_PREFIX)).toBe(true)
+    await insertApiKey(database, tenant.organizationId, rawToken)
 
     const res = await app.fetch(
       new Request("http://localhost/v1/api-keys", {
-        headers: { Authorization: `Bearer ${lakToken}` },
+        headers: { Authorization: `Bearer ${bearer}` },
       }),
     )
     expect(res.status).toBe(200)
@@ -88,12 +106,13 @@ describe("auth middleware dispatch", () => {
 
   it<ApiTestContext>("authenticates a `loa_`-prefixed token via the OAuth validator", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const loaToken = `loa_${crypto.randomUUID()}`
-    await insertOAuthApplicationAndToken(database, tenant.organizationId, tenant.userId, loaToken)
+    // DB stores the raw value; the bearer carries the prefix.
+    const rawToken = crypto.randomUUID()
+    await insertOAuthApplicationAndToken(database, tenant.organizationId, tenant.userId, rawToken)
 
     const res = await app.fetch(
       new Request("http://localhost/v1/api-keys", {
-        headers: { Authorization: `Bearer ${loaToken}` },
+        headers: { Authorization: `Bearer ${OAUTH_ACCESS_TOKEN_PREFIX}${rawToken}` },
       }),
     )
     expect(res.status).toBe(200)
@@ -155,7 +174,7 @@ describe("auth middleware dispatch", () => {
     // before consent would have NULL on the joined row; the validator must
     // refuse it (the auth middleware can't pick a tenant context out of NULL).
     const tenant = await createTenantSetup(database)
-    const loaToken = `loa_${crypto.randomUUID()}`
+    const rawToken = crypto.randomUUID()
 
     const clientId = `mcp-client-${generateId()}`
     await database.db.insert(oauthApplications).values({
@@ -168,7 +187,7 @@ describe("auth middleware dispatch", () => {
     })
     await database.db.insert(oauthAccessTokens).values({
       id: generateId(),
-      accessToken: loaToken,
+      accessToken: rawToken,
       clientId,
       userId: tenant.userId,
       accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
@@ -177,7 +196,7 @@ describe("auth middleware dispatch", () => {
 
     const res = await app.fetch(
       new Request("http://localhost/v1/api-keys", {
-        headers: { Authorization: `Bearer ${loaToken}` },
+        headers: { Authorization: `Bearer ${OAUTH_ACCESS_TOKEN_PREFIX}${rawToken}` },
       }),
     )
     expect(res.status).toBe(401)
