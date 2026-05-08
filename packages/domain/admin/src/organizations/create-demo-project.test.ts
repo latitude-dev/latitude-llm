@@ -91,14 +91,14 @@ const buildLayer = (
     findManySummariesByIds: () => Effect.succeed(new Map()),
   })
 
-  // The use-case only calls `save` + `existsBySlug`; cast through the full
+  // The use-case only calls `save` + `countBySlug`; cast through the full
   // shape so we don't have to stub the rest of the port.
   const projectRepo = Layer.succeed(ProjectRepository, {
     save: (project: Project) =>
       Effect.sync(() => {
         world.savedProjects.push(project)
       }),
-    existsBySlug: (slug: string) => Effect.succeed(world.existingSlugs.has(slug)),
+    countBySlug: (slug: string) => Effect.succeed(world.existingSlugs.has(slug) ? 1 : 0),
   } as unknown as (typeof ProjectRepository)["Service"])
 
   const outbox = Layer.succeed(OutboxEventWriter, {
@@ -279,12 +279,11 @@ describe("createDemoProjectUseCase", () => {
   it("auto-suffixes the slug when it collides with an existing project across the workspace", async () => {
     // Slug uniqueness is enforced cross-org at the DB level, so even if
     // this org's project list is empty, another org may already own
-    // `demo-project`. The use-case should append `-1`, `-2`, ... until
-    // it finds a free slug.
+    // `demo-project`. The use-case delegates to `generateSlug`, which
+    // appends a 4-char random url-safe suffix on collision.
     const org = mkOrg()
     const { layer, world } = buildLayer(org)
     world.existingSlugs.add("demo-project")
-    world.existingSlugs.add("demo-project-1")
 
     const result = await Effect.runPromise(
       createDemoProjectUseCase({
@@ -294,9 +293,9 @@ describe("createDemoProjectUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result.projectSlug).toBe("demo-project-2")
+    expect(result.projectSlug).toMatch(/^demo-project-[a-z0-9]{4}$/)
     const saved = world.savedProjects[0]
-    expect(saved?.slug).toBe("demo-project-2")
+    expect(saved?.slug).toMatch(/^demo-project-[a-z0-9]{4}$/)
     // Project name still lands verbatim — only the slug gets the suffix.
     expect(saved?.name).toBe("Demo Project")
   })

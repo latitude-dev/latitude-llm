@@ -50,7 +50,7 @@ describe("updateSavedSearch", () => {
     expect(result.name).toBe("errors")
   })
 
-  it("appends a numeric suffix when the new slug collides with another row", async () => {
+  it("appends a random suffix when the new slug collides with another row", async () => {
     const id = SavedSearchId("1".repeat(24))
     const otherId = SavedSearchId("2".repeat(24))
     const layer = makeLayer([
@@ -58,7 +58,9 @@ describe("updateSavedSearch", () => {
       baseRow({ id: otherId, slug: "failures", name: "Failures" }),
     ])
     const result = await Effect.runPromise(updateSavedSearch({ id, name: "Failures" }).pipe(Effect.provide(layer)))
-    expect(result.slug).toBe("failures-1")
+    // `generateSlug` appends a random 4-char url-safe suffix on collision
+    // (see `@domain/shared/slug.ts`). Non-deterministic; assert the shape.
+    expect(result.slug).toMatch(/^failures-[a-z0-9]{4}$/)
   })
 
   it("updates the query when only query changes", async () => {

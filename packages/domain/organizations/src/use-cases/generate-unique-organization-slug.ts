@@ -1,32 +1,38 @@
-import { generateId, toSlug } from "@domain/shared"
+import { generateId, generateSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { SlugGenerationError } from "../errors.ts"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 
-const MAX_SLUG_ATTEMPTS = 20
-
+/**
+ * Thin wrapper around the shared `generateSlug` helper that fans the unique
+ * organization slug check out to {@link OrganizationRepository}. Exists as a
+ * named use case (rather than an inline call) because the web's organization
+ * provisioning flow needs a fallback on empty `name` (e.g. organizations
+ * created via OAuth signup with a placeholder display name) — `generateSlug`
+ * itself fails on input that produces no URL-safe characters, so we feed it
+ * a generated workspace placeholder in that case.
+ */
 export const generateUniqueOrganizationSlugUseCase = Effect.fn("organizations.generateUniqueOrganizationSlug")(
   function* (input: { name: string }) {
     const repository = yield* OrganizationRepository
+    const fallbackName = `workspace-${generateId().slice(0, 8)}`
 
-    let slugBase = toSlug(input.name)
-
-    if (!slugBase) {
-      slugBase = `workspace-${generateId().slice(0, 8)}`
-    }
-
-    let slug = slugBase
-    for (let i = 1; i <= MAX_SLUG_ATTEMPTS; i += 1) {
-      const exists = yield* repository.existsBySlug(slug)
-      if (!exists) {
-        return slug
-      }
-      slug = `${slugBase}-${i}`
-    }
-
-    // If we exhausted all attempts, return an error effect
-    return yield* new SlugGenerationError({
-      message: `Could not generate a unique slug after ${MAX_SLUG_ATTEMPTS} attempts`,
-    })
+    return yield* generateSlug({
+      name: input.name?.trim() ? input.name : fallbackName,
+      count: (slug) => repository.countBySlug(slug),
+    }).pipe(
+      Effect.catchTag("InvalidSlugInputError", () =>
+        // Retry with the placeholder name if `toSlug(name)` produced an empty
+        // base. Won't recurse: the placeholder is guaranteed to slugify cleanly.
+        generateSlug({
+          name: fallbackName,
+          count: (slug) => repository.countBySlug(slug),
+        }).pipe(
+          Effect.catchTag("InvalidSlugInputError", (error) =>
+            Effect.fail(new SlugGenerationError({ message: error.reason })),
+          ),
+        ),
+      ),
+    )
   },
 )

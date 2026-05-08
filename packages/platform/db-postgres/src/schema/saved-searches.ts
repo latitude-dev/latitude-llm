@@ -8,7 +8,7 @@ export const savedSearches = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    slug: varchar("slug", { length: 80 }).notNull(),
+    slug: varchar("slug", { length: 128 }).notNull(),
     name: varchar("name", { length: 256 }).notNull(),
     query: text("query"),
     filterSet: jsonb("filter_set").$type<FilterSet>().notNull(),

@@ -45,6 +45,18 @@ export const createFakeAnnotationQueueRepository = (
         return queue ?? null
       }),
 
+    countBySlug: ({ projectId, slug, excludeQueueId }) =>
+      Effect.sync(
+        () =>
+          [...queues.values()].filter(
+            (q) =>
+              q.projectId === projectId &&
+              q.slug === slug &&
+              !q.deletedAt &&
+              (!excludeQueueId || q.id !== excludeQueueId),
+          ).length,
+      ),
+
     save: (input: SaveQueueInput) =>
       Effect.sync(() => {
         const id = input.id !== undefined ? AnnotationQueueId(input.id) : AnnotationQueueId(generateId())

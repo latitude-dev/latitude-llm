@@ -36,7 +36,7 @@ describe("createSavedSearch", () => {
     expect(result.assignedUserId).toBeNull()
   })
 
-  it("appends a numeric suffix on slug collision", async () => {
+  it("appends a random suffix on slug collision", async () => {
     const layer = makeLayer()
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -56,7 +56,10 @@ describe("createSavedSearch", () => {
         })
       }).pipe(Effect.provide(layer)),
     )
-    expect(result.slug).toBe("errors-1")
+    // `generateSlug` appends a random 4-char url-safe suffix on collision
+    // (see `@domain/shared/slug.ts`). The exact value is non-deterministic;
+    // assert the shape.
+    expect(result.slug).toMatch(/^errors-[a-z0-9]{4}$/)
   })
 
   it("rejects an empty search (no query and no filters)", async () => {

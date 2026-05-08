@@ -59,6 +59,13 @@ const markdownComponents: Components = {
       </CodeBlockShell>
     )
   },
+  // Wide tables would otherwise push their parent past the drawer width;
+  // wrap them so overflow scrolls horizontally inside the message.
+  table: ({ children }) => (
+    <div className="max-w-full overflow-x-auto">
+      <table>{children}</table>
+    </div>
+  ),
 }
 export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
 

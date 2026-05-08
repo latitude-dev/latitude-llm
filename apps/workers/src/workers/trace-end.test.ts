@@ -128,6 +128,7 @@ const makeIssueRow = (input?: { readonly id?: string; readonly projectId?: strin
   uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
   organizationId: ORGANIZATION_ID,
   projectId: input?.projectId ?? PROJECT_ID,
+  slug: `trace-end-worker-issue-${(input?.id ?? ISSUE_ID).slice(-6)}`,
   name: "Trace-end worker issue",
   description: "Issue context for trace-end worker tests",
   source: "annotation" as const,

@@ -6,7 +6,7 @@ import {
   annotationQueueSchema,
 } from "@domain/annotation-queues"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { annotationQueues } from "../schema/annotation-queues.ts"
@@ -253,6 +253,30 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                     cause,
                   }),
               ),
+            )
+        }),
+
+      countBySlug: ({ projectId, slug, excludeQueueId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(annotationQueues)
+                .where(
+                  and(
+                    eq(annotationQueues.organizationId, organizationId),
+                    eq(annotationQueues.projectId, projectId),
+                    eq(annotationQueues.slug, slug),
+                    isNull(annotationQueues.deletedAt),
+                    ...(excludeQueueId ? [ne(annotationQueues.id, excludeQueueId)] : []),
+                  ),
+                ),
+            )
+            .pipe(
+              Effect.map((rows) => rows[0]?.count ?? 0),
+              Effect.mapError((cause) => new RepositoryError({ operation: "countBySlug", cause })),
             )
         }),
 

@@ -82,7 +82,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     datasetRepo = fake.repository
     await Effect.runPromise(
       datasetRepo
-        .create({ id: DATASET_ID, projectId: PROJECT_ID, name: "existing-dataset" })
+        .create({ id: DATASET_ID, projectId: PROJECT_ID, slug: "existing-dataset", name: "existing-dataset" })
         .pipe(Effect.provideService(SqlClient, inertSqlClient)),
     )
 

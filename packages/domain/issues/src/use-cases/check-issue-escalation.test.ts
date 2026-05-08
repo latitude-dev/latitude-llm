@@ -19,6 +19,7 @@ const issueId = "iiiiiiiiiiiiiiiiiiiiiiii"
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId(issueId),
   uuid: "11111111-1111-4111-8111-111111111111",
+  slug: "test-issue",
   organizationId,
   projectId,
   name: "Token leakage in responses",

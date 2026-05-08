@@ -18,6 +18,7 @@ const seededDatasets = (scope: SeedScope) =>
     {
       id: DatasetId(scope.cuid("dataset:warranty")),
       versionId: DatasetVersionId(scope.cuid("dataset:warranty:version")),
+      slug: "warranty-coverage-guardrails",
       name: "Warranty Coverage Guardrails",
       description:
         "Golden dataset for the Acme support agent's warranty claims workflow. Rows cover cliff-use exclusions, " +
@@ -27,6 +28,7 @@ const seededDatasets = (scope: SeedScope) =>
     {
       id: DatasetId(scope.cuid("dataset:combination")),
       versionId: DatasetVersionId(scope.cuid("dataset:combination:version")),
+      slug: "dangerous-combination-guardrails",
       name: "Dangerous Combination Guardrails",
       description:
         "Golden dataset for testing Support Agent behavior on dangerous product combination requests. Each row is " +
@@ -47,6 +49,7 @@ const seedDatasets: Seeder = {
               id: dataset.id,
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
+              slug: dataset.slug,
               name: dataset.name,
               description: dataset.description,
               currentVersion: 1,
@@ -54,6 +57,7 @@ const seedDatasets: Seeder = {
             .onConflictDoUpdate({
               target: datasets.id,
               set: {
+                slug: dataset.slug,
                 name: dataset.name,
                 description: dataset.description,
                 currentVersion: 1,

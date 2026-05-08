@@ -57,6 +57,16 @@ describe("MarkdownContent", () => {
     }
   })
 
+  it("wraps tables in a horizontally scrollable container so they never overflow the drawer", () => {
+    const table = "| a | b |\n| - | - |\n| 1 | 2 |"
+    const markup = renderToStaticMarkup(<MarkdownContent content={table} />)
+
+    // The <table> must be nested inside an overflow-x-auto wrapper so wide
+    // tables scroll horizontally within the message instead of pushing the
+    // surrounding layout past the drawer width.
+    expect(markup).toMatch(/<div[^>]*\boverflow-x-auto\b[^>]*>\s*<table\b/)
+  })
+
   it("falls back to a guarded plain-text view for oversized content", () => {
     const oversizedContent = `${"a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD + 1)}END_MARKER`
 

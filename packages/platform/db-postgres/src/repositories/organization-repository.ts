@@ -8,7 +8,7 @@ import {
   type SqlClientShape,
   type UserId as UserIdType,
 } from "@domain/shared"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { members, organizations } from "../schema/better-auth.ts"
@@ -116,14 +116,14 @@ export const OrganizationRepositoryLive = Layer.effect(
           yield* sqlClient.query((db) => db.delete(organizations).where(eq(organizations.id, id)))
         }),
 
-      existsBySlug: (slug: string) =>
+      countBySlug: (slug: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db) =>
-              db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug)).limit(1),
+              db.select({ count: sql<number>`count(*)::int` }).from(organizations).where(eq(organizations.slug, slug)),
             )
-            .pipe(Effect.map((results) => results.length > 0))
+            .pipe(Effect.map((results) => results[0]?.count ?? 0))
         }),
     }
   }),

@@ -1,10 +1,17 @@
-import { datasetIdSchema, datasetVersionIdSchema, organizationIdSchema, projectIdSchema } from "@domain/shared"
+import {
+  datasetIdSchema,
+  datasetVersionIdSchema,
+  organizationIdSchema,
+  projectIdSchema,
+  SLUG_MAX_LENGTH,
+} from "@domain/shared"
 import { z } from "zod"
 
 const datasetSchema = z.object({
   id: datasetIdSchema,
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
+  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier derived from name; regenerated when name changes. Unique per (organization_id, project_id) among non-soft-deleted rows.
   name: z.string().min(1),
   description: z.string().nullable(),
   fileKey: z.string().nullable(),
