@@ -164,4 +164,3 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
 
     return { buckets }
   })
-

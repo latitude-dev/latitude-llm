@@ -26,18 +26,15 @@ export function IssueEscalatingNotification({
   const states = live?.states ?? (opened ? ["escalating"] : [])
   const url = buildIssueUrl(payload)
 
-  const title = opened
-    ? issueName
-      ? `The "${issueName}" issue is escalating.`
-      : "An issue is escalating."
-    : issueName
-      ? `The "${issueName}" issue stopped escalating.`
-      : "An issue stopped escalating."
-
   const icon = opened ? TrendingUpIcon : TrendingDownIcon
 
   return (
-    <BaseNotification seenAt={seenAt} icon={<Icon icon={icon} />} title={title} {...(url ? { url } : {})}>
+    <BaseNotification
+      seenAt={seenAt}
+      icon={<Icon icon={icon} />}
+      title={opened ? "An issue is escalating." : "An issue stopped escalating."}
+      url={url}
+    >
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
       <EscalatingTrend notificationSourceId={notification.sourceId} event={payload.event} states={states} />
     </BaseNotification>

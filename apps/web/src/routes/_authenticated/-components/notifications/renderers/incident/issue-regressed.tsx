@@ -22,12 +22,7 @@ export function IssueRegressedNotification({
   const url = buildIssueUrl(payload)
 
   return (
-    <BaseNotification
-      seenAt={seenAt}
-      icon={<ShieldAlertIcon />}
-      title="A resolved issue has regressed."
-      {...(url ? { url } : {})}
-    >
+    <BaseNotification seenAt={seenAt} icon={<ShieldAlertIcon />} title="A resolved issue has regressed." url={url}>
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
     </BaseNotification>
   )
