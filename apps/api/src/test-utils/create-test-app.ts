@@ -116,6 +116,7 @@ export const setupTestApi = () => {
 }
 
 interface TenantSetup {
+  readonly userId: string
   readonly organizationId: string
   readonly apiKeyToken: string
   readonly authApiKeyId: string
@@ -160,5 +161,5 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
     name: "auth-key",
   })
 
-  return { organizationId, apiKeyToken, authApiKeyId }
+  return { userId, organizationId, apiKeyToken, authApiKeyId }
 }

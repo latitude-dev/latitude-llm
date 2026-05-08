@@ -10,6 +10,7 @@ import { apiKeysEndpoints } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
+import { registerWellKnownRoutes } from "./well-known.ts"
 
 /**
  * Register all API routes with versioning.
@@ -19,6 +20,8 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   const routes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute({ app })
+  // Public discovery routes (no auth) — see `well-known.ts`.
+  registerWellKnownRoutes({ app })
 
   v1.use("*", async (c, next) => {
     c.set("db", options.database.db)

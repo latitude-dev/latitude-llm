@@ -41,6 +41,24 @@
           "status"
         ]
       },
+      "OAuthProtectedResourceMetadata": {
+        "type": "object",
+        "properties": {
+          "resource": {
+            "type": "string"
+          },
+          "authorization_servers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "resource",
+          "authorization_servers"
+        ]
+      },
       "Project": {
         "type": "object",
         "properties": {
@@ -1127,6 +1145,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "operationId": "wellKnown.oauthProtectedResource",
+        "tags": [
+          "Well-known"
+        ],
+        "summary": "OAuth protected resource metadata",
+        "description": "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+        "responses": {
+          "200": {
+            "description": "Protected resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthProtectedResourceMetadata"
                 }
               }
             }

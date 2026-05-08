@@ -30,6 +30,7 @@
     "@platform/ai": "workspace:*",
     "@platform/ai-voyage": "workspace:*",
     "@platform/api-key-auth": "workspace:*",
+    "@platform/oauth-token-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
