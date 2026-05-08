@@ -2,6 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { type RefObject, useCallback, useMemo } from "react"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
@@ -82,11 +83,29 @@ export function TracesView({
     onStateChange: onSelectionChange,
   })
 
+  const [, setTraceDetailTab] = useParamState("traceDetailTab", "trace")
+
   const handleTraceClick = useCallback(
     (trace: TraceRecord) => {
       onActiveTraceChange(trace.traceId === activeTraceId ? undefined : trace.traceId)
     },
     [activeTraceId, onActiveTraceChange],
+  )
+
+  const handleErrorClick = useCallback(
+    (trace: TraceRecord) => {
+      onActiveTraceChange(trace.traceId)
+      setTraceDetailTab("spans")
+    },
+    [onActiveTraceChange, setTraceDetailTab],
+  )
+
+  const handleAnnotationClick = useCallback(
+    (trace: TraceRecord) => {
+      onActiveTraceChange(trace.traceId)
+      setTraceDetailTab("annotations")
+    },
+    [onActiveTraceChange, setTraceDetailTab],
   )
 
   const getRowAriaLabel = useCallback(
@@ -140,6 +159,8 @@ export function TracesView({
           isLoading={isLoading}
           visibleColumnIds={visibleColumnIds}
           onTraceClick={handleTraceClick}
+          onErrorClick={handleErrorClick}
+          onAnnotationClick={handleAnnotationClick}
           getTraceRowAriaLabel={getRowAriaLabel}
           {...(activeTraceId ? { activeTraceId } : {})}
           selection={selection}
