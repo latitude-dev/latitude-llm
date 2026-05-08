@@ -9,6 +9,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
+    "trace-search:probe": "tsx src/scripts/probe-trace-search-scores.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },

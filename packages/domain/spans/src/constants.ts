@@ -119,17 +119,22 @@ export const TRACE_SEARCH_EMBEDDING_MODEL = "voyage-4-large"
 export const TRACE_SEARCH_EMBEDDING_DIMENSIONS = 2048
 
 /**
- * Minimum combined relevance score for a trace to surface in search results.
+ * Minimum semantic-only relevance score for a trace to surface in search
+ * results. Applied after the per-trace `max(...) GROUP BY trace_id` rollup
+ * over chunk-level cosine similarities — i.e. it's the score of a trace's
+ * single best-matching chunk.
  *
- * With no rerank, this is the sole precision filter. Pure-lexical hits always
- * pass (relevance 0.3 from the lexical weight alone). Pure-semantic hits must
- * clear the floor via cosine similarity: at 0.2, they need cosineSimilarity
- * >= 0.286, i.e. cosineDistance <= 0.714.
+ * Tuned empirically against the seeded Acme corpus on 2026-05-08:
+ *   - Real-query top scores: 0.37 (narrow, e.g. "JSON response") to 0.60
+ *     (specific, e.g. "rocket skates malfunction").
+ *   - Pure-nonsense query ("totally unrelated banana") tops out at 0.29 —
+ *     this is the noise floor of the corpus.
  *
- * Voyage-4-large produces lower raw cosine values than voyage-3-lite for the
- * same semantic match (different normalization), so the floor sits lower in
- * absolute terms than you might expect — genuine matches on paraphrase queries
- * cluster around cosine 0.33–0.38, with noise starting below ~0.26. Tune
- * empirically per corpus.
+ * 0.30 sits cleanly in the gap: everything below is bag-of-tokens noise,
+ * everything above is at least weakly topical. Pre-chunking the floor was
+ * 0.20 (single mean vector per trace dilutes scores); chunking + max-pool
+ * sharpens the distribution and the floor needs to come up.
+ *
+ * Re-tune against production if the noise / signal distribution shifts.
  */
-export const TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.2
+export const TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.3
