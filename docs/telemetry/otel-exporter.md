@@ -300,11 +300,11 @@ The `X-Latitude-Project` header is required on every request. Ensure it is prese
 
 This is the most common issue when integrating via the generic OTLP exporter. Your exporter is configured correctly (you get `202` and traces appear), but the Latitude UI shows empty LLM metadata.
 
-**Cause:** Your spans are missing the `gen_ai.*` semantic convention attributes. Configuring the exporter only ensures spans reach Latitude — it does not add LLM metadata. You must explicitly set attributes like `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.input.messages`, etc. on your spans.
+**Cause:** Your spans are missing the `gen_ai.*` semantic convention attributes. Configuring the exporter only ensures spans reach Latitude — it does not add LLM metadata. You must explicitly set attributes like `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.input.messages`, etc. on your spans.
 
 **Fix:** See [GenAI Span Attributes (LLM Metadata)](#genai-span-attributes-llm-metadata) above for the full list of attributes and message format. At a minimum, set:
 
-1. `gen_ai.system` — provider name
+1. `gen_ai.provider.name` — provider name (e.g. `"openai"`, `"anthropic"`). Latitude also accepts the deprecated `gen_ai.system` as a fallback for older emitters.
 2. `gen_ai.request.model` — model name
 3. `gen_ai.operation.name` — set to `"chat"`
 4. `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` — token counts
