@@ -86,7 +86,7 @@ function NotificationBellEnabled() {
           {unread > 0 ? (
             <span
               aria-hidden
-              className="absolute -top-0.5 -right-0.5 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground"
+              className="pointer-events-none absolute right-0 top-0 inline-flex h-4 min-w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground ring-2 ring-background"
             >
               {formatBadgeCount(unread)}
             </span>
@@ -106,7 +106,9 @@ function NotificationFeed() {
     queryKey: LIST_QUERY_KEY,
     initialPageParam: undefined as { createdAt: string; id: string } | undefined,
     queryFn: ({ pageParam }) =>
-      listNotifications({ data: { limit: PAGE_SIZE, ...(pageParam ? { cursor: pageParam } : {}) } }),
+      listNotifications({
+        data: { limit: PAGE_SIZE, ...(pageParam ? { cursor: pageParam } : {}) },
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
   })
