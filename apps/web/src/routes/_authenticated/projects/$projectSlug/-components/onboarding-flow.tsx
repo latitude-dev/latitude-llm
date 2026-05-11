@@ -651,9 +651,7 @@ export function OnboardingFlow({
                     setIsSubmittingOnboarding(true)
                     try {
                       const onboardingData =
-                        role === "other"
-                          ? { customJobTitle, stackChoice }
-                          : { jobTitle: role, stackChoice }
+                        role === "other" ? { customJobTitle, stackChoice } : { jobTitle: role, stackChoice }
                       await submitOnboarding({ data: onboardingData })
                       setStep("telemetry")
                     } catch (error) {
