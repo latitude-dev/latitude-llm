@@ -33,10 +33,7 @@ interface SessionCountRow {
 export const ClaudeCodeSpanReaderLive = Layer.effect(
   ClaudeCodeSpanReader,
   Effect.gen(function* () {
-    const listProjectsWithSpansInWindow: ClaudeCodeSpanReaderShape["listProjectsWithSpansInWindow"] = ({
-      from,
-      to,
-    }) =>
+    const listProjectsWithSpansInWindow: ClaudeCodeSpanReaderShape["listProjectsWithSpansInWindow"] = ({ from, to }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
@@ -58,12 +55,10 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
           })
           .pipe(
             Effect.map((rows) =>
-              rows.map(
-                (row): { readonly organizationId: OrganizationIdT; readonly projectId: ProjectIdT } => ({
-                  organizationId: toOrganizationId(row.organization_id),
-                  projectId: toProjectId(row.project_id),
-                }),
-              ),
+              rows.map((row): { readonly organizationId: OrganizationIdT; readonly projectId: ProjectIdT } => ({
+                organizationId: toOrganizationId(row.organization_id),
+                projectId: toProjectId(row.project_id),
+              })),
             ),
             Effect.mapError((error) => toRepositoryError(error, "listProjectsWithSpansInWindow")),
           )
