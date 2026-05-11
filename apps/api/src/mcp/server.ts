@@ -8,20 +8,19 @@ import { splitFlatInput } from "./flatten-input.ts"
 import { collectToolDescriptors } from "./registry.ts"
 
 /**
- * Mounts the MCP transport endpoint on `protectedApp` (which already lives
- * behind the unified auth + org-context middleware). Tool dispatch re-enters
- * the root Hono app via `rootApp.fetch(internalRequest)` so every tool call
- * runs through the same middleware chain (validation, rate-limit, auth,
+ * Mounts the MCP transport endpoint on `routes` (which already lives behind
+ * the unified auth + org-context middleware). Tool dispatch re-enters the
+ * root Hono app via `app.fetch(internalRequest)` so every tool call runs
+ * through the same middleware chain (validation, rate-limit, auth,
  * organization context). The outer `Authorization` and `X-Forwarded-For`
  * headers are forwarded so the inner request authenticates as the same
  * caller and counts against the same rate-limit bucket.
  *
- * `mountPath` is the path on `protectedApp` (e.g. `"/mcp"` when
- * `protectedApp` is mounted at `/${API_VERSION}` on the root, giving the
- * public URL `/v1/mcp`). The dispatcher prepends `/${API_VERSION}` to the
- * descriptor's router prefix when re-entering through `rootApp.fetch()` —
- * so a tool whose registry entry has `routerPrefix: "/api-keys"` resolves
- * to `/v1/api-keys`.
+ * The MCP mount path (`/mcp`) is internal to this function — when `routes`
+ * is mounted at `/${API_VERSION}` on the root, the public URL becomes
+ * `/v1/mcp`. The dispatcher prepends `/${API_VERSION}` to the descriptor's
+ * router prefix when re-entering through `app.fetch()` — so a tool whose
+ * registry entry has `routerPrefix: "/api-keys"` resolves to `/v1/api-keys`.
  *
  * Each request gets its own `McpServer` + `WebStandardStreamableHTTPServerTransport`
  * + `connect()` + tool registration loop. This is an SDK invariant in stateless
@@ -41,22 +40,29 @@ import { collectToolDescriptors } from "./registry.ts"
  * need — each tool call is independent.
  *
  * The per-request cost is a small `McpServer` constructor + N closure
- * allocations from the registration loop; dwarfed by the inner `rootApp.fetch`
+ * allocations from the registration loop; dwarfed by the inner `app.fetch`
  * round-trip, which is the actual work.
  *
  * Tools are registered from the snapshot built by {@link collectToolDescriptors}.
  * The registry is populated at boot by `mountWithMcp(...)` calls in
  * `routes/index.ts`, so by the time the first request lands here every tool
  * is already known.
+ *
+ * TODO: add DNS-rebinding protection on this route (Host-header allowlist) as
+ * defense-in-depth on top of bearer auth. Reject  with a JSON-RPC 403 when the
+ * incoming Host isn't in the list. See the MCP SDK's `hostHeaderValidation`
+ * helper for the standard shape.
  */
-export const registerMcpRoute = (
-  rootApp: OpenAPIHono<AppEnv>,
-  protectedApp: OpenAPIHono<ProtectedEnv>,
-  mountPath: string,
-): void => {
+export const registerMcpRoute = ({
+  app,
+  routes,
+}: {
+  app: OpenAPIHono<AppEnv>
+  routes: OpenAPIHono<ProtectedEnv>
+}): void => {
   const toolDescriptors = collectToolDescriptors()
 
-  protectedApp.all(mountPath, async (c) => {
+  routes.all("/mcp", async (c) => {
     const mcpServer = new McpServer(MCP_INFO, { capabilities: { tools: {} } })
 
     for (const tool of toolDescriptors) {
@@ -85,7 +91,7 @@ export const registerMcpRoute = (
 
           const hasJsonBody = body !== undefined && !methodHasNoBody(descriptor.httpMethod)
 
-          const response = await rootApp.fetch(
+          const response = await app.fetch(
             new Request(url, { method, headers, ...(hasJsonBody ? { body: JSON.stringify(body) } : {}) }),
           )
           const output = await response.text()
@@ -122,7 +128,7 @@ interface InternalRoute {
 
 /**
  * One-shot builder for the absolute URL the MCP dispatcher passes to
- * `rootApp.fetch(...)`. Composes the sub-app prefix + route template (with
+ * `app.fetch(...)`. Composes the sub-app prefix + route template (with
  * `{name}` placeholders), substitutes path params, appends the query string,
  * prepends `/${API_VERSION}`, and resolves against the outer MCP request's
  * origin so Hono's path matcher sees a fully-qualified URL.

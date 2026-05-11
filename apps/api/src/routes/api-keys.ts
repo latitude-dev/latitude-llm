@@ -6,12 +6,12 @@ import {
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { createRoute, z } from "@hono/zod-openapi"
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { type AnyApiEndpoint, defineApiEndpoint } from "../mcp/index.ts"
+import { defineApiEndpoint } from "../mcp/index.ts"
 import {
   errorResponse,
   IdParamsSchema,
@@ -109,7 +109,9 @@ const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
     }).pipe(Effect.orDie),
 })
 
-const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>()
+export const apiKeysPath = "/api-keys"
+
+const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>(apiKeysPath)
 
 const createApiKey = apiKeyEndpoint({
   route: createRoute({
@@ -196,4 +198,8 @@ const revokeApiKey = apiKeyEndpoint({
   },
 })
 
-export const apiKeysEndpoints: readonly AnyApiEndpoint[] = [createApiKey, listApiKeys, revokeApiKey]
+export const createApiKeysRoutes = () => {
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
+  for (const ep of [createApiKey, listApiKeys, revokeApiKey]) ep.mountHttp(app)
+  return app
+}
