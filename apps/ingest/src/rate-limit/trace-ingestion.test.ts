@@ -32,6 +32,7 @@ class FakeRedisPipeline {
 }
 
 class FakeRedis implements TraceIngestionRateLimitRedis {
+  readonly executedKeys: string[] = []
   private readonly values = new Map<string, number>()
   private readonly ttls = new Map<string, number>()
 
@@ -45,6 +46,8 @@ class FakeRedis implements TraceIngestionRateLimitRedis {
   }
 
   execute(command: PipelineCommand): number {
+    this.executedKeys.push(command.key)
+
     switch (command.type) {
       case "incr": {
         const value = (this.values.get(command.key) ?? 0) + 1
@@ -130,6 +133,19 @@ describe("checkTraceIngestionRateLimit", () => {
       limitedBy: "bytes",
       retryAfterSeconds: 30,
     })
+  })
+
+  it("hash-tags request and byte counters into the same Redis Cluster slot", async () => {
+    const redis = new FakeRedis()
+
+    await checkTraceIngestionRateLimit(createInput(redis, 40))
+
+    const uniqueKeys = [...new Set(redis.executedKeys)]
+    expect(uniqueKeys).toHaveLength(2)
+    expect(uniqueKeys[0]).toContain("org:org-1:")
+    expect(uniqueKeys[1]).toContain("org:org-1:")
+    expect(uniqueKeys[0]).toContain("{ingest:traces:org-1:project-1:key-1}")
+    expect(uniqueKeys[1]).toContain("{ingest:traces:org-1:project-1:key-1}")
   })
 
   it("fails open when redis is unavailable", async () => {

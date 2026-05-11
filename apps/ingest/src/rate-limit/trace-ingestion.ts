@@ -83,7 +83,10 @@ const normalizeRetryAfterSeconds = (ttl: number, fallback: number): number => {
 const buildRateLimitKey = (
   input: Omit<CheckTraceIngestionRateLimitInput, "redis" | "payloadBytes" | "config">,
 ): string => {
-  return `ratelimit:ingest:traces:${input.organizationId}:${input.projectId}:${input.apiKeyId}`
+  // Requests + bytes counters are updated in one pipeline, so both keys must
+  // share a Redis Cluster slot. The hash tag is scoped to this org/project/key
+  // bucket while preserving the org-first key prefix.
+  return `org:${input.organizationId}:{ingest:traces:${input.organizationId}:${input.projectId}:${input.apiKeyId}}`
 }
 
 export const checkTraceIngestionRateLimit = async (

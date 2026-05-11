@@ -11,8 +11,11 @@ const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62 // ~2 months
 
 const pad2 = (n: number): string => n.toString().padStart(2, "0")
 
+// The repeated `{...${orgId}}` hash tag keeps the three window keys for one
+// org on the same Redis Cluster slot so MGET / pipeline operations don't fail
+// with CROSSSLOT in MemoryDB / ElastiCache cluster mode.
 const buildBudgetKey = (orgId: OrganizationId, window: "daily" | "weekly" | "monthly", suffix: string): string =>
-  `org:${orgId}:trace-search:embed-budget:${window}:${suffix}`
+  `org:${orgId}:{trace-search:embed-budget:${orgId}}:${window}:${suffix}`
 
 const dailyKey = (orgId: OrganizationId, now: Date): string => {
   const yyyy = now.getUTCFullYear()

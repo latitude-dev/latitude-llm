@@ -176,7 +176,7 @@ describe("TraceSearchBudgetLive.tryConsume", () => {
     expect(redis.store.size).toBe(0)
   })
 
-  it("tracks orgs independently", async () => {
+  it("tracks orgs independently and hash-tags each org's budget keys together", async () => {
     const redis = new FakeRedis()
 
     await runWithLimits(
@@ -195,8 +195,14 @@ describe("TraceSearchBudgetLive.tryConsume", () => {
     const orgBKeys = Array.from(redis.store.keys()).filter((k) => k.includes(OTHER_ORG))
     expect(orgAKeys).toHaveLength(3)
     expect(orgBKeys).toHaveLength(3)
-    for (const k of orgAKeys) expect(k.startsWith(`org:${ORG_ID}:`)).toBe(true)
-    for (const k of orgBKeys) expect(k.startsWith(`org:${OTHER_ORG}:`)).toBe(true)
+    for (const k of orgAKeys) {
+      expect(k.startsWith(`org:${ORG_ID}:`)).toBe(true)
+      expect(k).toContain(`{trace-search:embed-budget:${ORG_ID}}`)
+    }
+    for (const k of orgBKeys) {
+      expect(k.startsWith(`org:${OTHER_ORG}:`)).toBe(true)
+      expect(k).toContain(`{trace-search:embed-budget:${OTHER_ORG}}`)
+    }
     for (const k of [...orgAKeys, ...orgBKeys]) expect(redis.store.get(k)).toBe(900)
   })
 
