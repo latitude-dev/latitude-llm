@@ -71,11 +71,11 @@ The Agents SDK uses the OpenAI **Responses API**, which is not covered by the st
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { Latitude, capture } from "@latitude-data/telemetry"
         import { Agent, run, tool } from "@openai/agents"
         import { z } from "zod"
 
-        const latitude = initLatitude({
+        const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
           instrumentations: ["openai-agents"],

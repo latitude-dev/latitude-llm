@@ -271,10 +271,10 @@ export function getOnboardingSnippet(
 }
 
 function snippetTsOpenai() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import OpenAI from "openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -323,10 +323,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsAnthropic() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import Anthropic from "@anthropic-ai/sdk"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["anthropic"],
@@ -377,13 +377,13 @@ latitude["shutdown"]()
 }
 
 function snippetTsBedrock() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["bedrock"],
@@ -444,10 +444,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsCohere() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { CohereClient } from "cohere-ai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["cohere"],
@@ -496,10 +496,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsTogether() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import Together from "together-ai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["togetherai"],
@@ -548,10 +548,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsVertex() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { VertexAI } from "@google-cloud/vertexai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["vertexai"],
@@ -600,10 +600,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsAiplatform() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { PredictionServiceClient } from "@google-cloud/aiplatform"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["aiplatform"],
@@ -651,10 +651,10 @@ latitude["shutdown"]()
 }
 
 function snippetTsAzureOpenai() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { AzureOpenAI } from "openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -711,11 +711,11 @@ latitude["shutdown"]()
 }
 
 function snippetTsVercelAiSdk() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
 })
@@ -738,11 +738,11 @@ await latitude.shutdown()
 }
 
 function snippetTsLangchain() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { ChatOpenAI } from "@langchain/openai"
 import { HumanMessage } from "@langchain/core/messages"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["langchain"],
@@ -786,12 +786,12 @@ latitude["shutdown"]()
 }
 
 function snippetTsLlamaindex() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { Settings } from "llamaindex"
 import { openai } from "@llamaindex/openai"
 import { agent } from "@llamaindex/workflow"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["llamaindex"],

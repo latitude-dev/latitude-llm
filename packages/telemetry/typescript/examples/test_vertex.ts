@@ -11,9 +11,9 @@
  */
 
 import { VertexAI } from "@google-cloud/vertexai"
-import { capture, initLatitude } from "../src"
+import { capture, Latitude } from "../src"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,

@@ -222,7 +222,7 @@ Latitude expects the standard **parts-based** GenAI message format. Each message
 
 ## Existing Observability Stack
 
-Latitude works alongside your existing observability tools. Add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
+Latitude works alongside your existing observability tools. In TypeScript, `new Latitude()` detects common OpenTelemetry-compatible providers (Sentry, Datadog, New Relic, Honeycomb, and custom OTel SDKs) and attaches Latitude when possible; custom setups can also add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
 
 ### With Datadog (TypeScript)
 
@@ -247,38 +247,44 @@ provider.register()
 ### With Sentry (TypeScript)
 
 ```ts
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import * as Sentry from "@sentry/node"
-import {
-  LatitudeSpanProcessor,
-  registerLatitudeInstrumentations,
-} from "@latitude-data/telemetry"
+import { Latitude } from "@latitude-data/telemetry"
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 1.0,
 })
 
-const provider = new NodeTracerProvider({
-  spanProcessors: [
-    new LatitudeSpanProcessor(
-      process.env.LATITUDE_API_KEY!,
-      process.env.LATITUDE_PROJECT_SLUG!,
-    ),
-  ],
-})
-
-await registerLatitudeInstrumentations({
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
-  tracerProvider: provider,
 })
 
-provider.register()
+await latitude.ready
+```
+
+### With New Relic or Honeycomb (TypeScript)
+
+Initialize the vendor SDK first, then construct `new Latitude()`. New Relic's OpenTelemetry bridge and Honeycomb's `HoneycombSDK` both register OpenTelemetry providers that Latitude can reuse.
+
+```ts
+import { Latitude } from "@latitude-data/telemetry"
+
+// Initialize New Relic or Honeycomb first.
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
+
+await latitude.ready
 ```
 
 ### Other Platforms
 
-For any observability platform that supports OpenTelemetry (Jaeger, Grafana Tempo, Honeycomb, etc.), the pattern is the same: configure an additional OTLP exporter pointed at `https://ingest.latitude.so/v1/traces` with the required `Authorization` and `X-Latitude-Project` headers alongside your existing exporter.
+For any observability platform that supports OpenTelemetry (Jaeger, Grafana Tempo, etc.), the pattern is the same: initialize the existing SDK first and then construct `new Latitude()`, or configure an additional OTLP exporter pointed at `https://ingest.latitude.so/v1/traces` with the required `Authorization` and `X-Latitude-Project` headers alongside your existing exporter.
 
 ## Troubleshooting
 

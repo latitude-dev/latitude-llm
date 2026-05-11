@@ -56,11 +56,11 @@ The Vercel AI SDK has built-in OpenTelemetry support via its `experimental_telem
     Initialize Latitude **without** an `instrumentations` array. The Vercel AI SDK emits its own OpenTelemetry spans. Set `experimental_telemetry.isEnabled` to `true` on your AI SDK calls.
 
     ```ts
-    import { initLatitude, capture } from "@latitude-data/telemetry"
+    import { Latitude, capture } from "@latitude-data/telemetry"
     import { generateText } from "ai"
     import { openai } from "@ai-sdk/openai"
 
-    const latitude = initLatitude({
+    const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
       projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
     })

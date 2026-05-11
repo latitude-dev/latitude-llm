@@ -69,10 +69,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { Latitude, capture } from "@latitude-data/telemetry"
         import { VertexAI } from "@google-cloud/vertexai"
 
-        const latitude = initLatitude({
+        const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
           instrumentations: ["vertexai"],
