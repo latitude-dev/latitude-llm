@@ -788,11 +788,7 @@ describe("TraceRepository", () => {
     it("paginates ranked search on per-trace relevance, not per-chunk rows", async () => {
       const startTime = new Date(Date.UTC(2026, 0, 3, 0, 0, 0))
       const tag = "search-pagination-chunks"
-      const traces = [
-        TraceId(`${"7".repeat(31)}0`),
-        TraceId(`${"8".repeat(31)}0`),
-        TraceId(`${"9".repeat(31)}0`),
-      ]
+      const traces = [TraceId(`${"7".repeat(31)}0`), TraceId(`${"8".repeat(31)}0`), TraceId(`${"9".repeat(31)}0`)]
 
       await Effect.runPromise(
         insertJsonEachRow(
