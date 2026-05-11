@@ -1,6 +1,17 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { JobTitle } from "@domain/users"
-import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect, useToast } from "@repo/ui"
+import {
+  Button,
+  Checkbox,
+  CodeBlock,
+  CopyButton,
+  ProviderIcon,
+  Tabs,
+  Text,
+  useIsMobileDevice,
+  useMountEffect,
+  useToast,
+} from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -19,6 +30,7 @@ import { useProjectsCollection } from "../../../../../domains/projects/projects.
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { MobileGateScreen } from "./mobile-gate-screen.tsx"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -410,6 +422,7 @@ export function OnboardingFlow({
   readonly projectSlug: string
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
+  const isMobileDevice = useIsMobileDevice()
   const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
@@ -535,6 +548,8 @@ export function OnboardingFlow({
   const roleImageSrc = ROLE_MOCKUPS[role]
   const roleImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[roleImageSrc] ?? { width: 1024, height: 579 }
   const galleryImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[activeGalleryItem.image] ?? { width: 1024, height: 579 }
+
+  if (isMobileDevice) return <MobileGateScreen />
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
