@@ -167,3 +167,21 @@ export type {
 export { selectTraceEndItemsUseCase } from "./use-cases/select-trace-end-items.ts"
 export type { TraceEndItemDecisionCounts } from "./use-cases/summarize-trace-end-item-decisions.ts"
 export { summarizeTraceEndItemDecisions } from "./use-cases/summarize-trace-end-item-decisions.ts"
+
+// Claude Code Wrapped (server-only — intentionally omitted from browser.ts
+// since it pulls in per-org repositories that the browser bundle doesn't
+// need).
+export {
+  type ClaudeCodeWrappedEmailSender,
+  type ClaudeCodeWrappedRenderedEmail,
+  ClaudeCodeSpanReader,
+  type ClaudeCodeSpanReaderShape,
+  listProjectsWithClaudeCodeSpansUseCase,
+  type Report,
+  reportSchema,
+  type RunClaudeCodeWrappedDeps,
+  type RunClaudeCodeWrappedInput,
+  type RunClaudeCodeWrappedResult,
+  type RunClaudeCodeWrappedSkippedReason,
+  runClaudeCodeWrappedUseCase,
+} from "./claude-code-wrapped/index.ts"

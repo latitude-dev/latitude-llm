@@ -70,6 +70,7 @@ function setup(opts: SetupOpts = {}) {
     createdAt: new Date(),
     name: null,
     email: `${uid}@test.com`,
+    emailVerified: true,
     image: null,
   }))
 
