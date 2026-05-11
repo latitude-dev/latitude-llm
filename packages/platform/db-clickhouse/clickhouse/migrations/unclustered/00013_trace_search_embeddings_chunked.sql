@@ -22,6 +22,9 @@ PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
 ORDER BY (organization_id, project_id, trace_id, chunk_index)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
+-- Existing semantic rows remain in `trace_search_embeddings_legacy` after the
+-- swap; immediately run the trace-search backfill job in deploy so the new
+-- chunked table is repopulated from canonical trace conversations.
 RENAME TABLE
     trace_search_embeddings         TO trace_search_embeddings_legacy,
     trace_search_embeddings_chunked TO trace_search_embeddings;

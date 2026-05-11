@@ -12,7 +12,7 @@
 -- so we can't ALTER the live table to add `chunk_index` to the PK in place.
 -- Instead: create the new shape under a temporary name, then RENAME-swap. The
 -- live name picks up the new shape (empty); old data sits in `_legacy` until
--- it ages out via TTL or a follow-up cleanup migration drops it.
+-- the deploy backfill job repopulates the new table from canonical traces.
 
 CREATE TABLE IF NOT EXISTS trace_search_embeddings_chunked ON CLUSTER default
 (
@@ -43,8 +43,9 @@ ORDER BY (organization_id, project_id, trace_id, chunk_index)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
 -- Atomic-as-it-gets swap. After this, the original name points to the new
--- empty shape and writers / readers pick it up automatically. Old rows live
--- in `trace_search_embeddings_legacy` until a follow-up migration drops them.
+-- empty shape and writers / readers pick it up automatically. Existing rows
+-- remain in `trace_search_embeddings_legacy`; run the trace-search backfill
+-- job immediately in deploy to repopulate the new table from trace data.
 RENAME TABLE
     trace_search_embeddings         TO trace_search_embeddings_legacy,
     trace_search_embeddings_chunked TO trace_search_embeddings

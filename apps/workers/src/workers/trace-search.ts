@@ -8,6 +8,7 @@ import {
   TRACE_SEARCH_EMBEDDING_MODEL,
   TraceRepository,
   TraceSearchBudget,
+  type TraceSearchChunk,
   TraceSearchRepository,
 } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -90,6 +91,11 @@ const generateEmbedding = (searchText: string): Effect.Effect<readonly number[],
     }),
   )
 
+export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]) =>
+  [...chunks]
+    .filter((chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
+    .sort((a, b) => b.chunkIndex - a.chunkIndex)
+
 /**
  * Process a trace search refresh task:
  *  1. Load canonical conversation messages for the trace.
@@ -141,9 +147,10 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
 
-    const eligibleChunks = searchDocument.chunks.filter(
-      (chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
-    )
+    // Chunk indices are assigned in chronological order, so processing them in
+    // descending order prioritizes the tail when budget pressure means we may
+    // not get to every chunk.
+    const eligibleChunks = prioritizeChunksForEmbedding(searchDocument.chunks)
 
     if (eligibleChunks.length === 0) {
       logger.info(
