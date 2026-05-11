@@ -16,6 +16,8 @@ export interface TraceSearchEmbeddingRow {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly traceId: TraceId
+  /** 0-based contiguous chunk index within the trace. Part of the dedup key. */
+  readonly chunkIndex: number
   readonly startTime: Date
   readonly contentHash: string
   readonly embeddingModel: string
@@ -47,13 +49,15 @@ export interface TraceSearchRepositoryShape {
   upsertEmbedding(row: TraceSearchEmbeddingRow): Effect.Effect<void, RepositoryError>
 
   /**
-   * Check if a trace already has an embedding with the given content hash.
-   * Used to skip redundant embedding generation.
+   * Check if a chunk row exists for this trace at this chunk_index with the
+   * given content hash. Used to skip redundant per-chunk embedding work when
+   * the chunk's contents haven't changed since the last index.
    */
   hasEmbeddingWithHash(
     organizationId: OrganizationId,
     projectId: ProjectId,
     traceId: TraceId,
+    chunkIndex: number,
     contentHash: string,
   ): Effect.Effect<boolean, RepositoryError>
 }

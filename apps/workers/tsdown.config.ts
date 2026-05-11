@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown"
 
 export default defineConfig({
-  entry: ["src/server.ts"],
+  entry: ["src/server.ts", "src/scripts/backfill-trace-search.ts"],
   format: ["cjs"],
   target: "node25",
   outDir: "dist",
