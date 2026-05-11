@@ -780,6 +780,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      voyageai:
+        specifier: 'catalog:'
+        version: 0.2.1
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
