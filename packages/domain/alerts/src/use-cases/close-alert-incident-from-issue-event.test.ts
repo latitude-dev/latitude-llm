@@ -18,11 +18,13 @@ function createTestLayers(opts: { closedId: string | null }) {
     AlertIncidentRepository.of({
       insert: () => Effect.die("insert not used in this test"),
       findById: () => Effect.die("findById not used in this test"),
+      findOpen: () => Effect.succeed(null),
       closeOpen: (input) =>
         Effect.sync(() => {
           closed.push(input)
           return opts.closedId !== null ? AlertIncidentId(opts.closedId) : null
         }),
+      updateExitDwell: () => Effect.void,
       listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )

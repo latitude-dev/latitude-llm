@@ -21,7 +21,9 @@ function createTestLayers() {
           inserted.push(incident)
         }),
       findById: () => Effect.die("findById not used in this test"),
+      findOpen: () => Effect.succeed(null),
       closeOpen: () => Effect.succeed(null),
+      updateExitDwell: () => Effect.void,
       listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )

@@ -192,6 +192,7 @@ const createScoreAnalyticsRepository = (input: {
     countDistinctTracesByTimeRange: () => Effect.succeed(input.totalTraces ?? 0),
     listTracesByIssue: () => Effect.die("Unexpected listTracesByIssue"),
     countTracesByIssue: () => Effect.die("Unexpected countTracesByIssue"),
+    escalationSignalsByIssues: () => Effect.die("Unexpected escalationSignalsByIssues"),
   }
 
   return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }

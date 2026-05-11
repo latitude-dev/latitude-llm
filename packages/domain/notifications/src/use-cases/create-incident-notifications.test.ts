@@ -51,12 +51,16 @@ function setup(opts: SetupOpts = {}) {
     startedAt: new Date("2026-05-07T10:00:00Z"),
     endedAt: null,
     createdAt: new Date("2026-05-07T10:00:00Z"),
+    entrySignals: null,
+    exitEligibleSince: null,
     ...opts.incident,
   })
 
   const incidentRepo: AlertIncidentRepositoryShape = {
     insert: () => Effect.die("insert not used"),
+    findOpen: () => Effect.die("findOpen not used"),
     closeOpen: () => Effect.die("closeOpen not used"),
+    updateExitDwell: () => Effect.die("updateExitDwell not used"),
     findById: (id) =>
       id === incidentId ? Effect.succeed(incident) : Effect.fail(new NotFoundError({ entity: "AlertIncident", id })),
     listByProjectInRange: () => Effect.die("listByProjectInRange not used"),
