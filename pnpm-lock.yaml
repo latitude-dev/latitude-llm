@@ -10,8 +10,8 @@ catalogs:
       specifier: 1.6.9
       version: 1.6.9
     '@better-auth/stripe':
-      specifier: 1.6.9
-      version: 1.6.9
+      specifier: 1.6.10
+      version: 1.6.10
     '@biomejs/biome':
       specifier: 2.4.6
       version: 2.4.6
@@ -1656,7 +1656,7 @@ importers:
         version: 1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0)
       '@better-auth/stripe':
         specifier: 'catalog:'
-        version: 1.6.9(@better-auth/core@1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0))(better-auth@1.6.9(f7ab4fb454abba9c34f9f53d652fec1c))(better-call@1.3.5(zod@4.3.6))(stripe@22.1.0(@types/node@25.6.2))
+        version: 1.6.10(@better-auth/core@1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0))(better-auth@1.6.9(f7ab4fb454abba9c34f9f53d652fec1c))(better-call@1.3.5(zod@4.3.6))(stripe@22.1.0(@types/node@25.6.2))
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
@@ -3155,11 +3155,11 @@ packages:
       prisma:
         optional: true
 
-  '@better-auth/stripe@1.6.9':
-    resolution: {integrity: sha512-ONXc1GkANZImGjL9pAR1k1ZPwBrFpxE4V/QLsZHp+c+7j4CCW5N2ozZ3p82gfj+6Svi7t2xAt6vbr3M68zVsvQ==}
+  '@better-auth/stripe@1.6.10':
+    resolution: {integrity: sha512-TSrzDFMvyQuZPb2kVJlOH6kCKXOc7SGnrVtbodmXu50jjKXCPCCH+/O89w25KyDRFdVtra/FnilutXjk9Cw80A==}
     peerDependencies:
-      '@better-auth/core': ^1.6.9
-      better-auth: ^1.6.9
+      '@better-auth/core': ^1.6.10
+      better-auth: ^1.6.10
       better-call: 1.3.5
       stripe: ^18 || ^19 || ^20 || ^21 || ^22
 
@@ -13267,7 +13267,7 @@ snapshots:
     optionalDependencies:
       '@prisma/client': 5.22.0
 
-  '@better-auth/stripe@1.6.9(@better-auth/core@1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0))(better-auth@1.6.9(f7ab4fb454abba9c34f9f53d652fec1c))(better-call@1.3.5(zod@4.3.6))(stripe@22.1.0(@types/node@25.6.2))':
+  '@better-auth/stripe@1.6.10(@better-auth/core@1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0))(better-auth@1.6.9(f7ab4fb454abba9c34f9f53d652fec1c))(better-call@1.3.5(zod@4.3.6))(stripe@22.1.0(@types/node@25.6.2))':
     dependencies:
       '@better-auth/core': 1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.16)(nanostores@1.3.0)
       better-auth: 1.6.9(f7ab4fb454abba9c34f9f53d652fec1c)
