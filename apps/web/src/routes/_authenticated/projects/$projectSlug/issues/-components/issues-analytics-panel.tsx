@@ -230,7 +230,7 @@ export function IssuesAnalyticsPanel({
                 height={160}
                 showYAxis={false}
                 xAxisLabelFontSize={10}
-                ariaLabel="Issue occurrences by day"
+                ariaLabel="Issue occurrences over time"
                 formatTooltip={formatHistogramTooltip}
                 onSelect={onRangeSelect ? handleSelect : undefined}
                 {...(overlay ? { overlay } : {})}
