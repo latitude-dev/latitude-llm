@@ -97,6 +97,11 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
           projectId: issueWithLifecycle.projectId,
           issueId: issueWithLifecycle.id,
           escalatedAt: now.toISOString(),
+          // Legacy flat-multiplier detector — no seasonal snapshot to carry.
+          // The seasonal rewrite landing in a later commit populates this; the
+          // worker treats null as "incident opens without snapshot, exits via
+          // band-shape + 72h timeout only".
+          entrySignals: null,
         },
       })
       return {
@@ -116,6 +121,8 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
           projectId: issueWithLifecycle.projectId,
           issueId: issueWithLifecycle.id,
           endedAt: now.toISOString(),
+          // Pre-rewrite detector only knows the threshold-cross exit shape.
+          reason: "threshold",
         },
       })
       return {

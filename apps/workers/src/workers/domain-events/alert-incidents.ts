@@ -2,6 +2,7 @@ import {
   type AlertIncidentKind,
   closeAlertIncidentFromIssueEventUseCase,
   createAlertIncidentFromIssueEventUseCase,
+  type EntrySignalsSnapshot,
 } from "@domain/alerts"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
@@ -25,6 +26,7 @@ const createIncidentFor = (
     readonly projectId: string
     readonly issueId: string
     readonly occurredAt: Date
+    readonly entrySignals?: EntrySignalsSnapshot | null
   },
 ) => {
   const pgClient = getPostgresClient()
@@ -35,6 +37,7 @@ const createIncidentFor = (
     projectId: payload.projectId,
     issueId: payload.issueId,
     occurredAt: payload.occurredAt,
+    entrySignals: payload.entrySignals ?? null,
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
     Effect.tap((incident) =>
@@ -57,6 +60,7 @@ const closeIncidentFor = (
     readonly projectId: string
     readonly issueId: string
     readonly endedAt: Date
+    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
   },
 ) => {
   const pgClient = getPostgresClient()
@@ -67,6 +71,9 @@ const closeIncidentFor = (
     projectId: payload.projectId,
     issueId: payload.issueId,
     endedAt: payload.endedAt,
+    // Omit when undefined: `exactOptionalPropertyTypes` rejects
+    // `{ reason: undefined }` against the optional `reason?:` field.
+    ...(payload.reason !== undefined ? { reason: payload.reason } : {}),
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
     Effect.tap(() => Effect.sync(() => logger.info(`alert_incident closed kind=${kind} issueId=${payload.issueId}`))),
@@ -102,6 +109,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         projectId: payload.projectId,
         issueId: payload.issueId,
         occurredAt: new Date(payload.escalatedAt),
+        entrySignals: payload.entrySignals,
       }),
 
     "issue-escalation-ended": (payload) =>
@@ -110,6 +118,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         projectId: payload.projectId,
         issueId: payload.issueId,
         endedAt: new Date(payload.endedAt),
+        reason: payload.reason,
       }),
   })
 }

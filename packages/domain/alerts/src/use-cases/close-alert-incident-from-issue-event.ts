@@ -10,6 +10,14 @@ export interface CloseAlertIncidentFromIssueEventInput {
   readonly projectId: string
   readonly issueId: string
   readonly endedAt: Date
+  /**
+   * Forwarded to the `IncidentClosed` outbox event so downstream consumers
+   * (notifications copy, dashboards) can tell whether the band exit, the
+   * absolute-rate backstop, or the 72h timeout closed the incident. Optional
+   * because legacy `IssueEscalationEnded` events emitted before the seasonal
+   * detector landed don't carry a reason.
+   */
+  readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
 }
 
 export type CloseAlertIncidentFromIssueEventError = RepositoryError
@@ -50,6 +58,9 @@ export const closeAlertIncidentFromIssueEventUseCase = (input: CloseAlertInciden
             kind: input.kind,
             sourceType: "issue",
             sourceId: input.issueId,
+            // Omit when undefined: `exactOptionalPropertyTypes` rejects
+            // `{ reason: undefined }` against the optional `reason?:` field.
+            ...(input.reason !== undefined ? { reason: input.reason } : {}),
           },
         })
       }),

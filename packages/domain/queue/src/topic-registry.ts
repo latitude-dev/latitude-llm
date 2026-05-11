@@ -114,12 +114,24 @@ const _registry = {
       readonly projectId: string
       readonly issueId: string
       readonly escalatedAt: string
+      readonly entrySignals: {
+        readonly expected1h: number
+        readonly expected6hPerHour: number
+        readonly stddev1h: number
+        readonly stddev6hPerHour: number
+        readonly kShort: number
+        readonly kLong: number
+        readonly entryThreshold1h: number
+        readonly entryThreshold6hPerHour: number
+        readonly entryCount24h: number
+      } | null
     }
     "issue-escalation-ended": {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string
       readonly endedAt: string
+      readonly reason: "threshold" | "absolute-rate-drop" | "timeout"
     }
   }>(),
 
