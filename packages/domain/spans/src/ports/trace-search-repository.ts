@@ -60,19 +60,6 @@ export interface TraceSearchRepositoryShape {
     chunkIndex: number,
     contentHash: string,
   ): Effect.Effect<boolean, RepositoryError>
-
-  /**
-   * Delete chunk rows for this trace whose `chunk_index >= chunkIndexFloor`.
-   * Used after re-indexing a trace with fewer chunks than its previous
-   * indexing produced (e.g. an agent loop got pruned), so stale tail chunks
-   * don't linger in the cosine scan and skew `max() GROUP BY trace_id`.
-   */
-  deleteChunksAtOrAbove(
-    organizationId: OrganizationId,
-    projectId: ProjectId,
-    traceId: TraceId,
-    chunkIndexFloor: number,
-  ): Effect.Effect<void, RepositoryError>
 }
 
 export class TraceSearchRepository extends Context.Service<TraceSearchRepository, TraceSearchRepositoryShape>()(

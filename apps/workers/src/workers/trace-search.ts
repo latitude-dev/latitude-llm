@@ -94,11 +94,10 @@ const generateEmbedding = (searchText: string): Effect.Effect<readonly number[],
  * Process a trace search refresh task:
  *  1. Load canonical conversation messages for the trace.
  *  2. Build the search document (lexical text + per-chunk slices).
- *  3. Upsert the whole-trace lexical document.
+ *  3. Upsert the lexical document from canonical trace text. This is built
+ *     independently of which chunks are selected for embeddings.
  *  4. For each chunk above the min-length floor, dedup-by-hash → budget-gate →
  *     embed → upsert one row per chunk.
- *  5. Delete trailing stale chunk rows from a previous indexing whose
- *     chunk_index is past the new chunk count.
  */
 const processRefreshTrace = (payload: RefreshTracePayload) =>
   Effect.gen(function* () {
@@ -150,13 +149,6 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       logger.info(
         `Trace ${traceId} produced no embedding-eligible chunks (each below ${TRACE_SEARCH_EMBEDDING_MIN_LENGTH} chars), skipping semantic index`,
       )
-      // Still drop any leftover chunk rows from a previous indexing.
-      yield* traceSearchRepo.deleteChunksAtOrAbove(
-        OrganizationId(organizationId),
-        ProjectId(projectId),
-        TraceId(traceId),
-        0,
-      )
       return
     }
 
@@ -181,8 +173,8 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
 
       // Budget gate per-chunk. If any window would overflow we stop
       // embedding remaining chunks for this trace so we don't end up with
-      // a partial-but-skewed chunk set; lexical document still covers the
-      // whole conversation. Tracker errors fail open.
+      // a partial-but-skewed chunk set; the lexical document was already
+      // written independently. Tracker errors fail open.
       const estimatedTokens = Math.ceil(chunk.text.length / 4)
       const budgetOk = yield* budget.tryConsume(OrganizationId(organizationId), estimatedTokens).pipe(
         Effect.tapError((error) =>
@@ -218,17 +210,6 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       })
       embeddedCount++
     }
-
-    // Drop any leftover trailing chunks from a previous indexing that had
-    // more chunks than the current one (e.g. a re-indexed trace that lost
-    // some turns). The PK includes chunk_index so we can target them
-    // precisely without disturbing the surviving ones.
-    yield* traceSearchRepo.deleteChunksAtOrAbove(
-      OrganizationId(organizationId),
-      ProjectId(projectId),
-      TraceId(traceId),
-      eligibleChunks.length,
-    )
 
     logger.info(
       `Indexed semantic search embeddings for trace ${traceId}: ${embeddedCount} embedded, ${skippedDuplicate} unchanged`,

@@ -16,7 +16,7 @@ export interface TraceSearchDocumentInput {
   readonly messages: readonly GenAIMessage[]
 }
 
-/** One embedding-shaped slice of the conversation. See `specs/trace-search-chunking.md`. */
+/** One embedding-shaped slice of the conversation. */
 export interface TraceSearchChunk {
   readonly chunkIndex: number
   readonly text: string
@@ -102,9 +102,7 @@ function extractTurns(messages: readonly GenAIMessage[]): string[] {
  * carries more retrieval signal than the head (user's framing).
  *
  * Both walks soft-cap on their boundary: the turn that crosses is still
- * included fully (atomic-turn rule), then the walk stops. If the tail walk
- * somehow consumed every turn, the head guarantee force-includes turn 0 so
- * the opening never fully drops.
+ * included fully (atomic-turn rule), then the walk stops.
  */
 function selectHeadTailTurns(turns: readonly string[]): string[] {
   const tailIndices = new Set<number>()
@@ -122,13 +120,6 @@ function selectHeadTailTurns(turns: readonly string[]): string[] {
     if (headAccum >= TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS) break
     headIndices.push(i)
     headAccum += turns[i]!.length
-  }
-
-  if (headIndices.length === 0 && turns.length > 0) {
-    // Head guarantee — keep the opening of the conversation even when tail
-    // ate everything.
-    headIndices.push(0)
-    tailIndices.delete(0)
   }
 
   const sortedTail = [...tailIndices].sort((a, b) => a - b)

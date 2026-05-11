@@ -103,37 +103,4 @@ describe("TraceSearchRepository", () => {
       ).toBe(false)
     })
   })
-
-  describe("deleteChunksAtOrAbove", () => {
-    it("removes only the trailing chunks above the floor", async () => {
-      const baseHash = "delc123".repeat(8) + "x"
-      // Seed three chunks for one trace.
-      for (const chunkIndex of [0, 1, 2]) {
-        await Effect.runPromise(
-          repo.upsertEmbedding({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            traceId: TEST_TRACE_ID,
-            chunkIndex,
-            startTime: new Date(),
-            contentHash: baseHash,
-            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-            embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1),
-          }),
-        )
-      }
-
-      await Effect.runPromise(repo.deleteChunksAtOrAbove(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 1))
-
-      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 0, baseHash))).toBe(
-        true,
-      )
-      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 1, baseHash))).toBe(
-        false,
-      )
-      expect(await Effect.runPromise(repo.hasEmbeddingWithHash(ORG_ID, PROJECT_ID, TEST_TRACE_ID, 2, baseHash))).toBe(
-        false,
-      )
-    })
-  })
 })

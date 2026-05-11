@@ -55,12 +55,12 @@ import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-sub
 
 /**
  * Cap on the semantic-side **chunk-row** candidate pool. Each trace can carry
- * multiple chunks now (see `specs/trace-search-chunking.md`), so the cap is
- * sized for chunks, not traces. Cosine scan stays linear over the embeddings
- * table; above ~30k chunk rows per project latency becomes user-visible. The
- * cap trades recall on the long tail for bounded query time — at the average
- * ~3-chunks-per-trace ratio that's ~10k traces, comfortably above realistic
- * project sizes inside the 30-day TTL window.
+ * multiple chunks now, so the cap is sized for chunks, not traces. Cosine scan
+ * stays linear over the embeddings table; above ~30k chunk rows per project
+ * latency becomes user-visible. The cap trades recall on the long tail for
+ * bounded query time — at the average ~3-chunks-per-trace ratio that's ~10k
+ * traces, comfortably above realistic project sizes inside the 30-day TTL
+ * window.
  */
 const SEMANTIC_SCAN_LIMIT = 30_000
 
@@ -134,9 +134,10 @@ function buildLexicalSearchSubquery(phrases: readonly string[]): {
  * embedding. The embedding table holds one row per trace **chunk**, so we
  * compute per-chunk cosine similarity and roll up to a per-trace score via
  * `max(...) GROUP BY trace_id` — a trace's relevance is its best-matching
- * chunk's similarity. The inner `ORDER BY cosineDistance ASC LIMIT N` bounds
- * the per-project cosine scan cost; the outer rollup collapses surviving
- * chunks back into one row per trace for the downstream join.
+ * chunk's similarity. The inner `ORDER BY semantic_score DESC LIMIT N` bounds
+ * the per-project cosine scan cost by keeping the nearest chunks first; the
+ * outer rollup collapses surviving chunks back into one row per trace for the
+ * downstream join.
  */
 function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
   subquery: string
@@ -153,7 +154,7 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
                 FROM trace_search_embeddings
                 WHERE organization_id = {organizationId:String}
                   AND project_id = {projectId:String}
-                ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
+                ORDER BY semantic_score DESC
                 LIMIT {semanticScanLimit:UInt32}
               )
               GROUP BY trace_id`,

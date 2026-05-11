@@ -51,10 +51,8 @@ export const TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS = 12_000
  * `TRACE_SEARCH_DOCUMENT_MAX_LENGTH` so total chunked text per trace stays
  * roughly bounded.
  *
- * The head walk runs second and is hard-skipped if the tail walk already
- * claimed every turn — except for turn 0, which the chunker force-includes
- * so the opening of the conversation never fully drops out (see the
- * "head guarantee" in `specs/trace-search-chunking.md`).
+ * The head walk runs second and stops before revisiting any turn already
+ * claimed by the tail walk.
  */
 export const TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS = 8_000
 

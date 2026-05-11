@@ -178,17 +178,37 @@ describe("buildTraceSearchDocument", () => {
       expect(allChunkText).not.toContain("tag15")
     })
 
-    it("guarantees at least one head turn even when the tail walk consumed everything", async () => {
-      // One huge final turn → tail walk grabs it (atomic-turn overshoot).
-      // Head guarantee force-includes turn 0 so the opening survives.
+    it("does not duplicate turn 0 when the tail walk already consumed every turn", async () => {
+      // A single huge turn is enough to exceed the document budget. The tail
+      // walk already includes it via atomic-turn overshoot, so no separate
+      // head guarantee is needed.
       const document = await build([
         textMessage("user", "first user opener"),
         textMessage("assistant", "y".repeat(TRACE_SEARCH_DOCUMENT_MAX_LENGTH * 2)),
       ])
 
-      const headChunk = document.chunks[0]
-      expect(headChunk?.text).toContain("first user opener")
+      const allChunkText = document.chunks.map((c) => c.text).join(" ")
+      expect(countOccurrences(allChunkText, "first user opener")).toBe(1)
       expect(document.chunks.length).toBeGreaterThan(1)
+    })
+
+    it("does not duplicate turns when head and tail walks meet", async () => {
+      // Total is just over the trace budget while each turn is small enough to
+      // avoid slicing. Tail and head selection should meet without repeating
+      // the same turn in both regions.
+      const messages: GenAIMessage[] = []
+      for (let i = 0; i < 22; i++) {
+        messages.push(textMessage("user", `marker-${i.toString().padStart(2, "0")} ${"x".repeat(900)}`))
+        messages.push(textMessage("assistant", "ok"))
+      }
+
+      const document = await build(messages)
+      const allChunkText = document.chunks.map((c) => c.text).join(" ")
+
+      for (let i = 0; i < 22; i++) {
+        const marker = `marker-${i.toString().padStart(2, "0")}`
+        expect(countOccurrences(allChunkText, marker)).toBeLessThanOrEqual(1)
+      }
     })
 
     it("respects budget allocation: ~12k tail + ~8k head", async () => {
@@ -257,4 +277,8 @@ describe("buildTraceSearchDocument", () => {
 
 function hasLoneSurrogate(text: string): boolean {
   return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text)
+}
+
+function countOccurrences(text: string, needle: string): number {
+  return text.split(needle).length - 1
 }
