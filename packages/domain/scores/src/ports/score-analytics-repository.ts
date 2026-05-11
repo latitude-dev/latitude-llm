@@ -74,6 +74,32 @@ export interface IssueOccurrenceAggregate {
   readonly lastSeenAt: Date
 }
 
+/**
+ * Signals consumed by the seasonal-anomaly escalation detector.
+ *
+ * `recent_*` are sliding counts over the trailing window read from raw
+ * `scores`. `expected_*` and `stddev_*` are pooled across the same
+ * (day-of-week, hour ± 1) bins over the last `SEASONAL_HISTORY_WEEKS`
+ * weeks, read from the `scores_hourly_buckets` MV. The 6-hour window
+ * lives in a per-hour rate (`expected6hPerHour`, `recent6h / 6`) so the
+ * two windows compare in the same unit.
+ *
+ * `samplesCount` is how many distinct prior weeks contributed any data to
+ * the (dow, hour) bin pool — fewer means the band is on shakier ground
+ * and the helper inflates `k` in response.
+ */
+export interface IssueEscalationSignals {
+  readonly issueId: IssueId
+  readonly recent1h: number
+  readonly recent6h: number
+  readonly recent24h: number
+  readonly expected1h: number
+  readonly expected6hPerHour: number
+  readonly stddev1h: number
+  readonly stddev6hPerHour: number
+  readonly samplesCount: number
+}
+
 /** A single time-bucket for issue occurrence time-series. */
 export interface IssueOccurrenceBucket {
   readonly bucket: string // ISO date string
@@ -199,6 +225,23 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueIds: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
+
+  // -- Per-issue signals for the seasonal-anomaly escalation detector --------
+  // Reads:
+  //   • sliding 1h / 6h / 24h counts from raw `scores` (small scan, PK lookup)
+  //   • pooled (dow, hour ± 1) × prior weeks expected/stddev from the
+  //     `scores_hourly_buckets` materialized view (constant cost regardless of
+  //     score volume).
+  // The repository never applies the σ floor or the cold-start `k` inflation —
+  // those rules live in the `evaluateSeasonalEscalation` helper so the data
+  // returned here is the raw observation.
+  escalationSignalsByIssues(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+    readonly now?: Date // overridable for tests; defaults to now() inside the query
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly IssueEscalationSignals[], RepositoryError, ChSqlClient>
 
   // -- Issue tag aggregation across affected traces --------------------------
   // `timeRange.from` is required to keep the underlying scans partition-bounded

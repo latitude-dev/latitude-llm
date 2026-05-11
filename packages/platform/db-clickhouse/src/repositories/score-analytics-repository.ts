@@ -1,5 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
+  IssueEscalationSignals,
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
   IssueTagsAggregate,
@@ -15,7 +16,7 @@ import type {
   SessionScoreRollup,
   TraceScoreRollup,
 } from "@domain/scores"
-import { ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, SEASONAL_BUCKET_POOLING_HOURS, SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 import {
   ChSqlClient,
   type ChSqlClientShape,
@@ -77,6 +78,32 @@ const scopeParams = (organizationId: OrganizationId, projectId: ProjectId) => ({
   projectId: projectId as string,
 })
 
+const HOUR_MS = 60 * 60 * 1000
+const WEEK_MS = 7 * 24 * HOUR_MS
+
+/**
+ * Builds the 12 (or `(2 * pooling + 1) * weeks`) anchor bucket timestamps
+ * used as the 1h-sample centers for the seasonal escalation read. Each
+ * anchor's 6h sample sums six consecutive MV rows ending at the anchor.
+ * Returned in epoch-milliseconds for caller-side mapping convenience.
+ */
+const computeSeasonalAnchors = (now: Date): readonly number[] => {
+  const alignedHourMs = Math.floor(now.getTime() / HOUR_MS) * HOUR_MS
+  const anchors: number[] = []
+  for (let week = 1; week <= SEASONAL_HISTORY_WEEKS; week++) {
+    for (let offset = -SEASONAL_BUCKET_POOLING_HOURS; offset <= SEASONAL_BUCKET_POOLING_HOURS; offset++) {
+      anchors.push(alignedHourMs - week * WEEK_MS + offset * HOUR_MS)
+    }
+  }
+  return anchors
+}
+
+const toClickHouseDateTime = (ms: number): string => {
+  // `DateTime('UTC')` accepts `"YYYY-MM-DD HH:MM:SS"`.
+  const iso = new Date(ms).toISOString()
+  return `${iso.slice(0, 10)} ${iso.slice(11, 19)}`
+}
+
 // ---------------------------------------------------------------------------
 // Row types for ClickHouse JSON responses
 // ---------------------------------------------------------------------------
@@ -136,6 +163,19 @@ type IssueOccurrenceRow = {
 
 type IssueOccurrenceBucketRow = {
   bucket: string
+  count: string
+}
+
+type RecentCountsRow = {
+  issue_id: string
+  recent_1h: string
+  recent_6h: string
+  recent_24h: string
+}
+
+type HourlyBucketRow = {
+  issue_id: string
+  ts_hour: string
   count: string
 }
 
@@ -241,6 +281,90 @@ const toIssueOccurrenceBucket = (row: IssueOccurrenceBucketRow): IssueOccurrence
   bucket: row.bucket,
   count: Number(row.count),
 })
+
+/**
+ * Merge the sliding-recents read and the seasonal-bucket read into the
+ * `IssueEscalationSignals` shape consumed by the escalation detector.
+ *
+ * For each issue, computes the 12 (or `(2P+1) × N_WEEKS`) per-anchor 1h and
+ * 6h-span samples by indexing into the MV bucket map, then aggregates them
+ * into mean / stddev. The σ floor is applied in the helper, not here — this
+ * function emits the raw observation.
+ */
+const mergeEscalationSignals = (input: {
+  readonly issueIds: readonly string[]
+  readonly anchors: readonly number[]
+  readonly nowMs: number
+  readonly recentRows: readonly RecentCountsRow[]
+  readonly bucketRows: readonly HourlyBucketRow[]
+}): readonly IssueEscalationSignals[] => {
+  const { issueIds, anchors, recentRows, bucketRows } = input
+  // (issueId, ts_hour_ms) → count
+  const bucketMap = new Map<string, Map<number, number>>()
+  for (const row of bucketRows) {
+    const issueId = normalizeCHString(row.issue_id)
+    const tsHourMs = parseCHDate(row.ts_hour).getTime()
+    const count = Number(row.count)
+    let perIssue = bucketMap.get(issueId)
+    if (!perIssue) {
+      perIssue = new Map()
+      bucketMap.set(issueId, perIssue)
+    }
+    perIssue.set(tsHourMs, (perIssue.get(tsHourMs) ?? 0) + count)
+  }
+
+  const recentByIssue = new Map<string, RecentCountsRow>()
+  for (const row of recentRows) {
+    recentByIssue.set(normalizeCHString(row.issue_id), row)
+  }
+
+  const meanStddev = (values: readonly number[]): { readonly mean: number; readonly stddev: number } => {
+    if (values.length === 0) return { mean: 0, stddev: 0 }
+    const mean = values.reduce((acc, v) => acc + v, 0) / values.length
+    const variance = values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length
+    return { mean, stddev: Math.sqrt(variance) }
+  }
+
+  return issueIds.map<IssueEscalationSignals>((issueId) => {
+    const recent = recentByIssue.get(issueId)
+    const perIssueBuckets = bucketMap.get(issueId) ?? new Map<number, number>()
+
+    const oneHourSamples: number[] = []
+    const sixHourPerHourSamples: number[] = []
+    const weeksContributing = new Set<number>()
+
+    for (const anchorMs of anchors) {
+      const oneH = perIssueBuckets.get(anchorMs) ?? 0
+      let sixH = 0
+      for (let i = 0; i <= 5; i++) {
+        sixH += perIssueBuckets.get(anchorMs - i * HOUR_MS) ?? 0
+      }
+      oneHourSamples.push(oneH)
+      sixHourPerHourSamples.push(sixH / 6)
+      if (oneH > 0 || sixH > 0) {
+        // bucket "week" = how many full weeks ago — i.e. floor((now - anchor) / 7d)
+        // We don't care about offset within the pool when counting samples.
+        const weekIndex = Math.round((input.nowMs - anchorMs) / WEEK_MS)
+        weeksContributing.add(weekIndex)
+      }
+    }
+
+    const oneStats = meanStddev(oneHourSamples)
+    const sixStats = meanStddev(sixHourPerHourSamples)
+
+    return {
+      issueId: toIssueId(issueId),
+      recent1h: recent ? Number(recent.recent_1h) : 0,
+      recent6h: recent ? Number(recent.recent_6h) : 0,
+      recent24h: recent ? Number(recent.recent_24h) : 0,
+      expected1h: oneStats.mean,
+      expected6hPerHour: sixStats.mean,
+      stddev1h: oneStats.stddev,
+      stddev6hPerHour: sixStats.stddev,
+      samplesCount: weeksContributing.size,
+    }
+  })
+}
 
 const toIssueWindowMetric = (row: IssueWindowMetricRow): IssueWindowMetric => ({
   issueId: toIssueId(normalizeCHString(row.issue_id)),
@@ -592,6 +716,87 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+        }),
+
+      // -- escalationSignalsByIssues -----------------------------------------
+      // Two reads merged in TypeScript:
+      //   1. Sliding 1h / 6h / 24h counts from raw `scores` (single-issue PK
+      //      lookup, tiny scan over the trailing 24h).
+      //   2. Same-(dow, hour ± 1) bucket counts from `scores_hourly_buckets`
+      //      for the prior `SEASONAL_HISTORY_WEEKS` weeks. 6h-band samples are
+      //      reconstructed from six consecutive bucket rows ending at each
+      //      anchor; aggregation to mean/stddev happens in TS because the
+      //      sample set is small (12 anchors × N issues).
+      escalationSignalsByIssues: ({ organizationId, projectId, issueIds, now, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          const nowMs = (now ?? new Date()).getTime()
+          const anchors = computeSeasonalAnchors(now ?? new Date())
+          // Buckets we need from the MV: each anchor + the 5 hourly buckets
+          // preceding it (for the 6h-span sum). Deduplicated since 6h spans
+          // can overlap across adjacent hour-offsets.
+          const neededBucketSet = new Set<number>()
+          for (const anchorMs of anchors) {
+            for (let i = 0; i <= 5; i++) neededBucketSet.add(anchorMs - i * HOUR_MS)
+          }
+          const neededBuckets = [...neededBucketSet].map(toClickHouseDateTime)
+
+          const [recentRows, bucketRows] = yield* Effect.all(
+            [
+              chSqlClient.query<RecentCountsRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          issue_id,
+                          countIf(created_at >= now() - INTERVAL 1 HOUR)  AS recent_1h,
+                          countIf(created_at >= now() - INTERVAL 6 HOUR)  AS recent_6h,
+                          countIf(created_at >= now() - INTERVAL 1 DAY)   AS recent_24h
+                        FROM scores
+                        WHERE ${scopeClause(options)}
+                          AND issue_id IN ({issueIds:Array(String)})
+                          AND created_at >= now() - INTERVAL 1 DAY
+                        GROUP BY issue_id`,
+                  query_params: {
+                    ...scopeParams(organizationId, projectId),
+                    issueIds: Array.from(issueIds) as string[],
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<RecentCountsRow>()
+              }),
+              chSqlClient.query<HourlyBucketRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          issue_id,
+                          ts_hour,
+                          sum(count) AS count
+                        FROM scores_hourly_buckets
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND issue_id IN ({issueIds:Array(String)})
+                          AND ts_hour IN ({tsHours:Array(DateTime)})
+                        GROUP BY issue_id, ts_hour`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    issueIds: Array.from(issueIds) as string[],
+                    tsHours: neededBuckets,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<HourlyBucketRow>()
+              }),
+            ],
+            { concurrency: 2 },
+          )
+
+          return mergeEscalationSignals({
+            issueIds: issueIds.map((id) => id as string),
+            anchors,
+            nowMs,
+            recentRows,
+            bucketRows,
+          })
         }),
 
       // -- aggregateTagsByIssues ---------------------------------------------
