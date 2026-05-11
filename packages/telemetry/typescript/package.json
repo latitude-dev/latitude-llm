@@ -74,7 +74,7 @@
     "ai": "^6.0.168",
     "cohere-ai": "^7.21.0",
     "llamaindex": "^0.12.1",
-    "openai": "^6.33.0",
+    "openai": "^6.37.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

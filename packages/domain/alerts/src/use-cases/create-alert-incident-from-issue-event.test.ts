@@ -22,6 +22,7 @@ function createTestLayers() {
         }),
       findById: () => Effect.die("findById not used in this test"),
       closeOpen: () => Effect.succeed(null),
+      listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )
 

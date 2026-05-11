@@ -111,6 +111,9 @@ export const markAllNotificationsSeen = createServerFn({ method: "POST" }).handl
 })
 
 const DAY_MS = 24 * 60 * 60 * 1000
+// 12h buckets — matches the issue detail drawer, gives ~4 bars across the
+// ±1 day window the notification card renders.
+const NOTIFICATION_TREND_BUCKET_SECONDS = 12 * 60 * 60
 
 interface IncidentTrendResult {
   readonly buckets: readonly IssueOccurrenceBucket[]
@@ -158,6 +161,7 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
           projectId: incident.projectId,
           issueIds: [IssueId(incident.sourceId)],
           timeRange: { from, to },
+          bucketSeconds: NOTIFICATION_TREND_BUCKET_SECONDS,
         })
       }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, organizationId), withTracing),
     )

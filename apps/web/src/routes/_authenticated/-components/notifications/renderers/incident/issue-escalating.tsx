@@ -77,6 +77,7 @@ function EscalatingTrend({
     <div className="pt-2">
       <IssueTrendBar
         buckets={data?.buckets ?? []}
+        bucketSeconds={12 * 60 * 60}
         height={48}
         isLoading={isLoading}
         showLabels={false}

@@ -135,7 +135,12 @@ const createScoreAnalyticsRepository = (input: {
 }) => {
   const windowMetricInputs: unknown[] = []
   const aggregateInputs: unknown[] = []
-  const histogramInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
+  const histogramInputs: Array<{
+    issueIds: readonly string[]
+    from: Date
+    to: Date
+    bucketSeconds: number
+  }> = []
   const trendInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
   const tagsInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date | undefined }> = []
 
@@ -165,12 +170,13 @@ const createScoreAnalyticsRepository = (input: {
         windowMetricInputs.push(windowMetricInput)
         return input.windowMetrics
       }),
-    histogramByIssues: ({ issueIds, timeRange }) =>
+    histogramByIssues: ({ issueIds, timeRange, bucketSeconds }) =>
       Effect.sync(() => {
         histogramInputs.push({
           issueIds,
           from: timeRange.from ?? new Date(0),
           to: timeRange.to ?? new Date(0),
+          bucketSeconds,
         })
         return input.histogramBuckets ?? []
       }),
@@ -495,7 +501,10 @@ describe("listIssuesUseCase", () => {
     expect(result.occurrencesSum).toBe(5)
     expect(result.items[0]?.affectedTracesPercent).toBe(0.5)
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])
-    expect(result.analytics.histogram).toHaveLength(7)
+    // Adaptive bucketing over 7 days picks 4h buckets → 6 bars/day × 7 days = 42.
+    expect(result.analytics.histogram).toHaveLength(42)
+    expect(result.analytics.histogramBucketSeconds).toBe(4 * 60 * 60)
+    // Per-issue trend in the list keeps the daily 14-bar mini-bar.
     expect(result.items[0]?.trend).toHaveLength(14)
     expect(listByIssueIdsCalls).toEqual([[activeIssue.id]])
     expect(histogramInputs[0]?.issueIds).toEqual([activeIssue.id, regressedIssue.id, archivedIssue.id])
@@ -609,7 +618,13 @@ describe("listIssuesUseCase", () => {
         | undefined
       readonly expectedFromIso: string
       readonly expectedToIso: string
-      readonly expectedBuckets: readonly string[]
+      /**
+       * Width adaptively picked from the range — 7 days → 4h (14400s), 27 days → 1d (86400s),
+       * 3 days → 2h (7200s). Verified against `pickTraceHistogramBucketSeconds`.
+       */
+      readonly expectedBucketSeconds: number
+      readonly expectedFirstBucketIso: string
+      readonly expectedLastBucketIso: string
     }
 
     const cases: readonly HistogramRangeCase[] = [
@@ -618,15 +633,9 @@ describe("listIssuesUseCase", () => {
         timeRange: undefined,
         expectedFromIso: "2026-04-04T00:00:00.000Z",
         expectedToIso: "2026-04-10T23:59:59.999Z",
-        expectedBuckets: [
-          "2026-04-04",
-          "2026-04-05",
-          "2026-04-06",
-          "2026-04-07",
-          "2026-04-08",
-          "2026-04-09",
-          "2026-04-10",
-        ],
+        expectedBucketSeconds: 4 * 60 * 60,
+        expectedFirstBucketIso: "2026-04-04T00:00:00.000Z",
+        expectedLastBucketIso: "2026-04-10T20:00:00.000Z",
       },
       {
         name: "shows the range from from through today when only from is selected",
@@ -635,35 +644,9 @@ describe("listIssuesUseCase", () => {
         },
         expectedFromIso: "2026-03-15T00:00:00.000Z",
         expectedToIso: "2026-04-10T23:59:59.999Z",
-        expectedBuckets: [
-          "2026-03-15",
-          "2026-03-16",
-          "2026-03-17",
-          "2026-03-18",
-          "2026-03-19",
-          "2026-03-20",
-          "2026-03-21",
-          "2026-03-22",
-          "2026-03-23",
-          "2026-03-24",
-          "2026-03-25",
-          "2026-03-26",
-          "2026-03-27",
-          "2026-03-28",
-          "2026-03-29",
-          "2026-03-30",
-          "2026-03-31",
-          "2026-04-01",
-          "2026-04-02",
-          "2026-04-03",
-          "2026-04-04",
-          "2026-04-05",
-          "2026-04-06",
-          "2026-04-07",
-          "2026-04-08",
-          "2026-04-09",
-          "2026-04-10",
-        ],
+        expectedBucketSeconds: 24 * 60 * 60,
+        expectedFirstBucketIso: "2026-03-15T00:00:00.000Z",
+        expectedLastBucketIso: "2026-04-10T00:00:00.000Z",
       },
       {
         name: "shows the last 7 days ending at to when only to is selected",
@@ -672,15 +655,9 @@ describe("listIssuesUseCase", () => {
         },
         expectedFromIso: "2026-03-28T00:00:00.000Z",
         expectedToIso: "2026-04-03T23:59:59.999Z",
-        expectedBuckets: [
-          "2026-03-28",
-          "2026-03-29",
-          "2026-03-30",
-          "2026-03-31",
-          "2026-04-01",
-          "2026-04-02",
-          "2026-04-03",
-        ],
+        expectedBucketSeconds: 4 * 60 * 60,
+        expectedFirstBucketIso: "2026-03-28T00:00:00.000Z",
+        expectedLastBucketIso: "2026-04-03T20:00:00.000Z",
       },
       {
         name: "shows every selected day when from and to are selected",
@@ -690,11 +667,20 @@ describe("listIssuesUseCase", () => {
         },
         expectedFromIso: "2026-04-01T00:00:00.000Z",
         expectedToIso: "2026-04-03T23:59:59.999Z",
-        expectedBuckets: ["2026-04-01", "2026-04-02", "2026-04-03"],
+        expectedBucketSeconds: 2 * 60 * 60,
+        expectedFirstBucketIso: "2026-04-01T00:00:00.000Z",
+        expectedLastBucketIso: "2026-04-03T22:00:00.000Z",
       },
     ]
 
-    it.each(cases)("$name", async ({ timeRange, expectedFromIso, expectedToIso, expectedBuckets }) => {
+    it.each(cases)("$name", async ({
+      timeRange,
+      expectedFromIso,
+      expectedToIso,
+      expectedBucketSeconds,
+      expectedFirstBucketIso,
+      expectedLastBucketIso,
+    }) => {
       const now = new Date("2026-04-10T12:00:00.000Z")
       const issue = makeIssue({
         id: IssueId("m".repeat(24)),
@@ -750,7 +736,19 @@ describe("listIssuesUseCase", () => {
       expect(histogramInputs[0]?.issueIds).toEqual([issue.id])
       expect(histogramInputs[0]?.from.toISOString()).toBe(expectedFromIso)
       expect(histogramInputs[0]?.to.toISOString()).toBe(expectedToIso)
-      expect(result.analytics.histogram.map((bucket) => bucket.bucket)).toEqual(expectedBuckets)
+      expect(histogramInputs[0]?.bucketSeconds).toBe(expectedBucketSeconds)
+      expect(result.analytics.histogramBucketSeconds).toBe(expectedBucketSeconds)
+
+      const histogram = result.analytics.histogram
+      expect(histogram.length).toBeGreaterThan(0)
+      expect(histogram[0]?.bucket).toBe(expectedFirstBucketIso)
+      expect(histogram[histogram.length - 1]?.bucket).toBe(expectedLastBucketIso)
+      // Every bucket key is aligned to the chosen interval — no drift between scaffold rows.
+      const widthMs = expectedBucketSeconds * 1000
+      const firstMs = Date.parse(expectedFirstBucketIso)
+      for (const [index, bucket] of histogram.entries()) {
+        expect(Date.parse(bucket.bucket)).toBe(firstMs + index * widthMs)
+      }
     })
   })
 

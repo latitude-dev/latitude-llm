@@ -28,6 +28,8 @@ import {
 } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
+import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
+import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import {
   invalidateIssueQueries,
   useIssueDetail,
@@ -179,6 +181,36 @@ export function IssueDetailDrawer({
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
   const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
   const traceSelection = useSelectableRows({ rowIds: traceIds, totalRowCount: totalTraceCount })
+
+  // Window the incident query to the same range that the trend chart paints. Bucket keys are
+  // ISO timestamps now (12h-aligned), and `trendBucketSeconds` tells us the cell width so we can
+  // include the full last bucket in the upper bound. Falls back to an empty window when the
+  // issue hasn't loaded — the hook short-circuits via `enabled`.
+  const trendIncidentRange = useMemo(() => {
+    const trend = issue?.trend
+    if (!trend || trend.length === 0) return null
+    const firstBucket = trend[0]
+    const lastBucket = trend[trend.length - 1]
+    if (!firstBucket || !lastBucket) return null
+    const bucketWidthMs = (issue?.trendBucketSeconds ?? 24 * 60 * 60) * 1000
+    return {
+      fromIso: new Date(Date.parse(firstBucket.bucket)).toISOString(),
+      toIso: new Date(Date.parse(lastBucket.bucket) + bucketWidthMs - 1).toISOString(),
+    }
+  }, [issue?.trend, issue?.trendBucketSeconds])
+
+  // The drawer's per-issue trend always shows incidents when the org has the feature flag —
+  // there's no toggle here, but we still respect the same flag the histograms gate on so the
+  // overlay vanishes everywhere consistently when the flag flips off.
+  const { flagEnabled: incidentsFlagEnabled } = useShowIncidentsOverlay()
+  const { data: trendIncidents } = useProjectAlertIncidentsInRange({
+    projectId,
+    fromIso: trendIncidentRange?.fromIso ?? "",
+    toIso: trendIncidentRange?.toIso ?? "",
+    sourceType: "issue",
+    sourceId: issueId,
+    enabled: incidentsFlagEnabled && trendIncidentRange !== null,
+  })
   const { selectedCount, bulkSelection, clearSelections } = traceSelection
   const hasActiveLinkedEvaluations =
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
@@ -392,6 +424,7 @@ export function IssueDetailDrawer({
               <div className="px-4 py-3">
                 <IssueTrendBar
                   buckets={issue?.trend ?? []}
+                  bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
                   height={120}
                   isLoading={isLoading}
                   labelLayout="floating"
@@ -401,6 +434,7 @@ export function IssueDetailDrawer({
                   resolvedAt={issue?.resolvedAt ?? null}
                   escalationOccurrenceThreshold={issue?.escalationOccurrenceThreshold ?? null}
                   showEscalationThresholdGuide
+                  incidents={trendIncidents}
                 />
               </div>
             </div>

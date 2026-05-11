@@ -1,6 +1,6 @@
 import { type AlertIncident, AlertIncidentRepository, alertIncidentSchema } from "@domain/alerts"
 import { type AlertIncidentId, NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, asc, eq, gte, isNull, lte, or } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -62,6 +62,27 @@ export const AlertIncidentRepositoryLive = Layer.effect(
           )
           const closedId = rows[0]?.id
           return closedId ? (closedId as AlertIncidentId) : null
+        }),
+      listByProjectInRange: ({ organizationId, projectId, from, to, sourceType, sourceId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(alertIncidents)
+              .where(
+                and(
+                  eq(alertIncidents.organizationId, organizationId),
+                  eq(alertIncidents.projectId, projectId),
+                  lte(alertIncidents.startedAt, to),
+                  or(isNull(alertIncidents.endedAt), gte(alertIncidents.endedAt, from)),
+                  sourceType ? eq(alertIncidents.sourceType, sourceType) : undefined,
+                  sourceId ? eq(alertIncidents.sourceId, sourceId) : undefined,
+                ),
+              )
+              .orderBy(asc(alertIncidents.startedAt)),
+          )
+          return rows.map(toDomain)
         }),
     }),
   ),

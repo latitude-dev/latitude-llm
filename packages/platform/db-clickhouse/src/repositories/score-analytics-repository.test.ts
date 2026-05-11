@@ -573,16 +573,19 @@ describe("ScoreAnalyticsRepository", () => {
       ])
     })
 
-    it("returns daily occurrence buckets", async () => {
+    it("returns occurrence buckets at the requested interval", async () => {
       const trend = await runCh(
         repo.trendByIssue({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           issueId: IssueId(issueId),
           days: 30,
+          bucketSeconds: 24 * 60 * 60,
         }),
       )
       expect(trend.length).toBeGreaterThanOrEqual(2)
+      // Bucket keys are now full ISO timestamps; the YYYY-MM-DD prefix still uniquely identifies
+      // the day for fixture rows.
       const twoDaysAgo = trend.find((bucket) => bucket.bucket.startsWith(daysAgoBucket(2)))
       expect(twoDaysAgo).toBeDefined()
       expect(twoDaysAgo?.count).toBe(2)
@@ -663,6 +666,7 @@ describe("ScoreAnalyticsRepository", () => {
           projectId: PROJECT_ID,
           issueIds: [IssueId(issueA), IssueId(issueB)],
           timeRange: { from, to },
+          bucketSeconds: 24 * 60 * 60,
         }),
       )
       const trend = await runCh(
@@ -674,10 +678,12 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
 
+      // `histogramByIssues` now emits ISO timestamps for the bucket key regardless of interval,
+      // while `trendByIssues` (used by the row-level mini-bar) keeps the legacy `YYYY-MM-DD` shape.
       expect(histogram).toEqual([
-        { bucket: "2026-04-08", count: 1 },
-        { bucket: "2026-04-09", count: 1 },
-        { bucket: "2026-04-10", count: 1 },
+        { bucket: "2026-04-08T00:00:00.000Z", count: 1 },
+        { bucket: "2026-04-09T00:00:00.000Z", count: 1 },
+        { bucket: "2026-04-10T00:00:00.000Z", count: 1 },
       ])
       expect(trend).toEqual([
         {

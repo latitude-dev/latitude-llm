@@ -23,6 +23,7 @@ function createTestLayers(opts: { closedId: string | null }) {
           closed.push(input)
           return opts.closedId !== null ? AlertIncidentId(opts.closedId) : null
         }),
+      listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
     }),
   )
 
