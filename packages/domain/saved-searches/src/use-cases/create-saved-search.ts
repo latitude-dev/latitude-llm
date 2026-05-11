@@ -1,4 +1,12 @@
-import { type FilterSet, generateSlug, type ProjectId, type SavedSearchId, type UserId } from "@domain/shared"
+import { OutboxEventWriter } from "@domain/events"
+import {
+  type FilterSet,
+  generateSlug,
+  type ProjectId,
+  type SavedSearchId,
+  SqlClient,
+  type UserId,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { SAVED_SEARCH_NAME_MAX_LENGTH } from "../constants.ts"
 import { isEmptySearch } from "../entities/saved-search.ts"
@@ -37,20 +45,42 @@ export const createSavedSearch = Effect.fn("savedSearches.createSavedSearch")(fu
     return yield* new EmptySavedSearchError({})
   }
 
-  const repo = yield* SavedSearchRepository
-  const slug = yield* generateSlug({
-    name: trimmedName,
-    count: (slug) => repo.countBySlug({ projectId: input.projectId, slug }),
-  })
+  const sqlClient = yield* SqlClient
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repo = yield* SavedSearchRepository
+      const slug = yield* generateSlug({
+        name: trimmedName,
+        count: (slug) => repo.countBySlug({ projectId: input.projectId, slug }),
+      })
 
-  return yield* repo.create({
-    ...(input.id ? { id: input.id } : {}),
-    projectId: input.projectId,
-    slug,
-    name: trimmedName,
-    query: normalizedQuery,
-    filterSet: input.filterSet,
-    assignedUserId: input.assignedUserId ?? null,
-    createdByUserId: input.createdByUserId,
-  })
+      const created = yield* repo.create({
+        ...(input.id ? { id: input.id } : {}),
+        projectId: input.projectId,
+        slug,
+        name: trimmedName,
+        query: normalizedQuery,
+        filterSet: input.filterSet,
+        assignedUserId: input.assignedUserId ?? null,
+        createdByUserId: input.createdByUserId,
+      })
+
+      const outboxEventWriter = yield* OutboxEventWriter
+      yield* outboxEventWriter.write({
+        eventName: "SavedSearchCreated",
+        aggregateType: "saved-search",
+        aggregateId: created.id,
+        organizationId: created.organizationId,
+        payload: {
+          organizationId: created.organizationId,
+          actorUserId: created.createdByUserId,
+          projectId: created.projectId,
+          searchId: created.id,
+          name: created.name,
+        },
+      })
+
+      return created
+    }),
+  )
 })
