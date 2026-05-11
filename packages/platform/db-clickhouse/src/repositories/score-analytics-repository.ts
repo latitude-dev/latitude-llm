@@ -703,7 +703,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT
                         formatDateTime(
                           toStartOfInterval(created_at, INTERVAL {bucketSeconds:UInt32} SECOND),
-                          '%Y-%m-%dT%H:%M:%S.000Z'
+                          '%Y-%m-%dT%H:%i:%S.000Z'
                         ) AS bucket,
                         count() AS count
                       FROM scores
@@ -782,7 +782,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT
                         formatDateTime(
                           toStartOfInterval(created_at, INTERVAL {bucketSeconds:UInt32} SECOND),
-                          '%Y-%m-%dT%H:%M:%S.000Z'
+                          '%Y-%m-%dT%H:%i:%S.000Z'
                         ) AS bucket,
                         count() AS count
                       FROM scores
