@@ -34,6 +34,7 @@ import {
   totalConfusionMatrixObservations,
   unarchiveEvaluation,
   updateEvaluationSampling,
+  updateEvaluationTriggerFilter,
 } from "./helpers.ts"
 import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 
@@ -179,6 +180,87 @@ describe("evaluation lifecycle helpers", () => {
 
     const full = updateEvaluationSampling({ evaluation: makeEvaluation(), sampling: 100 })
     expect(full.trigger.sampling).toBe(100)
+  })
+
+  it("updates the trigger filter and bumps updatedAt", () => {
+    const updatedAt = new Date("2026-05-12T00:00:00.000Z")
+    const updated = updateEvaluationTriggerFilter({
+      evaluation: makeEvaluation(),
+      filter: { tags: [{ op: "in", value: ["agent-a"] }] },
+      updatedAt,
+    })
+
+    expect(updated.trigger.filter).toEqual({ tags: [{ op: "in", value: ["agent-a"] }] })
+    expect(updated.updatedAt).toEqual(updatedAt)
+  })
+
+  it("preserves other trigger fields when updating the filter", () => {
+    const evaluation = makeEvaluation({
+      trigger: { filter: {}, turn: "every", debounce: 0, sampling: 42 },
+    })
+
+    const updated = updateEvaluationTriggerFilter({
+      evaluation,
+      filter: { serviceNames: [{ op: "in", value: ["checkout"] }] },
+    })
+
+    expect(updated.trigger.sampling).toBe(42)
+    expect(updated.trigger.turn).toBe("every")
+    expect(updated.trigger.debounce).toBe(0)
+  })
+
+  it("returns the same evaluation when the filter is structurally equal", () => {
+    const evaluation = makeEvaluation({
+      trigger: {
+        filter: { tags: [{ op: "in", value: ["a"] }] },
+        turn: "every",
+        debounce: 0,
+        sampling: 10,
+      },
+    })
+
+    // Same shape but with an empty array on an absent key — should be treated as a no-op.
+    const same = updateEvaluationTriggerFilter({
+      evaluation,
+      filter: { tags: [{ op: "in", value: ["a"] }], serviceNames: [] },
+    })
+
+    expect(same).toBe(evaluation)
+  })
+
+  it("rejects filter updates on deleted evaluations", () => {
+    const deleted = makeEvaluation({
+      deletedAt: new Date("2026-04-04T00:00:00.000Z"),
+    })
+
+    expect(() => updateEvaluationTriggerFilter({ evaluation: deleted, filter: {} })).toThrowError(
+      EvaluationDeletedError,
+    )
+  })
+
+  it("rejects structurally invalid filters", () => {
+    expect(() =>
+      updateEvaluationTriggerFilter({
+        evaluation: makeEvaluation(),
+        // gtePercentile requires a number in [0, 100].
+        filter: { duration: [{ op: "gtePercentile", value: 200 }] },
+      }),
+    ).toThrow()
+  })
+
+  it("clears the filter when given an empty filter set", () => {
+    const evaluation = makeEvaluation({
+      trigger: {
+        filter: { tags: [{ op: "in", value: ["a"] }] },
+        turn: "every",
+        debounce: 0,
+        sampling: 10,
+      },
+    })
+
+    const cleared = updateEvaluationTriggerFilter({ evaluation, filter: {} })
+
+    expect(cleared.trigger.filter).toEqual({})
   })
 })
 

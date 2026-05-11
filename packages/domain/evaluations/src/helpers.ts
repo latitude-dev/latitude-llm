@@ -1,4 +1,4 @@
-import { deterministicSampling, type ResolvedSettings } from "@domain/shared"
+import { deterministicSampling, type FilterSet, filterSetSchema, type ResolvedSettings } from "@domain/shared"
 import { ALIGNMENT_METRIC_TOLERANCE } from "./constants.ts"
 import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
 import { isPausedEvaluation } from "./entities/evaluation.ts"
@@ -145,6 +145,45 @@ export const updateEvaluationSampling = (input: {
   return {
     ...input.evaluation,
     trigger: { ...input.evaluation.trigger, sampling: input.sampling },
+    updatedAt,
+  }
+}
+
+// Empty arrays carry no constraint; treat them as absent so the no-op check
+// doesn't bump updatedAt when the UI sends `{ tags: [] }` for a cleared field.
+const canonicalizeFilterSet = (filter: FilterSet): Record<string, readonly unknown[]> => {
+  const out: Record<string, readonly unknown[]> = {}
+  for (const key of Object.keys(filter).sort()) {
+    const conditions = filter[key]
+    if (conditions && conditions.length > 0) {
+      out[key] = conditions
+    }
+  }
+  return out
+}
+
+const areFilterSetsEqual = (left: FilterSet, right: FilterSet): boolean =>
+  JSON.stringify(canonicalizeFilterSet(left)) === JSON.stringify(canonicalizeFilterSet(right))
+
+export const updateEvaluationTriggerFilter = (input: {
+  readonly evaluation: Evaluation
+  readonly filter: FilterSet
+  readonly updatedAt?: Date
+}): Evaluation => {
+  assertEvaluationNotDeleted(input.evaluation)
+
+  // Defence-in-depth: the server function validates filter shape at the request
+  // boundary, but the helper is also reachable from internal call sites.
+  const filter = filterSetSchema.parse(input.filter)
+
+  if (areFilterSetsEqual(input.evaluation.trigger.filter, filter)) {
+    return input.evaluation
+  }
+
+  const updatedAt = input.updatedAt ?? new Date()
+  return {
+    ...input.evaluation,
+    trigger: { ...input.evaluation.trigger, filter },
     updatedAt,
   }
 }

@@ -28,7 +28,12 @@ export {
   isPausedEvaluation,
 } from "./entities/evaluation.ts"
 export { EvaluationNotFoundError } from "./errors.ts"
-export { deriveEvaluationAlignmentMetrics, softDeleteEvaluation, updateEvaluationSampling } from "./helpers.ts"
+export {
+  deriveEvaluationAlignmentMetrics,
+  softDeleteEvaluation,
+  updateEvaluationSampling,
+  updateEvaluationTriggerFilter,
+} from "./helpers.ts"
 export {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   type EvaluationAlignmentExample,
