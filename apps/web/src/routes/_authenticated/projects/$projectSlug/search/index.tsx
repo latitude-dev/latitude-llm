@@ -113,11 +113,7 @@ function SearchPage() {
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
-  // Bulk actions only render for explicitly-picked rows. `mode: "all"` and
-  // `mode: "allExcept"` would resolve server-side against the unfiltered
-  // project, ignoring `searchQuery`, which would silently process more
-  // traces than the user sees in the UI.
-  const showBulkActions = bulkSelection?.mode === "selected"
+  const showBulkActions = selectedCount > 0
 
   const onSortingChange = (next: { column: string; direction: SortDirection }) => {
     setSortBy(next.column)
@@ -159,6 +155,7 @@ function SearchPage() {
           projectId,
           selection: bulkSelection,
           ...(hasActiveFilters ? { filters } : {}),
+          ...(hasSearchQuery ? { searchQuery: q } : {}),
         },
       })
       toast({
@@ -386,6 +383,8 @@ function SearchPage() {
           selection={bulkSelection}
           selectedCount={selectedCount}
           onSuccess={clearSelections}
+          {...(hasSearchQuery ? { searchQuery: q } : {})}
+          {...(hasActiveFilters ? { filters } : {})}
         />
       ) : null}
 
@@ -433,7 +432,7 @@ function SearchInput({
           const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
           onSubmit(next)
         }}
-        placeholder="Search"
+        placeholder='Search by meaning. Use "quotes" for an exact phrase.'
         size="lg"
         maxLength={SEARCH_QUERY_MAX_LENGTH}
         className="w-full pl-9 rounded-xl"

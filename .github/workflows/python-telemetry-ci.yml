@@ -53,5 +53,4 @@ jobs:
       - name: Run tests
         run: |
           cd packages/telemetry/python
-          # Skip instrument_test.py due to test infrastructure issue with exporter patching
-          uv run pytest tests/ -x --ignore=tests/telemetry/instrument_test.py
+          uv run pytest tests/ -x

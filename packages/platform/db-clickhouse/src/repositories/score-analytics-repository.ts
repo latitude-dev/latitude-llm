@@ -689,16 +689,23 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         }),
 
       // -- trendByIssue ------------------------------------------------------
-      trendByIssue: ({ organizationId, projectId, issueId, days, options }) =>
+      trendByIssue: ({ organizationId, projectId, issueId, days, bucketSeconds, options }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const lookback = days ?? 30
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
+                // Bucket is emitted as an ISO-8601 UTC timestamp (`...T00:00:00.000Z`) regardless
+                // of the chosen interval. Daily callers that historically expected `YYYY-MM-DD`
+                // adapt at the consumer; using a single format keeps sub-day buckets
+                // (e.g. 12h trend on the issue detail drawer) free of CH string-coercion quirks.
                 query: `SELECT
-                        toDate(created_at) AS bucket,
-                        count()            AS count
+                        formatDateTime(
+                          toStartOfInterval(created_at, INTERVAL {bucketSeconds:UInt32} SECOND),
+                          '%Y-%m-%dT%H:%i:%S.000Z'
+                        ) AS bucket,
+                        count() AS count
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND issue_id = {issueId:FixedString(24)}
@@ -709,6 +716,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                   ...scopeParams(organizationId, projectId),
                   issueId: issueId as string,
                   days: lookback,
+                  bucketSeconds,
                 },
                 format: "JSONEachRow",
               })
@@ -752,7 +760,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             })
             .pipe(Effect.map((rows) => rows.map(toIssueWindowMetric)))
         }),
-      histogramByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) =>
+      histogramByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, bucketSeconds, options }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (issueIds.length === 0) {
@@ -770,9 +778,13 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
+                // Same ISO-8601 UTC bucket format as `trendByIssue` — see comment there.
                 query: `SELECT
-                        toDate(created_at) AS bucket,
-                        count()            AS count
+                        formatDateTime(
+                          toStartOfInterval(created_at, INTERVAL {bucketSeconds:UInt32} SECOND),
+                          '%Y-%m-%dT%H:%i:%S.000Z'
+                        ) AS bucket,
+                        count() AS count
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
                       GROUP BY bucket
@@ -780,6 +792,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   ...params,
+                  bucketSeconds,
                 },
                 format: "JSONEachRow",
               })

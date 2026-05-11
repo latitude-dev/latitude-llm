@@ -17,6 +17,7 @@ export {
 export type {
   AlertIncidentRepositoryShape,
   CloseOpenAlertIncidentInput,
+  ListAlertIncidentsByProjectInRangeInput,
 } from "./ports/alert-incident-repository.ts"
 export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
 export type {

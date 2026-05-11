@@ -22,8 +22,10 @@ import { Route as DesignSystemColorsRouteImport } from './routes/design-system/c
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
 import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
+import { Route as AuthConsentRouteImport } from './routes/auth/consent'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
@@ -40,6 +42,7 @@ import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
+import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
@@ -112,6 +115,11 @@ const AuthInviteRoute = AuthInviteRouteImport.update({
   path: '/auth/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthConsentRoute = AuthConsentRouteImport.update({
+  id: '/auth/consent',
+  path: '/auth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -122,6 +130,12 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
+  Char91DotwellKnownChar93OauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BackofficeOrganizationsIndexRoute =
   BackofficeOrganizationsIndexRouteImport.update({
     id: '/organizations/',
@@ -216,6 +230,11 @@ const AuthenticatedProjectsProjectSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const ApiAuthMcpAuthorizeRoute = ApiAuthMcpAuthorizeRouteImport.update({
+  id: '/api/auth/mcp/authorize',
+  path: '/api/auth/mcp/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
   id: '/api/auth/$provider/start',
   path: '/api/auth/$provider/start',
@@ -263,8 +282,10 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -291,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -299,7 +321,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/api/health': typeof ApiHealthRoute
+  '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -326,6 +350,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -338,8 +363,10 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -367,6 +394,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
+  '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -380,8 +408,10 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/'
     | '/login'
+    | '/.well-known/oauth-authorization-server'
     | '/settings'
     | '/api/health'
+    | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
     | '/design-system/button'
@@ -408,6 +438,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/projects/$projectSlug/'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets/'
@@ -416,7 +447,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/.well-known/oauth-authorization-server'
     | '/api/health'
+    | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
     | '/design-system/button'
@@ -443,6 +476,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets'
@@ -454,8 +488,10 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/_authenticated'
     | '/login'
+    | '/.well-known/oauth-authorization-server'
     | '/_authenticated/settings'
     | '/api/health'
+    | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
     | '/design-system/button'
@@ -483,6 +519,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
+    | '/api/auth/mcp/authorize'
     | '/_authenticated/projects/$projectSlug/'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
     | '/_authenticated/projects/$projectSlug/datasets/'
@@ -495,7 +532,9 @@ export interface RootRouteChildren {
   DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
@@ -503,6 +542,7 @@ export interface RootRouteChildren {
   ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
   ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
   ApiAuthProviderStartRoute: typeof ApiAuthProviderStartRoute
+  ApiAuthMcpAuthorizeRoute: typeof ApiAuthMcpAuthorizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -598,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/consent': {
+      id: '/auth/consent'
+      path: '/auth/consent'
+      fullPath: '/auth/consent'
+      preLoaderRoute: typeof AuthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -611,6 +658,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/backoffice/organizations/': {
       id: '/backoffice/organizations/'
@@ -723,6 +777,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug/'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/api/auth/mcp/authorize': {
+      id: '/api/auth/mcp/authorize'
+      path: '/api/auth/mcp/authorize'
+      fullPath: '/api/auth/mcp/authorize'
+      preLoaderRoute: typeof ApiAuthMcpAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$provider/start': {
       id: '/api/auth/$provider/start'
@@ -895,7 +956,10 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute:
+    Char91DotwellKnownChar93OauthAuthorizationServerRoute,
   ApiHealthRoute: ApiHealthRoute,
+  AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,
   DownloadsExportRoute: DownloadsExportRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
@@ -903,6 +967,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
   ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
   ApiAuthProviderStartRoute: ApiAuthProviderStartRoute,
+  ApiAuthMcpAuthorizeRoute: ApiAuthMcpAuthorizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

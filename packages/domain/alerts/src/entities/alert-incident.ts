@@ -1,34 +1,36 @@
-import { alertIncidentIdSchema, cuidSchema, organizationIdSchema, projectIdSchema } from "@domain/shared"
+import {
+  ALERT_INCIDENT_KINDS,
+  ALERT_INCIDENT_SOURCE_TYPES,
+  ALERT_SEVERITIES,
+  type AlertIncidentKind,
+  type AlertIncidentSourceType,
+  type AlertSeverity,
+  alertIncidentIdSchema,
+  alertIncidentKindSchema,
+  alertIncidentSourceTypeSchema,
+  alertSeveritySchema,
+  cuidSchema,
+  organizationIdSchema,
+  projectIdSchema,
+  SEVERITY_FOR_KIND,
+} from "@domain/shared"
 import { z } from "zod"
 
-/**
- * Discriminator for the entity that produced an alert. Polymorphic source pointer:
- * `(sourceType, sourceId)` together identify the subject of the incident.
- */
-export const ALERT_INCIDENT_SOURCE_TYPES = ["issue"] as const
-export const alertIncidentSourceTypeSchema = z.enum(ALERT_INCIDENT_SOURCE_TYPES)
-export type AlertIncidentSourceType = z.infer<typeof alertIncidentSourceTypeSchema>
-
-/**
- * Namespaced kind. The prefix matches `sourceType` so kinds remain unambiguous
- * even when future source types add their own variants (e.g. `saved_search.threshold`).
- */
-export const ALERT_INCIDENT_KINDS = ["issue.new", "issue.regressed", "issue.escalating"] as const
-export const alertIncidentKindSchema = z.enum(ALERT_INCIDENT_KINDS)
-export type AlertIncidentKind = z.infer<typeof alertIncidentKindSchema>
-
-export const ALERT_SEVERITIES = ["medium", "high"] as const
-export const alertSeveritySchema = z.enum(ALERT_SEVERITIES)
-export type AlertSeverity = z.infer<typeof alertSeveritySchema>
-
-/**
- * Hardcoded severity per kind for V1. Stored on the row so future configurable
- * severity can land without a migration.
- */
-export const SEVERITY_FOR_KIND: Record<AlertIncidentKind, AlertSeverity> = {
-  "issue.new": "medium",
-  "issue.regressed": "high",
-  "issue.escalating": "high",
+// Re-export the alert-kind / severity primitives that used to live here so
+// existing `@domain/alerts` consumers keep working unchanged. The canonical
+// declarations now live in `@domain/shared` so non-alert domains (notifications,
+// project settings) can key off them without depending on `@domain/alerts`.
+export {
+  ALERT_INCIDENT_KINDS,
+  ALERT_INCIDENT_SOURCE_TYPES,
+  ALERT_SEVERITIES,
+  alertIncidentKindSchema,
+  type AlertIncidentKind,
+  alertIncidentSourceTypeSchema,
+  type AlertIncidentSourceType,
+  type AlertSeverity,
+  alertSeveritySchema,
+  SEVERITY_FOR_KIND,
 }
 
 export const alertIncidentSchema = z.object({

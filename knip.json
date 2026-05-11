@@ -16,14 +16,13 @@
     "apps/workflows": {
       "project": ["src/**/*.ts"],
       "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker"]
+      "ignoreDependencies": ["@temporalio/worker", "voyageai"]
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignore": [
-        "src/domains/feature-flags/feature-flags.collection.ts",
-        "src/domains/feature-flags/feature-flags.functions.ts"
+        "src/domains/feature-flags/feature-flags.collection.ts"
       ],
       "ignoreDependencies": ["@temporalio/client"]
     },

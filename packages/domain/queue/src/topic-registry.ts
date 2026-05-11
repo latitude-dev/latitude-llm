@@ -84,6 +84,17 @@ const _registry = {
     }
   }>(),
 
+  notifications: payloads<{
+    "create-from-incident-opened": {
+      readonly organizationId: string
+      readonly alertIncidentId: string
+    }
+    "create-from-incident-closed": {
+      readonly organizationId: string
+      readonly alertIncidentId: string
+    }
+  }>(),
+
   "alert-incidents": payloads<{
     "issue-created": {
       readonly organizationId: string

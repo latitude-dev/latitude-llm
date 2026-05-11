@@ -86,6 +86,15 @@ describe("createLoopsContactsSender", () => {
     await Effect.runPromise(sender.createContact({ email: "a@b.co", userId: "user_123" }))
   })
 
+  it("swallows 409 conflict on create regardless of message wording", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    createContactMock.mockRejectedValueOnce(
+      new APIError(409, { success: false, message: "An audience member with this email already exists." }),
+    )
+
+    await Effect.runPromise(sender.createContact({ email: "a@b.co", userId: "user_123" }))
+  })
+
   it("surfaces non-duplicate create failures as MarketingContactsError", async () => {
     const sender = createLoopsContactsSender({ apiKey: "test-key" })
     createContactMock.mockRejectedValueOnce(new APIError(429, { success: false, message: "rate limited" }))

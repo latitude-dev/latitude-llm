@@ -15,7 +15,7 @@ import {
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { ThumbsDownIcon, ThumbsUpIcon, TriangleAlertIcon } from "lucide-react"
-import { type ReactNode, useCallback, useMemo } from "react"
+import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
@@ -69,6 +69,8 @@ interface ProjectTracesTableProps {
   readonly annotationCountsPendingTraceIds?: ReadonlySet<string> | undefined
   readonly scrollAreaLayout?: "fill" | "intrinsic"
   readonly scrollContainerClassName?: string
+  readonly onErrorClick?: (trace: TraceRecord) => void
+  readonly onAnnotationClick?: (trace: TraceRecord) => void
 }
 
 export function ProjectTracesTable({
@@ -95,6 +97,8 @@ export function ProjectTracesTable({
   annotationCountsPendingTraceIds,
   scrollAreaLayout,
   scrollContainerClassName,
+  onErrorClick,
+  onAnnotationClick,
 }: ProjectTracesTableProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
 
@@ -114,6 +118,22 @@ export function ProjectTracesTable({
             errorCount={trace.errorCount}
             annotationCounts={annotationCounts?.get(trace.traceId)}
             annotationCountsPending={annotationCountsPendingTraceIds?.has(trace.traceId) === true}
+            {...(onErrorClick
+              ? {
+                  onErrorClick: (e: MouseEvent) => {
+                    e.stopPropagation()
+                    onErrorClick(trace)
+                  },
+                }
+              : {})}
+            {...(onAnnotationClick
+              ? {
+                  onAnnotationClick: (e: MouseEvent) => {
+                    e.stopPropagation()
+                    onAnnotationClick(trace)
+                  },
+                }
+              : {})}
           />
         ),
       },
@@ -309,6 +329,8 @@ export function ProjectTracesTable({
     linkTarget,
     annotationCounts,
     annotationCountsPendingTraceIds,
+    onErrorClick,
+    onAnnotationClick,
   ])
 
   const columns = useMemo(() => {
@@ -367,10 +389,14 @@ function TraceIndicatorsCell({
   errorCount,
   annotationCounts,
   annotationCountsPending,
+  onErrorClick,
+  onAnnotationClick,
 }: {
   readonly errorCount: number
   readonly annotationCounts: TraceAnnotationCounts | undefined
   readonly annotationCountsPending: boolean
+  readonly onErrorClick?: (e: MouseEvent) => void
+  readonly onAnnotationClick?: (e: MouseEvent) => void
 }) {
   const positiveCount = annotationCounts?.positiveCount ?? 0
   const negativeCount = annotationCounts?.negativeCount ?? 0
@@ -385,10 +411,11 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="success"
-              indicator={<Icon icon={ThumbsUpIcon} size="xs" />}
+              indicator={<Icon icon={ThumbsUpIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(positiveCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
               aria-label={`${positiveCount} positive ${positiveCount === 1 ? "annotation" : "annotations"}`}
+              onClick={onAnnotationClick}
             />
           }
         >
@@ -401,10 +428,11 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="destructive"
-              indicator={<Icon icon={ThumbsDownIcon} size="xs" />}
+              indicator={<Icon icon={ThumbsDownIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(negativeCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
               aria-label={`${negativeCount} negative ${negativeCount === 1 ? "annotation" : "annotations"}`}
+              onClick={onAnnotationClick}
             />
           }
         >
@@ -417,10 +445,11 @@ function TraceIndicatorsCell({
           trigger={
             <Status
               variant="warning"
-              indicator={<Icon icon={TriangleAlertIcon} size="xs" />}
+              indicator={<Icon icon={TriangleAlertIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(errorCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : undefined}
+              className={showIconOnly ? "gap-0 px-1.5" : onErrorClick ? "cursor-pointer" : undefined}
               aria-label={`${errorCount} ${errorCount === 1 ? "error" : "errors"} in this trace`}
+              onClick={onErrorClick}
             />
           }
         >
