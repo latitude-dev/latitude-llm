@@ -370,6 +370,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../../packages/domain/notifications
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
@@ -590,6 +593,9 @@ importers:
       '@domain/marketing':
         specifier: workspace:*
         version: link:../../packages/domain/marketing
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../../packages/domain/notifications
       '@domain/product-feedback':
         specifier: workspace:*
         version: link:../../packages/domain/product-feedback
@@ -1221,6 +1227,34 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
+  packages/domain/notifications:
+    dependencies:
+      '@domain/alerts':
+        specifier: workspace:*
+        version: link:../alerts
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../issues
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/domain/optimizations:
     dependencies:
       effect:
@@ -1696,6 +1730,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../domain/issues
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../../domain/notifications
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../domain/organizations

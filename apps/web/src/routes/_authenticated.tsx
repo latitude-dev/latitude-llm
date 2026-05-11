@@ -18,6 +18,7 @@ import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
+import { NotificationBell } from "./_authenticated/-components/notifications/notification-bell.tsx"
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
@@ -257,6 +258,7 @@ function NavHeader() {
       </div>
       <div className="flex items-center gap-4">
         <BillingCreditCounter organizationId={organizationId} />
+        <NotificationBell />
         <ThemeToggle />
         {supportEnabled && (
           <button

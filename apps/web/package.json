@@ -28,6 +28,7 @@
     "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",

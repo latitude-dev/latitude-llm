@@ -1,3 +1,4 @@
+export * from "./alert-incident-kinds.ts"
 export * from "./cache.ts"
 export * from "./ch-sql-client.ts"
 export * from "./deterministic-sampling.ts"
