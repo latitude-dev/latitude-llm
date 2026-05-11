@@ -228,20 +228,17 @@ Latitude works alongside your existing observability tools. In TypeScript, `new 
 
 ```ts
 import tracer from "dd-trace"
-import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
+import { Latitude } from "@latitude-data/telemetry"
 
 tracer.init({ service: "my-app", env: "production" })
 
-const provider = new tracer.TracerProvider()
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
 
-provider.addSpanProcessor(
-  new LatitudeSpanProcessor(
-    process.env.LATITUDE_API_KEY!,
-    process.env.LATITUDE_PROJECT_SLUG!,
-  ),
-)
-
-provider.register()
+await latitude.ready
 ```
 
 ### With Sentry (TypeScript)

@@ -311,25 +311,25 @@ For users with existing observability infrastructure.
 
 ### With Datadog
 
-Initialize Datadog first, then construct `new Latitude()` so Latitude can attach to Datadog's OTel `TracerProvider` when possible. Datadog exposes a public `addSpanProcessor` API, so Latitude can share the Datadog provider without replacing it. If your setup exposes the provider directly, you can also pass it as `tracerProvider` or wire `LatitudeSpanProcessor` explicitly:
+Initialize Datadog first, then construct `new Latitude()` so Latitude can attach to Datadog's OTel provider when possible:
 
 ```typescript
 import tracer from "dd-trace";
-import { LatitudeSpanProcessor } from "@latitude-data/telemetry";
+import { Latitude } from "@latitude-data/telemetry";
 
-const ddTracer = tracer.init({ service: "my-app", env: "production" });
-const provider = new ddTracer.TracerProvider();
+tracer.init({ service: "my-app", env: "production" });
 
-provider.addSpanProcessor(
-  new LatitudeSpanProcessor(
-    process.env.LATITUDE_API_KEY!,
-    process.env.LATITUDE_PROJECT_SLUG!,
-  ),
-);
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+});
 
-provider.register();
+await latitude.ready;
 
-// LLM calls are now traced and sent to both Datadog and Latitude
+// LLM calls are now traced and sent to both Datadog and Latitude.
+await latitude.flush();
+await latitude.shutdown(); // Does not shut down Datadog.
 ```
 
 **Adding context:** Use `capture()` if you want to add user IDs, session IDs, or tags to your traces (see [Using `capture()` for Context and Boundaries](#using-capture-for-context-and-boundaries)).
