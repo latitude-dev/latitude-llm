@@ -19,6 +19,8 @@ export const POSTHOG_TRACKED_EVENTS = new Set<TrackedEventName>([
   "AnnotationQueueItemCompleted",
   "ProjectDeleted",
   "FirstTraceReceived",
+  "FlaggerToggled",
+  "SavedSearchCreated",
 ])
 
 export const isPostHogTracked = (name: string): name is TrackedEventName =>

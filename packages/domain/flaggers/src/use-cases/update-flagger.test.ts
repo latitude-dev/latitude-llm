@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { CacheStore, FlaggerId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -46,6 +47,7 @@ describe("updateFlaggerUseCase", () => {
     const layer = Layer.mergeAll(
       Layer.succeed(FlaggerRepository, repository),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
       cacheLayer,
     )
 
@@ -73,6 +75,7 @@ describe("updateFlaggerUseCase", () => {
     const layer = Layer.mergeAll(
       Layer.succeed(FlaggerRepository, repository),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
       cacheLayer,
     )
 
@@ -97,6 +100,7 @@ describe("updateFlaggerUseCase", () => {
     const layer = Layer.mergeAll(
       Layer.succeed(FlaggerRepository, repository),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
       cacheLayer,
     )
 
@@ -120,6 +124,7 @@ describe("updateFlaggerUseCase", () => {
     const layer = Layer.mergeAll(
       Layer.succeed(FlaggerRepository, repository),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
     )
 
     const updated = await Effect.runPromise(

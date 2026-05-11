@@ -1331,6 +1331,9 @@ importers:
 
   packages/domain/saved-searches:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

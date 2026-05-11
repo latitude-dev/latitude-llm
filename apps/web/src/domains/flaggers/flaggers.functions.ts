@@ -8,10 +8,10 @@ import {
 } from "@domain/flaggers"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { FlaggerRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { FlaggerRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
@@ -80,14 +80,20 @@ export const updateFlagger = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<FlaggerRecord | null> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const projectId = ProjectId(data.projectId)
     const client = getPostgresClient()
 
     const flagger = await Effect.runPromise(
-      updateFlaggerUseCase({ organizationId, projectId, slug: data.slug, enabled: data.enabled }).pipe(
-        withPostgres(FlaggerRepositoryLive, client, orgId),
+      updateFlaggerUseCase({
+        organizationId,
+        projectId,
+        slug: data.slug,
+        enabled: data.enabled,
+        actorUserId: userId,
+      }).pipe(
+        withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
         withTracing,
       ),

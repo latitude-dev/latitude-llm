@@ -307,6 +307,8 @@ export const createDomainEventsWorker = ({
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: () => Effect.void,
+    FlaggerToggled: () => Effect.void,
+    SavedSearchCreated: () => Effect.void,
     // Impersonation events are audit-only — their value is being
     // persisted in the outbox for support / compliance queries.
     // No downstream worker consumes them, so these handlers are no-ops.

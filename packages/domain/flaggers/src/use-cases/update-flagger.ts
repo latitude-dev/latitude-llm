@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import type { ProjectId, RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Flagger } from "../entities/flagger.ts"
@@ -10,6 +11,7 @@ export interface UpdateFlaggerInput {
   readonly projectId: ProjectId
   readonly slug: FlaggerSlug
   readonly enabled: boolean
+  readonly actorUserId?: string
 }
 
 export type UpdateFlaggerError = RepositoryError
@@ -37,6 +39,23 @@ export const updateFlaggerUseCase = Effect.fn("flaggers.updateFlagger")(function
     organizationId: input.organizationId,
     projectId: input.projectId,
   })
+
+  if (updated) {
+    const outboxEventWriter = yield* OutboxEventWriter
+    yield* outboxEventWriter.write({
+      eventName: "FlaggerToggled",
+      aggregateType: "flagger",
+      aggregateId: updated.id,
+      organizationId: input.organizationId,
+      payload: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId ?? "",
+        projectId: input.projectId,
+        flaggerSlug: input.slug,
+        enabled: input.enabled,
+      },
+    })
+  }
 
   return updated satisfies Flagger | null
 })

@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -15,6 +16,7 @@ function makeLayer() {
   return Layer.mergeAll(
     Layer.succeed(SavedSearchRepository, repository),
     Layer.succeed(SqlClient, createFakeSqlClient()),
+    Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
   )
 }
 
