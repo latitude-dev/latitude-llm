@@ -1,0 +1,25 @@
+{
+  "name": "@platform/oauth-token-auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --dir src"
+  },
+  "dependencies": {
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@domain/shared": "workspace:*",
+    "@platform/testkit": "workspace:*",
+    "vitest": "catalog:"
+  }
+}

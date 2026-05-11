@@ -1,5 +1,5 @@
 import { scoreSourceSchema } from "@domain/scores"
-import { cuidSchema, issueIdSchema } from "@domain/shared"
+import { cuidSchema, issueIdSchema, SLUG_MAX_LENGTH } from "@domain/shared"
 import { z } from "zod"
 import { ISSUE_NAME_MAX_LENGTH, ISSUE_SOURCES, ISSUE_STATES } from "../constants.ts"
 
@@ -41,6 +41,7 @@ export const issueSchema = z.object({
   uuid: z.string().uuid(), // links the Postgres row with the Weaviate object
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
+  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier derived from name; regenerated when name changes via `refreshIssueDetailsUseCase`. Unique per (organization_id, project_id).
   name: z.string().min(1).max(ISSUE_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: issueSourceSchema, // provenance of the first creating score

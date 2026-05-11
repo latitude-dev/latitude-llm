@@ -5,7 +5,7 @@ import { type RefObject, useCallback, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
-import { useAuthenticatedUser } from "../../../../../-route-data.ts"
+import { useAuthenticatedImpersonatedBy, useAuthenticatedUser } from "../../../../../-route-data.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -38,9 +38,10 @@ function ConversationContent({
   const clearSelectionRef = useRef<(() => void) | null>(null)
 
   const user = useAuthenticatedUser()
+  const impersonatedBy = useAuthenticatedImpersonatedBy()
   const isDev = import.meta.env.DEV
   const isAdmin = (user as { role?: string }).role === "admin"
-  const showDownload = isDev || isAdmin
+  const showDownload = isDev || isAdmin || impersonatedBy !== null
 
   const handleDownload = useCallback(() => {
     const json = JSON.stringify(traceDetail.allMessages, null, 2)

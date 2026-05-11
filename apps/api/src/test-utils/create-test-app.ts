@@ -15,6 +15,7 @@ import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import type { TestContext } from "vitest"
 import { afterAll, beforeAll, beforeEach } from "vitest"
+import { resetEndpointRegistry } from "../mcp/index.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
 import { registerRoutes } from "../routes/index.ts"
@@ -78,6 +79,11 @@ export const setupTestApi = () => {
     database = await acquireDatabase()
     redis = createFakeRedis()
 
+    // The MCP endpoint registry is module-global. Multiple test files mounted in
+    // the same vitest worker would otherwise accumulate entries across
+    // `registerRoutes` calls — reset before each test app boot.
+    resetEndpointRegistry()
+
     app = new OpenAPIHono<AppEnv>()
     app.onError(honoErrorHandler)
 
@@ -110,6 +116,7 @@ export const setupTestApi = () => {
 }
 
 interface TenantSetup {
+  readonly userId: string
   readonly organizationId: string
   readonly apiKeyToken: string
   readonly authApiKeyId: string
@@ -154,5 +161,5 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
     name: "auth-key",
   })
 
-  return { organizationId, apiKeyToken, authApiKeyId }
+  return { userId, organizationId, apiKeyToken, authApiKeyId }
 }

@@ -6,7 +6,7 @@ import {
   type IssueCentroid,
   updateIssueCentroid,
 } from "@domain/issues"
-import { IssueId } from "@domain/shared"
+import { IssueId, toSlug } from "@domain/shared"
 import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS, type SeedScope } from "@domain/shared/seeding"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
@@ -249,6 +249,10 @@ function buildIssueRow(input: {
     uuid: input.issueUuid,
     organizationId: input.organizationId,
     projectId: input.projectId,
+    // Seeds run before the migration backfill is exercised; we provide a slug
+    // up-front from the issue's name. Seed names are unique within the demo
+    // project so a plain `toSlug(name)` is collision-free.
+    slug: toSlug(input.issue.name),
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,

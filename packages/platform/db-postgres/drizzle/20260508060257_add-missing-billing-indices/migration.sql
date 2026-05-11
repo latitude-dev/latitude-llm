@@ -1,0 +1,4 @@
+-- No-op metadata migration.
+-- The preceding custom partition migration already creates the composite primary
+-- key and billing usage indexes. This snapshot-only migration keeps Drizzle's
+-- generated state aligned with the live schema without reapplying existing DDL.

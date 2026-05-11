@@ -10,7 +10,8 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
-    "openapi:emit": "tsx scripts/emit-openapi.ts"
+    "openapi:emit": "tsx scripts/emit-openapi.ts",
+    "mcp:emit": "tsx scripts/emit-mcp.ts"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
@@ -29,6 +30,7 @@
     "@platform/ai": "workspace:*",
     "@platform/ai-voyage": "workspace:*",
     "@platform/api-key-auth": "workspace:*",
+    "@platform/oauth-token-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",

@@ -82,8 +82,8 @@ catalogs:
       specifier: 2.1.0
       version: 2.1.0
     hono:
-      specifier: 4.12.15
-      version: 4.12.15
+      specifier: 4.12.16
+      version: 4.12.16
     ioredis:
       specifier: 5.10.1
       version: 5.10.1
@@ -199,16 +199,16 @@ importers:
         version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.15)
+        version: 1.19.13(hono@4.12.16)
       '@hono/otel':
         specifier: ^1.1.1
-        version: 1.1.1(hono@4.12.15)
+        version: 1.1.1(hono@4.12.16)
       '@hono/swagger-ui':
         specifier: ^0.5.0
-        version: 0.5.3(hono@4.12.15)
+        version: 0.5.3(hono@4.12.16)
       '@hono/zod-openapi':
         specifier: ^1.2.4
-        version: 1.3.0(hono@4.12.15)(zod@4.3.6)
+        version: 1.3.0(hono@4.12.16)(zod@4.3.6)
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -230,6 +230,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/oauth-token-auth
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
@@ -244,7 +247,7 @@ importers:
         version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
-        version: 4.12.15
+        version: 4.12.16
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -287,10 +290,10 @@ importers:
         version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.15)
+        version: 1.19.13(hono@4.12.16)
       '@hono/otel':
         specifier: ^1.1.1
-        version: 1.1.1(hono@4.12.15)
+        version: 1.1.1(hono@4.12.16)
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -320,7 +323,7 @@ importers:
         version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
-        version: 4.12.15
+        version: 4.12.16
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -547,7 +550,7 @@ importers:
         version: 6.12.1(@bull-board/ui@6.12.1)
       '@bull-board/hono':
         specifier: 'catalog:'
-        version: 6.12.1(hono@4.12.15)
+        version: 6.12.1(hono@4.12.16)
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -616,7 +619,7 @@ importers:
         version: link:../../packages/domain/users
       '@hono/node-server':
         specifier: 'catalog:'
-        version: 1.19.13(hono@4.12.15)
+        version: 1.19.13(hono@4.12.16)
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -679,7 +682,7 @@ importers:
         version: 0.8.2
       hono:
         specifier: 'catalog:'
-        version: 4.12.15
+        version: 4.12.16
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -1901,6 +1904,31 @@ importers:
         specifier: 'catalog:'
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
 
+  packages/platform/oauth-token-auth:
+    dependencies:
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../db-postgres
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+    devDependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
+      '@platform/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/platform/op-gepa:
     dependencies:
       '@domain/optimizations':
@@ -2019,7 +2047,7 @@ importers:
         version: 4.0.0-beta.57
       hono:
         specifier: 'catalog:'
-        version: 4.12.15
+        version: 4.12.16
 
   packages/platform/workflows-temporal:
     dependencies:
@@ -7286,6 +7314,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@vercel/oidc@3.2.0':
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
@@ -8877,6 +8906,10 @@ packages:
 
   hono@4.12.15:
     resolution: {integrity: sha512-qM0jDhFEaCBb4TxoW7f53Qrpv9RBiayUHo0S52JudprkhvpjIrGoU1mnnr29Fvd1U335ZFPZQY1wlkqgfGXyLg==}
+    engines: {node: '>=16.9.0'}
+
+  hono@4.12.16:
+    resolution: {integrity: sha512-jN0ZewiNAWSe5khM3EyCmBb250+b40wWbwNILNfEvq84VREWwOIkuUsFONk/3i3nqkz7Oe1PcpM2mwQEK2L9Kg==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.1:
@@ -13067,12 +13100,12 @@ snapshots:
       '@bull-board/ui': 6.12.1
       redis-info: 3.1.0
 
-  '@bull-board/hono@6.12.1(hono@4.12.15)':
+  '@bull-board/hono@6.12.1(hono@4.12.16)':
     dependencies:
       '@bull-board/api': 6.12.1(@bull-board/ui@6.12.1)
       '@bull-board/ui': 6.12.1
       ejs: 3.1.10
-      hono: 4.12.15
+      hono: 4.12.16
 
   '@bull-board/ui@6.12.1':
     dependencies:
@@ -13435,28 +13468,33 @@ snapshots:
   '@hono/node-server@1.19.13(hono@4.12.15)':
     dependencies:
       hono: 4.12.15
+    optional: true
 
-  '@hono/otel@1.1.1(hono@4.12.15)':
+  '@hono/node-server@1.19.13(hono@4.12.16)':
+    dependencies:
+      hono: 4.12.16
+
+  '@hono/otel@1.1.1(hono@4.12.16)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.40.0
-      hono: 4.12.15
+      hono: 4.12.16
 
-  '@hono/swagger-ui@0.5.3(hono@4.12.15)':
+  '@hono/swagger-ui@0.5.3(hono@4.12.16)':
     dependencies:
-      hono: 4.12.15
+      hono: 4.12.16
 
-  '@hono/zod-openapi@1.3.0(hono@4.12.15)(zod@4.3.6)':
+  '@hono/zod-openapi@1.3.0(hono@4.12.16)(zod@4.3.6)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.5.0(zod@4.3.6)
-      '@hono/zod-validator': 0.7.6(hono@4.12.15)(zod@4.3.6)
-      hono: 4.12.15
+      '@hono/zod-validator': 0.7.6(hono@4.12.16)(zod@4.3.6)
+      hono: 4.12.16
       openapi3-ts: 4.5.0
       zod: 4.3.6
 
-  '@hono/zod-validator@0.7.6(hono@4.12.15)(zod@4.3.6)':
+  '@hono/zod-validator@0.7.6(hono@4.12.16)(zod@4.3.6)':
     dependencies:
-      hono: 4.12.15
+      hono: 4.12.16
       zod: 4.3.6
 
   '@humanwhocodes/retry@0.4.3': {}
@@ -18939,7 +18977,10 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
-  hono@4.12.15: {}
+  hono@4.12.15:
+    optional: true
+
+  hono@4.12.16: {}
 
   hookable@6.1.1: {}
 

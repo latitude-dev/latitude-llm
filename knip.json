@@ -3,6 +3,7 @@
   "workspaces": {
     ".": {},
     "apps/api": {
+      "entry": ["src/openapi/pagination.ts"],
       "project": ["src/**/*.ts"]
     },
     "apps/ingest": {

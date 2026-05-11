@@ -8,7 +8,7 @@ import {
   MIN_OCCURRENCES_FOR_VISIBILITY,
 } from "@domain/issues"
 import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -61,6 +61,7 @@ const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
     uuid: row.uuid,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    slug: row.slug,
     name: row.name,
     description: row.description,
     source: row.source,
@@ -87,6 +88,7 @@ const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
   uuid: issue.uuid,
   organizationId: issue.organizationId,
   projectId: issue.projectId,
+  slug: issue.slug,
   name: issue.name,
   description: issue.description,
   source: issue.source,
@@ -251,6 +253,7 @@ const issueRepositoryCoreLive = Layer.effect(
                 set: {
                   uuid: row.uuid,
                   projectId: row.projectId,
+                  slug: row.slug,
                   name: row.name,
                   description: row.description,
                   source: row.source,
@@ -263,6 +266,21 @@ const issueRepositoryCoreLive = Layer.effect(
                 },
               }),
           )
+        }),
+
+      countBySlug: (input) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const conditions = and(
+            eq(issues.organizationId, sqlClient.organizationId),
+            eq(issues.projectId, input.projectId),
+            eq(issues.slug, input.slug),
+            ...(input.excludeIssueId ? [ne(issues.id, input.excludeIssueId)] : []),
+          )
+          const [row] = yield* sqlClient.query((db) =>
+            db.select({ count: sql<number>`count(*)::int` }).from(issues).where(conditions),
+          )
+          return row?.count ?? 0
         }),
     }
   }),

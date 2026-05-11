@@ -65,11 +65,14 @@ const buildKeys = (input: Pick<BillingSpendReservationInput, "organizationId" | 
   }
 }
 
+// The `{${organizationId}}` hash tag colocates the counter and idempotency-set keys on the same
+// Redis Cluster slot. EVAL requires every KEYS[*] argument to map to one slot — without the hash
+// tag, the two keys hash independently and cluster-mode Redis returns CROSSSLOT.
 const buildCounterKey = (organizationId: OrganizationId, periodSegment: string): string =>
-  `org:${organizationId}:billing:spend-reservation:${periodSegment}:reserved`
+  `org:{${organizationId}}:billing:spend-reservation:${periodSegment}:reserved`
 
 const buildIdempotencySetKey = (organizationId: OrganizationId, periodSegment: string): string =>
-  `org:${organizationId}:billing:spend-reservation:${periodSegment}:keys`
+  `org:{${organizationId}}:billing:spend-reservation:${periodSegment}:keys`
 
 export const RedisBillingSpendReservationLive = (redis: RedisClient) =>
   Layer.succeed(BillingSpendReservation, {

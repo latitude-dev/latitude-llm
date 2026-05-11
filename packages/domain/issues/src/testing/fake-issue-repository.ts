@@ -65,6 +65,15 @@ export const createFakeIssueRepository = (
         issues.set(issue.id, issue)
       }),
 
+    countBySlug: ({ projectId, slug, excludeIssueId }) =>
+      Effect.sync(
+        () =>
+          [...issues.values()].filter(
+            (issue) =>
+              issue.projectId === projectId && issue.slug === slug && (!excludeIssueId || issue.id !== excludeIssueId),
+          ).length,
+      ),
+
     list: ({ projectId, limit, offset }) =>
       Effect.sync(() => {
         const rows = [...issues.values()]

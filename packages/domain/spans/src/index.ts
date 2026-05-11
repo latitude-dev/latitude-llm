@@ -36,7 +36,14 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
-export { resolveTraceIdFromRef, type TraceRef, traceRefSchema } from "./helpers/trace-ref.ts"
+export {
+  resolveTraceIdFromRef,
+  resolveTraceIdsFromRef,
+  type TraceRef,
+  type TracesRef,
+  traceRefSchema,
+  tracesRefSchema,
+} from "./helpers/trace-ref.ts"
 export {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,

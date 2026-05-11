@@ -54,7 +54,7 @@ describe("deleteRows", () => {
     datasetRepo = fake.repository
     await Effect.runPromise(
       datasetRepo
-        .create({ id: DATASET_ID, projectId: PROJECT_ID, name: "delete-rows-test" })
+        .create({ id: DATASET_ID, projectId: PROJECT_ID, slug: "existing-dataset", name: "delete-rows-test" })
         .pipe(Effect.provideService(SqlClient, inertSqlClient)),
     )
   })

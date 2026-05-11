@@ -16,6 +16,14 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  * enforced at the application layer.
  *
  * Scoped to the 'latitude' schema.
+ *
+ * TODO(api-key-plugin): migrate to better-auth's `apiKey` plugin once we have
+ * downtime to backfill. The plugin natively supports organization-owned keys
+ * via the `references` config option, plus expiration, refill quotas, and
+ * rate-limiting — features we'd otherwise have to build ourselves. This file
+ * (plus `@platform/api-key-auth` and `@domain/api-keys`) goes away then.
+ * See https://better-auth.com/docs/plugins/api-key for the target shape, and
+ * `plans/mcp-oauth-api-expansion.md` (decision D1) for context.
  */
 
 export const apiKeys = latitudeSchema.table(

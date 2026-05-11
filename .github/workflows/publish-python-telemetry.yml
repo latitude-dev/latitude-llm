@@ -1,11 +1,8 @@
 name: Publish Python Telemetry
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - packages/telemetry/python/**
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -18,26 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
       - name: Get current version
         id: get_version
         run: |
-          cd packages/telemetry/python
-          CURRENT_VERSION=$(python -c "
-          import re
-          with open('pyproject.toml') as f:
-              match = re.search(r'version\s*=\s*\"(.+?)\"', f.read())
-              print(match.group(1) if match else '0.0.0')
-          ")
+          CURRENT_VERSION=$(grep -m1 '^version' packages/telemetry/python/pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check version on PyPI
@@ -49,6 +30,18 @@ jobs:
           else
             echo "should_publish=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Setup Python
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         if: steps.check_version.outputs.should_publish == 'true'

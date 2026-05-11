@@ -1,10 +1,9 @@
-import type { FilterSet, ProjectId, SavedSearchId, UserId } from "@domain/shared"
+import { type FilterSet, generateSlug, type ProjectId, type SavedSearchId, type UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { SAVED_SEARCH_NAME_MAX_LENGTH } from "../constants.ts"
 import { isEmptySearch } from "../entities/saved-search.ts"
 import { EmptySavedSearchError, InvalidSavedSearchNameError } from "../errors.ts"
 import { SavedSearchRepository } from "../ports/saved-search-repository.ts"
-import { generateUniqueSlug } from "./generate-unique-slug.ts"
 
 export interface CreateSavedSearchInput {
   readonly id?: SavedSearchId
@@ -38,9 +37,12 @@ export const createSavedSearch = Effect.fn("savedSearches.createSavedSearch")(fu
     return yield* new EmptySavedSearchError({})
   }
 
-  const slug = yield* generateUniqueSlug({ projectId: input.projectId, name: trimmedName })
-
   const repo = yield* SavedSearchRepository
+  const slug = yield* generateSlug({
+    name: trimmedName,
+    count: (slug) => repo.countBySlug({ projectId: input.projectId, slug }),
+  })
+
   return yield* repo.create({
     ...(input.id ? { id: input.id } : {}),
     projectId: input.projectId,

@@ -2,19 +2,21 @@ import os
 
 from latitude_telemetry.util import Model
 
-DEFAULT_EXPORTER_URL = "http://localhost:3002"
+PRODUCTION_EXPORTER_URL = "https://ingest.latitude.so"
 
 
-def _get_exporter_url() -> str:
+def get_exporter_url() -> str:
     """
     Determine the OTLP exporter base URL.
-    Uses LATITUDE_TELEMETRY_URL env var, falling back to localhost:3002.
+    Uses LATITUDE_TELEMETRY_URL env var, falling back to the production
+    Latitude ingest endpoint. Set LATITUDE_TELEMETRY_URL explicitly
+    (e.g. http://localhost:3002) for local development.
     """
     url = os.getenv("LATITUDE_TELEMETRY_URL")
     if url:
         return url.rstrip("/")
 
-    return DEFAULT_EXPORTER_URL
+    return PRODUCTION_EXPORTER_URL
 
 
 class Env(Model):
@@ -22,5 +24,5 @@ class Env(Model):
 
 
 env = Env(
-    EXPORTER_URL=_get_exporter_url(),
+    EXPORTER_URL=get_exporter_url(),
 )
