@@ -95,9 +95,9 @@ export function IssuesAnalyticsPanel({
     enabled: incidentsActive && incidentRange !== null,
   })
 
-  const { overlay, incidentsByBucketIndex } = useMemo(() => {
+  const { overlay, incidentsTouchingBucketIndex } = useMemo(() => {
     if (!incidentsActive || incidents.length === 0 || analytics.histogram.length === 0 || !incidentRange) {
-      return { overlay: undefined, incidentsByBucketIndex: new Map() }
+      return { overlay: undefined, incidentsTouchingBucketIndex: new Map() }
     }
     const bucketStartsMs = analytics.histogram.map((b) => Date.parse(b.bucket))
     const result = buildIncidentMarkers({
@@ -108,17 +108,18 @@ export function IssuesAnalyticsPanel({
     })
     return {
       overlay: result.overlay,
-      incidentsByBucketIndex: result.incidentsByBucketIndex,
+      // Tooltip listing — see histogram.tsx for the rationale on using the "touching" map.
+      incidentsTouchingBucketIndex: result.incidentsTouchingBucketIndex,
     }
-  }, [incidentsActive, incidents, analytics.histogram, histogramBarChartData, incidentRange, bucketWidthMs])
+  }, [incidentsActive, incidents, analytics.histogram, incidentRange, bucketWidthMs])
 
   const formatHistogramTooltip = useCallback(
     (category: string, value: number, dataIndex: number) => {
       const base = `${category}<br/><b>${formatCount(value)}</b> occurrences`
-      const inBucket = incidentsByBucketIndex.get(dataIndex) ?? []
-      return base + renderIncidentsTooltipBlock(inBucket)
+      const touching = incidentsTouchingBucketIndex.get(dataIndex) ?? []
+      return base + renderIncidentsTooltipBlock(touching)
     },
-    [incidentsByBucketIndex],
+    [incidentsTouchingBucketIndex],
   )
 
   const handleSelect = useCallback(

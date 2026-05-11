@@ -64,6 +64,12 @@ interface IncidentRange {
 interface IncidentGrouping {
   /** Lookup of incidents whose `startedAt` snaps into a given bucket index. */
   readonly incidentsByBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
+  /**
+   * Per-bucket list of every incident that **touches** the bucket — both point-in-time incidents
+   * that started in it AND ranged incidents whose `[startIndex, endIndex]` covers it. Use this for
+   * tooltips so a bucket in the middle of an escalation surfaces the escalation, not nothing.
+   */
+  readonly incidentsTouchingBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
   /** Ranges (start..end inclusive bucket indices) for ranged kinds like `issue.escalating`. */
   readonly ranges: readonly IncidentRange[]
 }
@@ -90,7 +96,11 @@ export function groupIncidentsByBucket({
   incidents,
   nowMs,
 }: GroupIncidentsByBucketInput): IncidentGrouping {
-  const empty: IncidentGrouping = { incidentsByBucketIndex: new Map(), ranges: [] }
+  const empty: IncidentGrouping = {
+    incidentsByBucketIndex: new Map(),
+    incidentsTouchingBucketIndex: new Map(),
+    ranges: [],
+  }
   if (bucketStartsMs.length === 0 || incidents.length === 0) return empty
 
   const firstStartMs = bucketStartsMs[0]
@@ -98,7 +108,13 @@ export function groupIncidentsByBucket({
   const lastIndex = bucketStartsMs.length - 1
 
   const incidentsByBucketIndex = new Map<number, AlertIncidentRecord[]>()
+  const incidentsTouchingBucketIndex = new Map<number, AlertIncidentRecord[]>()
   const ranges: IncidentRange[] = []
+  const pushTouching = (bucketIndex: number, incident: AlertIncidentRecord) => {
+    const existing = incidentsTouchingBucketIndex.get(bucketIndex) ?? []
+    existing.push(incident)
+    incidentsTouchingBucketIndex.set(bucketIndex, existing)
+  }
 
   for (const incident of incidents) {
     const startMs = Date.parse(incident.startedAt)
@@ -108,6 +124,7 @@ export function groupIncidentsByBucket({
     const list = incidentsByBucketIndex.get(startIdx) ?? []
     list.push(incident)
     incidentsByBucketIndex.set(startIdx, list)
+    pushTouching(startIdx, incident)
 
     if (RANGED_KINDS.has(incident.kind)) {
       const endMs = incident.endedAt ? Date.parse(incident.endedAt) : nowMs
@@ -116,11 +133,14 @@ export function groupIncidentsByBucket({
       const endIdx = snapped ?? (Number.isFinite(endMs) && endMs >= firstStartMs ? lastIndex : null)
       if (endIdx !== null) {
         ranges.push({ startIndex: startIdx, endIndex: endIdx, incident })
+        for (let i = startIdx + 1; i <= endIdx; i++) {
+          pushTouching(i, incident)
+        }
       }
     }
   }
 
-  return { incidentsByBucketIndex, ranges }
+  return { incidentsByBucketIndex, incidentsTouchingBucketIndex, ranges }
 }
 
 interface BuildIncidentMarkersInput {
@@ -132,7 +152,13 @@ interface BuildIncidentMarkersInput {
 
 interface BuildIncidentMarkersResult {
   readonly overlay: BarChartOverlay
+  /** Incidents that **started** in the bucket — used for things like the per-incident marker pin. */
   readonly incidentsByBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
+  /**
+   * Incidents that touch the bucket (started in it OR a ranged incident covering it). Use this for
+   * tooltips so a bucket inside an escalation range surfaces that escalation.
+   */
+  readonly incidentsTouchingBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
 }
 
 /**
@@ -152,6 +178,7 @@ export function buildIncidentMarkers({
   const empty: BuildIncidentMarkersResult = {
     overlay: { lines: [], areas: [] },
     incidentsByBucketIndex: new Map(),
+    incidentsTouchingBucketIndex: new Map(),
   }
   if (bucketStartsMs.length === 0 || incidents.length === 0) return empty
 
@@ -180,7 +207,11 @@ export function buildIncidentMarkers({
     })
   }
 
-  return { overlay: { lines, areas }, incidentsByBucketIndex: grouping.incidentsByBucketIndex }
+  return {
+    overlay: { lines, areas },
+    incidentsByBucketIndex: grouping.incidentsByBucketIndex,
+    incidentsTouchingBucketIndex: grouping.incidentsTouchingBucketIndex,
+  }
 }
 
 const escapeHtml = (s: string): string =>

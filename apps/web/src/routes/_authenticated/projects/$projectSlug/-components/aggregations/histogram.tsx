@@ -61,9 +61,9 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
     enabled: showIncidents,
   })
 
-  const { overlay, incidentsByBucketIndex } = useMemo(() => {
+  const { overlay, incidentsTouchingBucketIndex } = useMemo(() => {
     if (!showIncidents || incidents.length === 0 || denseBuckets.length === 0) {
-      return { overlay: undefined, incidentsByBucketIndex: new Map() }
+      return { overlay: undefined, incidentsTouchingBucketIndex: new Map() }
     }
     const result = buildIncidentMarkers({
       bucketStartsMs: denseBuckets.map((b) => Date.parse(b.bucketStart)),
@@ -73,9 +73,11 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
     })
     return {
       overlay: result.overlay,
-      incidentsByBucketIndex: result.incidentsByBucketIndex,
+      // Tooltip listing — use "touching" so a bucket inside an escalation range still surfaces
+      // the escalation, not nothing.
+      incidentsTouchingBucketIndex: result.incidentsTouchingBucketIndex,
     }
-  }, [showIncidents, incidents, denseBuckets, bucketSeconds, chartData, rangeEndIso])
+  }, [showIncidents, incidents, denseBuckets, bucketSeconds, rangeEndIso])
 
   const handleSelect = useCallback(
     (range: { startIndex: number; endIndex: number } | null) => {
@@ -98,10 +100,10 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
   const formatTooltip = useCallback(
     (category: string, value: number, dataIndex: number) => {
       const base = `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`
-      const inBucket = incidentsByBucketIndex.get(dataIndex) ?? []
-      return base + renderIncidentsTooltipBlock(inBucket)
+      const touching = incidentsTouchingBucketIndex.get(dataIndex) ?? []
+      return base + renderIncidentsTooltipBlock(touching)
     },
-    [definition, incidentsByBucketIndex],
+    [definition, incidentsTouchingBucketIndex],
   )
 
   if (isLoading) {
