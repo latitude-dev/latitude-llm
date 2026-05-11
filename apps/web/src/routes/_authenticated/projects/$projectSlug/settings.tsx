@@ -1,3 +1,4 @@
+import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
 import type { AlertIncidentKind } from "@domain/shared"
 import {
   DetailSection,
@@ -5,6 +6,7 @@ import {
   type InfiniteTableColumn,
   Input,
   Label,
+  Slider,
   Switch,
   Text,
   Tooltip,
@@ -65,6 +67,8 @@ function ProjectSettingsPage() {
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
+  const [isSavingSensitivity, setIsSavingSensitivity] = useState(false)
+  const sensitivityDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
   const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const { data: notificationsEnabled = false } = useQuery({
@@ -169,6 +173,32 @@ function ProjectSettingsPage() {
     }
   }
 
+  const handleSensitivityChange = (value: number) => {
+    // Slider fires on every step; debounce so we don't flood the API with one
+    // update per tick. Pattern mirrors `handleProjectRename` above.
+    if (sensitivityDebounceRef.current) clearTimeout(sensitivityDebounceRef.current)
+
+    sensitivityDebounceRef.current = setTimeout(() => {
+      setIsSavingSensitivity(true)
+      const transaction = updateProjectMutation(currentProject.id, {
+        settings: {
+          ...currentProject.settings,
+          alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
+        },
+      })
+      void transaction.isPersisted.promise
+        .then(() => {
+          toast({ description: "Escalation sensitivity updated" })
+        })
+        .catch((error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        })
+        .finally(() => {
+          setIsSavingSensitivity(false)
+        })
+    }, 400)
+  }
+
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
     if (savingAlertKind !== null) return
 
@@ -252,8 +282,9 @@ function ProjectSettingsPage() {
                   onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
                 />
               </div>
-              {notificationsEnabled
-                ? ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
+              {notificationsEnabled ? (
+                <>
+                  {ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
                     const inputId = `alert-notification-${toggle.kind}`
                     const checked = currentProject.settings.alertNotifications?.[toggle.kind] ?? true
                     return (
@@ -273,8 +304,17 @@ function ProjectSettingsPage() {
                         />
                       </div>
                     )
-                  })
-                : null}
+                  })}
+                  <EscalationSensitivityControl
+                    value={
+                      currentProject.settings.alertNotifications?.escalationSensitivity ??
+                      DEFAULT_ESCALATION_SENSITIVITY_K
+                    }
+                    isSaving={isSavingSensitivity}
+                    onChange={handleSensitivityChange}
+                  />
+                </>
+              ) : null}
             </div>
           </DetailSection>
           <DetailSection
@@ -303,5 +343,48 @@ function ProjectSettingsPage() {
         </Layout.List>
       </Layout.Content>
     </Layout>
+  )
+}
+
+interface EscalationSensitivityControlProps {
+  readonly value: number
+  readonly isSaving: boolean
+  readonly onChange: (value: number) => void
+}
+
+// Local presentational state so dragging the slider feels responsive while
+// the actual save is debounced through the parent's `onChange`.
+function EscalationSensitivityControl({ value, isSaving, onChange }: EscalationSensitivityControlProps) {
+  const [draft, setDraft] = useState(value)
+
+  return (
+    <div className="flex w-full flex-col gap-3 border-t border-border pt-4">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="escalation-sensitivity">Escalation sensitivity</Label>
+        <Text.H6 color="foregroundMuted">
+          Controls how aggressively the detector flags escalating issues. Lower values trigger sooner but produce more
+          false positives; higher values wait for stronger signal.
+        </Text.H6>
+      </div>
+      <div className="flex w-full flex-row items-center gap-4">
+        <Slider
+          id="escalation-sensitivity"
+          min={1}
+          max={6}
+          step={1}
+          value={[draft]}
+          onValueChange={(values) => {
+            const next = values[0] ?? value
+            setDraft(next)
+            onChange(next)
+          }}
+          disabled={isSaving}
+          aria-label="Escalation sensitivity"
+        />
+        <Text.H5 weight="medium" className="w-8 text-right">
+          {draft}
+        </Text.H5>
+      </div>
+    </div>
   )
 }

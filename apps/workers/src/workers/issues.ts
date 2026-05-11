@@ -118,12 +118,7 @@ export const createIssuesWorker = async ({
     checkEscalation: (payload) =>
       checkIssueEscalationUseCase(payload).pipe(
         withPostgres(
-          Layer.mergeAll(
-            IssueRepositoryLive,
-            OutboxEventWriterLive,
-            AlertIncidentRepositoryLive,
-            SettingsReaderLive,
-          ),
+          Layer.mergeAll(IssueRepositoryLive, OutboxEventWriterLive, AlertIncidentRepositoryLive, SettingsReaderLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
