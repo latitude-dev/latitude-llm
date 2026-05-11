@@ -18,9 +18,6 @@ import { createFileRoute } from "@tanstack/react-router"
 const buildTargetUrl = (request: Request): string => {
   const target = new URL(request.url)
   target.pathname = "/api/auth/.well-known/oauth-authorization-server"
-  // Strip any query string from the probe — RFC 8414 metadata is always a
-  // bare GET; carrying random query params through the redirect could
-  // confuse downstream caches.
   target.search = ""
   return target.toString()
 }

@@ -41,11 +41,11 @@ export const registerCorsMiddleware = (app: Hono, options: RegisterCorsMiddlewar
         logger.warn(`CORS rejected origin: ${origin} for path: ${c.req.path}`)
         return null
       },
-      allowMethods: ["GET", "POST", "PUT", "DELETE"],
-      allowHeaders: ["Content-Type", "Authorization"],
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      allowHeaders: ["Content-Type", "Authorization", "Accept", "MCP-Session-Id", "MCP-Protocol-Version"],
       credentials: true,
       maxAge: 86400,
-      exposeHeaders: ["X-RateLimit-Limit", "X-RateLimit-Remaining"],
+      exposeHeaders: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "MCP-Session-Id", "WWW-Authenticate"],
     }),
   )
 }
