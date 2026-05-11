@@ -227,7 +227,9 @@ label
 description
 status -- emergent | reviewed | ignored | merged | archived
 centroid_embedding_model
-centroid_vector -- storage shape TBD; JSON for MVP is acceptable if cluster count is modest
+centroid_version -- references latest centroid vector artifact in ClickHouse
+projection_embedding_model -- nullable until cluster-level projection text is generated
+projection_version -- nullable; references latest projection vector artifact in ClickHouse
 first_seen_at
 last_seen_at
 trace_count
@@ -241,7 +243,7 @@ Required query shapes:
 
 - list active/emergent clusters by project ordered by recent volume/trend
 - find cluster by id within active organization/project
-- list reviewed cluster centroids for live assignment
+- list reviewed cluster ids and vector versions for live assignment
 - update review status and label/description
 
 #### `intent_taxonomy_nodes`
@@ -301,9 +303,9 @@ created_at
 completed_at nullable
 ```
 
-### ClickHouse - High-Volume Analytical Assignments
+### ClickHouse - High-Volume Analytical Assignments and Vectors
 
-ClickHouse owns high-volume trace assignment analytics.
+ClickHouse owns high-volume trace assignment analytics and taxonomy vector artifacts. This spec does not require Weaviate for taxonomy clustering or cluster semantic search.
 
 #### `trace_intent_assignments`
 
@@ -332,22 +334,35 @@ Query shapes:
 - compute cluster-level metrics from joined trace data
 - list representative trace ids for a cluster
 
-All ClickHouse queries must use parameterized bindings.
+#### `intent_cluster_vectors`
 
-### Weaviate - Cluster Projection Search
-
-Weaviate should mirror reviewed/emergent cluster projections for semantic search and nearest cluster retrieval when that is preferable to ClickHouse vector scans.
-
-Collection candidate:
+Append-only/vector-versioned table for cluster-level vectors.
 
 ```text
-IntentClusters
-  label
-  description
-  representativeText
+organization_id String
+project_id String
+cluster_id String
+vector_kind LowCardinality(String) -- centroid | projection
+vector_version UInt64
+embedding_model LowCardinality(String)
+embedding Array(Float32)
+source_clustering_run_id String nullable
+projection_text String nullable -- label/description/representative summary used for projection embeddings
+created_at DateTime64
 ```
 
-Use self-provided vectors and project-scoped multi-tenancy, following the existing issues collection pattern in `packages/platform/db-weaviate`.
+`centroid` vectors are computed from member trace embeddings and are used for nearest-centroid live assignment, cluster reconciliation, drift checks, and representative trace selection.
+
+`projection` vectors are embeddings of cluster-level human-readable text such as generated labels, descriptions, taxonomy path, and representative examples. They are used for semantic search over clusters/categories and product-concept matching. Projection vectors are not required to equal the centroid, and reviewed user labels should produce a new projection vector version.
+
+Query shapes:
+
+- list latest active centroid vectors for a project
+- list latest projection vectors for cluster semantic search
+- retrieve vectors by cluster id/version for audit and debugging
+- compare query embeddings to projection vectors for natural-language cluster search
+
+All ClickHouse queries must use parameterized bindings.
 
 ## Repository and Package Boundaries
 
@@ -388,7 +403,7 @@ Domain code owns:
 - reconciliation rules
 - use-case orchestration against ports
 
-Domain code must not import concrete ClickHouse, Postgres, Weaviate, queue, or AI clients.
+Domain code must not import concrete ClickHouse, Postgres, queue, or AI clients.
 
 ### Platform Packages
 
@@ -401,9 +416,7 @@ packages/platform/db-postgres
 packages/platform/db-clickhouse
   trace assignment repository
   embedding-window read methods
-
-packages/platform/db-weaviate
-  intent cluster projection repository
+  intent cluster vector repository for centroid and projection embeddings
 
 packages/platform/clustering
   kNN community detection adapter
@@ -703,7 +716,7 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 ## Open Questions
 
 - Should the intent signature be exactly the existing trace-search document, a new derived projection, or a dedicated field in `trace_search_documents`?
-- Should centroid vectors live in Postgres JSON, ClickHouse, or only Weaviate for MVP?
+- Should Postgres keep a small centroid cache for MVP, or should live assignment always read latest centroid vectors from ClickHouse?
 - Should assistant behaviour and user intent be separate cluster axes from day one, or should MVP cluster a combined behavior signature and add axes later?
 - What similarity thresholds are acceptable on real Latitude traces?
 - Should taxonomy review actions be exposed publicly in API/MCP in the same phase as web UI, or after MVP validation?
@@ -731,8 +744,8 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 
 - [ ] **P1-1**: Create `packages/domain/intent-taxonomy` with entity schemas, constants, errors, ports, and helper functions.
 - [ ] **P1-2**: Add Postgres tables for `intent_clusters`, `intent_taxonomy_nodes`, `intent_cluster_taxonomy_links`, and `intent_clustering_runs` with organization-scoped RLS and repository adapters.
-- [ ] **P1-3**: Add ClickHouse migrations for `trace_intent_assignments` in both unclustered and clustered migration trees using `ch:create`.
-- [ ] **P1-4**: Add ClickHouse repository methods to read trace vectors by project/window and write assignment batches.
+- [ ] **P1-3**: Add ClickHouse migrations for `trace_intent_assignments` and `intent_cluster_vectors` in both unclustered and clustered migration trees using `ch:create`.
+- [ ] **P1-4**: Add ClickHouse repository methods to read trace vectors by project/window, write assignment batches, and read/write latest cluster centroid/projection vectors.
 - [ ] **P1-5**: Extend shared alert source/kind primitives with `intent_cluster` source type and `intent_cluster.*` incident kinds, including severity defaults.
 - [ ] **P1-6**: Add test fixtures and seed data for clusters and assignments.
 
