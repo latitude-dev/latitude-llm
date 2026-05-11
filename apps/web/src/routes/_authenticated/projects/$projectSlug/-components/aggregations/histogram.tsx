@@ -3,23 +3,32 @@ import { denseTraceTimeHistogramBuckets, type TraceHistogramMetric } from "@doma
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
 import { useCallback, useMemo } from "react"
 
+import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
+import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 interface HistogramProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly metric: TraceHistogramMetric
+  /** When true, fetch and overlay incidents on the histogram. */
+  readonly showIncidents: boolean
   /** Called when user selects a time range via brush on the histogram. */
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }
 
-export function Histogram({ projectId, filters, metric, onRangeSelect }: HistogramProps) {
+export function Histogram({ projectId, filters, metric, showIncidents, onRangeSelect }: HistogramProps) {
   const {
     data: sparseBuckets,
     isLoading,
@@ -45,6 +54,31 @@ export function Histogram({ projectId, filters, metric, onRangeSelect }: Histogr
     [denseBuckets, definition],
   )
 
+  const { data: incidents } = useProjectAlertIncidentsInRange({
+    projectId,
+    fromIso: rangeStartIso,
+    toIso: rangeEndIso,
+    enabled: showIncidents,
+  })
+
+  const { overlay, incidentsTouchingBucketIndex } = useMemo(() => {
+    if (!showIncidents || incidents.length === 0 || denseBuckets.length === 0) {
+      return { overlay: undefined, incidentsTouchingBucketIndex: new Map() }
+    }
+    const result = buildIncidentMarkers({
+      bucketStartsMs: denseBuckets.map((b) => Date.parse(b.bucketStart)),
+      bucketWidthMs: bucketSeconds * 1000,
+      incidents,
+      nowMs: Date.parse(rangeEndIso),
+    })
+    return {
+      overlay: result.overlay,
+      // Tooltip listing — use "touching" so a bucket inside an escalation range still surfaces
+      // the escalation, not nothing.
+      incidentsTouchingBucketIndex: result.incidentsTouchingBucketIndex,
+    }
+  }, [showIncidents, incidents, denseBuckets, bucketSeconds, rangeEndIso])
+
   const handleSelect = useCallback(
     (range: { startIndex: number; endIndex: number } | null) => {
       if (!onRangeSelect) return
@@ -64,9 +98,12 @@ export function Histogram({ projectId, filters, metric, onRangeSelect }: Histogr
   )
 
   const formatTooltip = useCallback(
-    (category: string, value: number) =>
-      `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`,
-    [definition],
+    (category: string, value: number, dataIndex: number) => {
+      const base = `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`
+      const touching = incidentsTouchingBucketIndex.get(dataIndex) ?? []
+      return base + renderIncidentsTooltipBlock(touching)
+    },
+    [definition, incidentsTouchingBucketIndex],
   )
 
   if (isLoading) {
@@ -102,6 +139,7 @@ export function Histogram({ projectId, filters, metric, onRangeSelect }: Histogr
         ariaLabel={`${definition.label} by time bucket`}
         formatTooltip={formatTooltip}
         onSelect={onRangeSelect ? handleSelect : undefined}
+        {...(overlay ? { overlay } : {})}
       />
     </div>
   )

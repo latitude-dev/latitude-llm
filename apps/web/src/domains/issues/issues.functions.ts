@@ -102,6 +102,7 @@ const toIssuesListResultRecord = (result: ListIssuesResult) => ({
   analytics: {
     counts: result.analytics.counts,
     histogram: result.analytics.histogram.map(toIssuesBucketRecord),
+    histogramBucketSeconds: result.analytics.histogramBucketSeconds,
     totalTraces: result.analytics.totalTraces,
   },
   items: result.items.map(toIssueRecord),
@@ -155,18 +156,28 @@ const issueTracesCountInputSchema = z.object({
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
-const buildBucketScaffold = (input: { readonly from: Date; readonly to: Date }): readonly string[] => {
-  const buckets: string[] = []
-  const cursor = new Date(input.from)
-  cursor.setUTCHours(0, 0, 0, 0)
-
-  while (cursor.getTime() <= input.to.getTime()) {
-    buckets.push(cursor.toISOString().slice(0, 10))
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
+/**
+ * Sub-day-aware scaffold producing ISO-8601 UTC bucket-start timestamps. Used by the issue
+ * detail trend (12h buckets) — the wider per-bucket precision lets incident overlays land in
+ * the right half-day rather than collapsing to the calendar date.
+ */
+const buildHistogramBucketScaffold = (input: {
+  readonly from: Date
+  readonly to: Date
+  readonly bucketSeconds: number
+}): readonly string[] => {
+  const widthMs = input.bucketSeconds * 1000
+  if (widthMs <= 0) return []
+  const startMs = Math.floor(input.from.getTime() / widthMs) * widthMs
+  const endMs = input.to.getTime()
+  const out: string[] = []
+  for (let cursor = startMs; cursor <= endMs; cursor += widthMs) {
+    out.push(new Date(cursor).toISOString())
   }
-
-  return buckets
+  return out
 }
+
+const ISSUE_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
 
 const fillBuckets = (input: {
   readonly scaffold: readonly string[]
@@ -187,6 +198,7 @@ const toIssueDetailRecord = (input: {
   readonly totalOccurrences: number
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
+  readonly trendBucketSeconds: number
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly tags: readonly string[]
   readonly keepMonitoringDefault: boolean
@@ -208,6 +220,7 @@ const toIssueDetailRecord = (input: {
   totalOccurrences: input.totalOccurrences,
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
+  trendBucketSeconds: input.trendBucketSeconds,
   evaluations: input.evaluations,
   tags: input.tags,
   keepMonitoringDefault: input.keepMonitoringDefault,
@@ -374,7 +387,11 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const trendFrom = new Date(trendTo)
         trendFrom.setUTCDate(trendFrom.getUTCDate() - 13)
         trendFrom.setUTCHours(0, 0, 0, 0)
-        const trendScaffold = buildBucketScaffold({ from: trendFrom, to: trendTo })
+        const trendScaffold = buildHistogramBucketScaffold({
+          from: trendFrom,
+          to: trendTo,
+          bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+        })
 
         // Match the listIssuesUseCase tag-aggregation window so the drawer
         // and the table show a consistent set of tags for the same issue.
@@ -392,6 +409,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             projectId,
             issueId: issue.id,
             days: 14,
+            bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
           }),
           evaluationRepository.listByIssueId({
             projectId,
@@ -429,6 +447,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             scaffold: trendScaffold,
             buckets: trend,
           }),
+          trendBucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
           evaluations: evaluationPage.items.map(toEvaluationSummaryRecord),
           tags: tagsAggregates[0]?.tags ?? [],
           keepMonitoringDefault: settings.keepMonitoring,

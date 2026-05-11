@@ -337,6 +337,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
+      '@domain/alerts':
+        specifier: workspace:*
+        version: link:../../packages/domain/alerts
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -1171,6 +1174,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils

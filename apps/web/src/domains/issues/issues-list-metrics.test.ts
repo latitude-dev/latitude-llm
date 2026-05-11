@@ -13,6 +13,7 @@ const makeListIssuesResult = (): ListIssuesResult => ({
       seenOccurrences: 0,
     },
     histogram: [],
+    histogramBucketSeconds: 24 * 60 * 60,
     totalTraces: 79,
   },
   items: [
