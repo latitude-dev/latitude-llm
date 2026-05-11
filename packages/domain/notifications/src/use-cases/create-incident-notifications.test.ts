@@ -105,6 +105,7 @@ function setup(opts: SetupOpts = {}) {
     uuid: "11111111-1111-4111-8111-111111111111",
     organizationId: orgId,
     projectId,
+    slug: "sample-issue",
     name: "Sample issue",
     description: "Sample description",
     source: "annotation",
@@ -135,6 +136,7 @@ function setup(opts: SetupOpts = {}) {
     findByUuid: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
     list: () => Effect.die("not used"),
+    countBySlug: () => Effect.die("not used"),
   })
 
   const project: Project = {
@@ -159,7 +161,7 @@ function setup(opts: SetupOpts = {}) {
     softDelete: () => Effect.die("not used"),
     hardDelete: () => Effect.die("not used"),
     existsByName: () => Effect.die("not used"),
-    existsBySlug: () => Effect.die("not used"),
+    countBySlug: () => Effect.die("not used"),
   })
 
   const { repo: notificationRepo, rows } = createFakeNotificationRepository()
