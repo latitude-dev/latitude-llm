@@ -1,5 +1,5 @@
 import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
-import { type MemberWithUser, MembershipRepository } from "@domain/organizations"
+import { MembershipRepository, type MemberWithUser } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
@@ -71,21 +71,20 @@ const SEND_CONCURRENCY = 5
  */
 const isEligibleRecipient = (member: MemberWithUser): boolean => member.emailVerified
 
-const renderForRecipient =
-  (deps: RunClaudeCodeWrappedDeps, report: Report) => (member: MemberWithUser) =>
-    Effect.gen(function* () {
-      const rendered = yield* Effect.tryPromise(() =>
-        deps.renderEmail({ userName: member.name ?? "there", report }),
-      ).pipe(
-        Effect.mapError((cause) => new Error("Failed to render Claude Code Wrapped email", { cause: cause as Error })),
-      )
-      yield* deps.sendEmail({
-        to: member.email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-      })
+const renderForRecipient = (deps: RunClaudeCodeWrappedDeps, report: Report) => (member: MemberWithUser) =>
+  Effect.gen(function* () {
+    const rendered = yield* Effect.tryPromise(() =>
+      deps.renderEmail({ userName: member.name ?? "there", report }),
+    ).pipe(
+      Effect.mapError((cause) => new Error("Failed to render Claude Code Wrapped email", { cause: cause as Error })),
+    )
+    yield* deps.sendEmail({
+      to: member.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
     })
+  })
 
 /**
  * Runs the per-project Claude Code Wrapped pipeline. Triggered by either the

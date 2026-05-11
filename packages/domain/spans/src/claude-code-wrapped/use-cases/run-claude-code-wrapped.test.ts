@@ -1,9 +1,8 @@
 import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
 import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
-import { type MemberWithUser, MembershipRepository } from "@domain/organizations"
+import { MembershipRepository, type MemberWithUser } from "@domain/organizations"
 import { createFakeMembershipRepository } from "@domain/organizations/testing"
-import { ProjectRepository } from "@domain/projects"
-import { type Project } from "@domain/projects"
+import { type Project, ProjectRepository } from "@domain/projects"
 import {
   ChSqlClient,
   type ChSqlClientShape,
@@ -129,7 +128,13 @@ const setupHarness = (options: {
 }
 
 const makeDeps = (sent: TestHarness["sent"]) => ({
-  renderEmail: async ({ userName, report }: { userName: string; report: { projectName: string } }): Promise<ClaudeCodeWrappedRenderedEmail> => ({
+  renderEmail: async ({
+    userName,
+    report,
+  }: {
+    userName: string
+    report: { projectName: string }
+  }): Promise<ClaudeCodeWrappedRenderedEmail> => ({
     html: `<p>Hi ${userName}, your week in ${report.projectName}</p>`,
     subject: `Wrapped: ${report.projectName}`,
     text: `Hi ${userName}, your week in ${report.projectName}`,
