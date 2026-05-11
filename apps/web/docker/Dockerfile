@@ -44,11 +44,16 @@ RUN apk add --update --no-cache \
 FROM alpine AS base
 
 # Will be used to cache pnpm store
-RUN npm install -g corepack@0.31.0 && corepack enable && corepack prepare pnpm@9.8.0 --activate
+RUN npm install -g corepack@0.31.0 && corepack enable
 
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# pnpm 9 uses $PNPM_HOME as the global bin dir; pnpm 10+ moved it to $PNPM_HOME/bin. Include both so future bumps don't break the build.
+ENV PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
+
+# Copy package.json so corepack reads `packageManager` and pins pnpm to the project's version.
+WORKDIR /app
+COPY package.json ./
 
 # Install turbo globally
 RUN pnpm install -g turbo
