@@ -193,6 +193,7 @@ const createScoreAnalyticsRepository = (input: {
     listTracesByIssue: () => Effect.die("Unexpected listTracesByIssue"),
     countTracesByIssue: () => Effect.die("Unexpected countTracesByIssue"),
     escalationSignalsByIssues: () => Effect.die("Unexpected escalationSignalsByIssues"),
+    escalationThresholdHistogramByIssues: () => Effect.die("Unexpected escalationThresholdHistogramByIssues"),
   }
 
   return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }

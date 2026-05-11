@@ -3,6 +3,7 @@ import { exportSelectionSchema } from "@domain/exports"
 import {
   type ApplyIssueLifecycleCommandResult,
   applyIssueLifecycleCommandUseCase,
+  DEFAULT_ESCALATION_SENSITIVITY_K,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
   getEscalationOccurrenceThreshold,
@@ -18,8 +19,12 @@ import {
   listIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
 } from "@domain/issues"
-import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import { IssueId, OrganizationId, ProjectId, resolveSettings } from "@domain/shared"
+import {
+  type IssueEscalationThresholdBucket,
+  type IssueOccurrenceBucket,
+  ScoreAnalyticsRepository,
+} from "@domain/scores"
+import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -199,6 +204,7 @@ const toIssueDetailRecord = (input: {
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
   readonly trendBucketSeconds: number
+  readonly trendEscalationThresholds: readonly IssueEscalationThresholdBucket[]
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly tags: readonly string[]
   readonly keepMonitoringDefault: boolean
@@ -221,6 +227,7 @@ const toIssueDetailRecord = (input: {
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
   trendBucketSeconds: input.trendBucketSeconds,
+  trendEscalationThresholds: input.trendEscalationThresholds,
   evaluations: input.evaluations,
   tags: input.tags,
   keepMonitoringDefault: input.keepMonitoringDefault,
@@ -411,6 +418,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const issueRepository = yield* IssueRepository
         const evaluationRepository = yield* EvaluationRepository
         const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        const settingsReader = yield* SettingsReader
 
         const issues = yield* issueRepository.findByIds({
           projectId,
@@ -437,7 +445,13 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const tagsFrom = new Date(now)
         tagsFrom.setUTCDate(tagsFrom.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
 
-        const [occurrences, trend, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
+        // `escalationSensitivity` is the user-facing `k_short` knob on the
+        // seasonal detector — read raw here (not via `resolveSettings`) since
+        // the cascade only surfaces `keepMonitoring` today.
+        const projectSettings = yield* settingsReader.getProjectSettings(projectId)
+        const kShort = projectSettings?.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
+
+        const [occurrences, trend, thresholdSeries, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
           scoreAnalyticsRepository.aggregateByIssues({
             organizationId: orgId,
             projectId,
@@ -449,6 +463,14 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             issueId: issue.id,
             days: 14,
             bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+          }),
+          scoreAnalyticsRepository.escalationThresholdHistogramByIssues({
+            organizationId: orgId,
+            projectId,
+            issueIds: [issue.id],
+            timeRange: { from: trendFrom, to: trendTo },
+            bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+            kShort,
           }),
           evaluationRepository.listByIssueId({
             projectId,
@@ -468,6 +490,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         ])
 
         const occurrence = occurrences[0] ?? null
+        const thresholdBuckets = thresholdSeries[0]?.buckets ?? []
 
         return toIssueDetailRecord({
           issue,
@@ -487,6 +510,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             buckets: trend,
           }),
           trendBucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+          trendEscalationThresholds: thresholdBuckets,
           evaluations: evaluationPage.items.map(toEvaluationSummaryRecord),
           tags: tagsAggregates[0]?.tags ?? [],
           keepMonitoringDefault: settings.keepMonitoring,

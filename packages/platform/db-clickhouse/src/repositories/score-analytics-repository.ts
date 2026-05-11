@@ -1,6 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   IssueEscalationSignals,
+  IssueEscalationThresholdBucket,
+  IssueEscalationThresholdSeries,
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
   IssueTagsAggregate,
@@ -372,6 +374,121 @@ const toIssueWindowMetric = (row: IssueWindowMetricRow): IssueWindowMetric => ({
   firstSeenAt: parseCHDate(row.first_seen_at),
   lastSeenAt: parseCHDate(row.last_seen_at),
 })
+
+const SECOND_MS = 1000
+const DAYS_PER_WEEK = 7
+
+/**
+ * Sample stddev with the same variance floor the detector helper uses, so
+ * the chart line matches the live decision rule visually.
+ */
+const sigmaEffective = (observed: number, expected: number): number =>
+  Math.max(observed, Math.sqrt(Math.max(0, expected)), 1.0)
+
+/**
+ * Build a `(dow, hour)` → mean/stddev/samples table from the prior-history
+ * rows, with the same `(dow, hour ± SEASONAL_BUCKET_POOLING_HOURS)` pool
+ * across `SEASONAL_HISTORY_WEEKS` prior weeks used by the live detector.
+ *
+ * Returned as a 7×24 grid so per-hour lookups during bucket projection are
+ * O(1) and the projection cost scales with the number of chart hours, not
+ * with the size of the history.
+ */
+const buildSeasonalGrid = (rows: readonly HourlyBucketRow[]): { mean: number; sigma: number; samples: number }[][] => {
+  // grid[dow][hour] = { sums: number[], samples: number } where each entry is
+  // the bucket count for one prior week's matching (dow, hour) cell. Stored
+  // as raw counts so we can later sum them into the ±1h pool without losing
+  // the originals.
+  const cells: number[][][] = Array.from({ length: DAYS_PER_WEEK }, () =>
+    Array.from({ length: 24 }, () => [] as number[]),
+  )
+
+  for (const row of rows) {
+    const ts = parseCHDate(row.ts_hour)
+    const dow = ts.getUTCDay()
+    const hour = ts.getUTCHours()
+    const cell = cells[dow]?.[hour]
+    if (cell) cell.push(Number(row.count))
+  }
+
+  const grid: { mean: number; sigma: number; samples: number }[][] = Array.from({ length: DAYS_PER_WEEK }, () =>
+    Array.from({ length: 24 }, () => ({ mean: 0, sigma: 0, samples: 0 })),
+  )
+
+  for (let dow = 0; dow < DAYS_PER_WEEK; dow++) {
+    for (let hour = 0; hour < 24; hour++) {
+      const pooled: number[] = []
+      for (let offset = -SEASONAL_BUCKET_POOLING_HOURS; offset <= SEASONAL_BUCKET_POOLING_HOURS; offset++) {
+        // Hour-wrap intentionally crosses into the adjacent dow so the pool
+        // for (Mon, 00) includes (Sun, 23) and (Mon, 01) — matches what the
+        // live detector does when its anchors fall near midnight.
+        const wrappedDow = (dow + Math.floor((hour + offset) / 24) + DAYS_PER_WEEK) % DAYS_PER_WEEK
+        const wrappedHour = (((hour + offset) % 24) + 24) % 24
+        const samples = cells[wrappedDow]?.[wrappedHour]
+        if (samples) pooled.push(...samples)
+      }
+
+      const cell = grid[dow]?.[hour]
+      if (!cell) continue
+      if (pooled.length === 0) continue
+
+      const mean = pooled.reduce((acc, v) => acc + v, 0) / pooled.length
+      const variance = pooled.reduce((acc, v) => acc + (v - mean) ** 2, 0) / pooled.length
+      cell.mean = mean
+      cell.sigma = Math.sqrt(variance)
+      cell.samples = pooled.length
+    }
+  }
+
+  return grid
+}
+
+/**
+ * Project a stable entry-band threshold across the histogram's buckets.
+ *
+ * For each bucket spanning `bucketHours` hours, the per-hour expected counts
+ * are summed and the per-hour variances are added in quadrature (independent
+ * hours), then the 1h-band `k_short` and the 6h-band `k_long = max(1,
+ * k_short - 1)` are both applied. The line is the max of the two — the
+ * harder one to clear — which matches what the detector's AND-of-windows
+ * trip rule effectively asks the bucket to cross.
+ *
+ * Hours that fall on a `(dow, hour)` cell with no contributing samples
+ * still contribute the σ floor (≈1.0 occurrences) to the bucket's variance.
+ * That keeps the line drawn across "dead" stretches at a low but
+ * informative level — an event in a normally-quiet bin really is anomalous
+ * — instead of breaking the line every time the histogram crosses an
+ * empty `(dow, hour)`. The caller short-circuits to `Number.NaN` when the
+ * issue has no history at all anywhere in the pool.
+ */
+const projectBucketThresholds = (input: {
+  readonly grid: readonly (readonly { readonly mean: number; readonly sigma: number; readonly samples: number }[])[]
+  readonly bucketStartMs: number
+  readonly bucketEndMs: number
+  readonly kShort: number
+}): number => {
+  const { grid, bucketStartMs, bucketEndMs, kShort } = input
+  const kLong = Math.max(1, kShort - 1)
+  let sumExpected = 0
+  let sumVariance = 0
+
+  for (let cursor = bucketStartMs; cursor < bucketEndMs; cursor += HOUR_MS) {
+    const d = new Date(cursor)
+    const dow = d.getUTCDay()
+    const hour = d.getUTCHours()
+    const cell = grid[dow]?.[hour]
+    const expected = cell?.mean ?? 0
+    const sigmaObs = cell?.sigma ?? 0
+    sumExpected += expected
+    const sigmaEff = sigmaEffective(sigmaObs, expected)
+    sumVariance += sigmaEff * sigmaEff
+  }
+
+  const bucketSigma = Math.sqrt(sumVariance)
+  const t1h = sumExpected + kShort * bucketSigma
+  const t6h = sumExpected + kLong * bucketSigma
+  return Math.max(t1h, t6h)
+}
 
 const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly IssueTrendSeries[] => {
   const bucketsByIssueId = new Map<string, IssueOccurrenceBucket[]>()
@@ -1004,6 +1121,102 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceBucketRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+        }),
+      escalationThresholdHistogramByIssues: ({
+        organizationId,
+        projectId,
+        issueIds,
+        timeRange,
+        bucketSeconds,
+        kShort,
+      }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          // Sub-hour buckets aren't supported — the MV is hourly so anything
+          // finer than that would round to the same band repeated across the
+          // bucket and read more like noise than a meaningful line.
+          if (bucketSeconds < 3600) return []
+          if (!timeRange.from || !timeRange.to) return []
+
+          const histogramStartMs = timeRange.from.getTime()
+          const histogramEndMs = timeRange.to.getTime()
+          // Anchor the seasonal pool on the chart's end, not its start. This
+          // matches the live detector's `now - week*W` anchors when the chart
+          // ends at "now", and — more importantly — newer issues whose data
+          // is contained in the chart window still get a meaningful line.
+          // Anchoring on `from` would require ≥4 weeks of pre-chart history
+          // and silently emit empty thresholds for anything younger.
+          const historyEndMs = histogramEndMs
+          const historyStartMs = historyEndMs - SEASONAL_HISTORY_WEEKS * WEEK_MS
+
+          const bucketRows = yield* chSqlClient.query<HourlyBucketRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      issue_id,
+                      ts_hour,
+                      sum(count) AS count
+                    FROM scores_hourly_buckets
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND issue_id IN ({issueIds:Array(String)})
+                      AND ts_hour >= toDateTime({historyStart:String}, 'UTC')
+                      AND ts_hour <  toDateTime({historyEnd:String}, 'UTC')
+                    GROUP BY issue_id, ts_hour`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                issueIds: Array.from(issueIds) as string[],
+                historyStart: toClickHouseDateTime(historyStartMs),
+                historyEnd: toClickHouseDateTime(historyEndMs),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<HourlyBucketRow>()
+          })
+
+          // Group history rows by issue, then project per-issue thresholds.
+          const rowsByIssue = new Map<string, HourlyBucketRow[]>()
+          for (const row of bucketRows) {
+            const issueId = normalizeCHString(row.issue_id)
+            const list = rowsByIssue.get(issueId) ?? []
+            list.push(row)
+            rowsByIssue.set(issueId, list)
+          }
+
+          // Bucket scaffold aligned to `toStartOfInterval(... , INTERVAL N SECOND)`
+          // — same alignment ClickHouse uses for `histogramByIssues`, so each
+          // threshold bucket's key matches its histogram counterpart 1:1.
+          const bucketWidthMs = bucketSeconds * SECOND_MS
+          const firstBucketStartMs = Math.floor(histogramStartMs / bucketWidthMs) * bucketWidthMs
+          const bucketStarts: number[] = []
+          for (let start = firstBucketStartMs; start < histogramEndMs; start += bucketWidthMs) {
+            bucketStarts.push(start)
+          }
+
+          return issueIds.map<IssueEscalationThresholdSeries>((issueId) => {
+            const issueRows = rowsByIssue.get(issueId as string) ?? []
+            // No history at all in the pool → don't fabricate a line. The
+            // floor σ would still produce a low constant threshold, but it
+            // would carry no real meaning and the renderer can drop it.
+            const hasAnyHistory = issueRows.length > 0
+            const grid = buildSeasonalGrid(issueRows)
+
+            const buckets: IssueEscalationThresholdBucket[] = bucketStarts.map((bucketStartMs) => {
+              const bucketEndMs = bucketStartMs + bucketWidthMs
+              const thresholdCount = hasAnyHistory
+                ? projectBucketThresholds({
+                    grid,
+                    bucketStartMs,
+                    bucketEndMs,
+                    kShort,
+                  })
+                : Number.NaN
+              const iso = `${new Date(bucketStartMs).toISOString().slice(0, 19)}.000Z`
+              return { bucket: iso, thresholdCount }
+            })
+            return { issueId, buckets }
+          })
         }),
       trendByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) =>
         Effect.gen(function* () {
