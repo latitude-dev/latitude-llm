@@ -131,6 +131,16 @@ describe("useParamState", () => {
       await actWithParamFlush(() => result.current[1]((prev) => `${prev}!`))
       expect(result.current[0]).toBe("hi!")
     })
+
+    it('decodes JSON-quoted strings written by TanStack Router (e.g. `"foo"`)', () => {
+      // TanStack Router's default search-param stringifier JSON-encodes strings
+      // that are themselves valid JSON, so a value of `"quoted text"` ends up
+      // in the URL as `%22%5C%22quoted%20text%5C%22%22`. The hook must mirror
+      // that decoding when it reads `URLSearchParams` directly.
+      setUrl(`?q=${encodeURIComponent(JSON.stringify('"quoted text"'))}`)
+      const { result } = setup("q", "")
+      expect(result.current[0]).toBe('"quoted text"')
+    })
   })
 
   describe("boolean params", () => {

@@ -392,6 +392,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       selection: exportSelectionSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
     }),
   )
   .handler(async ({ data }): Promise<EnqueuedExportResult> => {
@@ -420,6 +421,7 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
         recipientEmail: email,
         ...(data.filters ? { filters: data.filters } : {}),
         ...(data.selection ? { selection: data.selection } : {}),
+        ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
       }),
     )
 

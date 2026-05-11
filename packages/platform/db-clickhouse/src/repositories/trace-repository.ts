@@ -34,6 +34,8 @@ import type {
 import {
   emptyTraceDistribution,
   emptyTraceMetrics,
+  type ParsedSearchQuery,
+  parseSearchQuery,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MODEL,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
@@ -51,47 +53,91 @@ import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-sub
 // Trace Search Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Configuration for hybrid search weights (lexical vs semantic). */
-const HYBRID_SEARCH_CONFIG = {
-  /** Weight for lexical relevance score (0-1). */
-  lexicalWeight: 0.3,
-  /** Weight for semantic relevance score (0-1). */
-  semanticWeight: 0.7,
-} as const
+/**
+ * Cap on the semantic-side **chunk-row** candidate pool. Each trace can carry
+ * multiple chunks now, so the cap is sized for chunks, not traces. Cosine scan
+ * stays linear over the embeddings table; above ~30k chunk rows per project
+ * latency becomes user-visible. The cap trades recall on the long tail for
+ * bounded query time — at the average ~3-chunks-per-trace ratio that's ~10k
+ * traces, comfortably above realistic project sizes inside the 30-day TTL
+ * window.
+ */
+const SEMANTIC_SCAN_LIMIT = 30_000
 
 /**
- * Cap on the semantic-side candidate pool. Cosine scan is linear over the
- * embeddings table; above ~10k per project latency becomes user-visible. The
- * cap trades recall on the long tail for bounded query time — realistic
- * projects stay well under this in a 30-day TTL window.
+ * Tokenize a phrase the same way the `search_text` text index does at
+ * storage: split on every non-alphanumeric ASCII byte (matching CH's
+ * `splitByNonAlpha`) and lowercase. Empty fragments are dropped.
+ *
+ * Keeping the TS tokenizer in lock-step with the CH `tokenizer` setting on
+ * `idx_search_text_text` is what makes the storage-vs-query whitespace
+ * asymmetry from LAT-562 disappear: the user's typed `"key": true` and the
+ * indexed `"key":true` produce the same `[key, true]` array on both sides.
  */
-const SEMANTIC_SCAN_LIMIT = 10_000
+function tokenizePhrase(phrase: string): readonly string[] {
+  return phrase
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 0)
+}
 
 /**
- * Builds a subquery that returns matching trace_ids from trace_search_documents.
- * Uses tokenbf_v1 and ngrambf_v1 indexes for efficient lexical search.
+ * Multi-token phrases match as a token bag (every token present, order not
+ * enforced). Swap the per-token loop for `hasPhrase` once we're on CH 26.4+
+ * to recover phrase-order semantics.
+ *
+ * A phrase that tokenizes to nothing (only punctuation between the quotes)
+ * intentionally matches zero rows rather than silently dropping the filter.
  */
-function buildLexicalSearchSubquery(searchQuery: string): { subquery: string; params: Record<string, string> } {
-  // Normalize the search query for token matching
-  const normalizedQuery = searchQuery.trim().toLowerCase()
+function buildLexicalSearchSubquery(phrases: readonly string[]): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  const tokenized = phrases.map(tokenizePhrase)
+  const matchNothing = tokenized.length > 0 && tokenized.some((tokens) => tokens.length === 0)
 
-  // CAST(trace_id AS String): both UNION ALL branches must produce the same
-  // trace_id type, and the semantic branch returns String (post-cast) so the
-  // lexical branch matches.
+  if (matchNothing) {
+    return {
+      subquery: `SELECT CAST(trace_id AS String) AS trace_id
+                 FROM trace_search_documents
+                 WHERE organization_id = {organizationId:String}
+                   AND project_id = {projectId:String}
+                   AND 0`,
+      params: {},
+    }
+  }
+
+  const predicates: string[] = []
+  const params: Record<string, unknown> = {}
+  tokenized.forEach((tokens, phraseIdx) => {
+    tokens.forEach((token, tokenIdx) => {
+      const paramName = `phrase${phraseIdx}_${tokenIdx}`
+      predicates.push(`hasTokenCaseInsensitive(search_text, {${paramName}:String})`)
+      params[paramName] = token
+    })
+  })
+
+  const phraseClause = predicates.length > 0 ? `AND ${predicates.join(" AND ")}` : ""
+
   return {
-    subquery: `SELECT CAST(trace_id AS String) AS trace_id, 1.0 AS lexical_score FROM trace_search_documents
-              WHERE organization_id = {organizationId:String}
-                AND project_id = {projectId:String}
-                AND search_text ILIKE {searchPattern:String}`,
-    params: {
-      searchPattern: `%${normalizedQuery}%`,
-    },
+    subquery: `SELECT CAST(trace_id AS String) AS trace_id
+               FROM trace_search_documents
+               WHERE organization_id = {organizationId:String}
+                 AND project_id = {projectId:String}
+                 ${phraseClause}`,
+    params,
   }
 }
 
 /**
- * Builds a subquery for semantic search candidates using pre-computed query embedding.
- * Cosine distance is converted to a similarity score: 1 - distance.
+ * Builds a subquery for semantic search candidates using a pre-computed query
+ * embedding. The embedding table holds one row per trace **chunk**, so we
+ * compute per-chunk cosine similarity and roll up to a per-trace score via
+ * `max(...) GROUP BY trace_id` — a trace's relevance is its best-matching
+ * chunk's similarity. The inner `ORDER BY semantic_score DESC LIMIT N` bounds
+ * the per-project cosine scan cost by keeping the nearest chunks first; the
+ * outer rollup collapses surviving chunks back into one row per trace for the
+ * downstream join.
  */
 function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
   subquery: string
@@ -99,13 +145,19 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
 } {
   return {
     subquery: `SELECT
-                CAST(trace_id AS String) AS trace_id,
-                (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
-              FROM trace_search_embeddings
-              WHERE organization_id = {organizationId:String}
-                AND project_id = {projectId:String}
-              ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
-              LIMIT {semanticScanLimit:UInt32}`,
+                trace_id,
+                max(semantic_score) AS semantic_score
+              FROM (
+                SELECT
+                  CAST(trace_id AS String) AS trace_id,
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                FROM trace_search_embeddings
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                ORDER BY semantic_score DESC
+                LIMIT {semanticScanLimit:UInt32}
+              )
+              GROUP BY trace_id`,
     params: {
       queryEmbedding: [...queryEmbedding],
       semanticScanLimit: SEMANTIC_SCAN_LIMIT,
@@ -114,68 +166,102 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
 }
 
 /**
- * Builds a hybrid search subquery combining lexical and semantic candidates.
- * Uses a weighted combination of lexical and semantic scores.
- * Traces with only lexical matches still participate (semantic_score = 0).
- * Traces with only semantic matches also participate (lexical_score = 0).
+ * Plan returned by `buildSearchPlan`. Callers branch on `ranked`:
+ *   - `ranked = true`  → ORDER BY relevance_score DESC (semantic / hybrid).
+ *   - `ranked = false` → pure phrase filter, callers should keep the default
+ *     sort so phrase matches surface in chronological order rather than by
+ *     trace_id hash.
  */
-function buildHybridSearchSubquery(
-  searchQuery: string,
-  queryEmbedding: readonly number[] | undefined,
-): { subquery: string; params: Record<string, unknown> } {
-  const lexicalResult = buildLexicalSearchSubquery(searchQuery)
+type SearchPlan = {
+  readonly ranked: boolean
+  readonly subquery: string
+  readonly params: Record<string, unknown>
+}
 
-  // If no embedding available, fall back to lexical-only
-  if (!queryEmbedding || queryEmbedding.length === 0) {
+/**
+ * Translate `(phrases, semanticPrompt, queryEmbedding)` into one of three
+ * shapes (the spec's table collapses to three live shapes — the empty/empty
+ * case is gated upstream by `isActiveSearch`):
+ *
+ *   - phrases-only (`ranked=false`): AND-ed `hasAllTokens` filter.
+ *   - semantic-only (`ranked=true`): cosine ranker with the relevance floor.
+ *   - hybrid (`ranked=true`): phrase filter narrows the candidate set, cosine
+ *     similarity ranks the survivors. Phrase matches without an embedding
+ *     stay in (relevance_score = 0); the lexical filter already enforced
+ *     precision, so the semantic floor is dropped to avoid losing them.
+ *
+ * If a semantic prompt was typed but the embedder is unavailable, the plan
+ * collapses to phrases-only (no semantic ranking) when phrases are present,
+ * or to a deliberate empty result when there are no phrases — same fallback
+ * shape the previous design relied on.
+ */
+function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly number[] | undefined): SearchPlan {
+  const hasPhrases = parsed.phrases.length > 0
+  const hasSemantic = parsed.semanticPrompt.length > 0
+  const hasEmbedding = !!queryEmbedding && queryEmbedding.length > 0
+
+  if (hasPhrases && !hasSemantic) {
+    const lex = buildLexicalSearchSubquery(parsed.phrases)
     return {
-      subquery: `SELECT trace_id, lexical_score AS relevance_score FROM (${lexicalResult.subquery})`,
-      params: lexicalResult.params,
+      ranked: false,
+      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      params: lex.params,
     }
   }
 
-  const semanticResult = buildSemanticSearchSubquery(queryEmbedding)
+  if (!hasPhrases && hasSemantic) {
+    if (!hasEmbedding) {
+      return {
+        ranked: true,
+        subquery: `SELECT CAST(trace_id AS String) AS trace_id, 0.0 AS relevance_score
+                   FROM trace_search_documents
+                   WHERE organization_id = {organizationId:String}
+                     AND project_id = {projectId:String}
+                     AND 0`,
+        params: {},
+      }
+    }
+    const sem = buildSemanticSearchSubquery(queryEmbedding)
+    return {
+      ranked: true,
+      subquery: `SELECT trace_id, semantic_score AS relevance_score
+                 FROM (${sem.subquery})
+                 WHERE semantic_score >= {minRelevanceScore:Float64}`,
+      params: { ...sem.params, minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE },
+    }
+  }
 
-  // UNION ALL + GROUP BY rather than FULL OUTER JOIN. In ClickHouse a join
-  // miss yields the column's default value (zero bytes for FixedString, empty
-  // string for String), not SQL NULL, so coalesce/ifNull can't distinguish
-  // "no match" from a real row. UNION ALL avoids the issue entirely.
-  //
-  // HAVING filters at the precision floor. With no rerank, this is the sole
-  // quality gate — pure-lexical hits always pass (lexicalWeight), pure-
-  // semantic hits must clear the floor via cosine similarity.
-  const subquery = `SELECT
-                      trace_id,
-                      ({lexicalWeight:Float64} * max(lexical_score) +
-                       {semanticWeight:Float64} * max(semantic_score)) AS relevance_score
-                    FROM (
-                      SELECT trace_id, lexical_score, 0.0 AS semantic_score
-                      FROM (${lexicalResult.subquery})
-                      UNION ALL
-                      SELECT trace_id, 0.0 AS lexical_score, semantic_score
-                      FROM (${semanticResult.subquery})
-                    )
-                    GROUP BY trace_id
-                    HAVING relevance_score >= {minRelevanceScore:Float64}`
-
+  // hasPhrases && hasSemantic
+  const lex = buildLexicalSearchSubquery(parsed.phrases)
+  if (!hasEmbedding) {
+    return {
+      ranked: false,
+      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      params: lex.params,
+    }
+  }
+  const sem = buildSemanticSearchSubquery(queryEmbedding)
+  // LEFT JOIN keeps phrase-matching traces without an embedding (semantic_score
+  // defaults to 0.0 in CH for the missing side of an outer join). The lexical
+  // filter is the precision gate, so no semantic floor here.
   return {
-    subquery,
-    params: {
-      ...lexicalResult.params,
-      ...semanticResult.params,
-      lexicalWeight: HYBRID_SEARCH_CONFIG.lexicalWeight,
-      semanticWeight: HYBRID_SEARCH_CONFIG.semanticWeight,
-      minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
-    },
+    ranked: true,
+    subquery: `SELECT lex.trace_id AS trace_id,
+                      max(sem.semantic_score) AS relevance_score
+               FROM (${lex.subquery}) AS lex
+               LEFT JOIN (${sem.subquery}) AS sem
+                 ON lex.trace_id = sem.trace_id
+               GROUP BY lex.trace_id`,
+    params: { ...lex.params, ...sem.params },
   }
 }
 
 /**
- * Whether the request carries an active search query. Any non-empty,
- * non-whitespace `searchQuery` flips the list and aggregate queries onto the
- * hybrid search path.
+ * Whether the parsed query carries enough signal to flip the read path onto
+ * the search subquery. Empty-input or whitespace-only inputs short-circuit.
  */
-function hasActiveSearchQuery(searchQuery: string | undefined): searchQuery is string {
-  return !!searchQuery && searchQuery.trim().length > 0
+function isActiveSearch(parsed: ParsedSearchQuery): boolean {
+  return parsed.phrases.length > 0 || parsed.semanticPrompt.length > 0
 }
 
 const LIST_SELECT = `
@@ -650,14 +736,14 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,
   Effect.gen(function* () {
-    const generateQueryEmbedding = (searchQuery: string): Effect.Effect<readonly number[] | undefined, never> =>
+    const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<readonly number[] | undefined, never> =>
       Effect.gen(function* () {
         const aiOption = yield* Effect.serviceOption(AI)
         if (Option.isNone(aiOption)) return undefined
 
         const result = yield* aiOption.value
           .embed({
-            text: searchQuery,
+            text: semanticPrompt,
             model: TRACE_SEARCH_EMBEDDING_MODEL,
             dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
             inputType: "query",
@@ -670,6 +756,18 @@ export const TraceRepositoryLive = Layer.effect(
           )
 
         return result?.embedding
+      })
+
+    /**
+     * Resolve a parsed search query into a `SearchPlan`. Skips the embedder
+     * when the parsed query has no semantic prompt — phrase-only queries are
+     * pure filters and don't need a Voyage round-trip.
+     */
+    const planSearch = (parsed: ParsedSearchQuery): Effect.Effect<SearchPlan, never> =>
+      Effect.gen(function* () {
+        const queryEmbedding =
+          parsed.semanticPrompt.length > 0 ? yield* generateQueryEmbedding(parsed.semanticPrompt) : undefined
+        return buildSearchPlan(parsed, queryEmbedding)
       })
 
     const getCohortBaselineByTags: TraceRepositoryShape["getCohortBaselineByTags"] = ({
@@ -836,11 +934,10 @@ export const TraceRepositoryLive = Layer.effect(
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
         const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        if (hasActiveSearchQuery(options.searchQuery)) {
-          const searchQuery = options.searchQuery
-          const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-          const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
+        const parsed = options.searchQuery ? parseSearchQuery(options.searchQuery) : undefined
+        const plan = parsed && isActiveSearch(parsed) ? yield* planSearch(parsed) : undefined
 
+        if (plan?.ranked) {
           const cursorClause = options.cursor
             ? `AND (search_results.relevance_score, t.trace_id) <
                  ({cursorSortValue:Float64}, {cursorTraceId:FixedString(32)})`
@@ -852,7 +949,7 @@ export const TraceRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `WITH search_results AS (
-                          SELECT trace_id, relevance_score FROM (${searchResult.subquery})
+                          SELECT trace_id, relevance_score FROM (${plan.subquery})
                         )
                         SELECT ${LIST_SELECT},
                                search_results.relevance_score
@@ -871,7 +968,7 @@ export const TraceRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   limit: limit + 1,
                   ...filterParams,
-                  ...searchResult.params,
+                  ...plan.params,
                   ...(options.cursor
                     ? {
                         cursorSortValue: options.cursor.sortValue,
@@ -915,6 +1012,7 @@ export const TraceRepositoryLive = Layer.effect(
           )
         }
         const finalHaving = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+        const searchFilter = plan ? `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))` : ""
 
         return yield* chSqlClient
           .query(async (client) => {
@@ -924,6 +1022,7 @@ export const TraceRepositoryLive = Layer.effect(
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         ${extraWhere}
+                        ${searchFilter}
                       GROUP BY organization_id, project_id, trace_id
                       ${finalHaving}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
@@ -933,6 +1032,7 @@ export const TraceRepositoryLive = Layer.effect(
                 projectId: projectId as string,
                 limit: limit + 1,
                 ...filterParams,
+                ...(plan?.params ?? {}),
                 ...(options.cursor
                   ? {
                       cursorSortValue: options.cursor.sortValue,
@@ -1111,10 +1211,10 @@ export const TraceRepositoryLive = Layer.effect(
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-          if (hasActiveSearchQuery(searchQuery)) {
-            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
-            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            const plan = yield* planSearch(parsed)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`
 
             return yield* chSqlClient
               .query(async (client) => {
@@ -1134,7 +1234,7 @@ export const TraceRepositoryLive = Layer.effect(
                     organizationId: organizationId as string,
                     projectId: projectId as string,
                     ...filterParams,
-                    ...searchResult.params,
+                    ...plan.params,
                   },
                   format: "JSONEachRow",
                 })
@@ -1216,13 +1316,10 @@ export const TraceRepositoryLive = Layer.effect(
                 Effect.mapError((error) => toRepositoryError(error, "findLastTraceAt")),
               )
 
-          if (hasActiveSearchQuery(searchQuery)) {
-            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
-            return yield* runQuery(
-              `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`,
-              searchResult.params,
-            )
+          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            const plan = yield* planSearch(parsed)
+            return yield* runQuery(`AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`, plan.params)
           }
 
           return yield* runQuery("", {})
@@ -1273,13 +1370,10 @@ export const TraceRepositoryLive = Layer.effect(
                 Effect.mapError((error) => toRepositoryError(error, "countAnnotatedByProjectId")),
               )
 
-          if (hasActiveSearchQuery(searchQuery)) {
-            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
-            return yield* runQuery(
-              `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`,
-              searchResult.params,
-            )
+          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            const plan = yield* planSearch(parsed)
+            return yield* runQuery(`AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`, plan.params)
           }
 
           return yield* runQuery("", {})
@@ -1293,10 +1387,10 @@ export const TraceRepositoryLive = Layer.effect(
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-          if (hasActiveSearchQuery(searchQuery)) {
-            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
-            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            const plan = yield* planSearch(parsed)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`
 
             return yield* chSqlClient
               .query(async (client) => {
@@ -1342,7 +1436,7 @@ export const TraceRepositoryLive = Layer.effect(
                     organizationId: organizationId as string,
                     projectId: projectId as string,
                     ...filterParams,
-                    ...searchResult.params,
+                    ...plan.params,
                   },
                   format: "JSONEachRow",
                 })
@@ -1417,10 +1511,10 @@ export const TraceRepositoryLive = Layer.effect(
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
           const bs = Math.floor(bucketSeconds)
 
-          if (hasActiveSearchQuery(searchQuery)) {
-            const queryEmbedding = yield* generateQueryEmbedding(searchQuery)
-            const searchResult = buildHybridSearchSubquery(searchQuery, queryEmbedding)
-            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${searchResult.subquery}))`
+          const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            const plan = yield* planSearch(parsed)
+            const searchCondition = `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`
 
             return yield* chSqlClient
               .query(async (client) => {
@@ -1448,7 +1542,7 @@ export const TraceRepositoryLive = Layer.effect(
                     projectId: projectId as string,
                     bucketSeconds: bs,
                     ...filterParams,
-                    ...searchResult.params,
+                    ...plan.params,
                   },
                   format: "JSONEachRow",
                 })

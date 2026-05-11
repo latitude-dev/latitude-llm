@@ -1,5 +1,6 @@
 import { Context, Effect } from "effect"
 import { z } from "zod"
+import { ALERT_INCIDENT_KINDS, type AlertIncidentKind } from "./alert-incident-kinds.ts"
 import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
@@ -13,9 +14,22 @@ export const organizationSettingsSchema = z.object({
     .optional(),
 })
 
+/**
+ * Per-alert-kind switch for in-app notifications. Missing entries default to
+ * `true` (alert notifications are on by default; users opt out per kind).
+ */
+export const alertNotificationsSettingSchema = z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean())
+export type AlertNotificationsSetting = z.infer<typeof alertNotificationsSettingSchema>
+
 export const projectSettingsSchema = z.object({
   keepMonitoring: z.boolean().optional(),
+  alertNotifications: alertNotificationsSettingSchema.optional(),
 })
+
+export const isAlertNotificationEnabled = (
+  settings: ProjectSettings | null | undefined,
+  kind: AlertIncidentKind,
+): boolean => settings?.alertNotifications?.[kind] ?? true
 
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>
 

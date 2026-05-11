@@ -21,6 +21,8 @@
     "reset": "pnpm clean && pnpm install && pnpm build && pnpm db:reset",
     "catchup": "pnpm clean && pnpm install && pnpm build && pnpm db:up",
     "openapi:emit": "pnpm --filter @app/api openapi:emit",
+    "mcp:emit": "pnpm --filter @app/api mcp:emit",
+    "mcp:inspect": "pnpm --filter @app/api mcp:inspect",
     "sdk:check": "./fern/invoke.sh check",
     "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local --local --force",
     "prepare": "pnpm hooks && effect-language-service patch"

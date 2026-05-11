@@ -388,6 +388,7 @@ function ProjectPage() {
             selection={bulkSelection}
             selectedCount={selectedCount}
             onSuccess={clearSelections}
+            {...(hasActiveFilters ? { filters } : {})}
           />
         </>
       )}

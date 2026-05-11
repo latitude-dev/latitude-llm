@@ -369,6 +369,7 @@ CREATE TABLE trace_search_embeddings
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
     `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `chunk_index` UInt16 CODEC(T64, ZSTD(1)),
     `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `content_hash` FixedString(64) CODEC(ZSTD(1)),
     `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
@@ -377,5 +378,5 @@ CREATE TABLE trace_search_embeddings
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id)
-ORDER BY (organization_id, project_id, trace_id);
+PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
+ORDER BY (organization_id, project_id, trace_id, chunk_index);

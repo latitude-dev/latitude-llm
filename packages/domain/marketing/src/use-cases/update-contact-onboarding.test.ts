@@ -68,6 +68,7 @@ describe("updateContactOnboarding", () => {
     expect(sender.updates).toEqual([
       {
         userId: USER_ID,
+        email: "ada@example.com",
         firstName: "Ada Lovelace",
         jobTitle: "Founder",
         userGroup: MARKETING_USER_GROUP_CODE_AGENTS,

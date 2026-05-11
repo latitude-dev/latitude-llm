@@ -191,9 +191,21 @@ export const createDomainEventsWorker = ({
         dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.issueId}:${event.payload.endedAt}`,
       }),
 
-    // PR 1 has no consumer for IncidentCreated. PR 2 (email channel) and
-    // PR 3 (in-app feed) will replace this no-op with channel fan-out.
-    IncidentCreated: () => Effect.void,
+    IncidentCreated: (event) =>
+      pub.publish(
+        "notifications",
+        "create-from-incident-opened",
+        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
+        { dedupeKey: `notifications:incident-opened:${event.payload.alertIncidentId}` },
+      ),
+
+    IncidentClosed: (event) =>
+      pub.publish(
+        "notifications",
+        "create-from-incident-closed",
+        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
+        { dedupeKey: `notifications:incident-closed:${event.payload.alertIncidentId}` },
+      ),
 
     AnnotationDeleted: (event) => {
       const { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt } = event.payload
@@ -295,6 +307,8 @@ export const createDomainEventsWorker = ({
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: () => Effect.void,
+    FlaggerToggled: () => Effect.void,
+    SavedSearchCreated: () => Effect.void,
     // Impersonation events are audit-only — their value is being
     // persisted in the outbox for support / compliance queries.
     // No downstream worker consumes them, so these handlers are no-ops.

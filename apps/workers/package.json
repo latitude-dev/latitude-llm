@@ -9,6 +9,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
+    "trace-search:backfill:dist": "node --enable-source-maps dist/scripts/backfill-trace-search.cjs",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src"
   },
@@ -33,6 +34,7 @@
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/marketing": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

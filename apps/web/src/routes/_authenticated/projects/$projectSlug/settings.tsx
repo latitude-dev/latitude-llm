@@ -1,3 +1,4 @@
+import type { AlertIncidentKind } from "@domain/shared"
 import {
   DetailSection,
   InfiniteTable,
@@ -10,9 +11,11 @@ import {
   useToast,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
+import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
@@ -20,6 +23,34 @@ import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index
 import { toUserMessage } from "../../../../lib/errors.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
+
+const NOTIFICATIONS_FEATURE_FLAG = "notifications"
+
+interface AlertNotificationToggleConfig {
+  readonly kind: AlertIncidentKind
+  readonly label: string
+  readonly description: string
+}
+
+// Order matches the lifecycle: discovery → recurrence → sustained spike.
+const ALERT_NOTIFICATION_TOGGLES: readonly AlertNotificationToggleConfig[] = [
+  {
+    kind: "issue.new",
+    label: "Notify when a new issue is discovered",
+    description: "Send an in-app notification the first time an issue is detected in this project.",
+  },
+  {
+    kind: "issue.regressed",
+    label: "Notify when an issue regresses",
+    description: "Send an in-app notification when a resolved issue starts producing occurrences again.",
+  },
+  {
+    kind: "issue.escalating",
+    label: "Notify when an issue starts or stops escalating",
+    description:
+      "Send an in-app notification when occurrence rate crosses the escalation threshold, and again when it returns to baseline.",
+  },
+]
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
   staticData: {
@@ -33,7 +64,13 @@ function ProjectSettingsPage() {
   const { toast } = useToast()
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
+  const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
   const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const { data: notificationsEnabled = false } = useQuery({
+    queryKey: ["feature-flag", NOTIFICATIONS_FEATURE_FLAG],
+    queryFn: () => hasFeatureFlag({ data: { identifier: NOTIFICATIONS_FEATURE_FLAG } }),
+  })
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
@@ -132,6 +169,26 @@ function ProjectSettingsPage() {
     }
   }
 
+  const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
+    if (savingAlertKind !== null) return
+
+    setSavingAlertKind(kind)
+    try {
+      const transaction = updateProjectMutation(currentProject.id, {
+        settings: {
+          ...currentProject.settings,
+          alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), [kind]: checked },
+        },
+      })
+      await transaction.isPersisted.promise
+      toast({ description: "Notification preference updated" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setSavingAlertKind(null)
+    }
+  }
+
   const handleFlaggerEnabledChange = async (flagger: FlaggerRecord, checked: boolean) => {
     try {
       const transaction = updateFlaggerMutation({
@@ -179,20 +236,45 @@ function ProjectSettingsPage() {
             label="Issues"
             contentClassName="max-h-none overflow-visible px-2 pt-2"
           >
-            <div className="flex w-full flex-row items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="keep-monitoring">Monitor resolved issues</Label>
-                <Text.H6 color="foregroundMuted">
-                  When enabled, evaluations monitoring active issues stay active after the issues are resolved to detect
-                  further regressions
-                </Text.H6>
+            <div className="flex w-full flex-col gap-4">
+              <div className="flex w-full flex-row items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="keep-monitoring">Monitor resolved issues</Label>
+                  <Text.H6 color="foregroundMuted">
+                    When enabled, evaluations monitoring active issues stay active after the issues are resolved to
+                    detect further regressions
+                  </Text.H6>
+                </div>
+                <Switch
+                  id="keep-monitoring"
+                  checked={currentProject.settings.keepMonitoring ?? true}
+                  loading={isSavingKeepMonitoring}
+                  onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
+                />
               </div>
-              <Switch
-                id="keep-monitoring"
-                checked={currentProject.settings.keepMonitoring ?? true}
-                loading={isSavingKeepMonitoring}
-                onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
-              />
+              {notificationsEnabled
+                ? ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
+                    const inputId = `alert-notification-${toggle.kind}`
+                    const checked = currentProject.settings.alertNotifications?.[toggle.kind] ?? true
+                    return (
+                      <div
+                        key={toggle.kind}
+                        className="flex w-full flex-row items-center justify-between gap-4 border-t border-border pt-4"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={inputId}>{toggle.label}</Label>
+                          <Text.H6 color="foregroundMuted">{toggle.description}</Text.H6>
+                        </div>
+                        <Switch
+                          id={inputId}
+                          checked={checked}
+                          loading={savingAlertKind === toggle.kind}
+                          onCheckedChange={(next) => void handleAlertNotificationChange(toggle.kind, next)}
+                        />
+                      </div>
+                    )
+                  })
+                : null}
             </div>
           </DetailSection>
           <DetailSection

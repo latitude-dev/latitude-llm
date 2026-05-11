@@ -9,9 +9,9 @@ export interface MarkContactTelemetryEnabledInput {
 
 /**
  * Marks every member of the org as `telemetryEnabled: true` in the marketing
- * tool once the org has received its first trace. Every current member is
- * already a Loops contact (they either signed up or were registered after
- * accepting an invite), so we update each by `userId`.
+ * tool once the org has received its first trace. We pass both `userId` and
+ * `email` so Loops can resolve the contact by email when an older record
+ * (e.g. a v1-era contact) isn't yet linked to the v2 `userId`.
  */
 export const markContactTelemetryEnabled = ({
   marketingContacts,
@@ -30,6 +30,7 @@ export const markContactTelemetryEnabled = ({
       (member) =>
         marketingContacts.updateContact({
           userId: member.userId,
+          email: member.email,
           telemetryEnabled: true,
         }),
       { concurrency: "unbounded", discard: true },

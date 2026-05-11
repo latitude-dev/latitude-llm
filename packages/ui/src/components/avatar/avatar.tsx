@@ -15,14 +15,18 @@ const sizeClass: Record<AvatarSize, string> = {
   xl: "h-14 w-14 text-xl",
 }
 
+const displayInitialPattern = /^[\p{L}\p{N}]$/u
+const fallbackInitial = "L"
+
 export function initialsFromDisplayName(name: string): string {
   const trimmed = name.trim()
-  if (trimmed.length === 0) return "?"
+  if (trimmed.length === 0) return fallbackInitial
 
-  const firstWord = trimmed.split(/\s+/).find(Boolean)
-  if (!firstWord) return "?"
+  for (const char of Array.from(trimmed)) {
+    if (displayInitialPattern.test(char)) return char.toUpperCase()
+  }
 
-  return Array.from(firstWord)[0]?.toUpperCase() ?? "?"
+  return fallbackInitial
 }
 
 export interface AvatarProps {

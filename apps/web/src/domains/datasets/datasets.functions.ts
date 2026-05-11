@@ -22,6 +22,7 @@ import {
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
+  filterSetSchema,
   IssueId,
   isValidId,
   OrganizationId,
@@ -612,6 +613,8 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
       datasetId: z.string(),
       issueId: z.string().optional(),
       selection: rowSelectionSchema,
+      searchQuery: z.string().max(500).optional(),
+      filters: filterSetSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
@@ -625,6 +628,8 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
         datasetId: DatasetId(data.datasetId),
         source: toTraceSource(data.issueId),
         selection: toTraceSelection(data.selection),
+        ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        ...(data.filters ? { filters: data.filters } : {}),
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
@@ -657,6 +662,8 @@ export const createDatasetFromTracesFunction = createServerFn({
       issueId: z.string().optional(),
       name: z.string().min(1),
       selection: rowSelectionSchema,
+      searchQuery: z.string().max(500).optional(),
+      filters: filterSetSchema.optional(),
     }),
   )
   .handler(
@@ -680,6 +687,8 @@ export const createDatasetFromTracesFunction = createServerFn({
           name: data.name,
           source: toTraceSource(data.issueId),
           selection: toTraceSelection(data.selection),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+          ...(data.filters ? { filters: data.filters } : {}),
         }).pipe(
           withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),

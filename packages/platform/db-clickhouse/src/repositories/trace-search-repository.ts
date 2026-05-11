@@ -44,6 +44,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
                 organization_id: row.organizationId as string,
                 project_id: row.projectId as string,
                 trace_id: row.traceId,
+                chunk_index: row.chunkIndex,
                 start_time: toClickhouseDateTime(row.startTime),
                 content_hash: row.contentHash,
                 embedding_model: row.embeddingModel,
@@ -61,6 +62,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
       organizationId,
       projectId,
       traceId,
+      chunkIndex,
       contentHash,
     ) =>
       chSqlClient
@@ -70,12 +72,14 @@ export const TraceSearchRepositoryLive = Layer.effect(
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
                       AND trace_id = {traceId:FixedString(32)}
+                      AND chunk_index = {chunkIndex:UInt16}
                       AND content_hash = {contentHash:String}
                     LIMIT 1`,
             query_params: {
               organizationId: organizationId as string,
               projectId: projectId as string,
               traceId,
+              chunkIndex,
               contentHash,
             },
             format: "JSONEachRow",

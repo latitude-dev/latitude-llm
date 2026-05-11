@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@domain/admin": "workspace:*",
+    "@domain/alerts": "workspace:*",
     "@intercom/messenger-js-sdk": "0.0.14",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
@@ -27,6 +28,7 @@
     "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",

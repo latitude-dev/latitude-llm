@@ -76,6 +76,9 @@ describe("markContactTelemetryEnabled", () => {
 
     expect(sender.updates).toHaveLength(3)
     expect(new Set(sender.updates.map((u) => u.userId))).toEqual(new Set([USER_OLDEST, USER_OWNER, USER_NEWEST]))
+    expect(new Set(sender.updates.map((u) => u.email))).toEqual(
+      new Set(["oldest@example.com", "owner@example.com", "newest@example.com"]),
+    )
     for (const update of sender.updates) {
       expect(update.telemetryEnabled).toBe(true)
     }

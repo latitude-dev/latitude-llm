@@ -103,14 +103,28 @@ export interface EventPayloads {
   }
   /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row is
-   * inserted. PR 1 has no consumer (the dispatcher routes it to a no-op);
-   * PR 2 (email) and PR 3 (in-app) will subscribe.
+   * inserted. Consumed by the in-app notifications worker (and, later, by
+   * email/Slack channel workers) to fan out to delivery channels.
    */
   IncidentCreated: {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
     readonly kind: "issue.new" | "issue.regressed" | "issue.escalating"
+    readonly sourceType: "issue"
+    readonly sourceId: string
+  }
+  /**
+   * Emitted by the alert-incidents worker after an `alert_incidents` row's
+   * `ended_at` is set (only sustained kinds — currently `issue.escalating` —
+   * can close). Symmetric to `IncidentCreated`. Consumed by the notifications
+   * worker to fire a "closed" notification for the same incident.
+   */
+  IncidentClosed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly alertIncidentId: string
+    readonly kind: "issue.escalating"
     readonly sourceType: "issue"
     readonly sourceId: string
   }
@@ -181,6 +195,20 @@ export interface EventPayloads {
     readonly actorUserId: string
     readonly projectId: string
     readonly datasetId: string
+    readonly name: string
+  }
+  FlaggerToggled: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly flaggerSlug: string
+    readonly enabled: boolean
+  }
+  SavedSearchCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly searchId: string
     readonly name: string
   }
   EvaluationConfigured: {

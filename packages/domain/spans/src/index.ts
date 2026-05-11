@@ -5,6 +5,10 @@ export {
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
+  TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
+  TRACE_SEARCH_CHUNK_MAX_CHARS,
+  TRACE_SEARCH_CHUNK_OVERLAP_CHARS,
+  TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
@@ -126,6 +130,7 @@ export {
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
 export type {
+  TraceSearchChunk,
   TraceSearchDocument,
   TraceSearchDocumentInput,
 } from "./use-cases/build-trace-search-document.ts"
@@ -147,6 +152,8 @@ export type {
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
+export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type {
