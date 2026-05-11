@@ -643,7 +643,9 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())}
+                  disabled={
+                    stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())
+                  }
                   onClick={async () => {
                     if (stackChoice === null || isSubmittingOnboarding) return
                     setIsSubmittingOnboarding(true)
