@@ -11,6 +11,7 @@ import { logger as honoLogger } from "hono/logger"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
+import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { AppEnv } from "./types.ts"
@@ -33,6 +34,7 @@ const startServer = async () => {
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
+  app.use(suppressHttpErrorTelemetry)
 
   app.onError(honoErrorHandler)
 
