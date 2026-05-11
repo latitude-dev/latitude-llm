@@ -54,7 +54,11 @@ function applyMetadataEntries(filter: FilterSet, entries: readonly { key: string
   for (const [key, value] of Object.entries(filter)) {
     if (!key.startsWith("metadata.")) next[key] = value
   }
+  // `MetadataFilter` emits onChange on every keystroke, so partial rows with an
+  // empty key/value reach us mid-typing. Persisting `metadata.` would be
+  // rejected by `filterSetSchema` on save; drop incomplete rows instead.
   for (const entry of entries) {
+    if (entry.key === "" || entry.value === "") continue
     next[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
   }
   return next
@@ -115,12 +119,13 @@ function EvaluationFilterModalForm({
           filter: draft,
         },
       })
-      onClose()
       await invalidateIssueQueries(projectId, issueId)
       toast({ description: "Scope updated." })
+      // `onClose` unmounts the modal — no need (and no point) resetting
+      // `isSaving` afterwards, so the reset lives in the failure path only.
+      onClose()
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
-    } finally {
       setIsSaving(false)
     }
   }
