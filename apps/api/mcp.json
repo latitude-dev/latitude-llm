@@ -12,7 +12,8 @@
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Human-readable name for the API key"
           }
         },
         "required": [
@@ -34,7 +35,8 @@
             "type": "string"
           },
           "token": {
-            "type": "string"
+            "type": "string",
+            "description": "The API key token. Only included in the creation response — store it securely."
           },
           "tokenHash": {
             "type": "string"
@@ -163,7 +165,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Resource ID"
           }
         },
         "required": [

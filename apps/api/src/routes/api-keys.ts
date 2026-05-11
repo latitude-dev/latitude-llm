@@ -28,9 +28,7 @@ const ResponseSchema = z
     id: z.string(),
     organizationId: z.string(),
     name: z.string(),
-    token: z
-      .string()
-      .openapi({ description: "The API key token. Only included in the creation response — store it securely." }),
+    token: z.string().describe("The API key token. Only included in the creation response — store it securely."),
     tokenHash: z.string(),
     lastUsedAt: z.string().nullable(),
     deletedAt: z.string().nullable(),
@@ -55,7 +53,7 @@ const ListResponseSchema = z.object({ apiKeys: z.array(ListItemSchema) }).openap
 
 const RequestSchema = z
   .object({
-    name: z.string().min(1).openapi({ description: "Human-readable name for the API key" }),
+    name: z.string().min(1).describe("Human-readable name for the API key"),
   })
   .openapi("CreateApiKeyBody")
 

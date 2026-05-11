@@ -30,6 +30,9 @@ export const registerEndpoint = (endpoint: AnyApiEndpoint): void => {
  * entries across `registerRoutes` calls. Production boot doesn't call it —
  * `registerRoutes` runs once per process, so the registry starts empty
  * either way.
+ *
+ * @public — only consumed by test files which knip doesn't traverse, so we
+ * mark it explicitly to stop knip flagging it as unused.
  */
 export const resetEndpointRegistry = (): void => {
   endpointRegistry.length = 0
