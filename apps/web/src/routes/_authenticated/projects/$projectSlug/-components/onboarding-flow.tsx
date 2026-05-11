@@ -413,6 +413,7 @@ export function OnboardingFlow({
   const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
+  const [customJobTitle, setCustomJobTitle] = useState("")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
@@ -571,6 +572,16 @@ export function OnboardingFlow({
                   )
                 })}
               </div>
+              {role === "other" && (
+                <input
+                  type="text"
+                  placeholder="What's your role?"
+                  value={customJobTitle}
+                  onChange={(e) => setCustomJobTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  maxLength={256}
+                />
+              )}
               <div>
                 <Button onClick={() => setStep("stack")}>Next</Button>
               </div>
@@ -636,7 +647,8 @@ export function OnboardingFlow({
                     if (stackChoice === null || isSubmittingOnboarding) return
                     setIsSubmittingOnboarding(true)
                     try {
-                      await submitOnboarding({ data: { jobTitle: role, stackChoice } })
+                      const resolvedJobTitle = role === "other" && customJobTitle.trim() ? customJobTitle.trim() : role
+                      await submitOnboarding({ data: { jobTitle: resolvedJobTitle, stackChoice } })
                       setStep("telemetry")
                     } catch (error) {
                       toast({ variant: "destructive", description: toUserMessage(error) })
