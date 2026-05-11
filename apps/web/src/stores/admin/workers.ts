@@ -11,8 +11,16 @@ import { removeWorkspaceJobsAction } from '$/actions/admin/workers/removeWorkspa
 import type {
   QueueStats,
   QueueDetail,
+  JobInfo,
   WorkspaceQueueUsage,
 } from '@latitude-data/core/services/workers/inspect'
+
+export type QueueJobState =
+  | 'active'
+  | 'waiting'
+  | 'delayed'
+  | 'completed'
+  | 'failed'
 
 export function useQueueStats(opts?: SWRConfiguration) {
   const route = ROUTES.api.admin.workers.root
@@ -41,6 +49,28 @@ export function useQueueDetail(
 
   const { data, mutate, ...rest } = useSWR<QueueDetail>(route, fetcher, {
     refreshInterval: 5000,
+    ...opts,
+  })
+
+  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
+}
+
+export function useQueueJobs(
+  queueName: string | null,
+  state: QueueJobState,
+  opts?: SWRConfiguration,
+) {
+  const route = queueName
+    ? `${ROUTES.api.admin.workers.detail(queueName).jobs}?state=${state}&start=0&end=500`
+    : null
+  const fetcher = useFetcher<JobInfo[]>(route ?? undefined)
+
+  const {
+    data = [],
+    mutate,
+    ...rest
+  } = useSWR<JobInfo[]>(route, fetcher, {
+    refreshInterval: 10000,
     ...opts,
   })
 

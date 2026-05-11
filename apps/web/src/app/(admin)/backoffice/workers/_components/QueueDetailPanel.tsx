@@ -14,6 +14,8 @@ import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable
 import { ROUTES, BackofficeRoutes } from '$/services/routes'
 import Link from 'next/link'
 
+import { FailedJobsSection } from './FailedJobsSection'
+
 type ConfirmState =
   | { type: 'drain' }
   | { type: 'workspace'; workspaceId: number }
@@ -216,6 +218,8 @@ export function QueueDetailPanel({
             ))}
           </DataTable>
         )}
+
+        <FailedJobsSection queueName={data.stats.name} />
       </div>
 
       {confirm && (

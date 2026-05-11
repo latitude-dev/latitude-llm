@@ -340,6 +340,7 @@ export const API_ROUTES = {
       root: '/api/admin/workers',
       detail: (queueName: string) => ({
         root: `/api/admin/workers/${queueName}`,
+        jobs: `/api/admin/workers/${queueName}/jobs`,
       }),
       workspace: (workspaceId: number) => ({
         root: `/api/admin/workers/workspace/${workspaceId}`,
