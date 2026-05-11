@@ -1,8 +1,9 @@
 import { Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
+import { ArrowRightIcon, CheckIcon, MinusIcon, SparklesIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
+import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
 import {
   DashboardHero,
   DashboardSection,
@@ -12,6 +13,7 @@ import {
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { MetricsSection } from "./-components/metrics-section.tsx"
+import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
   loader: async ({ params }) => {
@@ -118,6 +120,18 @@ function BackofficeProjectDetailPage() {
       />
 
       <MetricsSection projectId={project.id} />
+
+      <ActionsSection
+        title="Project actions"
+        description="Operational actions for this project — manually trigger background jobs, etc."
+      >
+        <ActionRow
+          icon={SparklesIcon}
+          title="Run Claude Code Wrapped"
+          description="Enqueue the weekly summary email now. Worker still gates on the claude-code-wrapped feature flag and on Claude Code activity in the last 7 days."
+          action={<WrappedTriggerButton projectId={project.id} projectName={project.name} />}
+        />
+      </ActionsSection>
 
       <DashboardSection
         title="Organization"
