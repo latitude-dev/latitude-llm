@@ -785,6 +785,108 @@ describe("TraceRepository", () => {
       expect(ids.filter((id) => id === FLAT_TRACE)).toHaveLength(1)
     })
 
+    it("paginates ranked search on per-trace relevance, not per-chunk rows", async () => {
+      const startTime = new Date(Date.UTC(2026, 0, 3, 0, 0, 0))
+      const tag = "search-pagination-chunks"
+      const traces = [
+        TraceId(`${"7".repeat(31)}0`),
+        TraceId(`${"8".repeat(31)}0`),
+        TraceId(`${"9".repeat(31)}0`),
+      ]
+
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          traces.map((traceId, i) => ({
+            ...makeSpanRow({
+              traceId,
+              spanId: `${(i + 20).toString(16).padStart(2, "0")}${"e".repeat(14)}`,
+              startTime: new Date(startTime.getTime() + i * 1000),
+              costTotalMicrocents: 0,
+              tokensInput: 0,
+              tokensOutput: 0,
+            }),
+            tags: [tag],
+          })),
+        ),
+      )
+
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "trace_search_documents",
+          traces.map((traceId, i) => ({
+            organization_id: ORG_ID,
+            project_id: PROJECT_ID,
+            trace_id: traceId,
+            start_time: toClickHouseDateTime(new Date(startTime.getTime() + i * 1000)),
+            root_span_name: "root",
+            search_text: `pagination needle ${traceId}`,
+            content_hash: `${"b".repeat(63)}${i}`,
+            indexed_at: toClickHouseDateTime(startTime),
+          })),
+        ),
+      )
+
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "trace_search_embeddings",
+          traces.flatMap((traceId, traceIndex) =>
+            [0, 1].map((chunkIndex) => ({
+              organization_id: ORG_ID,
+              project_id: PROJECT_ID,
+              trace_id: traceId,
+              chunk_index: chunkIndex,
+              start_time: toClickHouseDateTime(new Date(startTime.getTime() + traceIndex * 1000)),
+              content_hash: `${"c".repeat(60)}${traceIndex.toString().padStart(2, "0")}${chunkIndex
+                .toString()
+                .padStart(2, "0")}`,
+              embedding_model: "voyage-4-large",
+              embedding: [...alignedEmbedding],
+              indexed_at: toClickHouseDateTime(startTime),
+            })),
+          ),
+        ),
+      )
+
+      const options = {
+        limit: 1,
+        searchQuery: "needle",
+        filters: { tags: [{ op: "in", value: [tag] }] },
+      } as const
+
+      const first = await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options }))
+      expect(first.nextCursor).toBeDefined()
+      const firstCursor = first.nextCursor
+      if (!firstCursor) throw new Error("Expected first search page to have a cursor")
+
+      const second = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { ...options, cursor: firstCursor },
+        }),
+      )
+      expect(second.nextCursor).toBeDefined()
+      const secondCursor = second.nextCursor
+      if (!secondCursor) throw new Error("Expected second search page to have a cursor")
+
+      const third = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { ...options, cursor: secondCursor },
+        }),
+      )
+
+      expect(first.hasMore).toBe(true)
+      expect(second.hasMore).toBe(true)
+      expect(third.hasMore).toBe(false)
+      expect([...first.items, ...second.items, ...third.items].map((t) => t.traceId)).toEqual([...traces].reverse())
+    })
+
     it("multi-token phrase: every token in the phrase must be present", async () => {
       await insertSearchRows()
 
