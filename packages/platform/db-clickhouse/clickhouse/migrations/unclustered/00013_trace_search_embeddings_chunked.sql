@@ -25,14 +25,15 @@ TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 -- Existing semantic rows remain in `trace_search_embeddings_legacy` after the
 -- swap; immediately run the trace-search backfill job in deploy so the new
 -- chunked table is repopulated from canonical trace conversations.
-RENAME TABLE
-    trace_search_embeddings         TO trace_search_embeddings_legacy,
-    trace_search_embeddings_chunked TO trace_search_embeddings;
+--
+-- ClickHouse Cloud Shared databases reject multi-table RENAME statements, so
+-- keep these as separate DDL statements instead of one atomic RENAME swap.
+RENAME TABLE trace_search_embeddings TO trace_search_embeddings_legacy;
+RENAME TABLE trace_search_embeddings_chunked TO trace_search_embeddings;
 
 -- +goose Down
 
-RENAME TABLE
-    trace_search_embeddings        TO trace_search_embeddings_chunked,
-    trace_search_embeddings_legacy TO trace_search_embeddings;
+RENAME TABLE trace_search_embeddings TO trace_search_embeddings_chunked;
+RENAME TABLE trace_search_embeddings_legacy TO trace_search_embeddings;
 
 DROP TABLE IF EXISTS trace_search_embeddings_chunked;

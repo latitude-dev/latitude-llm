@@ -42,20 +42,19 @@ PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
 ORDER BY (organization_id, project_id, trace_id, chunk_index)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
--- Atomic-as-it-gets swap. After this, the original name points to the new
--- empty shape and writers / readers pick it up automatically. Existing rows
--- remain in `trace_search_embeddings_legacy`; run the trace-search backfill
--- job immediately in deploy to repopulate the new table from trace data.
-RENAME TABLE
-    trace_search_embeddings         TO trace_search_embeddings_legacy,
-    trace_search_embeddings_chunked TO trace_search_embeddings
-ON CLUSTER default;
+-- Swap the live name to the new empty shape so writers / readers pick it up
+-- automatically. Existing rows remain in `trace_search_embeddings_legacy`; run
+-- the trace-search backfill job immediately in deploy to repopulate the new
+-- table from trace data.
+--
+-- ClickHouse Cloud Shared databases reject multi-table RENAME statements, so
+-- keep these as separate DDL statements instead of one atomic RENAME swap.
+RENAME TABLE trace_search_embeddings TO trace_search_embeddings_legacy ON CLUSTER default;
+RENAME TABLE trace_search_embeddings_chunked TO trace_search_embeddings ON CLUSTER default;
 
 -- +goose Down
 
-RENAME TABLE
-    trace_search_embeddings        TO trace_search_embeddings_chunked,
-    trace_search_embeddings_legacy TO trace_search_embeddings
-ON CLUSTER default;
+RENAME TABLE trace_search_embeddings TO trace_search_embeddings_chunked ON CLUSTER default;
+RENAME TABLE trace_search_embeddings_legacy TO trace_search_embeddings ON CLUSTER default;
 
 DROP TABLE IF EXISTS trace_search_embeddings_chunked ON CLUSTER default;
