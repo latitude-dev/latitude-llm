@@ -206,6 +206,7 @@ describe('evaluateLiveLogJob', () => {
         }),
         expect.objectContaining({
           deduplication: expect.any(Object),
+          attempts: 5,
         }),
       )
     })
@@ -236,6 +237,7 @@ describe('evaluateLiveLogJob', () => {
         }),
         expect.objectContaining({
           deduplication: expect.any(Object),
+          attempts: 5,
         }),
       )
       expect(mockEvaluationsQueue.add).not.toHaveBeenCalledWith(

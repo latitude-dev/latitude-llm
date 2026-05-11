@@ -1,7 +1,7 @@
 import { MainSpanType, SpanWithDetails } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { NotFoundError } from '../../../lib/errors'
+import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import { isRetryableError } from '../../../lib/isRetryableError'
 import {
   CommitsRepository,
@@ -148,6 +148,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
   } catch (error) {
     if (isRetryableError(error as Error)) throw error
+    if (shouldRetryTraceAssembly(error as Error, job)) throw error
 
     captureException(error as Error)
 
@@ -160,4 +161,27 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
     if (dry) throw error
   }
+}
+
+/**
+ * Trace assembly errors are usually a race with OTel ingestion: the prompt
+ * span's spanCreated event arrives before the completion span's batch lands
+ * in the read store. Re-throwing lets BullMQ retry the job with exponential
+ * backoff, freeing the worker slot during the wait.
+ */
+const RETRYABLE_TRACE_ASSEMBLY_MESSAGES = new Set([
+  'Cannot assemble trace',
+  'Cannot find completion span',
+  'Completion span metadata is missing',
+])
+
+function shouldRetryTraceAssembly(
+  error: Error,
+  job: Job<RunEvaluationV2JobData>,
+): boolean {
+  if (!(error instanceof UnprocessableEntityError)) return false
+  if (!RETRYABLE_TRACE_ASSEMBLY_MESSAGES.has(error.message)) return false
+
+  const maxAttempts = job.opts.attempts ?? 1
+  return job.attemptsMade + 1 < maxAttempts
 }
