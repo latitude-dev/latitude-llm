@@ -43,6 +43,17 @@ function makeLayer() {
   const repository: AdminFeatureFlagRepositoryShape = {
     list: () => Effect.succeed([...active.values()]),
     listArchived: () => Effect.succeed([...archived.values()]),
+    findEligibilityForFlag: (identifier) =>
+      Effect.gen(function* () {
+        const flag = active.get(identifier)
+        if (!flag) return yield* new FeatureFlagNotFoundError({ identifier })
+        if (flag.enabledForAll) return { enabledForAll: true, organizationIds: [] }
+        const orgIds: OrganizationId[] = []
+        for (const [orgId, set] of enabledByOrg.entries()) {
+          if (set.has(identifier)) orgIds.push(OrganizationId(orgId))
+        }
+        return { enabledForAll: false, organizationIds: orgIds }
+      }),
     create: (input) =>
       Effect.gen(function* () {
         if (active.has(input.identifier) || archived.has(input.identifier)) {
