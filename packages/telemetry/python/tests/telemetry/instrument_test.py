@@ -57,7 +57,7 @@ class TestInstrument(TestCase):
 
         span = spans[0]
         self.assert_span_name(span, "openai.chat")
-        self.assert_span_has_attribute(span, "gen_ai.system", "OpenAI")
+        self.assert_span_has_attribute(span, "gen_ai.system", "openai")
         self.assert_span_has_attribute(span, "gen_ai.request.model", "gpt-4o-mini")
         self.assert_span_has_attribute(span, "gen_ai.response.model", "gpt-4o-mini")
         self.assert_span_has_attribute(span, "gen_ai.usage.input_tokens", 10)
