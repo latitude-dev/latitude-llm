@@ -62,15 +62,11 @@ class TestCase(unittest.TestCase):
             if hasattr(processor, "span_exporter"):
                 processor.span_exporter = self.test_exporter
                 return True
-            inner = getattr(processor, "_inner", None)
-            if inner is not None and patch_span_exporter(inner):
-                return True
-            export_processor = getattr(processor, "_export_processor", None)
-            if export_processor is not None and patch_span_exporter(export_processor):
-                return True
+            for attr in ("_tail", "_inner", "_export_processor"):
+                child = getattr(processor, attr, None)
+                if child is not None and patch_span_exporter(child):
+                    return True
             return False
-
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 
         for processor in self.provider._active_span_processor._span_processors:
             patch_span_exporter(processor)
