@@ -11,7 +11,7 @@ RUN apk add --no-cache libc6-compat curl python3 make g++ gcc
 FROM alpine AS base
 
 # Will be used to cache pnpm store
-RUN npm install -g corepack@0.31.0 && corepack enable
+RUN npm install -g corepack@0.31.0 && corepack enable && corepack prepare pnpm@9.8.0 --activate
 
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
