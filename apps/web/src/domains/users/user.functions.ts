@@ -1,6 +1,6 @@
 import { OutboxEventWriter } from "@domain/events"
 import { SqlClient } from "@domain/shared"
-import { UserRepository } from "@domain/users"
+import { onboardingJobTitleSchema, UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -24,7 +24,7 @@ export const updateUser = createServerFn({ method: "POST" })
 export const submitOnboarding = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
-      jobTitle: z.string().min(1).max(256),
+      jobTitle: onboardingJobTitleSchema,
       stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
     }),
   )

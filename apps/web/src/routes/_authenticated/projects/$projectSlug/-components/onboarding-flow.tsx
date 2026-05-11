@@ -575,6 +575,7 @@ export function OnboardingFlow({
               {role === "other" && (
                 <input
                   type="text"
+                  aria-label="Custom job title"
                   placeholder="What's your role?"
                   value={customJobTitle}
                   onChange={(e) => setCustomJobTitle(e.target.value)}
@@ -642,7 +643,7 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={stackChoice === null || isSubmittingOnboarding}
+                  disabled={stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())}
                   onClick={async () => {
                     if (stackChoice === null || isSubmittingOnboarding) return
                     setIsSubmittingOnboarding(true)
