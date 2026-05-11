@@ -17,8 +17,25 @@ export const organizationSettingsSchema = z.object({
 /**
  * Per-alert-kind switch for in-app notifications. Missing entries default to
  * `true` (alert notifications are on by default; users opt out per kind).
+ *
+ * `escalationSensitivity` (1-6) tunes the seasonal anomaly detector: it's the
+ * `k_short` multiplier on σ for the 1h window (the 6h `k_long` is derived as
+ * `k_short - 1` so the long window provides independent confirmation). Lower
+ * = noisier (trips more easily); higher = quieter. Optional; the detector
+ * falls back to `DEFAULT_ESCALATION_SENSITIVITY_K` when missing. Carried on
+ * `alertNotifications` because it only matters when at least one kind is
+ * enabled.
+ *
+ * The kind keys (`issue.new` / `issue.regressed` / `issue.escalating`) and
+ * the named `escalationSensitivity` key live at the same level — no name
+ * collision is possible since the kinds are dotted identifiers.
  */
-export const alertNotificationsSettingSchema = z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean())
+export const alertNotificationsSettingSchema = z.intersection(
+  z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean()),
+  z.object({
+    escalationSensitivity: z.number().int().min(1).max(6).optional(),
+  }),
+)
 export type AlertNotificationsSetting = z.infer<typeof alertNotificationsSettingSchema>
 
 export const projectSettingsSchema = z.object({

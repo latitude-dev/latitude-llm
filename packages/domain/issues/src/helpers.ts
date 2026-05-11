@@ -324,9 +324,7 @@ export interface SeasonalEscalationDecision {
  * gate as before. The 7-day issue-age guard makes the zero-history case
  * rare in practice.
  */
-export const evaluateSeasonalEscalation = (
-  input: SeasonalEscalationDecisionInput,
-): SeasonalEscalationDecision => {
+export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInput): SeasonalEscalationDecision => {
   const { signals, kShort, isNew, wasEscalating, entrySignals, startedAt, exitEligibleSince, now } = input
 
   if (isNew) {
@@ -361,7 +359,10 @@ export const evaluateSeasonalEscalation = (
       return { transition: "none", nextExitEligibleSince: null }
     }
     // Active incident with no seasonal context — absolute-rate backstop only.
-    if (entrySignals !== null && signals.recent24h < entrySignals.entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR) {
+    if (
+      entrySignals !== null &&
+      signals.recent24h < entrySignals.entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR
+    ) {
       return { transition: "exit", reason: "absolute-rate-drop", nextExitEligibleSince: null }
     }
     return { transition: "none", nextExitEligibleSince: exitEligibleSince }
