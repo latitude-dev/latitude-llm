@@ -72,7 +72,19 @@ function parseParamValue<T extends ParamStateValue>(rawValue: string, defaultVal
 
 /** Reads a raw search param string directly from the current browser URL. */
 function readRawParam(paramKey: string) {
-  return new URLSearchParams(window.location.search).get(paramKey)
+  const raw = new URLSearchParams(window.location.search).get(paramKey)
+  if (raw === null) return null
+  // TanStack Router's default search-param stringifier JSON-encodes any string
+  // whose content is itself valid JSON (e.g. `"quoted"` or `{"a":1}`), so the
+  // URL ends up with one extra layer of quoting. The router's reader undoes
+  // that on its own, but this hook reads `URLSearchParams` directly to stay
+  // synchronous, so we have to mirror the parse here. Strings that don't
+  // parse as JSON pass through unchanged.
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed === "string") return parsed
+  } catch {}
+  return raw
 }
 
 /**

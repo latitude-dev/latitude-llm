@@ -433,7 +433,7 @@ function SearchInput({
           const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
           onSubmit(next)
         }}
-        placeholder="Search"
+        placeholder='Search by meaning. Use "quotes" for an exact phrase.'
         size="lg"
         maxLength={SEARCH_QUERY_MAX_LENGTH}
         className="w-full pl-9 rounded-xl"
