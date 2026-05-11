@@ -1,5 +1,5 @@
-import { OutboxEventWriter } from "@domain/events"
-import { CacheStore, FlaggerId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { CacheStore, FlaggerId, OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -36,6 +36,17 @@ const createCacheLayer = () => {
     },
   })
   return { layer, deletedKeys }
+}
+
+const createOutboxLayer = () => {
+  const written: OutboxWriteEvent[] = []
+  const layer = Layer.succeed(OutboxEventWriter, {
+    write: (event) => {
+      written.push(event)
+      return Effect.void
+    },
+  })
+  return { layer, written }
 }
 
 describe("updateFlaggerUseCase", () => {
@@ -115,6 +126,69 @@ describe("updateFlaggerUseCase", () => {
 
     expect(updated).toBeNull()
     expect(deletedKeys).toEqual([`org:${ORG_ID}:flaggers:${PROJECT_ID}`])
+  })
+
+  it("emits a FlaggerToggled outbox event with the actor and new state when the row was updated", async () => {
+    const ACTOR_USER_ID = UserId("u".repeat(24))
+    const seed = makeFlagger("jailbreaking", true)
+    const { repository } = createFakeFlaggerRepository([seed])
+    const { layer: cacheLayer } = createCacheLayer()
+    const { layer: outboxLayer, written } = createOutboxLayer()
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(FlaggerRepository, repository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      outboxLayer,
+      cacheLayer,
+    )
+
+    await Effect.runPromise(
+      updateFlaggerUseCase({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        slug: "jailbreaking",
+        enabled: false,
+        actorUserId: ACTOR_USER_ID,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(written).toHaveLength(1)
+    const [event] = written
+    expect(event?.eventName).toBe("FlaggerToggled")
+    expect(event?.aggregateType).toBe("flagger")
+    expect(event?.aggregateId).toBe(seed.id)
+    expect(event?.organizationId).toBe(ORG_ID)
+    expect(event?.payload).toEqual({
+      organizationId: ORG_ID,
+      actorUserId: ACTOR_USER_ID,
+      projectId: PROJECT_ID,
+      flaggerSlug: "jailbreaking",
+      enabled: false,
+    })
+  })
+
+  it("does NOT emit FlaggerToggled when no matching row exists", async () => {
+    const { repository } = createFakeFlaggerRepository([])
+    const { layer: cacheLayer } = createCacheLayer()
+    const { layer: outboxLayer, written } = createOutboxLayer()
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(FlaggerRepository, repository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      outboxLayer,
+      cacheLayer,
+    )
+
+    await Effect.runPromise(
+      updateFlaggerUseCase({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        slug: "jailbreaking",
+        enabled: false,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(written).toEqual([])
   })
 
   it("succeeds even when no CacheStore is in the layer (eviction is best-effort)", async () => {

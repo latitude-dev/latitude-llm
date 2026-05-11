@@ -1,5 +1,5 @@
 import { OutboxEventWriter } from "@domain/events"
-import type { ProjectId, RepositoryError } from "@domain/shared"
+import { type ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Flagger } from "../entities/flagger.ts"
 import type { FlaggerSlug } from "../flagger-strategies/types.ts"
@@ -28,34 +28,43 @@ export const updateFlaggerUseCase = Effect.fn("flaggers.updateFlagger")(function
   yield* Effect.annotateCurrentSpan("flagger.projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("flagger.slug", input.slug)
 
-  const repository = yield* FlaggerRepository
-  const updated = yield* repository.update({
-    projectId: input.projectId,
-    slug: input.slug,
-    enabled: input.enabled,
-  })
+  const sqlClient = yield* SqlClient
+  const updated = yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repository = yield* FlaggerRepository
+      const row = yield* repository.update({
+        projectId: input.projectId,
+        slug: input.slug,
+        enabled: input.enabled,
+      })
 
+      if (row) {
+        const outboxEventWriter = yield* OutboxEventWriter
+        yield* outboxEventWriter.write({
+          eventName: "FlaggerToggled",
+          aggregateType: "flagger",
+          aggregateId: row.id,
+          organizationId: input.organizationId,
+          payload: {
+            organizationId: input.organizationId,
+            actorUserId: input.actorUserId ?? "",
+            projectId: input.projectId,
+            flaggerSlug: input.slug,
+            enabled: input.enabled,
+          },
+        })
+      }
+
+      return row
+    }),
+  )
+
+  // Evict AFTER the transaction commits so a concurrent reader can't
+  // repopulate the cache with the stale value between eviction and commit.
   yield* evictProjectFlaggersUseCase({
     organizationId: input.organizationId,
     projectId: input.projectId,
   })
-
-  if (updated) {
-    const outboxEventWriter = yield* OutboxEventWriter
-    yield* outboxEventWriter.write({
-      eventName: "FlaggerToggled",
-      aggregateType: "flagger",
-      aggregateId: updated.id,
-      organizationId: input.organizationId,
-      payload: {
-        organizationId: input.organizationId,
-        actorUserId: input.actorUserId ?? "",
-        projectId: input.projectId,
-        flaggerSlug: input.slug,
-        enabled: input.enabled,
-      },
-    })
-  }
 
   return updated satisfies Flagger | null
 })
