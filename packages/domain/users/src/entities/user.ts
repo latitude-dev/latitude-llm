@@ -21,18 +21,6 @@ export const JOB_TITLE_VALUES = ["engineer", "data-ai-ml", "product-manager", "f
 export const jobTitleSchema = z.enum(JOB_TITLE_VALUES)
 export type JobTitle = z.infer<typeof jobTitleSchema>
 
-/**
- * Accepts a known job title (except the bare sentinel `"other"`) **or** a
- * trimmed custom string when the user picks "other" and types their actual
- * role. Trims before validation so whitespace-only input is rejected.
- */
-export const onboardingJobTitleSchema = z
-  .string()
-  .max(256)
-  .transform((v) => v.trim())
-  .pipe(z.string().min(1))
-  .refine((v) => v !== "other", { message: 'Custom job title required when "other" is selected' })
-
 export const userSchema = z.object({
   id: userIdSchema,
   email: z.string().min(1),

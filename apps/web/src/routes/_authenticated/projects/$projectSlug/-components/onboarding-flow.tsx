@@ -650,8 +650,11 @@ export function OnboardingFlow({
                     if (stackChoice === null || isSubmittingOnboarding) return
                     setIsSubmittingOnboarding(true)
                     try {
-                      const resolvedJobTitle = role === "other" && customJobTitle.trim() ? customJobTitle.trim() : role
-                      await submitOnboarding({ data: { jobTitle: resolvedJobTitle, stackChoice } })
+                      const onboardingData =
+                        role === "other"
+                          ? { customJobTitle, stackChoice }
+                          : { jobTitle: role, stackChoice }
+                      await submitOnboarding({ data: onboardingData })
                       setStep("telemetry")
                     } catch (error) {
                       toast({ variant: "destructive", description: toUserMessage(error) })
