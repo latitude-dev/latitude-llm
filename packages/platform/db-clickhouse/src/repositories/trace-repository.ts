@@ -79,25 +79,12 @@ function tokenizePhrase(phrase: string): readonly string[] {
 }
 
 /**
- * Builds a subquery that returns matching trace_ids from trace_search_documents
- * by AND-ing one `hasTokenCaseInsensitive` predicate per token. The text index
- * on `search_text` accelerates each predicate; without the index (e.g. the
- * in-process chdb test backend) the same predicates fall back to a token scan
- * with identical semantics.
+ * Multi-token phrases match as a token bag (every token present, order not
+ * enforced). Swap the per-token loop for `hasPhrase` once we're on CH 26.4+
+ * to recover phrase-order semantics.
  *
- * Multi-token phrases collapse to a token-bag match: every token must be
- * present in `search_text`, but they need not be contiguous. The LAT-562 use
- * case (`"handOffToHuman": true`) is single-token-per-phrase, so this is
- * exact for the motivating problem. The proper "contiguous tokens, in order"
- * primitive is `hasPhrase`, which lands in CH 26.4 (PR
- * ClickHouse/ClickHouse#101997); prod runs 26.2 today. When prod upgrades,
- * swap the per-token loop for one `hasPhrase(search_text, phrase)` call per
- * phrase to recover phrase-order semantics.
- *
- * If a phrase tokenizes to nothing (the user typed only punctuation between
- * the quotes), the entire query intentionally matches no rows: the user
- * filtered on a phrase the index can't represent — surfacing zero results is
- * more honest than silently dropping the filter.
+ * A phrase that tokenizes to nothing (only punctuation between the quotes)
+ * intentionally matches zero rows rather than silently dropping the filter.
  */
 function buildLexicalSearchSubquery(phrases: readonly string[]): {
   subquery: string
