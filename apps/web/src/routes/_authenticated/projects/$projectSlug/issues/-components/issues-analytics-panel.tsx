@@ -103,7 +103,6 @@ export function IssuesAnalyticsPanel({
     const result = buildIncidentMarkers({
       bucketStartsMs,
       bucketWidthMs,
-      categories: histogramBarChartData.map((d) => d.category),
       incidents,
       nowMs: Date.parse(incidentRange.toIso),
     })

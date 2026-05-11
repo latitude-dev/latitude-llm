@@ -11,18 +11,23 @@ const barMaxWidthPx = 40
 const gridVerticalInsetPx = 16
 
 /** Visual marker drawn over the histogram. Categories must match `xAxis.data` strings. */
+/**
+ * Marker keyed by the bucket's **index** in `xAxis.data` (i.e. its position) rather than its
+ * formatted display label — display labels can collide for long ranges or formatters that drop
+ * the year, which would silently snap a marker to the wrong bucket.
+ */
 export interface BarChartOverlayLine {
-  readonly category: string
+  readonly categoryIndex: number
   readonly color: string
   readonly dashed?: boolean
   /** Symbol drawn at the top of the line; `undefined` hides the symbol. */
   readonly topSymbol?: { readonly shape: "circle" | "diamond" | "rect" | "triangle"; readonly size: number }
 }
 
-/** Inclusive area span between two categories on the x-axis. */
+/** Inclusive area span between two category positions (indices), same rationale as the line. */
 export interface BarChartOverlayArea {
-  readonly startCategory: string
-  readonly endCategory: string
+  readonly startCategoryIndex: number
+  readonly endCategoryIndex: number
   readonly color: string
   readonly opacity?: number
 }
@@ -198,8 +203,12 @@ function buildSeries({
             silent: true,
             symbol: "none",
             label: { show: false },
+            // Bind by category index — on a `type: "category"` xAxis, eCharts accepts a numeric
+            // `xAxis` value as the category position. That avoids the label-collision class of
+            // bug where two buckets format to the same display string and an overlay snaps to
+            // the wrong one.
             data: lines.map((line) => ({
-              xAxis: line.category,
+              xAxis: line.categoryIndex,
               lineStyle: {
                 color: line.color,
                 type: line.dashed ? "dashed" : "solid",
@@ -222,10 +231,10 @@ function buildSeries({
             silent: true,
             data: areas.map((area) => [
               {
-                xAxis: area.startCategory,
+                xAxis: area.startCategoryIndex,
                 itemStyle: { color: area.color, opacity: area.opacity ?? 0.18 },
               },
-              { xAxis: area.endCategory },
+              { xAxis: area.endCategoryIndex },
             ]),
           },
         }

@@ -68,7 +68,6 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
     const result = buildIncidentMarkers({
       bucketStartsMs: denseBuckets.map((b) => Date.parse(b.bucketStart)),
       bucketWidthMs: bucketSeconds * 1000,
-      categories: chartData.map((d) => d.category),
       incidents,
       nowMs: Date.parse(rangeEndIso),
     })

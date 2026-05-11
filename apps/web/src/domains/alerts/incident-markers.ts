@@ -126,7 +126,6 @@ export function groupIncidentsByBucket({
 interface BuildIncidentMarkersInput {
   readonly bucketStartsMs: readonly number[]
   readonly bucketWidthMs: number
-  readonly categories: readonly string[]
   readonly incidents: readonly AlertIncidentRecord[]
   readonly nowMs: number
 }
@@ -147,7 +146,6 @@ interface BuildIncidentMarkersResult {
 export function buildIncidentMarkers({
   bucketStartsMs,
   bucketWidthMs,
-  categories,
   incidents,
   nowMs,
 }: BuildIncidentMarkersInput): BuildIncidentMarkersResult {
@@ -163,11 +161,9 @@ export function buildIncidentMarkers({
   const areas: BarChartOverlayArea[] = []
 
   for (const [bucketIndex, bucketIncidents] of grouping.incidentsByBucketIndex) {
-    const startCategory = categories[bucketIndex]
-    if (startCategory === undefined) continue
     for (const incident of bucketIncidents) {
       lines.push({
-        category: startCategory,
+        categoryIndex: bucketIndex,
         color: INCIDENT_SEVERITY_COLOR[incident.severity],
         dashed: incident.kind === "issue.regressed",
         topSymbol: KIND_TOP_SYMBOL[incident.kind],
@@ -176,12 +172,9 @@ export function buildIncidentMarkers({
   }
 
   for (const range of grouping.ranges) {
-    const startCategory = categories[range.startIndex]
-    const endCategory = categories[range.endIndex]
-    if (startCategory === undefined || endCategory === undefined) continue
     areas.push({
-      startCategory,
-      endCategory,
+      startCategoryIndex: range.startIndex,
+      endCategoryIndex: range.endIndex,
       color: INCIDENT_SEVERITY_COLOR[range.incident.severity],
       opacity: 0.16,
     })
