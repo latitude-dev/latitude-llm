@@ -17,7 +17,7 @@
  * redirects to `/login` with the consent URL as the post-login `redirect`
  * search param so the flow resumes after sign-in.
  */
-import { Button, cn, LatitudeLogo, Text, useHashColor, useToast } from "@repo/ui"
+import { Button, cn, initialsFromDisplayName, LatitudeLogo, Text, useHashColor, useToast } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 import { useState } from "react"
@@ -65,7 +65,7 @@ function OrgAvatar({ name }: { name: string }) {
       className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
       style={style}
     >
-      {name.charAt(0).toUpperCase()}
+      {initialsFromDisplayName(name)}
     </div>
   )
 }
