@@ -479,6 +479,181 @@ labelCluster: {
 
 `trace-end` or `trace-search` should enqueue intent assignment only after the trace has enough indexed content or an embedding. Do not add expensive intent work to the ingestion hot path.
 
+## Alerts and Notifications Integration
+
+Latitude already has an alerts pipeline centered on `alert_incidents`:
+
+```text
+source domain transition
+  -> domain event
+  -> apps/workers domain-events dispatcher
+  -> alert-incidents queue
+  -> @domain/alerts creates/closes alert_incidents row
+  -> IncidentCreated / IncidentClosed domain events
+  -> notifications queue
+  -> @domain/notifications fans out in-app notifications
+```
+
+Current alert incidents are issue-scoped. The shared alert primitives live in `@domain/shared` so settings and notifications can key off alert kinds without depending on `@domain/alerts`:
+
+- source types: currently `issue`
+- kinds: currently `issue.new`, `issue.regressed`, `issue.escalating`
+- severity: currently hardcoded per kind through `SEVERITY_FOR_KIND`
+- project settings: `project.settings.alertNotifications[kind]`, defaulting to enabled
+- notification delivery: one `notifications` row per organization member per incident lifecycle event
+
+Intent taxonomy should reuse this pipeline rather than creating a parallel alerting system.
+
+### Intent Alert Source Types and Kinds
+
+Extend the shared alert source/kind primitives:
+
+```text
+sourceType:
+  issue
+  intent_cluster
+
+kind:
+  issue.new
+  issue.regressed
+  issue.escalating
+  intent_cluster.new
+  intent_cluster.regressed
+  intent_cluster.escalating
+```
+
+Initial severity mapping:
+
+```text
+intent_cluster.new         medium
+intent_cluster.regressed   high
+intent_cluster.escalating  high
+```
+
+`intent_cluster.new` is a point-in-time incident when a recurring emergent cluster is first created or first crosses the product's notification-worthy minimum support.
+
+`intent_cluster.regressed` is a point-in-time incident when a reviewed or previously quiet/resolved cluster starts recurring again after a user marked it reviewed/resolved/ignored-for-now. The exact review state that qualifies as "resolved" for intents must be finalized during implementation.
+
+`intent_cluster.escalating` is a sustained incident. It opens when a cluster's recent trace volume crosses an escalation threshold relative to baseline, and closes when volume falls below a hysteresis exit threshold.
+
+### Intent Domain Events
+
+The intent-taxonomy domain should emit fact-style events when cluster lifecycle transitions happen. Suggested events:
+
+```text
+IntentClusterCreated
+IntentClusterRegressed
+IntentClusterEscalated
+IntentClusterEscalationEnded
+```
+
+Payloads should include ids only plus transition timestamps:
+
+```ts
+IntentClusterCreated: {
+  organizationId: string
+  projectId: string
+  clusterId: string
+  createdAt: string
+}
+
+IntentClusterRegressed: {
+  organizationId: string
+  projectId: string
+  clusterId: string
+  regressedAt: string
+  triggerTraceId?: string
+}
+
+IntentClusterEscalated: {
+  organizationId: string
+  projectId: string
+  clusterId: string
+  escalatedAt: string
+}
+
+IntentClusterEscalationEnded: {
+  organizationId: string
+  projectId: string
+  clusterId: string
+  endedAt: string
+}
+```
+
+These events should describe cluster lifecycle transitions, not notification commands. The `domain-events` worker owns fan-out to the alert-incidents queue.
+
+### Alert Incident Creation
+
+The current alert use-cases are issue-specific (`createAlertIncidentFromIssueEventUseCase` and `closeAlertIncidentFromIssueEventUseCase`). Intent integration should either:
+
+1. generalize them into source-agnostic use-cases such as `createAlertIncidentUseCase` / `closeAlertIncidentUseCase`, or
+2. add intent-specific wrappers that call a shared internal builder.
+
+Prefer the source-agnostic use-case if the type shape remains clear. The alert incident row already has a polymorphic `(sourceType, sourceId)` model; the domain use-case should match that model instead of permanently encoding issue-only assumptions.
+
+Required alert-incidents queue additions:
+
+```text
+alert-incidents
+  intent-cluster-created
+  intent-cluster-regressed
+  intent-cluster-escalated
+  intent-cluster-escalation-ended
+```
+
+Dedupe keys should include the source, kind, and lifecycle discriminator:
+
+```text
+alert-incidents:intent_cluster.new:{clusterId}
+alert-incidents:intent_cluster.regressed:{clusterId}:{triggerTraceIdOrRegressedAt}
+alert-incidents:intent_cluster.escalating:{clusterId}:{escalatedAt}
+alert-incidents:intent_cluster.escalation-ended:{clusterId}:{endedAt}
+```
+
+### Escalation Detection
+
+Intent escalation should mirror issue escalation's shape:
+
+- recent count is measured from ClickHouse `trace_intent_assignments`
+- baseline count is measured from earlier windows for the same cluster
+- entry threshold uses a minimum floor plus a multiplier over baseline
+- exit threshold uses hysteresis to avoid flapping
+- the open `intent_cluster.escalating` incident is the stored truth for "currently escalating"
+
+Do not recompute escalation state ad hoc in UI. Reads should derive current state from open alert incidents or from a repository join that exposes lifecycle flags, matching the issue pattern.
+
+The escalation check should be scheduled from assignment events with throttle/debounce semantics:
+
+- throttle catches escalation starts with bounded latency while a cluster is hot
+- debounce catches escalation endings after the stream quiets down
+- use different dedupe keys so entry and exit checks do not collide
+
+### Notifications and UI Rendering
+
+The current notification payload snapshots issue/project identity. Intent notifications need an equivalent snapshot:
+
+```ts
+{
+  event: "opened" | "closed"
+  incidentKind: "intent_cluster.new" | "intent_cluster.regressed" | "intent_cluster.escalating"
+  clusterId: string
+  clusterLabel?: string
+  projectId?: string
+  projectSlug?: string
+}
+```
+
+Implementation options:
+
+1. widen `IncidentNotificationPayload` with optional intent cluster fields, or
+2. introduce per-source payload variants under the existing `type: "incident"` notification type.
+
+The notification worker should resolve source details based on `incident.sourceType`. It should no longer assume every incident source is an issue.
+
+Project settings should render toggles for intent alert kinds once the taxonomy feature is enabled. Missing settings should default to enabled, matching issue alerts.
+
+Timeline/chart overlays can reuse the existing incident marker helpers if `AlertIncidentKind` and kind labels are extended. Ranged behavior should include `intent_cluster.escalating` alongside `issue.escalating`.
+
 ## UI Scope
 
 Web UI should be implemented under the project route:
@@ -558,7 +733,8 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 - [ ] **P1-2**: Add Postgres tables for `intent_clusters`, `intent_taxonomy_nodes`, `intent_cluster_taxonomy_links`, and `intent_clustering_runs` with organization-scoped RLS and repository adapters.
 - [ ] **P1-3**: Add ClickHouse migrations for `trace_intent_assignments` in both unclustered and clustered migration trees using `ch:create`.
 - [ ] **P1-4**: Add ClickHouse repository methods to read trace vectors by project/window and write assignment batches.
-- [ ] **P1-5**: Add test fixtures and seed data for clusters and assignments.
+- [ ] **P1-5**: Extend shared alert source/kind primitives with `intent_cluster` source type and `intent_cluster.*` incident kinds, including severity defaults.
+- [ ] **P1-6**: Add test fixtures and seed data for clusters and assignments.
 
 **Exit gate**:
 
@@ -571,7 +747,8 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 - [ ] **P2-2**: Add `intent-taxonomy:assignTrace` queue topic and worker handler.
 - [ ] **P2-3**: Enqueue assignment after trace-search embedding refresh when embedding data is available.
 - [ ] **P2-4**: Write unclustered/low-confidence assignments for traces that do not match existing clusters.
-- [ ] **P2-5**: Add metrics/logging for assignment coverage, low-confidence rate, and missing-embedding rate.
+- [ ] **P2-5**: Emit assignment-driven lifecycle events needed for future escalation checks without doing notification work inline.
+- [ ] **P2-6**: Add metrics/logging for assignment coverage, low-confidence rate, and missing-embedding rate.
 
 **Exit gate**:
 
@@ -598,6 +775,7 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 - [ ] **P4-3**: Persist generated label/description only for unreviewed clusters.
 - [ ] **P4-4**: Implement review actions: rename, ignore, promote/review, merge.
 - [ ] **P4-5**: Add audit metadata for review actions.
+- [ ] **P4-6**: Define which reviewed cluster states can later regress and emit `IntentClusterRegressed` when they do.
 
 **Exit gate**:
 
@@ -621,8 +799,12 @@ If existing trace-search budgets prevent embedding all traces, this feature shou
 - [ ] **P6-1**: Add backfill tooling for historical traces.
 - [ ] **P6-2**: Add budget and rate-limit enforcement for cluster labeling.
 - [ ] **P6-3**: Add coverage dashboards/metrics for assignment coverage and cluster churn.
-- [ ] **P6-4**: Add API/MCP-compatible use-cases or routes for core taxonomy read/review capabilities.
-- [ ] **P6-5**: Promote stable architecture and behavior into `dev-docs/*` and remove or shrink this spec.
+- [ ] **P6-4**: Generalize alert incident creation/closing for non-issue sources or add intent-specific wrappers around a shared builder.
+- [ ] **P6-5**: Add domain event fan-out from intent cluster lifecycle events to `alert-incidents` queue tasks.
+- [ ] **P6-6**: Implement intent cluster escalation checks over ClickHouse assignment aggregates with throttle/debounce scheduling.
+- [ ] **P6-7**: Extend in-app notification payloads, renderers, project settings toggles, and incident chart overlays for `intent_cluster.*` incidents.
+- [ ] **P6-8**: Add API/MCP-compatible use-cases or routes for core taxonomy read/review capabilities.
+- [ ] **P6-9**: Promote stable architecture and behavior into `dev-docs/*` and remove or shrink this spec.
 
 **Exit gate**:
 
