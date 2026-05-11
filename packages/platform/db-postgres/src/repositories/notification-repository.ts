@@ -1,6 +1,6 @@
 import { type Notification, NotificationRepository, notificationSchema } from "@domain/notifications"
 import { SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, desc, eq, isNull, lt, or, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { notifications } from "../schema/notifications.ts"
@@ -28,8 +28,6 @@ const toDomain = (row: typeof notifications.$inferSelect): Notification =>
     seenAt: row.seenAt,
   })
 
-void asc // keep import for potential reuse; tree-shaken at build time
-
 export const NotificationRepositoryLive = Layer.effect(
   NotificationRepository,
   Effect.succeed(
@@ -39,10 +37,37 @@ export const NotificationRepositoryLive = Layer.effect(
           if (incoming.length === 0) return
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = incoming.map(toInsertRow)
-          // The partial unique index on (org, user, source_id, payload->>event)
-          // dedupes incident notifications under outbox redelivery; rows that
-          // collide are silently dropped.
-          yield* sqlClient.query((db) => db.insert(notifications).values(rows).onConflictDoNothing())
+          // Conflict target is the partial unique index defined in
+          // `schema/notifications.ts` (`notifications_incident_event_uq`).
+          // We target it explicitly — by column list + the index's WHERE
+          // predicate — so PK collisions and other constraint violations
+          // still surface as errors instead of being silently swallowed.
+          // Done via raw SQL because Drizzle's typed `target` array
+          // can't express the `(payload->>'event')` index expression.
+          yield* sqlClient.query((db) =>
+            db.execute(sql`
+              insert into ${notifications}
+                (id, organization_id, user_id, type, source_id, payload, created_at, seen_at)
+              values ${sql.join(
+                rows.map(
+                  (r) => sql`(
+                    ${r.id},
+                    ${r.organizationId},
+                    ${r.userId},
+                    ${r.type},
+                    ${r.sourceId},
+                    ${JSON.stringify(r.payload)}::jsonb,
+                    ${r.createdAt},
+                    ${r.seenAt}
+                  )`,
+                ),
+                sql`, `,
+              )}
+              on conflict (organization_id, user_id, source_id, ((payload->>'event')))
+                where type = 'incident' and source_id is not null
+              do nothing
+            `),
+          )
         }),
 
       list: ({ organizationId, userId, limit, cursor }) =>

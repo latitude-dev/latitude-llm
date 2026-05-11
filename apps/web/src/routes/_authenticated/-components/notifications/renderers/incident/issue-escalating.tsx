@@ -69,8 +69,12 @@ function EscalatingTrend({
 
   if (!enabled) return null
 
+  // Use padding (internal spacing) rather than `mt-*` per the web-frontend
+  // skill's "no margin utilities" rule. Parent (`BaseNotification`) renders
+  // children in a flex column; this wrapper adds breathing room above the
+  // chart without leaning on margins.
   return (
-    <div className="mt-2">
+    <div className="pt-2">
       <IssueTrendBar
         buckets={data?.buckets ?? []}
         height={48}

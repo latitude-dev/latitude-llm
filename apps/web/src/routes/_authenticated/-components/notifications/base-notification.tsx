@@ -40,7 +40,7 @@ function BaseNotificationContent({ seenAt, icon, title, description, children }:
     <>
       {icon ? (
         <div
-          className={cn("mt-0.5 w-8 h-8 rounded-lg flex shrink-0 items-center justify-center", {
+          className={cn("w-8 h-8 rounded-lg flex shrink-0 items-center justify-center", {
             "bg-muted text-muted-foreground": !isUnseen,
             "bg-accent text-primary": isUnseen,
           })}

@@ -1,7 +1,7 @@
-import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Skeleton, Text } from "@repo/ui"
+import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Bell } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import {
   getUnreadNotificationCount,
@@ -55,15 +55,6 @@ function NotificationBellEnabled() {
     },
   })
 
-  // Fire markAllSeen exactly once per popover open. The dependency on `open`
-  // keeps StrictMode's double-mount behaviour from re-firing.
-  useEffect(() => {
-    if (!open) return
-    if (unread === 0 && markSeen.isIdle) return
-    markSeen.mutate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only on open
-  }, [open])
-
   return (
     <Popover
       open={open}
@@ -74,6 +65,12 @@ function NotificationBellEnabled() {
           // to render as "unseen for this open" vs "seen on a previous open".
           // Reset every open so the highlight state is fresh each time.
           setOpenedAt(new Date())
+          // Mark everything seen as soon as the popover opens. Skip when
+          // there's nothing to mark so we don't churn the server with
+          // no-op POSTs on every re-open. Event handler instead of effect
+          // — per the web-frontend skill, effects shouldn't be used as
+          // command dispatchers.
+          if (unread > 0) markSeen.mutate()
         } else {
           // Discard cached pages so reopening starts fresh from the top.
           queryClient.removeQueries({ queryKey: LIST_QUERY_KEY })
@@ -125,15 +122,21 @@ function NotificationFeed() {
   })
 
   // Infinite scroll inside the popover — fetch the next page when the sentinel
-  // at the list bottom enters view.
-  useEffect(() => {
+  // at the list bottom enters view. Use `useMountEffect` per the web-frontend
+  // skill: the IntersectionObserver is a one-time subscribe-to-external-system.
+  // The callback reads the latest query state through a ref so we don't
+  // re-wire the observer every time TanStack Query updates.
+  const latestQueryStateRef = useRef({ fetchNextPage, hasNextPage, isFetchingNextPage })
+  latestQueryStateRef.current = { fetchNextPage, hasNextPage, isFetchingNextPage }
+  useMountEffect(() => {
     const node = sentinelRef.current
     if (!node) return
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-            void fetchNextPage()
+          const state = latestQueryStateRef.current
+          if (entry.isIntersecting && state.hasNextPage && !state.isFetchingNextPage) {
+            void state.fetchNextPage()
           }
         }
       },
@@ -141,7 +144,7 @@ function NotificationFeed() {
     )
     observer.observe(node)
     return () => observer.disconnect()
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
+  })
 
   if (isLoading) {
     return (
