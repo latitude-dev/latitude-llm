@@ -1,5 +1,5 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import type { DatasetId, IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { DatasetId, FilterSet, IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { ChSqlClient } from "@domain/shared"
 import type { TraceDetail, TraceListCursor } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
@@ -45,7 +45,12 @@ function mapTraceToRow(t: TraceDetail) {
 const PAGE_SIZE = 1_000
 const ISSUE_TRACE_PAGE_SIZE = 1_000
 
-function collectAllProjectTraceIds(args: { readonly organizationId: OrganizationId; readonly projectId: ProjectId }) {
+function collectAllProjectTraceIds(args: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly searchQuery?: string
+  readonly filters?: FilterSet
+}) {
   return Effect.gen(function* () {
     const repo = yield* TraceRepository
     const ids: TraceId[] = []
@@ -56,7 +61,12 @@ function collectAllProjectTraceIds(args: { readonly organizationId: Organization
       const page = yield* repo.listByProjectId({
         organizationId: args.organizationId,
         projectId: args.projectId,
-        options: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+        options: {
+          limit: PAGE_SIZE,
+          ...(cursor ? { cursor } : {}),
+          ...(args.searchQuery ? { searchQuery: args.searchQuery } : {}),
+          ...(args.filters ? { filters: args.filters } : {}),
+        },
       })
       for (const trace of page.items) {
         ids.push(trace.traceId)
@@ -103,6 +113,8 @@ function collectAllTraceIds(args: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly source: TraceSource
+  readonly searchQuery?: string
+  readonly filters?: FilterSet
 }) {
   if (args.source.kind === "issue") {
     return collectAllIssueTraceIds({
@@ -111,7 +123,12 @@ function collectAllTraceIds(args: {
       issueId: args.source.issueId,
     })
   }
-  return collectAllProjectTraceIds({ organizationId: args.organizationId, projectId: args.projectId })
+  return collectAllProjectTraceIds({
+    organizationId: args.organizationId,
+    projectId: args.projectId,
+    ...(args.searchQuery ? { searchQuery: args.searchQuery } : {}),
+    ...(args.filters ? { filters: args.filters } : {}),
+  })
 }
 
 function resolveTraceIds(args: {
@@ -119,6 +136,8 @@ function resolveTraceIds(args: {
   readonly projectId: ProjectId
   readonly source: TraceSource
   readonly selection: TraceSelection
+  readonly searchQuery?: string
+  readonly filters?: FilterSet
 }) {
   return Effect.gen(function* () {
     if (args.selection.mode === "selected") return args.selection.traceIds
@@ -127,6 +146,8 @@ function resolveTraceIds(args: {
       organizationId: args.organizationId,
       projectId: args.projectId,
       source: args.source,
+      ...(args.searchQuery ? { searchQuery: args.searchQuery } : {}),
+      ...(args.filters ? { filters: args.filters } : {}),
     })
 
     if (args.selection.mode === "all") return allIds
@@ -154,6 +175,8 @@ export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(funct
   readonly datasetId: DatasetId
   readonly source: TraceSource
   readonly selection: TraceSelection
+  readonly searchQuery?: string
+  readonly filters?: FilterSet
 }) {
   yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
   yield* Effect.annotateCurrentSpan("projectId", args.projectId)
@@ -166,6 +189,8 @@ export const addTracesToDataset = Effect.fn("datasets.addTracesToDataset")(funct
     projectId: args.projectId,
     source: args.source,
     selection: args.selection,
+    ...(args.searchQuery ? { searchQuery: args.searchQuery } : {}),
+    ...(args.filters ? { filters: args.filters } : {}),
   })
   if (traceIds.length === 0) return EMPTY_RESULT
   if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
@@ -200,6 +225,8 @@ export const createDatasetFromTraces = Effect.fn("datasets.createDatasetFromTrac
   readonly name: string
   readonly source: TraceSource
   readonly selection: TraceSelection
+  readonly searchQuery?: string
+  readonly filters?: FilterSet
 }) {
   yield* Effect.annotateCurrentSpan("projectId", args.projectId)
 
@@ -217,6 +244,8 @@ export const createDatasetFromTraces = Effect.fn("datasets.createDatasetFromTrac
       projectId: args.projectId,
       source: args.source,
       selection: args.selection,
+      ...(args.searchQuery ? { searchQuery: args.searchQuery } : {}),
+      ...(args.filters ? { filters: args.filters } : {}),
     })
     if (traceIds.length === 0) {
       return { datasetId: dataset.id, ...EMPTY_RESULT }

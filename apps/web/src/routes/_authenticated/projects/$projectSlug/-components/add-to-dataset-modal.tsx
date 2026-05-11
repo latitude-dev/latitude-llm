@@ -1,4 +1,5 @@
 import { MAX_TRACES_PER_DATASET_IMPORT } from "@domain/datasets/constants"
+import type { FilterSet } from "@domain/shared"
 import { Alert, Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
@@ -22,6 +23,17 @@ interface AddToDatasetModalProps {
    * to this issue (via score analytics). Omit on the project-wide traces page.
    */
   issueId?: string
+  /**
+   * Saved-search query that scopes "all" / "allExcept" selections. Ignored when
+   * `issueId` is set. Omit outside the search page.
+   */
+  searchQuery?: string
+  /**
+   * Active table filters that scope "all" / "allExcept" selections to the
+   * same set the user sees. Ignored when `issueId` is set. Omit when no
+   * filters are active.
+   */
+  filters?: FilterSet
   selection: BulkSelection<string>
   selectedCount: number
   onSuccess: () => void
@@ -32,6 +44,8 @@ export function AddToDatasetModal({
   onOpenChange,
   projectId,
   issueId,
+  searchQuery,
+  filters,
   selection,
   selectedCount,
   onSuccess,
@@ -71,6 +85,8 @@ export function AddToDatasetModal({
             name: newDatasetName.trim(),
             selection,
             ...(issueId ? { issueId } : {}),
+            ...(searchQuery ? { searchQuery } : {}),
+            ...(filters ? { filters } : {}),
           },
         })
         toast({
@@ -92,6 +108,8 @@ export function AddToDatasetModal({
             datasetId: selectedDatasetId,
             selection,
             ...(issueId ? { issueId } : {}),
+            ...(searchQuery ? { searchQuery } : {}),
+            ...(filters ? { filters } : {}),
           },
         })
         toast({
@@ -119,6 +137,8 @@ export function AddToDatasetModal({
     newDatasetName,
     projectId,
     issueId,
+    searchQuery,
+    filters,
     selection,
     selectedCount,
     toast,
