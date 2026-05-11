@@ -266,7 +266,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/ingest:
     dependencies:
@@ -551,6 +551,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.18)
+      '@domain/admin':
+        specifier: workspace:*
+        version: link:../../packages/domain/admin
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -584,6 +587,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../../packages/domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
@@ -692,7 +698,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/workflows:
     dependencies:
