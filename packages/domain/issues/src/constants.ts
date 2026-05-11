@@ -9,22 +9,76 @@ export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**
- * An issue is "escalating" when last-day occurrences exceed the 7-day
- * baseline average by this factor.
- * */
+ * @deprecated Legacy flat-multiplier factor — removed when the seasonal
+ * detector replaces the old use case. Still imported by helpers in
+ * `helpers.ts` that are retired in the same change.
+ */
 export const ESCALATION_THRESHOLD_FACTOR = 1.33
 
-/** Escalating issues must clear at least this many recent occurrences. */
+/**
+ * Floor used by the seasonal detector's deep-cold-start fallthrough. When
+ * fewer than one prior week contributes any data to the relevant
+ * dow/hour bucket, the band math has nothing to compare against — the
+ * detector falls back to "trip when the absolute count clears this
+ * threshold". Same role this constant had before the rewrite (it was the
+ * pre-seasonal flat-multiplier floor); kept for the rare genuinely
+ * historyless case.
+ */
 export const ESCALATION_MIN_OCCURRENCES_THRESHOLD = 20
 
 /**
- * Hysteresis exit factor: an escalating issue is considered "no longer
- * escalating" only when the recent occurrence count drops below
- * `entryThreshold * ESCALATION_EXIT_THRESHOLD_FACTOR`. Prevents flapping at
- * the boundary by requiring a meaningful return below the entry threshold
- * before closing the incident.
+ * Exit hysteresis factor: on exit, the band-shape condition uses
+ * `expected + k_exit · σ` with `k_exit = ESCALATION_EXIT_THRESHOLD_FACTOR · k_entry`.
+ * The asymmetry between entry and exit `k` (combined with the dwell below)
+ * prevents flapping at the band edge once an incident has opened.
  */
 export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
+
+/**
+ * Default seasonal sensitivity exposed to users as `escalationSensitivity`
+ * on `projectSettings.alertNotifications`. Interpreted as `k_short` —
+ * the multiplier on σ for the 1h window. `k_long = k_short − 1` for the
+ * 6h window so the short-window can prove "now" without the long window
+ * dominating it (multi-window-multi-burn-rate SRE pattern). Default 3
+ * approximates 99% confidence under a normal assumption.
+ */
+export const DEFAULT_ESCALATION_SENSITIVITY_K = 3
+
+/**
+ * Cold-start guard: when fewer than `MIN_SEASONAL_SAMPLES` of the last
+ * `SEASONAL_HISTORY_WEEKS` weeks contributed any data to the relevant
+ * bucket, the detector inflates `k_cold = k + 1` instead of running with
+ * a noisy σ estimate. Wider bands where we have less evidence; cleaner
+ * than a hard floor and stays inside the same algorithm.
+ */
+export const MIN_SEASONAL_SAMPLES = 2
+
+/**
+ * Temporal dwell on exit: the band-shape exit condition must hold
+ * continuously for this long before the incident actually closes. Set to
+ * roughly 2 evaluation bins at the current ~15-min check cadence. Mirrors
+ * Prometheus `keep_firing_for` / Datadog `recovery_window` and prevents
+ * single-bin dips from closing an active incident.
+ */
+export const ESCALATION_EXIT_DWELL_MS = 30 * 60 * 1000
+
+/**
+ * Backstop multiplier on the entry-time 24h count: when the live 24h
+ * count drops below `entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR`,
+ * the incident force-closes via the `absolute-rate-drop` path regardless
+ * of the band shape. Catches the case where the seasonal baseline catches
+ * up to a sustained-but-declining incident — bands would say "still high
+ * relative to expected" but the absolute volume is half what tripped open.
+ */
+export const ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR = 0.5
+
+/**
+ * Hard ceiling on incident lifetime. Past this, the incident force-closes
+ * via the `timeout` path regardless of bands or absolute rate. Matches
+ * how Datadog / CloudWatch / GCP Monitoring all guard against ghost
+ * incidents that never naturally recover.
+ */
+export const ESCALATION_MAX_DURATION_MS = 72 * 60 * 60 * 1000
 
 /**
  * Throttle window for the per-issue escalation-state recheck task triggered

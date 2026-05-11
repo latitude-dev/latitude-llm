@@ -1165,6 +1165,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/alerts':
+        specifier: workspace:*
+        version: link:../alerts
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
