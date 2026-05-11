@@ -79,7 +79,7 @@ snapshot_commit=$(git commit-tree "$(git rev-parse 'origin/development^{tree}')"
   -m "Release - ${timestamp}")
 git push origin "${snapshot_commit}:refs/heads/${branch}"
 
-commits=$(git log --pretty=format:'- %h %s' origin/main..origin/development | head -50)
+commits=$(git log --max-count=50 --pretty=format:'- %h %s' origin/main..origin/development)
 body=$(
   cat <<EOF
 Promotes \`development\` to \`main\` for a release.
