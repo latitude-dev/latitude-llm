@@ -23,7 +23,7 @@ export const FLAGGER_MAX_TOKENS = 512
 
 export const FLAGGER_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
+  model: "minimax.minimax-m2.5",
   temperature: 0.2,
 } as const
 
