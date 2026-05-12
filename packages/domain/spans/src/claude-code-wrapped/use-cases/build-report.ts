@@ -1,7 +1,14 @@
 import type { Project } from "@domain/projects"
 import type { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
-import { type FileLine, type Report, reportSchema, type ToolBucket, type ToolMix, type WorkspaceDeepDive } from "../entities/report.ts"
+import {
+  type FileLine,
+  type Report,
+  reportSchema,
+  type ToolBucket,
+  type ToolMix,
+  type WorkspaceDeepDive,
+} from "../entities/report.ts"
 import { pickReadAnchor, pickWrittenAnchor } from "../helpers/anchors.ts"
 import {
   type BiggestWriteRow,
