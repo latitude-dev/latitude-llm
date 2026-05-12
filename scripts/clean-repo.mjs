@@ -5,7 +5,12 @@ import { dirname, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const removableDirectoryNames = new Set(["dist", "node_modules", ".turbo"])
+const removableDirectoryNames = new Set([
+  "dist",
+  "node_modules",
+  ".turbo",
+  ".venv", // uv-managed Python virtual envs (packages/*/python/.venv)
+])
 const removedDirectories = []
 
 async function deleteMatchingDirectories(directoryPath) {
@@ -29,7 +34,7 @@ async function deleteMatchingDirectories(directoryPath) {
 await deleteMatchingDirectories(rootDir)
 
 if (removedDirectories.length === 0) {
-  console.log("No dist/, node_modules/, or .turbo/ directories found.")
+  console.log("No dist/, node_modules/, .turbo/, or .venv/ directories found.")
   process.exit(0)
 }
 

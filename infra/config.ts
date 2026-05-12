@@ -29,6 +29,7 @@ export interface EnvironmentConfig {
       nodeType: string
       numNodes: number
       multiAz: boolean
+      evictionPolicy: string
     }
     bullmq: {
       type: "elasticache" | "memorydb"
@@ -96,6 +97,7 @@ export const stagingConfig: EnvironmentConfig = {
       nodeType: "cache.t3.micro",
       numNodes: 1,
       multiAz: false,
+      evictionPolicy: "allkeys-lru",
     },
     bullmq: {
       type: "elasticache",
@@ -197,6 +199,7 @@ export const productionConfig: EnvironmentConfig = {
       nodeType: "db.t4g.small",
       numNodes: 2,
       multiAz: true,
+      evictionPolicy: "allkeys-lru",
     },
     bullmq: {
       type: "memorydb",

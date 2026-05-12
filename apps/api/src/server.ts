@@ -9,8 +9,10 @@ import { Effect } from "effect"
 import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "./clients.ts"
+import { API_INFO } from "./constants.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
+import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { AppEnv } from "./types.ts"
@@ -23,6 +25,7 @@ const startServer = async () => {
   })
 
   const app = new OpenAPIHono<AppEnv>()
+  const url = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
   const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
   app.use(
@@ -33,6 +36,7 @@ const startServer = async () => {
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
+  app.use(suppressHttpErrorTelemetry)
 
   app.onError(honoErrorHandler)
 
@@ -58,12 +62,8 @@ const startServer = async () => {
   // OpenAPI spec
   app.doc("/openapi.json", {
     openapi: "3.1.0",
-    info: {
-      title: "Latitude API",
-      version: "1.0.0",
-      description: "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header.",
-    },
-    servers: [{ url: `http://localhost:${port}`, description: "Local development" }],
+    info: API_INFO,
+    servers: [{ url }],
   })
 
   // Swagger UI

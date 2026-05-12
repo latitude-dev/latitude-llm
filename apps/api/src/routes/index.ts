@@ -1,12 +1,14 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { mountWithMcp } from "../mcp/index.ts"
+import { API_VERSION } from "../constants.ts"
+import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
+import { createAuthRateLimiter, createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
+import { accountPath, createAccountRoutes } from "./account.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
-import { apiKeysEndpoints } from "./api-keys.ts"
+import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
@@ -20,7 +22,6 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   const routes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute({ app })
-  // Public discovery routes (no auth) — see `well-known.ts`.
   registerWellKnownRoutes({ app })
 
   v1.use("*", async (c, next) => {
@@ -41,16 +42,21 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
       logTouchBuffer: options.logTouchBuffer,
     }),
   )
-  // The org entity is loaded on every protected request from the API key's
-  // resolved org id. No path param feeds into it — see the middleware.
   routes.use("*", createOrganizationContextMiddleware())
 
   routes.route("/projects", createProjectsRoutes())
   routes.route("/projects/:projectSlug/scores", createScoresRoutes())
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
-  mountWithMcp(routes, "/api-keys", apiKeysEndpoints)
+
+  routes.use(apiKeysPath, createTierRateLimiter("low"))
+  routes.route(apiKeysPath, createApiKeysRoutes())
+
+  routes.use(accountPath, createTierRateLimiter("low"))
+  routes.route(accountPath, createAccountRoutes())
+
+  registerMcpRoute({ app, routes })
 
   v1.route("/", routes)
 
-  app.route("/v1", v1)
+  app.route(`/${API_VERSION}`, v1)
 }

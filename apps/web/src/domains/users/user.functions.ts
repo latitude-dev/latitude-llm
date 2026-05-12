@@ -21,13 +21,27 @@ export const updateUser = createServerFn({ method: "POST" })
     })
   })
 
+const submitOnboardingSchema = z
+  .object({
+    jobTitle: jobTitleSchema.exclude(["other"]).optional(),
+    customJobTitle: z
+      .string()
+      .max(256)
+      .transform((v) => v.trim())
+      .pipe(z.string().min(1))
+      .optional(),
+    stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
+  })
+  .refine((d) => d.jobTitle !== undefined || d.customJobTitle !== undefined, {
+    message: "Either a known job title or a custom title is required",
+  })
+  .transform((d) => ({
+    resolvedJobTitle: d.jobTitle ?? d.customJobTitle!,
+    stackChoice: d.stackChoice,
+  }))
+
 export const submitOnboarding = createServerFn({ method: "POST" })
-  .inputValidator(
-    z.object({
-      jobTitle: jobTitleSchema,
-      stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
-    }),
-  )
+  .inputValidator(submitOnboardingSchema)
   .handler(async ({ data }) => {
     const userId = await requireUserSession()
     const adminClient = getAdminPostgresClient()
@@ -40,7 +54,7 @@ export const submitOnboarding = createServerFn({ method: "POST" })
 
         yield* sqlClient.transaction(
           Effect.gen(function* () {
-            yield* userRepo.setJobTitle({ userId, jobTitle: data.jobTitle })
+            yield* userRepo.setJobTitle({ userId, jobTitle: data.resolvedJobTitle })
             yield* outbox.write({
               eventName: "UserOnboardingCompleted",
               aggregateType: "user",

@@ -8,6 +8,7 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getQueuePublisher, getRedisClient } from "./clients.ts"
+import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
@@ -25,6 +26,7 @@ const start = async () => {
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
+  app.use(suppressHttpErrorTelemetry)
 
   app.onError((err, c) => {
     if (err instanceof LatitudeObservabilityTestError) {

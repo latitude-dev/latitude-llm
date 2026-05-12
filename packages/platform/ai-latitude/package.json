@@ -17,8 +17,8 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "catalog:",
-    "@opentelemetry/context-async-hooks": "^2.6.0",
-    "@opentelemetry/sdk-trace-base": "^2.6.1",
+    "@opentelemetry/context-async-hooks": "2.7.0",
+    "@opentelemetry/sdk-trace-base": "2.7.0",
     "@repo/vitest-config": "workspace:*",
     "vitest": "catalog:"
   }

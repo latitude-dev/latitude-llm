@@ -1,5 +1,6 @@
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi"
 import type { Env } from "hono"
+import { registerEndpoint } from "./registry.ts"
 
 /**
  * Internal route config shape used through the codebase. Extends `@hono/zod-openapi`'s
@@ -24,47 +25,59 @@ export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
  *
  * - HTTP — {@link mountHttp} attaches the route + handler to an `OpenAPIHono` instance
  *   exactly the way `app.openapi(route, handler)` would today.
- * - MCP — {@link tool}, `route.name`, and the request schemas drive tool generation
- *   in {@link ./registry.ts}.
+ * - MCP — `mountHttp` additionally registers the endpoint with the global MCP
+ *   registry (when `tool === true`), carrying the `prefix` baked in at factory time.
  */
 interface ApiEndpoint<R extends AppRouteConfig, E extends Env> {
   readonly route: R
   readonly handler: RouteHandler<R, E>
   /** Whether this endpoint should be exposed as an MCP tool. Defaults to `true`. */
   readonly tool: boolean
+  /** Path prefix the endpoint will be mounted at — used to rebuild the dispatch URL. */
+  readonly prefix: string
   mountHttp(app: OpenAPIHono<E>): void
 }
 
 /**
  * Type-erased view used by the registry. The registry only consumes route metadata
- * and `mountHttp`, so erasing the route's response/handler types here keeps the
+ * and the `prefix`, so erasing the route's response/handler types here keeps the
  * variance honest (different routes have different `RouteHandler<R, E>` shapes that
  * aren't mutually assignable, which would prevent storing them together).
  */
 export interface AnyApiEndpoint {
   readonly route: AppRouteConfig
   readonly tool: boolean
+  readonly prefix: string
   // biome-ignore lint/suspicious/noExplicitAny: type-erased registry view — see comment above
   mountHttp(app: OpenAPIHono<any>): void
 }
 
 /**
- * Returns a factory bound to a specific Hono `Env`. The factory turns a route +
- * handler into an {@link ApiEndpoint} that can be served as both an HTTP route and
- * an MCP tool.
+ * Returns a factory bound to a specific Hono `Env` and mount prefix. Endpoints
+ * created by the factory know where they'll be mounted on the parent router, so
+ * {@link mountHttp} simultaneously serves the HTTP route AND registers the
+ * endpoint with the MCP registry under that prefix — no separate
+ * "mount + register" helper at the parent.
  *
- * The two-step shape (`defineApiEndpoint<E>()(args)`) exists because TypeScript
- * can't partially-infer one type argument while accepting another explicitly: we
- * need the caller to specify `Env` (which depends on which sub-app the endpoint
- * will mount under — e.g. `OrganizationScopedEnv` for `/api-keys`,
- * `ProjectScopedEnv` for `/projects/{slug}/scores`) while letting the route shape
- * `R` infer from `args.route`. The outer call fixes `E`; the inner call infers `R`.
+ * The prefix MUST match the path the resulting sub-app is later mounted at via
+ * `parent.route(prefix, subApp)`. The route file is expected to export the
+ * prefix as a constant (e.g. `export const apiKeysPath = "/api-keys"`) and pass
+ * it both here and to the parent — so the value is declared once.
+ *
+ * The two-step shape (`defineApiEndpoint<E>(prefix)(args)`) exists because
+ * TypeScript can't partially-infer one type argument while accepting another
+ * explicitly: we need the caller to specify `Env` (which depends on which
+ * sub-app the endpoint will mount under — e.g. `OrganizationScopedEnv` for
+ * `/api-keys`, `ProjectScopedEnv` for `/projects/{slug}/scores`) while letting
+ * the route shape `R` infer from `args.route`. The outer call fixes `E` and
+ * captures the prefix; the inner call infers `R`.
  *
  * @example
  * ```ts
- * const apiKeysEndpoint = defineApiEndpoint<OrganizationScopedEnv>()
+ * export const apiKeysPath = "/api-keys"
+ * const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>(apiKeysPath)
  *
- * const listApiKeys = apiKeysEndpoint({
+ * const listApiKeys = apiKeyEndpoint({
  *   route: createRoute({
  *     method: "get",
  *     path: "/",
@@ -74,10 +87,16 @@ export interface AnyApiEndpoint {
  *   }),
  *   handler: async (c) => c.json({ items: [] }, 200),
  * })
+ *
+ * export const createApiKeysRoutes = () => {
+ *   const app = new OpenAPIHono<OrganizationScopedEnv>()
+ *   for (const ep of [listApiKeys, ...]) ep.mountHttp(app)
+ *   return app
+ * }
  * ```
  */
 export const defineApiEndpoint =
-  <E extends Env>() =>
+  <E extends Env>(prefix: string) =>
   <R extends AppRouteConfig>(args: {
     route: R
     handler: RouteHandler<R, E>
@@ -90,16 +109,19 @@ export const defineApiEndpoint =
     // the OpenAPI spec and the MCP tool registry.
     const { name, ...rest } = route
     const routeForHono = { ...rest, operationId: name } as unknown as R
-    return {
+    const endpoint: ApiEndpoint<R, E> = {
       route,
       handler,
       tool,
+      prefix,
       mountHttp(app) {
         // Cast through `any` because OpenAPIHono.openapi is parameterised on a
         // concrete RouteConfig, not our AppRouteConfig superset. The runtime call
         // is identical to `app.openapi(route, handler)`.
         // biome-ignore lint/suspicious/noExplicitAny: see comment above
         ;(app as any).openapi(routeForHono, handler)
+        if (tool) registerEndpoint(endpoint as unknown as AnyApiEndpoint)
       },
     }
+    return endpoint
   }

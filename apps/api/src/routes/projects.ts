@@ -36,13 +36,13 @@ const ListResponseSchema = z.object({ projects: z.array(ResponseSchema) }).opena
 
 const CreateRequestSchema = z
   .object({
-    name: z.string().min(1).openapi({ description: "Project name" }),
+    name: z.string().min(1).describe("Project name"),
   })
   .openapi("CreateProjectBody")
 
 const UpdateRequestSchema = z
   .object({
-    name: z.string().min(1).optional().openapi({ description: "New project name" }),
+    name: z.string().min(1).optional().describe("New project name"),
   })
   .openapi("UpdateProjectBody")
 
