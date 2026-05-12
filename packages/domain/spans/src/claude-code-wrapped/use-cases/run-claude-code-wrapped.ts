@@ -13,14 +13,9 @@ import { ClaudeCodeSpanReader } from "../ports/claude-code-span-reader.ts"
  * (the most common). This keeps the pipeline working end-to-end during the
  * transition; once `buildReportUseCase` lands, this helper goes away.
  */
-const emptyHeatmap = (): Report["heatmap"] =>
-  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+const emptyHeatmap = (): Report["heatmap"] => Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
 
-const makeStubReport = (
-  project: Project,
-  input: RunClaudeCodeWrappedInput,
-  sessions: number,
-): Report => ({
+const makeStubReport = (project: Project, input: RunClaudeCodeWrappedInput, sessions: number): Report => ({
   project: { id: project.id, name: project.name, slug: project.slug },
   organization: { id: input.organizationId, name: "" },
   window: { start: input.windowStart, end: input.windowEnd },

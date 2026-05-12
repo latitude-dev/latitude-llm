@@ -54,6 +54,16 @@ const makeProject = (): Project => ({
 const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeSpanReaderShape => ({
   listProjectsWithSpansInWindow: () => Effect.succeed([]),
   countSessionsForProjectInWindow: () => Effect.succeed(0),
+  getTotalsForProject: () => Effect.die("getTotalsForProject not used in run tests"),
+  getSessionDurationStats: () => Effect.die("getSessionDurationStats not used in run tests"),
+  getToolMix: () => Effect.die("getToolMix not used in run tests"),
+  getTopFiles: () => Effect.die("getTopFiles not used in run tests"),
+  getTopBashCommands: () => Effect.die("getTopBashCommands not used in run tests"),
+  getTopWorkspaces: () => Effect.die("getTopWorkspaces not used in run tests"),
+  getTopBranches: () => Effect.die("getTopBranches not used in run tests"),
+  getWorkspaceDeepDive: () => Effect.die("getWorkspaceDeepDive not used in run tests"),
+  getHeatmap: () => Effect.die("getHeatmap not used in run tests"),
+  getBusiestDay: () => Effect.die("getBusiestDay not used in run tests"),
   ...overrides,
 })
 

@@ -1,7 +1,7 @@
 export {
   type FileLine,
-  type Personality,
   PERSONALITY_KINDS,
+  type Personality,
   type PersonalityKind,
   type Report,
   reportSchema,
@@ -12,8 +12,21 @@ export {
   type WorkspaceLine,
 } from "./entities/report.ts"
 export {
+  type BashPatternRow,
+  type BranchRow,
+  type BusiestDayRow,
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,
+  type FileTouchesRow,
+  type HeatmapCellRow,
+  type OrgProjectPair,
+  type ProjectWindowInput,
+  type SessionDurationStatsRow,
+  type ToolMixRow,
+  type WindowInput,
+  type WorkspaceDeepDiveRow,
+  type WorkspaceRow,
+  type WrappedTotalsRow,
 } from "./ports/claude-code-span-reader.ts"
 export { listProjectsWithClaudeCodeSpansUseCase } from "./use-cases/list-projects-with-claude-code-spans.ts"
 export {

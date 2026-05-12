@@ -13,14 +13,7 @@ export type ToolBucket = (typeof TOOL_BUCKETS)[number]
  * The six personalities revealed at the end of the email. Assignment is
  * deterministic and pure — see `assignPersonality`.
  */
-export const PERSONALITY_KINDS = [
-  "surgeon",
-  "architect",
-  "detective",
-  "conductor",
-  "marathoner",
-  "strategist",
-] as const
+export const PERSONALITY_KINDS = ["surgeon", "architect", "detective", "conductor", "marathoner", "strategist"] as const
 export type PersonalityKind = (typeof PERSONALITY_KINDS)[number]
 
 const fileLineSchema = z.object({
