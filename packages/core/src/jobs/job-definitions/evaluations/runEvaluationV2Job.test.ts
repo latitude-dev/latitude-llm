@@ -13,6 +13,7 @@ import {
   UnprocessableEntityError,
 } from '../../../lib/errors'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { EvaluationResultsV2Repository } from '../../../repositories'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
@@ -412,6 +413,67 @@ describe('runEvaluationV2Job', () => {
       })
       expect(evaluationFinishedSpy).not.toHaveBeenCalled()
       expect(evaluationErrorSpy).not.toHaveBeenCalled()
+    })
+
+    it('records an error evaluation result when trace assembly fails on the final attempt', async () => {
+      // Live-eval (no experiment) job: when the trace assembly cannot find
+      // the completion span and all retries are exhausted, the failure must
+      // be persisted as an evaluation result row so the UI shows it instead
+      // of "-".
+      runEvaluationV2Spy.mockReset()
+      runEvaluationV2Spy.mockResolvedValueOnce(
+        Result.error(
+          new UnprocessableEntityError('Cannot find completion span'),
+        ),
+      )
+
+      const finalAttemptJob = {
+        ...jobData,
+        attemptsMade: 4,
+        opts: { attempts: 5 },
+      } as Job<RunEvaluationV2JobData>
+
+      await runEvaluationV2Job(finalAttemptJob)
+
+      const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
+      const persisted =
+        await resultsRepository.findByEvaluatedSpanAndEvaluation({
+          evaluatedSpanId: span.id,
+          evaluatedTraceId: span.traceId,
+          evaluationUuid: evaluation.uuid,
+        })
+
+      expect(persisted).toBeDefined()
+      expect(persisted?.error?.message).toBe('Cannot find completion span')
+    })
+
+    it('does not record an error result while retries remain', async () => {
+      runEvaluationV2Spy.mockReset()
+      runEvaluationV2Spy.mockResolvedValueOnce(
+        Result.error(
+          new UnprocessableEntityError('Cannot find completion span'),
+        ),
+      )
+
+      const earlyAttemptJob = {
+        ...jobData,
+        attemptsMade: 0,
+        opts: { attempts: 5 },
+      } as Job<RunEvaluationV2JobData>
+
+      await expect(runEvaluationV2Job(earlyAttemptJob)).rejects.toThrowError(
+        new UnprocessableEntityError('Cannot find completion span'),
+      )
+
+      const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
+      const persisted =
+        await resultsRepository.findByEvaluatedSpanAndEvaluation({
+          evaluatedSpanId: span.id,
+          evaluatedTraceId: span.traceId,
+          evaluationUuid: evaluation.uuid,
+        })
+
+      expect(persisted).toBeUndefined()
     })
   })
 

@@ -175,6 +175,59 @@ describe('assembleTraceStructure', () => {
     expect(spans[1]?.endOffset).toBe(1500)
   })
 
+  it('treats spans whose parent is not in the result set as virtual roots', async () => {
+    // Simulates the live-eval race: a sub-prompt (and its completion) have
+    // been ingested before the agent's root prompt lands. The orphan tool —
+    // which still references a not-yet-ingested parent — must be surfaced as
+    // a root so the sub-prompt remains reachable via findSpanById.
+    const startTime = new Date()
+
+    const orphanTool = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-orphan',
+      parentId: '0123456789abcdef',
+      type: SpanType.Tool,
+      name: 'lat_agent_confidence-scorer',
+      startedAt: startTime,
+      duration: 1000,
+    })
+
+    const subPrompt = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-orphan',
+      parentId: orphanTool.id,
+      type: SpanType.Prompt,
+      name: 'confidence-scorer',
+      startedAt: new Date(startTime.getTime() + 50),
+      duration: 800,
+    })
+
+    const subCompletion = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-orphan',
+      parentId: subPrompt.id,
+      type: SpanType.Completion,
+      name: 'openai / gpt-5',
+      startedAt: new Date(startTime.getTime() + 100),
+      duration: 700,
+    })
+
+    const result = await assembleTraceStructure({
+      traceId: 'trace-orphan',
+      workspace,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.value?.trace.children).toHaveLength(1)
+
+    const root = result.value?.trace.children[0]
+    expect(root?.id).toBe(orphanTool.id)
+    expect(root?.parentId).toBeUndefined()
+    expect(root?.children).toHaveLength(1)
+    expect(root?.children[0]?.id).toBe(subPrompt.id)
+    expect(root?.children[0]?.children[0]?.id).toBe(subCompletion.id)
+  })
+
   it('does not fetch metadata for any spans', async () => {
     await factories.createSpan({
       workspaceId: workspace.id,
@@ -581,6 +634,66 @@ describe('assembleTraceWithMessages', () => {
       0,
     )
     expect(totalPromptTokens).toBe(1400)
+  })
+
+  it('returns the sub-prompt completion when the agent root span has not been ingested yet', async () => {
+    // Reproduces the live-eval race for workspaces with confidence-scorer
+    // sub-prompts: the eval fires for a sub-prompt before its enclosing agent
+    // root span lands. Without orphan-root handling, trace.children would be
+    // empty and Cannot find completion span would be thrown.
+    const startTime = new Date()
+
+    const orphanTool = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-pre-root',
+      parentId: 'fedcba9876543210',
+      type: SpanType.Tool,
+      name: 'lat_agent_confidence-scorer',
+      startedAt: startTime,
+      duration: 1000,
+    })
+
+    const subPrompt = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-pre-root',
+      parentId: orphanTool.id,
+      type: SpanType.Prompt,
+      name: 'confidence-scorer',
+      startedAt: new Date(startTime.getTime() + 50),
+      duration: 800,
+    })
+
+    const subCompletion = await factories.createSpan({
+      workspaceId: workspace.id,
+      traceId: 'trace-pre-root',
+      parentId: subPrompt.id,
+      type: SpanType.Completion,
+      name: 'openai / gpt-5',
+      startedAt: new Date(startTime.getTime() + 100),
+      duration: 700,
+    })
+
+    const completionMetadata = {
+      input: [{ role: 'user', content: [{ type: 'text', text: 'judge me' }] }],
+      output: [{ role: 'assistant', content: [{ type: 'text', text: '5' }] }],
+      provider: 'openai',
+      model: 'gpt-5',
+      configuration: {},
+    } as unknown as CompletionSpanMetadata
+
+    vi.spyOn(SpanMetadatasRepository.prototype, 'getBatch').mockResolvedValue(
+      new Map([[`trace-pre-root:${subCompletion.id}`, completionMetadata]]),
+    )
+
+    const result = await assembleTraceWithMessages({
+      traceId: 'trace-pre-root',
+      workspace,
+      spanId: subPrompt.id,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.value?.completionSpan?.id).toBe(subCompletion.id)
+    expect(result.value?.completionSpan?.metadata).toBeDefined()
   })
 })
 

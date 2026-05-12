@@ -1,4 +1,9 @@
-import { MainSpanType, SpanWithDetails } from '@latitude-data/constants'
+import {
+  EvaluationResultValue,
+  MainSpanType,
+  Span,
+  SpanWithDetails,
+} from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
@@ -7,12 +12,15 @@ import {
   CommitsRepository,
   DatasetRowsRepository,
   DatasetsRepository,
+  EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   ExperimentsRepository,
   SpanMetadatasRepository,
   SpansRepository,
 } from '../../../repositories'
+import { Workspace } from '../../../schema/models/types/Workspace'
 import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
+import { createEvaluationResultV2 } from '../../../services/evaluationsV2/results/create'
 import { updateExperimentStatus } from '../../../services/experiments/updateStatus'
 import { captureException } from '../../../utils/datadogCapture'
 
@@ -158,6 +166,14 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
         (progressTracker) =>
           progressTracker.evaluationError(span.documentLogUuid!),
       )
+    } else if (!experiment && !dry && span && isTraceAssemblyError(error)) {
+      await recordLiveEvalAssemblyFailure({
+        workspace,
+        span,
+        commitId,
+        evaluationUuid,
+        error: error as Error,
+      })
     }
     if (dry) throw error
   }
@@ -179,9 +195,82 @@ function shouldRetryTraceAssembly(
   error: Error,
   job: Job<RunEvaluationV2JobData>,
 ): boolean {
-  if (!(error instanceof UnprocessableEntityError)) return false
-  if (!RETRYABLE_TRACE_ASSEMBLY_MESSAGES.has(error.message)) return false
+  if (!isTraceAssemblyError(error)) return false
 
   const maxAttempts = job.opts.attempts ?? 1
   return job.attemptsMade + 1 < maxAttempts
+}
+
+function isTraceAssemblyError(error: unknown): boolean {
+  return (
+    error instanceof UnprocessableEntityError &&
+    RETRYABLE_TRACE_ASSEMBLY_MESSAGES.has(error.message)
+  )
+}
+
+/**
+ * Persists a failed evaluation result for live-eval jobs that exhausted their
+ * retries on a trace-assembly error. Without this the failure disappears (the
+ * catch block returns silently for non-experiment runs) and the UI shows "-",
+ * which is indistinguishable from "not yet evaluated".
+ */
+async function recordLiveEvalAssemblyFailure({
+  workspace,
+  span,
+  commitId,
+  evaluationUuid,
+  error,
+}: {
+  workspace: Workspace
+  span: Span
+  commitId: number
+  evaluationUuid: string
+  error: Error
+}) {
+  try {
+    if (!span.documentUuid) return
+
+    const commitsRepository = new CommitsRepository(workspace.id)
+    const commitResult = await commitsRepository.getCommitById(commitId)
+    if (commitResult.error) {
+      captureException(commitResult.error)
+      return
+    }
+    const commit = commitResult.unwrap()
+
+    const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+    const evaluationResult = await evaluationsRepository.getAtCommitByDocument({
+      commitUuid: commit.uuid,
+      documentUuid: span.documentUuid,
+      evaluationUuid,
+    })
+    if (evaluationResult.error) {
+      captureException(evaluationResult.error)
+      return
+    }
+    const evaluation = evaluationResult.unwrap()
+
+    const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
+    const existing = await resultsRepository.findByEvaluatedSpanAndEvaluation({
+      evaluatedSpanId: span.id,
+      evaluatedTraceId: span.traceId,
+      evaluationUuid,
+    })
+    if (existing) return
+
+    const writeResult = await createEvaluationResultV2({
+      evaluation,
+      span,
+      commit,
+      workspace,
+      value: {
+        error: { message: error.message },
+      } as EvaluationResultValue,
+    })
+    if (writeResult.error) {
+      captureException(writeResult.error)
+    }
+  } catch (recordingError) {
+    captureException(recordingError as Error)
+  }
 }
