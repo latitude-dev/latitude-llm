@@ -7,7 +7,12 @@ import { emailDesignTokens, emailTailwindConfig } from "../tokens/design-system.
 interface WrappedLayoutProps {
   readonly children: ReactNode
   readonly previewText: string
-  readonly footer?: ReactNode
+  /**
+   * Required. Owns the footer copy / branding because those vary by template
+   * (project deep-link, unsubscribe target, logo URL — all live with the
+   * caller's data).
+   */
+  readonly footer: ReactNode
 }
 
 /**
@@ -56,31 +61,7 @@ export function WrappedLayout({ children, previewText, footer }: WrappedLayoutPr
             {children}
 
             <Section className="mt-12 pt-6 border-t border-claude-cream-deep" align="center">
-              {footer ?? (
-                <p
-                  style={{
-                    fontFamily: emailDesignTokens.fonts.serif,
-                    fontSize: "12px",
-                    lineHeight: "18px",
-                    color: emailDesignTokens.colors.claude.mutedInk,
-                    margin: 0,
-                  }}
-                >
-                  Sent because your organization has Claude Code Wrapped enabled in Latitude.
-                </p>
-              )}
-              <p
-                style={{
-                  fontFamily: emailDesignTokens.fonts.serif,
-                  fontSize: "12px",
-                  lineHeight: "18px",
-                  color: emailDesignTokens.colors.claude.mutedInk,
-                  marginTop: "6px",
-                  marginBottom: 0,
-                }}
-              >
-                Latitude — the AI engineering platform for product teams.
-              </p>
+              {footer}
             </Section>
           </Container>
         </Body>

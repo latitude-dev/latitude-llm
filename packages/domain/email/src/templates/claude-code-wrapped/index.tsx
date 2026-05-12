@@ -15,19 +15,19 @@ export interface ClaudeCodeWrappedEmailData {
   readonly userName: string
   readonly report: Report
   /**
-   * Absolute base URL (no trailing slash) where the personality PNGs live.
-   * The worker derives this from `LAT_WEB_URL` so it stays correct across
-   * localhost / staging / production deployments. No default — the caller
-   * always knows which environment it's in.
+   * Public base URL of the web app (no trailing slash). The template derives
+   * every downstream link from this — personality PNGs, project deep-link,
+   * unsubscribe / settings page, Latitude logo. Worker passes the value of
+   * `LAT_WEB_URL` so it follows the deployment.
    */
-  readonly imageBaseUrl: string
+  readonly webAppUrl: string
 }
 
 export async function claudeCodeWrappedTemplate(data: ClaudeCodeWrappedEmailData): Promise<RenderedEmail> {
   const projectName = data.report.project.name
   return {
     html: await renderEmail(
-      <ClaudeCodeWrappedEmail userName={data.userName} report={data.report} imageBaseUrl={data.imageBaseUrl} />,
+      <ClaudeCodeWrappedEmail userName={data.userName} report={data.report} webAppUrl={data.webAppUrl} />,
     ),
     subject: `Your Claude Code week in ${projectName}`,
     text: `Hi ${data.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(

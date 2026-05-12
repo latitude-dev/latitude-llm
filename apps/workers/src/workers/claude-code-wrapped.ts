@@ -25,16 +25,18 @@ const logger = createLogger("claude-code-wrapped")
 const WINDOW_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
- * Resolves the base URL for the personality PNGs. The PNGs live under
- * `apps/web/public/email-branding/claude-code-wrapped/personalities/` and are
- * served directly by the web app, so the prefix is whatever `LAT_WEB_URL`
- * points at (localhost:3000 in dev, the deployment-specific host in
- * staging/prod — same env var Better Auth, file uploads, and the auth
- * config already use).
+ * Resolves the public base URL of the web app. The template derives every
+ * downstream link from this — personality PNGs (`/email-branding/…`), the
+ * project deep-link (`/projects/<slug>`), the unsubscribe / settings page
+ * (`/settings/account`), the Latitude logo (`/latitude-logo.png`).
+ *
+ * Same env var Better Auth, file uploads, and the auth config already use:
+ * `http://localhost:3000` in dev, the deployment-specific host in
+ * staging / prod.
  */
-const resolveImageBaseUrl = (): string => {
+const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
-  return `${webUrl.replace(/\/$/, "")}/email-branding/claude-code-wrapped/personalities`
+  return webUrl.replace(/\/$/, "")
 }
 
 interface ClaudeCodeWrappedWorkerDeps {
@@ -54,7 +56,7 @@ export const createClaudeCodeWrappedWorker = ({
 }: ClaudeCodeWrappedWorkerDeps) => {
   const emailSender = createEmailTransportSender()
   const sendEmailUseCase = sendEmail({ emailSender })
-  const imageBaseUrl = resolveImageBaseUrl()
+  const webAppUrl = resolveWebAppUrl()
 
   consumer.subscribe("claude-code-wrapped", {
     /**
@@ -131,7 +133,7 @@ export const createClaudeCodeWrappedWorker = ({
       const windowEnd = new Date(payload.windowEndIso)
 
       return runClaudeCodeWrappedUseCase({
-        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report, imageBaseUrl }),
+        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report, webAppUrl }),
         sendEmail: sendEmailUseCase,
       })({
         organizationId,

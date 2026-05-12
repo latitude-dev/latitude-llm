@@ -1,6 +1,6 @@
 import { OrganizationId, ProjectId } from "@domain/shared"
 import type { Report } from "@domain/spans"
-import { Section } from "@react-email/components"
+import { Img, Link, Section } from "@react-email/components"
 // biome-ignore lint/style/useImportType: React is required at runtime for JSX in workers (tsx/esbuild classic transform). Do not downgrade to `import type`.
 import React from "react"
 import { EmailHeading } from "../../components/EmailHeading.tsx"
@@ -16,10 +16,11 @@ interface ClaudeCodeWrappedEmailProps {
   readonly userName: string
   readonly report: Report
   /**
-   * Absolute base URL where the personality PNGs live (no trailing slash).
-   * Worker derives this from `LAT_WEB_URL` so it follows the deployment.
+   * Public base URL of the web app (no trailing slash). The template derives
+   * personality PNG URLs, the project deep-link, the unsubscribe link, and
+   * the Latitude logo from it. Worker passes `LAT_WEB_URL`.
    */
-  readonly imageBaseUrl: string
+  readonly webAppUrl: string
 }
 
 const DATE_RANGE_FMT = new Intl.DateTimeFormat("en-US", {
@@ -403,12 +404,84 @@ function PersonalityRevealSection({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Footer
+// ─────────────────────────────────────────────────────────────────────────
+
+const footerLineStyle: React.CSSProperties = {
+  fontFamily: emailDesignTokens.fonts.serif,
+  fontSize: "12px",
+  lineHeight: "18px",
+  color: emailDesignTokens.colors.claude.mutedInk,
+  margin: 0,
+  textAlign: "center",
+}
+
+const footerLinkStyle: React.CSSProperties = {
+  color: emailDesignTokens.colors.claude.accent,
+  textDecoration: "underline",
+}
+
+function WrappedFooter({
+  projectName,
+  projectUrl,
+  settingsUrl,
+  logoUrl,
+  homeUrl,
+}: {
+  projectName: string
+  projectUrl: string
+  settingsUrl: string
+  logoUrl: string
+  homeUrl: string
+}) {
+  return (
+    <>
+      <p style={footerLineStyle}>
+        {"Sent because you are tracking "}
+        <Link href={projectUrl} style={footerLinkStyle}>
+          {projectName}
+        </Link>
+        {"'s Claude Code activity with Latitude."}
+      </p>
+      <p style={{ ...footerLineStyle, marginTop: "4px" }}>
+        <Link href={settingsUrl} style={{ ...footerLinkStyle, color: emailDesignTokens.colors.claude.mutedInk }}>
+          Stop receiving these emails
+        </Link>
+      </p>
+      <div style={{ marginTop: "20px", textAlign: "center" }}>
+        <Link href={homeUrl}>
+          <Img src={logoUrl} alt="Latitude" width="120" height="22" style={{ display: "inline-block" }} />
+        </Link>
+        <p style={{ ...footerLineStyle, marginTop: "8px" }}>Latitude — the AI observability platform.</p>
+      </div>
+    </>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Root template
 // ─────────────────────────────────────────────────────────────────────────
 
-export function ClaudeCodeWrappedEmail({ userName, report, imageBaseUrl }: ClaudeCodeWrappedEmailProps) {
+export function ClaudeCodeWrappedEmail({ userName, report, webAppUrl }: ClaudeCodeWrappedEmailProps) {
+  const base = webAppUrl.replace(/\/$/, "")
+  const imageBaseUrl = `${base}/email-branding/claude-code-wrapped/personalities`
+  const projectUrl = `${base}/projects/${report.project.slug}`
+  const settingsUrl = `${base}/settings/account`
+  const logoUrl = `${base}/latitude-logo.png`
+
   return (
-    <WrappedLayout previewText={`${userName}, your Claude Code week in ${report.project.name}`}>
+    <WrappedLayout
+      previewText={`${userName}, your Claude Code week in ${report.project.name}`}
+      footer={
+        <WrappedFooter
+          projectName={report.project.name}
+          projectUrl={projectUrl}
+          settingsUrl={settingsUrl}
+          logoUrl={logoUrl}
+          homeUrl={base}
+        />
+      }
+    >
       <HeroSection userName={userName} report={report} />
       <HeadlineNumbersGrid totals={report.totals} />
       <BreadthStrip totals={report.totals} />
@@ -425,7 +498,7 @@ export function ClaudeCodeWrappedEmail({ userName, report, imageBaseUrl }: Claud
 
 ClaudeCodeWrappedEmail.PreviewProps = {
   userName: "Alex",
-  imageBaseUrl: "http://localhost:3000/email-branding/claude-code-wrapped/personalities",
+  webAppUrl: "http://localhost:3000",
   report: {
     project: { id: ProjectId("proj-preview"), name: "poncho-ios", slug: "poncho-ios" },
     organization: { id: OrganizationId("org-preview"), name: "Acme" },
