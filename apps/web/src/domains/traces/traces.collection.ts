@@ -7,7 +7,7 @@ import {
   type TraceTimeHistogramBucket,
 } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
@@ -235,16 +235,21 @@ export function useTraceDistinctValues({
   projectId,
   column,
   search,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly column: "tags" | "models" | "providers" | "serviceNames"
   readonly search?: string
+  readonly enabled?: boolean
 }) {
   return useQuery({
     queryKey: ["trace-distinct", projectId, column, search],
     queryFn: () => getTraceDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
     staleTime: 60_000,
-    enabled: projectId.length > 0,
+    enabled: enabled && projectId.length > 0,
+    // Keep the previous matches visible while the next query for a new search
+    // term is in flight, so the dropdown doesn't flash empty on every keystroke.
+    placeholderData: keepPreviousData,
   })
 }
 
