@@ -107,3 +107,10 @@ export class CannotInviteAsOwnerError extends Data.TaggedError("CannotInviteAsOw
   readonly httpStatus = 400
   readonly httpMessage = "Cannot invite a new member at the owner role. Use ownership transfer after they accept."
 }
+
+export class CannotRemoveOwnerError extends Data.TaggedError("CannotRemoveOwnerError")<{
+  readonly userId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Cannot remove the organization owner. Transfer ownership first."
+}

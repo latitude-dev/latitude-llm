@@ -301,6 +301,40 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(after.find((m) => m.id === target.memberId)).toBeUndefined()
   })
 
+  it<ApiTestContext>("DELETE /v1/members/:id rejects removing the owner (4xx)", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    // Caller is an admin; seed a separate owner so caller isn't blocked by self-removal.
+    await seedExtraMember(database, tenant.organizationId, { role: "admin" })
+    const owner = await seedExtraMember(database, tenant.organizationId, { role: "owner" })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/members/${owner.memberId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
+      }),
+    )
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    expect(response.status).toBeLessThan(500)
+
+    const after = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
+    expect(after.find((m) => m.id === owner.memberId)).toBeDefined()
+  })
+
+  it<ApiTestContext>("PATCH /v1/members/:id rejects changing the owner's role (4xx)", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const owner = await seedExtraMember(database, tenant.organizationId, { role: "owner" })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/members/${owner.memberId}`, {
+        method: "PATCH",
+        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "admin" }),
+      }),
+    )
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    expect(response.status).toBeLessThan(500)
+  })
+
   it<ApiTestContext>("DELETE /v1/members/:id rejects self-removal (4xx)", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const all = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))

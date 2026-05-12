@@ -29,6 +29,7 @@ export {
   CannotChangeOwnerRoleError,
   CannotChangeOwnRoleError,
   CannotInviteAsOwnerError,
+  CannotRemoveOwnerError,
   CannotRemoveSelfError,
   CannotTransferToNonMemberError,
   CannotTransferToSelfError,

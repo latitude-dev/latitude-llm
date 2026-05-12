@@ -293,7 +293,7 @@ const removeMember = memberEndpoint({
     ...fern("remove"),
     summary: "Remove a member",
     description:
-      "Removes a member from the caller's organization. Self-removal is rejected — use the org-leave flow on the web. Requires OAuth authentication.",
+      "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
     security: PROTECTED_SECURITY,
     request: { params: IdParamsSchema },
     responses: openApiNoContentResponses({ description: "Member removed" }),
