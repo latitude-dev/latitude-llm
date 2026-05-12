@@ -344,8 +344,11 @@ const mergeEscalationSignals = (input: {
       oneHourSamples.push(oneH)
       sixHourPerHourSamples.push(sixH / 6)
       if (oneH > 0 || sixH > 0) {
-        // bucket "week" = how many full weeks ago — i.e. floor((now - anchor) / 7d)
-        // We don't care about offset within the pool when counting samples.
+        // Round-to-nearest weeks-ago so anchors offset by ±SEASONAL_BUCKET_POOLING_HOURS
+        // within the same prior-week pool all map to the same week index. A floor
+        // would dump the `+1h` offset of week N into bucket N-1 and undercount
+        // contributing weeks; round keeps the whole pool grouped together, which
+        // is the property `samplesCount` is actually measuring.
         const weekIndex = Math.round((input.nowMs - anchorMs) / WEEK_MS)
         weeksContributing.add(weekIndex)
       }
