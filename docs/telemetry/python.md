@@ -175,7 +175,7 @@ def capture(
 
 ### `LatitudeSpanProcessor`
 
-Span processor for shared-provider setups. Reads Latitude context from OTel context and stamps attributes onto spans.
+Span processor for shared-provider setups. Reads Latitude context from OTel context and stamps attributes onto spans. It also sets **`latitude.project`** on every span to the constructor `project_slug` (the same value sent as the `X-Latitude-Project` header on export).
 
 ```python
 class LatitudeSpanProcessor:

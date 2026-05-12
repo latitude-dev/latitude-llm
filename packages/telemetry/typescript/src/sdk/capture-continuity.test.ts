@@ -176,6 +176,7 @@ describe("capture trace continuity", () => {
 
       processor.onStart(mockSpan, testContext)
 
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("latitude.project", "project-slug")
       expect(mockSpan.updateName).toHaveBeenCalledWith("my-capture-name")
       expect(mockSpan.setAttribute).toHaveBeenCalledWith("latitude.capture.name", "my-capture-name")
     })
@@ -203,6 +204,7 @@ describe("capture trace continuity", () => {
 
       processor.onStart(mockSpan, testContext)
 
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("latitude.project", "project-slug")
       expect(mockSpan.updateName).not.toHaveBeenCalled()
       expect(mockSpan.setAttribute).toHaveBeenCalledWith("latitude.capture.name", "parent-capture")
     })
@@ -229,11 +231,23 @@ describe("capture trace continuity", () => {
       })
 
       processor.onStart(mockSpan, testContext)
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("latitude.project", "project-slug")
       expect(mockSpan.updateName).toHaveBeenCalledWith("options-name")
     })
   })
 
   describe("smart filter", () => {
+    it("should allow spans with latitude.project through filter", () => {
+      const mockReadableSpan = {
+        instrumentationScope: { name: "some.other.tracer" },
+        attributes: {
+          "latitude.project": "my-agent",
+        },
+      } as unknown as ReadableSpan
+
+      expect(isDefaultExportSpan(mockReadableSpan)).toBe(true)
+    })
+
     it("should allow spans with latitude.capture.root through filter", () => {
       const mockReadableSpan = {
         instrumentationScope: { name: "so.latitude.instrumentation.capture" },

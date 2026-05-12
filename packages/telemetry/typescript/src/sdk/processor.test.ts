@@ -45,6 +45,7 @@ describe("LatitudeSpanProcessor", () => {
         const ctx = context.active()
         processor.onStart(mockSpan as unknown as Span, ctx)
 
+        expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.name, "test-capture")
         expect(mockSpan.updateName).toHaveBeenCalledWith("test-capture")
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.tags, JSON.stringify(["test"]))
@@ -63,7 +64,8 @@ describe("LatitudeSpanProcessor", () => {
 
     processor.onStart(mockSpan as unknown as Span, ctx)
 
-    expect(mockSpan.setAttribute).not.toHaveBeenCalled()
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
+    expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(ATTRIBUTES.name, expect.anything())
     expect(mockSpan.updateName).not.toHaveBeenCalled()
   })
 
@@ -74,6 +76,7 @@ describe("LatitudeSpanProcessor", () => {
 
     processor.onStart(mockSpan as unknown as Span, ctx)
 
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
     expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTR_SERVICE_NAME, "billing-api")
   })
 
@@ -87,6 +90,7 @@ describe("LatitudeSpanProcessor", () => {
         const ctx = context.active()
         processor.onStart(mockSpan as unknown as Span, ctx)
 
+        expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
         expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(ATTRIBUTES.tags, expect.anything())
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.sessionId, "session-1")
       },
@@ -104,6 +108,7 @@ describe("LatitudeSpanProcessor", () => {
         const ctx = context.active()
         processor.onStart(mockSpan as unknown as Span, ctx)
 
+        expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
         expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(ATTRIBUTES.metadata, expect.anything())
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.tags, JSON.stringify(["test"]))
       },
@@ -122,6 +127,7 @@ describe("LatitudeSpanProcessor", () => {
           const ctx = context.active()
           processor.onStart(mockSpan as unknown as Span, ctx)
 
+          expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, projectSlug)
           expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.name, "custom-name")
           expect(mockSpan.updateName).toHaveBeenCalledWith("custom-name")
         },

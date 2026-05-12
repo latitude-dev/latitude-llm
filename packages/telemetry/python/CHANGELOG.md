@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`latitude.project` on every span** — `LatitudeSpanProcessor` / `init_latitude()` now set the OpenTelemetry attribute `latitude.project` to the configured project slug on each span, matching the `X-Latitude-Project` export header.
+
 ## [3.0.0a4] - 2026-05-08
 
 ### Changed

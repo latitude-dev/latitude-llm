@@ -55,10 +55,16 @@ class LatitudeSpanProcessor(SpanProcessor):
     ):
         options = options or LatitudeSpanProcessorOptions()
 
+        if not api_key or not api_key.strip():
+            raise ValueError("[Latitude] api_key is required and cannot be empty")
+        if not project_slug or not project_slug.strip():
+            raise ValueError("[Latitude] project_slug is required and cannot be empty")
+        self._project_slug = project_slug.strip()
+
         exporter = create_exporter(
             ExporterOptions(
-                api_key=api_key,
-                project_slug=project_slug,
+                api_key=api_key.strip(),
+                project_slug=self._project_slug,
                 endpoint=env.EXPORTER_URL,
                 timeout=30,
             )
@@ -96,6 +102,8 @@ class LatitudeSpanProcessor(SpanProcessor):
             from opentelemetry import context as otel_context
 
             latitude_data = get_latitude_context(otel_context.get_current())
+
+        span.set_attribute(ATTRIBUTES.project, self._project_slug)
 
         if latitude_data:
             if latitude_data.name:

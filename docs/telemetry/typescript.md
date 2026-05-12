@@ -188,7 +188,7 @@ function capture<T>(
 
 ### `LatitudeSpanProcessor`
 
-Span processor for shared-provider setups. Reads Latitude context from OTel context and stamps attributes onto spans.
+Span processor for shared-provider setups. Reads Latitude context from OTel context and stamps attributes onto spans. It also sets **`latitude.project`** on every span to the constructor `projectSlug` (the same value sent as the `X-Latitude-Project` header on export), so project scoping is visible on the span payload for OTLP-only setups.
 
 ```ts
 class LatitudeSpanProcessor implements SpanProcessor {

@@ -160,6 +160,7 @@ All spans reaching the endpoint are ingested. To get the most out of the Latitud
 | Attribute | Type | Description |
 |---|---|---|
 | `latitude.capture.name` | `string` | A name for the capture context (e.g. `"handle-user-request"`) |
+| `latitude.project` | `string` | Project slug (must match `X-Latitude-Project` when using the OTLP endpoint) |
 | `latitude.tags` | `string` (JSON array) | Tags for filtering, e.g. `'["production","v2"]'` |
 | `latitude.metadata` | `string` (JSON object) | Arbitrary key-value pairs, e.g. `'{"requestId":"abc"}'` |
 | `session.id` | `string` | Group related traces into a session |

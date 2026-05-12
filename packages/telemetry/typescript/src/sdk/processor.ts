@@ -22,6 +22,7 @@ import type { LatitudeSpanProcessorOptions } from "./types.ts"
 export class LatitudeSpanProcessor implements SpanProcessor {
   private readonly tail: SpanProcessor
   private readonly serviceName: string | undefined
+  private readonly projectSlug: string
 
   constructor(apiKey: string, projectSlug: string, options?: LatitudeSpanProcessorOptions) {
     if (!apiKey || apiKey.trim() === "") {
@@ -31,6 +32,8 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       throw new Error("[Latitude] projectSlug is required and cannot be empty")
     }
 
+    this.projectSlug = projectSlug.trim()
+
     const exporter =
       options?.exporter ??
       new OTLPTraceExporter({
@@ -38,7 +41,7 @@ export class LatitudeSpanProcessor implements SpanProcessor {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "X-Latitude-Project": projectSlug,
+          "X-Latitude-Project": this.projectSlug,
         },
         timeoutMillis: 30_000,
       })
@@ -68,6 +71,8 @@ export class LatitudeSpanProcessor implements SpanProcessor {
     if (this.serviceName !== undefined) {
       span.setAttribute(ATTR_SERVICE_NAME, this.serviceName)
     }
+
+    span.setAttribute(ATTRIBUTES.project, this.projectSlug)
 
     const latitudeData = getLatitudeContext(parentContext)
 
