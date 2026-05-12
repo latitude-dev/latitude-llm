@@ -20,14 +20,14 @@ import { z } from "@hono/zod-openapi"
 export const Paginated = <T extends z.ZodType>(item: T, name: string) =>
   z
     .object({
-      items: z.array(item).openapi({ description: "Page of items, in the requested sort order." }),
-      nextCursor: z.string().nullable().openapi({
-        description:
+      items: z.array(item).describe("Page of items, in the requested sort order."),
+      nextCursor: z
+        .string()
+        .nullable()
+        .describe(
           "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue.",
-      }),
-      hasMore: z.boolean().openapi({
-        description: "`true` when there is at least one more page after this one.",
-      }),
+        ),
+      hasMore: z.boolean().describe("`true` when there is at least one more page after this one."),
     })
     .openapi(name)
 
@@ -40,14 +40,9 @@ export const Paginated = <T extends z.ZodType>(item: T, name: string) =>
  * it as unused while it's waiting for its first consumer.
  */
 export const PaginatedQueryParamsSchema = z.object({
-  cursor: z.string().optional().openapi({
-    description: "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
-  }),
-  limit: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(200)
-    .default(50)
-    .openapi({ description: "Page size. Defaults to 50; max 200." }),
+  cursor: z
+    .string()
+    .optional()
+    .describe("Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."),
+  limit: z.coerce.number().int().min(1).max(200).default(50).describe("Page size. Defaults to 50; max 200."),
 })

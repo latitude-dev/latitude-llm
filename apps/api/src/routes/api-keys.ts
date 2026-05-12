@@ -6,12 +6,12 @@ import {
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { createRoute, z } from "@hono/zod-openapi"
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { type AnyApiEndpoint, defineApiEndpoint } from "../mcp/index.ts"
+import { defineApiEndpoint } from "../mcp/index.ts"
 import {
   errorResponse,
   IdParamsSchema,
@@ -28,9 +28,7 @@ const ResponseSchema = z
     id: z.string(),
     organizationId: z.string(),
     name: z.string(),
-    token: z
-      .string()
-      .openapi({ description: "The API key token. Only included in the creation response — store it securely." }),
+    token: z.string().describe("The API key token. Only included in the creation response — store it securely."),
     tokenHash: z.string(),
     lastUsedAt: z.string().nullable(),
     deletedAt: z.string().nullable(),
@@ -55,7 +53,7 @@ const ListResponseSchema = z.object({ apiKeys: z.array(ListItemSchema) }).openap
 
 const RequestSchema = z
   .object({
-    name: z.string().min(1).openapi({ description: "Human-readable name for the API key" }),
+    name: z.string().min(1).describe("Human-readable name for the API key"),
   })
   .openapi("CreateApiKeyBody")
 
@@ -109,7 +107,9 @@ const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
     }).pipe(Effect.orDie),
 })
 
-const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>()
+export const apiKeysPath = "/api-keys"
+
+const apiKeyEndpoint = defineApiEndpoint<OrganizationScopedEnv>(apiKeysPath)
 
 const createApiKey = apiKeyEndpoint({
   route: createRoute({
@@ -196,4 +196,8 @@ const revokeApiKey = apiKeyEndpoint({
   },
 })
 
-export const apiKeysEndpoints: readonly AnyApiEndpoint[] = [createApiKey, listApiKeys, revokeApiKey]
+export const createApiKeysRoutes = () => {
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
+  for (const ep of [createApiKey, listApiKeys, revokeApiKey]) ep.mountHttp(app)
+  return app
+}
