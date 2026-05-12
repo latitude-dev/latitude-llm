@@ -6,8 +6,6 @@ import { renderEmail } from "../../utils/render.ts"
 import type { RenderedEmail } from "../types.ts"
 import { ClaudeCodeWrappedEmail } from "./EmailTemplate.tsx"
 
-const DEFAULT_IMAGE_BASE_URL = "https://console.latitude.so/email-branding/claude-code-wrapped/personalities"
-
 const PLAIN_RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 
 const formatPlainRange = (start: Date, end: Date): string =>
@@ -16,16 +14,20 @@ const formatPlainRange = (start: Date, end: Date): string =>
 export interface ClaudeCodeWrappedEmailData {
   readonly userName: string
   readonly report: Report
-  /** Optional override; defaults to the production console.latitude.so URL. */
-  readonly imageBaseUrl?: string
+  /**
+   * Absolute base URL (no trailing slash) where the personality PNGs live.
+   * The worker derives this from `LAT_WEB_URL` so it stays correct across
+   * localhost / staging / production deployments. No default — the caller
+   * always knows which environment it's in.
+   */
+  readonly imageBaseUrl: string
 }
 
 export async function claudeCodeWrappedTemplate(data: ClaudeCodeWrappedEmailData): Promise<RenderedEmail> {
-  const imageBaseUrl = data.imageBaseUrl ?? DEFAULT_IMAGE_BASE_URL
   const projectName = data.report.project.name
   return {
     html: await renderEmail(
-      <ClaudeCodeWrappedEmail userName={data.userName} report={data.report} imageBaseUrl={imageBaseUrl} />,
+      <ClaudeCodeWrappedEmail userName={data.userName} report={data.report} imageBaseUrl={data.imageBaseUrl} />,
     ),
     subject: `Your Claude Code week in ${projectName}`,
     text: `Hi ${data.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(

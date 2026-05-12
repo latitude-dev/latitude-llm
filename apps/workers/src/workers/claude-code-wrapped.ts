@@ -16,12 +16,26 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
+import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
 const logger = createLogger("claude-code-wrapped")
 
 const WINDOW_DURATION_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Resolves the base URL for the personality PNGs. The PNGs live under
+ * `apps/web/public/email-branding/claude-code-wrapped/personalities/` and are
+ * served directly by the web app, so the prefix is whatever `LAT_WEB_URL`
+ * points at (localhost:3000 in dev, the deployment-specific host in
+ * staging/prod — same env var Better Auth, file uploads, and the auth
+ * config already use).
+ */
+const resolveImageBaseUrl = (): string => {
+  const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+  return `${webUrl.replace(/\/$/, "")}/email-branding/claude-code-wrapped/personalities`
+}
 
 interface ClaudeCodeWrappedWorkerDeps {
   readonly consumer: QueueConsumer
@@ -40,6 +54,7 @@ export const createClaudeCodeWrappedWorker = ({
 }: ClaudeCodeWrappedWorkerDeps) => {
   const emailSender = createEmailTransportSender()
   const sendEmailUseCase = sendEmail({ emailSender })
+  const imageBaseUrl = resolveImageBaseUrl()
 
   consumer.subscribe("claude-code-wrapped", {
     /**
@@ -116,7 +131,7 @@ export const createClaudeCodeWrappedWorker = ({
       const windowEnd = new Date(payload.windowEndIso)
 
       return runClaudeCodeWrappedUseCase({
-        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report }),
+        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report, imageBaseUrl }),
         sendEmail: sendEmailUseCase,
       })({
         organizationId,
