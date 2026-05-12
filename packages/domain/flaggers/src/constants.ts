@@ -23,11 +23,11 @@ export const FLAGGER_MAX_TOKENS = 512
 
 export const FLAGGER_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
-  model: "amazon.nova-2-lite-v1:0",
+  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
   temperature: 0.2,
 } as const
 
-export const FLAGGER_ANNOTATOR_MAX_TOKENS = 4096
+export const FLAGGER_ANNOTATOR_MAX_TOKENS = 2048
 
 export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,
