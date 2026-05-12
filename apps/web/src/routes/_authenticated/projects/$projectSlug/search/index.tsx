@@ -487,19 +487,9 @@ function serializeSearchSegments(segments: readonly SearchSegment[]): string {
 
 function splitSegmentOnDelimiter(segment: SearchSegment, value: string): readonly SearchSegment[] {
   if (segment.kind !== "semantic") return [{ ...segment, text: value }]
+  if (!value.includes('"') && !value.includes("`")) return [{ ...segment, text: value }]
 
-  const quoteIndex = value.indexOf('"')
-  const backtickIndex = value.indexOf("`")
-  const delimiterIndex = [quoteIndex, backtickIndex].filter((idx) => idx !== -1).sort((a, b) => a - b)[0]
-  if (delimiterIndex === undefined) return [{ ...segment, text: value }]
-
-  const delimiter = value[delimiterIndex]!
-  const kind = kindForDelimiter(delimiter)
-  if (!kind) return [{ ...segment, text: value }]
-
-  const before = value.slice(0, delimiterIndex).trimEnd()
-  const after = value.slice(delimiterIndex + 1)
-  return [...(before.length > 0 ? [{ ...segment, text: before }] : []), createSearchSegment(kind, after)]
+  return parseSearchSegments(value)
 }
 
 function SearchInput({
