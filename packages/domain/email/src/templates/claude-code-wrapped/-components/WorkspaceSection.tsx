@@ -129,7 +129,9 @@ export function WorkspaceSection({
           >
             <tbody>
               {topFiles.map((file, idx) => (
-                <tr key={file.displayPath} style={idx < topFiles.length - 1 ? rowDividerStyle : undefined}>
+                // Include the index — two files can collapse to the same
+                // displayPath (e.g. workspacePath unknown + matching basenames).
+                <tr key={`${idx}-${file.displayPath}`} style={idx < topFiles.length - 1 ? rowDividerStyle : undefined}>
                   <td style={{ ...rowCellBase, ...monoStyle, wordBreak: "break-all" }}>{file.displayPath}</td>
                   <td
                     align="right"
