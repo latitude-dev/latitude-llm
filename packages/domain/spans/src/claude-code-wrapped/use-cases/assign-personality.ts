@@ -117,15 +117,16 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
       buildEvidence: () => [
         `${formatPercent(shareOf("edit"))} of your tool calls were Edits`,
         `Touched ${filesTouched.toLocaleString("en-US")} file${filesTouched === 1 ? "" : "s"} this week`,
-        `${toolMix.write.toLocaleString("en-US")} new file${toolMix.write === 1 ? "" : "s"} written from scratch`,
+        // Avoid claiming "new files" — `Write` overwrites existing paths too.
+        `${toolMix.write.toLocaleString("en-US")} Write call${toolMix.write === 1 ? "" : "s"} on top`,
       ],
     },
     {
       kind: "architect",
       share: shareOf("write"),
       buildEvidence: () => [
-        `${formatPercent(shareOf("write"))} of your tool calls created new files`,
-        `${toolMix.write.toLocaleString("en-US")} Write call${toolMix.write === 1 ? "" : "s"}`,
+        `${formatPercent(shareOf("write"))} of your tool calls were Writes`,
+        `${toolMix.write.toLocaleString("en-US")} file${toolMix.write === 1 ? "" : "s"} written`,
         `Touched ${filesTouched.toLocaleString("en-US")} file${filesTouched === 1 ? "" : "s"} in total`,
       ],
     },
