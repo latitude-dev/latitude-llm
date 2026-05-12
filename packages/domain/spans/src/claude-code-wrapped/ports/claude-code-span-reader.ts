@@ -33,6 +33,27 @@ export interface WrappedTotalsRow {
   readonly branches: number
   readonly commits: number
   readonly repos: number
+  /** Distinct UTC calendar days with at least one Claude Code span. Max 7. */
+  readonly streakDays: number
+  /** Count of Bash invocations that look like a test-runner command. */
+  readonly testsRun: number
+}
+
+export interface LocStatsRow {
+  /** Lines written from scratch (Write `content`). */
+  readonly writeLines: number
+  /** Lines added by Edit / MultiEdit / NotebookEdit (`new_string` newlines). */
+  readonly editAdded: number
+  /** Lines removed by Edit / MultiEdit / NotebookEdit (`old_string` newlines). */
+  readonly editRemoved: number
+  /** Lines Claude read (Read / NotebookRead `tool_output` newlines). */
+  readonly readLines: number
+}
+
+export interface BiggestWriteRow {
+  /** Absolute file_path from the tool_input. Caller takes basename for display. */
+  readonly filePath: string
+  readonly lines: number
 }
 
 export interface SessionDurationStatsRow {
@@ -70,8 +91,19 @@ export interface BranchRow {
 export interface WorkspaceDeepDiveRow {
   readonly toolCalls: number
   readonly sessions: number
+  /** Distinct commits seen in this workspace's spans. */
+  readonly commits: number
+  /**
+   * Absolute path of the workspace (from `metadata['workspace.path']`). Used
+   * to compute relative file paths before rendering — never shown directly.
+   * Empty string when the workspace's spans don't carry the path metadata.
+   */
+  readonly workspacePath: string
   readonly topFilePaths: readonly string[]
   readonly topBranches: readonly string[]
+  /** First whitespace-separated token of the workspace's most-used Bash invocation. */
+  readonly topBashCommandPattern: string | null
+  readonly topBashCommandCount: number
   readonly dominantTool: string | null
 }
 
@@ -111,6 +143,12 @@ export interface ClaudeCodeSpanReaderShape {
   getSessionDurationStats(
     params: ProjectWindowInput,
   ): Effect.Effect<SessionDurationStatsRow, RepositoryError, ChSqlClient>
+
+  /** Aggregated lines-of-code stats — written, edit-added, edit-removed, read. */
+  getLocStats(params: ProjectWindowInput): Effect.Effect<LocStatsRow, RepositoryError, ChSqlClient>
+
+  /** The single Write call with the largest content. */
+  getBiggestWrite(params: ProjectWindowInput): Effect.Effect<BiggestWriteRow | null, RepositoryError, ChSqlClient>
 
   /** Raw per-tool-name counts. App-side maps to TOOL_BUCKETS. */
   getToolMix(params: ProjectWindowInput): Effect.Effect<readonly ToolMixRow[], RepositoryError, ChSqlClient>

@@ -2,13 +2,13 @@ import type { Project } from "@domain/projects"
 import type { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import type { FileLine, Report, ToolBucket, ToolMix, WorkspaceDeepDive } from "../entities/report.ts"
+import { pickReadAnchor, pickWrittenAnchor } from "../helpers/anchors.ts"
 import {
-  type BashPatternRow,
-  type BranchRow,
+  type BiggestWriteRow,
   type BusiestDayRow,
   ClaudeCodeSpanReader,
-  type FileTouchesRow,
   type HeatmapCellRow,
+  type LocStatsRow,
   type SessionDurationStatsRow,
   type ToolMixRow,
   type WorkspaceDeepDiveRow,
@@ -35,6 +35,7 @@ const DEEP_DIVE_CONCURRENCY = 3
 const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
   Bash: "bash",
   Read: "read",
+  NotebookRead: "read",
   Edit: "edit",
   NotebookEdit: "edit",
   MultiEdit: "edit",
@@ -68,21 +69,33 @@ const bucketise = (rows: readonly ToolMixRow[]): ToolMix => {
 
 const basename = (path: string): string => {
   if (path === "") return ""
-  // Strip trailing slashes, then take the last path component.
   const trimmed = path.replace(/\/+$/, "")
   const idx = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"))
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed
 }
 
-const toFileLines = (rows: readonly FileTouchesRow[]): FileLine[] =>
-  rows.map((row) => ({ path: row.path, displayName: basename(row.path), touches: row.touches }))
+/**
+ * Strips an absolute workspace prefix so renderable paths are never longer
+ * than `src/components/Chat.tsx` — never `/Users/<name>/Dev/.../Chat.tsx`.
+ * Falls back to the basename if the workspace prefix doesn't match (e.g. a
+ * symlink target or a path outside the workspace root).
+ */
+const toRelativeDisplayPath = (path: string, workspacePath: string): string => {
+  if (path === "") return ""
+  if (workspacePath !== "" && path.startsWith(workspacePath)) {
+    const trimmed = path.slice(workspacePath.length).replace(/^[/\\]+/, "")
+    if (trimmed !== "") return trimmed
+  }
+  return basename(path)
+}
 
-const toEmptyHeatmap = (): Report["heatmap"] => Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+const toEmptyHeatmap = (): Report["heatmap"] =>
+  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
 
 /**
  * Fills a 7×24 zeroed matrix from sparse `(dayOfWeek, hourOfDay, uses)`
- * triples. ClickHouse's `toDayOfWeek` returns 1=Mon..7=Sun, which we map to
- * 0..6 so the array index is the day's display-order offset.
+ * triples. ClickHouse's `toDayOfWeek` returns 1=Mon..7=Sun, mapped to 0..6
+ * so the array index is the day's display-order offset.
  */
 const fillHeatmap = (rows: readonly HeatmapCellRow[]): Report["heatmap"] => {
   const matrix = toEmptyHeatmap()
@@ -100,12 +113,18 @@ const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): Work
   name: workspace.name,
   toolCalls: row.toolCalls,
   sessions: row.sessions,
-  topFiles: row.topFilePaths.map((path) => ({
-    path,
-    displayName: basename(path),
-    touches: 0,
-  })),
+  commits: row.commits,
+  topFiles: row.topFilePaths.map(
+    (path): FileLine => ({
+      displayPath: toRelativeDisplayPath(path, row.workspacePath),
+      // Per-file touch counts aren't returned by topKIf — show without count.
+      touches: 0,
+    }),
+  ),
   topBranches: [...row.topBranches],
+  topBashCommand: row.topBashCommandPattern
+    ? { pattern: row.topBashCommandPattern, count: row.topBashCommandCount }
+    : null,
   dominantTool: row.dominantTool ? toolBucketFor(row.dominantTool) : "other",
 })
 
@@ -116,13 +135,13 @@ export interface AssembleReportInput {
   readonly windowEnd: Date
   readonly totals: WrappedTotalsRow
   readonly durationStats: SessionDurationStatsRow
+  readonly locStats: LocStatsRow
   readonly toolMix: readonly ToolMixRow[]
-  readonly topFiles: readonly FileTouchesRow[]
-  readonly topBash: readonly BashPatternRow[]
+  readonly topBash: ReadonlyArray<{ readonly pattern: string; readonly uses: number }>
   readonly topWorkspaces: readonly WorkspaceRow[]
-  readonly topBranches: readonly BranchRow[]
   readonly heatmap: readonly HeatmapCellRow[]
   readonly busiestDay: BusiestDayRow | null
+  readonly biggestWrite: BiggestWriteRow | null
   readonly deepDives: ReadonlyArray<{
     readonly workspace: WorkspaceRow
     readonly row: WorkspaceDeepDiveRow
@@ -131,13 +150,12 @@ export interface AssembleReportInput {
 
 /**
  * Pure assembly step — no Effect, no I/O. Bucketises the tool mix, computes
- * basenames, fills the 7×24 heatmap, assigns the personality, and validates
- * the result against `reportSchema` (callers can rely on the returned object
- * being a `Report`).
+ * relative paths + anchors, fills the 7×24 heatmap, assigns the personality,
+ * and validates the result against `reportSchema` (callers can rely on the
+ * returned object being a `Report`).
  */
 export const assembleReport = (input: AssembleReportInput): Report => {
   const toolMix = bucketise(input.toolMix)
-  const topFiles = toFileLines(input.topFiles)
   const heatmap = fillHeatmap(input.heatmap)
 
   const workspaces = input.topWorkspaces.map((row) => ({
@@ -147,6 +165,11 @@ export const assembleReport = (input: AssembleReportInput): Report => {
   }))
   const otherWorkspaceCount = Math.max(0, workspaces.length - MAX_WORKSPACE_DEEP_DIVES)
   const workspaceDeepDives = input.deepDives.map(({ workspace, row }) => buildDeepDive(workspace, row))
+
+  const linesWritten = input.locStats.writeLines + input.locStats.editAdded
+  const linesAdded = input.locStats.editAdded
+  const linesRemoved = input.locStats.editRemoved
+  const linesRead = input.locStats.readLines
 
   const personality = assignPersonality({
     toolMix,
@@ -158,15 +181,21 @@ export const assembleReport = (input: AssembleReportInput): Report => {
 
   const longestSession =
     input.durationStats.longestDurationMs > 0
-      ? {
-          durationMs: input.durationStats.longestDurationMs,
-          workspace: input.durationStats.longestWorkspace,
-        }
+      ? { durationMs: input.durationStats.longestDurationMs, workspace: input.durationStats.longestWorkspace }
       : null
 
-  const busiestDay = input.busiestDay ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls } : null
+  const busiestDay = input.busiestDay
+    ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls }
+    : null
 
-  const mainCharacterFile = topFiles[0] ?? null
+  const biggestWrite = input.biggestWrite
+    ? { displayName: basename(input.biggestWrite.filePath), lines: input.biggestWrite.lines }
+    : null
+
+  const topBashCommand =
+    input.topBash[0] && input.topBash[0].pattern !== ""
+      ? { pattern: input.topBash[0].pattern, count: input.topBash[0].uses }
+      : null
 
   return {
     project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
@@ -182,16 +211,23 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       branches: input.totals.branches,
       commits: input.totals.commits,
       repos: input.totals.repos,
+      streakDays: input.totals.streakDays,
+      testsRun: input.totals.testsRun,
     },
     toolMix,
-    topFiles,
-    topBashCommands: input.topBash.map((row) => ({ pattern: row.pattern, count: row.uses })),
-    topWorkspaces: workspaces,
-    topBranches: input.topBranches.map((row) => ({ name: row.name, sessions: row.sessions })),
+    loc: {
+      written: linesWritten,
+      read: linesRead,
+      added: linesAdded,
+      removed: linesRemoved,
+      writtenAnchor: pickWrittenAnchor(linesWritten),
+      readAnchor: pickReadAnchor(linesRead),
+    },
+    topBashCommand,
     workspaceDeepDives,
     otherWorkspaceCount,
     heatmap,
-    moments: { longestSession, busiestDay, mainCharacterFile },
+    moments: { longestSession, busiestDay, biggestWrite },
     personality,
   }
 }
@@ -204,7 +240,7 @@ export interface BuildReportInput {
 }
 
 /**
- * Runs the eight independent Wrapped queries in parallel, then a per-top-3
+ * Runs the independent Wrapped queries in parallel, then a per-top-3
  * workspace fan-out, then hands the raw rows to `assembleReport` for the
  * pure transformation step. Returns a validated `Report`.
  */
@@ -218,18 +254,18 @@ export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(f
     to: input.windowEnd,
   }
 
-  const [totals, durationStats, toolMix, topFiles, topBash, topWorkspaces, topBranches, heatmap, busiestDay] =
+  const [totals, durationStats, locStats, toolMix, topBash, topWorkspaces, heatmap, busiestDay, biggestWrite] =
     yield* Effect.all(
       [
         reader.getTotalsForProject(projectScope),
         reader.getSessionDurationStats(projectScope),
+        reader.getLocStats(projectScope),
         reader.getToolMix(projectScope),
-        reader.getTopFiles(projectScope),
         reader.getTopBashCommands(projectScope),
         reader.getTopWorkspaces(projectScope),
-        reader.getTopBranches(projectScope),
         reader.getHeatmap(projectScope),
         reader.getBusiestDay(projectScope),
+        reader.getBiggestWrite(projectScope),
       ],
       { concurrency: QUERY_CONCURRENCY },
     )
@@ -251,13 +287,13 @@ export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(f
     windowEnd: input.windowEnd,
     totals,
     durationStats,
+    locStats,
     toolMix,
-    topFiles,
     topBash,
     topWorkspaces,
-    topBranches,
     heatmap,
     busiestDay,
+    biggestWrite,
     deepDives,
   })
 })

@@ -1,5 +1,6 @@
 export {
   type FileLine,
+  type LocStats,
   PERSONALITY_KINDS,
   type Personality,
   type PersonalityKind,
@@ -8,17 +9,20 @@ export {
   TOOL_BUCKETS,
   type ToolBucket,
   type ToolMix,
+  type TopBashCommand,
   type WorkspaceDeepDive,
-  type WorkspaceLine,
 } from "./entities/report.ts"
+export { pickReadAnchor, pickWrittenAnchor } from "./helpers/anchors.ts"
 export {
   type BashPatternRow,
+  type BiggestWriteRow,
   type BranchRow,
   type BusiestDayRow,
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,
   type FileTouchesRow,
   type HeatmapCellRow,
+  type LocStatsRow,
   type OrgProjectPair,
   type ProjectWindowInput,
   type SessionDurationStatsRow,

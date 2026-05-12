@@ -10,12 +10,14 @@ import {
 } from "@domain/shared"
 import {
   type BashPatternRow,
+  type BiggestWriteRow,
   type BranchRow,
   type BusiestDayRow,
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,
   type FileTouchesRow,
   type HeatmapCellRow,
+  type LocStatsRow,
   type SessionDurationStatsRow,
   type ToolMixRow,
   type WorkspaceDeepDiveRow,
@@ -79,6 +81,22 @@ interface TotalsCHRow {
   readonly branches: number | string
   readonly commits: number | string
   readonly repos: number | string
+  readonly streak_days: number | string
+  readonly tests_run: number | string
+}
+
+interface LocStatsCHRow {
+  readonly write_lines: number | string
+  readonly edit_added: number | string
+  readonly edit_removed: number | string
+  readonly multiedit_added: number | string
+  readonly multiedit_removed: number | string
+  readonly read_lines: number | string
+}
+
+interface BiggestWriteCHRow {
+  readonly file_path: string
+  readonly lines: number | string
 }
 
 interface DurationStatsCHRow {
@@ -116,8 +134,12 @@ interface BranchCHRow {
 interface WorkspaceDeepDiveCHRow {
   readonly tool_calls: number | string
   readonly sessions: number | string
+  readonly commits: number | string
+  readonly workspace_path: string
   readonly top_file_paths: readonly string[] | null
   readonly top_branches: readonly string[] | null
+  readonly top_bash_command: readonly string[] | null
+  readonly top_bash_command_count: number | string
   readonly dominant_tool: readonly string[] | null
 }
 
@@ -218,7 +240,13 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   countDistinctIf(metadata['workspace.name'], metadata['workspace.name'] != '')       AS workspaces,
                   countDistinctIf(metadata['git.branch'],     metadata['git.branch']     != '')       AS branches,
                   countDistinctIf(metadata['git.commit'],     metadata['git.commit']     != '')       AS commits,
-                  countDistinctIf(metadata['git.repo'],       metadata['git.repo']       != '')       AS repos
+                  countDistinctIf(metadata['git.repo'],       metadata['git.repo']       != '')       AS repos,
+                  uniqExact(toDate(start_time))                                                       AS streak_days,
+                  countIf(
+                    tool_name = 'Bash'
+                    AND match(JSONExtractString(tool_input, 'command'),
+                      '(?i)(^|\\s)(test(\\s|:|$)|pytest|vitest|jest|mocha|rspec)')
+                  )                                                                                   AS tests_run
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
               `,
@@ -235,6 +263,8 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               branches: 0,
               commits: 0,
               repos: 0,
+              streakDays: 0,
+              testsRun: 0,
             }
             if (!row) return empty
             return {
@@ -246,9 +276,84 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               branches: num(row.branches),
               commits: num(row.commits),
               repos: num(row.repos),
+              streakDays: num(row.streak_days),
+              testsRun: num(row.tests_run),
             }
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "getTotalsForProject")))
+      })
+
+    const getLocStats: ClaudeCodeSpanReaderShape["getLocStats"] = (params) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            // countSubstrings counts non-overlapping occurrences — equivalent
+            // to "lines of code" when measured by '\n'. We treat the final
+                          // line as "complete enough" for the aggregate.
+            const result = await client.query({
+              query: `
+                SELECT
+                  sumIf(countSubstrings(JSONExtractString(tool_input, 'content'),    '\\n'),
+                        tool_name = 'Write')                                          AS write_lines,
+                  sumIf(countSubstrings(JSONExtractString(tool_input, 'new_string'), '\\n'),
+                        tool_name IN ('Edit', 'NotebookEdit'))                        AS edit_added,
+                  sumIf(countSubstrings(JSONExtractString(tool_input, 'old_string'), '\\n'),
+                        tool_name IN ('Edit', 'NotebookEdit'))                        AS edit_removed,
+                  sumIf(arraySum(arrayMap(
+                          x -> countSubstrings(JSONExtractString(x, 'new_string'), '\\n'),
+                          JSONExtractArrayRaw(tool_input, 'edits')
+                        )), tool_name = 'MultiEdit')                                  AS multiedit_added,
+                  sumIf(arraySum(arrayMap(
+                          x -> countSubstrings(JSONExtractString(x, 'old_string'), '\\n'),
+                          JSONExtractArrayRaw(tool_input, 'edits')
+                        )), tool_name = 'MultiEdit')                                  AS multiedit_removed,
+                  sumIf(countSubstrings(tool_output, '\\n'),
+                        tool_name IN ('Read', 'NotebookRead'))                        AS read_lines
+                FROM spans
+                WHERE ${PROJECT_WINDOW_FILTER}
+              `,
+              query_params: projectWindowParams(params),
+              format: "JSONEachRow",
+            })
+            const [row] = await result.json<LocStatsCHRow>()
+            const empty: LocStatsRow = { writeLines: 0, editAdded: 0, editRemoved: 0, readLines: 0 }
+            if (!row) return empty
+            return {
+              writeLines: num(row.write_lines),
+              editAdded: num(row.edit_added) + num(row.multiedit_added),
+              editRemoved: num(row.edit_removed) + num(row.multiedit_removed),
+              readLines: num(row.read_lines),
+            }
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "getLocStats")))
+      })
+
+    const getBiggestWrite: ClaudeCodeSpanReaderShape["getBiggestWrite"] = (params) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `
+                SELECT
+                  JSONExtractString(tool_input, 'file_path')                AS file_path,
+                  countSubstrings(JSONExtractString(tool_input, 'content'), '\\n') AS lines
+                FROM spans
+                WHERE ${PROJECT_WINDOW_FILTER}
+                  AND tool_name = 'Write'
+                  AND JSONExtractString(tool_input, 'file_path') != ''
+                ORDER BY lines DESC
+                LIMIT 1
+              `,
+              query_params: projectWindowParams(params),
+              format: "JSONEachRow",
+            })
+            const [row] = await result.json<BiggestWriteCHRow>()
+            if (!row || num(row.lines) <= 0) return null
+            return { filePath: row.file_path, lines: num(row.lines) } satisfies BiggestWriteRow
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "getBiggestWrite")))
       })
 
     const getSessionDurationStats: ClaudeCodeSpanReaderShape["getSessionDurationStats"] = (params) =>
@@ -450,21 +555,53 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // The top bash command + its count come from a sub-aggregation:
+            // topKIf gives us the most-used pattern, and we count just rows
+            // matching it in the same pass.
             const result = await client.query({
               query: `
+                WITH top_bash AS (
+                  SELECT
+                    splitByChar(' ', trim(BOTH ' ' FROM JSONExtractString(tool_input, 'command')))[1] AS pattern,
+                    count() AS uses
+                  FROM spans
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND metadata['workspace.name'] = {workspaceName:String}
+                    AND tool_name = 'Bash'
+                    AND JSONExtractString(tool_input, 'command') != ''
+                  GROUP BY pattern
+                  ORDER BY uses DESC
+                  LIMIT 1
+                )
                 SELECT
-                  count() AS tool_calls,
-                  countDistinctIf(session_id, session_id != '') AS sessions,
-                  topKIf(3)(
+                  (SELECT count() FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS tool_calls,
+                  (SELECT countDistinctIf(session_id, session_id != '') FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS sessions,
+                  (SELECT countDistinctIf(metadata['git.commit'], metadata['git.commit'] != '') FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS commits,
+                  (SELECT any(metadata['workspace.path']) FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}
+                      AND metadata['workspace.path'] != '') AS workspace_path,
+                  (SELECT topKIf(3)(
                     JSONExtractString(tool_input, 'file_path'),
                     tool_name IN (${FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")})
                     AND JSONExtractString(tool_input, 'file_path') != ''
-                  ) AS top_file_paths,
-                  topKIf(2)(metadata['git.branch'], metadata['git.branch'] != '') AS top_branches,
-                  topKIf(1)(tool_name, operation = 'execute_tool' AND tool_name != '') AS dominant_tool
-                FROM spans
-                WHERE ${PROJECT_WINDOW_FILTER}
-                  AND metadata['workspace.name'] = {workspaceName:String}
+                  ) FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS top_file_paths,
+                  (SELECT topKIf(2)(metadata['git.branch'], metadata['git.branch'] != '') FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS top_branches,
+                  (SELECT topKIf(1)(tool_name, operation = 'execute_tool' AND tool_name != '') FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}) AS dominant_tool,
+                  (SELECT groupArray(pattern) FROM top_bash) AS top_bash_command,
+                  (SELECT sum(uses) FROM top_bash) AS top_bash_command_count
               `,
               query_params: { ...projectWindowParams(params), workspaceName: params.workspaceName },
               format: "JSONEachRow",
@@ -473,16 +610,25 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
             const empty: WorkspaceDeepDiveRow = {
               toolCalls: 0,
               sessions: 0,
+              commits: 0,
+              workspacePath: "",
               topFilePaths: [],
               topBranches: [],
+              topBashCommandPattern: null,
+              topBashCommandCount: 0,
               dominantTool: null,
             }
             if (!row) return empty
+            const topBashPattern = row.top_bash_command?.[0] ?? null
             return {
               toolCalls: num(row.tool_calls),
               sessions: num(row.sessions),
+              commits: num(row.commits),
+              workspacePath: row.workspace_path ?? "",
               topFilePaths: row.top_file_paths ?? [],
               topBranches: row.top_branches ?? [],
+              topBashCommandPattern: topBashPattern && topBashPattern !== "" ? topBashPattern : null,
+              topBashCommandCount: num(row.top_bash_command_count),
               dominantTool: row.dominant_tool?.[0] ?? null,
             }
           })
@@ -552,6 +698,8 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
       countSessionsForProjectInWindow,
       getTotalsForProject,
       getSessionDurationStats,
+      getLocStats,
+      getBiggestWrite,
       getToolMix,
       getTopFiles,
       getTopBashCommands,

@@ -9,9 +9,7 @@ import { emailDesignTokens } from "../../tokens/design-system.ts"
 import { Heatmap } from "./-components/Heatmap.tsx"
 import { MomentCard } from "./-components/MomentCard.tsx"
 import { PersonalityCard, type PersonalityKindLocal } from "./-components/PersonalityCard.tsx"
-import { RankList } from "./-components/RankList.tsx"
 import { StatCard } from "./-components/StatCard.tsx"
-import { ToolMixBar, type ToolMixSegment } from "./-components/ToolMixBar.tsx"
 import { WorkspaceCard } from "./-components/WorkspaceCard.tsx"
 
 interface ClaudeCodeWrappedEmailProps {
@@ -19,7 +17,7 @@ interface ClaudeCodeWrappedEmailProps {
   readonly report: Report
   /**
    * Absolute base URL where the personality PNGs live (no trailing slash).
-   * Production wires this to `https://console.latitude.so/email-branding/claude-code-wrapped/personalities`.
+   * Worker derives this from `LAT_WEB_URL` so it follows the deployment.
    */
   readonly imageBaseUrl: string
 }
@@ -46,8 +44,6 @@ const formatDuration = (ms: number): string => {
 const formatCompact = (n: number): string => n.toLocaleString("en-US")
 
 const formatBusiestDay = (date: string): string => {
-  // The query returns YYYY-MM-DD UTC. Parse explicitly so we don't slip into
-  // the local timezone (Outlook's Date handling is unforgiving).
   const [y, m, d] = date.split("-").map((part) => Number.parseInt(part, 10))
   if (!y || !m || !d) return date
   const utc = new Date(Date.UTC(y, m - 1, d))
@@ -59,27 +55,8 @@ const formatBusiestDay = (date: string): string => {
   }).format(utc)
 }
 
-// Tool-mix segment colors — built on the claude.accent ramp with the cream
-// background as the neutral. Order matches the legend order.
-const TOOL_MIX_PALETTE: Record<string, { label: string; color: string }> = {
-  bash: { label: "Bash", color: "#D97555" },
-  read: { label: "Read", color: "#C97A3C" },
-  edit: { label: "Edit", color: "#A66A4D" },
-  write: { label: "Write", color: "#7E5246" },
-  search: { label: "Search", color: "#BE9580" },
-  plan: { label: "Plan", color: "#7C8B5D" },
-  other: { label: "Other", color: "#A9A39A" },
-}
-
-const buildToolMixSegments = (mix: Report["toolMix"]): readonly ToolMixSegment[] =>
-  (Object.keys(TOOL_MIX_PALETTE) as Array<keyof typeof TOOL_MIX_PALETTE>).map((bucket) => ({
-    label: TOOL_MIX_PALETTE[bucket].label,
-    color: TOOL_MIX_PALETTE[bucket].color,
-    count: mix[bucket as keyof Report["toolMix"]],
-  }))
-
 // ─────────────────────────────────────────────────────────────────────────
-// Sections
+// Section styles
 // ─────────────────────────────────────────────────────────────────────────
 
 const sectionStyle: React.CSSProperties = {
@@ -93,6 +70,27 @@ const sectionSubtitleStyle: React.CSSProperties = {
   marginTop: "6px",
   marginBottom: "16px",
 }
+
+const bigNumberStyle: React.CSSProperties = {
+  fontFamily: emailDesignTokens.fonts.serif,
+  fontSize: "44px",
+  lineHeight: "52px",
+  fontWeight: 500,
+  color: emailDesignTokens.colors.claude.ink,
+  margin: "8px 0 4px 0",
+}
+
+const anchorStyle: React.CSSProperties = {
+  fontFamily: emailDesignTokens.fonts.serif,
+  fontSize: "14px",
+  fontStyle: "italic",
+  color: emailDesignTokens.colors.claude.mutedInk,
+  margin: 0,
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sections (top to bottom in display order)
+// ─────────────────────────────────────────────────────────────────────────
 
 function HeroSection({ userName, report }: { userName: string; report: Report }) {
   return (
@@ -137,103 +135,116 @@ function HeadlineNumbersGrid({ totals }: { totals: Report["totals"] }) {
 }
 
 function BreadthStrip({ totals }: { totals: Report["totals"] }) {
-  const parts: string[] = []
-  if (totals.workspaces > 0) parts.push(`${formatCompact(totals.workspaces)} workspaces`)
-  if (totals.branches > 0) parts.push(`${formatCompact(totals.branches)} branches`)
-  if (totals.commits > 0) parts.push(`${formatCompact(totals.commits)} commits`)
-  if (totals.repos > 0) parts.push(`${formatCompact(totals.repos)} repos`)
-  if (parts.length === 0) return null
+  const breadthParts: string[] = []
+  if (totals.workspaces > 0) breadthParts.push(`${formatCompact(totals.workspaces)} workspaces`)
+  if (totals.branches > 0) breadthParts.push(`${formatCompact(totals.branches)} branches`)
+  if (totals.commits > 0) breadthParts.push(`${formatCompact(totals.commits)} commits`)
+  if (totals.repos > 0) breadthParts.push(`${formatCompact(totals.repos)} repos`)
+
+  const subParts: string[] = []
+  if (totals.streakDays > 0) {
+    subParts.push(`${totals.streakDays}-day streak`)
+  }
+  if (totals.testsRun > 0) {
+    subParts.push(`${formatCompact(totals.testsRun)} test run${totals.testsRun === 1 ? "" : "s"}`)
+  }
+
+  if (breadthParts.length === 0 && subParts.length === 0) return null
+
   return (
     <Section style={{ marginTop: "12px", textAlign: "center" }}>
+      {breadthParts.length > 0 ? (
+        <p
+          style={{
+            fontFamily: emailDesignTokens.fonts.serif,
+            fontSize: "13px",
+            color: emailDesignTokens.colors.claude.mutedInk,
+            margin: 0,
+          }}
+        >
+          {breadthParts.join(" · ")}
+        </p>
+      ) : null}
+      {subParts.length > 0 ? (
+        <p
+          style={{
+            fontFamily: emailDesignTokens.fonts.serif,
+            fontSize: "13px",
+            color: emailDesignTokens.colors.claude.accent,
+            margin: "4px 0 0 0",
+          }}
+        >
+          {subParts.join(" · ")}
+        </p>
+      ) : null}
+    </Section>
+  )
+}
+
+function LocSection({ loc }: { loc: Report["loc"] }) {
+  if (loc.written <= 0 && loc.read <= 0) return null
+
+  return (
+    <Section style={{ ...sectionStyle, textAlign: "center" }}>
       <p
         style={{
           fontFamily: emailDesignTokens.fonts.serif,
           fontSize: "13px",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
           color: emailDesignTokens.colors.claude.mutedInk,
           margin: 0,
         }}
       >
-        {parts.join(" · ")}
+        Lines written
       </p>
-    </Section>
-  )
-}
-
-function ToolMixSection({ mix }: { mix: Report["toolMix"] }) {
-  return (
-    <Section style={sectionStyle}>
-      <EmailHeading variant="sectionTitle">Tool mix</EmailHeading>
-      <p style={sectionSubtitleStyle}>How Claude Code split its work this week.</p>
-      <ToolMixBar segments={buildToolMixSegments(mix)} />
-    </Section>
-  )
-}
-
-function TopFilesSection({ files }: { files: Report["topFiles"] }) {
-  return (
-    <Section style={sectionStyle}>
-      <EmailHeading variant="sectionTitle">Top files</EmailHeading>
-      <p style={sectionSubtitleStyle}>The files Claude returned to most often.</p>
-      <RankList
-        emptyHint="No file activity recorded."
-        items={files.map((file) => ({
-          primary: file.displayName,
-          secondary: file.path,
-          trailing: `${formatCompact(file.touches)}×`,
-        }))}
-      />
-    </Section>
-  )
-}
-
-function TopBashCommandsSection({ commands }: { commands: Report["topBashCommands"] }) {
-  if (commands.length === 0) return null
-  return (
-    <Section style={sectionStyle}>
-      <EmailHeading variant="sectionTitle">Top commands</EmailHeading>
-      <p style={sectionSubtitleStyle}>Grouped by the first token of each bash invocation.</p>
-      <RankList
-        items={commands.map((c) => ({
-          primary: c.pattern,
-          trailing: `${formatCompact(c.count)} runs`,
-        }))}
-      />
-    </Section>
-  )
-}
-
-function WorkspacesSection({ deepDives, otherCount }: { deepDives: Report["workspaceDeepDives"]; otherCount: number }) {
-  if (deepDives.length === 0) return null
-  const single = deepDives.length === 1
-  const title = single && deepDives[0] ? `Your week in ${deepDives[0].name}` : "Workspaces"
-  const subtitle = single
-    ? "Your one and only this week."
-    : `Where Claude spent the most time${otherCount > 0 ? ` — plus ${otherCount} more workspaces` : ""}.`
-  return (
-    <Section style={sectionStyle}>
-      <EmailHeading variant="sectionTitle">{title}</EmailHeading>
-      <p style={sectionSubtitleStyle}>{subtitle}</p>
-      {deepDives.map((ws) => (
-        <WorkspaceCard
-          key={ws.name}
-          name={ws.name}
-          sessions={ws.sessions}
-          toolCalls={ws.toolCalls}
-          topFiles={ws.topFiles}
-          topBranches={ws.topBranches}
-          dominantTool={ws.dominantTool}
-        />
-      ))}
-      {!single && otherCount > 0 ? (
+      <p style={bigNumberStyle}>{formatCompact(loc.written)}</p>
+      {loc.writtenAnchor ? <p style={anchorStyle}>{loc.writtenAnchor}</p> : null}
+      {loc.added > 0 || loc.removed > 0 ? (
         <p
           style={{
             fontFamily: emailDesignTokens.fonts.serif,
-            fontSize: "12px",
+            fontSize: "13px",
             color: emailDesignTokens.colors.claude.mutedInk,
-            marginTop: "4px",
+            margin: "12px 0 0 0",
           }}
         >
-          {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
+          <span style={{ color: emailDesignTokens.colors.claude.accent }}>{`+${formatCompact(loc.added)}`}</span>
+          {" / "}
+          <span>{`−${formatCompact(loc.removed)}`}</span>
+          {" across edits"}
+        </p>
+      ) : null}
+    </Section>
+  )
+}
+
+function ReadWriteRatioSection({ loc }: { loc: Report["loc"] }) {
+  if (loc.written <= 0 || loc.read <= 0) return null
+  const ratio = loc.read / loc.written
+  // Round to integer when the ratio is meaningfully whole; otherwise 1dp.
+  const ratioText = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
+  return (
+    <Section style={{ ...sectionStyle, textAlign: "center" }}>
+      <p
+        style={{
+          fontFamily: emailDesignTokens.fonts.serif,
+          fontSize: "18px",
+          lineHeight: "26px",
+          color: emailDesignTokens.colors.claude.ink,
+          margin: 0,
+          maxWidth: "440px",
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        {`For every line you wrote, Claude read `}
+        <span style={{ color: emailDesignTokens.colors.claude.accent, fontWeight: 600 }}>{ratioText}</span>
+        {`.`}
+      </p>
+      {loc.readAnchor ? (
+        <p style={{ ...anchorStyle, marginTop: "8px" }}>
+          {`${formatCompact(loc.read)} lines read — ${loc.readAnchor}`}
         </p>
       ) : null}
     </Section>
@@ -253,7 +264,7 @@ function HeatmapSection({ heatmap }: { heatmap: Report["heatmap"] }) {
 }
 
 function MomentsSection({ moments }: { moments: Report["moments"] }) {
-  const hasAny = moments.longestSession || moments.busiestDay || moments.mainCharacterFile
+  const hasAny = moments.longestSession || moments.busiestDay || moments.biggestWrite
   if (!hasAny) return null
   return (
     <Section style={sectionStyle}>
@@ -286,20 +297,95 @@ function MomentsSection({ moments }: { moments: Report["moments"] }) {
             ) : (
               <MomentCard label="Busiest day" value="—" />
             )}
-            {moments.mainCharacterFile ? (
+            {moments.biggestWrite ? (
               <MomentCard
-                label="Main character"
-                value={moments.mainCharacterFile.displayName}
-                detail={`Touched ${formatCompact(moments.mainCharacterFile.touches)} time${
-                  moments.mainCharacterFile.touches === 1 ? "" : "s"
-                }`}
+                label="Biggest single write"
+                value={moments.biggestWrite.displayName}
+                detail={`${formatCompact(moments.biggestWrite.lines)} line${moments.biggestWrite.lines === 1 ? "" : "s"}`}
               />
             ) : (
-              <MomentCard label="Main character" value="—" />
+              <MomentCard label="Biggest single write" value="—" />
             )}
           </tr>
         </tbody>
       </table>
+    </Section>
+  )
+}
+
+function TopCommandLine({ command }: { command: Report["topBashCommand"] }) {
+  if (!command) return null
+  return (
+    <Section style={{ ...sectionStyle, textAlign: "center" }}>
+      <p
+        style={{
+          fontFamily: emailDesignTokens.fonts.serif,
+          fontSize: "18px",
+          lineHeight: "26px",
+          color: emailDesignTokens.colors.claude.ink,
+          margin: 0,
+        }}
+      >
+        {`Your favorite command: `}
+        <span
+          style={{
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            backgroundColor: emailDesignTokens.colors.claude.creamDeep,
+            padding: "2px 8px",
+            borderRadius: "4px",
+            color: emailDesignTokens.colors.claude.accent,
+          }}
+        >
+          {command.pattern}
+        </span>
+        {` — ${formatCompact(command.count)} run${command.count === 1 ? "" : "s"}.`}
+      </p>
+    </Section>
+  )
+}
+
+function WorkspacesSection({
+  deepDives,
+  otherCount,
+}: {
+  deepDives: Report["workspaceDeepDives"]
+  otherCount: number
+}) {
+  if (deepDives.length === 0) return null
+  const single = deepDives.length === 1
+  const title = single && deepDives[0] ? `Your week in ${deepDives[0].name}` : "Workspaces"
+  const subtitle = single
+    ? "Your one and only this week."
+    : `Where Claude spent the most time${otherCount > 0 ? ` — plus ${otherCount} more workspaces` : ""}.`
+  return (
+    <Section style={sectionStyle}>
+      <EmailHeading variant="sectionTitle">{title}</EmailHeading>
+      <p style={sectionSubtitleStyle}>{subtitle}</p>
+      {deepDives.map((ws) => (
+        <WorkspaceCard
+          key={ws.name}
+          name={ws.name}
+          sessions={ws.sessions}
+          toolCalls={ws.toolCalls}
+          commits={ws.commits}
+          topFiles={ws.topFiles}
+          topBranches={ws.topBranches}
+          topBashCommand={ws.topBashCommand}
+          dominantTool={ws.dominantTool}
+        />
+      ))}
+      {!single && otherCount > 0 ? (
+        <p
+          style={{
+            fontFamily: emailDesignTokens.fonts.serif,
+            fontSize: "12px",
+            color: emailDesignTokens.colors.claude.mutedInk,
+            marginTop: "4px",
+          }}
+        >
+          {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
+        </p>
+      ) : null}
     </Section>
   )
 }
@@ -311,7 +397,6 @@ function PersonalityRevealSection({
   personality: Report["personality"]
   imageBaseUrl: string
 }) {
-  // Defensively narrow the evidence tuple — the schema guarantees 3 strings.
   const [e1 = "", e2 = "", e3 = ""] = personality.evidence
   return (
     <Section style={sectionStyle}>
@@ -334,23 +419,20 @@ export function ClaudeCodeWrappedEmail({ userName, report, imageBaseUrl }: Claud
       <HeroSection userName={userName} report={report} />
       <HeadlineNumbersGrid totals={report.totals} />
       <BreadthStrip totals={report.totals} />
-      <ToolMixSection mix={report.toolMix} />
-      <TopFilesSection files={report.topFiles} />
-      <TopBashCommandsSection commands={report.topBashCommands} />
-      <WorkspacesSection deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
+      <LocSection loc={report.loc} />
+      <ReadWriteRatioSection loc={report.loc} />
       <HeatmapSection heatmap={report.heatmap} />
       <MomentsSection moments={report.moments} />
+      <TopCommandLine command={report.topBashCommand} />
+      <WorkspacesSection deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
       <PersonalityRevealSection personality={report.personality} imageBaseUrl={imageBaseUrl} />
     </WrappedLayout>
   )
 }
 
-// React Email's preview server picks this up as the default story for the
-// template. Keep it representative — a single-workspace user with
-// strategist-friendly tool mix.
 ClaudeCodeWrappedEmail.PreviewProps = {
   userName: "Alex",
-  imageBaseUrl: "https://console.latitude.so/email-branding/claude-code-wrapped/personalities",
+  imageBaseUrl: "http://localhost:3000/email-branding/claude-code-wrapped/personalities",
   report: {
     project: { id: ProjectId("proj-preview"), name: "poncho-ios", slug: "poncho-ios" },
     organization: { id: OrganizationId("org-preview"), name: "Acme" },
@@ -368,38 +450,32 @@ ClaudeCodeWrappedEmail.PreviewProps = {
       branches: 4,
       commits: 23,
       repos: 1,
+      streakDays: 5,
+      testsRun: 32,
     },
     toolMix: { bash: 87, read: 168, edit: 142, write: 21, search: 52, plan: 12, other: 0 },
-    topFiles: [
-      { path: "/Users/cesar/Dev/poncho-ios/src/index.ts", displayName: "index.ts", touches: 34 },
-      { path: "/Users/cesar/Dev/poncho-ios/src/Chat.tsx", displayName: "Chat.tsx", touches: 21 },
-      { path: "/Users/cesar/Dev/poncho-ios/src/types.ts", displayName: "types.ts", touches: 14 },
-      { path: "/Users/cesar/Dev/poncho-ios/Package.swift", displayName: "Package.swift", touches: 9 },
-      { path: "/Users/cesar/Dev/poncho-ios/README.md", displayName: "README.md", touches: 6 },
-    ],
-    topBashCommands: [
-      { pattern: "pnpm", count: 32 },
-      { pattern: "git", count: 21 },
-      { pattern: "swift", count: 14 },
-      { pattern: "ls", count: 11 },
-      { pattern: "cat", count: 9 },
-    ],
-    topWorkspaces: [{ name: "poncho-ios", sessions: 17, toolCalls: 482 }],
-    topBranches: [
-      { name: "main", sessions: 9 },
-      { name: "feat/chat-input", sessions: 5 },
-    ],
+    loc: {
+      written: 14_832,
+      read: 184_200,
+      added: 9_421,
+      removed: 3_402,
+      writtenAnchor: "≈ 10% of the Apollo 11 guidance code",
+      readAnchor: "≈ a full-length novel",
+    },
+    topBashCommand: { pattern: "pnpm", count: 32 },
     workspaceDeepDives: [
       {
         name: "poncho-ios",
         toolCalls: 482,
         sessions: 17,
+        commits: 23,
         topFiles: [
-          { path: "/Users/cesar/Dev/poncho-ios/src/index.ts", displayName: "index.ts", touches: 0 },
-          { path: "/Users/cesar/Dev/poncho-ios/src/Chat.tsx", displayName: "Chat.tsx", touches: 0 },
-          { path: "/Users/cesar/Dev/poncho-ios/src/types.ts", displayName: "types.ts", touches: 0 },
+          { displayPath: "src/index.ts", touches: 0 },
+          { displayPath: "src/Chat.tsx", touches: 0 },
+          { displayPath: "src/types.ts", touches: 0 },
         ],
         topBranches: ["main", "feat/chat-input"],
+        topBashCommand: { pattern: "pnpm", count: 32 },
         dominantTool: "edit",
       },
     ],
@@ -416,20 +492,12 @@ ClaudeCodeWrappedEmail.PreviewProps = {
     moments: {
       longestSession: { durationMs: 92 * 60 * 1000, workspace: "poncho-ios" },
       busiestDay: { date: "2026-05-06", toolCalls: 107 },
-      mainCharacterFile: {
-        path: "/Users/cesar/Dev/poncho-ios/src/index.ts",
-        displayName: "index.ts",
-        touches: 34,
-      },
+      biggestWrite: { displayName: "Chat.tsx", lines: 890 },
     },
     personality: {
       kind: "surgeon",
       score: 0.42,
-      evidence: [
-        "42% of your tool calls were Edits",
-        "Touched 142 files this week",
-        "21 new files written from scratch",
-      ],
+      evidence: ["42% of your tool calls were Edits", "Touched 142 files this week", "21 new files written from scratch"],
     },
   },
 } satisfies ClaudeCodeWrappedEmailProps

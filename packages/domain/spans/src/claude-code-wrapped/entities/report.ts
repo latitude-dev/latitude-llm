@@ -2,9 +2,9 @@ import { organizationIdSchema, projectIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 /**
- * Tool-call buckets used by the tool-mix bar and the personality algorithm.
- * Each Claude Code tool span's `tool_name` is bucketed into exactly one of
- * these (see `toolBucketFor` in the build-report use case).
+ * Tool-call buckets used by the personality algorithm and the
+ * (personality-internal) tool-mix evidence. The standalone tool-mix bar
+ * is gone — the percentages live inside the personality reveal.
  */
 export const TOOL_BUCKETS = ["bash", "read", "edit", "write", "search", "plan", "other"] as const
 export type ToolBucket = (typeof TOOL_BUCKETS)[number]
@@ -13,29 +13,41 @@ export type ToolBucket = (typeof TOOL_BUCKETS)[number]
  * The six personalities revealed at the end of the email. Assignment is
  * deterministic and pure — see `assignPersonality`.
  */
-export const PERSONALITY_KINDS = ["surgeon", "architect", "detective", "conductor", "marathoner", "strategist"] as const
+export const PERSONALITY_KINDS = [
+  "surgeon",
+  "architect",
+  "detective",
+  "conductor",
+  "marathoner",
+  "strategist",
+] as const
 export type PersonalityKind = (typeof PERSONALITY_KINDS)[number]
 
 const fileLineSchema = z.object({
-  path: z.string(),
-  displayName: z.string(),
+  /**
+   * Display path — relative to the owning workspace when known, basename
+   * otherwise. Never the absolute path (which would leak `/Users/<name>/…`
+   * or similar private prefixes).
+   */
+  displayPath: z.string(),
   touches: z.number().int().nonnegative(),
 })
 export type FileLine = z.infer<typeof fileLineSchema>
 
-const workspaceLineSchema = z.object({
-  name: z.string(),
-  sessions: z.number().int().nonnegative(),
-  toolCalls: z.number().int().nonnegative(),
+const topBashCommandSchema = z.object({
+  pattern: z.string(),
+  count: z.number().int().nonnegative(),
 })
-export type WorkspaceLine = z.infer<typeof workspaceLineSchema>
+export type TopBashCommand = z.infer<typeof topBashCommandSchema>
 
 const workspaceDeepDiveSchema = z.object({
   name: z.string(),
   toolCalls: z.number().int().nonnegative(),
   sessions: z.number().int().nonnegative(),
+  commits: z.number().int().nonnegative(),
   topFiles: z.array(fileLineSchema).max(3),
   topBranches: z.array(z.string()).max(2),
+  topBashCommand: topBashCommandSchema.nullable(),
   dominantTool: z.enum(TOOL_BUCKETS),
 })
 export type WorkspaceDeepDive = z.infer<typeof workspaceDeepDiveSchema>
@@ -60,6 +72,28 @@ const personalitySchema = z.object({
 })
 export type Personality = z.infer<typeof personalitySchema>
 
+const locSchema = z.object({
+  /**
+   * Total lines that came into existence — Write content + Edit additions
+   * + MultiEdit additions. The headline "lines written" number.
+   */
+  written: z.number().int().nonnegative(),
+  /**
+   * Total lines Claude read (Read / NotebookRead `tool_output`). Approximate
+   * — Read can be partial-file when callers pass `offset` / `limit`.
+   */
+  read: z.number().int().nonnegative(),
+  /** Lines added by Edit / MultiEdit specifically (excludes brand-new Writes). */
+  added: z.number().int().nonnegative(),
+  /** Lines removed by Edit / MultiEdit. */
+  removed: z.number().int().nonnegative(),
+  /** Playful comparison anchor for `written`. */
+  writtenAnchor: z.string(),
+  /** Playful comparison anchor for `read`. */
+  readAnchor: z.string(),
+})
+export type LocStats = z.infer<typeof locSchema>
+
 /**
  * Data shape passed to the Claude Code Wrapped email template. Every field is
  * a directly-renderable value — no computation happens in the template.
@@ -79,28 +113,18 @@ export const reportSchema = z.object({
     branches: z.number().int().nonnegative(),
     commits: z.number().int().nonnegative(),
     repos: z.number().int().nonnegative(),
+    /** Distinct UTC calendar days with at least one Claude Code span. Max 7. */
+    streakDays: z.number().int().nonnegative(),
+    /** Count of Bash invocations that look like a test runner. */
+    testsRun: z.number().int().nonnegative(),
   }),
 
   toolMix: toolMixSchema,
 
-  topFiles: z.array(fileLineSchema).max(5),
-  topBashCommands: z
-    .array(
-      z.object({
-        pattern: z.string(),
-        count: z.number().int().nonnegative(),
-      }),
-    )
-    .max(5),
-  topWorkspaces: z.array(workspaceLineSchema),
-  topBranches: z
-    .array(
-      z.object({
-        name: z.string(),
-        sessions: z.number().int().nonnegative(),
-      }),
-    )
-    .max(5),
+  loc: locSchema,
+
+  /** The single most-used Bash command prefix this week (null if no bash). */
+  topBashCommand: topBashCommandSchema.nullable(),
 
   workspaceDeepDives: z.array(workspaceDeepDiveSchema).max(3),
   /** Count of workspaces beyond the top-3 shown in deep dives. */
@@ -123,7 +147,13 @@ export const reportSchema = z.object({
         toolCalls: z.number().int().nonnegative(),
       })
       .nullable(),
-    mainCharacterFile: fileLineSchema.nullable(),
+    biggestWrite: z
+      .object({
+        /** Basename only — full path is never rendered. */
+        displayName: z.string(),
+        lines: z.number().int().nonnegative(),
+      })
+      .nullable(),
   }),
 
   personality: personalitySchema,

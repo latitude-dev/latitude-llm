@@ -20,6 +20,8 @@ const project: Project = {
   updatedAt: new Date("2026-05-04T00:00:00.000Z"),
 }
 
+const WORKSPACE_PATH = "/Users/cesar/Dev/latitude/poncho-ios"
+
 const baseInput: AssembleReportInput = {
   project,
   organization: { id: ORG_ID, name: "Acme" },
@@ -34,11 +36,19 @@ const baseInput: AssembleReportInput = {
     branches: 2,
     commits: 7,
     repos: 1,
+    streakDays: 5,
+    testsRun: 9,
   },
   durationStats: {
     totalDurationMs: 30 * 60 * 1000,
     longestDurationMs: 15 * 60 * 1000,
     longestWorkspace: "poncho-ios",
+  },
+  locStats: {
+    writeLines: 240,
+    editAdded: 600,
+    editRemoved: 180,
+    readLines: 9_200,
   },
   toolMix: [
     { toolName: "Edit", uses: 50 },
@@ -47,29 +57,33 @@ const baseInput: AssembleReportInput = {
     { toolName: "Write", uses: 5 },
     { toolName: "Grep", uses: 5 },
   ],
-  topFiles: [
-    { path: "/Users/cesar/Dev/latitude/poncho-ios/src/index.ts", touches: 12 },
-    { path: "/Users/cesar/Dev/latitude/poncho-ios/src/types.ts", touches: 7 },
-  ],
   topBash: [
     { pattern: "pnpm", uses: 9 },
     { pattern: "git", uses: 6 },
   ],
   topWorkspaces: [{ name: "poncho-ios", sessions: 5, toolCalls: 100 }],
-  topBranches: [{ name: "main", sessions: 5 }],
   heatmap: [
     { dayOfWeek: 1, hourOfDay: 14, uses: 25 },
     { dayOfWeek: 3, hourOfDay: 9, uses: 40 },
   ],
   busiestDay: { date: "2026-05-06", toolCalls: 40 },
+  biggestWrite: { filePath: `${WORKSPACE_PATH}/src/index.ts`, lines: 320 },
   deepDives: [
     {
       workspace: { name: "poncho-ios", sessions: 5, toolCalls: 100 },
       row: {
         toolCalls: 100,
         sessions: 5,
-        topFilePaths: ["/Users/cesar/Dev/latitude/poncho-ios/src/index.ts"],
-        topBranches: ["main"],
+        commits: 7,
+        workspacePath: WORKSPACE_PATH,
+        topFilePaths: [
+          `${WORKSPACE_PATH}/src/index.ts`,
+          `${WORKSPACE_PATH}/src/Chat.tsx`,
+          "/Users/someone-else/elsewhere/foo.ts",
+        ],
+        topBranches: ["main", "feat/chat-input"],
+        topBashCommandPattern: "pnpm",
+        topBashCommandCount: 9,
         dominantTool: "Edit",
       },
     },
@@ -81,6 +95,11 @@ describe("toolBucketFor", () => {
     expect(toolBucketFor("Edit")).toBe("edit")
     expect(toolBucketFor("NotebookEdit")).toBe("edit")
     expect(toolBucketFor("MultiEdit")).toBe("edit")
+  })
+
+  it("maps Read and NotebookRead to read", () => {
+    expect(toolBucketFor("Read")).toBe("read")
+    expect(toolBucketFor("NotebookRead")).toBe("read")
   })
 
   it("maps Grep, Glob, LS to search", () => {
@@ -129,6 +148,16 @@ describe("assembleReport", () => {
     expect(report.toolMix.edit).toBe(15)
   })
 
+  it("computes LOC totals and anchors", () => {
+    const report = assembleReport(baseInput)
+    expect(report.loc.written).toBe(840) // writeLines + editAdded
+    expect(report.loc.added).toBe(600)
+    expect(report.loc.removed).toBe(180)
+    expect(report.loc.read).toBe(9_200)
+    expect(report.loc.writtenAnchor.length).toBeGreaterThan(0)
+    expect(report.loc.readAnchor.length).toBeGreaterThan(0)
+  })
+
   it("zero-fills the 7×24 heatmap and places known cells correctly", () => {
     const report = assembleReport(baseInput)
     expect(report.heatmap).toHaveLength(7)
@@ -138,11 +167,21 @@ describe("assembleReport", () => {
     expect(report.heatmap[5]?.[5]).toBe(0)
   })
 
-  it("extracts basenames for top files", () => {
+  it("renders workspace-relative file paths (never absolute)", () => {
     const report = assembleReport(baseInput)
-    expect(report.topFiles[0]?.displayName).toBe("index.ts")
-    expect(report.topFiles[1]?.displayName).toBe("types.ts")
-    expect(report.topFiles[0]?.path).toContain("/Users/cesar/")
+    const paths = report.workspaceDeepDives[0]?.topFiles.map((f) => f.displayPath) ?? []
+    expect(paths).toContain("src/index.ts")
+    expect(paths).toContain("src/Chat.tsx")
+    // The file outside the workspace falls back to basename — no absolute paths.
+    expect(paths).toContain("foo.ts")
+    for (const p of paths) {
+      expect(p.startsWith("/")).toBe(false)
+    }
+  })
+
+  it("exposes the top bash command for the workspace deep dive", () => {
+    const report = assembleReport(baseInput)
+    expect(report.workspaceDeepDives[0]?.topBashCommand).toEqual({ pattern: "pnpm", count: 9 })
   })
 
   it("emits otherWorkspaceCount = 0 for 1-workspace input", () => {
@@ -165,8 +204,12 @@ describe("assembleReport", () => {
         row: {
           toolCalls: workspace.toolCalls,
           sessions: workspace.sessions,
+          commits: 0,
+          workspacePath: "",
           topFilePaths: [],
           topBranches: [],
+          topBashCommandPattern: null,
+          topBashCommandCount: 0,
           dominantTool: "Edit",
         },
       })),
@@ -175,9 +218,12 @@ describe("assembleReport", () => {
     expect(report.workspaceDeepDives).toHaveLength(3)
   })
 
-  it("sets mainCharacterFile from the top file when present", () => {
+  it("sets biggestWrite to basename only (no full path)", () => {
     const report = assembleReport(baseInput)
-    expect(report.moments.mainCharacterFile?.displayName).toBe("index.ts")
+    expect(report.moments.biggestWrite?.displayName).toBe("index.ts")
+    expect(report.moments.biggestWrite?.lines).toBe(320)
+    // Defence: the basename must never leak the absolute path.
+    expect(report.moments.biggestWrite?.displayName.startsWith("/")).toBe(false)
   })
 
   it("sets longestSession to null when duration is 0", () => {
@@ -192,5 +238,21 @@ describe("assembleReport", () => {
     const report = assembleReport(baseInput)
     expect(report.personality.kind).toBe("surgeon")
     expect(report.personality.evidence).toHaveLength(3)
+  })
+
+  it("carries streakDays and testsRun through from totals", () => {
+    const report = assembleReport(baseInput)
+    expect(report.totals.streakDays).toBe(5)
+    expect(report.totals.testsRun).toBe(9)
+  })
+
+  it("surfaces the #1 bash command as the singleton", () => {
+    const report = assembleReport(baseInput)
+    expect(report.topBashCommand).toEqual({ pattern: "pnpm", count: 9 })
+  })
+
+  it("topBashCommand is null when no bash data exists", () => {
+    const report = assembleReport({ ...baseInput, topBash: [] })
+    expect(report.topBashCommand).toBeNull()
   })
 })
