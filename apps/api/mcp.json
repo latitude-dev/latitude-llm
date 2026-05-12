@@ -13,7 +13,7 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Human-readable name for the API key"
+            "description": "Human-readable name for the API key. Used to distinguish keys in the UI."
           }
         },
         "required": [
@@ -26,20 +26,20 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable API-key identifier."
           },
           "organizationId": {
-            "type": "string"
+            "type": "string",
+            "description": "Organization that owns this API key."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable name."
           },
           "token": {
             "type": "string",
-            "description": "The API key token. Only included in the creation response — store it securely."
-          },
-          "tokenHash": {
-            "type": "string"
+            "description": "The full API key token. Returned by create / get / update — store it securely; treat it as a password."
           },
           "lastUsedAt": {
             "anyOf": [
@@ -49,7 +49,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
           },
           "deletedAt": {
             "anyOf": [
@@ -59,13 +60,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch)."
           }
         },
         "required": [
@@ -73,7 +77,6 @@
           "organizationId",
           "name",
           "token",
-          "tokenHash",
           "lastUsedAt",
           "deletedAt",
           "createdAt",
@@ -102,13 +105,20 @@
               "type": "object",
               "properties": {
                 "id": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Stable API-key identifier."
                 },
                 "organizationId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Organization that owns this API key."
                 },
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "token": {
+                  "type": "string",
+                  "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{id}` to retrieve the full token."
                 },
                 "lastUsedAt": {
                   "anyOf": [
@@ -118,7 +128,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
                 },
                 "deletedAt": {
                   "anyOf": [
@@ -128,19 +139,23 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
                 },
                 "createdAt": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
                 },
                 "updatedAt": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last metadata update."
                 }
               },
               "required": [
                 "id",
                 "organizationId",
                 "name",
+                "token",
                 "lastUsedAt",
                 "deletedAt",
                 "createdAt",
@@ -152,6 +167,176 @@
         },
         "required": [
           "apiKeys"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getApiKey",
+      "title": "Get API key",
+      "description": "Returns a single API key including the full unmasked `token`. Useful for retrieving a stored token by id without rotating it.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resource ID"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable API-key identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this API key."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "token": {
+            "type": "string",
+            "description": "The full API key token. Returned by create / get / update — store it securely; treat it as a password."
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch)."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "token",
+          "lastUsedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateApiKey",
+      "title": "Update API key",
+      "description": "Renames an API key. The token itself is immutable — use create + revoke if you need a new value.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resource ID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New human-readable name for the API key."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable API-key identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this API key."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "token": {
+            "type": "string",
+            "description": "The full API key token. Returned by create / get / update — store it securely; treat it as a password."
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch)."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "token",
+          "lastUsedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
         ],
         "additionalProperties": false
       }

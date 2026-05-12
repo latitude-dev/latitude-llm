@@ -75,6 +75,86 @@ describe("API Keys Routes Integration", () => {
     expect(body.token.length).toBeGreaterThan(0)
   })
 
+  it<ApiTestContext>("GET /v1/api-keys list response includes a masked token preview", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      apiKeys: ReadonlyArray<{ id: string; token: string }>
+    }
+    const authKey = body.apiKeys.find((k) => k.id === tenant.authApiKeyId)
+    expect(authKey).toBeDefined()
+    expect(authKey?.token).toMatch(/^.{4}\*+.{4}$/)
+    // The full token must NOT appear in the list response.
+    expect(authKey?.token).not.toBe(tenant.apiKeyToken)
+  })
+
+  it<ApiTestContext>("GET /v1/api-keys/:id returns the full unmasked token", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${tenant.authApiKeyId}`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { id: string; token: string }
+    expect(body.id).toBe(tenant.authApiKeyId)
+    expect(body.token).toBe(tenant.apiKeyToken)
+  })
+
+  it<ApiTestContext>("GET /v1/api-keys/:id is org-scoped (404 across tenants)", async ({ app, database }) => {
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${tenantB.authApiKeyId}`, {
+        headers: createApiKeyAuthHeaders(tenantA.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it<ApiTestContext>("PATCH /v1/api-keys/:id renames the key", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${tenant.authApiKeyId}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "renamed" }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { id: string; name: string; token: string }
+    expect(body.id).toBe(tenant.authApiKeyId)
+    expect(body.name).toBe("renamed")
+    // The token field is included in the update response (full token, like create/get).
+    expect(body.token).toBe(tenant.apiKeyToken)
+  })
+
+  it<ApiTestContext>("PATCH /v1/api-keys/:id is org-scoped (404 across tenants)", async ({ app, database }) => {
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${tenantB.authApiKeyId}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenantA.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "should-not-apply" }),
+      }),
+    )
+
+    expect(response.status).toBe(404)
+  })
+
   it<ApiTestContext>("DELETE /v1/api-keys/:id cannot revoke cross-tenant keys", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
