@@ -148,7 +148,7 @@ importers:
         specifier: 'catalog:'
         version: 2.4.6
       '@effect/language-service':
-        specifier: ^0.84.2
+        specifier: 0.84.3
         version: 0.84.3
       '@types/node':
         specifier: 'catalog:'
@@ -160,7 +160,7 @@ importers:
         specifier: 4.80.1
         version: 4.80.1
       knip:
-        specifier: ^6.1.0
+        specifier: 6.6.2
         version: 6.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       turbo:
         specifier: 'catalog:'
@@ -205,13 +205,13 @@ importers:
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
       '@hono/otel':
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1(hono@4.12.16)
       '@hono/swagger-ui':
-        specifier: ^0.5.0
+        specifier: 0.5.3
         version: 0.5.3(hono@4.12.16)
       '@hono/zod-openapi':
-        specifier: ^1.2.4
+        specifier: 1.3.0
         version: 1.3.0(hono@4.12.16)(zod@4.3.6)
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
@@ -276,7 +276,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/ingest:
     dependencies:
@@ -302,7 +302,7 @@ importers:
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
       '@hono/otel':
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1(hono@4.12.16)
       '@platform/api-key-auth':
         specifier: workspace:*
@@ -340,7 +340,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -411,7 +411,7 @@ importers:
         specifier: 0.0.14
         version: 0.0.14
       '@lottiefiles/dotlottie-wc':
-        specifier: ^0.9.12
+        specifier: 0.9.12
         version: 0.9.12
       '@platform/ai':
         specifier: workspace:*
@@ -483,13 +483,13 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       lucide-react:
-        specifier: ^1.8.0
+        specifier: 1.9.0
         version: 1.9.0(react@19.2.5)
       nitro:
         specifier: 3.0.260311-beta
         version: 3.0.260311-beta(@azure/identity@4.13.1)(@electric-sql/pglite@0.3.15)(aws4fetch@1.0.20)(better-sqlite3@12.9.0)(chokidar@5.0.0)(dotenv@17.3.1)(drizzle-orm@1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(@types/pg@8.16.0)(better-sqlite3@12.9.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(giget@3.2.0)(ioredis@5.10.1)(jiti@2.6.1)(lru-cache@11.3.5)(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
       posthog-js:
-        specifier: ^1.369.3
+        specifier: 1.371.3
         version: 1.371.3
       react:
         specifier: 'catalog:'
@@ -498,13 +498,13 @@ importers:
         specifier: 'catalog:'
         version: 19.2.5(react@19.2.5)
       react-use:
-        specifier: ^17.6.0
+        specifier: 17.6.0
         version: 17.6.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
       ua-parser-js:
-        specifier: ^2.0.6
+        specifier: 2.0.9
         version: 2.0.9
       zod:
         specifier: 'catalog:'
@@ -514,13 +514,13 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vitest-config
       '@tailwindcss/postcss':
-        specifier: ^4.0.0
+        specifier: 4.2.4
         version: 4.2.4
       '@tailwindcss/vite':
-        specifier: ^4.0.0
+        specifier: 4.2.4
         version: 4.2.4(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: 16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@types/react':
         specifier: 'catalog:'
@@ -532,19 +532,19 @@ importers:
         specifier: 'catalog:'
         version: 6.0.1(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.3))
       agentation:
-        specifier: ^3.0.2
+        specifier: 3.0.2
         version: 3.0.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
       jsdom:
-        specifier: ^29.0.1
+        specifier: 29.0.2
         version: 29.0.2(@noble/hashes@2.2.0)
       postcss:
-        specifier: ^8.5.3
+        specifier: 8.5.10
         version: 8.5.10
       rollup-plugin-visualizer:
-        specifier: ^7.0.1
+        specifier: 7.0.1
         version: 7.0.1(rolldown@1.0.0-rc.17)
       vite:
         specifier: 'catalog:'
@@ -688,7 +688,7 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       fflate:
-        specifier: ^0.8.2
+        specifier: 0.8.2
         version: 0.8.2
       hono:
         specifier: 4.12.16
@@ -823,26 +823,26 @@ importers:
   infra:
     dependencies:
       '@pulumi/aws':
-        specifier: ^7.23.0
+        specifier: 7.27.0
         version: 7.27.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
       '@pulumi/awsx':
-        specifier: ^3.3.0
+        specifier: 3.5.0
         version: 3.5.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
       '@pulumi/pulumi':
-        specifier: ^3.227.0
+        specifier: 3.232.0
         version: 3.232.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
       '@pulumi/random':
-        specifier: ^4.19.1
+        specifier: 4.19.2
         version: 4.19.2(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
     devDependencies:
       '@types/node':
-        specifier: ^22.0.0
+        specifier: 22.19.17
         version: 22.19.17
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20260421.2
       typescript:
-        specifier: ^6.0.3
+        specifier: 6.0.3
         version: 6.0.3
 
   packages/domain/admin:
@@ -1030,20 +1030,20 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       papaparse:
-        specifier: ^5.5.3
+        specifier: 5.5.3
         version: 5.5.3
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
       '@types/papaparse':
-        specifier: ^5.5.2
+        specifier: 5.5.2
         version: 5.5.2
 
   packages/domain/email:
     dependencies:
       '@react-email/components':
-        specifier: ^1.0.9
+        specifier: 1.0.12
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       effect:
         specifier: 'catalog:'
@@ -1071,7 +1071,7 @@ importers:
         specifier: 5.2.9
         version: 5.2.9
       typescript:
-        specifier: ^6.0.3
+        specifier: 6.0.3
         version: 6.0.3
 
   packages/domain/evaluations:
@@ -1339,7 +1339,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20260421.2
       typescript:
-        specifier: ^6.0.3
+        specifier: 6.0.3
         version: 6.0.3
 
   packages/domain/saved-searches:
@@ -1466,22 +1466,22 @@ importers:
         specifier: 1.9.1
         version: 1.9.1
       '@opentelemetry/auto-instrumentations-node':
-        specifier: ^0.71.0
+        specifier: 0.71.0
         version: 0.71.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))
       '@opentelemetry/context-async-hooks':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/exporter-trace-otlp-http':
-        specifier: ^0.213.0
+        specifier: 0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-node':
-        specifier: ^0.213.0
+        specifier: 0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-web':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@platform/env':
         specifier: workspace:*
@@ -1525,10 +1525,10 @@ importers:
         specifier: 1.9.1
         version: 1.9.1
       '@opentelemetry/context-async-hooks':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base':
-        specifier: ^2.6.1
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@repo/vitest-config':
         specifier: workspace:*
@@ -1591,7 +1591,7 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       posthog-node:
-        specifier: ^5.9.2
+        specifier: 5.30.1
         version: 5.30.1(rxjs@7.8.2)
     devDependencies:
       '@repo/vitest-config':
@@ -1795,7 +1795,7 @@ importers:
         specifier: 'catalog:'
         version: 8.16.0
       stripe:
-        specifier: ^22.0.1
+        specifier: 22.1.0
         version: 22.1.0(@types/node@25.6.0)
       voyageai:
         specifier: 'catalog:'
@@ -1863,14 +1863,14 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       nodemailer:
-        specifier: ^8.0.6
+        specifier: 8.0.6
         version: 8.0.6
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../vitest-config
       '@types/nodemailer':
-        specifier: ^8.0.0
+        specifier: 8.0.0
         version: 8.0.0
       vitest:
         specifier: 'catalog:'
@@ -1913,7 +1913,7 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       loops:
-        specifier: ^6.3.0
+        specifier: 6.3.0
         version: 6.3.0
     devDependencies:
       '@repo/vitest-config':
@@ -2016,10 +2016,10 @@ importers:
   packages/platform/storage-object:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.1045.0
-        version: 3.1045.0
+        specifier: 3.1042.0
+        version: 3.1042.0
       '@aws-sdk/s3-request-presigner':
-        specifier: ^3.1029.0
+        specifier: 3.1036.0
         version: 3.1036.0
       '@domain/shared':
         specifier: workspace:*
@@ -2034,8 +2034,8 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       flydrive:
-        specifier: ^2.1.0
-        version: 2.1.0(@aws-sdk/client-s3@3.1045.0)(@aws-sdk/s3-request-presigner@3.1036.0)
+        specifier: 2.1.0
+        version: 2.1.0(@aws-sdk/client-s3@3.1042.0)(@aws-sdk/s3-request-presigner@3.1036.0)
     devDependencies:
       vitest:
         specifier: 'catalog:'
@@ -2059,7 +2059,7 @@ importers:
         specifier: workspace:*
         version: link:../../utils
       chdb:
-        specifier: ^1.6.0
+        specifier: 1.6.0
         version: 1.6.0
       effect:
         specifier: 'catalog:'
@@ -2123,10 +2123,10 @@ importers:
   packages/telemetry/claude-code:
     dependencies:
       '@clack/prompts':
-        specifier: ^1.2.0
+        specifier: 1.2.0
         version: 1.2.0
       picocolors:
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1
     devDependencies:
       '@biomejs/biome':
@@ -2172,10 +2172,10 @@ importers:
   packages/telemetry/openclaw-cli:
     dependencies:
       '@clack/prompts':
-        specifier: ^1.2.0
+        specifier: 1.2.0
         version: 1.2.0
       picocolors:
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1
     devDependencies:
       '@biomejs/biome':
@@ -2203,75 +2203,75 @@ importers:
         specifier: 1.9.1
         version: 1.9.1
       '@opentelemetry/context-async-hooks':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/core':
-        specifier: ^2.6.0
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/exporter-trace-otlp-http':
-        specifier: ^0.213.0
+        specifier: 0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation':
-        specifier: ^0.213.0
+        specifier: 0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources':
-        specifier: ^2.6.1
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-node':
-        specifier: ^2.6.1
+        specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions':
-        specifier: ^1.40.0
+        specifier: 1.40.0
         version: 1.40.0
       '@traceloop/instrumentation-anthropic':
-        specifier: ^0.26.0
+        specifier: 0.26.0
         version: 0.26.0
       '@traceloop/instrumentation-bedrock':
-        specifier: ^0.26.0
+        specifier: 0.26.0
         version: 0.26.0
       '@traceloop/instrumentation-cohere':
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       '@traceloop/instrumentation-langchain':
-        specifier: ^0.25.0
-        version: 0.25.0(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))
+        specifier: 0.25.0
+        version: 0.25.0(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))
       '@traceloop/instrumentation-llamaindex':
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       '@traceloop/instrumentation-openai':
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       '@traceloop/instrumentation-together':
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       '@traceloop/instrumentation-vertexai':
-        specifier: ^0.26.0
+        specifier: 0.26.0
         version: 0.26.0
     devDependencies:
       '@ai-sdk/openai':
-        specifier: ^3.0.53
+        specifier: 3.0.53
         version: 3.0.53(zod@4.3.6)
       '@anthropic-ai/sdk':
-        specifier: ^0.91.1
+        specifier: 0.91.1
         version: 0.91.1(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime':
-        specifier: ^3.1032.0
+        specifier: 3.1036.0
         version: 3.1036.0
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.4.6
       '@google-cloud/vertexai':
-        specifier: ^1.10.4
+        specifier: 1.12.0
         version: 1.12.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))
       '@langchain/core':
-        specifier: ^1.1.39
-        version: 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
+        specifier: 1.1.41
+        version: 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       '@langchain/openai':
-        specifier: ^1.4.1
-        version: 1.4.4(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(ws@8.20.0)
+        specifier: 1.4.4
+        version: 1.4.4(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(ws@8.20.0)
       '@openai/agents':
-        specifier: ^0.9.1
-        version: 0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
+        specifier: 0.8.5
+        version: 0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
       '@types/node':
         specifier: 'catalog:'
         version: 22.14.1
@@ -2279,17 +2279,17 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20260421.2
       ai:
-        specifier: ^6.0.168
+        specifier: 6.0.168
         version: 6.0.168(zod@4.3.6)
       cohere-ai:
-        specifier: ^7.21.0
+        specifier: 7.21.0
         version: 7.21.0
       llamaindex:
-        specifier: ^0.12.1
+        specifier: 0.12.1
         version: 0.12.1(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(hono@4.12.16)(rxjs@7.8.2)(tree-sitter@0.22.4)(web-tree-sitter@0.24.7)(zod@4.3.6)
       openai:
-        specifier: ^6.37.0
-        version: 6.37.0(ws@8.20.0)(zod@4.3.6)
+        specifier: 6.36.0
+        version: 6.36.0(ws@8.20.0)(zod@4.3.6)
       tsdown:
         specifier: 'catalog:'
         version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
@@ -2308,119 +2308,119 @@ importers:
   packages/ui:
     dependencies:
       '@base-ui/react':
-        specifier: ^1.4.0
+        specifier: 1.4.1
         version: 1.4.1(@types/react@19.2.14)(date-fns@3.6.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@codemirror/commands':
-        specifier: ^6.10.2
+        specifier: 6.10.3
         version: 6.10.3
       '@codemirror/lang-json':
-        specifier: ^6.0.2
+        specifier: 6.0.2
         version: 6.0.2
       '@codemirror/language':
-        specifier: ^6.12.2
+        specifier: 6.12.3
         version: 6.12.3
       '@codemirror/state':
-        specifier: ^6.6.0
+        specifier: 6.6.0
         version: 6.6.0
       '@codemirror/view':
-        specifier: ^6.40.0
+        specifier: 6.41.1
         version: 6.41.1
       '@domain/models':
         specifier: workspace:*
         version: link:../domain/models
       '@radix-ui/react-checkbox':
-        specifier: ^1.3.3
+        specifier: 1.3.3
         version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-dialog':
-        specifier: ^1.1.15
+        specifier: 1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-dropdown-menu':
-        specifier: ^2.1.16
+        specifier: 2.1.16
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-label':
-        specifier: ^2.1.2
+        specifier: 2.1.8
         version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-popover':
-        specifier: ^1.1.15
+        specifier: 1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-select':
-        specifier: ^2.2.6
+        specifier: 2.2.6
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-slider':
-        specifier: ^1.3.6
+        specifier: 1.3.6
         version: 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-slot':
-        specifier: ^1.1.2
+        specifier: 1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.5)
       '@radix-ui/react-switch':
-        specifier: ^1.2.6
+        specifier: 1.2.6
         version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-toast':
-        specifier: ^1.2.15
+        specifier: 1.2.15
         version: 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-tooltip':
-        specifier: ^1.2.8
+        specifier: 1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@repo/utils':
         specifier: workspace:*
         version: link:../utils
       '@tanstack/react-virtual':
-        specifier: ^3.13.23
+        specifier: 3.13.24
         version: 3.13.24(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 0.7.1
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 2.1.1
         version: 2.1.1
       date-fns:
-        specifier: ^3.6.0
+        specifier: 3.6.0
         version: 3.6.0
       echarts:
-        specifier: ^6.0.0
+        specifier: 6.0.0
         version: 6.0.0
       echarts-for-react:
-        specifier: ^3.0.6
+        specifier: 3.0.6
         version: 3.0.6(echarts@6.0.0)(react@19.2.5)
       lowlight:
-        specifier: ^3.3.0
+        specifier: 3.3.0
         version: 3.3.0
       lucide-react:
-        specifier: ^1.8.0
+        specifier: 1.9.0
         version: 1.9.0(react@19.2.5)
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.2.5)
       react-markdown:
-        specifier: ^10.1.0
+        specifier: 10.1.0
         version: 10.1.0(@types/react@19.2.14)(react@19.2.5)
       react-textarea-autosize:
-        specifier: ^8.5.9
+        specifier: 8.5.9
         version: 8.5.9(@types/react@19.2.14)(react@19.2.5)
       rehype-highlight:
-        specifier: ^7.0.2
+        specifier: 7.0.2
         version: 7.0.2
       remark-breaks:
-        specifier: ^4.0.0
+        specifier: 4.0.0
         version: 4.0.0
       remark-emoji:
-        specifier: ^5.0.2
+        specifier: 5.0.2
         version: 5.0.2
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 4.0.1
         version: 4.0.1
       tailwind-merge:
-        specifier: ^2.6.0
+        specifier: 2.6.1
         version: 2.6.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
       '@tailwindcss/postcss':
-        specifier: ^4.0.0
+        specifier: 4.2.4
         version: 4.2.4
       '@tailwindcss/typography':
-        specifier: ^0.5.16
+        specifier: 0.5.19
         version: 0.5.19(tailwindcss@4.2.4)
       '@types/react':
         specifier: 'catalog:'
@@ -2432,7 +2432,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20260421.2
       postcss:
-        specifier: ^8.5.3
+        specifier: 8.5.10
         version: 8.5.10
       react:
         specifier: 'catalog:'
@@ -2444,10 +2444,10 @@ importers:
         specifier: 'catalog:'
         version: 2.0.0
       tailwindcss:
-        specifier: ^4.0.0
+        specifier: 4.2.4
         version: 4.2.4
       tw-animate-css:
-        specifier: ^1.0.0
+        specifier: 1.4.0
         version: 1.4.0
       typescript:
         specifier: 'catalog:'
@@ -2509,7 +2509,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/platform/op-gepa
       diff:
-        specifier: ^8.0.4
+        specifier: 8.0.4
         version: 8.0.4
       effect:
         specifier: 'catalog:'
@@ -2518,13 +2518,13 @@ importers:
         specifier: 0.25.10
         version: 0.25.10
       ink:
-        specifier: ^6.3.1
+        specifier: 6.8.0
         version: 6.8.0(@types/react@19.2.14)(react@19.2.5)
       listr2:
-        specifier: ^9.0.4
+        specifier: 9.0.5
         version: 9.0.5
       papaparse:
-        specifier: ^5.5.3
+        specifier: 5.5.3
         version: 5.5.3
       react:
         specifier: 'catalog:'
@@ -2540,7 +2540,7 @@ importers:
         version: 4.3.6
     devDependencies:
       '@types/papaparse':
-        specifier: ^5.5.2
+        specifier: 5.5.2
         version: 5.5.2
       '@types/react':
         specifier: 'catalog:'
@@ -2705,8 +2705,8 @@ packages:
     resolution: {integrity: sha512-Yfw5xf0kcX80xI8Zg4/0xWG+WSFSJ+z752TZ4UqjyoTQrp+DwBXigbyegSC68XsNlz+YIJYNKcuXxxmJrfdjig==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-s3@3.1045.0':
-    resolution: {integrity: sha512-fsuO3Y6t+3Ro9Bsg41DKj4Sfy53CGSrhnMldNplWmG8Tx0UbYk+YDa4RD1hVlJpERw4JBmPkl0+J9qlxMh1pcA==}
+  '@aws-sdk/client-s3@3.1042.0':
+    resolution: {integrity: sha512-z3Ibstr7ckDT10dz/nkk4+93LitrrO49Oq563/JoFHt30ZNodPBCfSxysKcelLyi/lNVF1MZrhZZfikUAG3iNQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-sagemaker@3.1036.0':
@@ -4547,26 +4547,26 @@ packages:
     resolution: {integrity: sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA==}
     engines: {node: '>=20.0'}
 
-  '@openai/agents-core@0.9.1':
-    resolution: {integrity: sha512-WSH7S46qopzNCGfHrJxeDVeZCKU0pK9gqhVevRfHdlrcWUcjm7Sj58SiTdGi3v/v1sw2xKDzVN08C4K8qxjNoQ==}
+  '@openai/agents-core@0.8.5':
+    resolution: {integrity: sha512-qs9mmN+D+UmqEZo3qrvhhIIXIOgSvJPic0v4a+ruq+eYgcQMk3PY8lLcsdQwJit6zf2Wyfv1q2cX5m3jzWZpKw==}
     peerDependencies:
       zod: ^4.0.0
     peerDependenciesMeta:
       zod:
         optional: true
 
-  '@openai/agents-openai@0.9.1':
-    resolution: {integrity: sha512-UqyYCuTh5dQgFY2R73UlH+n1P0gBatQ/hlcGZwca7f4N6+2xMy1wBkFJo7x9SMW9cN2XYlWl96sQYMqh+X+v7w==}
+  '@openai/agents-openai@0.8.5':
+    resolution: {integrity: sha512-cGYmyiVy8ecgf2Vch0L/ekeNo3xuZsuWnRsxyv+w9ai9dgxUifdEQ6G3dtsjMLtmXVHRVGoO7mVBr+tKcilntw==}
     peerDependencies:
       zod: ^4.0.0
 
-  '@openai/agents-realtime@0.9.1':
-    resolution: {integrity: sha512-INUkmYtSRupNxUAIb85zt1DTwVLsKHyCbIi9PZq3rfAFuldpaD39Fqo1F7pmY47+Tt773+sGBTMVxqqW7PxTZw==}
+  '@openai/agents-realtime@0.8.5':
+    resolution: {integrity: sha512-JqKVsR33OvKtTxRp5Ylhw8WfNvJ49ZIhlhMZlSVKqwR2Ks6JuxqFJ0zM9p7JIbTQDSlAZnmnZJv1qlItaildiQ==}
     peerDependencies:
       zod: ^4.0.0
 
-  '@openai/agents@0.9.1':
-    resolution: {integrity: sha512-IxVlkr3ixeE1vxTp6Gaj1nn9I+J+Lwf+ZhHWKOVC2/SKV//B1KVBllWkX0bj4OKZO1VyO+NHA0eDVLLZxQIqIw==}
+  '@openai/agents@0.8.5':
+    resolution: {integrity: sha512-OFA7XVV1qXE8lzatvQj080KdSArt8utBExFXRfD5B/R7KT0D+AVaKwg6nLoW3Gxb30vRkIUQf+MaW/Wz+gO3Yg==}
     peerDependencies:
       zod: ^4.0.0
 
@@ -6761,10 +6761,6 @@ packages:
 
   '@smithy/util-utf8@4.2.2':
     resolution: {integrity: sha512-75MeYpjdWRe8M5E3AW0O4Cx3UadweS+cwdXjwYGBW5h/gxxnbeZ877sLPX/ZJA9GVTlL/qG0dXP29JWFCD1Ayw==}
-    engines: {node: '>=18.0.0'}
-
-  '@smithy/util-waiter@4.2.16':
-    resolution: {integrity: sha512-GtclrKoZ3Lt7jPQ7aTIYKfjY92OgceScftVnkTsG8e1KV8rkvZgN+ny6YSRhd9hxB8rZtwVbmln7NTvE5O3GmQ==}
     engines: {node: '>=18.0.0'}
 
   '@smithy/util-waiter@4.3.0':
@@ -9283,10 +9279,6 @@ packages:
     resolution: {integrity: sha512-HuEDBTI70aYdx1v6U97SbNx9F1+svQKBDo30o0b9fw055LMepzpOOd0Ccg9Q6tbqmBSJaMuY0fB7yw9/vjBYCA==}
     engines: {node: '>=12.22.0'}
 
-  ip-address@10.1.0:
-    resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
-    engines: {node: '>= 12'}
-
   ip-address@10.2.0:
     resolution: {integrity: sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==}
     engines: {node: '>= 12'}
@@ -10291,8 +10283,8 @@ packages:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
 
-  openai@6.37.0:
-    resolution: {integrity: sha512-0H5dEGFmmLv6KSd0W1w2nyL8WsLkX6yoLeQpU+dZAOuGcany5qkYQMmj35ZrKgb6yiyYqpUzFOpR8mZQkgqeEQ==}
+  openai@6.36.0:
+    resolution: {integrity: sha512-Has2YbIusMq9wQEierFsgf9c783dy1y9arX459LmphNacEkkM5yxi2RIyXP0LmkOroQyW19iTwALHL8Yf26UKA==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -12327,21 +12319,21 @@ snapshots:
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
-      '@aws-sdk/core': 3.974.5
-      '@aws-sdk/credential-provider-node': 3.972.36
+      '@aws-sdk/core': 3.974.8
+      '@aws-sdk/credential-provider-node': 3.972.39
       '@aws-sdk/eventstream-handler-node': 3.972.14
       '@aws-sdk/middleware-eventstream': 3.972.10
       '@aws-sdk/middleware-host-header': 3.972.10
       '@aws-sdk/middleware-logger': 3.972.10
       '@aws-sdk/middleware-recursion-detection': 3.972.11
-      '@aws-sdk/middleware-user-agent': 3.972.35
+      '@aws-sdk/middleware-user-agent': 3.972.38
       '@aws-sdk/middleware-websocket': 3.972.16
       '@aws-sdk/region-config-resolver': 3.972.13
       '@aws-sdk/token-providers': 3.1036.0
       '@aws-sdk/types': 3.973.8
       '@aws-sdk/util-endpoints': 3.996.8
       '@aws-sdk/util-user-agent-browser': 3.972.10
-      '@aws-sdk/util-user-agent-node': 3.973.21
+      '@aws-sdk/util-user-agent-node': 3.973.24
       '@smithy/config-resolver': 4.4.17
       '@smithy/core': 3.23.17
       '@smithy/eventstream-serde-browser': 4.2.14
@@ -12352,7 +12344,7 @@ snapshots:
       '@smithy/invalid-dependency': 4.2.14
       '@smithy/middleware-content-length': 4.2.14
       '@smithy/middleware-endpoint': 4.4.32
-      '@smithy/middleware-retry': 4.5.5
+      '@smithy/middleware-retry': 4.5.7
       '@smithy/middleware-serde': 4.2.20
       '@smithy/middleware-stack': 4.2.14
       '@smithy/node-config-provider': 4.3.14
@@ -12368,7 +12360,7 @@ snapshots:
       '@smithy/util-defaults-mode-node': 4.2.54
       '@smithy/util-endpoints': 3.4.2
       '@smithy/util-middleware': 4.2.14
-      '@smithy/util-retry': 4.3.4
+      '@smithy/util-retry': 4.3.8
       '@smithy/util-stream': 4.5.25
       '@smithy/util-utf8': 4.2.2
       tslib: 2.8.1
@@ -12423,17 +12415,17 @@ snapshots:
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
-      '@aws-sdk/core': 3.974.5
-      '@aws-sdk/credential-provider-node': 3.972.36
+      '@aws-sdk/core': 3.974.8
+      '@aws-sdk/credential-provider-node': 3.972.39
       '@aws-sdk/middleware-host-header': 3.972.10
       '@aws-sdk/middleware-logger': 3.972.10
       '@aws-sdk/middleware-recursion-detection': 3.972.11
-      '@aws-sdk/middleware-user-agent': 3.972.35
+      '@aws-sdk/middleware-user-agent': 3.972.38
       '@aws-sdk/region-config-resolver': 3.972.13
       '@aws-sdk/types': 3.973.8
       '@aws-sdk/util-endpoints': 3.996.8
       '@aws-sdk/util-user-agent-browser': 3.972.10
-      '@aws-sdk/util-user-agent-node': 3.973.21
+      '@aws-sdk/util-user-agent-node': 3.973.24
       '@smithy/config-resolver': 4.4.17
       '@smithy/core': 3.23.17
       '@smithy/fetch-http-handler': 5.3.17
@@ -12441,7 +12433,7 @@ snapshots:
       '@smithy/invalid-dependency': 4.2.14
       '@smithy/middleware-content-length': 4.2.14
       '@smithy/middleware-endpoint': 4.4.32
-      '@smithy/middleware-retry': 4.5.5
+      '@smithy/middleware-retry': 4.5.7
       '@smithy/middleware-serde': 4.2.20
       '@smithy/middleware-stack': 4.2.14
       '@smithy/node-config-provider': 4.3.14
@@ -12457,14 +12449,14 @@ snapshots:
       '@smithy/util-defaults-mode-node': 4.2.54
       '@smithy/util-endpoints': 3.4.2
       '@smithy/util-middleware': 4.2.14
-      '@smithy/util-retry': 4.3.4
+      '@smithy/util-retry': 4.3.8
       '@smithy/util-utf8': 4.2.2
-      '@smithy/util-waiter': 4.2.16
+      '@smithy/util-waiter': 4.3.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
 
-  '@aws-sdk/client-s3@3.1045.0':
+  '@aws-sdk/client-s3@3.1042.0':
     dependencies:
       '@aws-crypto/sha1-browser': 5.2.0
       '@aws-crypto/sha256-browser': 5.2.0
@@ -12528,17 +12520,17 @@ snapshots:
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
-      '@aws-sdk/core': 3.974.5
-      '@aws-sdk/credential-provider-node': 3.972.36
+      '@aws-sdk/core': 3.974.8
+      '@aws-sdk/credential-provider-node': 3.972.39
       '@aws-sdk/middleware-host-header': 3.972.10
       '@aws-sdk/middleware-logger': 3.972.10
       '@aws-sdk/middleware-recursion-detection': 3.972.11
-      '@aws-sdk/middleware-user-agent': 3.972.35
+      '@aws-sdk/middleware-user-agent': 3.972.38
       '@aws-sdk/region-config-resolver': 3.972.13
       '@aws-sdk/types': 3.973.8
       '@aws-sdk/util-endpoints': 3.996.8
       '@aws-sdk/util-user-agent-browser': 3.972.10
-      '@aws-sdk/util-user-agent-node': 3.973.21
+      '@aws-sdk/util-user-agent-node': 3.973.24
       '@smithy/config-resolver': 4.4.17
       '@smithy/core': 3.23.17
       '@smithy/fetch-http-handler': 5.3.17
@@ -12546,7 +12538,7 @@ snapshots:
       '@smithy/invalid-dependency': 4.2.14
       '@smithy/middleware-content-length': 4.2.14
       '@smithy/middleware-endpoint': 4.4.32
-      '@smithy/middleware-retry': 4.5.5
+      '@smithy/middleware-retry': 4.5.7
       '@smithy/middleware-serde': 4.2.20
       '@smithy/middleware-stack': 4.2.14
       '@smithy/node-config-provider': 4.3.14
@@ -12562,9 +12554,9 @@ snapshots:
       '@smithy/util-defaults-mode-node': 4.2.54
       '@smithy/util-endpoints': 3.4.2
       '@smithy/util-middleware': 4.2.14
-      '@smithy/util-retry': 4.3.4
+      '@smithy/util-retry': 4.3.8
       '@smithy/util-utf8': 4.2.2
-      '@smithy/util-waiter': 4.2.16
+      '@smithy/util-waiter': 4.3.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
@@ -13101,7 +13093,7 @@ snapshots:
 
   '@aws-sdk/s3-request-presigner@3.1036.0':
     dependencies:
-      '@aws-sdk/signature-v4-multi-region': 3.996.22
+      '@aws-sdk/signature-v4-multi-region': 3.996.25
       '@aws-sdk/types': 3.973.8
       '@aws-sdk/util-format-url': 3.972.10
       '@smithy/middleware-endpoint': 4.4.32
@@ -14360,7 +14352,7 @@ snapshots:
       '@jsonjoy.com/codegen': 17.67.0(tslib@2.8.1)
       tslib: 2.8.1
 
-  '@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)':
+  '@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
@@ -14368,7 +14360,7 @@ snapshots:
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.21
-      langsmith: 0.5.23(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
+      langsmith: 0.5.23(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       mustache: 4.2.0
       p-queue: 6.6.2
       uuid: 11.1.0
@@ -14380,11 +14372,11 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/openai@1.4.4(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(ws@8.20.0)':
+  '@langchain/openai@1.4.4(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))(ws@8.20.0)':
     dependencies:
-      '@langchain/core': 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
+      '@langchain/core': 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       js-tiktoken: 1.0.21
-      openai: 6.37.0(ws@8.20.0)(zod@4.3.6)
+      openai: 6.36.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
@@ -14822,10 +14814,10 @@ snapshots:
 
   '@oozcitak/util@10.0.0': {}
 
-  '@openai/agents-core@0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
+  '@openai/agents-core@0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
     dependencies:
       debug: 4.4.3
-      openai: 6.37.0(ws@8.20.0)(zod@4.3.6)
+      openai: 6.36.0(ws@8.20.0)(zod@4.3.6)
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
       zod: 4.3.6
@@ -14834,20 +14826,20 @@ snapshots:
       - supports-color
       - ws
 
-  '@openai/agents-openai@0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
+  '@openai/agents-openai@0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-core': 0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
       debug: 4.4.3
-      openai: 6.37.0(ws@8.20.0)(zod@4.3.6)
+      openai: 6.36.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
       - ws
 
-  '@openai/agents-realtime@0.9.1(@cfworker/json-schema@4.1.1)(zod@4.3.6)':
+  '@openai/agents-realtime@0.8.5(@cfworker/json-schema@4.1.1)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-core': 0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
       '@types/ws': 8.18.1
       debug: 4.4.3
       ws: 8.20.0
@@ -14858,13 +14850,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@openai/agents@0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
+  '@openai/agents@0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
-      '@openai/agents-openai': 0.9.1(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
-      '@openai/agents-realtime': 0.9.1(@cfworker/json-schema@4.1.1)(zod@4.3.6)
+      '@openai/agents-core': 0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-openai': 0.8.5(@cfworker/json-schema@4.1.1)(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-realtime': 0.8.5(@cfworker/json-schema@4.1.1)(zod@4.3.6)
       debug: 4.4.3
-      openai: 6.37.0(ws@8.20.0)(zod@4.3.6)
+      openai: 6.36.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -15127,7 +15119,7 @@ snapshots:
   '@opentelemetry/instrumentation-amqplib@0.60.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15145,7 +15137,7 @@ snapshots:
   '@opentelemetry/instrumentation-aws-sdk@0.68.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15171,7 +15163,7 @@ snapshots:
   '@opentelemetry/instrumentation-connect@0.56.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
       '@types/connect': 3.4.38
@@ -15203,7 +15195,7 @@ snapshots:
   '@opentelemetry/instrumentation-express@0.61.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15212,7 +15204,7 @@ snapshots:
   '@opentelemetry/instrumentation-fastify@0.57.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15221,7 +15213,7 @@ snapshots:
   '@opentelemetry/instrumentation-fs@0.32.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
     transitivePeerDependencies:
       - supports-color
@@ -15259,7 +15251,7 @@ snapshots:
   '@opentelemetry/instrumentation-hapi@0.59.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15303,7 +15295,7 @@ snapshots:
   '@opentelemetry/instrumentation-koa@0.61.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15336,7 +15328,7 @@ snapshots:
   '@opentelemetry/instrumentation-mongoose@0.59.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15397,7 +15389,7 @@ snapshots:
   '@opentelemetry/instrumentation-pg@0.65.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
       '@opentelemetry/sql-common': 0.41.2(@opentelemetry/api@1.9.1)
@@ -15410,7 +15402,7 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/api-logs': 0.213.0
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
     transitivePeerDependencies:
       - supports-color
@@ -15427,7 +15419,7 @@ snapshots:
   '@opentelemetry/instrumentation-restify@0.58.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15467,7 +15459,7 @@ snapshots:
   '@opentelemetry/instrumentation-undici@0.23.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
     transitivePeerDependencies:
@@ -15603,33 +15595,33 @@ snapshots:
   '@opentelemetry/resource-detector-alibaba-cloud@0.33.5(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
 
   '@opentelemetry/resource-detector-aws@2.15.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
 
   '@opentelemetry/resource-detector-azure@0.21.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
 
   '@opentelemetry/resource-detector-container@0.8.6(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
 
   '@opentelemetry/resource-detector-gcp@0.48.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/resources': 2.7.0(@opentelemetry/api@1.9.1)
       gcp-metadata: 8.1.2
     transitivePeerDependencies:
@@ -15794,7 +15786,7 @@ snapshots:
   '@opentelemetry/sql-common@0.41.2(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
 
   '@oxc-parser/binding-android-arm-eabi@0.127.0':
     optional: true
@@ -17626,11 +17618,6 @@ snapshots:
       '@smithy/util-buffer-from': 4.2.2
       tslib: 2.8.1
 
-  '@smithy/util-waiter@4.2.16':
-    dependencies:
-      '@smithy/types': 4.14.1
-      tslib: 2.8.1
-
   '@smithy/util-waiter@4.3.0':
     dependencies:
       '@smithy/types': 4.14.1
@@ -18181,7 +18168,7 @@ snapshots:
   '@traceloop/instrumentation-bedrock@0.26.0':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.203.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
       '@traceloop/ai-semantic-conventions': 0.26.0
@@ -18201,9 +18188,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@traceloop/instrumentation-langchain@0.25.0(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))':
+  '@traceloop/instrumentation-langchain@0.25.0(@langchain/core@1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0))':
     dependencies:
-      '@langchain/core': 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
+      '@langchain/core': 1.1.41(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0)
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/core': 2.7.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.203.0(@opentelemetry/api@1.9.1)
@@ -19882,14 +19869,14 @@ snapshots:
 
   flattie@1.1.1: {}
 
-  flydrive@2.1.0(@aws-sdk/client-s3@3.1045.0)(@aws-sdk/s3-request-presigner@3.1036.0):
+  flydrive@2.1.0(@aws-sdk/client-s3@3.1042.0)(@aws-sdk/s3-request-presigner@3.1036.0):
     dependencies:
       '@humanwhocodes/retry': 0.4.3
       '@poppinss/utils': 7.0.1
       etag: 1.8.1
       mime-types: 3.0.2
     optionalDependencies:
-      '@aws-sdk/client-s3': 3.1045.0
+      '@aws-sdk/client-s3': 3.1042.0
       '@aws-sdk/s3-request-presigner': 3.1036.0
 
   foreground-child@3.3.1:
@@ -20383,8 +20370,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ip-address@10.1.0: {}
-
   ip-address@10.2.0: {}
 
   ipaddr.js@1.9.1: {}
@@ -20608,7 +20593,7 @@ snapshots:
 
   kysely@0.28.16: {}
 
-  langsmith@0.5.23(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.37.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0):
+  langsmith@0.5.23(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(openai@6.36.0(ws@8.20.0)(zod@4.3.6))(ws@8.20.0):
     dependencies:
       p-queue: 6.6.2
       uuid: 10.0.0
@@ -20616,7 +20601,7 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/exporter-trace-otlp-proto': 0.213.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.7.0(@opentelemetry/api@1.9.1)
-      openai: 6.37.0(ws@8.20.0)(zod@4.3.6)
+      openai: 6.36.0(ws@8.20.0)(zod@4.3.6)
       ws: 8.20.0
 
   leac@0.6.0: {}
@@ -21620,7 +21605,7 @@ snapshots:
       powershell-utils: 0.1.0
       wsl-utils: 0.3.1
 
-  openai@6.37.0(ws@8.20.0)(zod@4.3.6):
+  openai@6.36.0(ws@8.20.0)(zod@4.3.6):
     optionalDependencies:
       ws: 8.20.0
       zod: 4.3.6
@@ -22775,7 +22760,7 @@ snapshots:
 
   socks@2.8.7:
     dependencies:
-      ip-address: 10.1.0
+      ip-address: 10.2.0
       smart-buffer: 4.2.0
 
   sorted-btree@1.8.1: {}

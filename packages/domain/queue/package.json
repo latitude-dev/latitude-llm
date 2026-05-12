@@ -21,6 +21,6 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   }
 }

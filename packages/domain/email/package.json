@@ -11,7 +11,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@react-email/components": "^1.0.9",
+    "@react-email/components": "1.0.12",
     "effect": "catalog:",
     "react": "catalog:",
     "zod": "catalog:"
@@ -22,6 +22,6 @@
     "@types/react": "catalog:",
     "@typescript/native-preview": "catalog:",
     "react-email": "5.2.9",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   }
 }

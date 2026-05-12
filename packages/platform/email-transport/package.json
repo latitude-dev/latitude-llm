@@ -15,11 +15,11 @@
     "@domain/email": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "nodemailer": "^8.0.6"
+    "nodemailer": "8.0.6"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
-    "@types/nodemailer": "^8.0.0",
+    "@types/nodemailer": "8.0.0",
     "vitest": "catalog:"
   }
 }
