@@ -47,9 +47,21 @@ export async function assembleTraceStructure(
   const endedAt = new Date(Math.max(...spans.map((s) => s.endedAt.getTime()))) // prettier-ignore
   const duration = endedAt.getTime() - startedAt.getTime()
 
+  // Spans whose declared `parentId` is not present in the result set are
+  // treated as virtual roots. This happens when an eval fires for a nested
+  // prompt before its ancestor span has been ingested (e.g. sub-prompt of an
+  // in-flight agent run). Without this, partial traces collapse to no roots
+  // and the assembler cannot locate any completion span.
+  const spanIds = new Set(spans.map((s) => s.id))
+  const orphanIds = new Set<string>()
+
   const childrens = new Map<string, Span[]>()
   for (const span of spans) {
     if (!span.parentId) continue
+    if (!spanIds.has(span.parentId)) {
+      orphanIds.add(span.id)
+      continue
+    }
     const children = childrens.get(span.parentId) || []
     childrens.set(span.parentId, [...children, span])
   }
@@ -59,11 +71,17 @@ export async function assembleTraceStructure(
   }
 
   const roots = spans
-    .filter((span) => !span.parentId)
+    .filter((span) => !span.parentId || orphanIds.has(span.id))
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 
   const assembledSpans = roots.map((span) =>
-    assembleSpanStructure({ span, depth: 0, startedAt, childrens }),
+    assembleSpanStructure({
+      span,
+      depth: 0,
+      startedAt,
+      childrens,
+      isOrphanRoot: orphanIds.has(span.id),
+    }),
   )
 
   const trace: AssembledTrace = {
@@ -156,11 +174,13 @@ function assembleSpanStructure({
   depth,
   startedAt,
   childrens,
+  isOrphanRoot = false,
 }: {
   span: Span
   depth: number
   startedAt: Date
   childrens: Map<string, Span[]>
+  isOrphanRoot?: boolean
 }): AssembledSpan {
   const children = childrens.get(span.id) || []
 
@@ -178,6 +198,7 @@ function assembleSpanStructure({
 
   return {
     ...span,
+    parentId: isOrphanRoot ? undefined : span.parentId,
     children: assembledSpans,
     depth: depth,
     startOffset: startOffset,
