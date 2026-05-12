@@ -46,8 +46,8 @@ Each new span arrival resets the debounce timer. This handles common scenarios:
 Once a trace is complete, Latitude triggers downstream processes:
 
 - **Evaluation triggers** check if any active evaluations should run against this trace
-- **Live annotation queues** check if the trace matches any queue filters
-- **System annotation queues** classify the trace against default review categories
+- **[Flaggers](../annotations/flaggers)** classify the trace against built-in failure categories and write annotations on matches
+- The trace is indexed for **[search](../search/overview)** so it becomes discoverable in the Search page
 
 ## Viewing Traces
 
@@ -158,5 +158,6 @@ When your application provides a `session_id` with its telemetry, Latitude group
 ## Next Steps
 
 - [Sessions](./sessions): Session-level conversations and aggregation
+- [Search](../search/overview): Find traces by meaning, not just metadata
 - [Scores](../scores/overview): How scores attach to traces
 - [Annotations](../annotations/inline-annotations): Annotating directly from trace views

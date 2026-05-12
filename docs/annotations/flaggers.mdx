@@ -1,0 +1,117 @@
+---
+title: Flaggers
+description: Automatic annotators that surface common failure categories on every trace
+---
+
+# Flaggers
+
+Flaggers are Latitude's built-in automatic annotators. Every project is provisioned with a fixed set of flaggers — one per known failure category — and each completed trace is checked against the enabled flaggers. When a flagger matches, Latitude writes an annotation score directly on the trace, no human review required.
+
+Flaggers replace what used to be called **system annotation queues**. The categories and detection logic are the same; the surface is different. Instead of routing matches into a queue for review, flaggers write a published annotation immediately and that annotation flows through the rest of the system: scores, issue discovery, analytics, and alignment.
+
+## Available Flaggers
+
+Each project starts with these flaggers provisioned. Some use deterministic rules; the rest use lightweight LLM classifiers.
+
+<AccordionGroup>
+  <Accordion title="Jailbreaking">
+    Detects attempts to bypass system or safety constraints. This covers prompt injection, instruction hierarchy attacks, policy-evasion attempts, tool abuse intended to bypass guardrails, role or identity escape attempts, or assistant behavior that actually follows those bypass attempts. Does not flag harmless roleplay or ordinary unsafe requests that the assistant correctly refuses.
+  </Accordion>
+
+  <Accordion title="NSFW">
+    Detects sexual or otherwise not-safe-for-work content. Flags traces containing sexual content, explicit erotic material, or other clearly inappropriate content that should be reviewed. Does not flag benign anatomy or health discussion, mild romance, or safety-oriented policy discussion.
+  </Accordion>
+
+  <Accordion title="Refusal">
+    Detects when the assistant refuses a request it should handle. Flags traces where the assistant declines, deflects, or over-restricts even though the request is allowed and answerable within product policy and system capabilities. Does not flag correct refusals where the request is unsafe, unsupported, or missing required context. Suppressed when **Jailbreaking** or **NSFW** also matches — a correct refusal of a jailbreak isn't itself an over-refusal.
+  </Accordion>
+
+  <Accordion title="Frustration">
+    Detects clear user frustration or dissatisfaction. Flags traces where the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate or correct themselves because the assistant is not helping. Does not flag neutral clarifications or isolated terse replies without real evidence of frustration.
+  </Accordion>
+
+  <Accordion title="Forgetting">
+    Detects when the assistant forgets earlier conversation context or instructions. Flags traces where the assistant loses relevant session memory, repeats already-settled questions, contradicts previously established facts, or ignores earlier constraints from the same conversation. Does not flag ambiguity that was never resolved or context the user never provided.
+  </Accordion>
+
+  <Accordion title="Laziness">
+    Detects when the assistant avoids doing the requested work. Flags traces where the assistant gives a shallow partial answer, stops early without justification, refuses to inspect provided context, or pushes work back onto the user. Does not flag cases where the task is genuinely blocked by missing access, context, or policy constraints. Suppressed when **Trashing** also matches.
+  </Accordion>
+
+  <Accordion title="Trashing">
+    Detects when the agent cycles between tools without making progress. Flags traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Does not flag legitimate retries after transient errors or iterative refinement that is visibly converging.
+  </Accordion>
+
+  <Accordion title="Tool Call Errors">
+    Detects failed or errored tool invocations. Flags traces where the conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. Deterministic; no LLM call.
+  </Accordion>
+
+  <Accordion title="Output Schema Validation">
+    Detects structured-output responses that don't conform to the declared schema. Flags traces where a generation span was configured to produce structured output and the actual response either failed to parse as JSON or was visibly truncated before completion. Deterministic; no LLM call.
+  </Accordion>
+
+  <Accordion title="Empty Response">
+    Detects empty or degenerate assistant responses. Flags traces where the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text. Deterministic; no LLM call.
+  </Accordion>
+</AccordionGroup>
+
+## How Flaggers Run
+
+When a trace completes (after the trace-end debounce window), Latitude runs the enabled flaggers against it. Each flagger evaluates the trace in three phases:
+
+1. **Required context check**: The flagger confirms the trace has the data it needs (for example, the Output Schema Validation flagger needs a generation span with a declared schema).
+2. **Deterministic detection**: The flagger applies its rules. The result is `matched`, `no-match`, or `ambiguous`.
+3. **LLM detection** (for LLM-capable flaggers only): If the deterministic step returned `ambiguous`, an LLM judges the trace. Sampled traces from the `no-match` path are also re-evaluated with the LLM, so the flagger can catch cases the deterministic rules missed.
+
+If any phase produces a match, Latitude writes a published annotation score on the trace with the flagger's feedback. That annotation behaves like any other:
+
+- It feeds [issue discovery](../issues/overview)
+- It contributes to [evaluation alignment](../evaluations/alignment)
+- It shows up on the trace, in scores analytics, and in any saved search that surfaces matching traces
+
+Flagger annotations are marked with a system source. They don't sit in a draft state waiting for human review; they're immediately part of your project's signal.
+
+### Suppression
+
+Some flaggers suppress others to avoid double-counting:
+
+- **Refusal** is suppressed by **Jailbreaking** and **NSFW**: a correct refusal of an unsafe request isn't over-refusal.
+- **Laziness** is suppressed by **Trashing**: an agent stuck cycling tools isn't separately "lazy".
+
+Suppression only applies when the higher-priority flagger actually matched. If Jailbreaking returns `no-match`, Refusal can still match.
+
+## Configuring Flaggers
+
+Open **Project Settings** to see the flaggers list. For each flagger you can adjust:
+
+- **Enabled**: Turn the flagger on or off for this project. A disabled flagger never runs and never writes annotations.
+- **Sampling**: An integer between 0 and 100 that controls what fraction of `no-match` traces are escalated to the LLM step. Only meaningful for LLM-capable flaggers. Deterministic flaggers ignore sampling because their rules either match or they don't.
+
+Sampling is the main lever for cost and noise control. A flagger that's too noisy can be turned down; a flagger that's missing too many real cases can be turned up.
+
+<Note>
+  Flagger names, descriptions, and detection prompts are read-only — they describe Latitude-defined categories. You can change whether a flagger is enabled and how often the LLM step runs, but not what the flagger looks for.
+</Note>
+
+## Flaggers vs Search vs Inline Annotations
+
+| Surface | Best for |
+| --- | --- |
+| **Flaggers** | Automatic, project-wide detection of known failure categories. You don't pick the matches; the flagger does. |
+| **[Saved searches](../search/saved-searches)** | Building custom cohorts around anything Latitude doesn't already flag for you. |
+| **[Inline annotations](./inline-annotations)** | Leaving human feedback on individual traces, either as a quick spot check or as the human side of an evaluation alignment loop. |
+
+All three feed the same scores system, the same issue discovery pipeline, and the same alignment metrics. The difference is who decides which trace gets attention: a flagger, a person searching, or a person opening a trace directly.
+
+## Flagger Annotations and Issues
+
+Because flagger annotations are published with a system source, they flow into [issue discovery](../issues/overview) automatically. A trace that gets a `frustration` annotation from the flagger will be clustered into the relevant issue alongside human-annotated and evaluation-detected occurrences, with no extra wiring.
+
+This is the simplest way to see flaggers in action: enable them on a project, let them run for a week, and watch what comes out the other side of issue discovery.
+
+## Next Steps
+
+- [Annotations Overview](./overview): How annotations connect to scores, issues, and evaluations
+- [Inline Annotations](./inline-annotations): Leave human feedback on traces
+- [Search](../search/overview): Build cohorts that flaggers don't cover
+- [Issues](../issues/overview): How flagger annotations become trackable failure patterns

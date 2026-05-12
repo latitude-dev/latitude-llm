@@ -27,17 +27,19 @@ The result is a continuous improvement cycle where your agents get better with e
 
 ## Key Concepts
 
-| Concept              | What It Is                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| **Span**             | A single unit of work captured by telemetry (an LLM call, a tool invocation, etc.)         |
-| **Trace**            | A complete interaction from start to finish, composed of one or more spans                 |
-| **Session**          | A multi-turn conversation between a user and your agent, composed of related traces        |
-| **Score**            | A quantitative verdict on a trace: normalized between 0 and 1, with pass/fail and feedback |
-| **Evaluation**       | A script that automatically produces scores from your agent's interactions                 |
-| **Issue**            | A named failure pattern discovered by grouping similar failed scores                       |
-| **Annotation**       | A human review of a trace, producing a score through Latitude's review workflow            |
-| **Annotation Queue** | A managed review backlog that routes traces to human reviewers                             |
-| **Simulation**       | A test run of your agent against scenarios, evaluated locally or in CI                     |
+| Concept           | What It Is                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| **Span**          | A single unit of work captured by telemetry (an LLM call, a tool invocation, etc.)         |
+| **Trace**         | A complete interaction from start to finish, composed of one or more spans                 |
+| **Session**       | A multi-turn conversation between a user and your agent, composed of related traces        |
+| **Score**         | A quantitative verdict on a trace: normalized between 0 and 1, with pass/fail and feedback |
+| **Evaluation**    | A script that automatically produces scores from your agent's interactions                 |
+| **Issue**         | A named failure pattern discovered by grouping similar failed scores                       |
+| **Annotation**    | A verdict on a trace from a human, a flagger, or the API, attached as a score              |
+| **Flagger**       | A built-in automatic annotator for a known failure category like _jailbreaking_ or _frustration_ |
+| **Search**        | A hybrid keyword + semantic search over trace conversations, with optional saved filters   |
+| **Saved Search**  | A named bookmark for a search query plus filters, with assignee and review progress        |
+| **Simulation**    | A test run of your agent against scenarios, evaluated locally or in CI                     |
 
 ## Next Steps
 
