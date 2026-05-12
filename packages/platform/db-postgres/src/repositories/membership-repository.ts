@@ -151,11 +151,11 @@ export const MembershipRepositoryLive = Layer.effect(
 
       findByIdWithUser,
 
-      findMemberByEmail: ({ email, organizationId }: { email: string; organizationId: OrganizationId }) =>
+      findMemberByEmail: (email: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
-            .query((db) =>
+            .query((db, organizationId) =>
               db
                 .select({ id: members.id })
                 .from(members)

@@ -11,10 +11,10 @@ export const createFakeInvitationRepository = (overrides?: Partial<InvitationRep
   const repository: InvitationRepositoryShape = {
     findPublicPendingPreviewById: (id) => Effect.fail(new NotFoundError({ entity: "Invitation", id })),
 
-    listPendingByOrganizationId: (organizationId) =>
+    listPending: () =>
       Effect.succeed(
         [...invitations.values()]
-          .filter((i) => i.organizationId === organizationId && i.status === "pending")
+          .filter((i) => i.status === "pending")
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
       ),
 

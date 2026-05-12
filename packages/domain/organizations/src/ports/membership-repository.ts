@@ -28,13 +28,11 @@ export class MembershipRepository extends Context.Service<
     listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError, SqlClient>
     findByIdWithUser: (id: MembershipId) => Effect.Effect<MemberWithUser, NotFoundError | RepositoryError, SqlClient>
     /**
-     * Returns true if the email belongs to a confirmed member of the organization. Case-insensitive comparison.
-     * Joins `members` to `users.email`. Returns false (not a `NotFoundError`) when no match — callers don't usually need to distinguish "no row" from a failure here.
+     * Returns true if the email belongs to a confirmed member of the caller's organization (resolved
+     * from the RLS context). Case-insensitive comparison; returns false (not a `NotFoundError`) when
+     * no match — callers don't usually need to distinguish "no row" from a failure here.
      */
-    findMemberByEmail: (params: {
-      email: string
-      organizationId: OrganizationId
-    }) => Effect.Effect<boolean, RepositoryError, SqlClient>
+    findMemberByEmail: (email: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     save: (membership: Membership) => Effect.Effect<void, RepositoryError, SqlClient>

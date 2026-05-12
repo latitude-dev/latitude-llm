@@ -89,15 +89,12 @@ export const inviteMemberUseCase = Effect.fn("organizations.inviteMember")(funct
 
   const normalizedEmail = input.email.trim().toLowerCase()
 
-  const isAlreadyMember = yield* membershipRepo.findMemberByEmail({
-    email: normalizedEmail,
-    organizationId: input.organizationId,
-  })
+  const isAlreadyMember = yield* membershipRepo.findMemberByEmail(normalizedEmail)
   if (isAlreadyMember) {
     return yield* new AlreadyMemberError({ email: normalizedEmail })
   }
 
-  const pendingInvitations = yield* invitationRepo.listPendingByOrganizationId(input.organizationId)
+  const pendingInvitations = yield* invitationRepo.listPending()
 
   if (pendingInvitations.some((inv) => inv.email.toLowerCase() === normalizedEmail)) {
     return yield* new AlreadyInvitedError({ email: normalizedEmail })

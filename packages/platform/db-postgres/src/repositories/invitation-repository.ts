@@ -72,11 +72,11 @@ export const InvitationRepositoryLive = Layer.effect(
             )
         }),
 
-      listPendingByOrganizationId: (organizationId: OrganizationId) =>
+      listPending: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
-            .query((db) =>
+            .query((db, organizationId) =>
               db
                 .select()
                 .from(invitations)
@@ -110,10 +110,10 @@ export const InvitationRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient
-            .query((db) =>
+            .query((db, organizationId) =>
               db.insert(invitations).values({
                 id: invitation.id,
-                organizationId: invitation.organizationId,
+                organizationId,
                 email: invitation.email,
                 role: invitation.role,
                 status: invitation.status,

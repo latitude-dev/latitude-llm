@@ -34,7 +34,7 @@ export const listMembersUseCase = Effect.fn("organizations.listMembers")(functio
   const invitationRepo = yield* InvitationRepository
 
   const members = yield* membershipRepo.listMembersWithUser(input.organizationId)
-  const pendingInvitations = yield* invitationRepo.listPendingByOrganizationId(input.organizationId)
+  const pendingInvitations = yield* invitationRepo.listPending()
 
   const activeEmails = new Set(members.map((m) => m.email.toLowerCase()))
   const invitations = pendingInvitations.filter((inv) => !activeEmails.has(inv.email.toLowerCase()))

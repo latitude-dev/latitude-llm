@@ -1,4 +1,4 @@
-import type { InvitationId, NotFoundError, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
+import type { InvitationId, NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Invitation, InvitationStatus } from "../entities/invitation.ts"
 import type { PublicInvitationPreview } from "../entities/public-invitation-preview.ts"
@@ -13,11 +13,10 @@ export class InvitationRepository extends Context.Service<
       invitationId: string,
     ) => Effect.Effect<PublicInvitationPreview, NotFoundError | RepositoryError, SqlClient>
     /**
-     * Returns every pending invitation in the organization, newest first. Excludes accepted / rejected / canceled rows.
+     * Returns every pending invitation in the caller's organization (resolved from the RLS context),
+     * newest first. Excludes accepted / rejected / canceled rows.
      */
-    listPendingByOrganizationId: (
-      organizationId: OrganizationId,
-    ) => Effect.Effect<readonly Invitation[], RepositoryError, SqlClient>
+    listPending: () => Effect.Effect<readonly Invitation[], RepositoryError, SqlClient>
     /** Single invitation row by id; org-scoped via RLS. */
     findById: (id: InvitationId) => Effect.Effect<Invitation, NotFoundError | RepositoryError, SqlClient>
     /** Inserts a new invitation row. The caller is responsible for generating the id + expiry. */
