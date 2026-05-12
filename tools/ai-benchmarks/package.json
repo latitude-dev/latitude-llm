@@ -31,19 +31,19 @@
     "@platform/ai": "workspace:*",
     "@platform/ai-vercel": "workspace:*",
     "@platform/op-gepa": "workspace:*",
-    "diff": "^8.0.4",
+    "diff": "8.0.4",
     "effect": "catalog:",
     "esbuild": "0.25.10",
-    "ink": "^6.3.1",
-    "listr2": "^9.0.4",
-    "papaparse": "^5.5.3",
+    "ink": "6.8.0",
+    "listr2": "9.0.5",
+    "papaparse": "5.5.3",
     "react": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/papaparse": "^5.5.2",
+    "@types/papaparse": "5.5.2",
     "@types/react": "catalog:"
   }
 }

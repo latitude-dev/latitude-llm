@@ -15,7 +15,7 @@
     "@domain/marketing": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "loops": "^6.3.0"
+    "loops": "6.3.0"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

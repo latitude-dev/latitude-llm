@@ -19,12 +19,12 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1045.0",
-    "@aws-sdk/s3-request-presigner": "^3.1029.0",
+    "@aws-sdk/client-s3": "3.1042.0",
+    "@aws-sdk/s3-request-presigner": "3.1036.0",
     "@domain/shared": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
-    "flydrive": "^2.1.0"
+    "flydrive": "2.1.0"
   }
 }
