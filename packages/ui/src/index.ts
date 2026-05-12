@@ -316,7 +316,6 @@ export {
 } from "./components/tooltip/tooltip.tsx"
 export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"
-export { useIsMobileDevice } from "./hooks/use-is-mobile-device.ts"
 export { useLocalStorage } from "./hooks/use-local-storage.ts"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
 export { useValueWithDefault } from "./hooks/use-value-with-default.ts"
