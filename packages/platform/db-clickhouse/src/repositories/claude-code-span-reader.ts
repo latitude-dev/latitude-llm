@@ -375,9 +375,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
           })
           .pipe(
             Effect.map((rows): readonly BashPatternRow[] =>
-              rows
-                .filter((row) => row.pattern !== "")
-                .map((row) => ({ pattern: row.pattern, uses: num(row.uses) })),
+              rows.filter((row) => row.pattern !== "").map((row) => ({ pattern: row.pattern, uses: num(row.uses) })),
             ),
             Effect.mapError((error) => toRepositoryError(error, "getTopBashCommands")),
           )
@@ -565,4 +563,3 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
     }
   }),
 )
-

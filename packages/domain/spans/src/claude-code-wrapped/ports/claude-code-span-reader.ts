@@ -119,9 +119,7 @@ export interface ClaudeCodeSpanReaderShape {
   getTopFiles(params: ProjectWindowInput): Effect.Effect<readonly FileTouchesRow[], RepositoryError, ChSqlClient>
 
   /** Top 5 Bash commands grouped by leading whitespace token. */
-  getTopBashCommands(
-    params: ProjectWindowInput,
-  ): Effect.Effect<readonly BashPatternRow[], RepositoryError, ChSqlClient>
+  getTopBashCommands(params: ProjectWindowInput): Effect.Effect<readonly BashPatternRow[], RepositoryError, ChSqlClient>
 
   /** All workspaces in the window, sorted by tool-call count desc. */
   getTopWorkspaces(params: ProjectWindowInput): Effect.Effect<readonly WorkspaceRow[], RepositoryError, ChSqlClient>
