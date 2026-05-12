@@ -1,3 +1,4 @@
+import { getAnnotationProvenance } from "@domain/annotations"
 import type { AnnotationAnchor } from "@domain/scores"
 import type { HighlightRange } from "@repo/ui"
 import { useCallback, useMemo } from "react"
@@ -11,10 +12,28 @@ import type { AnnotationRecord } from "../../../../../../../domains/annotations/
 import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 
+const AGENT_ANNOTATOR_ID_PREFIX = "agent:"
+
 interface AnnotationAnnotator {
   readonly id: string
   readonly name: string
   readonly imageSrc: string | null
+  readonly kind?: "agent"
+}
+
+function buildAgentAnnotator(sourceId: string): AnnotationAnnotator {
+  return {
+    id: `${AGENT_ANNOTATOR_ID_PREFIX}${sourceId}`,
+    name: "Latitude Agent",
+    imageSrc: null,
+    kind: "agent",
+  }
+}
+
+export function getAnnotatorIdForBucketing(annotation: AnnotationRecord): string | null {
+  if (annotation.annotatorId) return annotation.annotatorId
+  if (getAnnotationProvenance(annotation) === "agent") return `${AGENT_ANNOTATOR_ID_PREFIX}${annotation.sourceId}`
+  return null
 }
 
 interface MessageAnnotationData {
@@ -82,6 +101,11 @@ export function useTraceAnnotationsData({ projectId, traceId }: UseTraceAnnotati
           const user = pickUserFromMembersMap(memberByUserId, a.annotatorId)
           if (user) {
             newAnnotators.push(user)
+          }
+        } else if (getAnnotationProvenance(a) === "agent") {
+          const agentAnnotator = buildAgentAnnotator(a.sourceId)
+          if (!existingAnnotatorIds.has(agentAnnotator.id)) {
+            newAnnotators.push(agentAnnotator)
           }
         }
 

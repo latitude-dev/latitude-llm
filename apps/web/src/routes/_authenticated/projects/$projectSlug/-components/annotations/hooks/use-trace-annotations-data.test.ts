@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { generateId } from "@domain/shared"
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -9,6 +10,7 @@ const mockAnnotations = [
     passed: true,
     feedback: "Good response",
     annotatorId: "user-1",
+    sourceId: "UI",
     metadata: { rawFeedback: "Good response", messageIndex: 0 },
   },
   {
@@ -16,6 +18,7 @@ const mockAnnotations = [
     passed: false,
     feedback: "Bad response",
     annotatorId: "user-2",
+    sourceId: "UI",
     metadata: { rawFeedback: "Bad response", messageIndex: 1, partIndex: 0, startOffset: 0, endOffset: 10 },
   },
 ]
@@ -44,10 +47,22 @@ vi.mock("../../../../../../../domains/members/members.collection.ts", () => ({
 }))
 
 vi.mock("../../../../../../../domains/members/pick-users-from-members.ts", () => ({
-  pickUserFromMembersMap: vi.fn(() => ({ id: "user-1", name: "User 1", imageSrc: null })),
+  pickUserFromMembersMap: vi.fn((_map: unknown, id: string | null) =>
+    id ? { id, name: `User ${id}`, imageSrc: null } : null,
+  ),
 }))
 
-import { useTraceAnnotationsData } from "./use-trace-annotations-data.ts"
+import { useAnnotationsByTrace } from "../../../../../../../domains/annotations/annotations.collection.ts"
+import { getAnnotatorIdForBucketing, useTraceAnnotationsData } from "./use-trace-annotations-data.ts"
+
+type AnnotationItem = (typeof mockAnnotations)[number]
+
+function setAnnotationsOnce(items: readonly AnnotationItem[]) {
+  vi.mocked(useAnnotationsByTrace).mockReturnValueOnce({
+    data: { items },
+    isLoading: false,
+  } as ReturnType<typeof useAnnotationsByTrace>)
+}
 
 describe("useTraceAnnotationsData", () => {
   beforeEach(() => {
@@ -205,5 +220,176 @@ describe("useTraceAnnotationsData", () => {
 
       expect(mockMutate).toHaveBeenCalledWith({ scoreId: "ann-1", projectId: "proj-1" }, undefined)
     })
+  })
+
+  describe("agent annotations", () => {
+    it("pushes a synthetic Latitude Agent annotator for agent-authored message-level annotations", () => {
+      setAnnotationsOnce([
+        {
+          id: "ann-agent",
+          passed: true,
+          feedback: "Looks good",
+          annotatorId: null as unknown as string,
+          sourceId: "SYSTEM",
+          metadata: { rawFeedback: "Looks good", messageIndex: 5 },
+        },
+      ])
+
+      const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
+
+      const msg = result.current.messageLevelAnnotations.get(5)
+      expect(msg?.annotators).toEqual([{ id: "agent:SYSTEM", name: "Latitude Agent", imageSrc: null, kind: "agent" }])
+    })
+
+    it("dedupes multiple agent annotations that share a sourceId", () => {
+      const agentId = generateId()
+      setAnnotationsOnce([
+        {
+          id: "a1",
+          passed: true,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: agentId,
+          metadata: { rawFeedback: "", messageIndex: 0 },
+        },
+        {
+          id: "a2",
+          passed: false,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: agentId,
+          metadata: { rawFeedback: "", messageIndex: 0 },
+        },
+      ])
+
+      const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
+
+      const msg = result.current.messageLevelAnnotations.get(0)
+      expect(msg?.annotations).toHaveLength(2)
+      expect(msg?.annotators).toHaveLength(1)
+      expect(msg?.annotators[0]?.id).toBe(`agent:${agentId}`)
+    })
+
+    it("creates distinct annotators for agents with different sourceIds", () => {
+      const agentA = generateId()
+      const agentB = generateId()
+      setAnnotationsOnce([
+        {
+          id: "a1",
+          passed: true,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: agentA,
+          metadata: { rawFeedback: "", messageIndex: 2 },
+        },
+        {
+          id: "a2",
+          passed: true,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: agentB,
+          metadata: { rawFeedback: "", messageIndex: 2 },
+        },
+        {
+          id: "a3",
+          passed: false,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: "SYSTEM",
+          metadata: { rawFeedback: "", messageIndex: 2 },
+        },
+      ])
+
+      const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
+
+      const msg = result.current.messageLevelAnnotations.get(2)
+      expect(msg?.annotators.map((a) => a.id)).toEqual([`agent:${agentA}`, `agent:${agentB}`, "agent:SYSTEM"])
+    })
+
+    it("combines human and agent annotators on the same message", () => {
+      setAnnotationsOnce([
+        {
+          id: "h1",
+          passed: true,
+          feedback: "",
+          annotatorId: "user-1",
+          sourceId: "UI",
+          metadata: { rawFeedback: "", messageIndex: 7 },
+        },
+        {
+          id: "a1",
+          passed: true,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: "SYSTEM",
+          metadata: { rawFeedback: "", messageIndex: 7 },
+        },
+      ])
+
+      const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
+
+      const msg = result.current.messageLevelAnnotations.get(7)
+      expect(msg?.annotators).toEqual([
+        { id: "user-1", name: "User user-1", imageSrc: null },
+        { id: "agent:SYSTEM", name: "Latitude Agent", imageSrc: null, kind: "agent" },
+      ])
+    })
+
+    it("ignores agent annotations that have a partIndex (those go to highlight ranges)", () => {
+      setAnnotationsOnce([
+        {
+          id: "ar1",
+          passed: true,
+          feedback: "",
+          annotatorId: null as unknown as string,
+          sourceId: "SYSTEM",
+          metadata: { rawFeedback: "", messageIndex: 3, partIndex: 0, startOffset: 0, endOffset: 4 },
+        },
+      ])
+
+      const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
+
+      expect(result.current.messageLevelAnnotations.size).toBe(0)
+      expect(result.current.highlightRanges).toHaveLength(1)
+    })
+  })
+})
+
+describe("getAnnotatorIdForBucketing", () => {
+  it("returns the annotatorId for human-authored annotations", () => {
+    expect(
+      getAnnotatorIdForBucketing({
+        annotatorId: "user-9",
+        sourceId: "UI",
+      } as Parameters<typeof getAnnotatorIdForBucketing>[0]),
+    ).toBe("user-9")
+  })
+
+  it("returns the agent-prefixed sourceId for SYSTEM annotations", () => {
+    expect(
+      getAnnotatorIdForBucketing({
+        annotatorId: null,
+        sourceId: "SYSTEM",
+      } as Parameters<typeof getAnnotatorIdForBucketing>[0]),
+    ).toBe("agent:SYSTEM")
+  })
+
+  it("returns the agent-prefixed sourceId for flagger CUID annotations", () => {
+    const agentId = generateId()
+    expect(
+      getAnnotatorIdForBucketing({
+        annotatorId: null,
+        sourceId: agentId,
+      } as Parameters<typeof getAnnotatorIdForBucketing>[0]),
+    ).toBe(`agent:${agentId}`)
+  })
+
+  it("returns null for unauthored, non-agent annotations (e.g. API)", () => {
+    expect(
+      getAnnotatorIdForBucketing({
+        annotatorId: null,
+        sourceId: "API",
+      } as Parameters<typeof getAnnotatorIdForBucketing>[0]),
+    ).toBeNull()
   })
 })
