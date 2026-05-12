@@ -1,6 +1,6 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
 import { Button, CloseTrigger, Modal, Text, useToast } from "@repo/ui"
-import { useCallback, useMemo, useState } from "react"
+import { type RefObject, useCallback, useMemo, useState } from "react"
 import { MetadataFilter } from "../../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
 import { MultiSelectFilter } from "../../../../../../components/filters-builder/multi-select-filter.tsx"
 import type { DistinctColumn } from "../../../../../../components/filters-builder/types.ts"
@@ -93,6 +93,11 @@ function EvaluationFilterModalForm({
   const { toast } = useToast()
   const [draft, setDraft] = useState<FilterSet>(evaluation.trigger.filter)
   const [isSaving, setIsSaving] = useState(false)
+  const [popoverContainerEl, setPopoverContainerEl] = useState<HTMLDivElement | null>(null)
+  const popoverContainerRef = useMemo<RefObject<HTMLElement | null>>(
+    () => ({ current: popoverContainerEl }),
+    [popoverContainerEl],
+  )
 
   const metadataEntries = useMemo(() => extractMetadataEntries(draft), [draft])
 
@@ -102,10 +107,6 @@ function EvaluationFilterModalForm({
 
   const handleMetadataChange = useCallback((entries: { key: string; value: string }[]) => {
     setDraft((current) => applyMetadataEntries(current, entries))
-  }, [])
-
-  const handleClear = useCallback(() => {
-    setDraft({})
   }, [])
 
   const handleSave = async () => {
@@ -140,9 +141,6 @@ function EvaluationFilterModalForm({
       description="Run this evaluation only on traces matching the filters below. Leave empty to evaluate all traces."
       footer={
         <>
-          <Button variant="ghost" onClick={handleClear} disabled={isSaving}>
-            Clear all
-          </Button>
           <CloseTrigger />
           <Button onClick={() => void handleSave()} isLoading={isSaving}>
             Save
@@ -150,24 +148,28 @@ function EvaluationFilterModalForm({
         </>
       }
     >
-      <div className="flex flex-col gap-5 pb-2">
-        {EVAL_FILTER_DIMENSIONS.map(({ field, label }) => {
-          const selected = getInValues(draft, field)
-          return (
-            <div key={field} className="flex flex-col gap-1.5">
-              <Text.H6 color="foregroundMuted">{label}</Text.H6>
-              <MultiSelectFilter
-                projectId={projectId}
-                column={field}
-                selected={selected}
-                onChange={(values) => handleMultiSelectChange(field, values)}
-              />
-            </div>
-          )
-        })}
-        <div className="flex flex-col gap-1.5">
-          <Text.H6 color="foregroundMuted">Metadata</Text.H6>
-          <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
+      <div className="relative">
+        <div ref={setPopoverContainerEl} aria-hidden className="absolute left-0 top-0" />
+        <div className="flex flex-col gap-5 pb-4">
+          {EVAL_FILTER_DIMENSIONS.map(({ field, label }) => {
+            const selected = getInValues(draft, field)
+            return (
+              <div key={field} className="flex flex-col gap-1.5">
+                <Text.H6 color="foregroundMuted">{label}</Text.H6>
+                <MultiSelectFilter
+                  projectId={projectId}
+                  column={field}
+                  selected={selected}
+                  onChange={(values) => handleMultiSelectChange(field, values)}
+                  portalContainer={popoverContainerRef}
+                />
+              </div>
+            )
+          })}
+          <div className="flex flex-col gap-1.5">
+            <Text.H6 color="foregroundMuted">Metadata</Text.H6>
+            <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
+          </div>
         </div>
       </div>
     </Modal>
