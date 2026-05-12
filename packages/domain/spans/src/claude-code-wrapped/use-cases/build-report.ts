@@ -67,9 +67,20 @@ const bucketise = (rows: readonly ToolMixRow[]): ToolMix => {
   return mix
 }
 
+// CodeQL flagged the previous trailing-slash regex (`/\/+$/`) as potential
+// ReDoS on uncontrolled input. The loop below is linear regardless of how
+// many trailing slashes the input has.
+const trimTrailingSlashes = (path: string): string => {
+  let end = path.length
+  while (end > 0 && (path.charCodeAt(end - 1) === 0x2f || path.charCodeAt(end - 1) === 0x5c)) {
+    end--
+  }
+  return end === path.length ? path : path.slice(0, end)
+}
+
 const basename = (path: string): string => {
   if (path === "") return ""
-  const trimmed = path.replace(/\/+$/, "")
+  const trimmed = trimTrailingSlashes(path)
   const idx = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"))
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed
 }
