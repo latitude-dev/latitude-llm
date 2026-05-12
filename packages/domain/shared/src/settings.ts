@@ -26,16 +26,19 @@ export const organizationSettingsSchema = z.object({
  * `alertNotifications` because it only matters when at least one kind is
  * enabled.
  *
- * The kind keys (`issue.new` / `issue.regressed` / `issue.escalating`) and
- * the named `escalationSensitivity` key live at the same level — no name
- * collision is possible since the kinds are dotted identifiers.
+ * Built from `ALERT_INCIDENT_KINDS` so adding a new alert kind automatically
+ * extends the schema. Modelled as a plain `z.object` rather than a record
+ * intersection because `z.record(z.enum(...))` validates keys against the
+ * enum and would reject the non-enum `escalationSensitivity` key.
  */
-export const alertNotificationsSettingSchema = z.intersection(
-  z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean()),
-  z.object({
-    escalationSensitivity: z.number().int().min(1).max(6).optional(),
-  }),
-)
+const alertNotificationsKindShape = Object.fromEntries(
+  ALERT_INCIDENT_KINDS.map((kind) => [kind, z.boolean().optional()] as const),
+) as { [K in AlertIncidentKind]: z.ZodOptional<z.ZodBoolean> }
+
+export const alertNotificationsSettingSchema = z.object({
+  ...alertNotificationsKindShape,
+  escalationSensitivity: z.number().int().min(1).max(6).optional(),
+})
 export type AlertNotificationsSetting = z.infer<typeof alertNotificationsSettingSchema>
 
 export const projectSettingsSchema = z.object({
