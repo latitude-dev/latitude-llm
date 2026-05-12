@@ -7,14 +7,19 @@ description: Adding or changing routes in `apps/api`. One source of truth (`defi
 
 **When to use:** Adding a new endpoint to `apps/api`, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
 
-## Before you start — mirror the web UI
+## Before you start — reuse the UI's logic via the domain layer
 
-The MCP/API expansion ships full parity: every action and read available to a signed-in user in the web app gets an API endpoint. Before defining new routes for an entity, open its **`apps/web/src/domains/<entity>/<entity>.functions.ts`** and enumerate the exported server functions. Map each one to an API endpoint.
+When you add a new API endpoint, check whether the same action or read is already available in the web UI. The plan only ships a specific list of API endpoints (see the inventory in `plans/mcp-oauth-api-expansion.md`); the goal isn't full surface parity, it's not duplicating logic that the web already implements.
 
-- Server fn that imports `*UseCase` from a domain package → **reuse that use-case** in the API route handler.
-- Server fn that calls `getBetterAuth().api.*` (typical for invitation / org-membership flows) → **the domain use-case is missing**. Write it in the relevant `packages/domain/<pkg>` before the route. The API process can't call BA in-process; the new use-case is the shared seam both web and API consume going forward.
+For each new endpoint, open **`apps/web/src/domains/<entity>/<entity>.functions.ts`**. Three cases:
 
-The web's `.functions.ts` is the source of truth for what the entity can do. If you ship an API surface that's narrower, you've forced agents and SDK callers into a worse experience than humans get. If you ship one that's wider, you've designed past the UI's mental model — that's usually fine but worth flagging.
+- **The web's server fn already calls a domain use-case** (imports `*UseCase` from `@domain/*`): reuse that use-case in the API route handler. Don't reimplement the logic in `apps/api`.
+- **The web's server fn has the logic inline** (raw repository calls, validation, side effects in the server fn body itself): **extract it into a new domain use-case first**, then have both the web server fn AND your API route call it. The domain use-case becomes the shared seam.
+- **The web's server fn delegates to a third-party API** like `getBetterAuth().api.*`: the API process can't reach the same in-process instance. Write a domain use-case that replicates that behavior (carefully — read the third-party source so your use-case matches its rules), then point both the web and API at the use-case. Adds parity tests so the migration doesn't silently drift.
+
+The domain use-case is the shared seam between web and API. Duplicating logic in both surfaces creates drift — one gets a bug fix the other doesn't.
+
+If the entity doesn't have a `.functions.ts` because the UI doesn't expose this action yet, you're designing fresh. That's fine; just don't lose the option to share later — put the business logic in a `@domain/*` use-case from the start rather than inline in the route handler.
 
 ## What you're really doing
 

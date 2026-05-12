@@ -23,7 +23,6 @@ import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
-import { requireOAuthUserId } from "../middleware/require-oauth.ts"
 import {
   IdParamsSchema,
   jsonBody,
@@ -32,6 +31,7 @@ import {
   PROTECTED_SECURITY,
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
+import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
 export const membersPath = "/members"
 
