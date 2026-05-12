@@ -22,8 +22,13 @@ export const adminTriggerClaudeCodeWrappedInputSchema = z.object({
  *
  * Looks up the project's organization (so the client can't claim an orgId it
  * doesn't own), then publishes a `runForProject` task on the
- * `claude-code-wrapped` topic with a date-keyed dedupe so multiple clicks in
- * the same day collapse into one job.
+ * `claude-code-wrapped` topic.
+ *
+ * No BullMQ `dedupeKey` is set: an earlier version date-keyed the publish so
+ * repeated clicks collapsed into one job, but that also blocked legitimate
+ * retries after a failed run (BullMQ leaves the failed jobId "burned" until
+ * removed). Staff-driven manual clicks are infrequent enough that duplicate
+ * publishes aren't a real concern.
  *
  * The worker is the single source of truth for the feature-flag gate — this
  * handler does NOT pre-check the flag. If the flag is off the worker simply
