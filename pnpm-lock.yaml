@@ -1038,6 +1038,12 @@ importers:
 
   packages/domain/email:
     dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       '@react-email/components':
         specifier: ^1.0.9
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

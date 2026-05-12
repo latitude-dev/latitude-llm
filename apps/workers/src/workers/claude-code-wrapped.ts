@@ -119,14 +119,7 @@ export const createClaudeCodeWrappedWorker = ({
       const windowEnd = new Date(payload.windowEndIso)
 
       return runClaudeCodeWrappedUseCase({
-        renderEmail: ({ userName, report }) =>
-          claudeCodeWrappedTemplate({
-            userName,
-            projectName: report.project.name,
-            windowStart: report.window.start,
-            windowEnd: report.window.end,
-            totalSessions: report.totals.sessions,
-          }),
+        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report }),
         sendEmail: sendEmailUseCase,
       })({
         organizationId,

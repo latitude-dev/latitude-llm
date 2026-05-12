@@ -73,8 +73,7 @@ const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeS
       commits: 0,
       repos: 0,
     }),
-  getSessionDurationStats: () =>
-    Effect.succeed({ totalDurationMs: 0, longestDurationMs: 0, longestWorkspace: null }),
+  getSessionDurationStats: () => Effect.succeed({ totalDurationMs: 0, longestDurationMs: 0, longestWorkspace: null }),
   getToolMix: () => Effect.succeed([]),
   getTopFiles: () => Effect.succeed([]),
   getTopBashCommands: () => Effect.succeed([]),
@@ -98,9 +97,7 @@ const makeOrganization = (): Organization => ({
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
-const makeOrganizationRepository = (
-  organization: Organization,
-): (typeof OrganizationRepository)["Service"] => ({
+const makeOrganizationRepository = (organization: Organization): (typeof OrganizationRepository)["Service"] => ({
   findById: (id) =>
     id === organization.id
       ? Effect.succeed(organization)
