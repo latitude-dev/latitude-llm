@@ -2,9 +2,13 @@
 // since it pulls in per-org repositories that the browser bundle doesn't
 // need).
 export {
+  type AssembleReportInput,
+  assembleReport,
   type BashPatternRow,
   type BranchRow,
+  type BuildReportInput,
   type BusiestDayRow,
+  buildReportUseCase,
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,
   type ClaudeCodeWrappedEmailSender,
@@ -12,11 +16,6 @@ export {
   type FileLine,
   type FileTouchesRow,
   type HeatmapCellRow,
-  type AssembleReportInput,
-  assembleReport,
-  type BuildReportInput,
-  buildReportUseCase,
-  toolBucketFor,
   listProjectsWithClaudeCodeSpansUseCase,
   type OrgProjectPair,
   PERSONALITY_KINDS,
@@ -35,6 +34,7 @@ export {
   type ToolBucket,
   type ToolMix,
   type ToolMixRow,
+  toolBucketFor,
   type WindowInput,
   type WorkspaceDeepDive,
   type WorkspaceDeepDiveRow,

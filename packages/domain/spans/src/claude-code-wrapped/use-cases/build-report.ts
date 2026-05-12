@@ -77,8 +77,7 @@ const basename = (path: string): string => {
 const toFileLines = (rows: readonly FileTouchesRow[]): FileLine[] =>
   rows.map((row) => ({ path: row.path, displayName: basename(row.path), touches: row.touches }))
 
-const toEmptyHeatmap = (): Report["heatmap"] =>
-  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+const toEmptyHeatmap = (): Report["heatmap"] => Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
 
 /**
  * Fills a 7×24 zeroed matrix from sparse `(dayOfWeek, hourOfDay, uses)`
@@ -97,10 +96,7 @@ const fillHeatmap = (rows: readonly HeatmapCellRow[]): Report["heatmap"] => {
   return matrix
 }
 
-const buildDeepDive = (
-  workspace: WorkspaceRow,
-  row: WorkspaceDeepDiveRow,
-): WorkspaceDeepDive => ({
+const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): WorkspaceDeepDive => ({
   name: workspace.name,
   toolCalls: row.toolCalls,
   sessions: row.sessions,
@@ -168,9 +164,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
         }
       : null
 
-  const busiestDay = input.busiestDay
-    ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls }
-    : null
+  const busiestDay = input.busiestDay ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls } : null
 
   const mainCharacterFile = topFiles[0] ?? null
 

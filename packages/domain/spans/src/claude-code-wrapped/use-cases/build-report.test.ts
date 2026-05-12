@@ -2,7 +2,7 @@ import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { reportSchema } from "../entities/report.ts"
-import { assembleReport, type AssembleReportInput, toolBucketFor } from "./build-report.ts"
+import { type AssembleReportInput, assembleReport, toolBucketFor } from "./build-report.ts"
 
 const ORG_ID = OrganizationId("org-build".padEnd(24, "x").slice(0, 24))
 const PROJECT_ID = ProjectId("proj-build".padEnd(24, "x").slice(0, 24))
@@ -162,7 +162,13 @@ describe("assembleReport", () => {
       topWorkspaces: fiveWorkspaces,
       deepDives: fiveWorkspaces.slice(0, 3).map((workspace) => ({
         workspace,
-        row: { toolCalls: workspace.toolCalls, sessions: workspace.sessions, topFilePaths: [], topBranches: [], dominantTool: "Edit" },
+        row: {
+          toolCalls: workspace.toolCalls,
+          sessions: workspace.sessions,
+          topFilePaths: [],
+          topBranches: [],
+          dominantTool: "Edit",
+        },
       })),
     })
     expect(report.otherWorkspaceCount).toBe(2)

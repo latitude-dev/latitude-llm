@@ -1,6 +1,11 @@
 import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
 import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
-import { MembershipRepository, type MemberWithUser } from "@domain/organizations"
+import {
+  MembershipRepository,
+  type MemberWithUser,
+  type Organization,
+  OrganizationRepository,
+} from "@domain/organizations"
 import { createFakeMembershipRepository } from "@domain/organizations/testing"
 import { type Project, ProjectRepository } from "@domain/projects"
 import {
@@ -54,17 +59,56 @@ const makeProject = (): Project => ({
 const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeSpanReaderShape => ({
   listProjectsWithSpansInWindow: () => Effect.succeed([]),
   countSessionsForProjectInWindow: () => Effect.succeed(0),
-  getTotalsForProject: () => Effect.die("getTotalsForProject not used in run tests"),
-  getSessionDurationStats: () => Effect.die("getSessionDurationStats not used in run tests"),
-  getToolMix: () => Effect.die("getToolMix not used in run tests"),
-  getTopFiles: () => Effect.die("getTopFiles not used in run tests"),
-  getTopBashCommands: () => Effect.die("getTopBashCommands not used in run tests"),
-  getTopWorkspaces: () => Effect.die("getTopWorkspaces not used in run tests"),
-  getTopBranches: () => Effect.die("getTopBranches not used in run tests"),
-  getWorkspaceDeepDive: () => Effect.die("getWorkspaceDeepDive not used in run tests"),
-  getHeatmap: () => Effect.die("getHeatmap not used in run tests"),
-  getBusiestDay: () => Effect.die("getBusiestDay not used in run tests"),
+  // The Wrapped build path exercises all of these on the happy path. They
+  // return empty / zeroed defaults so the resulting Report is schema-valid
+  // but doesn't drive any specific assertion.
+  getTotalsForProject: () =>
+    Effect.succeed({
+      sessions: 0,
+      toolCalls: 0,
+      filesTouched: 0,
+      commandsRun: 0,
+      workspaces: 0,
+      branches: 0,
+      commits: 0,
+      repos: 0,
+    }),
+  getSessionDurationStats: () =>
+    Effect.succeed({ totalDurationMs: 0, longestDurationMs: 0, longestWorkspace: null }),
+  getToolMix: () => Effect.succeed([]),
+  getTopFiles: () => Effect.succeed([]),
+  getTopBashCommands: () => Effect.succeed([]),
+  getTopWorkspaces: () => Effect.succeed([]),
+  getTopBranches: () => Effect.succeed([]),
+  getWorkspaceDeepDive: () =>
+    Effect.succeed({ toolCalls: 0, sessions: 0, topFilePaths: [], topBranches: [], dominantTool: null }),
+  getHeatmap: () => Effect.succeed([]),
+  getBusiestDay: () => Effect.succeed(null),
   ...overrides,
+})
+
+const makeOrganization = (): Organization => ({
+  id: ORG_ID,
+  name: "Acme",
+  slug: "acme",
+  logo: null,
+  metadata: null,
+  settings: null,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+})
+
+const makeOrganizationRepository = (
+  organization: Organization,
+): (typeof OrganizationRepository)["Service"] => ({
+  findById: (id) =>
+    id === organization.id
+      ? Effect.succeed(organization)
+      : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+  listByUserId: () => Effect.die("listByUserId not used"),
+  save: () => Effect.die("save not used"),
+  delete: () => Effect.die("delete not used"),
+  countBySlug: () => Effect.die("countBySlug not used"),
 })
 
 const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Service"] => ({
@@ -82,7 +126,13 @@ const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Se
 
 interface TestHarness {
   readonly layer: Layer.Layer<
-    FeatureFlagRepository | ClaudeCodeSpanReader | ProjectRepository | MembershipRepository | SqlClient | ChSqlClient
+    | FeatureFlagRepository
+    | ClaudeCodeSpanReader
+    | ProjectRepository
+    | OrganizationRepository
+    | MembershipRepository
+    | SqlClient
+    | ChSqlClient
   >
   readonly sent: Array<{ to: string; subject: string; html: string; text: string }>
   readonly enableFlag: () => Promise<void>
@@ -98,6 +148,7 @@ const setupHarness = (options: {
     listMembersWithUser: () => Effect.succeed([...options.members]),
   })
   const projectRepo = makeProjectRepository(makeProject())
+  const organizationRepo = makeOrganizationRepository(makeOrganization())
   const reader = makeReader({
     countSessionsForProjectInWindow: () => Effect.succeed(options.sessions),
   })
@@ -114,6 +165,7 @@ const setupHarness = (options: {
     Layer.succeed(FeatureFlagRepository, fakeFlags.repository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ProjectRepository, projectRepo),
+    Layer.succeed(OrganizationRepository, organizationRepo),
     Layer.succeed(ClaudeCodeSpanReader, reader),
     Layer.succeed(SqlClient, sqlClient),
     Layer.succeed(ChSqlClient, chSqlClient),

@@ -11,6 +11,7 @@ import {
   AdminFeatureFlagRepositoryLive,
   FeatureFlagRepositoryLive,
   MembershipRepositoryLive,
+  OrganizationRepositoryLive,
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -146,7 +147,12 @@ export const createClaudeCodeWrappedWorker = ({
           Effect.sync(() => logger.error(`claude-code-wrapped runForProject ${projectId} failed`, error)),
         ),
         withPostgres(
-          Layer.mergeAll(FeatureFlagRepositoryLive, MembershipRepositoryLive, ProjectRepositoryLive),
+          Layer.mergeAll(
+            FeatureFlagRepositoryLive,
+            MembershipRepositoryLive,
+            OrganizationRepositoryLive,
+            ProjectRepositoryLive,
+          ),
           postgresClient,
           organizationId,
         ),
