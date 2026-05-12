@@ -27,7 +27,7 @@ export const FLAGGER_ANNOTATOR_MODEL = {
   temperature: 0.2,
 } as const
 
-export const FLAGGER_ANNOTATOR_MAX_TOKENS = 2048
+export const FLAGGER_ANNOTATOR_MAX_TOKENS = 4096
 
 export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,

@@ -117,7 +117,7 @@ describe("runFlaggerAnnotatorUseCase", () => {
     const generateCall = calls.generate[0]
     expect(generateCall.model).toBe("amazon.nova-2-lite-v1:0")
     expect(generateCall.temperature).toBe(0.2)
-    expect(generateCall.maxTokens).toBe(2048)
+    expect(generateCall.maxTokens).toBe(4096)
     expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
     expect(generateCall.system).toContain("messageIndex")
