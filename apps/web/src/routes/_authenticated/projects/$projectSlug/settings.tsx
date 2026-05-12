@@ -67,7 +67,6 @@ function ProjectSettingsPage() {
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
-  const [isSavingSensitivity, setIsSavingSensitivity] = useState(false)
   const sensitivityDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
   const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
@@ -173,31 +172,30 @@ function ProjectSettingsPage() {
     }
   }
 
-  const handleSensitivityChange = (value: number) => {
-    // Slider fires on every step; debounce so we don't flood the API with one
-    // update per tick. Pattern mirrors `handleProjectRename` above.
-    if (sensitivityDebounceRef.current) clearTimeout(sensitivityDebounceRef.current)
+  const handleSensitivityChange = useCallback(
+    (value: number) => {
+      // Slider fires on every step; debounce so we don't flood the API with one
+      // update per tick. Pattern mirrors `handleProjectRename` above.
+      if (sensitivityDebounceRef.current) clearTimeout(sensitivityDebounceRef.current)
 
-    sensitivityDebounceRef.current = setTimeout(() => {
-      setIsSavingSensitivity(true)
-      const transaction = updateProjectMutation(currentProject.id, {
-        settings: {
-          ...currentProject.settings,
-          alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
-        },
-      })
-      void transaction.isPersisted.promise
-        .then(() => {
-          toast({ description: "Escalation sensitivity updated" })
+      sensitivityDebounceRef.current = setTimeout(() => {
+        const transaction = updateProjectMutation(currentProject.id, {
+          settings: {
+            ...currentProject.settings,
+            alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
+          },
         })
-        .catch((error) => {
-          toast({ variant: "destructive", description: toUserMessage(error) })
-        })
-        .finally(() => {
-          setIsSavingSensitivity(false)
-        })
-    }, 400)
-  }
+        void transaction.isPersisted.promise
+          .then(() => {
+            toast({ description: "Escalation sensitivity updated" })
+          })
+          .catch((error) => {
+            toast({ variant: "destructive", description: toUserMessage(error) })
+          })
+      }, 400)
+    },
+    [currentProject.id, currentProject.settings, toast],
+  )
 
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
     if (savingAlertKind !== null) return
@@ -310,7 +308,6 @@ function ProjectSettingsPage() {
                       currentProject.settings.alertNotifications?.escalationSensitivity ??
                       DEFAULT_ESCALATION_SENSITIVITY_K
                     }
-                    isSaving={isSavingSensitivity}
                     onChange={handleSensitivityChange}
                   />
                 </>
@@ -348,13 +345,12 @@ function ProjectSettingsPage() {
 
 interface EscalationSensitivityControlProps {
   readonly value: number
-  readonly isSaving: boolean
   readonly onChange: (value: number) => void
 }
 
 // Local presentational state so dragging the slider feels responsive while
 // the actual save is debounced through the parent's `onChange`.
-function EscalationSensitivityControl({ value, isSaving, onChange }: EscalationSensitivityControlProps) {
+function EscalationSensitivityControl({ value, onChange }: EscalationSensitivityControlProps) {
   const [draft, setDraft] = useState(value)
 
   // Sync the local draft when `value` changes from outside (project data finishing
@@ -386,7 +382,6 @@ function EscalationSensitivityControl({ value, isSaving, onChange }: EscalationS
             setDraft(next)
             onChange(next)
           }}
-          disabled={isSaving}
           aria-label="Escalation sensitivity"
         />
         <Text.H5 weight="medium" className="w-8 text-right">
