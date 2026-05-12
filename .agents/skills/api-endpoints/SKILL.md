@@ -7,6 +7,15 @@ description: Adding or changing routes in `apps/api`. One source of truth (`defi
 
 **When to use:** Adding a new endpoint to `apps/api`, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
 
+## Before you start — mirror the web UI
+
+The MCP/API expansion ships full parity: every action and read available to a signed-in user in the web app gets an API endpoint. Before defining new routes for an entity, open its **`apps/web/src/domains/<entity>/<entity>.functions.ts`** and enumerate the exported server functions. Map each one to an API endpoint.
+
+- Server fn that imports `*UseCase` from a domain package → **reuse that use-case** in the API route handler.
+- Server fn that calls `getBetterAuth().api.*` (typical for invitation / org-membership flows) → **the domain use-case is missing**. Write it in the relevant `packages/domain/<pkg>` before the route. The API process can't call BA in-process; the new use-case is the shared seam both web and API consume going forward.
+
+The web's `.functions.ts` is the source of truth for what the entity can do. If you ship an API surface that's narrower, you've forced agents and SDK callers into a worse experience than humans get. If you ship one that's wider, you've designed past the UI's mental model — that's usually fine but worth flagging.
+
 ## What you're really doing
 
 Every endpoint in `apps/api` is **one declaration that fans out four ways**:

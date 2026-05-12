@@ -28,6 +28,10 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
 
     listMembersWithUser: () => Effect.succeed([]),
 
+    findByIdWithUser: (id) => Effect.fail(new NotFoundError({ entity: "Membership", id })),
+
+    findMemberByEmail: () => Effect.succeed(false),
+
     isMember: (organizationId, userId) =>
       Effect.succeed([...memberships.values()].some((m) => m.organizationId === organizationId && m.userId === userId)),
 

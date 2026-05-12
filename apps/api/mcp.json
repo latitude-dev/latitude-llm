@@ -472,6 +472,504 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "listMembers",
+      "title": "List members",
+      "description": "Returns every active member of the caller's organization with their role and user details.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "active",
+                      "description": "Discriminator for confirmed members — the user has accepted their invitation and joined the org."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Stable membership identifier. Use this to address the row in update/remove endpoints."
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "description": "Organization this membership belongs to."
+                    },
+                    "userId": {
+                      "type": "string",
+                      "description": "Identifier of the user the membership represents."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "owner",
+                        "admin",
+                        "member"
+                      ],
+                      "description": "Member's role within the organization."
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Display name of the user. `null` if the user hasn't completed onboarding."
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "User's email address, verified at signup."
+                    },
+                    "image": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "User's profile image URL, when set."
+                    },
+                    "joinedAt": {
+                      "type": "string",
+                      "description": "ISO-8601 timestamp at which the user joined the organization."
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "id",
+                    "organizationId",
+                    "userId",
+                    "role",
+                    "name",
+                    "email",
+                    "image",
+                    "joinedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "invited",
+                      "description": "Discriminator for pending invitations — the invitee hasn't accepted yet, so no user record exists."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Stable invitation identifier. Distinct from membership ids."
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "description": "Organization the invitation grants access to."
+                    },
+                    "userId": {
+                      "type": "null",
+                      "description": "Always `null` — no user record exists until the invitation is accepted."
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "member"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role the invitee will get once they accept. `null` means the default (`member`)."
+                    },
+                    "name": {
+                      "type": "null",
+                      "description": "Always `null` — no user record exists yet."
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "Email address the invitation was sent to."
+                    },
+                    "image": {
+                      "type": "null",
+                      "description": "Always `null` — no user record exists yet."
+                    },
+                    "invitedAt": {
+                      "type": "string",
+                      "description": "ISO-8601 timestamp at which the invitation was created."
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "description": "ISO-8601 timestamp at which the invitation expires."
+                    },
+                    "inviterId": {
+                      "type": "string",
+                      "description": "User id of the member who issued the invitation."
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "id",
+                    "organizationId",
+                    "userId",
+                    "role",
+                    "name",
+                    "email",
+                    "image",
+                    "invitedAt",
+                    "expiresAt",
+                    "inviterId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "members"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "inviteMember",
+      "title": "Invite a member",
+      "description": "Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Email address to invite. The invitee receives an accept link by email."
+          },
+          "role": {
+            "description": "Role to grant on acceptance. Defaults to `member` when omitted.",
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ]
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "invited",
+            "description": "Discriminator for pending invitations — the invitee hasn't accepted yet, so no user record exists."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable invitation identifier. Distinct from membership ids."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization the invitation grants access to."
+          },
+          "userId": {
+            "type": "null",
+            "description": "Always `null` — no user record exists until the invitation is accepted."
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "owner",
+                  "admin",
+                  "member"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Role the invitee will get once they accept. `null` means the default (`member`)."
+          },
+          "name": {
+            "type": "null",
+            "description": "Always `null` — no user record exists yet."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address the invitation was sent to."
+          },
+          "image": {
+            "type": "null",
+            "description": "Always `null` — no user record exists yet."
+          },
+          "invitedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the invitation was created."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the invitation expires."
+          },
+          "inviterId": {
+            "type": "string",
+            "description": "User id of the member who issued the invitation."
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "organizationId",
+          "userId",
+          "role",
+          "name",
+          "email",
+          "image",
+          "invitedAt",
+          "expiresAt",
+          "inviterId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getMember",
+      "title": "Get member",
+      "description": "Returns a single member of the caller's organization, including their role and user details.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resource ID"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "active",
+            "description": "Discriminator for confirmed members — the user has accepted their invitation and joined the org."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable membership identifier. Use this to address the row in update/remove endpoints."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization this membership belongs to."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Identifier of the user the membership represents."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ],
+            "description": "Member's role within the organization."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of the user. `null` if the user hasn't completed onboarding."
+          },
+          "email": {
+            "type": "string",
+            "description": "User's email address, verified at signup."
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User's profile image URL, when set."
+          },
+          "joinedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the user joined the organization."
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "organizationId",
+          "userId",
+          "role",
+          "name",
+          "email",
+          "image",
+          "joinedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateMember",
+      "title": "Update a member",
+      "description": "Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resource ID"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "description": "New role. Owners cannot be changed via this endpoint — owner-transfer happens on the web."
+          }
+        },
+        "required": [
+          "id",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "active",
+            "description": "Discriminator for confirmed members — the user has accepted their invitation and joined the org."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable membership identifier. Use this to address the row in update/remove endpoints."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization this membership belongs to."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Identifier of the user the membership represents."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ],
+            "description": "Member's role within the organization."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of the user. `null` if the user hasn't completed onboarding."
+          },
+          "email": {
+            "type": "string",
+            "description": "User's email address, verified at signup."
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User's profile image URL, when set."
+          },
+          "joinedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the user joined the organization."
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "organizationId",
+          "userId",
+          "role",
+          "name",
+          "email",
+          "image",
+          "joinedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "removeMember",
+      "title": "Remove a member",
+      "description": "Removes a member from the caller's organization. Self-removal is rejected — use the org-leave flow on the web. Requires OAuth authentication.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resource ID"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
     }
   ]
 }
