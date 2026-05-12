@@ -443,9 +443,6 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/db-weaviate':
-        specifier: workspace:*
-        version: link:../../packages/platform/db-weaviate
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
@@ -681,9 +678,6 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/db-weaviate':
-        specifier: workspace:*
-        version: link:../../packages/platform/db-weaviate
       '@platform/email-transport':
         specifier: workspace:*
         version: link:../../packages/platform/email-transport

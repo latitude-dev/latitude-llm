@@ -49,7 +49,6 @@
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/db-weaviate": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/latitude-api": "workspace:*",

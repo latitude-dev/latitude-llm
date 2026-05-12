@@ -5,7 +5,6 @@ import { Effect } from "effect"
 import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { normalizeEmbedding, updateIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface RemoveScoreFromIssueInput {
   readonly organizationId: string
@@ -97,13 +96,6 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
         return { action: "removed" } satisfies RemoveScoreFromIssueResult
       }),
     )
-
-    if (result.action === "removed") {
-      yield* syncIssueProjectionsUseCase({
-        organizationId: input.organizationId,
-        issueId,
-      })
-    }
 
     return result
   }).pipe(Effect.withSpan("issues.removeScoreFromIssue")) as Effect.Effect<

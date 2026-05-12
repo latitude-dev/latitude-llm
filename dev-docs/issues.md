@@ -25,8 +25,7 @@ The `packages/domain/issues` package is the **reference implementation** for how
 
 ## Storage Split
 
-- Postgres stores the issue row and lifecycle state.
-- Weaviate stores the searchable text projection and centroid vector.
+- Postgres stores the issue row, lifecycle state, the derived `centroid_embedding` pgvector, and the generated `search_document` tsvector used for hybrid search.
 - Postgres also stores the canonical score rows and issue assignment state that discovery mutates.
 - ClickHouse stores immutable score analytics rows plus issue trend analytics.
 
@@ -138,7 +137,7 @@ For explicit link actions:
 
 - while the annotation is still drafted, keep the selected issue only as editable draft intent
 - skip similarity-based candidate selection for that annotation score once the draft is published
-- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write when needed, and projection/analytics sync
+- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation (which transparently refreshes the derived `centroid_embedding` inside `IssueRepository.save`), refresh event write when needed, and analytics sync
 - treat the issue as annotation-backed evidence immediately after publication
 
 ## Discovery Pipeline
@@ -150,35 +149,31 @@ Issue discovery should follow the original proposal closely:
 3. let the deduped `issues:discovery` task recheck canonical eligibility and decide whether a selected issue or issue-linked evaluation should be assigned directly before any similarity search runs
 4. enrich annotation-originated feedback first when needed
 5. embed canonical feedback with `voyage-4-large` at `2048` dimensions
-6. run hybrid search in Weaviate using vector similarity plus BM25
-7. use `RelativeScore` fusion
-8. filter out candidates that do not pass the minimum similarity threshold across the hybrid search stage
-9. rerank candidates with `rerank-2.5`
-10. filter out candidates that do not pass the minimum rerank relevance threshold
-11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
-12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
-13. match an existing issue or create a new issue when the centralized gate did not already route to a known issue
-14. if the final selected candidate is stale, delete its projection object asynchronously
-15. write `scores.issue_id` in Postgres
-16. if the score was added to an existing issue, write `ScoreAssignedToIssue` transactionally so later issue-details regeneration can debounce safely
-17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
-18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `ScoreAssignedToIssue`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+6. run project-scoped hybrid search directly against Postgres issues using pgvector cosine relevance plus `english` full-text rank
+7. use the fixed weighted fusion (`0.75` vector, `0.25` lexical) and filter candidates below the `0.8` hybrid threshold
+8. rerank candidates with `rerank-2.5`
+9. filter out candidates that do not pass the minimum rerank relevance threshold
+10. match an existing canonical issue id or create a new issue when the centralized gate did not already route to a known issue
+11. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
+12. write `scores.issue_id` in Postgres
+13. if the score was added to an existing issue, write `ScoreAssignedToIssue` transactionally so later issue-details regeneration can debounce safely
+14. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+15. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `ScoreAssignedToIssue`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
 
 Execution rules:
 
 - `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
-- scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
+- scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay analytics sync idempotently
 - `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
 - when initial workflow retrieval resolves to no known issue, the workflow must call the bounded locked serialization activity instead of creating an issue directly
 - `issues:refresh` runs after the configured throttle window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
-- in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
+- in workflow orchestration, do feedback embedding first and then enter locked serialization; the search/rerank/create-or-assign decision runs under the Redis serialization gates
 - the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
 - the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
-- after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
-- after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
-- the no-match path is only provisional; before creating a new issue, serialization must first acquire a feedback-scoped Redis lock and re-run hybrid search, rerank, and Postgres candidate resolution
+- after `issues:refresh` persists changed details, no explicit search sync is required because Postgres derives `search_document` from canonical issue text
+- rerank results already carry canonical issue ids from Postgres search, so there is no projection UUID resolution step
+- the no-match path is only provisional; before creating a new issue, serialization must first acquire a feedback-scoped Redis lock and re-run hybrid search and rerank
 - if the feedback-scoped re-check still finds no issue, serialization must acquire the project-scoped Redis lock and re-run retrieval again before creating
 - each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
@@ -187,21 +182,20 @@ Execution rules:
 
 ### Bounded locked serialization
 
-Weaviate is a retrieval accelerator, not the write-side source of correctness. A newly created issue can be present in Postgres before its Weaviate projection is visible to another concurrent discovery workflow. Therefore a workflow-level no-match result is not sufficient authority to create a new issue.
+Postgres pgvector search is canonical, but concurrent workers can still both observe no sufficiently similar issue before either creates a new row. A fuzzy no-match result is therefore not sufficient authority to create a new issue.
 
-The no-match branch must enter `serializeIssueDiscoveryUseCase`, which uses layered Redis locks. A feedback-scoped lock serializes identical feedback strings from the same score source/source id, reducing deterministic-flagger herds before external retrieval work. A project-scoped lock serializes brand-new issue creation attempts for the project, so differently worded but semantically duplicate no-match workflows do not create concurrently while Weaviate projections catch up.
+The no-match branch must enter `assignOrCreateIssueUseCase`, which uses layered Redis locks. A feedback-scoped lock serializes identical feedback strings from the same score source/source id, reducing deterministic-flagger herds before external retrieval work. A project-scoped lock serializes brand-new issue creation attempts for the project, so differently worded but semantically duplicate no-match workflows do not create concurrently.
 
 Inside locked serialization must:
 
 1. re-fetch the score by id
 2. acquire the feedback-scoped Redis lock
-3. re-run hybrid issue search against Weaviate using the same canonical feedback and normalized embedding
-4. re-run rerank and resolve the selected issue UUID against Postgres
+3. re-run hybrid issue search against Postgres using the same canonical feedback and normalized embedding
+4. re-run rerank over canonical issue candidates
 5. assign the score to the matched issue if the locked re-check now finds one
-6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank/Postgres resolution check
+6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank check
 7. assign to the project-lock match if one is found
 8. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
-9. sync the issue projection before releasing the locks
 
 This intentionally moves the long external retrieval/rerank/generation section outside Postgres transactions. Lock acquisition must use Redis `SET ... NX EX`; if the key is already held, serialization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. Redis lock keys must be organization-prefixed (`org:${organizationId}:...`) and released with token comparison so one worker cannot release another worker's lock after TTL expiry.
 
@@ -211,7 +205,7 @@ The correctness invariant is:
 - contended workers retry instead of waiting on Postgres or holding database transactions
 - project-level brand-new issue creation is serialized by the Redis project lock
 - assignment to an existing issue remains row-safe through the issue row lock and conditional score ownership claim
-- Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows
+- fuzzy no-match races can still create duplicates unless brand-new issue creation is serialized by Redis locks
 
 Concrete v1 mechanics worth carrying forward:
 
@@ -262,7 +256,7 @@ The preserved math shape from v1 is:
 - normalize each incoming embedding before contributing it
 - add or subtract a weighted, time-decayed contribution from `base`
 - track the scalar accumulator in `mass`
-- normalize `base` only when emitting the vector for Weaviate/search
+- normalize `base` only when emitting the vector for search (the derived pgvector column is materialized inside `IssueRepository.save` from the JSONB centroid)
 
 Important v2 corrections:
 
@@ -271,7 +265,7 @@ Important v2 corrections:
 - remember that v1 weights were keyed by evaluation type, while v2 intentionally remaps them onto score sources
 - fail fast on embedding-dimension mismatches
 - if removal underflows, zero or rebuild the centroid instead of leaving an invalid negative state
-- centroid updates must not depend on Weaviate availability
+- centroid updates and derived `centroid_embedding` maintenance live entirely inside Postgres; there is no external vector store dependency on the write path
 
 Legacy v1 reference path for centroid math:
 
@@ -320,12 +314,15 @@ The actual cluster identity is driven by:
 - incoming occurrence stream
 - assignment history
 
-Required Postgres indexes on the issue row:
+Required Postgres storage on the issue row:
 
-- single-column unique constraint on `uuid` for Postgres/Weaviate linkage and hydration; Postgres backs it with a unique index
+- `uuid` column kept as dormant legacy data; it defaults to `gen_random_uuid()` at the DB level and is not part of the `Issue` domain entity or any application read/write path
+- nullable `centroid_embedding vector(2048)` derived from the canonical JSONB centroid; empty/no-evidence centroids store `NULL`
+- generated `search_document` using the `english` text-search configuration over weighted `name` (`A`) and `description` (`B`)
 - btree on `(organization_id, project_id, ignored_at, resolved_at, created_at)` for project-scoped lifecycle filtering and management actions
-- do not add Postgres text-search indexes on `name` or `description`; issue search lives in Weaviate
-- do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by the Weaviate projection and centroid updates are driven by explicit ownership events
+- GIN index on `search_document` for lexical boost in hybrid search
+- no IVFFlat/HNSW index on `centroid_embedding`: issues per project are expected in the hundreds to low thousands, and an exact project-scoped sequential scan outperforms an approximate index at that scale
+- do not add JSONB indexes on `centroid`; centroid search is served by derived pgvector state maintained by `IssueRepository.save`
 
 Names/descriptions are generated from occurrences and refreshed on debounce.
 
@@ -337,7 +334,7 @@ They may use:
 
 But they must stay generic enough to represent the shared failure mode rather than the exact background details of one conversation.
 
-This matters because discovery combines semantic similarity and BM25:
+This matters because discovery combines semantic pgvector similarity and full-text lexical boost:
 
 - issue text should help scores with different wording or different surrounding details still converge on the same problem
 - titles/descriptions should capture the underlying failure pattern, not memorize incidental facts from one example
@@ -359,31 +356,16 @@ Once an issue-linked evaluation exists:
 - errored monitor scores stay out of discovery entirely because `errored = true` makes them ineligible
 - they can move a resolved issue into `regressed`
 
-## Weaviate Projection
+## Historical Weaviate Projection (deprecated)
 
-The `Issues` collection stores:
+> **Status:** removed. Issue hybrid search now runs entirely against canonical Postgres rows via pgvector + tsvector. The legacy Weaviate `Issues` collection configuration is preserved below as a historical reference for the proposal-driven BM25/vector tuning that informed the v2 thresholds. Do not wire it up.
 
-- `title`
-- `description`
-- self-provided centroid vector generated from clustered score feedback embeddings
-
-Requirements:
-
-- tenant scope `${organizationId}:${projectId}`
-- cosine distance
-- trigram tokenization for title
-- word tokenization for description
-- BM25 tuned for short texts
-- self-provided vectors with auto-vectorization disabled
-- tenant existence must be ensured before read/search paths
-- empty issues should not get a searchable vector projection before real evidence lands
-
-Exact v1 configuration that informs this design:
+Previous v1 shape, for context:
 
 - BM25 used `b = 0.35` and `k1 = 1.1`
 - the vector index used a self-provided dynamic index with cosine distance and threshold `10_000`
-- v1 tenant scope was document-scoped; v2 is intentionally changing that to project scope
-- v1 used Weaviate mainly for discovery and merge lookup, while user-facing issue search still used Postgres title search; v2 intentionally upgrades the product search surface to hybrid search in Weaviate
+- v1 tenant scope was document-scoped; v2 first moved to project scope inside Weaviate, then migrated off Weaviate entirely
+- v1 used Weaviate mainly for discovery and merge lookup, while user-facing issue search still used Postgres title search; the v2 product search surface upgraded to hybrid search (initially in Weaviate, now in Postgres)
 
 Exact legacy v1 reference collection configuration code to preserve, but adapt for v2:
 
@@ -457,9 +439,7 @@ export async function getIssuesCollection({ tenantName }: { tenantName: string }
 }
 ```
 
-This code is preserved verbatim as a v1 reference. Do not copy it blindly into v2 without also applying the intentional v2 changes documented here, especially the project-scoped tenant name and UUID-backed Postgres/Weaviate linkage.
-
-Weaviate object ids are UUID-based, so the issue row should store a dedicated `uuid` used as the object id for the Weaviate projection and to link the Postgres issue row with the issue object living in Weaviate.
+This code is preserved verbatim as a historical v1 reference. Do not copy it into the current issue search path: canonical issue search now runs against Postgres pgvector and full-text search, and the `uuid` column remains only as backwards-compatible data populated by a DB-level `gen_random_uuid()` default (no app code reads or writes it).
 
 ## Product Surface
 
@@ -483,9 +463,8 @@ Action-row behavior:
 Read orchestration:
 
 - ClickHouse owns score-backed time-range filtering, occurrence analytics, and issue trend metrics
-- Weaviate owns hybrid search and similarity scores
-- Postgres owns canonical issue rows, lifecycle grouping, and linked evaluation hydration
-- issue-page reads query ClickHouse first, run Weaviate only when search text is present, and then hydrate canonical Postgres issues through `IN (...)` issue-id / issue-uuid clauses
+- Postgres owns canonical issue rows, lifecycle grouping, hybrid search + similarity scoring (pgvector + tsvector), and linked evaluation hydration
+- issue-page reads query ClickHouse first, run `IssueRepository.hybridSearch` only when search text is present, and then hydrate canonical issues through `IN (...)` issue-id clauses
 
 Analytics panel behavior:
 

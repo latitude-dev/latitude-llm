@@ -30,16 +30,9 @@ import {
   SettingsReaderLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { IssueProjectionRepositoryLive, type WeaviateClient, withWeaviate } from "@platform/db-weaviate"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import {
-  getAdminPostgresClient,
-  getClickhouseClient,
-  getPostgresClient,
-  getRedisClient,
-  getWeaviateClient,
-} from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("issues")
 
@@ -55,7 +48,6 @@ interface IssuesDeps {
    */
   adminPostgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
-  weaviateClient?: WeaviateClient
   redisClient?: RedisClient
 }
 
@@ -66,13 +58,11 @@ export const createIssuesWorker = async ({
   postgresClient,
   adminPostgresClient,
   clickhouseClient,
-  weaviateClient,
   redisClient,
 }: IssuesDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
   const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
-  const wvClient = weaviateClient ?? (await getWeaviateClient())
   const rdClient = redisClient ?? getRedisClient()
 
   consumer.subscribe("issues", {
@@ -94,7 +84,6 @@ export const createIssuesWorker = async ({
           OrganizationId(payload.organizationId),
         ),
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
-        withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         withTracing,
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
@@ -107,14 +96,11 @@ export const createIssuesWorker = async ({
           pgClient,
           OrganizationId(payload.organizationId),
         ),
-        withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIGenerateLive, rdClient),
         withTracing,
         Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         Effect.tap(() =>
-          Effect.sync(() =>
-            logger.info(`Refreshed issue details and projection for ${payload.projectId}/${payload.issueId}`),
-          ),
+          Effect.sync(() => logger.info(`Refreshed issue details for ${payload.projectId}/${payload.issueId}`)),
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Issue refresh failed for ${payload.projectId}/${payload.issueId}`, error)),
@@ -187,7 +173,6 @@ export const createIssuesWorker = async ({
         createdAt: new Date(payload.createdAt),
       }).pipe(
         withPostgres(IssueRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
-        withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         withTracing,
         Effect.tap((result) =>

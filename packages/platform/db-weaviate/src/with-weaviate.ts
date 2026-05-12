@@ -10,7 +10,7 @@ import { WvQueryClientLive } from "./wv-query-client.ts"
  * @example
  * ```ts
  * effect.pipe(
- *   withWeaviate(IssueProjectionRepositoryLive, client, orgId),
+ *   withWeaviate(SomeWeaviateRepositoryLive, client, orgId),
  * )
  * ```
  */

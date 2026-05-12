@@ -1,7 +1,7 @@
 import { buildDatasetExportUseCase } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import type { ExportPayload } from "@domain/exports"
-import { buildIssuesExportUseCase, embedIssueSearchQueryUseCase, IssueProjectionRepository } from "@domain/issues"
+import { buildIssuesExportUseCase, embedIssueSearchQueryUseCase } from "@domain/issues"
 import type { QueueConsumer } from "@domain/queue"
 import {
   DatasetId,
@@ -30,13 +30,12 @@ import {
   type PostgresClient,
   withPostgres,
 } from "@platform/db-postgres"
-import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { strToU8, zip } from "fflate"
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 class ExportError extends Data.TaggedError("ExportError")<{
   readonly cause: unknown
@@ -45,14 +44,6 @@ class ExportError extends Data.TaggedError("ExportError")<{
 
 const logger = createLogger("exports")
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
-
-const withEmptyIssueProjection = Effect.provide(
-  Layer.succeed(IssueProjectionRepository, {
-    upsert: () => Effect.void,
-    delete: () => Effect.void,
-    hybridSearch: () => Effect.succeed([]),
-  }),
-)
 
 interface ExportsWorkerDeps {
   consumer: QueueConsumer
@@ -174,7 +165,6 @@ function generateIssuesExport(
     return buildIssuesExportUseCase(baseEffectInput).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
-      withEmptyIssueProjection,
     )
   }
 
@@ -184,11 +174,6 @@ function generateIssuesExport(
       projectId,
       query: trimmedSearchQuery,
     }).pipe(withAi(AIEmbedLive, getRedisClient()))
-    const weaviateClient = yield* Effect.tryPromise({
-      try: () => getWeaviateClient(),
-      catch: (cause) => new ExportError({ cause, kind: "issues" }),
-    })
-
     return yield* buildIssuesExportUseCase({
       ...baseEffectInput,
       search: {
@@ -198,7 +183,6 @@ function generateIssuesExport(
     }).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
-      withWeaviate(IssueProjectionRepositoryLive, weaviateClient, organizationId),
     )
   })
 }

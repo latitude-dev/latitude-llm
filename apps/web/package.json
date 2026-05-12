@@ -45,7 +45,6 @@
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/db-weaviate": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/oauth-token-auth": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",

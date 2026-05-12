@@ -9,7 +9,6 @@ import {
   getEscalationOccurrenceThreshold,
   type Issue,
   type IssueListItem,
-  IssueProjectionRepository,
   IssueRepository,
   issueLifecycleCommandSchema,
   issuesLifecycleGroupSchema,
@@ -30,7 +29,6 @@ import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { EvaluationRepositoryLive, IssueRepositoryLive, SettingsReaderLive, withPostgres } from "@platform/db-postgres"
-import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -38,13 +36,7 @@ import { z } from "zod"
 import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import {
-  getClickhouseClient,
-  getPostgresClient,
-  getQueuePublisher,
-  getRedisClient,
-  getWeaviateClient,
-} from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
 import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
@@ -79,7 +71,6 @@ const toIssuesBucketRecord = (bucket: { readonly bucket: string; readonly count:
 
 const toIssueRecord = (issue: IssueListItem) => ({
   id: issue.id,
-  uuid: issue.uuid,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
@@ -127,7 +118,6 @@ const issueInputSchema = z.object({
 
 const toIssueSummaryRecord = (issue: Issue) => ({
   id: issue.id,
-  uuid: issue.uuid,
   projectId: issue.projectId,
   name: issue.name,
   description: issue.description,
@@ -210,7 +200,6 @@ const toIssueDetailRecord = (input: {
   readonly keepMonitoringDefault: boolean
 }) => ({
   id: input.issue.id,
-  uuid: input.issue.uuid,
   projectId: input.issue.projectId,
   name: input.issue.name,
   description: input.issue.description,
@@ -238,14 +227,6 @@ export type IssueDetailRecord = ReturnType<typeof toIssueDetailRecord>
 const toIssueTraceRecord = (trace: TraceDetail): TraceRecord => toTraceRecord(trace)
 
 export type IssueTraceRecord = TraceRecord
-
-const withEmptyIssueProjection = Effect.provide(
-  Layer.succeed(IssueProjectionRepository, {
-    upsert: () => Effect.void,
-    delete: () => Effect.void,
-    hybridSearch: () => Effect.succeed([]),
-  }),
-)
 
 const issueLifecycleActionInputSchema = z.object({
   projectId: z.string(),
@@ -279,9 +260,6 @@ export const listIssues = createServerFn({ method: "GET" })
     const redisClient = getRedisClient()
     const trimmedSearchQuery = data.searchQuery?.trim() || undefined
     const traceCountFilters = buildIssuesTraceCountFilters(data.timeRange)
-    const provideIssueProjection = trimmedSearchQuery
-      ? withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), orgId)
-      : withEmptyIssueProjection
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -331,7 +309,6 @@ export const listIssues = createServerFn({ method: "GET" })
       }).pipe(
         withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
-        provideIssueProjection,
         withAi(AIEmbedLive, redisClient),
         withTracing,
       ),
@@ -671,9 +648,6 @@ export const applyBulkIssueLifecycleAction = createServerFn({ method: "POST" })
     const chClient = getClickhouseClient()
     const redisClient = getRedisClient()
     const trimmedSearchQuery = data.searchQuery?.trim() || undefined
-    const provideIssueProjection = trimmedSearchQuery
-      ? withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), orgId)
-      : withEmptyIssueProjection
 
     const issueIds: string[] = []
 
@@ -735,7 +709,6 @@ export const applyBulkIssueLifecycleAction = createServerFn({ method: "POST" })
         }).pipe(
           withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
           withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
-          provideIssueProjection,
           withAi(AIEmbedLive, redisClient),
           withTracing,
         ),

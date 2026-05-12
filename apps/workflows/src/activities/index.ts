@@ -21,15 +21,11 @@ export {
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
 export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
 export {
+  assignOrCreateIssue,
   assignScoreToIssue,
   checkEligibility,
   createIssueFromScore,
   embedScoreFeedback,
-  hybridSearchIssues,
-  rerankIssueCandidates,
-  resolveMatchedIssue,
-  serializeIssueDiscovery,
-  syncIssueProjections,
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"

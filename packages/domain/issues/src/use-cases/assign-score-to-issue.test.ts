@@ -8,9 +8,8 @@ import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -55,7 +54,6 @@ const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore =>
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -113,10 +111,6 @@ describe("assignScoreToIssueUseCase", () => {
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -169,10 +163,6 @@ describe("assignScoreToIssueUseCase", () => {
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -208,10 +198,6 @@ describe("assignScoreToIssueUseCase", () => {
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -262,10 +248,6 @@ describe("assignScoreToIssueUseCase", () => {
         }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -299,10 +281,6 @@ describe("assignScoreToIssueUseCase", () => {
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
         Effect.match({
           onFailure: (error) => error,
           onSuccess: () => {
@@ -345,10 +323,6 @@ describe("assignScoreToIssueUseCase", () => {
           }),
           Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
           Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-          Effect.provideService(
-            IssueProjectionRepository,
-            createFakeIssueProjectionRepository({ organizationId }).service,
-          ),
         ),
       )
 
@@ -397,10 +371,6 @@ describe("assignScoreToIssueUseCase", () => {
           }),
           Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
           Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-          Effect.provideService(
-            IssueProjectionRepository,
-            createFakeIssueProjectionRepository({ organizationId }).service,
-          ),
         ),
       )
 
@@ -434,10 +404,6 @@ describe("assignScoreToIssueUseCase", () => {
           }),
           Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
           Effect.provideService(IssueDiscoveryLockRepository, passthroughLockRepository),
-          Effect.provideService(
-            IssueProjectionRepository,
-            createFakeIssueProjectionRepository({ organizationId }).service,
-          ),
         ),
       )
 

@@ -39,7 +39,6 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => {
   const name = overrides.name ?? "Secret leakage"
   return issueSchema.parse({
     id: issueId,
-    uuid: "11111111-1111-4111-8111-111111111111",
     slug: toSlug(name),
     name,
     description: "The agent exposes sensitive secrets.",
@@ -134,7 +133,6 @@ describe("IssueRepositoryLive", () => {
     const canonicalIssue = makeIssue()
     const otherIssue = makeIssue({
       id: otherIssueId,
-      uuid: "22222222-2222-4222-8222-222222222222",
       name: "Incorrect refusal",
       description: "The agent refuses valid requests.",
       projectId: otherProjectId as string,
@@ -185,12 +183,10 @@ describe("IssueRepositoryLive", () => {
     const firstIssue = makeIssue()
     const secondIssue = makeIssue({
       id: IssueId("k".repeat(24)),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
       name: "Second canonical issue",
     })
     const otherProjectIssue = makeIssue({
       id: IssueId("l".repeat(24)),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc",
       projectId: otherProjectId as string,
       name: "Other project issue",
     })
@@ -217,10 +213,26 @@ describe("IssueRepositoryLive", () => {
     expect(items.map((item) => item.id).sort()).toEqual([firstIssue.id, secondIssue.id].sort())
   })
 
+  it("runs hybrid search with pgvector score expressions when there are no matches", async () => {
+    const normalizedEmbedding = createIssueCentroid().base.map((_, index) => (index === 0 ? 1 : 0))
+
+    const items = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        return yield* repository.hybridSearch({
+          projectId,
+          query: "secret leakage",
+          normalizedEmbedding,
+        })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(items).toEqual([])
+  })
+
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       projectId: listTestProjectId,
       name: "Zebra ordering",
       createdAt: new Date("2026-03-30T08:00:00.000Z"),
@@ -229,7 +241,6 @@ describe("IssueRepositoryLive", () => {
     })
     const mid = makeIssue({
       id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       projectId: listTestProjectId,
       name: "Beta token mention",
       createdAt: new Date("2026-03-30T09:00:00.000Z"),
@@ -238,7 +249,6 @@ describe("IssueRepositoryLive", () => {
     })
     const newest = makeIssue({
       id: IssueId("cccccccccccccccccccccccc"),
-      uuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       projectId: listTestProjectId,
       name: "Most recent issue",
       createdAt: new Date("2026-03-30T11:00:00.000Z"),
@@ -247,7 +257,6 @@ describe("IssueRepositoryLive", () => {
     })
     const hiddenLowEvidence = makeIssue({
       id: IssueId("dddddddddddddddddddddddd"),
-      uuid: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       projectId: listTestProjectId,
       name: "Single weak occurrence",
       createdAt: new Date("2026-03-30T12:00:00.000Z"),
@@ -256,7 +265,6 @@ describe("IssueRepositoryLive", () => {
     })
     const wrongProject = makeIssue({
       id: IssueId("eeeeeeeeeeeeeeeeeeeeeeee"),
-      uuid: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
       projectId: otherProjectId,
       name: "Wrong project issue",
       createdAt: new Date("2026-03-30T13:00:00.000Z"),
@@ -471,7 +479,6 @@ describe("IssueRepositoryLive", () => {
       const escalatingIssue = makeIssue()
       const regressedIssue = makeIssue({
         id: otherIssueId,
-        uuid: "22222222-2222-4222-8222-222222222222",
         name: "Incorrect refusal",
       })
 

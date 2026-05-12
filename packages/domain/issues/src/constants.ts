@@ -142,7 +142,7 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
 // Discovery thresholds (hybrid search)
 // ---------------------------------------------------------------------------
 
-/** Alpha for Weaviate hybrid search: 75% vector search, 25% keyword search */
+/** Alpha for Postgres pgvector + full-text hybrid search: 75% vector search, 25% keyword search */
 export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
 
 /** Minimum fused hybrid score to consider a candidate: 80% relevance after vector/BM25 fusion. */
@@ -154,6 +154,9 @@ export const ISSUE_DISCOVERY_SEARCH_CANDIDATES = 1000
 // ---------------------------------------------------------------------------
 // Discovery thresholds (rerank)
 // ---------------------------------------------------------------------------
+
+// TODO(issue-discovery-rerank): remove these constants with the temporary
+// third-party rerank stage once pgvector-only matching is calibrated.
 
 /** Maximum candidates sent into the reranking stage. */
 export const ISSUE_DISCOVERY_RERANK_CANDIDATES = 25
@@ -217,7 +220,7 @@ export const ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS = 300
 /**
  * TTL for the inner project-scoped serialization lock. Serializes brand-new
  * issue creation per project while a prior worker is still writing the
- * Postgres row and the Weaviate projection. Matches the activity timeout.
+ * Postgres issue row and derived search vector. Matches the activity timeout.
  */
 export const ISSUE_DISCOVERY_PROJECT_LOCK_TTL_SECONDS = 300
 
@@ -237,8 +240,8 @@ export const ISSUE_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${h
 
 /**
  * Per-issue serialization lock key. Wraps the assign-score-to-issue Postgres
- * transaction (centroid recompute) and the subsequent Weaviate projection
- * sync so concurrent writers to the same issue do not race on the projection.
+ * transaction (centroid recompute plus derived pgvector maintenance) so
+ * concurrent writers to the same issue do not race on centroid state.
  */
 export const ISSUE_UPDATE_LOCK_KEY = (issueId: string) => `issue:${issueId}`
 

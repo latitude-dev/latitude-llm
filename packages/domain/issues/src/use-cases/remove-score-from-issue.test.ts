@@ -5,9 +5,8 @@ import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid, updateIssueCentroid } from "../helpers.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
 import { removeScoreFromIssueUseCase } from "./remove-score-from-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -23,7 +22,6 @@ const makeEmbedding = (): number[] =>
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: issueId,
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -82,12 +80,10 @@ describe("removeScoreFromIssueUseCase", () => {
 
   it("returns issue-not-found when the issue does not exist", async () => {
     const { repository: issueRepository } = createFakeIssueRepository()
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding: makeEmbedding() }) })
 
     const layer = Layer.mergeAll(
       Layer.succeed(IssueRepository, issueRepository),
-      Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
@@ -107,7 +103,7 @@ describe("removeScoreFromIssueUseCase", () => {
     expect(result).toEqual({ action: "issue-not-found" })
   })
 
-  it("removes score contribution from issue centroid and syncs projection", async () => {
+  it("removes score contribution from issue centroid", async () => {
     const scoreCreatedAt = new Date("2026-03-30T10:00:00.000Z")
     const embedding = makeEmbedding()
 
@@ -130,15 +126,10 @@ describe("removeScoreFromIssueUseCase", () => {
     const { repository: issueRepository, issues } = createFakeIssueRepository()
     issues.set(issueWithCentroid.id, issueWithCentroid)
 
-    const { service: issueProjectionRepository, store: projectionStore } = createFakeIssueProjectionRepository({
-      organizationId,
-    })
-
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding }) })
 
     const layer = Layer.mergeAll(
       Layer.succeed(IssueRepository, issueRepository),
-      Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
@@ -162,11 +153,9 @@ describe("removeScoreFromIssueUseCase", () => {
 
     const updatedIssue = issues.get(issueId)
     expect(updatedIssue?.centroid.mass).toBe(0)
-
-    expect(projectionStore.size).toBe(0)
   })
 
-  it("updates projection with normalized centroid when mass remains positive", async () => {
+  it("keeps remaining centroid mass positive after removing one contribution", async () => {
     const scoreCreatedAt1 = new Date("2026-03-30T08:00:00.000Z")
     const scoreCreatedAt2 = new Date("2026-03-30T10:00:00.000Z")
     const embedding1 = makeEmbedding()
@@ -189,15 +178,10 @@ describe("removeScoreFromIssueUseCase", () => {
     const { repository: issueRepository, issues } = createFakeIssueRepository()
     issues.set(issueWithTwoScores.id, issueWithTwoScores)
 
-    const { service: issueProjectionRepository, store: projectionStore } = createFakeIssueProjectionRepository({
-      organizationId,
-    })
-
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding: embedding1 }) })
 
     const layer = Layer.mergeAll(
       Layer.succeed(IssueRepository, issueRepository),
-      Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
@@ -218,7 +202,5 @@ describe("removeScoreFromIssueUseCase", () => {
 
     const updatedIssue = issues.get(issueId)
     expect(updatedIssue?.centroid.mass).toBeGreaterThan(0)
-
-    expect(projectionStore.size).toBe(1)
   })
 })

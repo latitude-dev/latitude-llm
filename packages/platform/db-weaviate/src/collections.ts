@@ -1,4 +1,8 @@
-import type { IssuesCollectionProperties } from "@domain/issues"
+type IssuesCollectionProperties = {
+  title: string
+  description: string
+}
+
 import type { WeaviateClient } from "weaviate-client"
 import { configure, dataType, tokenization, vectorDistances, vectors } from "weaviate-client"
 import { defineWeaviateCollections } from "./migrations.ts"

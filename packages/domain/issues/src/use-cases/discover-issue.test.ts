@@ -26,9 +26,8 @@ import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
 import { discoverIssueUseCase } from "./discover-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -73,7 +72,6 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -154,7 +152,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -173,7 +170,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -199,7 +195,6 @@ describe("discoverIssueUseCase", () => {
     expect(scores.get(score.id)?.issueId).toBeNull()
     expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(startedWorkflows).toEqual([
       {
@@ -224,7 +219,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -251,7 +245,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository((id) =>
@@ -274,7 +267,6 @@ describe("discoverIssueUseCase", () => {
       scoreId: ScoreId("tttttttttttttttttttttttt"),
     })
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(startedWorkflows).toEqual([
       {
@@ -296,7 +288,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository } = createFakeIssueRepository()
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -314,7 +305,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -333,7 +323,6 @@ describe("discoverIssueUseCase", () => {
       scoreId: score.id,
     })
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(startedWorkflows).toEqual([
       {
         workflow: "issueDiscoveryWorkflow",
@@ -357,7 +346,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -375,7 +363,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -396,7 +383,6 @@ describe("discoverIssueUseCase", () => {
     expect(scores.get(score.id)?.issueId).toBeNull()
     expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(startedWorkflows).toHaveLength(1)
   })
 
@@ -413,7 +399,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -438,7 +423,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository((id) =>
@@ -463,11 +447,10 @@ describe("discoverIssueUseCase", () => {
     expect(scores.get(score.id)?.issueId).toBeNull()
     expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(startedWorkflows).toHaveLength(1)
   })
 
-  it("replays analytics and projection syncs when the score was already assigned before retry", async () => {
+  it("replays analytics sync when the score was already assigned before retry", async () => {
     const existingIssue = makeIssue()
     const assignedScore = makeScore({
       issueId: existingIssue.id,
@@ -475,7 +458,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -492,7 +474,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -511,7 +492,6 @@ describe("discoverIssueUseCase", () => {
     })
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(inserted).toEqual([assignedScore.id])
-    expect(store.size).toBe(0)
     expect(startedWorkflows).toHaveLength(0)
   })
 
@@ -519,7 +499,6 @@ describe("discoverIssueUseCase", () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository } = createFakeIssueRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -539,7 +518,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -570,7 +548,6 @@ describe("discoverIssueUseCase", () => {
       existsById: () => Effect.succeed(true),
       insert: () => Effect.die("analytics insert should be skipped when the score is already synced"),
     })
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
     })
@@ -587,7 +564,6 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(
           EvaluationRepository,
           createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
@@ -606,7 +582,6 @@ describe("discoverIssueUseCase", () => {
     })
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(inserted).toHaveLength(0)
-    expect(store.size).toBe(0)
     expect(startedWorkflows).toHaveLength(0)
   })
 })

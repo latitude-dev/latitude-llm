@@ -9,16 +9,18 @@ import {
 } from "../constants.ts"
 import { type CheckEligibilityError, type IssueDiscoveryLockUnavailableError, isEligibilityError } from "../errors.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
+import { IssueRepository } from "../ports/issue-repository.ts"
 import type { AssignScoreToIssueError, AssignScoreToIssueResult } from "./assign-score-to-issue.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import type { CreateIssueFromScoreError, CreateIssueFromScoreResult } from "./create-issue-from-score.ts"
-import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
-import { hybridSearchIssuesUseCase } from "./hybrid-search-issues.ts"
+import {
+  type CreateIssueFromScoreError,
+  type CreateIssueFromScoreResult,
+  createIssueFromScoreUseCase,
+} from "./create-issue-from-score.ts"
 import { rerankIssueCandidatesUseCase } from "./rerank-issue-candidates.ts"
-import { resolveMatchedIssueUseCase } from "./resolve-matched-issue.ts"
 
-export interface SerializeIssueDiscoveryInput {
+export interface AssignOrCreateIssueInput {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
@@ -26,12 +28,12 @@ export interface SerializeIssueDiscoveryInput {
   readonly normalizedEmbedding: readonly number[]
 }
 
-export type SerializeIssueDiscoveryResult =
+export type AssignOrCreateIssueResult =
   | AssignScoreToIssueResult
   | CreateIssueFromScoreResult
   | { readonly action: "skipped"; readonly reason: string }
 
-export type SerializeIssueDiscoveryError =
+export type AssignOrCreateIssueError =
   | AssignScoreToIssueError
   | CacheError
   | CheckEligibilityError
@@ -40,7 +42,7 @@ export type SerializeIssueDiscoveryError =
   | IssueDiscoveryLockUnavailableError
   | RepositoryError
 
-const checkEligibility = (input: SerializeIssueDiscoveryInput) =>
+const checkEligibility = (input: AssignOrCreateIssueInput) =>
   checkEligibilityUseCase({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -50,30 +52,28 @@ const checkEligibility = (input: SerializeIssueDiscoveryInput) =>
     Effect.catchIf(isEligibilityError, (error) => Effect.succeed({ status: "skipped" as const, reason: error._tag })),
   )
 
-const findMatchedIssueId = (input: SerializeIssueDiscoveryInput) =>
+const findAssignedIssueId = (input: AssignOrCreateIssueInput) =>
   Effect.gen(function* () {
-    const hybridSearch = yield* hybridSearchIssuesUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
+    const issueRepository = yield* IssueRepository
+    const candidates = yield* issueRepository.hybridSearch({
+      projectId: ProjectId(input.projectId),
       query: input.feedback,
-      normalizedEmbedding: input.normalizedEmbedding as number[],
+      normalizedEmbedding: input.normalizedEmbedding,
     })
 
+    // TODO(issue-discovery-rerank): remove this third-party rerank step once we
+    // calibrate pgvector-only assignment thresholds/margins. The candidate set
+    // is small and already scored by the highest-quality embedding model, so
+    // Postgres hybrid search should become the sole matching decision source.
     const retrieval = yield* rerankIssueCandidatesUseCase({
       query: input.feedback,
-      candidates: hybridSearch.candidates,
+      candidates,
     })
 
-    const matchedIssue = yield* resolveMatchedIssueUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      matchedIssueUuid: retrieval.matchedIssueUuid,
-    })
-
-    return matchedIssue.issueId
+    return retrieval.matchedIssueId
   })
 
-const assignToIssue = (input: SerializeIssueDiscoveryInput, issueId: string) =>
+const assignToIssue = (input: AssignOrCreateIssueInput, issueId: string) =>
   assignScoreToIssueUseCase({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -82,7 +82,7 @@ const assignToIssue = (input: SerializeIssueDiscoveryInput, issueId: string) =>
     normalizedEmbedding: input.normalizedEmbedding,
   })
 
-const createIssue = (input: SerializeIssueDiscoveryInput) =>
+const createIssue = (input: AssignOrCreateIssueInput) =>
   createIssueFromScoreUseCase({
     organizationId: input.organizationId,
     projectId: input.projectId,
@@ -90,7 +90,7 @@ const createIssue = (input: SerializeIssueDiscoveryInput) =>
     normalizedEmbedding: input.normalizedEmbedding,
   })
 
-export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInput) =>
+export const assignOrCreateIssueUseCase = (input: AssignOrCreateIssueInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
@@ -106,9 +106,9 @@ export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInp
         ttlSeconds: ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
       },
       Effect.gen(function* () {
-        const feedbackMatchedIssueId = yield* findMatchedIssueId(input)
-        if (feedbackMatchedIssueId !== null) {
-          return yield* assignToIssue(input, feedbackMatchedIssueId)
+        const feedbackAssignedIssueId = yield* findAssignedIssueId(input)
+        if (feedbackAssignedIssueId !== null) {
+          return yield* assignToIssue(input, feedbackAssignedIssueId)
         }
 
         return yield* lockRepository.withLock(
@@ -124,9 +124,9 @@ export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInp
               return { action: "skipped" as const, reason: eligibility.reason }
             }
 
-            const projectMatchedIssueId = yield* findMatchedIssueId(input)
-            if (projectMatchedIssueId !== null) {
-              return yield* assignToIssue(input, projectMatchedIssueId)
+            const projectAssignedIssueId = yield* findAssignedIssueId(input)
+            if (projectAssignedIssueId !== null) {
+              return yield* assignToIssue(input, projectAssignedIssueId)
             }
 
             return yield* createIssue(input)
@@ -134,4 +134,4 @@ export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInp
         )
       }),
     )
-  }).pipe(Effect.withSpan("issues.serializeIssueDiscovery"))
+  }).pipe(Effect.withSpan("issues.assignOrCreateIssue"))

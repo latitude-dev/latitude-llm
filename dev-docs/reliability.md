@@ -20,7 +20,7 @@ The docs should remain precise enough to stand on their own after the spec is de
 
 1. Canonical mutable score rows live in Postgres from day one.
 2. ClickHouse stores only immutable score analytics rows used for analytics.
-3. Issue search and clustering projection live in Weaviate.
+3. Issue hybrid search runs against canonical Postgres rows using pgvector cosine similarity and a generated `search_document` tsvector; there is no external search projection.
 4. Evaluation artifacts are stored as scripts from day one, even before the full portable runtime exists.
 5. The Latitude reliability platform should be equally accessible to humans through the web app UI and to other LLM Agents through MCP/API.
 6. Build reliability in `apps/web` first when that improves iteration speed, but design schemas/use-cases and public capabilities so the product does not dead-end into UI-only flows.
@@ -50,9 +50,8 @@ For UI/product-surface work, old v1 components and patterns should also be treat
 
 | Store      | Responsibility                                                                                                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Postgres   | canonical `scores`, `evaluations`, `issues`, `annotation_queues`, `simulations`, and embedded settings on `organization`, `projects`, and `user` |
+| Postgres   | canonical `scores`, `evaluations`, `issues` (including the derived `centroid_embedding` pgvector and generated `search_document` tsvector used for hybrid search), `annotation_queues`, `simulations`, and embedded settings on `organization`, `projects`, and `user` |
 | ClickHouse | immutable score analytics rows, score rollups, and score-aware span/trace/session analytics                                                         |
-| Weaviate   | issue title/description projection plus centroid vector for discovery/search                                                                     |
 
 ## Postgres Indexing
 
@@ -63,7 +62,7 @@ Rules:
 - start from real query shapes: tenant scope first, then lifecycle/filter columns, then the dominant sort column
 - define the needed secondary indexes in the relevant domain foundation phase together with the table definitions
 - express those indexes directly in the Drizzle table model definitions, not only as surrounding prose; single-column `.unique()` constraints may stay inline on the column when that is the clearest shape
-- do not add speculative JSONB, array, or text-search indexes when those queries are already served by owner-row primary keys, Weaviate, or ClickHouse
+- do not add speculative JSONB, array, or text-search indexes when those queries are already served by owner-row primary keys, the issues `search_document` GIN index, or ClickHouse
 
 ## System Loop
 
@@ -112,7 +111,6 @@ The first phase that needs each external provider capability introduces it as a 
 
 - `@platform/ai-vercel` for calling LLMs
 - `@platform/ai-voyage` for embeddings and reranking
-- `@platform/db-weaviate` for issue projection storage/search
 
 The canonical cross-domain `AI.generate` feature catalog (purpose, telemetry tags, and call sites) lives in `./ai-generation-features.md`.
 
@@ -226,16 +224,15 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 - issue name/description regeneration for existing issues runs through the throttled `issues:refresh` task keyed by the canonical issue id (at most once per 8h per issue; first publish wins)
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
-- the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
-- v2 keeps the v1 storage split of Postgres state plus Weaviate projection, but upgrades tenancy and product search behavior intentionally
-- in the `issue-discovery` workflow, keep retrieval as explicit sequential activities: feedback embedding/normalization, hybrid Weaviate search, then reranking
+- issue search uses canonical Postgres issue rows: `centroid_embedding vector(2048)` for exact cosine relevance plus generated full-text `search_document` for a bounded lexical boost, then Voyage reranking
+- in the `issue-discovery` workflow, feedback embedding/normalization runs first and the search/rerank/create-or-assign decision runs inside locked serialization
 - the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues from the last `25` assigned occurrences plus the current details as the stabilization baseline
-- after rerank picks a candidate, the workflow resolves that matched issue against canonical Postgres state before deciding between the separate create-from-score and assign-to-issue activities
-- the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, persist the canonical issue row and centroid update, then the workflow runs direct `syncIssueProjectionsUseCase` and `syncScoreAnalyticsUseCase` activities after commit; only assignments into an existing issue write `ScoreAssignedToIssue` transactionally for later debounced issue-details regeneration
-- the `issues:refresh` worker must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update, and it reruns `syncIssueProjectionsUseCase` only when the persisted name/description actually changed
+- rerank candidates carry canonical issue ids from Postgres search, so no projection UUID resolution step is needed before assignment
+- the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, and persist the canonical issue row, centroid update, and derived pgvector state; after commit the workflow runs direct `syncScoreAnalyticsUseCase` so immutable scores reach ClickHouse; only assignments into an existing issue write `ScoreAssignedToIssue` transactionally for later debounced issue-details regeneration
+- the `issues:refresh` worker must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update; the generated `search_document` updates from canonical text without a separate projection sync
 - existing-issue assignment must lock the canonical issue row before recomputing and saving centroid state so concurrent discovery workflows targeting the same issue serialize their centroid updates instead of losing one occurrence
 - resolved and ignored issues remain valid match targets in discovery; lifecycle semantics are handled after assignment (including regression and ignored ownership behavior), not by pre-filtering them out of retrieval
-- after rerank selects a best candidate, verify the selected issue row still exists in Postgres for the same organization/project before assignment; if missing, treat as no-match and create a new issue
+- fuzzy no-match races are still guarded by feedback-scoped and project-scoped Redis locks because a worker cannot row-lock a similar issue that does not exist yet
 
 ### Evaluation alignment
 
