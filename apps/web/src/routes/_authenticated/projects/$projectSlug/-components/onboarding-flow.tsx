@@ -413,6 +413,7 @@ export function OnboardingFlow({
   const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
+  const [customJobTitle, setCustomJobTitle] = useState("")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
@@ -537,7 +538,7 @@ export function OnboardingFlow({
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
-      <div className="flex h-full min-h-0 w-1/2 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-r border-border px-24 pt-24 pb-32 [scrollbar-gutter:stable]">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
           <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
             <div className="flex w-full flex-col gap-8">
@@ -571,6 +572,17 @@ export function OnboardingFlow({
                   )
                 })}
               </div>
+              {role === "other" && (
+                <input
+                  type="text"
+                  aria-label="Custom job title"
+                  placeholder="What's your role?"
+                  value={customJobTitle}
+                  onChange={(e) => setCustomJobTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  maxLength={256}
+                />
+              )}
               <div>
                 <Button onClick={() => setStep("stack")}>Next</Button>
               </div>
@@ -631,12 +643,16 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={stackChoice === null || isSubmittingOnboarding}
+                  disabled={
+                    stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())
+                  }
                   onClick={async () => {
                     if (stackChoice === null || isSubmittingOnboarding) return
                     setIsSubmittingOnboarding(true)
                     try {
-                      await submitOnboarding({ data: { jobTitle: role, stackChoice } })
+                      const onboardingData =
+                        role === "other" ? { customJobTitle, stackChoice } : { jobTitle: role, stackChoice }
+                      await submitOnboarding({ data: onboardingData })
                       setStep("telemetry")
                     } catch (error) {
                       toast({ variant: "destructive", description: toUserMessage(error) })
@@ -883,7 +899,7 @@ export function OnboardingFlow({
         )}
       </div>
 
-      <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
+      <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24 [scrollbar-gutter:stable]">
           {step === "role" ? (
             <div className="flex h-fit w-full flex-col items-center gap-4">

@@ -6,8 +6,17 @@ import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { runTraceSearchRefresh } from "../workers/trace-search.ts"
 
+const TRACE_SEARCH_BACKFILL_LOOKBACK_DAYS = 14
+
+function toClickHouseDateTime64String(date: Date): string {
+  return date.toISOString().replace("T", " ").replace("Z", "")
+}
+
 const USAGE = `
 Usage: pnpm --filter @app/workers trace-search:backfill [options]
+
+Defaults:
+  - Only traces from the last ${TRACE_SEARCH_BACKFILL_LOOKBACK_DAYS} days are backfilled
 
 Options:
   --organization-id <id>   Restrict backfill to one organization
@@ -40,8 +49,11 @@ function buildTraceQuery(filters: {
   readonly projectId?: string
   readonly limit?: number
 }): { readonly query: string; readonly params: Record<string, unknown> } {
-  const clauses = ["1 = 1"]
-  const params: Record<string, unknown> = {}
+  const since = new Date(Date.now() - TRACE_SEARCH_BACKFILL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+  const clauses = ["1 = 1", "min_start_time >= toDateTime64({since:String}, 3, 'UTC')"]
+  const params: Record<string, unknown> = {
+    since: toClickHouseDateTime64String(since),
+  }
 
   if (filters.organizationId) {
     clauses.push("organization_id = {organizationId:String}")

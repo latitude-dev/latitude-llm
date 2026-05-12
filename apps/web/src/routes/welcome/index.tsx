@@ -1,4 +1,4 @@
-import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
+import { Button, cn, Icon, initialsFromDisplayName, LatitudeLogo, Text, useHashColor } from "@repo/ui"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -18,7 +18,7 @@ function OrgAvatar({ name }: { name: string }) {
       className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
       style={style}
     >
-      {name.charAt(0).toUpperCase()}
+      {initialsFromDisplayName(name)}
     </div>
   )
 }

@@ -17,7 +17,7 @@
  * redirects to `/login` with the consent URL as the post-login `redirect`
  * search param so the flow resumes after sign-in.
  */
-import { Button, cn, LatitudeLogo, Text, useHashColor, useToast } from "@repo/ui"
+import { Button, cn, initialsFromDisplayName, LatitudeLogo, Text, useHashColor, useToast } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 import { useState } from "react"
@@ -25,6 +25,8 @@ import { z } from "zod"
 import { decideOAuthConsent, getOAuthConsentRequest } from "../../domains/oauth/oauth-consent.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+
+type ResultPhase = { kind: "authorized"; organizationName: string } | { kind: "denied" }
 
 const consentSearchSchema = z.object({
   consent_code: z.string().min(1),
@@ -65,7 +67,7 @@ function OrgAvatar({ name }: { name: string }) {
       className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
       style={style}
     >
-      {name.charAt(0).toUpperCase()}
+      {initialsFromDisplayName(name)}
     </div>
   )
 }
@@ -74,6 +76,7 @@ function OAuthConsentPage() {
   const { consent_code } = Route.useSearch()
   const { consent } = Route.useLoaderData()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [result, setResult] = useState<ResultPhase | null>(null)
   const { toast } = useToast()
 
   const clientName = consent.client.name ?? "An OAuth client"
@@ -91,10 +94,10 @@ function OAuthConsentPage() {
           organizationId,
         },
       })
-      // Full navigation (BA's redirect URL is the OAuth client's `redirect_uri`,
-      // a different origin in prod) — and `replace` so the consent page is gone
-      // from history. If the user clicks "back" from the OAuth client app they
-      // should leave the flow, not land on a stale consent screen.
+      const organizationName =
+        consent.organizations.find((org: { id: string; name: string }) => org.id === organizationId)?.name ??
+        "your organization"
+      setResult({ kind: "authorized", organizationName })
       window.location.replace(redirectUrl)
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
@@ -109,8 +112,7 @@ function OAuthConsentPage() {
       const { redirectUrl } = await decideOAuthConsent({
         data: { accept: false, consentCode: consent_code },
       })
-      // Same `replace` rationale as the authorize path — browser-back should
-      // not land on the now-dead consent page.
+      setResult({ kind: "denied" })
       window.location.replace(redirectUrl)
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
@@ -124,60 +126,97 @@ function OAuthConsentPage() {
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />
           <div className="flex flex-col items-center justify-center gap-y-2">
-            <Text.H3 align="center">Authorize access</Text.H3>
-            <Text.H5 color="foregroundMuted" align="center">
-              {clientName} wants to act on your behalf
-            </Text.H5>
+            {result === null ? (
+              <>
+                <Text.H3 align="center">Authorize access</Text.H3>
+                <Text.H5 color="foregroundMuted" align="center">
+                  {clientName} wants to act on your behalf
+                </Text.H5>
+              </>
+            ) : result.kind === "authorized" ? (
+              <>
+                <Text.H3 align="center">Access granted</Text.H3>
+                <Text.H5 color="foregroundMuted" align="center">
+                  {clientName} has been granted access
+                </Text.H5>
+              </>
+            ) : (
+              <>
+                <Text.H3 align="center">Access denied</Text.H3>
+                <Text.H5 color="foregroundMuted" align="center">
+                  {clientName} has been denied access
+                </Text.H5>
+              </>
+            )}
           </div>
         </div>
 
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
           <Text.H5 color="foregroundMuted">
-            <Text.H5 weight="medium">{clientName}</Text.H5> will act on your behalf and have full access to the
-            organization you choose below. You can revoke this access at any time from your organization's{" "}
-            <Text.H5 weight="medium">OAuth Keys</Text.H5> settings.
+            {result === null ? (
+              <>
+                <Text.H5 weight="medium">{clientName}</Text.H5> will act on your behalf and have full access to the
+                organization you choose below. You can revoke this access at any time from your organization's{" "}
+                <Text.H5 weight="medium">OAuth Keys</Text.H5> settings.
+              </>
+            ) : result.kind === "authorized" ? (
+              <>
+                <Text.H5 weight="medium">{clientName}</Text.H5> has been authorized to access{" "}
+                <Text.H5 weight="medium">{result.organizationName}</Text.H5>. You can close this page and return to{" "}
+                <Text.H5 weight="medium">{clientName}</Text.H5>.
+              </>
+            ) : (
+              <>
+                <Text.H5 weight="medium">{clientName}</Text.H5> has been denied access. You can close this page and
+                return to <Text.H5 weight="medium">{clientName}</Text.H5>.
+              </>
+            )}
           </Text.H5>
 
-          {noOrgs ? (
-            <Text.H5 color="destructive">
-              You don't belong to any organization yet. Create one before authorizing this client.
-            </Text.H5>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Text.H5 weight="medium">Choose an organization</Text.H5>
-              <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
-                {consent.organizations.map((org: { id: string; name: string }, index: number) => (
-                  <button
-                    key={org.id}
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => authorizeForOrg(org.id)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 bg-background hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer",
-                      index > 0 && "border-t border-border",
-                    )}
-                  >
-                    <OrgAvatar name={org.name} />
-                    <Text.H5 weight="medium" className="flex-1 text-left">
-                      {org.name}
-                    </Text.H5>
-                    <Text.H5 color="foregroundMuted">Authorize</Text.H5>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {result === null && (
+            <>
+              {noOrgs ? (
+                <Text.H5 color="destructive">
+                  You don't belong to any organization yet. Create one before authorizing this client.
+                </Text.H5>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Text.H5 weight="medium">Choose an organization</Text.H5>
+                  <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
+                    {consent.organizations.map((org: { id: string; name: string }, index: number) => (
+                      <button
+                        key={org.id}
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => authorizeForOrg(org.id)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 bg-background hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer",
+                          index > 0 && "border-t border-border",
+                        )}
+                      >
+                        <OrgAvatar name={org.name} />
+                        <Text.H5 weight="medium" className="flex-1 text-left">
+                          {org.name}
+                        </Text.H5>
+                        <Text.H5 color="foregroundMuted">Authorize</Text.H5>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <Button
-            variant="ghost"
-            type="button"
-            disabled={isSubmitting}
-            onClick={deny}
-            className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
-          >
-            Deny
-          </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                disabled={isSubmitting}
+                onClick={deny}
+                className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-medium leading-5 text-foreground bg-background border border-input hover:bg-muted disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 transition-colors"
+              >
+                Deny
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

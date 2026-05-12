@@ -82,3 +82,56 @@ export const flattenRouteInputSchema = (route: AppRouteConfig): FlatInput => {
     sources,
   }
 }
+
+/**
+ * Reverse of {@link flattenRouteInputSchema}: splits a flat input object back
+ * into the `{ params, query, body }` shape Hono's `app.fetch()` expects when
+ * the MCP server dispatches a tool call.
+ *
+ * `body` is a single object whose fields came from the route's JSON body.
+ * For routes whose body was wrapped (non-object body — discriminated union /
+ * array), `body` is whatever was under the `body` field of the flat input.
+ */
+export const splitFlatInput = (
+  input: Record<string, unknown>,
+  sources: Readonly<Record<string, FieldSource>>,
+): {
+  readonly params: Record<string, unknown>
+  readonly query: Record<string, unknown>
+  readonly body: Record<string, unknown> | unknown
+} => {
+  const params: Record<string, unknown> = {}
+  const query: Record<string, unknown> = {}
+  const body: Record<string, unknown> = {}
+  let wrappedBody: unknown
+  let hasBody = false
+  let hasWrappedBody = false
+
+  for (const [key, value] of Object.entries(input)) {
+    const source = sources[key]
+    switch (source) {
+      case "param":
+        params[key] = value
+        break
+      case "query":
+        query[key] = value
+        break
+      case "body":
+        body[key] = value
+        hasBody = true
+        break
+      case "wrapped-body":
+        wrappedBody = value
+        hasWrappedBody = true
+        break
+      // Field present in input but not in `sources` — silently dropped. Zod
+      // validation upstream should have rejected this; ignoring is fine.
+    }
+  }
+
+  return {
+    params,
+    query,
+    body: hasWrappedBody ? wrappedBody : hasBody ? body : undefined,
+  }
+}

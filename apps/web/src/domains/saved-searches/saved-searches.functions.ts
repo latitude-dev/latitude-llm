@@ -9,10 +9,10 @@ import {
   updateSavedSearch,
 } from "@domain/saved-searches"
 import { filterSetSchema, OrganizationId, ProjectId, SavedSearchId, UserId } from "@domain/shared"
-import { SavedSearchRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OutboxEventWriterLive, SavedSearchRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
@@ -100,7 +100,10 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
         query: data.query,
         filterSet: data.filterSet,
         createdByUserId: UserId(userId),
-      }).pipe(withPostgres(SavedSearchRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        withPostgres(Layer.mergeAll(SavedSearchRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+        withTracing,
+      ),
     )
     return toRecord(created)
   })

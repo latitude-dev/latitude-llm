@@ -234,6 +234,20 @@ export interface EventPayloads {
     readonly datasetId: string
     readonly name: string
   }
+  FlaggerToggled: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly flaggerSlug: string
+    readonly enabled: boolean
+  }
+  SavedSearchCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly searchId: string
+    readonly name: string
+  }
   EvaluationConfigured: {
     readonly organizationId: string
     readonly actorUserId: string

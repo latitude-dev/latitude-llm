@@ -21,39 +21,47 @@ describe("extractOutputSchema", () => {
   it("returns the 200 response schema when it exists", () => {
     const ItemSchema = z.object({ id: z.string() })
     const out = extractOutputSchema(route({ 200: jsonResponse(ItemSchema) }))
-    expect(out).toBe(ItemSchema)
+    expect(out?.schema).toBe(ItemSchema)
   })
 
   it("returns the 201 response schema when only 201 is defined", () => {
     const ItemSchema = z.object({ id: z.string() })
     const out = extractOutputSchema(route({ 201: jsonResponse(ItemSchema) }))
-    expect(out).toBe(ItemSchema)
+    expect(out?.schema).toBe(ItemSchema)
   })
 
-  it("prefers the lowest 2xx with JSON content (200 over 201)", () => {
+  it("prefers the lowest 2xx with an object JSON schema (200 over 201)", () => {
     const Two00 = z.object({ kind: z.literal("ok") })
     const Two01 = z.object({ kind: z.literal("created") })
     const out = extractOutputSchema(route({ 200: jsonResponse(Two00), 201: jsonResponse(Two01) }))
-    expect(out).toBe(Two00)
+    expect(out?.schema).toBe(Two00)
   })
 
-  it("returns null for a 204-only route (no body)", () => {
+  it("returns undefined for a 204-only route (no body)", () => {
     const out = extractOutputSchema(route({ 204: { description: "No Content" } }))
-    expect(out).toBeNull()
+    expect(out).toBeUndefined()
   })
 
-  it("returns null when no responses are defined", () => {
+  it("returns undefined when no responses are defined", () => {
     const out = extractOutputSchema(route({}))
-    expect(out).toBeNull()
+    expect(out).toBeUndefined()
   })
 
-  it("returns null when the only success response advertises a non-JSON content type", () => {
+  it("returns undefined when the only success response advertises a non-JSON content type", () => {
     const out = extractOutputSchema(
       route({
         200: { content: { "text/plain": { schema: z.string() } }, description: "OK" },
       }),
     )
-    expect(out).toBeNull()
+    expect(out).toBeUndefined()
+  })
+
+  it("returns undefined when the success response schema is not a ZodObject", () => {
+    // MCP `outputSchema` is constrained to object shapes — array / union / scalar
+    // bodies can't surface as structured output and are skipped here so the SDK
+    // doesn't get a schema it can't validate `structuredContent` against.
+    const out = extractOutputSchema(route({ 200: jsonResponse(z.array(z.string())) }))
+    expect(out).toBeUndefined()
   })
 
   it("ignores 4xx/5xx responses", () => {
@@ -64,7 +72,7 @@ describe("extractOutputSchema", () => {
         500: jsonResponse(ErrorSchema, "Server Error"),
       }),
     )
-    expect(out).toBeNull()
+    expect(out).toBeUndefined()
   })
 
   it("falls through 200 to 201 when 200 has no JSON content", () => {
@@ -75,6 +83,6 @@ describe("extractOutputSchema", () => {
         201: jsonResponse(Two01),
       }),
     )
-    expect(out).toBe(Two01)
+    expect(out?.schema).toBe(Two01)
   })
 })

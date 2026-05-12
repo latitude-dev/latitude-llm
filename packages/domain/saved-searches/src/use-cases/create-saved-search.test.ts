@@ -1,3 +1,4 @@
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -12,15 +13,23 @@ const CREATED_BY = UserId("u".repeat(24))
 
 function makeLayer() {
   const { repository } = createFakeSavedSearchRepository()
-  return Layer.mergeAll(
+  const written: OutboxWriteEvent[] = []
+  const layer = Layer.mergeAll(
     Layer.succeed(SavedSearchRepository, repository),
     Layer.succeed(SqlClient, createFakeSqlClient()),
+    Layer.succeed(OutboxEventWriter, {
+      write: (event) => {
+        written.push(event)
+        return Effect.void
+      },
+    }),
   )
+  return { layer, written }
 }
 
 describe("createSavedSearch", () => {
   it("creates a saved search with a slugified name", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     const result = await Effect.runPromise(
       createSavedSearch({
         projectId: PROJECT_ID,
@@ -37,7 +46,7 @@ describe("createSavedSearch", () => {
   })
 
   it("appends a random suffix on slug collision", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         yield* createSavedSearch({
@@ -63,7 +72,7 @@ describe("createSavedSearch", () => {
   })
 
   it("rejects an empty search (no query and no filters)", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     await expect(
       Effect.runPromise(
         createSavedSearch({
@@ -78,7 +87,7 @@ describe("createSavedSearch", () => {
   })
 
   it("rejects an empty name", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     await expect(
       Effect.runPromise(
         createSavedSearch({
@@ -93,7 +102,7 @@ describe("createSavedSearch", () => {
   })
 
   it("rejects a too-long name", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     await expect(
       Effect.runPromise(
         createSavedSearch({
@@ -108,7 +117,7 @@ describe("createSavedSearch", () => {
   })
 
   it("treats a whitespace-only query as null and accepts when filters are present", async () => {
-    const layer = makeLayer()
+    const { layer } = makeLayer()
     const result = await Effect.runPromise(
       createSavedSearch({
         projectId: PROJECT_ID,
@@ -119,5 +128,49 @@ describe("createSavedSearch", () => {
       }).pipe(Effect.provide(layer)),
     )
     expect(result.query).toBeNull()
+  })
+
+  it("emits a SavedSearchCreated outbox event with the creator and identifiers", async () => {
+    const { layer, written } = makeLayer()
+    const result = await Effect.runPromise(
+      createSavedSearch({
+        projectId: PROJECT_ID,
+        name: "Failed Payments",
+        query: "failed payments",
+        filterSet: { status: [{ op: "eq", value: "error" }] },
+        createdByUserId: CREATED_BY,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(written).toHaveLength(1)
+    const [event] = written
+    expect(event?.eventName).toBe("SavedSearchCreated")
+    expect(event?.aggregateType).toBe("saved-search")
+    expect(event?.aggregateId).toBe(result.id)
+    expect(event?.organizationId).toBe(result.organizationId)
+    expect(event?.payload).toEqual({
+      organizationId: result.organizationId,
+      actorUserId: CREATED_BY,
+      projectId: PROJECT_ID,
+      searchId: result.id,
+      name: "Failed Payments",
+    })
+  })
+
+  it("does NOT emit SavedSearchCreated when validation rejects the input", async () => {
+    const { layer, written } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        createSavedSearch({
+          projectId: PROJECT_ID,
+          name: "Empty",
+          query: null,
+          filterSet: {},
+          createdByUserId: CREATED_BY,
+        }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(EmptySavedSearchError)
+
+    expect(written).toEqual([])
   })
 })

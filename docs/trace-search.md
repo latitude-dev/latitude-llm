@@ -5,13 +5,13 @@ Full-text and semantic search over trace conversations, served alongside the exi
 ## Scope
 
 - **Trace-only.** Not session-level, not span-level.
-- **Forward-only.** Only traces indexed after rollout are searchable. No historical backfill.
+- **Forward-only.** Only traces indexed after rollout are searchable by default. No first-class customer backfill in the product UI.
 - **Input/output content only.** System prompts, system instructions, and tool-result bodies are excluded from the searchable document. Tool call *names* are preserved as light metadata.
 - **Time-bounded.** Both lexical documents and semantic embeddings age out via ClickHouse `TTL` — 90 days for documents, 30 days for embeddings. No per-project size cap.
 
 ## Data Model
 
-Two ClickHouse tables hold the searchable corpus. Both are `ReplacingMergeTree` keyed by `(organization_id, project_id, trace_id)` and partitioned by month of `start_time`.
+Two ClickHouse tables hold the searchable corpus. Both are `ReplacingMergeTree` partitioned by month of `start_time`. Documents use `(organization_id, project_id, trace_id)` as the logical primary key; embeddings add `chunk_index` so each trace can carry multiple vector rows.
 
 ### `trace_search_documents`
 
@@ -35,13 +35,14 @@ Retention: `TTL start_time + INTERVAL 90 DAY DELETE`.
 
 ### `trace_search_embeddings`
 
-Semantic index. One row per trace that passed the size floor and was embedded.
+Semantic index. One row per **chunk** (packed conversation turns / long-turn slices) that passed the per-chunk size floor and was embedded. `ReplacingMergeTree` is keyed by `(organization_id, project_id, trace_id, chunk_index)` so each slice versions independently.
 
 Key columns:
 
+- `chunk_index` — 0-based index within the trace's packed chunk list (part of the dedup key with `content_hash`).
 - `embedding` — `Array(Float32)`. Dimension set by `TRACE_SEARCH_EMBEDDING_DIMENSIONS` (currently 2048 for `voyage-4-large`).
 - `embedding_model` — identifier string (e.g. `"voyage-4-large"`). A future model/dimension swap would need to either drop-and-rebuild the table (forward-only rollout makes this cheap) or reintroduce a dim filter at query time.
-- `content_hash` — same SHA-256 as the document; lets the worker skip re-embedding unchanged content.
+- `content_hash` — SHA-256 of that chunk's normalized text; lets the worker skip re-embedding unchanged slices (distinct from the lexical document hash, which covers the whole trace string).
 - `indexed_at`, `start_time`, `organization_id`, `project_id`, `trace_id`.
 
 Retention: `TTL start_time + INTERVAL 30 DAY DELETE`. Shorter than documents because embeddings are the expensive side (Voyage credits + vector bytes) and the lexical fallback keeps recently-evicted traces discoverable.
@@ -55,10 +56,11 @@ Indexing is driven entirely by the existing trace-end debounce boundary — ther
 3. The trace-search worker (`apps/workers/src/workers/trace-search.ts`) picks up the task.
 4. The worker loads span input/output messages from ClickHouse and builds the canonical document via `buildTraceSearchDocument`.
 5. The lexical document is upserted to `trace_search_documents` unconditionally.
-6. Semantic-indexing decision:
-   - If `search_text.length < TRACE_SEARCH_EMBEDDING_MIN_LENGTH` (100 chars), skip the embed call. Short traces embed into uninformative vectors that cluster near every query.
-   - Otherwise, consult `hasEmbeddingWithHash` to see whether a row with the same content hash already exists. If yes, skip.
-   - Otherwise, call Voyage `embed` with `inputType: "document"` and upsert the row into `trace_search_embeddings`.
+6. Semantic-indexing decision (per chunk):
+   - Build `chunks` from `buildTraceSearchDocument` (head+tail turn selection when the trace exceeds the char budget, then greedy packing / long-turn slicing).
+   - Drop chunks shorter than `TRACE_SEARCH_EMBEDDING_MIN_LENGTH` (100 chars). If none remain, skip semantic indexing for the trace.
+   - For each remaining chunk, `hasEmbeddingWithHash` on `(trace_id, chunk_index, content_hash)` skips unchanged slices.
+   - Otherwise call Voyage `embed` with `inputType: "document"` and upsert **one row per chunk** into `trace_search_embeddings`. Org-level token budgets can stop the loop early; the lexical row was already written.
 
 The worker is best-effort: any error in the pipeline is logged and swallowed via `Effect.orElseSucceed(() => undefined)` — a single failing trace never retries the whole job queue.
 
@@ -68,30 +70,29 @@ The worker is best-effort: any error in the pipeline is logged and swallowed via
 
 - **Role gate.** Only `user` and `assistant` messages are emitted. `system` is excluded entirely.
 - **Part handling:**
-  - `text` / `reasoning` → raw string content.
+  - `text` → raw string content.
+  - `reasoning` → excluded (not indexed for lexical or chunks).
   - `tool_call` → `[TOOL CALL: <name>]`. Name is preserved as a signal; arguments are dropped.
   - `tool_call_response` → empty. Tool result payloads (JSON, errors) are not searchable in any meaningful way and the literal `[TOOL RESULT]` placeholder was actively harming embedding quality.
   - `blob` → `[IMAGE]` / `[VIDEO]` / `[AUDIO]` / `[BLOB:<modality>]`.
   - `file`, `uri` → labeled placeholders carrying the relevant identifier where useful.
   - Unknown part types → empty. We deliberately don't emit `[<unknown-type>]` labels because untyped tokens feed noise into embeddings.
-- **Prefix.** The trace's root span name is prepended once as a light metadata boost.
-- **Truncation.** Combined text is collapsed (whitespace normalized) and truncated to `TRACE_SEARCH_DOCUMENT_MAX_LENGTH`.
-- **Content hash.** SHA-256 of `traceId + "\0" + searchText` via `@repo/utils` `hash`. The hash is used both as the `ReplacingMergeTree` dedup key and to short-circuit re-embedding of unchanged content.
+- **Lexical vs chunks.** `search_text` is built from **every** turn (joined, whitespace-normalized, then middle-truncated when over `TRACE_SEARCH_DOCUMENT_MAX_LENGTH`). Embedding `chunks` apply the same turn budget first, then greedy packing / long-turn slicing — so long traces can omit middle turns from vectors while the lexical row still reflects the full conversation up to the char cap.
+- **Content hash (document).** SHA-256 of `traceId + "\0" + searchText` via `@repo/utils` `hash`, used as the lexical `ReplacingMergeTree` dedup key. Per-chunk hashes are separate and gate re-embedding per slice.
 
 ## Query Pipeline
 
-Active search adds a single CH query with cursor-based pagination on the trace list, mirroring the shape of the non-search list path. `count`, `metrics`, and `histogram` use the same hybrid candidate subquery as a filter (`trace_id IN (SELECT trace_id FROM <hybrid>)`), so aggregate numbers agree with the list without drift.
+Active search adds a single CH query with cursor-based pagination on the trace list, mirroring the shape of the non-search list path. `count`, `metrics`, and `histogram` use the same search-plan subquery as a filter (`trace_id IN (SELECT trace_id FROM <plan>)`), so aggregate numbers agree with the list without drift.
 
-### Hybrid candidate subquery (shared)
+### Search plan (phrases, semantic prompt, or both)
 
-`buildHybridSearchSubquery` combines lexical and semantic candidate sets via `UNION ALL` + `GROUP BY trace_id`. Each candidate carries up to two scores:
+`buildSearchPlan` in `trace-repository.ts` picks one of three shapes:
 
-- **Lexical side.** `SELECT trace_id, 1.0 FROM trace_search_documents WHERE search_text ILIKE '%<normalized>%'`. No `LIMIT`.
-- **Semantic side.** `SELECT trace_id, 1 - cosineDistance(embedding, :q) FROM trace_search_embeddings ORDER BY cosineDistance ASC LIMIT 10000`. Linear scan is bounded by `SEMANTIC_SCAN_LIMIT` so query latency stays bounded even as a project's embedding corpus grows.
+- **Phrases only** (`ranked = false`). Quoted phrases become an AND of `hasTokenCaseInsensitive` checks over `search_text` (same tokenizer as the `text` index). Results keep the caller's normal chronological sort.
+- **Semantic only** (`ranked = true`). The inner scan ranks **chunk rows** by cosine similarity, `ORDER BY semantic_score DESC LIMIT SEMANTIC_SCAN_LIMIT`, then rolls up with `max(semantic_score) GROUP BY trace_id` so each trace's score is its best-matching chunk. A `WHERE semantic_score >= TRACE_SEARCH_MIN_RELEVANCE_SCORE` gate drops noise on pure semantic queries.
+- **Hybrid** (`ranked = true`). Lexical phrase filter on `trace_search_documents` (precision) `LEFT JOIN` the per-trace semantic rollup. Phrase matches without embeddings stay in with `relevance_score = 0.0`; the floor is **not** re-applied so lexical precision is not lost.
 
-After `GROUP BY`, each trace has `max(lexical_score)` and `max(semantic_score)`. The combined `relevance_score` is `0.3 * lexical + 0.7 * semantic`. A `HAVING relevance_score >= TRACE_SEARCH_MIN_RELEVANCE_SCORE` (0.2) clause is the sole precision filter — the only thing standing between the user and retrieval noise.
-
-Pure-lexical hits always pass (`lexical_score = 1.0` → relevance 0.3). Pure-semantic hits must clear the floor, which at 0.2 corresponds to `cosineSimilarity >= 0.286`.
+The lexical document is always built from the **full** normalized conversation string in `buildTraceSearchDocument` (`search_text`), independent of which turns were packed into embedding chunks.
 
 ### List query — cursor-paginable
 
@@ -152,14 +153,11 @@ Rerank was tried in an intermediate iteration to compensate for `voyage-3-lite`'
 - Upgrading to `voyage-4-large` closed enough of the bi-encoder/cross-encoder quality gap that rerank's remaining marginal benefit didn't justify the rigidity.
 - Dropping rerank let the query path collapse back to a single cursor-paginable SQL query — the same shape as every other filter in the app.
 
-### Why `TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.2`
+### Why `TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.30`
 
-With no rerank, the `HAVING` clause is the sole precision filter. The value was tuned against the seed corpus:
+Per-chunk embeddings `max`-pool per trace, which sharpens cosine scores versus the old single-vector-per-trace mean. The floor applies **after** that rollup on **pure semantic** queries (hybrid deliberately skips the floor on the joined score).
 
-- Pure-lexical matches always pass (relevance 0.3).
-- Pure-semantic on voyage-4-large: genuine paraphrase matches typically score cosine 0.32–0.38 (relevance 0.22–0.27). Noise (classifier prompts, audit reviews that accidentally share vocabulary) starts below cosine 0.26 (relevance 0.18).
-
-0.2 admits real matches comfortably while cutting most noise. Tune per-corpus — raise toward 0.25 if the long tail feels noisy; drop toward 0.15 if real matches are being filtered out.
+The value was re-tuned on the seeded Acme corpus (2026-05-08): nonsense queries top out around 0.29 cosine while real matches start around 0.37+, so `0.30` sits in the gap. Revisit if the production noise/signal distribution shifts (model swap, prompt mix change).
 
 ### Why no per-project cap
 
@@ -239,9 +237,9 @@ All constants live in `packages/domain/spans/src/constants.ts`.
 | `TRACE_SEARCH_EMBEDDING_DIMENSIONS` | 2048 | Vector dimension |
 | `TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS` | 30 | Embedding TTL (enforced in migration) |
 | `TRACE_SEARCH_DOCUMENT_LOOKBACK_DAYS` | 90 | Document TTL (enforced in migration) |
-| `TRACE_SEARCH_MIN_RELEVANCE_SCORE` | 0.2 | Precision filter on combined relevance |
+| `TRACE_SEARCH_MIN_RELEVANCE_SCORE` | 0.30 | Pure-semantic noise gate after per-trace max over chunk cosines |
 
-The hybrid scoring weights (`lexicalWeight: 0.3`, `semanticWeight: 0.7`) live in `HYBRID_SEARCH_CONFIG` inside the ClickHouse trace repository.
+Hybrid ranking does not blend fixed lexical/semantic weights in SQL; lexical acts as a filter (and optional rank signal via the join) while semantic supplies cosine when present.
 
 ## Future Work
 

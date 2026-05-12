@@ -8,6 +8,7 @@ import {
   TRACE_SEARCH_EMBEDDING_MODEL,
   TraceRepository,
   TraceSearchBudget,
+  type TraceSearchChunk,
   TraceSearchRepository,
 } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -90,13 +91,19 @@ const generateEmbedding = (searchText: string): Effect.Effect<readonly number[],
     }),
   )
 
+export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]) =>
+  [...chunks]
+    .filter((chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
+    .sort((a, b) => b.chunkIndex - a.chunkIndex)
+
 /**
  * Process a trace search refresh task:
- * 1. Load canonical conversation messages for the trace
- * 2. Build the search document (conversation only, excludes system prompts)
- * 3. Upsert the lexical document
- * 4. Check semantic eligibility
- * 5. If eligible and changed, generate embedding and upsert
+ *  1. Load canonical conversation messages for the trace.
+ *  2. Build the search document (lexical text + per-chunk slices).
+ *  3. Upsert the lexical document from canonical trace text. This is built
+ *     independently of which chunks are selected for embeddings.
+ *  4. For each chunk above the min-length floor, dedup-by-hash → budget-gate →
+ *     embed → upsert one row per chunk.
  */
 const processRefreshTrace = (payload: RefreshTracePayload) =>
   Effect.gen(function* () {
@@ -109,9 +116,6 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
     const startTime = new Date(payload.startTime)
     const retentionDays = yield* resolveTraceSearchRetentionDays(organizationId)
 
-    // 1. Load the canonical conversation for the trace. This preserves the
-    // same chronological de-duplicated message list shown in the trace detail
-    // drawer, instead of rebuilding from span inputs that can repeat context.
     const traceDetail = yield* traceRepo.findByTraceId({
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
@@ -123,7 +127,6 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       return
     }
 
-    // 2. Build the search document
     const searchDocument = yield* buildTraceSearchDocument({
       traceId,
       startTime,
@@ -131,7 +134,6 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
       messages: traceDetail.allMessages,
     })
 
-    // 3. Upsert the lexical document
     yield* traceSearchRepo.upsertDocument({
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
@@ -145,76 +147,80 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
 
-    // 4. Skip semantic indexing for near-empty traces. Short documents embed
-    // into uninformative vectors that cluster at similar distances from every
-    // query, adding retrieval noise while still costing Voyage credits.
-    if (searchDocument.searchText.length < TRACE_SEARCH_EMBEDDING_MIN_LENGTH) {
+    // Chunk indices are assigned in chronological order, so processing them in
+    // descending order prioritizes the tail when budget pressure means we may
+    // not get to every chunk.
+    const eligibleChunks = prioritizeChunksForEmbedding(searchDocument.chunks)
+
+    if (eligibleChunks.length === 0) {
       logger.info(
-        `Trace ${traceId} below embedding min length (${searchDocument.searchText.length} < ${TRACE_SEARCH_EMBEDDING_MIN_LENGTH}), skipping semantic index`,
+        `Trace ${traceId} produced no embedding-eligible chunks (each below ${TRACE_SEARCH_EMBEDDING_MIN_LENGTH} chars), skipping semantic index`,
       )
       return
     }
 
-    // 5. Dedupe against an existing identical embedding. Stale rows age out
-    // via the ClickHouse TTL on `trace_search_embeddings`; this worker always
-    // embeds eligible new traces (subject to budget check below).
-    const hasExisting = yield* traceSearchRepo.hasEmbeddingWithHash(
-      OrganizationId(organizationId),
-      ProjectId(projectId),
-      TraceId(traceId),
-      searchDocument.contentHash,
-    )
-
-    if (hasExisting) {
-      logger.info(`Embedding already exists for trace ${traceId} with same hash, skipping`)
-      return
-    }
-
-    // 6. Gate on the per-org token budget *before* calling Voyage. If any of
-    // the daily / weekly / monthly windows would overflow, `tryConsume` leaves
-    // the counters untouched and returns false — we then skip the embed call
-    // entirely (trace stays lexical-only). Tracker errors (Redis down) fail
-    // open: we log and proceed so an infra blip doesn't silently disable
-    // semantic indexing.
     const budget = yield* TraceSearchBudget
-    const estimatedTokens = Math.ceil(searchDocument.searchText.length / 4)
-    const budgetOk = yield* budget.tryConsume(OrganizationId(organizationId), estimatedTokens).pipe(
-      Effect.tapError((error) =>
-        Effect.sync(() => logger.warn(`Embed budget check failed for org ${organizationId}`, error)),
-      ),
-      Effect.orElseSucceed(() => true),
-    )
 
-    if (!budgetOk) {
-      logger.info(
-        `Org ${organizationId} over embed budget (est ${estimatedTokens} tokens); skipping semantic index for trace ${traceId}`,
+    let embeddedCount = 0
+    let skippedDuplicate = 0
+
+    for (const chunk of eligibleChunks) {
+      const hasExisting = yield* traceSearchRepo.hasEmbeddingWithHash(
+        OrganizationId(organizationId),
+        ProjectId(projectId),
+        TraceId(traceId),
+        chunk.chunkIndex,
+        chunk.contentHash,
       )
-      return
+
+      if (hasExisting) {
+        skippedDuplicate++
+        continue
+      }
+
+      // Budget gate per-chunk. If any window would overflow we stop
+      // embedding remaining chunks for this trace so we don't end up with
+      // a partial-but-skewed chunk set; the lexical document was already
+      // written independently. Tracker errors fail open.
+      const estimatedTokens = Math.ceil(chunk.text.length / 4)
+      const budgetOk = yield* budget.tryConsume(OrganizationId(organizationId), estimatedTokens).pipe(
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.warn(`Embed budget check failed for org ${organizationId}`, error)),
+        ),
+        Effect.orElseSucceed(() => true),
+      )
+
+      if (!budgetOk) {
+        logger.info(
+          `Org ${organizationId} over embed budget (est ${estimatedTokens} tokens); stopping at chunk ${chunk.chunkIndex} of trace ${traceId}`,
+        )
+        break
+      }
+
+      const embedding = yield* generateEmbedding(chunk.text)
+
+      if (embedding.length === 0) {
+        logger.warn(`Failed to generate embedding for trace ${traceId} chunk ${chunk.chunkIndex}, skipping`)
+        continue
+      }
+
+      yield* traceSearchRepo.upsertEmbedding({
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        traceId: TraceId(traceId),
+        chunkIndex: chunk.chunkIndex,
+        startTime,
+        contentHash: chunk.contentHash,
+        embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+        embedding,
+        retentionDays,
+      })
+      embeddedCount++
     }
 
-    // 7. Generate the embedding. Budget was already debited in step 6; a
-    // Voyage failure here means we paid tokens that never shipped, which is
-    // acceptable at our scales (the budget is a cost ceiling, not a financial
-    // contract) and keeps the enforcement path simple.
-    const embedding = yield* generateEmbedding(searchDocument.searchText)
-
-    if (embedding.length === 0) {
-      logger.warn(`Failed to generate embedding for trace ${traceId}, skipping semantic index`)
-      return
-    }
-
-    yield* traceSearchRepo.upsertEmbedding({
-      organizationId: OrganizationId(organizationId),
-      projectId: ProjectId(projectId),
-      traceId: TraceId(traceId),
-      startTime,
-      contentHash: searchDocument.contentHash,
-      embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-      embedding,
-      retentionDays,
-    })
-
-    logger.info(`Indexed semantic search embedding for trace ${traceId}`)
+    logger.info(
+      `Indexed semantic search embeddings for trace ${traceId}: ${embeddedCount} embedded, ${skippedDuplicate} unchanged`,
+    )
   }).pipe(
     Effect.withSpan("trace-search.refreshTrace"),
     Effect.tapError((error) =>

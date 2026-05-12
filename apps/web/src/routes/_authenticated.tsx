@@ -311,7 +311,7 @@ function NavHeader() {
             },
           ]}
           trigger={() => (
-            <button type="button" className="cursor-pointer">
+            <button type="button" className="flex items-center cursor-pointer">
               <span className="relative inline-flex">
                 <Avatar
                   name={user.name?.trim() ? user.name : user.email}

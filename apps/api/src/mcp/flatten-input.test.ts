@@ -1,7 +1,7 @@
 import { z } from "@hono/zod-openapi"
 import { describe, expect, it } from "vitest"
 import type { AppRouteConfig } from "./define-endpoint.ts"
-import { flattenRouteInputSchema } from "./flatten-input.ts"
+import { type FieldSource, flattenRouteInputSchema, splitFlatInput } from "./flatten-input.ts"
 
 const baseRoute = {
   method: "post",
@@ -116,5 +116,44 @@ describe("flattenRouteInputSchema", () => {
     )
     expect(Object.keys(schema.shape)).toEqual([])
     expect(sources).toEqual({})
+  })
+})
+
+describe("splitFlatInput", () => {
+  it("partitions flat input fields into params/query/body buckets by source", () => {
+    const sources: Readonly<Record<string, FieldSource>> = {
+      id: "param",
+      cursor: "query",
+      name: "body",
+    }
+    const result = splitFlatInput({ id: "abc", cursor: "next-page", name: "key-1" }, sources)
+    expect(result.params).toEqual({ id: "abc" })
+    expect(result.query).toEqual({ cursor: "next-page" })
+    expect(result.body).toEqual({ name: "key-1" })
+  })
+
+  it("returns body undefined when there were no body-sourced fields (route with only params)", () => {
+    const sources: Readonly<Record<string, FieldSource>> = { id: "param" }
+    const result = splitFlatInput({ id: "abc" }, sources)
+    expect(result.body).toBeUndefined()
+  })
+
+  it("hands back the wrapped body verbatim for routes with non-object bodies (wrapped-body source)", () => {
+    // Mirrors flattenRouteInputSchema's wrapped-body behavior — discriminated
+    // unions get nested under a `body` key, and splitFlatInput returns it as-is
+    // so the dispatcher can JSON.stringify the original union value.
+    const sources: Readonly<Record<string, FieldSource>> = { body: "wrapped-body" }
+    const result = splitFlatInput({ body: { kind: "a", value: 1 } }, sources)
+    expect(result.body).toEqual({ kind: "a", value: 1 })
+  })
+
+  it("silently drops fields whose source isn't in the map", () => {
+    // Defensive — Zod validation upstream rejects unknown fields, but we still
+    // shouldn't blow up if a stray field reaches the splitter.
+    const sources: Readonly<Record<string, FieldSource>> = { id: "param" }
+    const result = splitFlatInput({ id: "abc", stray: "drop-me" }, sources)
+    expect(result.params).toEqual({ id: "abc" })
+    expect(result.query).toEqual({})
+    expect(result.body).toBeUndefined()
   })
 })

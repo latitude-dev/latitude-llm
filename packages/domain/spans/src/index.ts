@@ -5,6 +5,10 @@ export {
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
+  TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
+  TRACE_SEARCH_CHUNK_MAX_CHARS,
+  TRACE_SEARCH_CHUNK_OVERLAP_CHARS,
+  TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
@@ -126,6 +130,7 @@ export {
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
 export type {
+  TraceSearchChunk,
   TraceSearchDocument,
   TraceSearchDocumentInput,
 } from "./use-cases/build-trace-search-document.ts"

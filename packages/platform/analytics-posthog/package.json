@@ -15,7 +15,7 @@
     "@domain/events": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "posthog-node": "^5.9.2"
+    "posthog-node": "5.30.1"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

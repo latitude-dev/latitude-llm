@@ -17,7 +17,7 @@
     "@platform/cache-redis": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",
-    "chdb": "^1.6.0",
+    "chdb": "1.6.0",
     "effect": "catalog:",
     "hono": "catalog:"
   }
