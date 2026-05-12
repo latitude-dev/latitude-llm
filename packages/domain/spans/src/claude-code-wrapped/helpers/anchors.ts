@@ -55,7 +55,10 @@ const READ_ANCHORS: readonly Anchor[] = [
   { threshold: 200_000, phrase: () => "≈ War and Peace" },
   { threshold: 800_000, phrase: () => "≈ the Lord of the Rings trilogy" },
   { threshold: 3_000_000, phrase: () => "≈ the Encyclopedia Britannica" },
-  { threshold: 20_000_000, phrase: (n) => `≈ ${formatPercent(n, 167_000_000)} of the Library of Congress's text holdings` },
+  {
+    threshold: 20_000_000,
+    phrase: (n) => `≈ ${formatPercent(n, 167_000_000)} of the Library of Congress's text holdings`,
+  },
 ]
 
 const pickAnchor = (anchors: readonly Anchor[], count: number): string => {
@@ -63,7 +66,7 @@ const pickAnchor = (anchors: readonly Anchor[], count: number): string => {
   for (const anchor of anchors) {
     if (count >= anchor.threshold) chosen = anchor
   }
-  return chosen ? chosen.phrase(count) : anchors[0]?.phrase(count) ?? ""
+  return chosen ? chosen.phrase(count) : (anchors[0]?.phrase(count) ?? "")
 }
 
 export const pickWrittenAnchor = (linesWritten: number): string => pickAnchor(WRITTEN_ANCHORS, linesWritten)

@@ -88,6 +88,19 @@ export interface BranchRow {
   readonly sessions: number
 }
 
+export interface WorkspaceFileRow {
+  readonly path: string
+  readonly touches: number
+  readonly linesAdded: number
+  readonly linesRemoved: number
+  readonly reads: number
+}
+
+export interface WorkspaceBashCommandRow {
+  readonly pattern: string
+  readonly uses: number
+}
+
 export interface WorkspaceDeepDiveRow {
   readonly toolCalls: number
   readonly sessions: number
@@ -99,11 +112,11 @@ export interface WorkspaceDeepDiveRow {
    * Empty string when the workspace's spans don't carry the path metadata.
    */
   readonly workspacePath: string
-  readonly topFilePaths: readonly string[]
+  /** Top-touched files in the workspace, with per-file diff and read stats. */
+  readonly topFiles: readonly WorkspaceFileRow[]
   readonly topBranches: readonly string[]
-  /** First whitespace-separated token of the workspace's most-used Bash invocation. */
-  readonly topBashCommandPattern: string | null
-  readonly topBashCommandCount: number
+  /** Top bash command prefixes used in this workspace (up to 3). */
+  readonly topBashCommands: readonly WorkspaceBashCommandRow[]
   readonly dominantTool: string | null
 }
 

@@ -136,10 +136,16 @@ interface WorkspaceDeepDiveCHRow {
   readonly sessions: number | string
   readonly commits: number | string
   readonly workspace_path: string
+  /** Parallel arrays describing the top 3 touched files. */
   readonly top_file_paths: readonly string[] | null
+  readonly top_file_touches: readonly (number | string)[] | null
+  readonly top_file_lines_added: readonly (number | string)[] | null
+  readonly top_file_lines_removed: readonly (number | string)[] | null
+  readonly top_file_reads: readonly (number | string)[] | null
   readonly top_branches: readonly string[] | null
-  readonly top_bash_command: readonly string[] | null
-  readonly top_bash_command_count: number | string
+  /** Parallel arrays describing the top 3 bash command prefixes. */
+  readonly top_command_patterns: readonly string[] | null
+  readonly top_command_counts: readonly (number | string)[] | null
   readonly dominant_tool: readonly string[] | null
 }
 
@@ -290,7 +296,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
           .query(async (client) => {
             // countSubstrings counts non-overlapping occurrences — equivalent
             // to "lines of code" when measured by '\n'. We treat the final
-                          // line as "complete enough" for the aggregate.
+            // line as "complete enough" for the aggregate.
             const result = await client.query({
               query: `
                 SELECT
@@ -555,12 +561,41 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
-            // The top bash command + its count come from a sub-aggregation:
-            // topKIf gives us the most-used pattern, and we count just rows
-            // matching it in the same pass.
+            // Two CTEs precompute per-file diff stats and per-pattern bash
+            // counts (each capped at top-3). The outer SELECT materialises
+            // them as parallel arrays so we can return everything in a
+            // single round-trip.
             const result = await client.query({
               query: `
-                WITH top_bash AS (
+                WITH files AS (
+                  SELECT
+                    JSONExtractString(tool_input, 'file_path')                              AS path,
+                    countIf(tool_name IN ('Read', 'NotebookRead'))                          AS reads,
+                    sumIf(countSubstrings(JSONExtractString(tool_input, 'new_string'), '\\n'),
+                          tool_name IN ('Edit', 'NotebookEdit'))
+                      + sumIf(arraySum(arrayMap(
+                              x -> countSubstrings(JSONExtractString(x, 'new_string'), '\\n'),
+                              JSONExtractArrayRaw(tool_input, 'edits')
+                            )), tool_name = 'MultiEdit')
+                      + sumIf(countSubstrings(JSONExtractString(tool_input, 'content'), '\\n'),
+                              tool_name = 'Write')                                          AS lines_added,
+                    sumIf(countSubstrings(JSONExtractString(tool_input, 'old_string'), '\\n'),
+                          tool_name IN ('Edit', 'NotebookEdit'))
+                      + sumIf(arraySum(arrayMap(
+                              x -> countSubstrings(JSONExtractString(x, 'old_string'), '\\n'),
+                              JSONExtractArrayRaw(tool_input, 'edits')
+                            )), tool_name = 'MultiEdit')                                    AS lines_removed,
+                    count() AS touches
+                  FROM spans
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND metadata['workspace.name'] = {workspaceName:String}
+                    AND tool_name IN ('Read','NotebookRead','Edit','NotebookEdit','MultiEdit','Write')
+                    AND JSONExtractString(tool_input, 'file_path') != ''
+                  GROUP BY path
+                  ORDER BY touches DESC
+                  LIMIT 3
+                ),
+                commands AS (
                   SELECT
                     splitByChar(' ', trim(BOTH ' ' FROM JSONExtractString(tool_input, 'command')))[1] AS pattern,
                     count() AS uses
@@ -571,7 +606,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     AND JSONExtractString(tool_input, 'command') != ''
                   GROUP BY pattern
                   ORDER BY uses DESC
-                  LIMIT 1
+                  LIMIT 3
                 )
                 SELECT
                   (SELECT count() FROM spans
@@ -587,21 +622,19 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     WHERE ${PROJECT_WINDOW_FILTER}
                       AND metadata['workspace.name'] = {workspaceName:String}
                       AND metadata['workspace.path'] != '') AS workspace_path,
-                  (SELECT topKIf(3)(
-                    JSONExtractString(tool_input, 'file_path'),
-                    tool_name IN (${FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")})
-                    AND JSONExtractString(tool_input, 'file_path') != ''
-                  ) FROM spans
-                    WHERE ${PROJECT_WINDOW_FILTER}
-                      AND metadata['workspace.name'] = {workspaceName:String}) AS top_file_paths,
-                  (SELECT topKIf(2)(metadata['git.branch'], metadata['git.branch'] != '') FROM spans
+                  (SELECT topKIf(3)(metadata['git.branch'], metadata['git.branch'] != '') FROM spans
                     WHERE ${PROJECT_WINDOW_FILTER}
                       AND metadata['workspace.name'] = {workspaceName:String}) AS top_branches,
                   (SELECT topKIf(1)(tool_name, operation = 'execute_tool' AND tool_name != '') FROM spans
                     WHERE ${PROJECT_WINDOW_FILTER}
                       AND metadata['workspace.name'] = {workspaceName:String}) AS dominant_tool,
-                  (SELECT groupArray(pattern) FROM top_bash) AS top_bash_command,
-                  (SELECT sum(uses) FROM top_bash) AS top_bash_command_count
+                  (SELECT groupArray(path)          FROM files) AS top_file_paths,
+                  (SELECT groupArray(touches)       FROM files) AS top_file_touches,
+                  (SELECT groupArray(lines_added)   FROM files) AS top_file_lines_added,
+                  (SELECT groupArray(lines_removed) FROM files) AS top_file_lines_removed,
+                  (SELECT groupArray(reads)         FROM files) AS top_file_reads,
+                  (SELECT groupArray(pattern)       FROM commands) AS top_command_patterns,
+                  (SELECT groupArray(uses)          FROM commands) AS top_command_counts
               `,
               query_params: { ...projectWindowParams(params), workspaceName: params.workspaceName },
               format: "JSONEachRow",
@@ -612,23 +645,40 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               sessions: 0,
               commits: 0,
               workspacePath: "",
-              topFilePaths: [],
+              topFiles: [],
               topBranches: [],
-              topBashCommandPattern: null,
-              topBashCommandCount: 0,
+              topBashCommands: [],
               dominantTool: null,
             }
             if (!row) return empty
-            const topBashPattern = row.top_bash_command?.[0] ?? null
+
+            const filePaths = row.top_file_paths ?? []
+            const fileTouches = row.top_file_touches ?? []
+            const fileAdded = row.top_file_lines_added ?? []
+            const fileRemoved = row.top_file_lines_removed ?? []
+            const fileReads = row.top_file_reads ?? []
+            const topFiles = filePaths.map((path, i) => ({
+              path,
+              touches: num(fileTouches[i] ?? 0),
+              linesAdded: num(fileAdded[i] ?? 0),
+              linesRemoved: num(fileRemoved[i] ?? 0),
+              reads: num(fileReads[i] ?? 0),
+            }))
+
+            const commandPatterns = row.top_command_patterns ?? []
+            const commandCounts = row.top_command_counts ?? []
+            const topBashCommands = commandPatterns
+              .map((pattern, i) => ({ pattern, uses: num(commandCounts[i] ?? 0) }))
+              .filter((cmd) => cmd.pattern !== "")
+
             return {
               toolCalls: num(row.tool_calls),
               sessions: num(row.sessions),
               commits: num(row.commits),
               workspacePath: row.workspace_path ?? "",
-              topFilePaths: row.top_file_paths ?? [],
+              topFiles,
               topBranches: row.top_branches ?? [],
-              topBashCommandPattern: topBashPattern && topBashPattern !== "" ? topBashPattern : null,
-              topBashCommandCount: num(row.top_bash_command_count),
+              topBashCommands,
               dominantTool: row.dominant_tool?.[0] ?? null,
             }
           })

@@ -89,8 +89,7 @@ const toRelativeDisplayPath = (path: string, workspacePath: string): string => {
   return basename(path)
 }
 
-const toEmptyHeatmap = (): Report["heatmap"] =>
-  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+const toEmptyHeatmap = (): Report["heatmap"] => Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
 
 /**
  * Fills a 7×24 zeroed matrix from sparse `(dayOfWeek, hourOfDay, uses)`
@@ -114,17 +113,17 @@ const buildDeepDive = (workspace: WorkspaceRow, row: WorkspaceDeepDiveRow): Work
   toolCalls: row.toolCalls,
   sessions: row.sessions,
   commits: row.commits,
-  topFiles: row.topFilePaths.map(
-    (path): FileLine => ({
-      displayPath: toRelativeDisplayPath(path, row.workspacePath),
-      // Per-file touch counts aren't returned by topKIf — show without count.
-      touches: 0,
+  topFiles: row.topFiles.map(
+    (file): FileLine => ({
+      displayPath: toRelativeDisplayPath(file.path, row.workspacePath),
+      touches: file.touches,
+      linesAdded: file.linesAdded,
+      linesRemoved: file.linesRemoved,
+      reads: file.reads,
     }),
   ),
   topBranches: [...row.topBranches],
-  topBashCommand: row.topBashCommandPattern
-    ? { pattern: row.topBashCommandPattern, count: row.topBashCommandCount }
-    : null,
+  topBashCommands: row.topBashCommands.map((cmd) => ({ pattern: cmd.pattern, count: cmd.uses })),
   dominantTool: row.dominantTool ? toolBucketFor(row.dominantTool) : "other",
 })
 
@@ -184,9 +183,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       ? { durationMs: input.durationStats.longestDurationMs, workspace: input.durationStats.longestWorkspace }
       : null
 
-  const busiestDay = input.busiestDay
-    ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls }
-    : null
+  const busiestDay = input.busiestDay ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls } : null
 
   const biggestWrite = input.biggestWrite
     ? { displayName: basename(input.biggestWrite.filePath), lines: input.biggestWrite.lines }

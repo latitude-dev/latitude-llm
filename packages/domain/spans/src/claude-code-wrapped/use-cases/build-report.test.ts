@@ -76,14 +76,17 @@ const baseInput: AssembleReportInput = {
         sessions: 5,
         commits: 7,
         workspacePath: WORKSPACE_PATH,
-        topFilePaths: [
-          `${WORKSPACE_PATH}/src/index.ts`,
-          `${WORKSPACE_PATH}/src/Chat.tsx`,
-          "/Users/someone-else/elsewhere/foo.ts",
+        topFiles: [
+          { path: `${WORKSPACE_PATH}/src/index.ts`, touches: 23, linesAdded: 234, linesRemoved: 132, reads: 5 },
+          { path: `${WORKSPACE_PATH}/src/Chat.tsx`, touches: 18, linesAdded: 890, linesRemoved: 0, reads: 0 },
+          { path: "/Users/someone-else/elsewhere/foo.ts", touches: 4, linesAdded: 0, linesRemoved: 0, reads: 4 },
         ],
-        topBranches: ["main", "feat/chat-input"],
-        topBashCommandPattern: "pnpm",
-        topBashCommandCount: 9,
+        topBranches: ["main", "feat/chat-input", "fix/keyboard"],
+        topBashCommands: [
+          { pattern: "pnpm", uses: 9 },
+          { pattern: "git", uses: 6 },
+          { pattern: "swift", uses: 3 },
+        ],
         dominantTool: "Edit",
       },
     },
@@ -179,9 +182,36 @@ describe("assembleReport", () => {
     }
   })
 
-  it("exposes the top bash command for the workspace deep dive", () => {
+  it("exposes the top 3 bash commands for the workspace deep dive", () => {
     const report = assembleReport(baseInput)
-    expect(report.workspaceDeepDives[0]?.topBashCommand).toEqual({ pattern: "pnpm", count: 9 })
+    expect(report.workspaceDeepDives[0]?.topBashCommands).toEqual([
+      { pattern: "pnpm", count: 9 },
+      { pattern: "git", count: 6 },
+      { pattern: "swift", count: 3 },
+    ])
+  })
+
+  it("carries per-file diff stats through to the workspace deep dive", () => {
+    const report = assembleReport(baseInput)
+    const files = report.workspaceDeepDives[0]?.topFiles ?? []
+    const indexTs = files.find((f) => f.displayPath === "src/index.ts")
+    expect(indexTs).toEqual({
+      displayPath: "src/index.ts",
+      touches: 23,
+      linesAdded: 234,
+      linesRemoved: 132,
+      reads: 5,
+    })
+    // A file with no edits still surfaces reads — the template can swap the
+    // "+N / −M" label for "N reads" using these fields.
+    const readOnly = files.find((f) => f.displayPath === "foo.ts")
+    expect(readOnly).toEqual({
+      displayPath: "foo.ts",
+      touches: 4,
+      linesAdded: 0,
+      linesRemoved: 0,
+      reads: 4,
+    })
   })
 
   it("emits otherWorkspaceCount = 0 for 1-workspace input", () => {
@@ -206,10 +236,9 @@ describe("assembleReport", () => {
           sessions: workspace.sessions,
           commits: 0,
           workspacePath: "",
-          topFilePaths: [],
+          topFiles: [],
           topBranches: [],
-          topBashCommandPattern: null,
-          topBashCommandCount: 0,
+          topBashCommands: [],
           dominantTool: "Edit",
         },
       })),

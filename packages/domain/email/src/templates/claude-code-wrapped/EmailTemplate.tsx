@@ -10,7 +10,7 @@ import { Heatmap } from "./-components/Heatmap.tsx"
 import { MomentCard } from "./-components/MomentCard.tsx"
 import { PersonalityCard, type PersonalityKindLocal } from "./-components/PersonalityCard.tsx"
 import { StatCard } from "./-components/StatCard.tsx"
-import { WorkspaceCard } from "./-components/WorkspaceCard.tsx"
+import { WorkspaceSection } from "./-components/WorkspaceSection.tsx"
 
 interface ClaudeCodeWrappedEmailProps {
   readonly userName: string
@@ -344,25 +344,16 @@ function TopCommandLine({ command }: { command: Report["topBashCommand"] }) {
   )
 }
 
-function WorkspacesSection({
-  deepDives,
-  otherCount,
-}: {
-  deepDives: Report["workspaceDeepDives"]
-  otherCount: number
-}) {
+function WorkspaceSections({ deepDives, otherCount }: { deepDives: Report["workspaceDeepDives"]; otherCount: number }) {
   if (deepDives.length === 0) return null
-  const single = deepDives.length === 1
-  const title = single && deepDives[0] ? `Your week in ${deepDives[0].name}` : "Workspaces"
-  const subtitle = single
-    ? "Your one and only this week."
-    : `Where Claude spent the most time${otherCount > 0 ? ` — plus ${otherCount} more workspaces` : ""}.`
+  // Each workspace renders as its own section — no parent wrapper. With only
+  // one workspace, the section reads as the user's whole story this week;
+  // with several, each gets equal narrative weight instead of cramming into
+  // a card.
   return (
-    <Section style={sectionStyle}>
-      <EmailHeading variant="sectionTitle">{title}</EmailHeading>
-      <p style={sectionSubtitleStyle}>{subtitle}</p>
+    <>
       {deepDives.map((ws) => (
-        <WorkspaceCard
+        <WorkspaceSection
           key={ws.name}
           name={ws.name}
           sessions={ws.sessions}
@@ -370,23 +361,25 @@ function WorkspacesSection({
           commits={ws.commits}
           topFiles={ws.topFiles}
           topBranches={ws.topBranches}
-          topBashCommand={ws.topBashCommand}
+          topBashCommands={ws.topBashCommands}
           dominantTool={ws.dominantTool}
         />
       ))}
-      {!single && otherCount > 0 ? (
-        <p
-          style={{
-            fontFamily: emailDesignTokens.fonts.serif,
-            fontSize: "12px",
-            color: emailDesignTokens.colors.claude.mutedInk,
-            marginTop: "4px",
-          }}
-        >
-          {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
-        </p>
+      {otherCount > 0 ? (
+        <Section style={{ marginTop: "8px" }}>
+          <p
+            style={{
+              fontFamily: emailDesignTokens.fonts.serif,
+              fontSize: "12px",
+              color: emailDesignTokens.colors.claude.mutedInk,
+              margin: 0,
+            }}
+          >
+            {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
+          </p>
+        </Section>
       ) : null}
-    </Section>
+    </>
   )
 }
 
@@ -424,7 +417,7 @@ export function ClaudeCodeWrappedEmail({ userName, report, imageBaseUrl }: Claud
       <HeatmapSection heatmap={report.heatmap} />
       <MomentsSection moments={report.moments} />
       <TopCommandLine command={report.topBashCommand} />
-      <WorkspacesSection deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
+      <WorkspaceSections deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
       <PersonalityRevealSection personality={report.personality} imageBaseUrl={imageBaseUrl} />
     </WrappedLayout>
   )
@@ -470,12 +463,28 @@ ClaudeCodeWrappedEmail.PreviewProps = {
         sessions: 17,
         commits: 23,
         topFiles: [
-          { displayPath: "src/index.ts", touches: 0 },
-          { displayPath: "src/Chat.tsx", touches: 0 },
-          { displayPath: "src/types.ts", touches: 0 },
+          {
+            displayPath: "Poncho/Sources/Root/RootView.swift",
+            touches: 34,
+            linesAdded: 234,
+            linesRemoved: 132,
+            reads: 7,
+          },
+          {
+            displayPath: "Poncho/Sources/Sidebar/SidebarView.swift",
+            touches: 21,
+            linesAdded: 890,
+            linesRemoved: 0,
+            reads: 0,
+          },
+          { displayPath: "Project.swift", touches: 14, linesAdded: 0, linesRemoved: 0, reads: 14 },
         ],
-        topBranches: ["main", "feat/chat-input"],
-        topBashCommand: { pattern: "pnpm", count: 32 },
+        topBranches: ["main", "feat/chat-input", "fix/keyboard"],
+        topBashCommands: [
+          { pattern: "xcodebuild", count: 19 },
+          { pattern: "swift", count: 14 },
+          { pattern: "git", count: 11 },
+        ],
         dominantTool: "edit",
       },
     ],
@@ -497,7 +506,11 @@ ClaudeCodeWrappedEmail.PreviewProps = {
     personality: {
       kind: "surgeon",
       score: 0.42,
-      evidence: ["42% of your tool calls were Edits", "Touched 142 files this week", "21 new files written from scratch"],
+      evidence: [
+        "42% of your tool calls were Edits",
+        "Touched 142 files this week",
+        "21 new files written from scratch",
+      ],
     },
   },
 } satisfies ClaudeCodeWrappedEmailProps

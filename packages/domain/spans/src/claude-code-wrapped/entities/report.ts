@@ -13,14 +13,7 @@ export type ToolBucket = (typeof TOOL_BUCKETS)[number]
  * The six personalities revealed at the end of the email. Assignment is
  * deterministic and pure — see `assignPersonality`.
  */
-export const PERSONALITY_KINDS = [
-  "surgeon",
-  "architect",
-  "detective",
-  "conductor",
-  "marathoner",
-  "strategist",
-] as const
+export const PERSONALITY_KINDS = ["surgeon", "architect", "detective", "conductor", "marathoner", "strategist"] as const
 export type PersonalityKind = (typeof PERSONALITY_KINDS)[number]
 
 const fileLineSchema = z.object({
@@ -30,7 +23,18 @@ const fileLineSchema = z.object({
    * or similar private prefixes).
    */
   displayPath: z.string(),
+  /** Distinct tool calls that touched this file (Read, Edit, Write, …). */
   touches: z.number().int().nonnegative(),
+  /**
+   * Lines Claude added — counted across Edit / MultiEdit / NotebookEdit
+   * `new_string` newlines plus Write `content` newlines. The "+N" in the
+   * "+N / −M" diff label.
+   */
+  linesAdded: z.number().int().nonnegative(),
+  /** Lines Claude removed (Edit / MultiEdit / NotebookEdit `old_string` newlines). */
+  linesRemoved: z.number().int().nonnegative(),
+  /** Read / NotebookRead call count — used when there's no diff to show. */
+  reads: z.number().int().nonnegative(),
 })
 export type FileLine = z.infer<typeof fileLineSchema>
 
@@ -46,8 +50,9 @@ const workspaceDeepDiveSchema = z.object({
   sessions: z.number().int().nonnegative(),
   commits: z.number().int().nonnegative(),
   topFiles: z.array(fileLineSchema).max(3),
-  topBranches: z.array(z.string()).max(2),
-  topBashCommand: topBashCommandSchema.nullable(),
+  topBranches: z.array(z.string()).max(3),
+  /** Top bash command prefixes within this workspace (up to 3). */
+  topBashCommands: z.array(topBashCommandSchema).max(3),
   dominantTool: z.enum(TOOL_BUCKETS),
 })
 export type WorkspaceDeepDive = z.infer<typeof workspaceDeepDiveSchema>
