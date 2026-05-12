@@ -133,11 +133,11 @@ const makeDeps = (sent: TestHarness["sent"]) => ({
     report,
   }: {
     userName: string
-    report: { projectName: string }
+    report: { project: { name: string } }
   }): Promise<ClaudeCodeWrappedRenderedEmail> => ({
-    html: `<p>Hi ${userName}, your week in ${report.projectName}</p>`,
-    subject: `Wrapped: ${report.projectName}`,
-    text: `Hi ${userName}, your week in ${report.projectName}`,
+    html: `<p>Hi ${userName}, your week in ${report.project.name}</p>`,
+    subject: `Wrapped: ${report.project.name}`,
+    text: `Hi ${userName}, your week in ${report.project.name}`,
   }),
   sendEmail: (email: { to: string; subject: string; html: string; text: string }) =>
     Effect.sync(() => {

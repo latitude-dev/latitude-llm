@@ -1,10 +1,55 @@
 import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
 import { MembershipRepository, type MemberWithUser } from "@domain/organizations"
-import { ProjectRepository } from "@domain/projects"
+import { type Project, ProjectRepository } from "@domain/projects"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { Report } from "../entities/report.ts"
 import { ClaudeCodeSpanReader } from "../ports/claude-code-span-reader.ts"
+
+/**
+ * Builds a minimal but schema-valid `Report` while the rich ClickHouse
+ * aggregations live in a follow-up commit. Zeros everywhere except the
+ * session count, an empty 7×24 heatmap, and a default `surgeon` archetype
+ * (the most common). This keeps the pipeline working end-to-end during the
+ * transition; once `buildReportUseCase` lands, this helper goes away.
+ */
+const emptyHeatmap = (): Report["heatmap"] =>
+  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+
+const makeStubReport = (
+  project: Project,
+  input: RunClaudeCodeWrappedInput,
+  sessions: number,
+): Report => ({
+  project: { id: project.id, name: project.name, slug: project.slug },
+  organization: { id: input.organizationId, name: "" },
+  window: { start: input.windowStart, end: input.windowEnd },
+  totals: {
+    sessions,
+    toolCalls: 0,
+    durationMs: 0,
+    filesTouched: 0,
+    commandsRun: 0,
+    workspaces: 0,
+    branches: 0,
+    commits: 0,
+    repos: 0,
+  },
+  toolMix: { bash: 0, read: 0, edit: 0, write: 0, search: 0, plan: 0, other: 0 },
+  topFiles: [],
+  topBashCommands: [],
+  topWorkspaces: [],
+  topBranches: [],
+  workspaceDeepDives: [],
+  otherWorkspaceCount: 0,
+  heatmap: emptyHeatmap(),
+  moments: { longestSession: null, busiestDay: null, mainCharacterFile: null },
+  personality: {
+    kind: "surgeon",
+    score: 0,
+    evidence: ["", "", ""],
+  },
+})
 
 /**
  * Minimal rendered-email shape — mirrors `RenderedEmail` from `@domain/email`
@@ -123,14 +168,10 @@ export const runClaudeCodeWrappedUseCase = (deps: RunClaudeCodeWrappedDeps) =>
       return { status: "skipped", reason: "no-recipients" } satisfies RunClaudeCodeWrappedResult
     }
 
-    const report: Report = {
-      projectId: input.projectId,
-      organizationId: input.organizationId,
-      projectName: project.name,
-      windowStart: input.windowStart,
-      windowEnd: input.windowEnd,
-      totalSessions: sessions,
-    }
+    // Stub report — schema is in place, but the rich aggregations are added
+    // in a follow-up commit (build-report.ts). For now we emit a minimal but
+    // valid Report so the rest of the pipeline keeps working end-to-end.
+    const report: Report = makeStubReport(project, input, sessions)
 
     yield* Effect.forEach(recipients, renderForRecipient(deps, report), {
       concurrency: SEND_CONCURRENCY,

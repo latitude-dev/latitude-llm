@@ -1,4 +1,16 @@
-export { type Report, reportSchema } from "./entities/report.ts"
+export {
+  type FileLine,
+  type Personality,
+  PERSONALITY_KINDS,
+  type PersonalityKind,
+  type Report,
+  reportSchema,
+  TOOL_BUCKETS,
+  type ToolBucket,
+  type ToolMix,
+  type WorkspaceDeepDive,
+  type WorkspaceLine,
+} from "./entities/report.ts"
 export {
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,

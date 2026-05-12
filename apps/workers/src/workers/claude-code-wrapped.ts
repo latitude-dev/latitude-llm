@@ -121,10 +121,10 @@ export const createClaudeCodeWrappedWorker = ({
         renderEmail: ({ userName, report }) =>
           claudeCodeWrappedTemplate({
             userName,
-            projectName: report.projectName,
-            windowStart: report.windowStart,
-            windowEnd: report.windowEnd,
-            totalSessions: report.totalSessions,
+            projectName: report.project.name,
+            windowStart: report.window.start,
+            windowEnd: report.window.end,
+            totalSessions: report.totals.sessions,
           }),
         sendEmail: sendEmailUseCase,
       })({
