@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
+import { Button, cn, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
@@ -409,6 +409,69 @@ function SearchPage() {
   )
 }
 
+type SearchSyntaxPill = {
+  readonly kind: "literal" | "token"
+  readonly text: string
+  readonly open: boolean
+}
+
+function getSearchSyntaxPills(value: string): readonly SearchSyntaxPill[] {
+  const pills: SearchSyntaxPill[] = []
+  let i = 0
+
+  while (i < value.length) {
+    const delimiter = value[i]
+    if (delimiter !== '"' && delimiter !== "`") {
+      i += 1
+      continue
+    }
+
+    const close = value.indexOf(delimiter, i + 1)
+    const end = close === -1 ? value.length : close
+    const text = value
+      .slice(i + 1, end)
+      .trim()
+      .replace(/\s+/g, " ")
+    pills.push({
+      kind: delimiter === '"' ? "literal" : "token",
+      text,
+      open: close === -1,
+    })
+    i = close === -1 ? value.length : close + 1
+  }
+
+  return pills.slice(0, 3)
+}
+
+function SearchSyntaxPills({ draft }: { readonly draft: string }) {
+  const pills = getSearchSyntaxPills(draft)
+  if (pills.length === 0) return null
+
+  return (
+    <div className="pointer-events-none absolute inset-y-0 right-3 hidden max-w-[45%] items-center gap-1.5 lg:flex">
+      {pills.map((pill, index) => {
+        const delimiter = pill.kind === "literal" ? '"' : "`"
+        const label = pill.text.length > 0 ? `${delimiter}${pill.text}${pill.open ? "" : delimiter}` : delimiter
+        return (
+          <span
+            key={`${pill.kind}-${index.toString()}-${pill.text}`}
+            className={cn(
+              "inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium shadow-sm",
+              pill.kind === "literal"
+                ? "border-primary/25 bg-primary/10 text-primary"
+                : "border-accent-foreground/20 bg-accent text-accent-foreground",
+              pill.open ? "border-dashed" : "",
+            )}
+          >
+            <span className="shrink-0 opacity-70">{pill.kind === "literal" ? "Literal" : "Phrase"}</span>
+            <span className="truncate font-mono">{label}</span>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 function SearchInput({
   initialValue,
   onSubmit,
@@ -417,6 +480,7 @@ function SearchInput({
   readonly onSubmit: (value: string) => void
 }) {
   const [draft, setDraft] = useState(initialValue)
+  const hasSyntaxPills = getSearchSyntaxPills(draft).length > 0
 
   return (
     <div className="relative flex-1">
@@ -432,12 +496,13 @@ function SearchInput({
           const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
           onSubmit(next)
         }}
-        placeholder='Search by meaning. Use "quotes" for an exact phrase.'
+        placeholder={'Search by meaning. Use "literal text" or `ordered token phrase`.'}
         size="lg"
         maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className="w-full pl-9 rounded-xl"
+        className={cn("w-full rounded-xl pl-9", hasSyntaxPills ? "lg:pr-[28rem]" : "")}
         autoFocus
       />
+      <SearchSyntaxPills draft={draft} />
     </div>
   )
 }
