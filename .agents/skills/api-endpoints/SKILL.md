@@ -7,6 +7,20 @@ description: Adding or changing routes in `apps/api`. One source of truth (`defi
 
 **When to use:** Adding a new endpoint to `apps/api`, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
 
+## Before you start — reuse the UI's logic via the domain layer
+
+When you add a new API endpoint, check whether the same action or read is already available in the web UI. The plan only ships a specific list of API endpoints (see the inventory in `plans/mcp-oauth-api-expansion.md`); the goal isn't full surface parity, it's not duplicating logic that the web already implements.
+
+For each new endpoint, open **`apps/web/src/domains/<entity>/<entity>.functions.ts`**. Three cases:
+
+- **The web's server fn already calls a domain use-case** (imports `*UseCase` from `@domain/*`): reuse that use-case in the API route handler. Don't reimplement the logic in `apps/api`.
+- **The web's server fn has the logic inline** (raw repository calls, validation, side effects in the server fn body itself): **extract it into a new domain use-case first**, then have both the web server fn AND your API route call it. The domain use-case becomes the shared seam.
+- **The web's server fn delegates to a third-party API** like `getBetterAuth().api.*`: the API process can't reach the same in-process instance. Write a domain use-case that replicates that behavior (carefully — read the third-party source so your use-case matches its rules), then point both the web and API at the use-case. Adds parity tests so the migration doesn't silently drift.
+
+The domain use-case is the shared seam between web and API. Duplicating logic in both surfaces creates drift — one gets a bug fix the other doesn't.
+
+If the entity doesn't have a `.functions.ts` because the UI doesn't expose this action yet, you're designing fresh. That's fine; just don't lose the option to share later — put the business logic in a `@domain/*` use-case from the start rather than inline in the route handler.
+
 ## What you're really doing
 
 Every endpoint in `apps/api` is **one declaration that fans out four ways**:

@@ -10,6 +10,7 @@ import { accountPath, createAccountRoutes } from "./account.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
+import { createMembersRoutes, membersPath } from "./members.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
@@ -53,6 +54,9 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
 
   routes.use(accountPath, createTierRateLimiter("low"))
   routes.route(accountPath, createAccountRoutes())
+
+  routes.use(membersPath, createTierRateLimiter("medium"))
+  routes.route(membersPath, createMembersRoutes())
 
   registerMcpRoute({ app, routes })
 

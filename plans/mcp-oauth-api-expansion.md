@@ -36,6 +36,88 @@ Stack confirmed: `better-auth@1.6.9` (catalog), `@better-auth/core@1.6.9`, `@bet
 | D18 | **Pagination across the whole API uses one shape** — same as traces/issues today. `Paginated(Item, "PaginatedItem")` returns `{ items, nextCursor, hasMore }`. Projects list (currently flat `{ projects: [...] }`) gets migrated. | Consistency for both SDK and MCP consumers. |
 | D19 | **`/v1/mcp` lives behind the unified auth middleware.** The MCP discovery endpoints (`/auth/.well-known/oauth-protected-resource`, `/auth/.well-known/oauth-authorization-server`) live in the **public** ring (BA owns them). Add convenience root-level redirects from `/.well-known/oauth-*` → `/auth/.well-known/oauth-*` because some MCP clients query the root. | Matches what BA's docs recommend. |
 
+## Endpoint inventory
+
+Authoritative list of every HTTP route the plan introduces — per resource, with verb + path. The milestone sections below describe the *work* (use-cases, migrations, schema changes); this section is the *contract*. When in doubt about whether something is in scope, check here first.
+
+```
+Members
+    - List Members                                              [GET /members]
+    - Get Member details                                        [GET /members/{memberId}]
+    - Invite Member                                             [POST /members]
+    - Update Member                                             [PATCH /members/{memberId}]
+        - Role
+    - Remove Member                                             [DELETE /members/{memberId}]
+Projects
+    - List Projects                                             [GET /projects]
+    - Get Project details                                       [GET /projects/{projectSlug}]
+    - Create Project                                            [POST /projects]
+    - Update Project                                            [PATCH /projects/{projectSlug}]
+        - Name
+        - Settings
+        - Flaggers
+    - Delete Project                                            [DELETE /projects/{projectSlug}]
+API Keys
+    - List API Keys (masked)                                    [GET /api-keys]
+    - Get API Key details (unmasked)                            [GET /api-keys/{apiKeyId}]
+    - Create API Key                                            [POST /api-keys]
+    - Update API Key                                            [PATCH /api-keys/{apiKeyId}]
+        - Name
+    - Delete API Key                                            [DELETE /api-keys/{apiKeyId}]
+Traces
+    - List Traces (including all filters,                       [GET /projects/{projectSlug}/traces]
+                   including semantic search filter,
+                   keyset pagination)
+    - Get Trace details                                         [GET /projects/{projectSlug}/traces/{traceId}]
+    - Export Trace/s (via TraceRef/s) (bulk)                    [POST /projects/{projectSlug}/traces/export]
+Annotations
+    - Create Annotation (via TraceRef)                          [POST /projects/{projectSlug}/annotations]
+Scores
+    - Create Score (via TraceRef)                               [POST /projects/{projectSlug}/scores]
+Searches (saved searches)
+    - List Searches                                             [GET /projects/{projectSlug}/searches]
+    - Get Search details                                        [GET /projects/{projectSlug}/searches/{searchSlug}]
+    - Create Search (including all filters,                     [POST /projects/{projectSlug}/searches]
+                     including semantic search filter,
+                     just creates does not return traces)
+    - Update Search                                             [PATCH /projects/{projectSlug}/searches/{searchSlug}]
+        - Name
+        - Filters
+    - Delete Search                                             [DELETE /projects/{projectSlug}/searches/{searchSlug}]
+    - Assign Search to Member                                   [POST /projects/{projectSlug}/searches/{searchSlug}/assign]
+Issues
+    - List Issues (including all filters,                       [GET /projects/{projectSlug}/issues]
+                   keyset pagination)
+    - Get Issue details                                         [GET /projects/{projectSlug}/issues/{issueSlug}]
+    - Resolve Issue/s (bulk)                                    [POST /projects/{projectSlug}/issues/resolve]
+    - Unresolve Issue/s (bulk)                                  [POST /projects/{projectSlug}/issues/unresolve]
+    - Ignore Issue/s (bulk)                                     [POST /projects/{projectSlug}/issues/ignore]
+    - Unignore Issue/s (bulk)                                   [POST /projects/{projectSlug}/issues/unignore]
+    - Monitor (or realign) Issue                                [POST /projects/{projectSlug}/issues/{issueSlug}/monitor]
+    - Unmonitor Issue                                           [POST /projects/{projectSlug}/issues/{issueSlug}/unmonitor]
+    - Export Issue/s (bulk)                                     [POST /projects/{projectSlug}/issues/export]
+Datasets
+    - List Datasets                                             [GET /projects/{projectSlug}/datasets]
+    - Get Dataset details                                       [GET /projects/{projectSlug}/datasets/{datasetSlug}]
+    - Create Dataset                                            [POST /projects/{projectSlug}/datasets]
+    - Update Dataset                                            [PATCH /projects/{projectSlug}/datasets/{datasetSlug}]
+        - Name
+    - Delete Dataset                                            [DELETE /projects/{projectSlug}/datasets/{datasetSlug}]
+    - List Row/s (including the search query filter,            [GET /projects/{projectSlug}/datasets/{datasetSlug}/rows]
+                  keyset pagination)
+    - Add Row/s (bulk)                                          [POST /projects/{projectSlug}/datasets/{datasetSlug}/rows]
+    - Remove Rows/s (bulk)                                      [DELETE /projects/{projectSlug}/datasets/{datasetSlug}/rows]
+    - Import Row/s from File (CSV)                              [POST /projects/{projectSlug}/datasets/{datasetSlug}/rows/import/files]
+    - Import Row/s from Traces (via TraceRef/s) (bulk)          [POST /projects/{projectSlug}/datasets/{datasetSlug}/rows/import/traces]
+    - Export Rows/s (bulk)                                      [POST /projects/{projectSlug}/datasets/{datasetSlug}/rows/export]
+```
+
+**Explicitly out of scope (UI-only):**
+
+- Transfer organization ownership — high-blast-radius, kept on the web with extra confirmation.
+- Cancel pending member invitation — covered by the web's invitation lifecycle. Reconsider if real demand emerges.
+- Separate "list pending invitations" endpoint — pending invites surface through the web; the API stays focused on confirmed members.
+
 ## Architecture
 
 ### Process layout (cross-origin, cookie-free)
