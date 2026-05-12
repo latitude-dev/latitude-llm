@@ -848,8 +848,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           if (issueIds.length === 0) return []
-          const nowMs = (now ?? new Date()).getTime()
-          const anchors = computeSeasonalAnchors(now ?? new Date())
+          const resolvedNow = now ?? new Date()
+          const nowMs = resolvedNow.getTime()
+          const anchors = computeSeasonalAnchors(resolvedNow)
+          // Bind the SQL sliding-window edges to the same `now` the JS side uses
+          // for anchor computation; otherwise tests overriding `now` would
+          // compute anchors against the override while the SQL still reads
+          // `now()` from the DB clock, silently desyncing the two halves of
+          // the read.
+          const nowParam = toClickHouseDateTime(nowMs)
           // Buckets we need from the MV: each anchor + the 5 hourly buckets
           // preceding it (for the 6h-span sum). Deduplicated since 6h spans
           // can overlap across adjacent hour-offsets.
@@ -865,17 +872,18 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 const result = await client.query({
                   query: `SELECT
                           issue_id,
-                          countIf(created_at >= now() - INTERVAL 1 HOUR)  AS recent_1h,
-                          countIf(created_at >= now() - INTERVAL 6 HOUR)  AS recent_6h,
-                          countIf(created_at >= now() - INTERVAL 1 DAY)   AS recent_24h
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 HOUR) AS recent_1h,
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 6 HOUR) AS recent_6h,
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY)  AS recent_24h
                         FROM scores
                         WHERE ${scopeClause(options)}
                           AND issue_id IN ({issueIds:Array(String)})
-                          AND created_at >= now() - INTERVAL 1 DAY
+                          AND created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY
                         GROUP BY issue_id`,
                   query_params: {
                     ...scopeParams(organizationId, projectId),
                     issueIds: Array.from(issueIds) as string[],
+                    now: nowParam,
                   },
                   format: "JSONEachRow",
                 })
