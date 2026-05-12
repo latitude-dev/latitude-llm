@@ -1,7 +1,7 @@
 import type { Project } from "@domain/projects"
 import type { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
-import type { FileLine, Report, ToolBucket, ToolMix, WorkspaceDeepDive } from "../entities/report.ts"
+import { type FileLine, type Report, reportSchema, type ToolBucket, type ToolMix, type WorkspaceDeepDive } from "../entities/report.ts"
 import { pickReadAnchor, pickWrittenAnchor } from "../helpers/anchors.ts"
 import {
   type BiggestWriteRow,
@@ -161,8 +161,8 @@ export interface AssembleReportInput {
 /**
  * Pure assembly step — no Effect, no I/O. Bucketises the tool mix, computes
  * relative paths + anchors, fills the 7×24 heatmap, assigns the personality,
- * and validates the result against `reportSchema` (callers can rely on the
- * returned object being a `Report`).
+ * and runs the assembled object through `reportSchema.parse` so callers can
+ * rely on the returned value being a `Report`.
  */
 export const assembleReport = (input: AssembleReportInput): Report => {
   const toolMix = bucketise(input.toolMix)
@@ -205,7 +205,11 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       ? { pattern: input.topBash[0].pattern, count: input.topBash[0].uses }
       : null
 
-  return {
+  // Runtime-validate the assembled object so callers can rely on the
+  // return being a `Report` even when something upstream (a query, an
+  // adapter, a refactor) drifts away from the schema. Cheap — one Zod
+  // parse per Wrapped run, fired ~once per project per week.
+  return reportSchema.parse({
     project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
     organization: input.organization,
     window: { start: input.windowStart, end: input.windowEnd },
@@ -237,7 +241,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     heatmap,
     moments: { longestSession, busiestDay, biggestWrite },
     personality,
-  }
+  })
 }
 
 export interface BuildReportInput {
