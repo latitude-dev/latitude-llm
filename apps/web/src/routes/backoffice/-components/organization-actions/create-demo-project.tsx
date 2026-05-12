@@ -122,7 +122,11 @@ export function CreateDemoProjectButton({ organizationId }: CreateDemoProjectBut
               </FormWrapper>
             </Modal.Body>
             <Modal.Footer>
-              <CloseTrigger />
+              <CloseTrigger>
+                <Button variant="outline" size="sm">
+                  Close
+                </Button>
+              </CloseTrigger>
               <Button type="submit" size="sm" disabled={form.state.isSubmitting}>
                 {form.state.isSubmitting ? "Creating…" : "Create demo project"}
               </Button>
