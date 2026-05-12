@@ -1,9 +1,7 @@
-import { AdminFeatureFlagRepository } from "@domain/admin"
 import { claudeCodeWrappedTemplate, sendEmail } from "@domain/email"
-import { CLAUDE_CODE_WRAPPED_FLAG } from "@domain/feature-flags"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import { listProjectsWithClaudeCodeSpansUseCase, runClaudeCodeWrappedUseCase } from "@domain/spans"
+import { runClaudeCodeWrappedUseCase } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ClaudeCodeSpanReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
@@ -19,6 +17,7 @@ import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
+import { fanOutWeeklyRunUseCase } from "./claude-code-wrapped-fan-out.ts"
 
 const logger = createLogger("claude-code-wrapped")
 
@@ -69,48 +68,24 @@ export const createClaudeCodeWrappedWorker = ({
       const now = new Date()
       const windowStart = new Date(now.getTime() - WINDOW_DURATION_MS)
 
-      return Effect.gen(function* () {
-        const projects = yield* listProjectsWithClaudeCodeSpansUseCase({ from: windowStart, to: now })
-        if (projects.length === 0) {
-          logger.info("claude-code-wrapped: no projects had Claude Code activity in window")
-          return
-        }
-
-        const adminFlags = yield* AdminFeatureFlagRepository
-        const eligibility = yield* adminFlags.findEligibilityForFlag(CLAUDE_CODE_WRAPPED_FLAG)
-
-        const enabledOrgIds = new Set(eligibility.organizationIds.map((id) => id as string))
-        const eligible = eligibility.enabledForAll
-          ? projects
-          : projects.filter((project) => enabledOrgIds.has(project.organizationId as string))
-
-        if (eligible.length === 0) {
-          logger.info("claude-code-wrapped: no eligible projects after flag intersection")
-          return
-        }
-
-        const windowStartIso = windowStart.toISOString()
-        const windowEndIso = now.toISOString()
-
-        // No dedupeKey: BullMQ dedupe by jobId blocks legitimate retries after
-        // a failed run (the failed jobId stays "burned" until removed). The
-        // cron only fires weekly so there's no realistic duplicate-publish
-        // risk from this path, and the manual backoffice button should
-        // always re-run on click.
-        yield* Effect.forEach(
-          eligible,
-          (project) =>
-            publisher.publish("claude-code-wrapped", "runForProject", {
-              organizationId: project.organizationId as string,
-              projectId: project.projectId as string,
-              windowStartIso,
-              windowEndIso,
-            }),
-          { concurrency: 10, discard: true },
-        )
-
-        logger.info(`claude-code-wrapped: fan-out completed for ${eligible.length} project(s)`)
-      }).pipe(
+      // No dedupeKey on publish: BullMQ dedupe by jobId blocks legitimate
+      // retries after a failed run (the failed jobId stays "burned" until
+      // removed). The cron only fires weekly so there's no realistic
+      // duplicate-publish risk from this path.
+      return fanOutWeeklyRunUseCase({
+        publish: (payload) => publisher.publish("claude-code-wrapped", "runForProject", payload),
+      })({ windowStart, windowEnd: now }).pipe(
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            if (result.status === "fanned-out") {
+              logger.info(`claude-code-wrapped: fan-out completed for ${result.publishedCount} project(s)`)
+            } else if (result.status === "no-activity") {
+              logger.info("claude-code-wrapped: no projects had Claude Code activity in window")
+            } else {
+              logger.info("claude-code-wrapped: no eligible projects after flag intersection")
+            }
+          }),
+        ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error("claude-code-wrapped triggerWeeklyRun failed", error)),
         ),
@@ -119,6 +94,7 @@ export const createClaudeCodeWrappedWorker = ({
         withPostgres(AdminFeatureFlagRepositoryLive, adminPostgresClient),
         withClickHouse(ClaudeCodeSpanReaderLive, clickhouseClient, OrganizationId("system")),
         withTracing,
+        Effect.asVoid,
       )
     },
 
