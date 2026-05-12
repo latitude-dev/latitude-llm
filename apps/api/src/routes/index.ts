@@ -3,9 +3,10 @@ import { API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
+import { createAuthRateLimiter, createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
+import { accountPath, createAccountRoutes } from "./account.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
@@ -47,6 +48,9 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route("/projects/:projectSlug/scores", createScoresRoutes())
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
   routes.route(apiKeysPath, createApiKeysRoutes())
+
+  routes.use(accountPath, createTierRateLimiter("low"))
+  routes.route(accountPath, createAccountRoutes())
 
   registerMcpRoute({ app, routes })
 

@@ -24,6 +24,7 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/users": "workspace:*",
     "@hono/node-server": "catalog:",
     "@hono/otel": "1.1.1",
     "@hono/swagger-ui": "0.5.3",

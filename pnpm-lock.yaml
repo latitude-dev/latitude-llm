@@ -201,6 +201,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../../packages/domain/users
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
