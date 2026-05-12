@@ -395,7 +395,10 @@ describe("runFlaggerUseCase", () => {
     }
   })
 
-  it("recovers to matched=false when the AI returns output that fails schema validation", async () => {
+  // The Vercel adapter recovers `NoObjectGeneratedError` inside its capture span when
+  // `tolerateSchemaMismatch: true` is set (which the flagger does), surfacing the result
+  // as `object: undefined` instead of failing. The flagger collapses that into matched=false.
+  it("recovers to matched=false when the adapter signals a schema mismatch via object: undefined", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
         Effect.succeed(
@@ -412,20 +415,14 @@ describe("runFlaggerUseCase", () => {
         ),
     })
 
-    // Simulates Vercel AI SDK's NoObjectGeneratedError, which is surfaced by
-    // @platform/ai-vercel as AIError with the original SDK error on `cause`.
-    const sdkError = new Error("No object generated: response did not match schema.")
-    sdkError.name = "AI_NoObjectGeneratedError"
-
-    const { layer: aiLayer } = createFakeAI({
-      generate: () =>
-        Effect.fail(
-          new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
-            cause: sdkError,
-          }),
-        ),
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: undefined as T,
+          tokens: 0,
+          tokenUsage: { input: 0, output: 0 },
+          duration: 0,
+        }),
     })
 
     const result = await Effect.runPromise(
@@ -441,49 +438,8 @@ describe("runFlaggerUseCase", () => {
     )
 
     expect(result).toEqual({ matched: false })
-  })
-
-  it("recovers to matched=false when the SDK cause has no AI_NoObjectGeneratedError name but the message indicates a schema mismatch", async () => {
-    const { repository } = createFakeTraceRepository({
-      findByTraceId: () =>
-        Effect.succeed(
-          makeTraceDetail([
-            {
-              role: "user",
-              parts: [{ type: "text", content: "Please do the task." }],
-            },
-            {
-              role: "assistant",
-              parts: [{ type: "text", content: "I'll look into that." }],
-            },
-          ]),
-        ),
-    })
-
-    const { layer: aiLayer } = createFakeAI({
-      generate: () =>
-        Effect.fail(
-          new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
-            cause: new Error("No object generated: response did not match schema."),
-          }),
-        ),
-    })
-
-    const result = await Effect.runPromise(
-      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(TraceRepository, repository),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
-            aiLayer,
-          ),
-        ),
-      ),
-    )
-
-    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0]?.tolerateSchemaMismatch).toBe(true)
   })
 
   it("uses flagger-specific prompt for laziness with work signals", async () => {

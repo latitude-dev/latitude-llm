@@ -3,7 +3,7 @@ import {
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
   type AICredentialError,
-  AIError,
+  type AIError,
   buildProjectScopedAiMetadata,
 } from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
@@ -63,17 +63,6 @@ const loadTraceDetail = (input: RunFlaggerInput) =>
     })
   })
 
-// The Vercel AI SDK raises a `NoObjectGeneratedError` (name `AI_NoObjectGeneratedError`)
-// when the model returns output that does not match the requested schema. The flagger
-// treats this as a "no match" signal instead of propagating the failure — the model
-// effectively failed to classify, which for a triage flagger is indistinguishable
-// from matched=false.
-const isSchemaMismatchCause = (cause: unknown): boolean => {
-  if (!(cause instanceof Error)) return false
-  if (cause.name === "AI_NoObjectGeneratedError") return true
-  return typeof cause.message === "string" && cause.message.includes("response did not match schema")
-}
-
 /**
  * LLM classification for an already-loaded trace.
  *
@@ -93,35 +82,33 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
 
   const ai = yield* AI
 
-  const decisions = yield* ai
-    .generate({
-      ...FLAGGER_MODEL,
-      maxTokens: FLAGGER_MAX_TOKENS,
-      system: strategy.buildSystemPrompt!(input.trace),
-      prompt: strategy.buildPrompt!(input.trace),
-      schema: flaggerOutputSchema,
-      telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
-        metadata: buildProjectScopedAiMetadata(
-          { organizationId: input.organizationId, projectId: input.projectId },
-          { traceId: input.traceId, flaggerSlug: input.flaggerSlug },
-        ),
-      },
-    })
-    .pipe(
-      Effect.map((result) => result.object),
-      Effect.catchIf(
-        (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
-        () =>
-          Effect.gen(function* () {
-            yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
-            return { matched: false }
-          }),
+  // `tolerateSchemaMismatch` recovers a Vercel AI SDK `NoObjectGeneratedError` (model output
+  // that does not parse against the schema) inside the adapter. The flagger treats that as
+  // "no match", same as a deterministic miss — and recovering before the capture span sees
+  // the error keeps the false-positive out of Datadog error tracking.
+  const result = yield* ai.generate({
+    ...FLAGGER_MODEL,
+    maxTokens: FLAGGER_MAX_TOKENS,
+    system: strategy.buildSystemPrompt!(input.trace),
+    prompt: strategy.buildPrompt!(input.trace),
+    schema: flaggerOutputSchema,
+    tolerateSchemaMismatch: true,
+    telemetry: {
+      spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+      metadata: buildProjectScopedAiMetadata(
+        { organizationId: input.organizationId, projectId: input.projectId },
+        { traceId: input.traceId, flaggerSlug: input.flaggerSlug },
       ),
-    )
+    },
+  })
 
-  return { matched: decisions.matched } satisfies RunFlaggerResult
+  if (result.object === undefined) {
+    yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
+    return { matched: false } satisfies RunFlaggerResult
+  }
+
+  return { matched: result.object.matched } satisfies RunFlaggerResult
 })
 
 /**

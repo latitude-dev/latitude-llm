@@ -11,7 +11,7 @@ import {
 } from "@domain/ai"
 import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { generateText, Output } from "ai"
+import { generateText, NoObjectGeneratedError, Output } from "ai"
 import { Effect, Layer } from "effect"
 
 const latitudeTracer = getLatitudeTracer("vercelai")
@@ -277,20 +277,38 @@ export const AIGenerateLive = Layer.effect(
               },
             }
 
-            const result = await generateText(call)
-            const usage = result.usage
+            try {
+              const result = await generateText(call)
+              const usage = result.usage
 
-            return {
-              object: result.output,
-              tokens: usage?.totalTokens ?? 0,
-              tokenUsage: {
-                input: usage?.inputTokens ?? 0,
-                output: usage?.outputTokens ?? 0,
-                ...(usage?.reasoningTokens !== undefined ? { reasoning: usage.reasoningTokens } : {}),
-                ...(usage?.cachedInputTokens !== undefined ? { cacheRead: usage.cachedInputTokens } : {}),
-              },
-              duration: Math.round((performance.now() - startTime) * 1_000_000),
-            } satisfies GenerateResult<T>
+              return {
+                object: result.output,
+                tokens: usage?.totalTokens ?? 0,
+                tokenUsage: {
+                  input: usage?.inputTokens ?? 0,
+                  output: usage?.outputTokens ?? 0,
+                  ...(usage?.reasoningTokens !== undefined ? { reasoning: usage.reasoningTokens } : {}),
+                  ...(usage?.cachedInputTokens !== undefined ? { cacheRead: usage.cachedInputTokens } : {}),
+                },
+                duration: Math.round((performance.now() - startTime) * 1_000_000),
+              } satisfies GenerateResult<T>
+            } catch (error) {
+              // Recover schema mismatch inside execute — before the Latitude `capture` span
+              // observes it — so opt-in callers don't surface an error in Datadog for an
+              // outcome that they intentionally treat as "no object". The `as T` cast is sound
+              // because the recovery only runs when `tolerateSchemaMismatch === true`, and the
+              // public `AIGenerateShape.generate` overload widens the result to `T | undefined`
+              // for those callers.
+              if (input.tolerateSchemaMismatch === true && NoObjectGeneratedError.isInstance(error)) {
+                return {
+                  object: undefined as T,
+                  tokens: 0,
+                  tokenUsage: { input: 0, output: 0 },
+                  duration: Math.round((performance.now() - startTime) * 1_000_000),
+                } satisfies GenerateResult<T>
+              }
+              throw error
+            }
           }
 
           return await runWithAiTelemetry(input.telemetry, execute)

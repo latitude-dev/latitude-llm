@@ -59,6 +59,14 @@ export interface GenerateInput<T> {
    * Does not affect generation semantics; excluded from AI cache keys (see `withAICache`).
    */
   readonly telemetry?: GenerateTelemetryCapture
+  /**
+   * When `true`, an `AI_NoObjectGeneratedError` from the underlying SDK (model output that does
+   * not parse against the schema) is recovered inside the adapter: the call resolves with
+   * `object: undefined` and zeroed token usage instead of rejecting. Callers that opt in must
+   * handle the `undefined` case. Used by flows where a schema mismatch is a valid "no result"
+   * signal and should not surface as an error on the telemetry span.
+   */
+  readonly tolerateSchemaMismatch?: boolean
 }
 
 export interface GenerateResult<T> {
@@ -124,6 +132,9 @@ export interface RerankResult {
 // ---------------------------------------------------------------------------
 
 export interface AIGenerateShape {
+  generate<T>(
+    input: GenerateInput<T> & { readonly tolerateSchemaMismatch: true },
+  ): Effect.Effect<GenerateResult<T | undefined>, AIError | AICredentialError>
   generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
 }
 
