@@ -89,6 +89,7 @@ export const setupTestApi = () => {
 
     const fakePublisher: QueuePublisherShape = {
       publish: () => Effect.void,
+      scheduleRepeatable: () => Effect.void,
       close: () => Effect.void,
     }
 

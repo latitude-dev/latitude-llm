@@ -564,6 +564,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.16)
+      '@domain/admin':
+        specifier: workspace:*
+        version: link:../../packages/domain/admin
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -597,6 +600,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../../packages/domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
@@ -1045,6 +1051,12 @@ importers:
 
   packages/domain/email:
     dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       '@react-email/components':
         specifier: 1.0.12
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -1417,9 +1429,18 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../exports
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
       '@domain/models':
         specifier: workspace:*
         version: link:../models
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue

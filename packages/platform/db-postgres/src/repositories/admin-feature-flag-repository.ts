@@ -170,6 +170,34 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
           return flagRows.map((row) => toFeatureFlagSummary(row, []))
         }),
 
+      findEligibilityForFlag: (identifier) =>
+        Effect.gen(function* () {
+          const [flagRow] = yield* sqlClient.query((db) =>
+            db
+              .select({ id: featureFlags.id, enabledForAll: featureFlags.enabledForAll })
+              .from(featureFlags)
+              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .limit(1),
+          )
+          if (!flagRow) return yield* new FeatureFlagNotFoundError({ identifier })
+
+          if (flagRow.enabledForAll) {
+            // The flag is on for every org — no need to enumerate.
+            return { enabledForAll: true, organizationIds: [] }
+          }
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ organizationId: organizationFeatureFlags.organizationId })
+              .from(organizationFeatureFlags)
+              .where(eq(organizationFeatureFlags.featureFlagId, flagRow.id)),
+          )
+          return {
+            enabledForAll: false,
+            organizationIds: rows.map((row) => OrganizationId(row.organizationId)),
+          }
+        }),
+
       update: (input) =>
         Effect.gen(function* () {
           const update: Partial<typeof featureFlags.$inferInsert> = { updatedAt: new Date() }

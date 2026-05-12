@@ -10,6 +10,7 @@ export interface MemberWithUser {
   createdAt: Date
   name: string | null
   email: string
+  emailVerified: boolean
   image: string | null
 }
 

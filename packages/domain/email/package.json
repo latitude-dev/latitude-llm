@@ -11,6 +11,8 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@react-email/components": "1.0.12",
     "effect": "catalog:",
     "react": "catalog:",

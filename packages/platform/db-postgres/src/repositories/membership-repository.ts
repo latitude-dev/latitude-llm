@@ -49,6 +49,7 @@ export const MembershipRepositoryLive = Layer.effect(
                 createdAt: members.createdAt,
                 name: users.name,
                 email: users.email,
+                emailVerified: users.emailVerified,
                 image: users.image,
               })
               .from(members)

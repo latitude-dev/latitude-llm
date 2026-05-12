@@ -25,6 +25,7 @@ import { Effect } from "effect"
 import { Hono } from "hono"
 import { basicAuth } from "hono/basic-auth"
 import {
+  getAdminPostgresClient,
   getClickhouseClient,
   getPostgresClient,
   getPostHogClient,
@@ -37,6 +38,7 @@ import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
+import { createClaudeCodeWrappedWorker } from "./workers/claude-code-wrapped.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
@@ -202,6 +204,28 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
     })
+    createClaudeCodeWrappedWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      clickhouseClient: ctx.clickhouseClient,
+    })
+
+    // Register (or refresh) the weekly Claude Code Wrapped trigger. upsert
+    // semantics make this idempotent across worker restarts. The handler
+    // derives the 7-day window from Date.now() at fire time so the stored
+    // job payload doesn't go stale.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "claude-code-wrapped",
+          "triggerWeeklyRun",
+          {},
+          { key: "claude-code-wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))
