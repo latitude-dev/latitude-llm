@@ -174,6 +174,119 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "getAccount",
+      "title": "Get account",
+      "description": "Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Stable user identifier across the API."
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Verified email address of the authenticated user."
+                  },
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Display name, when set. `null` until the user completes onboarding."
+                  },
+                  "image": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Profile image URL, when set."
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "name",
+                  "image"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The user the request is acting on behalf of. `null` for API-key callers — API keys are org-scoped, not user-scoped."
+          },
+          "organization": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable organization identifier across the API."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable organization name."
+              },
+              "slug": {
+                "type": "string",
+                "description": "URL-safe slug. Regenerated when the organization is renamed — don't use it as a stable key."
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "slug"
+            ],
+            "additionalProperties": false,
+            "description": "Organization the request is scoped to."
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "owner",
+                  "admin",
+                  "member"
+                ],
+                "description": "Caller's role in the organization. `null` for API-key callers (no real user behind the credential)."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "user",
+          "organization",
+          "role"
+        ],
+        "additionalProperties": false
+      }
     }
   ]
 }

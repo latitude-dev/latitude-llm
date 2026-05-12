@@ -1126,6 +1126,95 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "AccountResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AccountUser"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/AccountOrganization"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              null
+            ],
+            "description": "Caller's role in the organization. `null` for API-key callers (no real user behind the credential)."
+          }
+        },
+        "required": [
+          "user",
+          "organization",
+          "role"
+        ]
+      },
+      "AccountUser": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable user identifier across the API."
+          },
+          "email": {
+            "type": "string",
+            "description": "Verified email address of the authenticated user."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name, when set. `null` until the user completes onboarding."
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Profile image URL, when set."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "image"
+        ],
+        "description": "The user the request is acting on behalf of. `null` for API-key callers — API keys are org-scoped, not user-scoped."
+      },
+      "AccountOrganization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable organization identifier across the API."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable organization name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug. Regenerated when the organization is renamed — don't use it as a stable key."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "description": "Organization the request is scoped to."
       }
     },
     "parameters": {}
@@ -1756,6 +1845,65 @@
         "responses": {
           "204": {
             "description": "API key revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/account": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "x-fern-sdk-group-name": "account",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get account",
+        "description": "Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAccount",
+        "responses": {
+          "200": {
+            "description": "Account snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
