@@ -48,19 +48,12 @@ export const adminTriggerClaudeCodeWrapped = createServerFn({ method: "POST" })
     const publisher = await getQueuePublisher()
     await Effect.runPromise(
       publisher
-        .publish(
-          "claude-code-wrapped",
-          "runForProject",
-          {
-            organizationId: project.organization.id,
-            projectId: project.id,
-            windowStartIso,
-            windowEndIso,
-          },
-          // Date-keyed dedupe: two clicks on the same day collapse to one
-          // job; a click next week triggers fresh.
-          { dedupeKey: `cc-wrapped:${project.id}:${windowStartIso.slice(0, 10)}` },
-        )
+        .publish("claude-code-wrapped", "runForProject", {
+          organizationId: project.organization.id,
+          projectId: project.id,
+          windowStartIso,
+          windowEndIso,
+        })
         .pipe(withTracing),
     )
 

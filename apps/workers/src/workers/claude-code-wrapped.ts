@@ -23,8 +23,6 @@ const logger = createLogger("claude-code-wrapped")
 
 const WINDOW_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
-const dayKey = (date: Date): string => date.toISOString().slice(0, 10)
-
 interface ClaudeCodeWrappedWorkerDeps {
   readonly consumer: QueueConsumer
   readonly publisher: QueuePublisherShape
@@ -53,7 +51,6 @@ export const createClaudeCodeWrappedWorker = ({
     triggerWeeklyRun: () => {
       const now = new Date()
       const windowStart = new Date(now.getTime() - WINDOW_DURATION_MS)
-      const windowKey = dayKey(windowStart)
 
       return Effect.gen(function* () {
         const projects = yield* listProjectsWithClaudeCodeSpansUseCase({ from: windowStart, to: now })
@@ -78,20 +75,20 @@ export const createClaudeCodeWrappedWorker = ({
         const windowStartIso = windowStart.toISOString()
         const windowEndIso = now.toISOString()
 
+        // No dedupeKey: BullMQ dedupe by jobId blocks legitimate retries after
+        // a failed run (the failed jobId stays "burned" until removed). The
+        // cron only fires weekly so there's no realistic duplicate-publish
+        // risk from this path, and the manual backoffice button should
+        // always re-run on click.
         yield* Effect.forEach(
           eligible,
           (project) =>
-            publisher.publish(
-              "claude-code-wrapped",
-              "runForProject",
-              {
-                organizationId: project.organizationId as string,
-                projectId: project.projectId as string,
-                windowStartIso,
-                windowEndIso,
-              },
-              { dedupeKey: `cc-wrapped:${project.projectId}:${windowKey}` },
-            ),
+            publisher.publish("claude-code-wrapped", "runForProject", {
+              organizationId: project.organizationId as string,
+              projectId: project.projectId as string,
+              windowStartIso,
+              windowEndIso,
+            }),
           { concurrency: 10, discard: true },
         )
 

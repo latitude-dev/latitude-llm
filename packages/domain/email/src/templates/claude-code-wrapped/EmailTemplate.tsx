@@ -1,7 +1,10 @@
 import { OrganizationId, ProjectId } from "@domain/shared"
 import type { Report } from "@domain/spans"
 import { Section } from "@react-email/components"
-import type React from "react"
+// React required at runtime for JSX in workers (tsx/esbuild classic transform).
+// `React.CSSProperties` references in the section helpers keep the import
+// "used" from tsgo's perspective, so no @ts-expect-error is needed.
+import React from "react"
 import { EmailHeading } from "../../components/EmailHeading.tsx"
 import { WrappedLayout } from "../../components/WrappedLayout.tsx"
 import { emailDesignTokens } from "../../tokens/design-system.ts"

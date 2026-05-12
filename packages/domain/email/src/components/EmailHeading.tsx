@@ -1,4 +1,7 @@
-import type React from "react"
+// React required at runtime for JSX in workers (tsx/esbuild classic transform).
+// The `React.CSSProperties` reference below keeps the import "used" from tsgo's
+// perspective, so no @ts-expect-error suppression is needed here.
+import React from "react"
 import { emailDesignTokens } from "../tokens/design-system.ts"
 
 type EmailHeadingVariant = "display" | "sectionTitle" | "cardTitle"
