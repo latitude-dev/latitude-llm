@@ -11,12 +11,13 @@ import {
   Text,
   Tooltip,
   useToast,
+  useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
@@ -349,17 +350,12 @@ interface EscalationSensitivityControlProps {
 }
 
 // Local presentational state so dragging the slider feels responsive while
-// the actual save is debounced through the parent's `onChange`.
+// the actual save is debounced through the parent's `onChange`. The hook
+// follows `value` whenever it changes externally (initial load, saved value
+// coming back, project switch) while still letting local drags override it
+// without a `useEffect` round-trip.
 function EscalationSensitivityControl({ value, onChange }: EscalationSensitivityControlProps) {
-  const [draft, setDraft] = useState(value)
-
-  // Sync the local draft when `value` changes from outside (project data finishing
-  // its initial load, the saved value coming back from the collection, navigation
-  // between projects). `useState(value)` only seeds once, so without this the
-  // slider can sit on a stale number after any of those transitions.
-  useEffect(() => {
-    setDraft(value)
-  }, [value])
+  const [draft, setDraft] = useValueWithDefault(value)
 
   return (
     <div className="flex w-full flex-col gap-3 border-t border-border pt-4">
