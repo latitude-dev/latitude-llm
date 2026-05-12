@@ -1,6 +1,7 @@
 import type { AlertSeverity } from "@domain/alerts"
 import { ChartSkeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { formatCount } from "@repo/utils"
+import { useMemo } from "react"
 import type { AlertIncidentRecord } from "../../../../../../domains/alerts/alerts.functions.ts"
 import {
   formatIncidentKindLabel,
@@ -294,45 +295,50 @@ export function IssueTrendBar({
    */
   readonly bucketSeconds?: number
 }) {
-  if (isLoading) {
-    return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
-  }
-
-  if (buckets.length === 0 || buckets.every((bucket) => bucket.count === 0)) {
-    return (
-      <div className="flex min-h-10 items-center">
-        <Text.H6 color="foregroundMuted">{emptyLabel}</Text.H6>
-      </div>
-    )
-  }
-
-  const bucketWidthMs = bucketSeconds * 1000
-  // Map per-bucket thresholds by key so we can zip against `buckets` regardless of how the
-  // caller ordered them. NaN entries are kept so we know "history was missing here" vs
-  // "no series at all" — both yield no overlay for that bar.
-  const thresholdByBucket = new Map<string, number>()
-  if (escalationThresholds) {
-    for (const entry of escalationThresholds) thresholdByBucket.set(entry.bucket, entry.thresholdCount)
-  }
-  const chartBuckets = buckets.map((bucket) => {
-    const threshold = thresholdByBucket.get(bucket.bucket)
-    return {
-      key: bucket.bucket,
-      label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
-      tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
-      count: bucket.count,
-      thresholdCount: threshold !== undefined && Number.isFinite(threshold) ? threshold : null,
+  // All derived chart state lives in `useMemo` blocks so hooks run unconditionally above the
+  // early returns below and downstream consumers (segments, paths) skip recomputation when
+  // inputs haven't changed.
+  const chartBuckets = useMemo(() => {
+    // Map per-bucket thresholds by key so we can zip against `buckets` regardless of how the
+    // caller ordered them. NaN entries are kept so we know "history was missing here" vs
+    // "no series at all" — both yield no overlay for that bar.
+    const thresholdByBucket = new Map<string, number>()
+    if (escalationThresholds) {
+      for (const entry of escalationThresholds) thresholdByBucket.set(entry.bucket, entry.thresholdCount)
     }
-  })
-  const hasSeasonalThresholds = chartBuckets.some((bucket) => bucket.thresholdCount !== null)
-  const visibleBucketLabelIndices = getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels)
+    return buckets.map((bucket) => {
+      const threshold = thresholdByBucket.get(bucket.bucket)
+      return {
+        key: bucket.bucket,
+        label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
+        tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
+        count: bucket.count,
+        thresholdCount: threshold !== undefined && Number.isFinite(threshold) ? threshold : null,
+      }
+    })
+  }, [buckets, escalationThresholds, bucketSeconds])
+
+  const hasSeasonalThresholds = useMemo(
+    () => chartBuckets.some((bucket) => bucket.thresholdCount !== null),
+    [chartBuckets],
+  )
+
+  const visibleBucketLabelIndices = useMemo(
+    () => getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels),
+    [chartBuckets.length, maxVisibleBucketLabels],
+  )
+
   // Threshold values participate in the scale so the dashed line never clips off the top.
-  const maxCount = Math.max(...chartBuckets.map((bucket) => Math.max(bucket.count, bucket.thresholdCount ?? 0)), 1)
+  const maxCount = useMemo(
+    () => Math.max(...chartBuckets.map((bucket) => Math.max(bucket.count, bucket.thresholdCount ?? 0)), 1),
+    [chartBuckets],
+  )
+
   // Group consecutive buckets that carry a threshold into smoothable segments. A null
   // breaks the line — that span had no contributing prior history, so any "expected" value
   // would be misleading. SVG coordinates use the chart-wide viewBox set on the overlay below:
   // x = bucket center (i + 0.5) in 0..N space, y = 100 − heightPercent in 0..100 space.
-  const thresholdSegments: { readonly x: number; readonly y: number }[][] = (() => {
+  const thresholdSegments = useMemo<{ readonly x: number; readonly y: number }[][]>(() => {
     const segments: { x: number; y: number }[][] = []
     let active: { x: number; y: number }[] = []
     chartBuckets.forEach((bucket, index) => {
@@ -348,7 +354,21 @@ export function IssueTrendBar({
     })
     if (active.length > 0) segments.push(active)
     return segments
-  })()
+  }, [chartBuckets, maxCount])
+
+  if (isLoading) {
+    return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
+  }
+
+  if (buckets.length === 0 || buckets.every((bucket) => bucket.count === 0)) {
+    return (
+      <div className="flex min-h-10 items-center">
+        <Text.H6 color="foregroundMuted">{emptyLabel}</Text.H6>
+      </div>
+    )
+  }
+
+  const bucketWidthMs = bucketSeconds * 1000
 
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
   const isRegressedIssue = states.includes("regressed")
