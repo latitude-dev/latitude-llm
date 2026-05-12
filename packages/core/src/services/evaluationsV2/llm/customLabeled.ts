@@ -28,7 +28,16 @@ async function validate(
   >,
   db = database,
 ) {
-  return await LlmEvaluationCustomSpecification.validate({ ...rest }, db)
+  // Safe: the Custom validator only reads `configuration`. The cast is
+  // needed because `evaluation.metric` is the literal `CustomLabeled`, which
+  // isn't assignable to the inner signature's `Custom`.
+  return await LlmEvaluationCustomSpecification.validate(
+    { ...rest } as unknown as EvaluationMetricValidateArgs<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Custom
+    >,
+    db,
+  )
 }
 
 async function run(

@@ -33,6 +33,7 @@ export type EvaluationMetricValidateArgs<
 > = {
   mode: 'create' | 'update'
   uuid?: string
+  evaluation?: EvaluationV2<T, M>
   configuration: EvaluationConfiguration<T, M>
   document: DocumentVersion
   evaluations: EvaluationV2[]

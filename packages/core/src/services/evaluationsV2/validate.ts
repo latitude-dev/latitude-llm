@@ -115,6 +115,7 @@ export async function validateEvaluationV2<
     {
       mode: mode,
       uuid: evaluation?.uuid,
+      evaluation: evaluation,
       metric: settings.metric,
       configuration: settings.configuration,
       document: document,
