@@ -3,6 +3,553 @@
   "version": "1.0.0",
   "tools": [
     {
+      "name": "createProject",
+      "title": "Create project",
+      "description": "Creates a new project within the organization. The name must be unique within the org.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable name for the project. Must be unique within the organization."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable project identifier (CUID2)."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "keepMonitoring": {
+                    "type": "boolean"
+                  },
+                  "alertNotifications": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "issue.new",
+                        "issue.regressed",
+                        "issue.escalating"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+          },
+          "firstTraceAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+          },
+          "lastEditedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent name/settings edit."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata change."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "slug",
+          "settings",
+          "firstTraceAt",
+          "deletedAt",
+          "lastEditedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listProjects",
+      "title": "List projects",
+      "description": "Returns every project in the organization. The response uses the standard paginated shape; the project list currently fits in a single page (`nextCursor` is always `null`).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Stable project identifier (CUID2)."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this project."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
+                },
+                "settings": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "keepMonitoring": {
+                          "type": "boolean"
+                        },
+                        "alertNotifications": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "enum": [
+                              "issue.new",
+                              "issue.regressed",
+                              "issue.escalating"
+                            ]
+                          },
+                          "additionalProperties": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+                },
+                "firstTraceAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands."
+                },
+                "deletedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+                },
+                "lastEditedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the most recent name/settings edit."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last metadata change."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "name",
+                "slug",
+                "settings",
+                "firstTraceAt",
+                "deletedAt",
+                "lastEditedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getProject",
+      "title": "Get project",
+      "description": "Returns a single project by slug.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable project identifier (CUID2)."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "keepMonitoring": {
+                    "type": "boolean"
+                  },
+                  "alertNotifications": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "issue.new",
+                        "issue.regressed",
+                        "issue.escalating"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+          },
+          "firstTraceAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+          },
+          "lastEditedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent name/settings edit."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata change."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "slug",
+          "settings",
+          "firstTraceAt",
+          "deletedAt",
+          "lastEditedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateProject",
+      "title": "Update project",
+      "description": "Updates a project's name and/or settings. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "name": {
+            "description": "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable).",
+            "type": "string",
+            "minLength": 1
+          },
+          "settings": {
+            "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+            "type": "object",
+            "properties": {
+              "keepMonitoring": {
+                "type": "boolean"
+              },
+              "alertNotifications": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "issue.new",
+                    "issue.regressed",
+                    "issue.escalating"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable project identifier (CUID2)."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "keepMonitoring": {
+                    "type": "boolean"
+                  },
+                  "alertNotifications": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "issue.new",
+                        "issue.regressed",
+                        "issue.escalating"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+          },
+          "firstTraceAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+          },
+          "lastEditedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent name/settings edit."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata change."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "slug",
+          "settings",
+          "firstTraceAt",
+          "deletedAt",
+          "lastEditedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deleteProject",
+      "title": "Delete project",
+      "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "createApiKey",
       "title": "Generate API key",
       "description": "Generates a new API key for the organization. The token is only returned once — store it securely.",
@@ -955,7 +1502,7 @@
     {
       "name": "removeMember",
       "title": "Remove a member",
-      "description": "Removes a member from the caller's organization. Self-removal is rejected — use the org-leave flow on the web. Requires OAuth authentication.",
+      "description": "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
