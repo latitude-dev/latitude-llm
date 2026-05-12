@@ -35,7 +35,8 @@ Traces are the primary unit that most reliability features operate on:
 
 - Evaluations run against traces
 - Scores are attached to traces
-- Annotation queues contain traces
+- Search and saved searches scope cohorts of traces
+- Flaggers automatically annotate matching traces
 - Issues group failures across traces
 
 ### Sessions
@@ -72,8 +73,8 @@ This matters because:
 Once a trace is considered complete, Latitude automatically:
 
 - Runs matching evaluations against it
-- Checks if it should be added to any live annotation queues
-- Classifies it against system annotation queues
+- Indexes the trace conversation for [search](../search/overview)
+- Classifies the trace against the enabled [flaggers](../annotations/flaggers), writing annotations on matches
 
 ## Filtering and Search
 
@@ -95,17 +96,16 @@ The trace dashboard provides rich filtering through a shared filter system. You 
 | Token usage | Input and output tokens |
 | Custom metadata | Any `metadata.*` fields you send |
 
-These same filters power evaluation triggers and live annotation queues. When you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
+These same filters power [search](../search/overview), [saved searches](../search/saved-searches), and evaluation triggers. When you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
 
-### Saved searches
+## Search and Saved Searches
 
-You can save any combination of search query and filters from the **Search** page to recall it later. Saved searches appear on the Search landing page in a table that surfaces, for each entry, the last matching trace, the number of annotated traces, and the total trace count. You can also assign a saved search to an organization member to indicate ownership.
-
-Loading a saved search restores its query and filters in the URL. Editing either while a saved search is loaded surfaces an **Update saved search** action (with a **Save as new search** alternative). Per-row actions on the list let you rename, reassign, or delete a saved search.
+The dedicated [Search](../search/overview) page goes further than dashboard filtering: you can type a plain-English query and Latitude returns the most relevant trace conversations, ranked by a blend of keyword and semantic match. Bookmark a useful query plus filters as a [saved search](../search/saved-searches) so the whole team can come back to it.
 
 ## Next Steps
 
 - [Traces](./traces): Understand the trace model and lifecycle in detail
 - [Sessions](./sessions): Learn about session-level aggregation
 - [Filters](./filters): Learn how the shared filter system works
+- [Search](../search/overview): Hybrid keyword + semantic search across trace conversations
 - [Scores](../scores/overview): See how scores attach to your telemetry

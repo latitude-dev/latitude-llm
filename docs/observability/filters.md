@@ -1,17 +1,17 @@
 ---
 title: Filters
-description: Use the shared filter system to narrow traces, configure evaluation triggers, and build annotation queues
+description: Use the shared filter system to narrow traces, save searches, and configure evaluation triggers
 ---
 
 # Filters
 
-Latitude uses a universal filter system across the platform. The same filters you use to search traces also power evaluation triggers and annotation queue configuration. Learn it once, use it everywhere.
+Latitude uses a universal filter system across the platform. The same filters you use to narrow traces in a search also power saved searches and evaluation triggers. Learn it once, use it everywhere.
 
 ## How Filters Work
 
 A filter is a set of field conditions. All conditions within a field are AND'd together, and all fields are AND'd across each other. For example, "Status is ERROR **and** Cost is greater than 100 microcents" returns only traces matching both criteria.
 
-Filters are available from the toolbar on the Traces page, and appear in the configuration UI for evaluation triggers and annotation queues.
+Filters appear on the Traces page, in the Search page (alongside the search query), and in the configuration UI for evaluation triggers.
 
 ## Available Filter Fields
 
@@ -74,14 +74,16 @@ All active filters combine with **AND** logic. Common combinations:
 | Feature | How Filters Are Used |
 | --- | --- |
 | **Trace dashboard** | Interactive filtering from the toolbar |
+| **[Search](../search/overview)** | Narrow a search query to a specific subset of traces |
+| **[Saved searches](../search/saved-searches)** | The filter set is part of what gets bookmarked alongside the query |
 | **Evaluation triggers** | Define which traces an evaluation monitors |
-| **Live annotation queues** | Define which traces automatically enter a queue |
 | **Score analytics** | Narrow analytics dashboards to specific trace subsets |
 
-When you configure an evaluation trigger or live annotation queue, you're building a filter using this same system. An empty filter means "match all traces."
+When you configure an evaluation trigger or save a search, you're building a filter using this same system. An empty filter means "match all traces."
 
 ## Next Steps
 
 - [Traces](./traces): Browse and filter your traces
+- [Search](../search/overview): Combine filters with hybrid search
+- [Saved Searches](../search/saved-searches): Persist a query plus filter set as a named bookmark
 - [Evaluation Triggers](../evaluations/triggers): Use filters to control evaluation scope
-- [Annotation Queues](../annotations/annotation-queues): Use filters to build live review queues
