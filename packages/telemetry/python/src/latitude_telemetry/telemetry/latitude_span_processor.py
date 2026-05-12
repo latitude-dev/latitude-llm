@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 
 from latitude_telemetry.constants import ATTRIBUTES
 from latitude_telemetry.env import env
@@ -37,6 +37,8 @@ class LatitudeSpanProcessorOptions:
     disable_smart_filter: bool = False
     should_export_span: Callable[[ReadableSpan], bool] | None = None
     blocked_instrumentation_scopes: tuple[str, ...] = ()
+    exporter: SpanExporter | None = None
+    service_name: str | None = None
 
 
 class LatitudeSpanProcessor(SpanProcessor):
@@ -55,7 +57,7 @@ class LatitudeSpanProcessor(SpanProcessor):
     ):
         options = options or LatitudeSpanProcessorOptions()
 
-        exporter = create_exporter(
+        exporter = options.exporter or create_exporter(
             ExporterOptions(
                 api_key=api_key,
                 project_slug=project_slug,
@@ -86,7 +88,13 @@ class LatitudeSpanProcessor(SpanProcessor):
         redact_then_export = RedactThenExportSpanProcessor(redact, batch_or_simple)
         self._tail: SpanProcessor = ExportFilterSpanProcessor(should_export, redact_then_export)
 
+        raw_service_name = options.service_name.strip() if options.service_name else ""
+        self._service_name = raw_service_name or None
+
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        if self._service_name is not None:
+            span.set_attribute("service.name", self._service_name)
+
         # Read Latitude context from OTel context and stamp onto span
         # Try parent_context first, then fall back to current context
         latitude_data = None

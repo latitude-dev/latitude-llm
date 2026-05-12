@@ -17,13 +17,13 @@ Requires Python 3.11+.
 
 ## Bootstrap (Recommended)
 
-The fastest way to start. One function sets up a complete OpenTelemetry pipeline with LLM auto-instrumentation and the Latitude exporter:
+The fastest way to start. One class sets up a complete OpenTelemetry pipeline with LLM auto-instrumentation and the Latitude exporter:
 
 ```python
-from latitude_telemetry import init_latitude
+from latitude_telemetry import Latitude
 from openai import OpenAI
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key="your-api-key",
     project_slug="your-project-slug",
     instrumentations=["openai"],
@@ -48,9 +48,9 @@ Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when 
 - **Filter and analyze**: Use tags and metadata to filter traces in Latitude
 
 ```python
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key="your-api-key",
     project_slug="your-project-slug",
     instrumentations=["openai"],
@@ -89,13 +89,14 @@ latitude.shutdown()
 If your app already uses OpenTelemetry, add Latitude alongside your existing processors:
 
 ```python
+from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from latitude_telemetry import LatitudeSpanProcessor, register_latitude_instrumentations
 
 provider = TracerProvider()
 provider.add_span_processor(LatitudeSpanProcessor("api-key", "project-slug"))
 
-provider.register()
+trace.set_tracer_provider(provider)
 
 register_latitude_instrumentations(
     instrumentations=["openai"],
@@ -111,37 +112,44 @@ For examples of integrating with **Datadog**, **Sentry**, or other observability
 
 ```python
 from latitude_telemetry import (
-    init_latitude,
+    Latitude,
+    LatitudeOptions,
     LatitudeSpanProcessor,
     capture,
     register_latitude_instrumentations,
 )
 ```
 
-### `init_latitude(api_key, project_slug, **options)`
+### `Latitude(**options)`
 
-Bootstraps a complete OpenTelemetry setup with LLM instrumentations and Latitude export.
+Bootstraps a complete OpenTelemetry setup with LLM instrumentations and Latitude export. If an OpenTelemetry provider is already registered, Latitude attaches its span processor to that provider instead of replacing it.
 
 ```python
-def init_latitude(
-    api_key: str,
-    project_slug: str,
-    instrumentations: list[str] | None = None,
-    disable_redact: bool = False,
-    disable_batch: bool = False,
-    disable_smart_filter: bool = False,
-    should_export_span: Callable[[ReadableSpan], bool] | None = None,
-    blocked_instrumentation_scopes: list[str] | None = None,
-) -> dict:
-    ...
+class Latitude:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        project_slug: str,
+        instrumentations: list[str] | None = None,
+        service_name: str | None = None,
+        disable_batch: bool = False,
+        disable_smart_filter: bool = False,
+        should_export_span: Callable[[ReadableSpan], bool] | None = None,
+        blocked_instrumentation_scopes: list[str] | None = None,
+        disable_redact: bool = False,
+        redact: RedactSpanProcessorOptions | None = None,
+        exporter: SpanExporter | None = None,
+        tracer_provider: TracerProvider | None = None,
+    ):
+        ...
 
-# Returns:
-# {
-#     "provider": TracerProvider,
-#     "flush": Callable[[], None],
-#     "shutdown": Callable[[], None],
-# }
+    provider: TracerProvider
+    def flush(self) -> None: ...
+    def shutdown(self) -> None: ...
 ```
+
+`init_latitude()` remains available as a backwards-compatible wrapper that returns `{"provider", "flush", "shutdown"}`.
 
 ### `capture(name, fn, options=None)`
 
@@ -195,6 +203,8 @@ class LatitudeSpanProcessorOptions:
     disable_smart_filter: bool = False
     should_export_span: Callable[[ReadableSpan], bool] | None = None
     blocked_instrumentation_scopes: tuple[str, ...] = ()
+    exporter: SpanExporter | None = None
+    service_name: str | None = None
 ```
 
 ### `register_latitude_instrumentations(instrumentations, tracer_provider)`
@@ -288,7 +298,7 @@ processor = LatitudeSpanProcessor(
 ### Spans not appearing in Latitude
 
 1. **Check API key and project slug**: Must be non-empty strings.
-2. **Verify instrumentations are registered**: Use `register_latitude_instrumentations()`.
+2. **Verify instrumentations are registered**: Create `Latitude(...)` before importing or constructing clients when possible, or use `register_latitude_instrumentations()` for manual setups.
 3. **Flush before exit**: Call `latitude.flush()` or `provider.force_flush()`.
 4. **Check smart filter**: Only LLM spans are exported by default. Use `disable_smart_filter=True` to export all spans.
 5. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
@@ -315,4 +325,4 @@ set_global_textmap(
 )
 ```
 
-`init_latitude()` does this automatically. For shared-provider setups, your existing OTel setup should already have this.
+`Latitude(...)` does this automatically when it owns the provider. For shared-provider setups, your existing OTel setup should already have this.

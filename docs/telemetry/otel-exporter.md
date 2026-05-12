@@ -222,7 +222,7 @@ Latitude expects the standard **parts-based** GenAI message format. Each message
 
 ## Existing Observability Stack
 
-Latitude works alongside your existing observability tools. In TypeScript, `new Latitude()` detects common OpenTelemetry-compatible providers (Sentry, Datadog, New Relic, Honeycomb, and custom OTel SDKs) and attaches Latitude when possible; custom setups can also add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
+Latitude works alongside your existing observability tools. In TypeScript, `new Latitude()` detects common OpenTelemetry-compatible providers (Sentry, Datadog, New Relic, Honeycomb, and custom OTel SDKs) and attaches Latitude when possible. In Python, `Latitude(...)` attaches to the registered OpenTelemetry provider when one already exists or creates one when none exists. Custom setups in either SDK can also add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
 
 ### With Datadog (TypeScript)
 
@@ -281,7 +281,7 @@ await latitude.ready
 
 ### Other Platforms
 
-For any observability platform that supports OpenTelemetry (Jaeger, Grafana Tempo, etc.), the pattern is the same: initialize the existing SDK first and then construct `new Latitude()`, or configure an additional OTLP exporter pointed at `https://ingest.latitude.so/v1/traces` with the required `Authorization` and `X-Latitude-Project` headers alongside your existing exporter.
+For any observability platform that supports OpenTelemetry (Jaeger, Grafana Tempo, etc.), the pattern is the same: initialize the existing SDK first and then construct `Latitude`, or configure an additional OTLP exporter pointed at `https://ingest.latitude.so/v1/traces` with the required `Authorization` and `X-Latitude-Project` headers alongside your existing exporter.
 
 ## Troubleshooting
 

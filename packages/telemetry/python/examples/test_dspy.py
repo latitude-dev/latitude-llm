@@ -10,10 +10,10 @@ Install: uv add dspy
 
 import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry BEFORE importing dspy so instrumentation can patch it
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["dspy"],
@@ -48,4 +48,4 @@ def test_dspy_completion():
 
 if __name__ == "__main__":
     test_dspy_completion()
-    latitude["flush"]()
+    latitude.flush()

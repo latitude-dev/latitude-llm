@@ -30,6 +30,11 @@ export type LatitudeOptions = SmartFilterOptions & {
   serviceName?: string
 }
 
+/**
+ * @deprecated Use `LatitudeOptions` with `new Latitude(options)` instead.
+ */
+export type InitLatitudeOptions = LatitudeOptions
+
 export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   disableRedact?: boolean
   redact?: RedactSpanProcessorOptions

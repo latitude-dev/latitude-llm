@@ -1,7 +1,7 @@
 import { context, propagation, type Tracer, type TracerProvider, trace } from "@opentelemetry/api"
 import { InMemorySpanExporter, NodeTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { afterEach, describe, expect, it } from "vitest"
-import { Latitude } from "./init.ts"
+import { initLatitude, Latitude } from "./init.ts"
 
 describe("Latitude", () => {
   afterEach(() => {
@@ -24,6 +24,20 @@ describe("Latitude", () => {
       projectSlug: "test-project",
     })
     expect(result.provider).toBeDefined()
+    expect(result.flush).toBeTypeOf("function")
+    expect(result.shutdown).toBeTypeOf("function")
+    await result.shutdown()
+  })
+
+  it("keeps initLatitude as a deprecated compatibility wrapper", async () => {
+    const result = initLatitude({
+      apiKey: "test-key",
+      projectSlug: "test-project",
+    })
+
+    expect(result).toBeInstanceOf(Latitude)
+    expect(result.provider).toBeDefined()
+    expect(result.ready).toBeInstanceOf(Promise)
     expect(result.flush).toBeTypeOf("function")
     expect(result.shutdown).toBeTypeOf("function")
     await result.shutdown()

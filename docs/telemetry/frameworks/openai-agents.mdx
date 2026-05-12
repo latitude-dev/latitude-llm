@@ -106,10 +106,10 @@ The Agents SDK uses the OpenAI **Responses API**, which is not covered by the st
       </Tab>
       <Tab title="Python">
         ```python
-        from latitude_telemetry import init_latitude, capture
+        from latitude_telemetry import Latitude, capture
         from agents import Agent, Runner
 
-        latitude = init_latitude(
+        latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
             instrumentations=["openai-agents"],

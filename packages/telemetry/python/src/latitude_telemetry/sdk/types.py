@@ -4,7 +4,8 @@ Type definitions for the Latitude Telemetry SDK.
 
 from typing import Callable, Literal, Required, TypedDict
 
-from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
+from opentelemetry.sdk.trace.export import SpanExporter
 
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
@@ -36,16 +37,25 @@ class ContextOptions(TypedDict, total=False):
     user_id: str
 
 
-class InitLatitudeOptions(SmartFilterOptions, total=False):
+class LatitudeOptions(SmartFilterOptions, total=False):
     api_key: Required[str]
     project_slug: Required[str]
     instrumentations: list[InstrumentationType]
     disable_redact: bool
     redact: RedactSpanProcessorOptions
     disable_batch: bool
+    exporter: SpanExporter
+    tracer_provider: TracerProvider
+    service_name: str
+
+
+class InitLatitudeOptions(LatitudeOptions, total=False):
+    pass
 
 
 class LatitudeSpanProcessorOptions(SmartFilterOptions, total=False):
     disable_redact: bool
     redact: RedactSpanProcessorOptions
     disable_batch: bool
+    exporter: SpanExporter
+    service_name: str

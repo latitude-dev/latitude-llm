@@ -6,7 +6,7 @@ import { NodeTracerProvider, type SpanProcessor } from "@opentelemetry/sdk-trace
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { registerLatitudeInstrumentations } from "./instrumentations.ts"
 import { LatitudeSpanProcessor } from "./processor.ts"
-import type { LatitudeOptions } from "./types.ts"
+import type { InitLatitudeOptions, LatitudeOptions } from "./types.ts"
 
 const SERVICE_NAME = process.env.npm_package_name || "unknown"
 
@@ -155,4 +155,11 @@ export class Latitude {
       console.error("Error during Latitude Telemetry shutdown:", err)
     }
   }
+}
+
+/**
+ * @deprecated Use `new Latitude(options)` instead.
+ */
+export function initLatitude(options: InitLatitudeOptions): Latitude {
+  return new Latitude(options)
 }

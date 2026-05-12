@@ -96,10 +96,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       </Tab>
       <Tab title="Python">
         ```python
-        from latitude_telemetry import init_latitude, capture
+        from latitude_telemetry import Latitude, capture
         from anthropic import Anthropic
 
-        latitude = init_latitude(
+        latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
             instrumentations=["anthropic"],

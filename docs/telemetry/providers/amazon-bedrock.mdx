@@ -105,10 +105,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="Python">
         ```python
         import json
-        from latitude_telemetry import init_latitude, capture
+        from latitude_telemetry import Latitude, capture
         import boto3
 
-        latitude = init_latitude(
+        latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
             instrumentations=["bedrock"],
