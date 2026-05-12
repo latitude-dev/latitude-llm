@@ -109,10 +109,11 @@ export const createWidgetsRoutes = () => {
 ```ts
 import { createWidgetsRoutes, widgetsPath } from "./widgets.ts"
 // ...
+routes.use(widgetsPath, createTierRateLimiter("low"))   // pick a tier — see below
 routes.route(widgetsPath, createWidgetsRoutes())
 ```
 
-Plain Hono mount — the MCP registration is a side effect of `mountHttp` inside `createWidgetsRoutes()`.
+The `routes.route(...)` call is plain Hono mount — MCP registration is a side effect of `mountHttp` inside `createWidgetsRoutes()`. The `routes.use(...)` line is the rate-limit tier — **don't skip it** (see "Rate limiting" below).
 
 ### 3. Regenerate manifests
 
@@ -167,6 +168,38 @@ filters: filterSetSchema, // ← what shape? what semantics? agent has to guess.
 
 If you find yourself writing `.openapi({ description })`, replace it with `.describe()` — descriptions hidden in the openapi WeakMap are invisible to MCP clients, which silently degrades agent UX.
 
+## Rate limiting — every new endpoint group needs a tier
+
+`createTierRateLimiter(tier)` is keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota. Apply it at the parent router, **before** the matching `routes.route(prefix, …)` call:
+
+```ts
+routes.use(myPath, createTierRateLimiter("low"))
+routes.route(myPath, createMyRoutes())
+```
+
+One tier per sub-app — Hono's `routes.use(prefix, …)` covers everything mounted under that prefix. Method-level granularity is possible (apply the limiter inside the route file per endpoint) but rarely worth the code spread.
+
+### Picking a tier
+
+Default to `low`. Most CRUD endpoints don't need more — `low` is 100 req/min/org, which comfortably covers SDK polling, MCP tool calls, and human-driven dashboards. Step up only when the endpoint genuinely warrants tighter limits.
+
+| Tier | Quota (per org / min) | Pick this when… |
+| --- | --- | --- |
+| `low` | 100 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most endpoints land here. |
+| `medium` | 60 | Mutations with non-trivial side effects (publishing events, writing to multiple tables, cache invalidation that fan-outs). |
+| `high` | 15 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
+| `critical` | 3 | Workflow-kicking ops: imports, exports, monitor-issue, anything that sends email or enqueues a heavy job. |
+
+Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way for cheap endpoints — it just frustrates legitimate callers. When in doubt, pick `low` and bump it later if a specific endpoint shows up in incident traffic.
+
+### What if a sub-app mixes cheap and expensive endpoints?
+
+Size to the heaviest endpoint in the group, OR split the sub-app. A pure-CRUD sub-app with one expensive export endpoint deserves `low` for the CRUD and `critical` for the export — easiest to express by giving the export its own sub-app (`/widgets/export`).
+
+### Always add the line
+
+This is in the recipe (step 2) for a reason: **shipping a route group without a tier means it inherits no per-route limit at all** — only the global IP-keyed brute-force guard. That's an easy oversight in PR review. The `routes.use(myPath, createTierRateLimiter(...))` line is part of "wiring up", not optional.
+
 ## Choosing route names and shapes
 
 - **`name`** is camelCase, verb-first, and reads like an SDK method: `createApiKey`, `listProjects`, `assignSavedSearch`. Avoid resource-prefixed names that read awkwardly as SDK calls (`apiKeysList` → use `listApiKeys`).
@@ -197,6 +230,8 @@ pnpm mcp:emit && git diff --exit-code apps/api/mcp.json           # no drift
 ```
 
 Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output.
+
+And glance at `apps/api/src/routes/index.ts` next to your `routes.route(prefix, …)` line — there should be a `routes.use(prefix, createTierRateLimiter("…"))` on the line above. If it's missing, your endpoints are uncapped per-org.
 
 ## Where the machinery lives
 

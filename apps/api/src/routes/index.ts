@@ -47,6 +47,8 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route("/projects", createProjectsRoutes())
   routes.route("/projects/:projectSlug/scores", createScoresRoutes())
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
+
+  routes.use(apiKeysPath, createTierRateLimiter("low"))
   routes.route(apiKeysPath, createApiKeysRoutes())
 
   routes.use(accountPath, createTierRateLimiter("low"))
