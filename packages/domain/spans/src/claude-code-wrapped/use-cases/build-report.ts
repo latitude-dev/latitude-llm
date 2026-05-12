@@ -1,0 +1,269 @@
+import type { Project } from "@domain/projects"
+import type { OrganizationId } from "@domain/shared"
+import { Effect } from "effect"
+import type { FileLine, Report, ToolBucket, ToolMix, WorkspaceDeepDive } from "../entities/report.ts"
+import {
+  type BashPatternRow,
+  type BranchRow,
+  type BusiestDayRow,
+  ClaudeCodeSpanReader,
+  type FileTouchesRow,
+  type HeatmapCellRow,
+  type SessionDurationStatsRow,
+  type ToolMixRow,
+  type WorkspaceDeepDiveRow,
+  type WorkspaceRow,
+  type WrappedTotalsRow,
+} from "../ports/claude-code-span-reader.ts"
+import { assignPersonality } from "./assign-personality.ts"
+
+/** Maximum workspaces to drill into. Anything past this counts as "other". */
+const MAX_WORKSPACE_DEEP_DIVES = 3
+
+/** Concurrency cap for the main fan-out. ClickHouse handles the load fine, but
+ *  the cron can run against many projects in parallel so we stay polite. */
+const QUERY_CONCURRENCY = 6
+
+/** Concurrency cap for the per-workspace fan-out. */
+const DEEP_DIVE_CONCURRENCY = 3
+
+/**
+ * Tool-name → bucket map. Maps every Claude Code tool we ship today and
+ * funnels everything else into `other` so the bucket sums always equal the
+ * total tool-call count.
+ */
+const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
+  Bash: "bash",
+  Read: "read",
+  Edit: "edit",
+  NotebookEdit: "edit",
+  MultiEdit: "edit",
+  Write: "write",
+  Grep: "search",
+  Glob: "search",
+  LS: "search",
+  TaskCreate: "plan",
+  TaskUpdate: "plan",
+}
+
+export const toolBucketFor = (toolName: string): ToolBucket => TOOL_NAME_TO_BUCKET[toolName] ?? "other"
+
+const emptyToolMix = (): ToolMix => ({
+  bash: 0,
+  read: 0,
+  edit: 0,
+  write: 0,
+  search: 0,
+  plan: 0,
+  other: 0,
+})
+
+const bucketise = (rows: readonly ToolMixRow[]): ToolMix => {
+  const mix = emptyToolMix()
+  for (const row of rows) {
+    mix[toolBucketFor(row.toolName)] += row.uses
+  }
+  return mix
+}
+
+const basename = (path: string): string => {
+  if (path === "") return ""
+  // Strip trailing slashes, then take the last path component.
+  const trimmed = path.replace(/\/+$/, "")
+  const idx = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"))
+  return idx >= 0 ? trimmed.slice(idx + 1) : trimmed
+}
+
+const toFileLines = (rows: readonly FileTouchesRow[]): FileLine[] =>
+  rows.map((row) => ({ path: row.path, displayName: basename(row.path), touches: row.touches }))
+
+const toEmptyHeatmap = (): Report["heatmap"] =>
+  Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+
+/**
+ * Fills a 7×24 zeroed matrix from sparse `(dayOfWeek, hourOfDay, uses)`
+ * triples. ClickHouse's `toDayOfWeek` returns 1=Mon..7=Sun, which we map to
+ * 0..6 so the array index is the day's display-order offset.
+ */
+const fillHeatmap = (rows: readonly HeatmapCellRow[]): Report["heatmap"] => {
+  const matrix = toEmptyHeatmap()
+  for (const row of rows) {
+    const dayIndex = row.dayOfWeek - 1
+    if (dayIndex < 0 || dayIndex >= 7 || row.hourOfDay < 0 || row.hourOfDay >= 24) continue
+    const dayRow = matrix[dayIndex]
+    if (!dayRow) continue
+    dayRow[row.hourOfDay] = row.uses
+  }
+  return matrix
+}
+
+const buildDeepDive = (
+  workspace: WorkspaceRow,
+  row: WorkspaceDeepDiveRow,
+): WorkspaceDeepDive => ({
+  name: workspace.name,
+  toolCalls: row.toolCalls,
+  sessions: row.sessions,
+  topFiles: row.topFilePaths.map((path) => ({
+    path,
+    displayName: basename(path),
+    touches: 0,
+  })),
+  topBranches: [...row.topBranches],
+  dominantTool: row.dominantTool ? toolBucketFor(row.dominantTool) : "other",
+})
+
+export interface AssembleReportInput {
+  readonly project: Project
+  readonly organization: { readonly id: OrganizationId; readonly name: string }
+  readonly windowStart: Date
+  readonly windowEnd: Date
+  readonly totals: WrappedTotalsRow
+  readonly durationStats: SessionDurationStatsRow
+  readonly toolMix: readonly ToolMixRow[]
+  readonly topFiles: readonly FileTouchesRow[]
+  readonly topBash: readonly BashPatternRow[]
+  readonly topWorkspaces: readonly WorkspaceRow[]
+  readonly topBranches: readonly BranchRow[]
+  readonly heatmap: readonly HeatmapCellRow[]
+  readonly busiestDay: BusiestDayRow | null
+  readonly deepDives: ReadonlyArray<{
+    readonly workspace: WorkspaceRow
+    readonly row: WorkspaceDeepDiveRow
+  }>
+}
+
+/**
+ * Pure assembly step — no Effect, no I/O. Bucketises the tool mix, computes
+ * basenames, fills the 7×24 heatmap, assigns the personality, and validates
+ * the result against `reportSchema` (callers can rely on the returned object
+ * being a `Report`).
+ */
+export const assembleReport = (input: AssembleReportInput): Report => {
+  const toolMix = bucketise(input.toolMix)
+  const topFiles = toFileLines(input.topFiles)
+  const heatmap = fillHeatmap(input.heatmap)
+
+  const workspaces = input.topWorkspaces.map((row) => ({
+    name: row.name,
+    sessions: row.sessions,
+    toolCalls: row.toolCalls,
+  }))
+  const otherWorkspaceCount = Math.max(0, workspaces.length - MAX_WORKSPACE_DEEP_DIVES)
+  const workspaceDeepDives = input.deepDives.map(({ workspace, row }) => buildDeepDive(workspace, row))
+
+  const personality = assignPersonality({
+    toolMix,
+    sessions: input.totals.sessions,
+    totalDurationMs: input.durationStats.totalDurationMs,
+    filesTouched: input.totals.filesTouched,
+    commandsRun: input.totals.commandsRun,
+  })
+
+  const longestSession =
+    input.durationStats.longestDurationMs > 0
+      ? {
+          durationMs: input.durationStats.longestDurationMs,
+          workspace: input.durationStats.longestWorkspace,
+        }
+      : null
+
+  const busiestDay = input.busiestDay
+    ? { date: input.busiestDay.date, toolCalls: input.busiestDay.toolCalls }
+    : null
+
+  const mainCharacterFile = topFiles[0] ?? null
+
+  return {
+    project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
+    organization: input.organization,
+    window: { start: input.windowStart, end: input.windowEnd },
+    totals: {
+      sessions: input.totals.sessions,
+      toolCalls: input.totals.toolCalls,
+      durationMs: input.durationStats.totalDurationMs,
+      filesTouched: input.totals.filesTouched,
+      commandsRun: input.totals.commandsRun,
+      workspaces: input.totals.workspaces,
+      branches: input.totals.branches,
+      commits: input.totals.commits,
+      repos: input.totals.repos,
+    },
+    toolMix,
+    topFiles,
+    topBashCommands: input.topBash.map((row) => ({ pattern: row.pattern, count: row.uses })),
+    topWorkspaces: workspaces,
+    topBranches: input.topBranches.map((row) => ({ name: row.name, sessions: row.sessions })),
+    workspaceDeepDives,
+    otherWorkspaceCount,
+    heatmap,
+    moments: { longestSession, busiestDay, mainCharacterFile },
+    personality,
+  }
+}
+
+export interface BuildReportInput {
+  readonly project: Project
+  readonly organization: { readonly id: OrganizationId; readonly name: string }
+  readonly windowStart: Date
+  readonly windowEnd: Date
+}
+
+/**
+ * Runs the eight independent Wrapped queries in parallel, then a per-top-3
+ * workspace fan-out, then hands the raw rows to `assembleReport` for the
+ * pure transformation step. Returns a validated `Report`.
+ */
+export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(function* (input: BuildReportInput) {
+  const reader = yield* ClaudeCodeSpanReader
+
+  const projectScope = {
+    organizationId: input.organization.id,
+    projectId: input.project.id,
+    from: input.windowStart,
+    to: input.windowEnd,
+  }
+
+  const [totals, durationStats, toolMix, topFiles, topBash, topWorkspaces, topBranches, heatmap, busiestDay] =
+    yield* Effect.all(
+      [
+        reader.getTotalsForProject(projectScope),
+        reader.getSessionDurationStats(projectScope),
+        reader.getToolMix(projectScope),
+        reader.getTopFiles(projectScope),
+        reader.getTopBashCommands(projectScope),
+        reader.getTopWorkspaces(projectScope),
+        reader.getTopBranches(projectScope),
+        reader.getHeatmap(projectScope),
+        reader.getBusiestDay(projectScope),
+      ],
+      { concurrency: QUERY_CONCURRENCY },
+    )
+
+  const deepDiveTargets = topWorkspaces.slice(0, MAX_WORKSPACE_DEEP_DIVES)
+  const deepDives = yield* Effect.forEach(
+    deepDiveTargets,
+    (workspace) =>
+      reader
+        .getWorkspaceDeepDive({ ...projectScope, workspaceName: workspace.name })
+        .pipe(Effect.map((row) => ({ workspace, row }))),
+    { concurrency: DEEP_DIVE_CONCURRENCY },
+  )
+
+  return assembleReport({
+    project: input.project,
+    organization: input.organization,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+    totals,
+    durationStats,
+    toolMix,
+    topFiles,
+    topBash,
+    topWorkspaces,
+    topBranches,
+    heatmap,
+    busiestDay,
+    deepDives,
+  })
+})

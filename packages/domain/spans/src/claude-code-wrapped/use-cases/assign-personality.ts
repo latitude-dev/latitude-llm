@@ -18,8 +18,7 @@ const MARATHONER_AVG_SESSION_MS_THRESHOLD = 45 * 60 * 1000
  */
 const MARATHONER_AVG_SESSION_MS_SATURATION = 4 * 60 * 60 * 1000
 
-const sumMix = (mix: ToolMix): number =>
-  mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.plan + mix.other
+const sumMix = (mix: ToolMix): number => mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.plan + mix.other
 
 const normaliseScore = (value: number, low: number, high: number): number => {
   if (high <= low) return 1
@@ -97,11 +96,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   if (avgSessionMs >= MARATHONER_AVG_SESSION_MS_THRESHOLD) {
     return {
       kind: "marathoner",
-      score: normaliseScore(
-        avgSessionMs,
-        MARATHONER_AVG_SESSION_MS_THRESHOLD,
-        MARATHONER_AVG_SESSION_MS_SATURATION,
-      ),
+      score: normaliseScore(avgSessionMs, MARATHONER_AVG_SESSION_MS_THRESHOLD, MARATHONER_AVG_SESSION_MS_SATURATION),
       evidence: [
         `Average session length: ${formatHoursMinutes(avgSessionMs)}`,
         `${sessions.toLocaleString("en-US")} long focus session${sessions === 1 ? "" : "s"}`,

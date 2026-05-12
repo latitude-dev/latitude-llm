@@ -28,6 +28,13 @@ export {
   type WorkspaceRow,
   type WrappedTotalsRow,
 } from "./ports/claude-code-span-reader.ts"
+export {
+  type AssembleReportInput,
+  assembleReport,
+  type BuildReportInput,
+  buildReportUseCase,
+  toolBucketFor,
+} from "./use-cases/build-report.ts"
 export { listProjectsWithClaudeCodeSpansUseCase } from "./use-cases/list-projects-with-claude-code-spans.ts"
 export {
   type ClaudeCodeWrappedEmailSender,
