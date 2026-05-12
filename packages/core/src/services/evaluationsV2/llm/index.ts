@@ -48,6 +48,7 @@ async function validate<M extends LlmEvaluationMetric>(
   {
     mode,
     metric,
+    evaluation,
     configuration,
     workspace,
     ...rest
@@ -66,7 +67,22 @@ async function validate<M extends LlmEvaluationMetric>(
     return Result.error(parsing.error)
   }
 
-  if (!metric.startsWith(LlmEvaluationMetric.Custom) || mode !== 'update') {
+  // Custom prompts embed provider/model in the prompt body, so they skip
+  // provider validation on update entirely. For non-custom metrics, also skip
+  // re-validating the provider on update when it hasn't changed — otherwise
+  // users can't edit (e.g. disable live evals on) an evaluation whose provider
+  // was deleted.
+  const isCustom = metric.startsWith(LlmEvaluationMetric.Custom)
+  const providerUnchangedOnUpdate =
+    mode === 'update' &&
+    !isCustom &&
+    !!evaluation &&
+    configuration.provider?.trim() === evaluation.configuration.provider &&
+    configuration.model?.trim() === evaluation.configuration.model
+  const skipProviderValidation =
+    (isCustom && mode === 'update') || providerUnchangedOnUpdate
+
+  if (!skipProviderValidation) {
     configuration.provider = configuration.provider.trim()
     if (!configuration.provider) {
       return Result.error(new BadRequestError('Provider is required'))
@@ -85,10 +101,13 @@ async function validate<M extends LlmEvaluationMetric>(
     if (!configuration.model) {
       return Result.error(new BadRequestError('Model is required'))
     }
+  } else if (providerUnchangedOnUpdate) {
+    configuration.provider = configuration.provider.trim()
+    configuration.model = configuration.model.trim()
   }
 
   const validation = await metricSpecification.validate(
-    { mode, configuration, workspace, ...rest },
+    { mode, evaluation, configuration, workspace, ...rest },
     db,
   )
   if (validation.error) {

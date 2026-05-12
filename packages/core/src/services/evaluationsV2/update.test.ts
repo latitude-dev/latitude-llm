@@ -489,4 +489,55 @@ describe('updateEvaluationV2', () => {
       },
     })
   })
+
+  it('allows updating an LLM evaluation whose provider has been deleted', async () => {
+    const { createEvaluationV2: createEval } = await import('./create')
+    const { destroyProviderApiKey } = await import('../providerApiKeys/destroy')
+    const { findFirstProviderApiKey } = await import(
+      '../../queries/providerApiKeys/findFirst'
+    )
+
+    const created = await createEval({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      settings: {
+        name: 'broken provider eval',
+        description: 'test',
+        type: EvaluationType.Llm,
+        metric: LlmEvaluationMetric.Binary,
+        configuration: {
+          reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          provider: 'openai',
+          model: 'gpt-4o',
+          criteria: 'criteria',
+          passDescription: 'pass',
+          failDescription: 'fail',
+        },
+      },
+      options: { evaluateLiveLogs: true },
+    }).then((r) => r.unwrap())
+
+    const liveEvaluation = created.evaluation
+
+    const provider = await findFirstProviderApiKey({
+      workspaceId: workspace.id,
+    })
+    await destroyProviderApiKey(provider!).then((r) => r.unwrap())
+
+    mocks.publisher.mockClear()
+
+    const { evaluation: updatedEvaluation } = await updateEvaluationV2({
+      evaluation: liveEvaluation,
+      commit: commit,
+      workspace: workspace,
+      options: { evaluateLiveLogs: false },
+    }).then((r) => r.unwrap())
+
+    expect(updatedEvaluation.evaluateLiveLogs).toBe(false)
+  })
 })
