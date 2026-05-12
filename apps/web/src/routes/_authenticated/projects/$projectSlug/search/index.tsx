@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, cn, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
+import { Button, cn, Icon, type SortDirection, SplitButton, Tooltip, toast, useMountEffect } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
@@ -409,67 +409,97 @@ function SearchPage() {
   )
 }
 
-type SearchSyntaxPill = {
-  readonly kind: "literal" | "token"
+type SearchSegmentKind = "semantic" | "literal" | "token"
+
+type SearchSegment = {
+  readonly id: string
+  readonly kind: SearchSegmentKind
   readonly text: string
-  readonly open: boolean
 }
 
-function getSearchSyntaxPills(value: string): readonly SearchSyntaxPill[] {
-  const pills: SearchSyntaxPill[] = []
+let nextSearchSegmentId = 0
+
+function createSearchSegment(kind: SearchSegmentKind, text = ""): SearchSegment {
+  nextSearchSegmentId += 1
+  return { id: `search-segment-${nextSearchSegmentId.toString()}`, kind, text }
+}
+
+function delimiterForKind(kind: SearchSegmentKind): '"' | "`" | "" {
+  if (kind === "literal") return '"'
+  if (kind === "token") return "`"
+  return ""
+}
+
+function kindForDelimiter(delimiter: string): SearchSegmentKind | undefined {
+  if (delimiter === '"') return "literal"
+  if (delimiter === "`") return "token"
+  return undefined
+}
+
+function parseSearchSegments(value: string): readonly SearchSegment[] {
+  const segments: SearchSegment[] = []
+  let buffer = ""
   let i = 0
 
+  const flushSemantic = () => {
+    const text = buffer.trim()
+    if (text.length === 0) {
+      buffer = ""
+      return
+    }
+    segments.push(createSearchSegment("semantic", text))
+    buffer = ""
+  }
+
   while (i < value.length) {
-    const delimiter = value[i]
-    if (delimiter !== '"' && delimiter !== "`") {
+    const delimiter = value[i]!
+    const kind = kindForDelimiter(delimiter)
+    if (!kind) {
+      buffer += delimiter
       i += 1
       continue
     }
 
     const close = value.indexOf(delimiter, i + 1)
-    const end = close === -1 ? value.length : close
-    const text = value
-      .slice(i + 1, end)
-      .trim()
-      .replace(/\s+/g, " ")
-    pills.push({
-      kind: delimiter === '"' ? "literal" : "token",
-      text,
-      open: close === -1,
-    })
-    i = close === -1 ? value.length : close + 1
+    if (close === -1) {
+      buffer += value.slice(i)
+      break
+    }
+
+    flushSemantic()
+    segments.push(createSearchSegment(kind, value.slice(i + 1, close)))
+    i = close + 1
   }
 
-  return pills.slice(0, 3)
+  flushSemantic()
+  return segments.length > 0 ? segments : [createSearchSegment("semantic")]
 }
 
-function SearchSyntaxPills({ draft }: { readonly draft: string }) {
-  const pills = getSearchSyntaxPills(draft)
-  if (pills.length === 0) return null
+function serializeSearchSegments(segments: readonly SearchSegment[]): string {
+  return segments
+    .map((segment) => {
+      if (segment.kind === "semantic") return segment.text
+      const delimiter = delimiterForKind(segment.kind)
+      return `${delimiter}${segment.text}${delimiter}`
+    })
+    .join("")
+}
 
-  return (
-    <div className="pointer-events-none absolute inset-y-0 right-3 hidden max-w-[45%] items-center gap-1.5 lg:flex">
-      {pills.map((pill, index) => {
-        const delimiter = pill.kind === "literal" ? '"' : "`"
-        const label = pill.text.length > 0 ? `${delimiter}${pill.text}${pill.open ? "" : delimiter}` : delimiter
-        return (
-          <span
-            key={`${pill.kind}-${index.toString()}-${pill.text}`}
-            className={cn(
-              "inline-flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium shadow-sm",
-              pill.kind === "literal"
-                ? "border-primary/25 bg-primary/10 text-primary"
-                : "border-accent-foreground/20 bg-accent text-accent-foreground",
-              pill.open ? "border-dashed" : "",
-            )}
-          >
-            <span className="shrink-0 opacity-70">{pill.kind === "literal" ? "Literal" : "Phrase"}</span>
-            <span className="truncate font-mono">{label}</span>
-          </span>
-        )
-      })}
-    </div>
-  )
+function splitSegmentOnDelimiter(segment: SearchSegment, value: string): readonly SearchSegment[] {
+  if (segment.kind !== "semantic") return [{ ...segment, text: value }]
+
+  const quoteIndex = value.indexOf('"')
+  const backtickIndex = value.indexOf("`")
+  const delimiterIndex = [quoteIndex, backtickIndex].filter((idx) => idx !== -1).sort((a, b) => a - b)[0]
+  if (delimiterIndex === undefined) return [{ ...segment, text: value }]
+
+  const delimiter = value[delimiterIndex]!
+  const kind = kindForDelimiter(delimiter)
+  if (!kind) return [{ ...segment, text: value }]
+
+  const before = value.slice(0, delimiterIndex).trimEnd()
+  const after = value.slice(delimiterIndex + 1)
+  return [...(before.length > 0 ? [{ ...segment, text: before }] : []), createSearchSegment(kind, after)]
 }
 
 function SearchInput({
@@ -479,30 +509,154 @@ function SearchInput({
   readonly initialValue: string
   readonly onSubmit: (value: string) => void
 }) {
-  const [draft, setDraft] = useState(initialValue)
-  const hasSyntaxPills = getSearchSyntaxPills(draft).length > 0
+  const [segments, setSegments] = useState(() => parseSearchSegments(initialValue))
+  const inputRefs = useRef(new Map<string, HTMLInputElement>())
+
+  const focusSegment = (id: string) => {
+    window.setTimeout(() => {
+      const input = inputRefs.current.get(id)
+      input?.focus()
+      input?.setSelectionRange(input.value.length, input.value.length)
+    }, 0)
+  }
+
+  useMountEffect(() => {
+    const first = segments[0]
+    if (first) focusSegment(first.id)
+  })
+
+  const submit = (nextSegments = segments) => {
+    const next = serializeSearchSegments(nextSegments).trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
+    onSubmit(next)
+  }
+
+  const updateSegment = (segment: SearchSegment, value: string) => {
+    const replacement = splitSegmentOnDelimiter(segment, value)
+    setSegments((current) => current.flatMap((item) => (item.id === segment.id ? replacement : [item])))
+    const focusTarget = replacement[replacement.length - 1]
+    if (focusTarget && focusTarget.id !== segment.id) focusSegment(focusTarget.id)
+  }
+
+  const openPill = (segment: SearchSegment, delimiter: '"' | "`", input: HTMLInputElement) => {
+    const kind = kindForDelimiter(delimiter)
+    if (!kind) return
+
+    const start = input.selectionStart ?? segment.text.length
+    const end = input.selectionEnd ?? start
+    const before = segment.text.slice(0, start).trimEnd()
+    const selected = segment.text.slice(start, end)
+    const after = segment.text.slice(end).trimStart()
+    const pill = createSearchSegment(kind, selected)
+    const replacement = [
+      ...(before.length > 0 ? [{ ...segment, text: before }] : []),
+      pill,
+      ...(after.length > 0 ? [createSearchSegment("semantic", after)] : []),
+    ]
+
+    setSegments((current) => current.flatMap((item) => (item.id === segment.id ? replacement : [item])))
+    focusSegment(pill.id)
+  }
+
+  const closePill = (segment: SearchSegment) => {
+    const nextSemantic = createSearchSegment("semantic")
+    setSegments((current) => {
+      const index = current.findIndex((item) => item.id === segment.id)
+      if (index === -1) return current
+      return [...current.slice(0, index + 1), nextSemantic, ...current.slice(index + 1)]
+    })
+    focusSegment(nextSemantic.id)
+  }
+
+  const removeEmptySegment = (segment: SearchSegment) => {
+    setSegments((current) => {
+      const index = current.findIndex((item) => item.id === segment.id)
+      if (index === -1) return current
+
+      if (current.length === 1) {
+        if (segment.kind === "semantic") return current
+        const next = createSearchSegment("semantic")
+        focusSegment(next.id)
+        return [next]
+      }
+
+      const next = current.filter((item) => item.id !== segment.id)
+      const focusTarget = next[Math.max(0, index - 1)] ?? next[0]
+      if (focusTarget) focusSegment(focusTarget.id)
+      return next
+    })
+  }
 
   return (
     <div className="relative flex-1">
       <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
         <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
       </div>
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") return
-          event.preventDefault()
-          const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
-          onSubmit(next)
-        }}
-        placeholder={'Search by meaning. Use "literal text" or `ordered token phrase`.'}
-        size="lg"
-        maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className={cn("w-full rounded-xl pl-9", hasSyntaxPills ? "lg:pr-[28rem]" : "")}
-        autoFocus
-      />
-      <SearchSyntaxPills draft={draft} />
+      <div className="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-xl border border-input bg-transparent pr-3 pl-9 text-sm transition-colors focus-within:ring-1 focus-within:ring-ring">
+        {segments.map((segment, index) => {
+          const isSemantic = segment.kind === "semantic"
+          const label = segment.kind === "literal" ? "Literal" : "Phrase"
+          const tooltip =
+            segment.kind === "literal"
+              ? 'Literal match: searches for this exact case-sensitive text. Serialized with "quotes".'
+              : "Phrase match: searches for these tokens adjacent and in order, ignoring punctuation. Serialized with `backticks`."
+          const placeholder =
+            isSemantic && index === 0 ? 'Search by meaning. Use "literal text" or `ordered token phrase`.' : ""
+          const segmentInput = (
+            <span
+              key={segment.id}
+              className={cn(
+                "inline-flex min-w-0 shrink-0 items-center",
+                isSemantic ? "" : "h-7 gap-1 rounded-full border px-2 text-xs font-medium shadow-sm",
+                segment.kind === "literal" ? "border-primary/25 bg-primary/10 text-primary" : "",
+                segment.kind === "token"
+                  ? "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                  : "",
+              )}
+            >
+              {!isSemantic ? <span className="shrink-0 opacity-70">{label}</span> : null}
+              <input
+                ref={(node) => {
+                  if (node) inputRefs.current.set(segment.id, node)
+                  else inputRefs.current.delete(segment.id)
+                }}
+                value={segment.text}
+                onChange={(event) => updateSegment(segment, event.target.value)}
+                onKeyDown={(event) => {
+                  if (segment.kind === "semantic" && (event.key === '"' || event.key === "`")) {
+                    event.preventDefault()
+                    openPill(segment, event.key, event.currentTarget)
+                    return
+                  }
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    if (segment.kind === "semantic") submit()
+                    else closePill(segment)
+                    return
+                  }
+                  if (event.key === "Backspace" && segment.text.length === 0) {
+                    event.preventDefault()
+                    removeEmptySegment(segment)
+                  }
+                }}
+                placeholder={placeholder}
+                maxLength={SEARCH_QUERY_MAX_LENGTH}
+                className={cn(
+                  "bg-transparent outline-none [field-sizing:content] placeholder:text-muted-foreground",
+                  isSemantic ? "h-6 min-w-[1ch] text-sm" : "h-6 min-w-[2ch] font-mono text-xs",
+                )}
+              />
+            </span>
+          )
+
+          if (isSemantic) return segmentInput
+
+          return (
+            <Tooltip key={segment.id} asChild side="bottom" align="start" delayDuration={400} trigger={segmentInput}>
+              {tooltip}
+            </Tooltip>
+          )
+        })}
+      </div>
     </div>
   )
 }
