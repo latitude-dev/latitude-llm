@@ -1,16 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { JobTitle } from "@domain/users"
-import {
-  Button,
-  Checkbox,
-  CodeBlock,
-  CopyButton,
-  ProviderIcon,
-  Tabs,
-  Text,
-  useMountEffect,
-  useToast,
-} from "@repo/ui"
+import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import type { LucideIcon } from "lucide-react"
 import {
