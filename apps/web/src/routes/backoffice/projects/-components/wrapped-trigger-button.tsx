@@ -1,7 +1,7 @@
 import { Alert, Button, CloseTrigger, Modal, Text, useToast } from "@repo/ui"
 import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
-import { adminTriggerClaudeCodeWrapped } from "../../../../domains/admin/claude-code-wrapped.functions.ts"
+import { adminTriggerWrapped } from "../../../../domains/admin/wrapped.functions.ts"
 import { toUserMessage } from "../../../../lib/errors.ts"
 
 interface WrappedTriggerButtonProps {
@@ -24,7 +24,7 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
   const handleConfirm = async () => {
     setIsSubmitting(true)
     try {
-      await adminTriggerClaudeCodeWrapped({ data: { projectId } })
+      await adminTriggerWrapped({ data: { projectId, type: "claude_code" } })
       toast({
         description: `Claude Code Wrapped enqueued for ${projectName}. Members will receive a notification if the flag is on and the project had activity this week.`,
       })
@@ -59,7 +59,8 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
           />
           <Modal.Body>
             <Text.H5 color="foregroundMuted">
-              All users in the organization will receive a notification and an email when the Wrapped has been generated.
+              All users in the organization will receive a notification and an email when the Wrapped has been
+              generated.
             </Text.H5>
             <Alert
               variant="warning"

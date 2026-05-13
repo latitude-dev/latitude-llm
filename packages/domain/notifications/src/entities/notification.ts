@@ -67,7 +67,7 @@ export type CustomMessageNotificationPayload = z.infer<typeof customMessageNotif
 export const wrappedReportNotificationPayloadSchema = z.object({
   /** Display name of the project the Wrapped covers. */
   projectName: z.string(),
-  /** Absolute URL to `/cc-wrapped/<id>`. */
+  /** Absolute URL to `/wrapped/<id>`. */
   link: z.string(),
 })
 export type WrappedReportNotificationPayload = z.infer<typeof wrappedReportNotificationPayloadSchema>

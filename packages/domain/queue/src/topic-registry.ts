@@ -379,13 +379,17 @@ const _registry = {
     }
   }>(),
 
-  // Weekly "Claude Code Wrapped" digest. `triggerWeeklyRun` is fired by a
-  // BullMQ repeatable schedule; the handler derives the 7-day window from
-  // Date.now() and fans out one `runForProject` per eligible (orgId, projectId)
-  // pair. The manual backoffice button publishes `runForProject` directly.
-  "claude-code-wrapped": payloads<{
+  // Weekly Wrapped digest. `triggerWeeklyRun` is fired by a BullMQ
+  // repeatable schedule; the handler derives the 7-day window from
+  // Date.now() and fans out one `runForProject` per eligible
+  // (type, orgId, projectId) tuple. The manual backoffice button
+  // publishes `runForProject` directly. Today the only `type` value
+  // is `"claude_code"`; future Wrapped types (Openclaw, Codex, …)
+  // publish on the same topic with their own `type` discriminator.
+  wrapped: payloads<{
     triggerWeeklyRun: Record<string, never>
     runForProject: {
+      readonly type: string
       readonly organizationId: string
       readonly projectId: string
       readonly windowStartIso: string

@@ -21,7 +21,7 @@ export interface CreateWrappedReportNotificationsInput {
    */
   readonly wrappedReportId: string
   readonly projectName: string
-  /** Absolute URL to `/cc-wrapped/<id>`. */
+  /** Absolute URL to `/wrapped/<id>`. */
   readonly link: string
 }
 

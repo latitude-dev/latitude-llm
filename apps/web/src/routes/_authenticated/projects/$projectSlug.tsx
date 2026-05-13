@@ -3,9 +3,9 @@ import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
-import { getLatestWrappedReportForProject } from "../../../domains/cc-wrapped/cc-wrapped.functions.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
+import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 
@@ -56,8 +56,8 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   // week's Wrapped report when one exists. Returns null for the typical
   // case (no report or report > 7 days old) and we just render nothing.
   const { data: latestWrapped } = useQuery({
-    queryKey: ["cc-wrapped", "latest", project.id],
-    queryFn: () => getLatestWrappedReportForProject({ data: { projectId: project.id } }),
+    queryKey: ["wrapped", "latest", project.id, "claude_code"],
+    queryFn: () => getLatestWrappedReportForProject({ data: { projectId: project.id, type: "claude_code" } }),
     staleTime: WRAPPED_REPORT_STALE_TIME_MS,
     retry: false,
   })
@@ -72,7 +72,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             <NavItem
               icon={ClaudeCodeIcon}
               label="Claude Code Wrapped"
-              to={`/cc-wrapped/${latestWrapped.id}`}
+              to={`/wrapped/${latestWrapped.id}`}
               external
               collapsed={collapsed}
             />

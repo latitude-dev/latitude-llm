@@ -58,7 +58,7 @@ describe("createWrappedReportNotificationsUseCase", () => {
         organizationId: ORG_ID,
         wrappedReportId: cuid("wr1"),
         projectName: "poncho-ios",
-        link: "https://example.com/cc-wrapped/abc",
+        link: "https://example.com/wrapped/abc",
       }).pipe(Effect.provide(layer)),
     )
 
@@ -70,7 +70,7 @@ describe("createWrappedReportNotificationsUseCase", () => {
       expect(n.organizationId).toBe(ORG_ID)
       expect(n.payload).toEqual({
         projectName: "poncho-ios",
-        link: "https://example.com/cc-wrapped/abc",
+        link: "https://example.com/wrapped/abc",
       })
       expect(n.seenAt).toBeNull()
     }
@@ -85,7 +85,7 @@ describe("createWrappedReportNotificationsUseCase", () => {
         organizationId: ORG_ID,
         wrappedReportId: cuid("wr2"),
         projectName: "p",
-        link: "https://example.com/cc-wrapped/xyz",
+        link: "https://example.com/wrapped/xyz",
       }).pipe(Effect.provide(layer)),
     )
 

@@ -17,11 +17,12 @@ import {
   type WrappedReportRecord,
   WrappedReportRepository,
   type WrappedReportSummary,
+  type WrappedReportType,
 } from "@domain/spans"
 import { and, desc, eq, gte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { claudeCodeWrappedReports } from "../schema/claude-code-wrapped-reports.ts"
+import { wrappedReports } from "../schema/wrapped-reports.ts"
 
 const parseReportBlob = (
   blob: unknown,
@@ -33,12 +34,14 @@ const parseReportBlob = (
   })
 
 const toDomainRecord = (
-  row: typeof claudeCodeWrappedReports.$inferSelect,
+  row: typeof wrappedReports.$inferSelect,
 ): Effect.Effect<WrappedReportRecord, ReturnType<typeof toRepositoryError>> =>
   Effect.gen(function* () {
     // Defence in depth: the schema column is typed as ReportVersion at
     // insert, but a stored row could in principle hold a version we no
     // longer know about (e.g. a downgrade after a forward migration).
+    // Today only the `claude_code` type's schema dictionary is in scope;
+    // future types will dispatch on `row.type + row.reportVersion`.
     const version = row.reportVersion
     if (!(version in SCHEMA_BY_VERSION)) {
       return yield* Effect.fail(toRepositoryError(new Error(`Unknown report_version ${version}`), "findById"))
@@ -46,6 +49,7 @@ const toDomainRecord = (
     const report = yield* parseReportBlob(row.report, version)
     return {
       id: WrappedReportId(row.id),
+      type: row.type,
       organizationId: OrganizationId(row.organizationId),
       projectId: ProjectId(row.projectId),
       windowStart: row.windowStart,
@@ -67,8 +71,9 @@ export const WrappedReportRepositoryLive = Layer.effect(
         // Cross-org write — the record itself carries the organizationId
         // it should be filed under, not the current SqlClient context.
         yield* sqlClient.query((db) =>
-          db.insert(claudeCodeWrappedReports).values({
+          db.insert(wrappedReports).values({
             id: record.id,
+            type: record.type,
             organizationId: record.organizationId,
             projectId: record.projectId,
             windowStart: record.windowStart,
@@ -87,7 +92,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
         // caller MUST build the SqlClient with `OrganizationId("system")`
         // so RLS is bypassed; otherwise the row will be invisible.
         const [row] = yield* sqlClient.query((db) =>
-          db.select().from(claudeCodeWrappedReports).where(eq(claudeCodeWrappedReports.id, id)).limit(1),
+          db.select().from(wrappedReports).where(eq(wrappedReports.id, id)).limit(1),
         )
 
         if (!row) return yield* new NotFoundError({ entity: "WrappedReport", id })
@@ -97,30 +102,32 @@ export const WrappedReportRepositoryLive = Layer.effect(
 
     findLatestForProject: ({
       projectId,
+      type,
       sinceCreatedAt,
     }: {
       projectId: ProjectIdType
+      type: WrappedReportType
       sinceCreatedAt: Date
     }): Effect.Effect<WrappedReportSummary | null, ReturnType<typeof toRepositoryError>, SqlClient> =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         // Org-scoped read — the session SqlClient carries the caller's org
-        // and the table's RLS policy enforces isolation. No JSONB validation
-        // here: the caller only needs the id + timestamp for navigation.
+        // and the table's RLS policy enforces isolation. The (type,
+        // project_id, created_at) compound index makes this a single seek.
+        // No JSONB validation here: the caller only needs the id + timestamp
+        // for navigation.
         const [row] = yield* sqlClient.query((db) =>
           db
-            .select({
-              id: claudeCodeWrappedReports.id,
-              createdAt: claudeCodeWrappedReports.createdAt,
-            })
-            .from(claudeCodeWrappedReports)
+            .select({ id: wrappedReports.id, createdAt: wrappedReports.createdAt })
+            .from(wrappedReports)
             .where(
               and(
-                eq(claudeCodeWrappedReports.projectId, projectId),
-                gte(claudeCodeWrappedReports.createdAt, sinceCreatedAt),
+                eq(wrappedReports.type, type),
+                eq(wrappedReports.projectId, projectId),
+                gte(wrappedReports.createdAt, sinceCreatedAt),
               ),
             )
-            .orderBy(desc(claudeCodeWrappedReports.createdAt))
+            .orderBy(desc(wrappedReports.createdAt))
             .limit(1),
         )
         if (!row) return null

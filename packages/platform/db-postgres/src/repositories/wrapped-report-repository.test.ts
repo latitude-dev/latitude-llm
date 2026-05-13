@@ -2,7 +2,7 @@ import { generateId, NotFoundError, OrganizationId, ProjectId, type SqlClient, W
 import { CURRENT_REPORT_VERSION, type Report, type WrappedReportRecord, WrappedReportRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
-import { claudeCodeWrappedReports } from "../schema/claude-code-wrapped-reports.ts"
+import { wrappedReports } from "../schema/wrapped-reports.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { WrappedReportRepositoryLive } from "./wrapped-report-repository.ts"
@@ -62,6 +62,7 @@ const sampleReport: Report = {
 
 const makeRecord = (overrides: Partial<WrappedReportRecord> = {}): WrappedReportRecord => ({
   id: WrappedReportId(generateId()),
+  type: "claude_code",
   organizationId: ORG_A,
   projectId: PROJECT_A,
   windowStart: new Date("2026-05-04T00:00:00.000Z"),
@@ -75,7 +76,7 @@ const makeRecord = (overrides: Partial<WrappedReportRecord> = {}): WrappedReport
 })
 
 afterEach(async () => {
-  await pg.db.delete(claudeCodeWrappedReports)
+  await pg.db.delete(wrappedReports)
 })
 
 describe("WrappedReportRepositoryLive", () => {
@@ -142,8 +143,9 @@ describe("WrappedReportRepositoryLive", () => {
   // directly via the db client.
   const seedRow = async (overrides: { id: string; createdAt: Date }) => {
     const record = makeRecord({ id: WrappedReportId(overrides.id) })
-    await pg.db.insert(claudeCodeWrappedReports).values({
+    await pg.db.insert(wrappedReports).values({
       id: record.id,
+      type: record.type,
       organizationId: record.organizationId,
       projectId: record.projectId,
       windowStart: record.windowStart,
@@ -160,29 +162,59 @@ describe("WrappedReportRepositoryLive", () => {
     const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    await seedRow({ id: "ccwst".padEnd(24, "1"), createdAt: tenDaysAgo })
-    await seedRow({ id: "ccwst".padEnd(24, "2"), createdAt: threeDaysAgo })
-    await seedRow({ id: "ccwst".padEnd(24, "3"), createdAt: yesterday })
+    await seedRow({ id: "wrst".padEnd(24, "1"), createdAt: tenDaysAgo })
+    await seedRow({ id: "wrst".padEnd(24, "2"), createdAt: threeDaysAgo })
+    await seedRow({ id: "wrst".padEnd(24, "3"), createdAt: yesterday })
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const found = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* WrappedReportRepository
-        return yield* repo.findLatestForProject({ projectId: PROJECT_A, sinceCreatedAt: sevenDaysAgo })
+        return yield* repo.findLatestForProject({
+          projectId: PROJECT_A,
+          type: "claude_code",
+          sinceCreatedAt: sevenDaysAgo,
+        })
       }),
     )
-    expect(found?.id).toBe("ccwst".padEnd(24, "3"))
+    expect(found?.id).toBe("wrst".padEnd(24, "3"))
+  })
+
+  it("findLatestForProject filters by type", async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    await seedRow({ id: "wrst".padEnd(24, "a"), createdAt: yesterday })
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    // The only row is `claude_code` (the default from `makeRecord`), so a
+    // query for a hypothetical other type returns null even though a row
+    // for the project exists in the window.
+    const found = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLatestForProject({
+          projectId: PROJECT_A,
+          // biome-ignore lint/suspicious/noExplicitAny: simulating a future type literal not yet in the union
+          type: "openclaw" as any,
+          sinceCreatedAt: sevenDaysAgo,
+        })
+      }),
+    )
+    expect(found).toBeNull()
   })
 
   it("findLatestForProject returns null when no row matches the project + cutoff", async () => {
     const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
-    await seedRow({ id: "ccwst".padEnd(24, "9"), createdAt: tenDaysAgo })
+    await seedRow({ id: "wrst".padEnd(24, "9"), createdAt: tenDaysAgo })
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const found = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* WrappedReportRepository
-        return yield* repo.findLatestForProject({ projectId: PROJECT_A, sinceCreatedAt: sevenDaysAgo })
+        return yield* repo.findLatestForProject({
+          projectId: PROJECT_A,
+          type: "claude_code",
+          sinceCreatedAt: sevenDaysAgo,
+        })
       }),
     )
     expect(found).toBeNull()
