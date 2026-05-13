@@ -1,11 +1,11 @@
-import type { Report } from "@domain/spans"
 import type { WrappedReportId } from "@domain/shared"
+import { CURRENT_REPORT_VERSION, type Report, type ReportVersion } from "@domain/spans"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers (tsx/esbuild classic transform)
 import React from "react"
 import { renderEmail } from "../../utils/render.ts"
 import type { RenderedEmail } from "../types.ts"
-import { ClaudeCodeWrappedEmail } from "./EmailTemplate.tsx"
+import { ClaudeCodeWrappedEmailV1 } from "./v1/EmailTemplateV1.tsx"
 
 const PLAIN_RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 
@@ -17,29 +17,38 @@ export interface ClaudeCodeWrappedEmailData {
   readonly report: Report
   /**
    * Public base URL of the web app (no trailing slash). The template derives
-   * every downstream link from this — personality PNGs, project deep-link,
-   * unsubscribe / settings page, Latitude logo, and the public report URL
-   * the "See your full week →" CTA points at. Worker passes `LAT_WEB_URL`.
+   * personality PNG URLs, project deep-link, unsubscribe / settings page,
+   * Latitude logo, and the full-report URL from it. Worker passes
+   * `LAT_WEB_URL`.
    */
   readonly webAppUrl: string
-  /**
-   * Persisted report id — the email teaser links to `${webAppUrl}/cc-wrapped/${reportId}`
-   * for the full report.
-   */
+  /** Persisted report id; the CTA links to `${webAppUrl}/cc-wrapped/${reportId}`. */
   readonly reportId: WrappedReportId
+  /**
+   * Optional override for the schema version of `report`. Defaults to
+   * `CURRENT_REPORT_VERSION`. Pass an older value to render an older
+   * stored row with its frozen template (the renderer dispatch picks the
+   * V1 / V2 / … React tree based on this).
+   */
+  readonly reportVersion?: ReportVersion
+}
+
+/**
+ * Dispatch by `reportVersion` → versioned React template. Add a new entry
+ * here when V2 ships; never modify existing rows.
+ */
+const TEMPLATE_BY_VERSION: Record<ReportVersion, typeof ClaudeCodeWrappedEmailV1> = {
+  1: ClaudeCodeWrappedEmailV1,
 }
 
 export async function claudeCodeWrappedTemplate(data: ClaudeCodeWrappedEmailData): Promise<RenderedEmail> {
   const projectName = data.report.project.name
   const fullReportUrl = `${data.webAppUrl.replace(/\/$/, "")}/cc-wrapped/${data.reportId}`
+  const version = data.reportVersion ?? CURRENT_REPORT_VERSION
+  const Template = TEMPLATE_BY_VERSION[version] ?? TEMPLATE_BY_VERSION[CURRENT_REPORT_VERSION]
   return {
     html: await renderEmail(
-      <ClaudeCodeWrappedEmail
-        userName={data.userName}
-        report={data.report}
-        webAppUrl={data.webAppUrl}
-        reportId={data.reportId}
-      />,
+      <Template userName={data.userName} report={data.report} webAppUrl={data.webAppUrl} reportId={data.reportId} />,
     ),
     subject: `Your Claude Code week in ${projectName}`,
     text: `Hi ${data.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(
