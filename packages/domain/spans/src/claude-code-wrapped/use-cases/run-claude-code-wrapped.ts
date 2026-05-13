@@ -64,6 +64,12 @@ export type RunClaudeCodeWrappedResult =
       readonly recipientCount: number
       readonly reportId: WrappedReportId
       readonly projectName: string
+      /**
+       * Resolved personality archetype kind. Surfaced so the worker can
+       * include it in the in-app notification payload without re-loading
+       * the persisted record.
+       */
+      readonly archetype: Report["personality"]["kind"]
     }
   | { readonly status: "skipped"; readonly reason: RunClaudeCodeWrappedSkippedReason }
 
@@ -183,5 +189,6 @@ export const runClaudeCodeWrappedUseCase = (deps: RunClaudeCodeWrappedDeps) =>
       recipientCount: recipients.length,
       reportId,
       projectName: project.name,
+      archetype: report.personality.kind,
     } satisfies RunClaudeCodeWrappedResult
   })

@@ -1,4 +1,4 @@
-import { createCustomMessageNotificationsUseCase, createIncidentNotificationsUseCase } from "@domain/notifications"
+import { createIncidentNotificationsUseCase, createWrappedReportNotificationsUseCase } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -58,14 +58,16 @@ const handleWrappedReport = (input: {
   organizationId: string
   wrappedReportId: string
   projectName: string
+  archetype: string
   link: string
 }) => {
   const pgClient = getPostgresClient()
 
-  return createCustomMessageNotificationsUseCase({
+  return createWrappedReportNotificationsUseCase({
     organizationId: OrganizationId(input.organizationId),
-    sourceId: input.wrappedReportId,
-    title: `Your Claude Code Wrapped for ${input.projectName} is ready`,
+    wrappedReportId: input.wrappedReportId,
+    projectName: input.projectName,
+    archetype: input.archetype,
     link: input.link,
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(input.organizationId)),
@@ -101,6 +103,7 @@ export const createNotificationsWorker = ({ consumer }: NotificationsDeps) => {
         organizationId: payload.organizationId,
         wrappedReportId: payload.wrappedReportId,
         projectName: payload.projectName,
+        archetype: payload.archetype,
         link: payload.link,
       }),
   })

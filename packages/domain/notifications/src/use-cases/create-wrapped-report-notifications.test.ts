@@ -5,7 +5,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { NotificationRepository } from "../ports/notification-repository.ts"
 import { createFakeNotificationRepository } from "../testing/fake-notification-repository.ts"
-import { createCustomMessageNotificationsUseCase } from "./create-custom-message-notifications.ts"
+import { createWrappedReportNotificationsUseCase } from "./create-wrapped-report-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 const ORG_ID = OrganizationId(cuid("o"))
@@ -49,15 +49,16 @@ const setup = (memberUserIds: readonly string[] = [cuid("u1"), cuid("u2")]) => {
   }
 }
 
-describe("createCustomMessageNotificationsUseCase", () => {
-  it("creates one notification per org member with the right payload + sourceId", async () => {
+describe("createWrappedReportNotificationsUseCase", () => {
+  it("creates one wrapped_report notification per org member with the right payload + sourceId", async () => {
     const { layer, rows } = setup([cuid("u1"), cuid("u2"), cuid("u3")])
 
     const result = await Effect.runPromise(
-      createCustomMessageNotificationsUseCase({
+      createWrappedReportNotificationsUseCase({
         organizationId: ORG_ID,
-        sourceId: cuid("wr1"),
-        title: "Your Wrapped is ready",
+        wrappedReportId: cuid("wr1"),
+        projectName: "poncho-ios",
+        archetype: "strategist",
         link: "https://example.com/cc-wrapped/abc",
       }).pipe(Effect.provide(layer)),
     )
@@ -65,11 +66,12 @@ describe("createCustomMessageNotificationsUseCase", () => {
     expect(result.inserted).toBe(3)
     expect(rows).toHaveLength(3)
     for (const n of rows) {
-      expect(n.type).toBe("custom_message")
+      expect(n.type).toBe("wrapped_report")
       expect(n.sourceId).toBe(cuid("wr1"))
       expect(n.organizationId).toBe(ORG_ID)
       expect(n.payload).toEqual({
-        title: "Your Wrapped is ready",
+        projectName: "poncho-ios",
+        archetype: "strategist",
         link: "https://example.com/cc-wrapped/abc",
       })
       expect(n.seenAt).toBeNull()
@@ -81,26 +83,16 @@ describe("createCustomMessageNotificationsUseCase", () => {
     const { layer, rows } = setup([])
 
     const result = await Effect.runPromise(
-      createCustomMessageNotificationsUseCase({
+      createWrappedReportNotificationsUseCase({
         organizationId: ORG_ID,
-        title: "Empty org notification",
+        wrappedReportId: cuid("wr2"),
+        projectName: "p",
+        archetype: "conductor",
+        link: "https://example.com/cc-wrapped/xyz",
       }).pipe(Effect.provide(layer)),
     )
 
     expect(result.inserted).toBe(0)
     expect(rows).toHaveLength(0)
-  })
-
-  it("omits content and link from the payload when not provided", async () => {
-    const { layer, rows } = setup([cuid("u1")])
-
-    await Effect.runPromise(
-      createCustomMessageNotificationsUseCase({
-        organizationId: ORG_ID,
-        title: "Title only",
-      }).pipe(Effect.provide(layer)),
-    )
-
-    expect(rows[0]?.payload).toEqual({ title: "Title only" })
   })
 })

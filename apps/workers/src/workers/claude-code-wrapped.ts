@@ -137,6 +137,7 @@ export const createClaudeCodeWrappedWorker = ({
                 organizationId: payload.organizationId,
                 wrappedReportId: result.reportId,
                 projectName: result.projectName,
+                archetype: result.archetype,
                 link: `${webAppUrl}/cc-wrapped/${result.reportId}`,
               })
               .pipe(
