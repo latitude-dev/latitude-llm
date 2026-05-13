@@ -66,7 +66,7 @@ export function Avatar({ name, imageSrc, size = "sm", stacked = false, className
       )}
       style={style as CSSProperties}
     >
-      <span className="leading-none">{initials}</span>
+      <span className="leading-none select-none">{initials}</span>
     </div>
   )
 }

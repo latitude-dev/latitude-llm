@@ -750,9 +750,9 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [ ] CSV import (`POST /rows/import/files`) — **deferred (D16)**; leave `// TODO(file-imports)` comment
   - [ ] Refactor `addTracesToDataset` to take `TracesRef` (or thin route-level adapter)
 - **M-Settings (web)** — independent of M4–M7; ships standalone
-  - [ ] Sessions section in `settings/account.tsx` (BA `listSessions` / `revokeSession` / `revokeOtherSessions`)
-  - [ ] Rename `settings/api-keys.tsx` → `settings/keys.tsx` (+ redirect from old URL)
-  - [ ] OAuth Keys table + "Revoke OAuth key" server-fn (deletes `oauth_access_tokens` rows by `(client_id, user_id)`, disables `oauth_applications` row when last token removed)
+  - [x] Sessions section in `settings/account.tsx` — UA-parsed device / OS, geoip city/region/country, "Sign out everywhere else" and per-row revoke (BA `listSessions` / `revokeSession` / `revokeOtherSessions`). Backed by `apps/web/src/domains/sessions/user-sessions.functions.ts`.
+  - [x] Renamed `settings/api-keys.tsx` → `settings/keys.tsx`; nav label "API Keys" → "Keys"; `settings/api-keys.tsx` kept as a `redirect()`-only route for old bookmarks.
+  - [x] OAuth Keys table on `settings/keys` + `revokeOAuthKey({ clientId, userId })` server-fn — admin-connection write with explicit `organization_id` check, deletes `oauth_access_tokens` rows for the pair, sets `oauth_applications.disabled = true` when the last token for that client is removed. Backed by `apps/web/src/domains/oauth/oauth-keys.functions.ts` + `oauth-keys.collection.ts`.
 - **Wrap-up**
   - [ ] `pnpm generate:sdk` — batched at the end of the plan, single PR (per the standing memo)
   - [ ] CI drift jobs for `apps/api/openapi.json` and `apps/api/mcp.json` (verification §)
