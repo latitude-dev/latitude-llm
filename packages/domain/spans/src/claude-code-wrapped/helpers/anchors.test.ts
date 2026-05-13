@@ -1,52 +1,60 @@
 import { describe, expect, it } from "vitest"
 import { pickReadAnchor, pickWrittenAnchor } from "./anchors.ts"
 
+const renderAnchor = (a: { prefix: string; emphasis: string }) => `${a.prefix} ${a.emphasis}`.toLowerCase()
+
 describe("pickWrittenAnchor", () => {
   it("picks something for zero", () => {
-    expect(pickWrittenAnchor(0)).toBeTruthy()
+    const a = pickWrittenAnchor(0)
+    expect(a.emphasis.length).toBeGreaterThan(0)
   })
 
   it("scales up — small counts get a small anchor", () => {
-    expect(pickWrittenAnchor(150).toLowerCase()).toMatch(/haiku|ted/)
+    expect(renderAnchor(pickWrittenAnchor(150))).toMatch(/haiku|ted/)
   })
 
   it("hits the Apollo anchor in the right range", () => {
-    expect(pickWrittenAnchor(20_000).toLowerCase()).toContain("apollo")
+    expect(renderAnchor(pickWrittenAnchor(20_000))).toContain("apollo")
   })
 
   it("uses the full-Apollo anchor at 145k+", () => {
-    expect(pickWrittenAnchor(145_000).toLowerCase()).toContain("apollo")
+    expect(renderAnchor(pickWrittenAnchor(145_000))).toContain("apollo")
   })
 
   it("hits Doom around 500k", () => {
-    expect(pickWrittenAnchor(700_000).toLowerCase()).toContain("doom")
+    expect(renderAnchor(pickWrittenAnchor(700_000))).toContain("doom")
   })
 
   it("clamps to the Linux kernel anchor at very large counts", () => {
-    const out = pickWrittenAnchor(50_000_000).toLowerCase()
-    expect(out).toContain("linux")
+    expect(renderAnchor(pickWrittenAnchor(50_000_000))).toContain("linux")
   })
 
-  it("always returns a non-empty string", () => {
+  it("always returns a non-empty emphasis", () => {
     for (const n of [0, 1, 100, 10_000, 1_000_000, 100_000_000]) {
-      expect(pickWrittenAnchor(n).length).toBeGreaterThan(0)
+      expect(pickWrittenAnchor(n).emphasis.length).toBeGreaterThan(0)
     }
+  })
+
+  it("emphasis never carries the percentage prefix (so the email can style it separately)", () => {
+    const a = pickWrittenAnchor(20_000)
+    expect(a.prefix).toMatch(/%/)
+    expect(a.emphasis).not.toMatch(/%/)
   })
 })
 
 describe("pickReadAnchor", () => {
   it("scales up", () => {
-    expect(pickReadAnchor(500).toLowerCase()).toMatch(/email|story/)
-    expect(pickReadAnchor(100_000).toLowerCase()).toMatch(/novel/)
+    expect(renderAnchor(pickReadAnchor(500))).toMatch(/email|story/)
+    expect(renderAnchor(pickReadAnchor(100_000))).toMatch(/novel/)
   })
 
   it("hits the Library of Congress at very large counts", () => {
-    expect(pickReadAnchor(50_000_000).toLowerCase()).toContain("library of congress")
+    expect(renderAnchor(pickReadAnchor(50_000_000))).toContain("library of congress")
   })
 
-  it("always returns a non-empty string", () => {
+  it("always returns a non-empty emphasis", () => {
     for (const n of [0, 1, 100, 10_000, 1_000_000, 100_000_000]) {
-      expect(pickReadAnchor(n).length).toBeGreaterThan(0)
+      expect(pickReadAnchor(n).emphasis.length).toBeGreaterThan(0)
     }
   })
 })

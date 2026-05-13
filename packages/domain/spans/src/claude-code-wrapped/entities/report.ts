@@ -5,15 +5,31 @@ import { z } from "zod"
  * Tool-call buckets used by the personality algorithm and the
  * (personality-internal) tool-mix evidence. The standalone tool-mix bar
  * is gone — the percentages live inside the personality reveal.
+ *
+ * `research` is web-side investigation (WebFetch / WebSearch) and is kept
+ * separate from `search` (codebase grep/glob/LS) because the two tell very
+ * different stories about how the user worked.
  */
-export const TOOL_BUCKETS = ["bash", "read", "edit", "write", "search", "plan", "other"] as const
+export const TOOL_BUCKETS = ["bash", "read", "edit", "write", "search", "research", "plan", "other"] as const
 export type ToolBucket = (typeof TOOL_BUCKETS)[number]
 
 /**
- * The six personalities revealed at the end of the email. Assignment is
- * deterministic and pure — see `assignPersonality`.
+ * Personalities revealed at the end of the email. Assignment is deterministic
+ * and pure — see `assignPersonality`. The set leans on conditional behavioural
+ * signals (Strategist/Scholar/Consultant/Shipper/Tester) and falls back to a
+ * baseline-excess tool-mix winner among Surgeon/Architect/Detective/Conductor.
  */
-export const PERSONALITY_KINDS = ["surgeon", "architect", "detective", "conductor", "marathoner", "strategist"] as const
+export const PERSONALITY_KINDS = [
+  "strategist",
+  "scholar",
+  "consultant",
+  "shipper",
+  "tester",
+  "surgeon",
+  "architect",
+  "detective",
+  "conductor",
+] as const
 export type PersonalityKind = (typeof PERSONALITY_KINDS)[number]
 
 const fileLineSchema = z.object({
@@ -63,6 +79,7 @@ const toolMixSchema = z.object({
   edit: z.number().int().nonnegative(),
   write: z.number().int().nonnegative(),
   search: z.number().int().nonnegative(),
+  research: z.number().int().nonnegative(),
   plan: z.number().int().nonnegative(),
   other: z.number().int().nonnegative(),
 })
@@ -76,6 +93,16 @@ const personalitySchema = z.object({
   evidence: z.array(z.string()).length(3),
 })
 export type Personality = z.infer<typeof personalitySchema>
+
+/**
+ * Comparison anchor split into a small muted prefix (e.g. "≈" or "≈ 25% of")
+ * and a large accent-coloured noun phrase the email renders with weight
+ * (e.g. "the Apollo 11 guidance code").
+ */
+const locAnchorSchema = z.object({
+  prefix: z.string(),
+  emphasis: z.string(),
+})
 
 const locSchema = z.object({
   /**
@@ -93,9 +120,9 @@ const locSchema = z.object({
   /** Lines removed by Edit / MultiEdit. */
   removed: z.number().int().nonnegative(),
   /** Playful comparison anchor for `written`. */
-  writtenAnchor: z.string(),
+  writtenAnchor: locAnchorSchema,
   /** Playful comparison anchor for `read`. */
-  readAnchor: z.string(),
+  readAnchor: locAnchorSchema,
 })
 export type LocStats = z.infer<typeof locSchema>
 

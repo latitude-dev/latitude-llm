@@ -50,8 +50,11 @@ const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
   Grep: "search",
   Glob: "search",
   LS: "search",
+  WebFetch: "research",
+  WebSearch: "research",
   TaskCreate: "plan",
   TaskUpdate: "plan",
+  TodoWrite: "plan",
 }
 
 export const toolBucketFor = (toolName: string): ToolBucket => TOOL_NAME_TO_BUCKET[toolName] ?? "other"
@@ -62,6 +65,7 @@ const emptyToolMix = (): ToolMix => ({
   edit: 0,
   write: 0,
   search: 0,
+  research: 0,
   plan: 0,
   other: 0,
 })
@@ -191,9 +195,13 @@ export const assembleReport = (input: AssembleReportInput): Report => {
   const personality = assignPersonality({
     toolMix,
     sessions: input.totals.sessions,
-    totalDurationMs: input.durationStats.totalDurationMs,
     filesTouched: input.totals.filesTouched,
     commandsRun: input.totals.commandsRun,
+    commits: input.totals.commits,
+    testsRun: input.totals.testsRun,
+    linesAdded,
+    linesWritten,
+    linesRead,
   })
 
   const longestSession =

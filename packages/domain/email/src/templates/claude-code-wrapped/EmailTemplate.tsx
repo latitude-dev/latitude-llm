@@ -81,12 +81,31 @@ const bigNumberStyle: React.CSSProperties = {
   margin: "8px 0 4px 0",
 }
 
-const anchorStyle: React.CSSProperties = {
+const anchorPrefixStyle: React.CSSProperties = {
   fontFamily: emailDesignTokens.fonts.serif,
   fontSize: "14px",
   fontStyle: "italic",
   color: emailDesignTokens.colors.claude.mutedInk,
-  margin: 0,
+  margin: "12px 0 0 0",
+}
+
+const anchorEmphasisStyle: React.CSSProperties = {
+  fontFamily: emailDesignTokens.fonts.serif,
+  fontSize: "26px",
+  lineHeight: "32px",
+  fontWeight: 500,
+  color: emailDesignTokens.colors.claude.accent,
+  margin: "2px 0 0 0",
+}
+
+function AnchorBlock({ anchor }: { anchor: Report["loc"]["writtenAnchor"] }) {
+  if (!anchor.emphasis) return null
+  return (
+    <>
+      {anchor.prefix ? <p style={anchorPrefixStyle}>{anchor.prefix}</p> : null}
+      <p style={anchorEmphasisStyle}>{anchor.emphasis}</p>
+    </>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -200,7 +219,7 @@ function LocSection({ loc }: { loc: Report["loc"] }) {
         Lines written
       </p>
       <p style={bigNumberStyle}>{formatCompact(loc.written)}</p>
-      {loc.writtenAnchor ? <p style={anchorStyle}>{loc.writtenAnchor}</p> : null}
+      <AnchorBlock anchor={loc.writtenAnchor} />
       {loc.added > 0 || loc.removed > 0 ? (
         <p
           style={{
@@ -243,10 +262,13 @@ function ReadWriteRatioSection({ loc }: { loc: Report["loc"] }) {
         <span style={{ color: emailDesignTokens.colors.claude.accent, fontWeight: 600 }}>{ratioText}</span>
         {`.`}
       </p>
-      {loc.readAnchor ? (
-        <p style={{ ...anchorStyle, marginTop: "8px" }}>
-          {`${formatCompact(loc.read)} lines read — ${loc.readAnchor}`}
-        </p>
+      {loc.readAnchor.emphasis ? (
+        <>
+          <p style={{ ...anchorPrefixStyle, marginTop: "12px" }}>
+            {`${formatCompact(loc.read)} lines read — ${loc.readAnchor.prefix}`}
+          </p>
+          <p style={anchorEmphasisStyle}>{loc.readAnchor.emphasis}</p>
+        </>
       ) : null}
     </Section>
   )
@@ -519,14 +541,14 @@ ClaudeCodeWrappedEmail.PreviewProps = {
       streakDays: 5,
       testsRun: 32,
     },
-    toolMix: { bash: 87, read: 168, edit: 142, write: 21, search: 52, plan: 12, other: 0 },
+    toolMix: { bash: 87, read: 168, edit: 142, write: 21, search: 52, research: 4, plan: 12, other: 0 },
     loc: {
       written: 14_832,
       read: 184_200,
       added: 9_421,
       removed: 3_402,
-      writtenAnchor: "≈ 10% of the Apollo 11 guidance code",
-      readAnchor: "≈ a full-length novel",
+      writtenAnchor: { prefix: "≈ 10% of", emphasis: "the Apollo 11 guidance code" },
+      readAnchor: { prefix: "≈", emphasis: "a full-length novel" },
     },
     topBashCommand: { pattern: "pnpm", count: 32 },
     workspaceDeepDives: [
@@ -579,11 +601,7 @@ ClaudeCodeWrappedEmail.PreviewProps = {
     personality: {
       kind: "surgeon",
       score: 0.42,
-      evidence: [
-        "42% of your tool calls were Edits",
-        "Touched 142 files this week",
-        "21 new files written from scratch",
-      ],
+      evidence: ["42% of your tool calls were Edits", "Touched 142 files this week", "21 Write calls on top"],
     },
   },
 } satisfies ClaudeCodeWrappedEmailProps

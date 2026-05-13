@@ -1,24 +1,47 @@
 import type { Personality, PersonalityKind, ToolBucket, ToolMix } from "../entities/report.ts"
 
 /**
- * Threshold for the Strategist archetype. Anyone with at least 15% of their
- * tool calls in the planning bucket (TaskCreate / TaskUpdate) gets it.
- * Planning is rare enough that this is a strong signal — and flattering.
+ * Expected share of each bucket in a "typical" Claude Code week. The
+ * personality algorithm subtracts these from the user's actual shares so
+ * that "dominant" reflects deviation from the baseline rather than raw
+ * volume. Read is always huge and Plan is always tiny — the bucket that
+ * stands out is the one the user *chose* to lean into.
+ *
+ * Numbers are first-pass guesses. Easy to retune from a one-shot ClickHouse
+ * percentile sample once we have a week or two of real data.
  */
-const STRATEGIST_PLAN_SHARE_THRESHOLD = 0.15
+const BASELINE_SHARE: Record<ToolBucket, number> = {
+  read: 0.4,
+  bash: 0.2,
+  edit: 0.15,
+  search: 0.1,
+  write: 0.05,
+  plan: 0.03,
+  research: 0.02,
+  other: 0.05,
+}
 
 /**
- * Threshold for the Marathoner archetype. Average session wall-clock has to
- * exceed 45 minutes. Kept rare so the archetype reveal stays meaningful.
+ * Minimum positive deviation needed for the "rare" conditional archetypes
+ * (Strategist, Scholar) to fire. Below this the user just happens to have
+ * a touch more planning/research than baseline — not enough to be a story.
  */
-const MARATHONER_AVG_SESSION_MS_THRESHOLD = 45 * 60 * 1000
+const RARE_EXCESS_THRESHOLD = 0.05
 
-/**
- * Upper anchor for the Marathoner score (4 hours). Score = 1.0 here.
- */
-const MARATHONER_AVG_SESSION_MS_SATURATION = 4 * 60 * 60 * 1000
+const STRATEGIST_MIN_PLAN_CALLS = 10
+const SCHOLAR_MIN_RESEARCH_CALLS = 5
 
-const sumMix = (mix: ToolMix): number => mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.plan + mix.other
+const CONSULTANT_MAX_LINES_TOUCHED = 200
+const CONSULTANT_MIN_SESSIONS = 5
+
+const SHIPPER_MIN_COMMITS = 5
+const SHIPPER_MIN_COMMITS_PER_SESSION = 1.0
+
+const TESTER_MIN_TESTS = 20
+const TESTER_MIN_TESTS_PER_SESSION = 2
+
+const sumMix = (mix: ToolMix): number =>
+  mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.research + mix.plan + mix.other
 
 const normaliseScore = (value: number, low: number, high: number): number => {
   if (high <= low) return 1
@@ -29,40 +52,38 @@ const normaliseScore = (value: number, low: number, high: number): number => {
 }
 
 const formatPercent = (n: number): string => `${Math.round(n * 100)}%`
-
-const formatHoursMinutes = (ms: number): string => {
-  const minutes = Math.round(ms / 60000)
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"}`
-  const hours = Math.floor(minutes / 60)
-  const remaining = minutes % 60
-  if (remaining === 0) return `${hours} hour${hours === 1 ? "" : "s"}`
-  return `${hours}h ${remaining}m`
-}
+const formatCount = (n: number): string => n.toLocaleString("en-US")
 
 interface AssignPersonalityInput {
   readonly toolMix: ToolMix
   readonly sessions: number
-  readonly totalDurationMs: number
   readonly filesTouched: number
   readonly commandsRun: number
+  readonly commits: number
+  readonly testsRun: number
+  readonly linesAdded: number
+  readonly linesWritten: number
+  readonly linesRead: number
 }
 
 /**
  * Pure, deterministic personality assignment.
  *
  * Priority order (first rule that fires wins):
- *   1. Strategist  — planning share ≥ 15%
- *   2. Marathoner  — average session ≥ 45 minutes
- *   3. Tool-mix winner among Surgeon (edit), Architect (write),
- *      Detective (read + search), Conductor (bash).
+ *   1. Strategist  — plan excess ≥ 5pp AND ≥ 10 plan calls
+ *   2. Scholar     — research excess ≥ 5pp AND ≥ 5 research calls
+ *   3. Consultant  — sessions ≥ 5 AND linesAdded + linesWritten < 200
+ *   4. Shipper     — commits ≥ 5 AND commits/session ≥ 1.0
+ *   5. Tester      — testsRun ≥ 20 AND testsRun/session ≥ 2
+ *   6. Tool-mix winner by *excess over baseline* among Surgeon (edit),
+ *      Architect (write), Detective (read + search), Conductor (bash).
  *
- * The priority exists so the rarer / more flattering archetypes don't get
- * drowned out by Bash/Read bulk. Returns the assigned archetype with a
- * 0..1 confidence score and three short evidence strings the email displays
- * under the reveal card.
+ * The baseline-excess fallback is the key trick that keeps "Detective" from
+ * eating every report — Read is always the absolute biggest bucket, but
+ * once we subtract its expected share, Edit/Bash/Write outliers can win.
  */
 export function assignPersonality(input: AssignPersonalityInput): Personality {
-  const { toolMix, sessions, totalDurationMs, filesTouched, commandsRun } = input
+  const { toolMix, sessions, filesTouched, commandsRun, commits, testsRun, linesAdded, linesWritten, linesRead } = input
   const total = sumMix(toolMix)
 
   // Guarded by the no-activity short-circuit upstream — but defend in depth
@@ -76,84 +97,130 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   }
 
   const shareOf = (bucket: ToolBucket): number => toolMix[bucket] / total
-  const avgSessionMs = sessions > 0 ? totalDurationMs / sessions : 0
+  const excessOf = (bucket: ToolBucket): number => shareOf(bucket) - BASELINE_SHARE[bucket]
 
-  // 1. Strategist
-  const planShare = shareOf("plan")
-  if (planShare >= STRATEGIST_PLAN_SHARE_THRESHOLD) {
+  // 1. Strategist — planning is rare; even small excess is loud.
+  const planExcess = excessOf("plan")
+  if (planExcess >= RARE_EXCESS_THRESHOLD && toolMix.plan >= STRATEGIST_MIN_PLAN_CALLS) {
     return {
       kind: "strategist",
-      score: normaliseScore(planShare, STRATEGIST_PLAN_SHARE_THRESHOLD, 0.5),
+      score: normaliseScore(planExcess, RARE_EXCESS_THRESHOLD, 0.3),
       evidence: [
-        `${formatPercent(planShare)} of your tool calls were planning steps`,
-        `${toolMix.plan.toLocaleString("en-US")} TaskCreate / TaskUpdate calls`,
-        `${sessions.toLocaleString("en-US")} session${sessions === 1 ? "" : "s"} across the week`,
+        `${formatPercent(shareOf("plan"))} of your tool calls were planning steps`,
+        `${formatCount(toolMix.plan)} TaskCreate / TaskUpdate / TodoWrite calls`,
+        `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} across the week`,
       ],
     }
   }
 
-  // 2. Marathoner
-  if (avgSessionMs >= MARATHONER_AVG_SESSION_MS_THRESHOLD) {
+  // 2. Scholar — web research is rarer still.
+  const researchExcess = excessOf("research")
+  if (researchExcess >= RARE_EXCESS_THRESHOLD && toolMix.research >= SCHOLAR_MIN_RESEARCH_CALLS) {
     return {
-      kind: "marathoner",
-      score: normaliseScore(avgSessionMs, MARATHONER_AVG_SESSION_MS_THRESHOLD, MARATHONER_AVG_SESSION_MS_SATURATION),
+      kind: "scholar",
+      score: normaliseScore(researchExcess, RARE_EXCESS_THRESHOLD, 0.3),
       evidence: [
-        `Average session length: ${formatHoursMinutes(avgSessionMs)}`,
-        `${sessions.toLocaleString("en-US")} long focus session${sessions === 1 ? "" : "s"}`,
-        `${total.toLocaleString("en-US")} tool calls across them`,
+        `${formatPercent(shareOf("research"))} of your tool calls were web research`,
+        `${formatCount(toolMix.research)} WebFetch / WebSearch call${toolMix.research === 1 ? "" : "s"}`,
+        `${formatCount(linesRead)} line${linesRead === 1 ? "" : "s"} read alongside`,
       ],
     }
   }
 
-  // 3. Tool-mix winner.
+  // 3. Consultant — many sessions, barely any code shipped.
+  const linesTouchedTotal = linesAdded + linesWritten
+  if (sessions >= CONSULTANT_MIN_SESSIONS && linesTouchedTotal < CONSULTANT_MAX_LINES_TOUCHED) {
+    return {
+      kind: "consultant",
+      score: normaliseScore(sessions, CONSULTANT_MIN_SESSIONS, 20),
+      evidence: [
+        `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} this week`,
+        linesTouchedTotal === 0
+          ? "No lines of code written or edited"
+          : `Only ${formatCount(linesTouchedTotal)} line${linesTouchedTotal === 1 ? "" : "s"} of code written or edited`,
+        `${formatCount(filesTouched)} file${filesTouched === 1 ? "" : "s"} touched`,
+      ],
+    }
+  }
+
+  // 4. Shipper — repeat closer, sustained across sessions.
+  if (sessions > 0 && commits >= SHIPPER_MIN_COMMITS && commits / sessions >= SHIPPER_MIN_COMMITS_PER_SESSION) {
+    const commitsPerSession = commits / sessions
+    return {
+      kind: "shipper",
+      score: normaliseScore(commitsPerSession, SHIPPER_MIN_COMMITS_PER_SESSION, 5),
+      evidence: [
+        `${formatCount(commits)} commit${commits === 1 ? "" : "s"} this week`,
+        `${commitsPerSession.toFixed(1)} commits per session, on average`,
+        `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} of focused work`,
+      ],
+    }
+  }
+
+  // 5. Tester — test runner heavy, sustained across sessions.
+  if (sessions > 0 && testsRun >= TESTER_MIN_TESTS && testsRun / sessions >= TESTER_MIN_TESTS_PER_SESSION) {
+    const testsPerSession = testsRun / sessions
+    return {
+      kind: "tester",
+      score: normaliseScore(testsPerSession, TESTER_MIN_TESTS_PER_SESSION, 10),
+      evidence: [
+        `${formatCount(testsRun)} test run${testsRun === 1 ? "" : "s"} this week`,
+        `${testsPerSession.toFixed(1)} test runs per session, on average`,
+        `${formatCount(commandsRun)} total shell command${commandsRun === 1 ? "" : "s"}`,
+      ],
+    }
+  }
+
+  // 6. Tool-mix winner by baseline excess.
   const candidates: ReadonlyArray<{
     readonly kind: PersonalityKind
-    readonly share: number
+    readonly excess: number
     readonly buildEvidence: () => readonly [string, string, string]
   }> = [
     {
       kind: "surgeon",
-      share: shareOf("edit"),
+      excess: excessOf("edit"),
       buildEvidence: () => [
         `${formatPercent(shareOf("edit"))} of your tool calls were Edits`,
-        `Touched ${filesTouched.toLocaleString("en-US")} file${filesTouched === 1 ? "" : "s"} this week`,
-        // Avoid claiming "new files" — `Write` overwrites existing paths too.
-        `${toolMix.write.toLocaleString("en-US")} Write call${toolMix.write === 1 ? "" : "s"} on top`,
+        `Touched ${formatCount(filesTouched)} file${filesTouched === 1 ? "" : "s"} this week`,
+        `${formatCount(toolMix.write)} Write call${toolMix.write === 1 ? "" : "s"} on top`,
       ],
     },
     {
       kind: "architect",
-      share: shareOf("write"),
+      excess: excessOf("write"),
       buildEvidence: () => [
         `${formatPercent(shareOf("write"))} of your tool calls were Writes`,
-        `${toolMix.write.toLocaleString("en-US")} file${toolMix.write === 1 ? "" : "s"} written`,
-        `Touched ${filesTouched.toLocaleString("en-US")} file${filesTouched === 1 ? "" : "s"} in total`,
+        `${formatCount(toolMix.write)} file${toolMix.write === 1 ? "" : "s"} written`,
+        `Touched ${formatCount(filesTouched)} file${filesTouched === 1 ? "" : "s"} in total`,
       ],
     },
     {
       kind: "detective",
-      share: shareOf("read") + shareOf("search"),
+      // Detective covers both codebase exploration buckets, so we sum their
+      // excesses (each baseline is subtracted independently).
+      excess: excessOf("read") + excessOf("search"),
       buildEvidence: () => [
         `${formatPercent(shareOf("read") + shareOf("search"))} of your tool calls were investigation (Read / Grep / Glob)`,
-        `${toolMix.read.toLocaleString("en-US")} file read${toolMix.read === 1 ? "" : "s"}`,
-        `${toolMix.search.toLocaleString("en-US")} search${toolMix.search === 1 ? "" : "es"} across the codebase`,
+        `${formatCount(toolMix.read)} file read${toolMix.read === 1 ? "" : "s"}`,
+        `${formatCount(toolMix.search)} search${toolMix.search === 1 ? "" : "es"} across the codebase`,
       ],
     },
     {
       kind: "conductor",
-      share: shareOf("bash"),
+      excess: excessOf("bash"),
       buildEvidence: () => [
         `${formatPercent(shareOf("bash"))} of your tool calls were shell commands`,
-        `${commandsRun.toLocaleString("en-US")} command${commandsRun === 1 ? "" : "s"} run from Bash`,
-        `${sessions.toLocaleString("en-US")} session${sessions === 1 ? "" : "s"} this week`,
+        `${formatCount(commandsRun)} command${commandsRun === 1 ? "" : "s"} run from Bash`,
+        `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} this week`,
       ],
     },
   ]
 
   // Deterministic tie-break: the candidates array order is the tie-break order
-  // (Surgeon > Architect > Detective > Conductor). Math.max via sort with
-  // stable Array.prototype.sort guarantees we keep that order for ties.
-  const winner = [...candidates].sort((a, b) => b.share - a.share)[0] ?? candidates[0]
+  // (Surgeon > Architect > Detective > Conductor). `Array.prototype.sort` is
+  // stable in modern engines, so equal-excess ties keep that order.
+  const winner = [...candidates].sort((a, b) => b.excess - a.excess)[0] ?? candidates[0]
   if (!winner) {
     // Unreachable because candidates is a non-empty literal, but the type
     // narrows aren't smart enough — fall back to detective.
@@ -167,7 +234,10 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   const [e1, e2, e3] = winner.buildEvidence()
   return {
     kind: winner.kind,
-    score: normaliseScore(winner.share, 0, 1),
+    // The excess can be negative when nothing stood out — clamp so score
+    // stays in [0, 1]. Saturate at +0.3 (30pp above baseline) which is a
+    // very strong signal.
+    score: normaliseScore(Math.max(0, winner.excess), 0, 0.3),
     evidence: [e1, e2, e3],
   }
 }

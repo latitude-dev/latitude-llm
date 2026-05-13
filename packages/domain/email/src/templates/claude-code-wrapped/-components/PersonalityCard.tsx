@@ -5,7 +5,16 @@ import React from "react"
 import { EmailHeading } from "../../../components/EmailHeading.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
 
-export type PersonalityKindLocal = "surgeon" | "architect" | "detective" | "conductor" | "marathoner" | "strategist"
+export type PersonalityKindLocal =
+  | "surgeon"
+  | "architect"
+  | "detective"
+  | "conductor"
+  | "strategist"
+  | "scholar"
+  | "consultant"
+  | "shipper"
+  | "tester"
 
 interface PersonalityCardProps {
   readonly kind: PersonalityKindLocal
@@ -18,8 +27,11 @@ const TITLE_FOR_KIND: Record<PersonalityKindLocal, string> = {
   architect: "The Architect",
   detective: "The Detective",
   conductor: "The Conductor",
-  marathoner: "The Marathoner",
   strategist: "The Strategist",
+  scholar: "The Scholar",
+  consultant: "The Consultant",
+  shipper: "The Shipper",
+  tester: "The Tester",
 }
 
 const DESCRIPTOR_FOR_KIND: Record<PersonalityKindLocal, string> = {
@@ -27,8 +39,11 @@ const DESCRIPTOR_FOR_KIND: Record<PersonalityKindLocal, string> = {
   architect: "You started from a blank page more than most.",
   detective: "You read and searched before you wrote.",
   conductor: "You ran the orchestra from the terminal.",
-  marathoner: "You stayed in flow for long stretches.",
   strategist: "You planned twice, coded once.",
+  scholar: "You sent Claude to the library.",
+  consultant: "You dropped in, asked, and moved on.",
+  shipper: "You closed the loop, again and again.",
+  tester: "You don't trust it until it's green.",
 }
 
 /**
