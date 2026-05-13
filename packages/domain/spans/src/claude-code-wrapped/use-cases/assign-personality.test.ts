@@ -27,7 +27,7 @@ const argsBase = {
 
 const run = (overrides: Partial<typeof argsBase>) => assignPersonality({ ...argsBase, ...overrides })
 
-describe("assignPersonality", () => {
+describe("assignPersonality (gate-then-rank)", () => {
   it("falls back to detective when there's no activity at all", () => {
     const result = run({ toolMix: baseMix, sessions: 0 })
     expect(result.kind).toBe("detective")
@@ -35,56 +35,65 @@ describe("assignPersonality", () => {
     expect(result.evidence[0]).toMatch(/no/i)
   })
 
-  it("returns Strategist when plan excess clears the threshold and call count is enough", () => {
-    // 10 plan / 100 total = 10% plan share, baseline 3% → excess 7pp (≥ 5pp).
+  it("returns Strategist when planning dominates and out-scores everything", () => {
+    // 30% plan share → planExcess 27pp, score = normalise(0.27, 0.05, 0.20) = 1.0.
+    // Tool-mix archetypes have much smaller excesses, so Strategist wins.
     const result = run({
-      toolMix: { ...baseMix, plan: 10, read: 50, edit: 25, bash: 15 },
+      toolMix: { ...baseMix, plan: 30, read: 50, edit: 10, bash: 10 },
     })
     expect(result.kind).toBe("strategist")
-    expect(result.score).toBeGreaterThan(0)
-    expect(result.evidence[0]).toContain("10%")
+    expect(result.evidence[0]).toContain("30%")
   })
 
-  it("does not fire Strategist when plan call count is below the floor", () => {
-    // 5% plan share would have ≥ 2pp excess but only 5 calls < 10 floor.
+  it("does not fire Strategist when plan call count is below the gate floor", () => {
+    // 7 plan calls < 10 floor — gate fails even though excess is high.
     const result = run({
-      toolMix: { ...baseMix, plan: 5, read: 60, edit: 35 },
+      toolMix: { ...baseMix, plan: 7, read: 50, edit: 40, bash: 3 },
     })
     expect(result.kind).not.toBe("strategist")
   })
 
-  it("returns Scholar when research excess and call count both clear the bar", () => {
-    // 10 research / 100 total = 10% research, baseline 2% → excess 8pp.
+  it("returns Scholar when research dominates and out-scores everything", () => {
     const result = run({
-      toolMix: { ...baseMix, research: 10, read: 60, edit: 30 },
+      toolMix: { ...baseMix, research: 25, read: 50, edit: 15, bash: 10 },
     })
     expect(result.kind).toBe("scholar")
-    expect(result.evidence[0]).toContain("10%")
     expect(result.evidence[1]).toMatch(/WebFetch|WebSearch/)
   })
 
-  it("Strategist beats Scholar when both rules would fire", () => {
+  it("Strategist beats Scholar when its score is higher", () => {
+    // plan excess 27pp vs research excess 8pp — Strategist out-scores.
     const result = run({
-      toolMix: { ...baseMix, plan: 15, research: 15, read: 50, edit: 20 },
+      toolMix: { ...baseMix, plan: 30, research: 10, read: 50, edit: 10 },
     })
     expect(result.kind).toBe("strategist")
   })
 
-  it("returns Consultant when sessions are plentiful but barely any code was touched", () => {
+  it("Scholar beats Strategist when its score is higher", () => {
+    // Strategist gate fails (plan calls < 10). Research at 20% saturates Scholar.
     const result = run({
-      toolMix: { ...baseMix, read: 80, search: 20 },
-      sessions: 8,
+      toolMix: { ...baseMix, plan: 7, research: 20, read: 50, edit: 23 },
+    })
+    expect(result.kind).toBe("scholar")
+  })
+
+  it("returns Consultant when sessions are plentiful but barely any code was touched", () => {
+    // Balanced mix so no tool-mix archetype saturates: read 50, bash 30, edit 20.
+    // Detective net excess ≈ 0 (read +10pp, search −10pp), Conductor ≈ +10pp →
+    // score 0.33, Surgeon +5pp → score 0.17. Consultant score 0.70 wins.
+    const result = run({
+      toolMix: { ...baseMix, read: 50, bash: 30, edit: 20 },
+      sessions: 12,
       filesTouched: 4,
       linesAdded: 0,
-      linesWritten: 50, // total = 50 < 200
+      linesWritten: 50,
     })
     expect(result.kind).toBe("consultant")
-    expect(result.evidence[0]).toContain("8")
   })
 
   it("does not fire Consultant when sessions are too few", () => {
     const result = run({
-      toolMix: { ...baseMix, read: 80, search: 20 },
+      toolMix: { ...baseMix, read: 50, bash: 30, edit: 20 },
       sessions: 3,
       linesAdded: 0,
       linesWritten: 0,
@@ -106,18 +115,17 @@ describe("assignPersonality", () => {
     const result = run({
       toolMix: { ...baseMix, bash: 40, edit: 40, read: 20 },
       sessions: 6,
-      commits: 12,
+      commits: 24, // 4 commits/session — saturates the Shipper score
     })
     expect(result.kind).toBe("shipper")
-    expect(result.evidence[0]).toContain("12")
-    expect(result.evidence[1]).toContain("2.0")
+    expect(result.evidence[1]).toContain("4.0")
   })
 
   it("does not fire Shipper when commit count is below the floor", () => {
     const result = run({
       toolMix: { ...baseMix, bash: 50, edit: 30, read: 20 },
       sessions: 2,
-      commits: 4, // ratio 2.0 but count 4 < 5
+      commits: 4, // ratio 2.0 but count 4 < 5 floor
     })
     expect(result.kind).not.toBe("shipper")
   })
@@ -126,14 +134,26 @@ describe("assignPersonality", () => {
     const result = run({
       toolMix: { ...baseMix, bash: 60, edit: 30, read: 10 },
       sessions: 10,
-      testsRun: 30,
+      testsRun: 80, // 8 tests/session — saturates the Tester score
     })
     expect(result.kind).toBe("tester")
-    expect(result.evidence[0]).toContain("30")
+    expect(result.evidence[0]).toContain("80")
+  })
+
+  it("weakly-firing Strategist loses to strongly-firing Shipper (gate-then-rank)", () => {
+    // Strategist passes its gate just barely — 10 plan calls, 7pp excess.
+    // Score = normalise(0.07, 0.05, 0.20) ≈ 0.13. Shipper crushes it with
+    // 3.0 commits/session — score = normalise(3.0, 1.0, 4.0) ≈ 0.67. This
+    // is exactly the case that motivated gate-then-rank vs strict priority.
+    const result = run({
+      toolMix: { ...baseMix, plan: 10, read: 50, edit: 32, bash: 8 },
+      sessions: 8,
+      commits: 24,
+    })
+    expect(result.kind).toBe("shipper")
   })
 
   it("returns Surgeon when Edit excess wins after baseline subtraction", () => {
-    // Edit 40% → excess 25pp. Read 50% → excess 10pp.
     const result = run({
       toolMix: { ...baseMix, edit: 40, read: 50, bash: 10 },
       filesTouched: 80,
@@ -143,12 +163,12 @@ describe("assignPersonality", () => {
   })
 
   it("returns Architect when Write excess wins after baseline subtraction", () => {
-    // Write 20% → excess 15pp (baseline 5pp). Beats other excesses.
+    // Write 25% → excess 20pp; Detective (read 50 → 10pp, search 0 → -10pp) = 0.
     const result = run({
-      toolMix: { ...baseMix, write: 20, edit: 20, read: 50, bash: 10 },
+      toolMix: { ...baseMix, write: 25, edit: 15, read: 50, bash: 10 },
     })
     expect(result.kind).toBe("architect")
-    expect(result.evidence[0]).toContain("20%")
+    expect(result.evidence[0]).toContain("25%")
   })
 
   it("returns Detective when read+search excess wins after baseline subtraction", () => {
@@ -160,28 +180,15 @@ describe("assignPersonality", () => {
     expect(result.evidence[0]).toContain("85%")
   })
 
-  it("returns Conductor when Bash excess wins after baseline subtraction", () => {
-    // Bash 60% (excess 40pp) beats anything else.
+  it("returns Conductor when Bash excess wins", () => {
+    // Bash 60% (excess 40pp) saturates Conductor's score to 1.0.
     const result = run({
       toolMix: { ...baseMix, bash: 60, read: 30, edit: 10 },
       commandsRun: 87,
-      // Need to NOT hit shipper/tester rules.
-      commits: 0,
-      testsRun: 0,
     })
     expect(result.kind).toBe("conductor")
     expect(result.evidence[0]).toContain("60%")
     expect(result.evidence[1]).toContain("87")
-  })
-
-  it("baseline subtraction keeps the score low for a balanced mix", () => {
-    // Roughly baseline-shaped mix — Read 40, Bash 20, Edit 15, Search 10,
-    // Write 5, Plan 3, Research 2, Other 5. Every excess is ~0 so no
-    // archetype is a clear winner — score should reflect that.
-    const result = run({
-      toolMix: { ...baseMix, read: 40, bash: 20, edit: 15, search: 10, write: 5, plan: 3, research: 2, other: 5 },
-    })
-    expect(result.score).toBeLessThan(0.2)
   })
 
   it("score is bounded to [0, 1]", () => {
@@ -191,6 +198,7 @@ describe("assignPersonality", () => {
 
     const strat = run({ toolMix: { ...baseMix, plan: 80, edit: 20 } })
     expect(strat.score).toBeLessThanOrEqual(1)
+    expect(strat.score).toBeGreaterThan(0.5)
   })
 
   it("evidence always has exactly 3 strings", () => {

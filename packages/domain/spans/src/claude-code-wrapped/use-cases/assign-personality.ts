@@ -21,24 +21,40 @@ const BASELINE_SHARE: Record<ToolBucket, number> = {
   other: 0.05,
 }
 
-/**
- * Minimum positive deviation needed for the "rare" conditional archetypes
- * (Strategist, Scholar) to fire. Below this the user just happens to have
- * a touch more planning/research than baseline — not enough to be a story.
- */
-const RARE_EXCESS_THRESHOLD = 0.05
+// Each archetype has a `gate` (minimum signal floor — below it, the
+// archetype can't fire at all) and a `score` formula mapping its signal
+// into [0, 1]. `assignPersonality` filters to gate-passers and returns
+// the highest-scoring one. The rare archetypes (Strategist, Scholar)
+// saturate earlier than the tool-mix archetypes so a strong rare signal
+// can beat a moderately-strong common one — otherwise a heavy editor
+// would always out-score a heavy planner.
 
-const STRATEGIST_MIN_PLAN_CALLS = 10
-const SCHOLAR_MIN_RESEARCH_CALLS = 5
+const STRATEGIST_GATE_EXCESS = 0.05
+const STRATEGIST_GATE_CALLS = 10
+const STRATEGIST_SCORE_LOW = 0.05
+const STRATEGIST_SCORE_HIGH = 0.2
 
-const CONSULTANT_MAX_LINES_TOUCHED = 200
-const CONSULTANT_MIN_SESSIONS = 5
+const SCHOLAR_GATE_EXCESS = 0.05
+const SCHOLAR_GATE_CALLS = 5
+const SCHOLAR_SCORE_LOW = 0.05
+const SCHOLAR_SCORE_HIGH = 0.2
 
-const SHIPPER_MIN_COMMITS = 5
-const SHIPPER_MIN_COMMITS_PER_SESSION = 1.0
+const CONSULTANT_GATE_SESSIONS = 5
+const CONSULTANT_GATE_MAX_LINES = 200
+const CONSULTANT_SCORE_LOW = 5
+const CONSULTANT_SCORE_HIGH = 15
 
-const TESTER_MIN_TESTS = 20
-const TESTER_MIN_TESTS_PER_SESSION = 2
+const SHIPPER_GATE_COMMITS = 5
+const SHIPPER_GATE_RATIO = 1.0
+const SHIPPER_SCORE_LOW = 1.0
+const SHIPPER_SCORE_HIGH = 4.0
+
+const TESTER_GATE_TESTS = 20
+const TESTER_GATE_RATIO = 2.0
+const TESTER_SCORE_LOW = 2.0
+const TESTER_SCORE_HIGH = 8.0
+
+const TOOL_MIX_SCORE_HIGH = 0.3
 
 const sumMix = (mix: ToolMix): number =>
   mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.research + mix.plan + mix.other
@@ -66,21 +82,30 @@ interface AssignPersonalityInput {
   readonly linesRead: number
 }
 
+interface Candidate {
+  readonly kind: PersonalityKind
+  readonly gatePasses: boolean
+  readonly score: number
+  readonly buildEvidence: () => readonly [string, string, string]
+}
+
 /**
- * Pure, deterministic personality assignment.
+ * Pure, deterministic personality assignment via **gate-then-rank**:
  *
- * Priority order (first rule that fires wins):
- *   1. Strategist  — plan excess ≥ 5pp AND ≥ 10 plan calls
- *   2. Scholar     — research excess ≥ 5pp AND ≥ 5 research calls
- *   3. Consultant  — sessions ≥ 5 AND linesAdded + linesWritten < 200
- *   4. Shipper     — commits ≥ 5 AND commits/session ≥ 1.0
- *   5. Tester      — testsRun ≥ 20 AND testsRun/session ≥ 2
- *   6. Tool-mix winner by *excess over baseline* among Surgeon (edit),
- *      Architect (write), Detective (read + search), Conductor (bash).
+ *   1. Build a candidate for every archetype with a `gatePasses` boolean
+ *      and a `score` in [0, 1].
+ *   2. Keep only the candidates whose gate passes.
+ *   3. Return the one with the highest score.
  *
- * The baseline-excess fallback is the key trick that keeps "Detective" from
- * eating every report — Read is always the absolute biggest bucket, but
- * once we subtract its expected share, Edit/Bash/Write outliers can win.
+ * The four tool-mix archetypes (Surgeon, Architect, Detective, Conductor)
+ * always pass their gate so at least one candidate is always eligible.
+ * The five conditional archetypes (Strategist, Scholar, Consultant,
+ * Shipper, Tester) require a minimum signal floor to fire at all; once
+ * they do, their score competes head-to-head with the tool-mix scores.
+ *
+ * Tie-break is candidate-array order (Strategist > Scholar > Consultant >
+ * Shipper > Tester > Surgeon > Architect > Detective > Conductor) via
+ * stable sort — a small bias toward the rarer archetypes when scores match.
  */
 export function assignPersonality(input: AssignPersonalityInput): Personality {
   const { toolMix, sessions, filesTouched, commandsRun, commits, testsRun, linesAdded, linesWritten, linesRead } = input
@@ -99,87 +124,74 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   const shareOf = (bucket: ToolBucket): number => toolMix[bucket] / total
   const excessOf = (bucket: ToolBucket): number => shareOf(bucket) - BASELINE_SHARE[bucket]
 
-  // 1. Strategist — planning is rare; even small excess is loud.
   const planExcess = excessOf("plan")
-  if (planExcess >= RARE_EXCESS_THRESHOLD && toolMix.plan >= STRATEGIST_MIN_PLAN_CALLS) {
-    return {
+  const researchExcess = excessOf("research")
+  const editExcess = excessOf("edit")
+  const writeExcess = excessOf("write")
+  const investigationExcess = excessOf("read") + excessOf("search")
+  const bashExcess = excessOf("bash")
+
+  const commitsPerSession = sessions > 0 ? commits / sessions : 0
+  const testsPerSession = sessions > 0 ? testsRun / sessions : 0
+  const linesTouchedTotal = linesAdded + linesWritten
+
+  const candidates: readonly Candidate[] = [
+    {
       kind: "strategist",
-      score: normaliseScore(planExcess, RARE_EXCESS_THRESHOLD, 0.3),
-      evidence: [
+      gatePasses: planExcess >= STRATEGIST_GATE_EXCESS && toolMix.plan >= STRATEGIST_GATE_CALLS,
+      score: normaliseScore(planExcess, STRATEGIST_SCORE_LOW, STRATEGIST_SCORE_HIGH),
+      buildEvidence: () => [
         `${formatPercent(shareOf("plan"))} of your tool calls were planning steps`,
         `${formatCount(toolMix.plan)} TaskCreate / TaskUpdate / TodoWrite calls`,
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} across the week`,
       ],
-    }
-  }
-
-  // 2. Scholar — web research is rarer still.
-  const researchExcess = excessOf("research")
-  if (researchExcess >= RARE_EXCESS_THRESHOLD && toolMix.research >= SCHOLAR_MIN_RESEARCH_CALLS) {
-    return {
+    },
+    {
       kind: "scholar",
-      score: normaliseScore(researchExcess, RARE_EXCESS_THRESHOLD, 0.3),
-      evidence: [
+      gatePasses: researchExcess >= SCHOLAR_GATE_EXCESS && toolMix.research >= SCHOLAR_GATE_CALLS,
+      score: normaliseScore(researchExcess, SCHOLAR_SCORE_LOW, SCHOLAR_SCORE_HIGH),
+      buildEvidence: () => [
         `${formatPercent(shareOf("research"))} of your tool calls were web research`,
         `${formatCount(toolMix.research)} WebFetch / WebSearch call${toolMix.research === 1 ? "" : "s"}`,
         `${formatCount(linesRead)} line${linesRead === 1 ? "" : "s"} read alongside`,
       ],
-    }
-  }
-
-  // 3. Consultant — many sessions, barely any code shipped.
-  const linesTouchedTotal = linesAdded + linesWritten
-  if (sessions >= CONSULTANT_MIN_SESSIONS && linesTouchedTotal < CONSULTANT_MAX_LINES_TOUCHED) {
-    return {
+    },
+    {
       kind: "consultant",
-      score: normaliseScore(sessions, CONSULTANT_MIN_SESSIONS, 20),
-      evidence: [
+      gatePasses: sessions >= CONSULTANT_GATE_SESSIONS && linesTouchedTotal < CONSULTANT_GATE_MAX_LINES,
+      score: normaliseScore(sessions, CONSULTANT_SCORE_LOW, CONSULTANT_SCORE_HIGH),
+      buildEvidence: () => [
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} this week`,
         linesTouchedTotal === 0
           ? "No lines of code written or edited"
           : `Only ${formatCount(linesTouchedTotal)} line${linesTouchedTotal === 1 ? "" : "s"} of code written or edited`,
         `${formatCount(filesTouched)} file${filesTouched === 1 ? "" : "s"} touched`,
       ],
-    }
-  }
-
-  // 4. Shipper — repeat closer, sustained across sessions.
-  if (sessions > 0 && commits >= SHIPPER_MIN_COMMITS && commits / sessions >= SHIPPER_MIN_COMMITS_PER_SESSION) {
-    const commitsPerSession = commits / sessions
-    return {
+    },
+    {
       kind: "shipper",
-      score: normaliseScore(commitsPerSession, SHIPPER_MIN_COMMITS_PER_SESSION, 5),
-      evidence: [
+      gatePasses: commits >= SHIPPER_GATE_COMMITS && commitsPerSession >= SHIPPER_GATE_RATIO,
+      score: normaliseScore(commitsPerSession, SHIPPER_SCORE_LOW, SHIPPER_SCORE_HIGH),
+      buildEvidence: () => [
         `${formatCount(commits)} commit${commits === 1 ? "" : "s"} this week`,
         `${commitsPerSession.toFixed(1)} commits per session, on average`,
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} of focused work`,
       ],
-    }
-  }
-
-  // 5. Tester — test runner heavy, sustained across sessions.
-  if (sessions > 0 && testsRun >= TESTER_MIN_TESTS && testsRun / sessions >= TESTER_MIN_TESTS_PER_SESSION) {
-    const testsPerSession = testsRun / sessions
-    return {
+    },
+    {
       kind: "tester",
-      score: normaliseScore(testsPerSession, TESTER_MIN_TESTS_PER_SESSION, 10),
-      evidence: [
+      gatePasses: testsRun >= TESTER_GATE_TESTS && testsPerSession >= TESTER_GATE_RATIO,
+      score: normaliseScore(testsPerSession, TESTER_SCORE_LOW, TESTER_SCORE_HIGH),
+      buildEvidence: () => [
         `${formatCount(testsRun)} test run${testsRun === 1 ? "" : "s"} this week`,
         `${testsPerSession.toFixed(1)} test runs per session, on average`,
         `${formatCount(commandsRun)} total shell command${commandsRun === 1 ? "" : "s"}`,
       ],
-    }
-  }
-
-  // 6. Tool-mix winner by baseline excess.
-  const candidates: ReadonlyArray<{
-    readonly kind: PersonalityKind
-    readonly excess: number
-    readonly buildEvidence: () => readonly [string, string, string]
-  }> = [
+    },
     {
       kind: "surgeon",
-      excess: excessOf("edit"),
+      gatePasses: true,
+      score: normaliseScore(editExcess, 0, TOOL_MIX_SCORE_HIGH),
       buildEvidence: () => [
         `${formatPercent(shareOf("edit"))} of your tool calls were Edits`,
         `Touched ${formatCount(filesTouched)} file${filesTouched === 1 ? "" : "s"} this week`,
@@ -188,7 +200,8 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "architect",
-      excess: excessOf("write"),
+      gatePasses: true,
+      score: normaliseScore(writeExcess, 0, TOOL_MIX_SCORE_HIGH),
       buildEvidence: () => [
         `${formatPercent(shareOf("write"))} of your tool calls were Writes`,
         `${formatCount(toolMix.write)} file${toolMix.write === 1 ? "" : "s"} written`,
@@ -197,9 +210,8 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "detective",
-      // Detective covers both codebase exploration buckets, so we sum their
-      // excesses (each baseline is subtracted independently).
-      excess: excessOf("read") + excessOf("search"),
+      gatePasses: true,
+      score: normaliseScore(investigationExcess, 0, TOOL_MIX_SCORE_HIGH),
       buildEvidence: () => [
         `${formatPercent(shareOf("read") + shareOf("search"))} of your tool calls were investigation (Read / Grep / Glob)`,
         `${formatCount(toolMix.read)} file read${toolMix.read === 1 ? "" : "s"}`,
@@ -208,7 +220,8 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "conductor",
-      excess: excessOf("bash"),
+      gatePasses: true,
+      score: normaliseScore(bashExcess, 0, TOOL_MIX_SCORE_HIGH),
       buildEvidence: () => [
         `${formatPercent(shareOf("bash"))} of your tool calls were shell commands`,
         `${formatCount(commandsRun)} command${commandsRun === 1 ? "" : "s"} run from Bash`,
@@ -217,13 +230,14 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
   ]
 
-  // Deterministic tie-break: the candidates array order is the tie-break order
-  // (Surgeon > Architect > Detective > Conductor). `Array.prototype.sort` is
-  // stable in modern engines, so equal-excess ties keep that order.
-  const winner = [...candidates].sort((a, b) => b.excess - a.excess)[0] ?? candidates[0]
+  // Filter to gate-passers, then rank by score. Stable sort preserves
+  // candidate-array order as the tie-break.
+  const eligible = candidates.filter((c) => c.gatePasses)
+  const winner = [...eligible].sort((a, b) => b.score - a.score)[0]
+
+  // The 4 tool-mix archetypes always pass their gate, so `eligible` is never
+  // empty in practice — but TS can't see that, and the defence is cheap.
   if (!winner) {
-    // Unreachable because candidates is a non-empty literal, but the type
-    // narrows aren't smart enough — fall back to detective.
     return {
       kind: "detective",
       score: 0,
@@ -232,12 +246,5 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   }
 
   const [e1, e2, e3] = winner.buildEvidence()
-  return {
-    kind: winner.kind,
-    // The excess can be negative when nothing stood out — clamp so score
-    // stays in [0, 1]. Saturate at +0.3 (30pp above baseline) which is a
-    // very strong signal.
-    score: normaliseScore(Math.max(0, winner.excess), 0, 0.3),
-    evidence: [e1, e2, e3],
-  }
+  return { kind: winner.kind, score: winner.score, evidence: [e1, e2, e3] }
 }
