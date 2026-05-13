@@ -224,6 +224,8 @@ Latitude expects the standard **parts-based** GenAI message format. Each message
 
 Latitude works alongside your existing observability tools. In TypeScript, `new Latitude()` detects common OpenTelemetry-compatible providers (Sentry, Datadog, New Relic, Honeycomb, and custom OTel SDKs) and attaches Latitude when possible. In Python, `Latitude(...)` attaches to the registered OpenTelemetry provider when one already exists or creates one when none exists. Custom setups in either SDK can also add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
 
+`await latitude.ready` is optional in these examples. Use it during startup only when you need to guarantee Latitude's instrumentations are registered before the first LLM call.
+
 ### With Datadog (TypeScript)
 
 ```ts
@@ -237,8 +239,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
 })
-
-await latitude.ready
 ```
 
 ### With Sentry (TypeScript)
@@ -257,26 +257,39 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
 })
-
-await latitude.ready
 ```
 
-### With New Relic or Honeycomb (TypeScript)
+### With New Relic (TypeScript)
 
-Initialize the vendor SDK first, then construct `new Latitude()`. New Relic's OpenTelemetry bridge and Honeycomb's `HoneycombSDK` both register OpenTelemetry providers that Latitude can reuse.
+Enable New Relic's OpenTelemetry bridge first, then construct `new Latitude()`. New Relic registers an OpenTelemetry provider that Latitude can reuse.
 
 ```ts
+import "newrelic"
 import { Latitude } from "@latitude-data/telemetry"
-
-// Initialize New Relic or Honeycomb first.
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
 })
+```
 
-await latitude.ready
+### With Honeycomb (TypeScript)
+
+Start Honeycomb's `HoneycombSDK` first, then construct `new Latitude()`. Honeycomb registers an OpenTelemetry provider that Latitude can reuse.
+
+```ts
+import { HoneycombSDK } from "@honeycombio/opentelemetry-node"
+import { Latitude } from "@latitude-data/telemetry"
+
+const honeycomb = new HoneycombSDK({ serviceName: "my-app" })
+honeycomb.start()
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
 ```
 
 ### Other Platforms
