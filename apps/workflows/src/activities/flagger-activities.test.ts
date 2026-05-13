@@ -64,6 +64,7 @@ vi.mock("@platform/db-postgres", () => ({
   BillingOverrideRepositoryLive: {},
   BillingUsageEventRepositoryLive: {},
   BillingUsagePeriodRepositoryLive: {},
+  FlaggerRepositoryLive: {},
   OutboxEventWriterLive: {},
   SettingsReaderLive: {},
   ScoreRepositoryLive: {},
