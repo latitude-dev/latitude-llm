@@ -589,7 +589,7 @@ describe("TraceRepository", () => {
     }
 
     // ─── Shape 1: ≥1 phrases, empty semantic — pure lexical filter ────────
-    it("phrase-only: AND-filters by hasAllTokens, ignores embeddings, no relevance ordering", async () => {
+    it("phrase-only: AND-filters literal quoted phrases, ignores embeddings, no relevance ordering", async () => {
       await insertSearchRows()
 
       const page = await runCh(
@@ -601,9 +601,8 @@ describe("TraceRepository", () => {
       )
 
       const ids = page.items.map((t) => t.traceId)
-      // Both phrases must be present. NOISE_TRACE has `handOffToHuman:false`,
-      // so although both `handofftohuman` and `false` tokens are present,
-      // `true` is not — it's filtered out. SEM_ONLY_TRACE same reasoning.
+      // Both literal snippets must be present. NOISE_TRACE and SEM_ONLY_TRACE
+      // have `handOffToHuman:false`, so `true` is not present.
       expect(ids).toContain(HYBRID_TRACE)
       expect(ids).toContain(LEX_ONLY_TRACE)
       expect(ids).not.toContain(SEM_ONLY_TRACE)
@@ -611,17 +610,49 @@ describe("TraceRepository", () => {
       expect(ids).not.toContain(PHRASE_NOEMB_TRACE)
     })
 
-    it("phrase-only with whitespace asymmetry: copy-pasted prettified JSON still matches compact-indexed text", async () => {
+    it("quoted literals require a case-sensitive substring match", async () => {
       await insertSearchRows()
 
-      // The user copies a prettified field name with surrounding whitespace
-      // and a colon — the same shape `prettifyCompactJson` shows. Tokenizer
-      // drops both space and `:`, so it still matches the compact indexed bytes.
       const page = await runCh(
         repo.listByProjectId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           options: { searchQuery: '"handOffToHuman: true"' },
+        }),
+      )
+
+      expect(page.items.map((t) => t.traceId)).toEqual([])
+    })
+
+    it("backtick phrases match ordered contiguous tokens across punctuation and whitespace", async () => {
+      await insertSearchRows()
+
+      // The user copies a prettified field shape, while indexed bytes are compact
+      // JSON. Backtick phrase search tokenizes both `:` and whitespace away but
+      // still requires `handOffToHuman` and `true` to be adjacent and ordered.
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "`handOffToHuman: true`" },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+    })
+
+    it("backtick phrases are case-insensitive to match the lower-cased text index", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "`HANDOFFTOHUMAN TRUE`" },
         }),
       )
 
@@ -663,13 +694,13 @@ describe("TraceRepository", () => {
         repo.listByProjectId({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          options: { searchQuery: '"handOffToHuman" "true" customer needle' },
+          options: { searchQuery: "`handOffToHuman: true` customer needle" },
         }),
       )
 
       const ids = page.items.map((t) => t.traceId)
-      // Phrase gates: only HYBRID and LEX_ONLY pass (both have handOffToHuman
-      // AND `:true`). Within those, HYBRID's aligned embedding ranks it above
+      // Phrase gate: only HYBRID and LEX_ONLY pass (both have adjacent ordered
+      // handOffToHuman/true tokens). Within those, HYBRID's aligned embedding ranks it above
       // LEX_ONLY, which has no embedding (relevance_score = 0). No semantic
       // floor in hybrid mode — phrase matches without an embedding stay in.
       expect(ids).toContain(HYBRID_TRACE)

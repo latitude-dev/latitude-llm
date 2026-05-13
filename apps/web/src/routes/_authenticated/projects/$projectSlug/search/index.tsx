@@ -1,8 +1,8 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Input, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
+import { Button, cn, Icon, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon, XIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import {
   useSavedSearchBySlug,
@@ -13,6 +13,7 @@ import { enqueueTracesExport } from "../../../../../domains/traces/traces.functi
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { useSearchSegments } from "../../../../../lib/hooks/useSearchSegments.ts"
 import {
   EMPTY_SELECTION,
   getBulkSelection,
@@ -416,28 +417,114 @@ function SearchInput({
   readonly initialValue: string
   readonly onSubmit: (value: string) => void
 }) {
-  const [draft, setDraft] = useState(initialValue)
+  const {
+    segments,
+    registerInput,
+    submit,
+    updateSegment,
+    openPill,
+    closePill,
+    removeSegment,
+    focusSearchEnd,
+    focusAdjacentSegment,
+  } = useSearchSegments(initialValue, onSubmit, SEARCH_QUERY_MAX_LENGTH)
 
   return (
     <div className="relative flex-1">
       <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
         <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
       </div>
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") return
-          event.preventDefault()
-          const next = draft.trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
-          onSubmit(next)
-        }}
-        placeholder='Search by meaning. Use "quotes" for an exact phrase.'
-        size="lg"
-        maxLength={SEARCH_QUERY_MAX_LENGTH}
-        className="w-full pl-9 rounded-xl"
-        autoFocus
-      />
+      <div className="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-xl border border-input bg-transparent pr-3 pl-9 text-sm transition-colors focus-within:ring-1 focus-within:ring-ring">
+        {segments.map((segment, index) => {
+          const isSemantic = segment.kind === "semantic"
+          const label = segment.kind === "literal" ? "Literal" : "Phrase"
+          const tooltip =
+            segment.kind === "literal"
+              ? "Exact text: results must contain this text exactly as typed, including capital letters and punctuation."
+              : "Words in order: results must contain these words next to each other, in this order. Capitalization and punctuation do not matter."
+          const placeholder =
+            isSemantic && index === 0 ? 'Search by meaning. Use "literal text" or `ordered token phrase`.' : ""
+          const segmentInput = (
+            <span
+              key={segment.id}
+              className={cn(
+                "inline-flex min-w-0 shrink-0 items-center",
+                isSemantic ? "" : "h-7 gap-1 rounded-full border px-2 text-xs font-medium shadow-sm",
+                segment.kind === "literal" ? "border-primary/25 bg-primary/10 text-primary" : "",
+                segment.kind === "token" ? "border-phrase/30 bg-phrase/10 text-phrase-foreground" : "",
+              )}
+            >
+              {!isSemantic ? <span className="shrink-0 opacity-70">{label}</span> : null}
+              <input
+                ref={registerInput(segment.id)}
+                value={segment.text}
+                onChange={(event) => updateSegment(segment, event.target.value)}
+                onKeyDown={(event) => {
+                  if (segment.kind === "semantic" && (event.key === '"' || event.key === "`")) {
+                    event.preventDefault()
+                    openPill(segment, event.key, event.currentTarget)
+                    return
+                  }
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    if (segment.kind === "semantic") submit()
+                    else closePill(segment)
+                    return
+                  }
+                  if (event.key === "Backspace" && segment.text.length === 0) {
+                    event.preventDefault()
+                    removeSegment(segment, true)
+                    return
+                  }
+                  if (event.key === "ArrowLeft" && event.currentTarget.selectionStart === 0) {
+                    event.preventDefault()
+                    focusAdjacentSegment(segment, "previous")
+                    return
+                  }
+                  if (event.key === "ArrowRight" && event.currentTarget.selectionStart === segment.text.length) {
+                    event.preventDefault()
+                    focusAdjacentSegment(segment, "next")
+                  }
+                }}
+                placeholder={placeholder}
+                maxLength={SEARCH_QUERY_MAX_LENGTH}
+                className={cn(
+                  "bg-transparent outline-none [field-sizing:content] placeholder:text-muted-foreground",
+                  isSemantic ? "h-6 min-w-[1ch] text-sm" : "h-6 min-w-[2ch] font-mono text-xs",
+                )}
+              />
+              {!isSemantic ? (
+                <button
+                  type="button"
+                  aria-label={`Remove ${label.toLowerCase()} search pill`}
+                  className="-mr-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-current/10 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => removeSegment(segment)}
+                >
+                  <Icon icon={XIcon} size="xs" />
+                </button>
+              ) : null}
+            </span>
+          )
+
+          if (isSemantic) return segmentInput
+
+          return (
+            <Tooltip key={segment.id} asChild side="bottom" align="start" delayDuration={400} trigger={segmentInput}>
+              {tooltip}
+            </Tooltip>
+          )
+        })}
+        <button
+          type="button"
+          aria-label="Continue typing search query"
+          className="h-6 min-w-4 flex-1 cursor-text bg-transparent outline-none"
+          onMouseDown={(event) => {
+            event.preventDefault()
+            focusSearchEnd()
+          }}
+        />
+      </div>
     </div>
   )
 }

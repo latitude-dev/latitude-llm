@@ -34,11 +34,20 @@ function substituteParams(sql: string, params?: Record<string, unknown>): string
   })
 }
 
+function rewriteUnsupportedChdbFunctions(sql: string): string {
+  return sql
+    .replace(/hasAllTokens\(\s*search_text\s*,\s*\[[^\]]*\]\s*\)\s+AND\s+/g, "")
+    .replace(
+      /tokens\(\s*lower\(search_text\)\s*,\s*'splitByNonAlpha'\s*\)/g,
+      "arrayFilter(token -> length(token) > 0, splitByRegexp('[^A-Za-z0-9]+', lower(search_text)))",
+    )
+}
+
 export function createTestClickHouse(): TestClickHouse {
   const session = new Session()
   const client = {
     async query(params: { query: string; query_params?: Record<string, unknown>; format?: string }) {
-      const sql = substituteParams(params.query, params.query_params)
+      const sql = rewriteUnsupportedChdbFunctions(substituteParams(params.query, params.query_params))
       const format = params.format ?? "JSONEachRow"
       const raw = session.query(sql, format)
 
@@ -56,7 +65,7 @@ export function createTestClickHouse(): TestClickHouse {
     },
 
     async command(params: { query: string; query_params?: Record<string, unknown> }) {
-      const sql = substituteParams(params.query, params.query_params)
+      const sql = rewriteUnsupportedChdbFunctions(substituteParams(params.query, params.query_params))
       session.query(sql)
       return { query_id: "test" }
     },
