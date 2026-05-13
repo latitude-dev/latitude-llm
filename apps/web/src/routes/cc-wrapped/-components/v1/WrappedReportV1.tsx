@@ -1,12 +1,14 @@
 import type { WrappedReportRecord } from "@domain/spans"
+import { InteractiveHeatmap } from "./InteractiveHeatmap.tsx"
+import { MomentsRow } from "./MomentsRow.tsx"
+import { WorkspaceDeepDiveSection } from "./WorkspaceDeepDiveSection.tsx"
 
 /**
  * V1 web renderer for the public Claude Code Wrapped page. Mirrors the data
  * shape of the V1 email but renders for the full-page web context: real
- * responsive layout, no email-table fallbacks. Step 8 will plug in the
- * interactive heatmap, moments, and workspace deep dives. Step 7 ships a
- * minimal "it loads" surface — hero + headline numbers + LOC headline +
- * personality reveal.
+ * responsive layout, no email-table fallbacks, interactive heatmap with
+ * per-cell tooltips, plus the full workspace deep dives that the email
+ * teaser drops.
  *
  * Frozen-in-amber when V2 ships — old persisted reports keep rendering with
  * this component via the dispatch at the route level.
@@ -111,6 +113,34 @@ function HeadlineNumbers({ totals }: { totals: WrappedReportRecord["report"]["to
   )
 }
 
+function BreadthStrip({ totals }: { totals: WrappedReportRecord["report"]["totals"] }) {
+  const parts: string[] = []
+  if (totals.workspaces > 0) parts.push(`${formatCompact(totals.workspaces)} workspaces`)
+  if (totals.branches > 0) parts.push(`${formatCompact(totals.branches)} branches`)
+  if (totals.commits > 0) parts.push(`${formatCompact(totals.commits)} commits`)
+  if (totals.repos > 0) parts.push(`${formatCompact(totals.repos)} repos`)
+
+  const sub: string[] = []
+  if (totals.streakDays > 0) sub.push(`${totals.streakDays}-day streak`)
+  if (totals.testsRun > 0) sub.push(`${formatCompact(totals.testsRun)} test run${totals.testsRun === 1 ? "" : "s"}`)
+
+  if (parts.length === 0 && sub.length === 0) return null
+  return (
+    <section className="text-center">
+      {parts.length > 0 ? (
+        <p className="text-sm" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+          {parts.join(" · ")}
+        </p>
+      ) : null}
+      {sub.length > 0 ? (
+        <p className="mt-1 text-sm" style={{ color: ACCENT, fontFamily: "Georgia, serif" }}>
+          {sub.join(" · ")}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
 function LocHeadline({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
   if (loc.written <= 0) return null
   return (
@@ -133,6 +163,94 @@ function LocHeadline({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
             {loc.writtenAnchor.emphasis}
           </p>
         </>
+      ) : null}
+      {loc.added > 0 || loc.removed > 0 ? (
+        <p className="mt-4 text-sm" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+          <span style={{ color: ACCENT }}>{`+${formatCompact(loc.added)}`}</span>
+          {" / "}
+          <span>{`−${formatCompact(loc.removed)}`}</span>
+          {" across edits"}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function ReadWriteRatio({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
+  if (loc.written <= 0 || loc.read <= 0) return null
+  const ratio = loc.read / loc.written
+  const ratioText = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
+  return (
+    <section className="text-center">
+      <p className="mx-auto max-w-md text-lg sm:text-xl" style={{ color: INK, fontFamily: "Georgia, serif" }}>
+        {"For every line you wrote, Claude read "}
+        <span style={{ color: ACCENT, fontWeight: 600 }}>{ratioText}</span>.
+      </p>
+      {loc.readAnchor.emphasis ? (
+        <p className="mt-2 text-sm italic" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+          {`${formatCompact(loc.read)} lines read — ${loc.readAnchor.prefix} ${loc.readAnchor.emphasis}`}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function TopBashCommand({ command }: { command: WrappedReportRecord["report"]["topBashCommand"] }) {
+  if (!command) return null
+  return (
+    <section className="text-center">
+      <p className="text-lg sm:text-xl" style={{ color: INK, fontFamily: "Georgia, serif" }}>
+        {"Your favorite command: "}
+        <span
+          className="mx-1 rounded-md px-2 py-0.5 font-mono text-base"
+          style={{ backgroundColor: "#E8E4D8", color: ACCENT }}
+        >
+          {command.pattern}
+        </span>
+        {` — ${formatCompact(command.count)} run${command.count === 1 ? "" : "s"}.`}
+      </p>
+    </section>
+  )
+}
+
+function HeatmapSection({ heatmap }: { heatmap: WrappedReportRecord["report"]["heatmap"] }) {
+  const hasActivity = heatmap.some((row) => row.some((cell) => cell > 0))
+  if (!hasActivity) return null
+  return (
+    <section>
+      <h2
+        className="text-center text-2xl sm:text-3xl"
+        style={{ fontFamily: "Georgia, serif", color: INK, fontWeight: 500 }}
+      >
+        Your week, hour by hour
+      </h2>
+      <p className="mt-2 text-center text-sm" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+        Hover any cell for the exact count. Times are UTC.
+      </p>
+      <div className="mt-6 flex justify-center">
+        <InteractiveHeatmap heatmap={heatmap} />
+      </div>
+    </section>
+  )
+}
+
+function WorkspaceSections({
+  deepDives,
+  otherCount,
+}: {
+  deepDives: WrappedReportRecord["report"]["workspaceDeepDives"]
+  otherCount: number
+}) {
+  if (deepDives.length === 0) return null
+  return (
+    <section className="space-y-10">
+      {deepDives.map((ws) => (
+        <WorkspaceDeepDiveSection key={ws.name} workspace={ws} />
+      ))}
+      {otherCount > 0 ? (
+        <p className="text-xs" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+          {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
+        </p>
       ) : null}
     </section>
   )
@@ -191,7 +309,13 @@ export function WrappedReportV1({ record }: WrappedReportV1Props) {
           end={report.window.end}
         />
         <HeadlineNumbers totals={report.totals} />
+        <BreadthStrip totals={report.totals} />
         <LocHeadline loc={report.loc} />
+        <ReadWriteRatio loc={report.loc} />
+        <HeatmapSection heatmap={report.heatmap} />
+        <MomentsRow moments={report.moments} />
+        <TopBashCommand command={report.topBashCommand} />
+        <WorkspaceSections deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
         <PersonalityReveal personality={report.personality} />
         <footer className="mt-8 text-center text-xs" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
           Generated by Latitude · Claude Code Wrapped
