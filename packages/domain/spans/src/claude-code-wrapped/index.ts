@@ -16,6 +16,8 @@ export {
   type TopBashCommand,
   type WorkspaceDeepDive,
 } from "./entities/report.ts"
+export type { WrappedReportRecord } from "./entities/wrapped-report-record.ts"
+export { WrappedReportRepository, type WrappedReportRepositoryShape } from "./ports/wrapped-report-repository.ts"
 export { pickReadAnchor, pickWrittenAnchor } from "./helpers/anchors.ts"
 export {
   type BashPatternRow,

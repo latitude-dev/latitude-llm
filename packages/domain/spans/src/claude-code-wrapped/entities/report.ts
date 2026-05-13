@@ -150,7 +150,9 @@ export type LocStats = z.infer<typeof locSchema>
 export const reportV1Schema = z.object({
   project: z.object({ id: projectIdSchema, name: z.string(), slug: z.string() }),
   organization: z.object({ id: organizationIdSchema, name: z.string() }),
-  window: z.object({ start: z.date(), end: z.date() }),
+  // `z.coerce.date()` accepts both real `Date` instances (the producer) and
+  // ISO strings (what JSONB → JS gives us back when re-reading the blob).
+  window: z.object({ start: z.coerce.date(), end: z.coerce.date() }),
 
   totals: z.object({
     sessions: z.number().int().nonnegative(),

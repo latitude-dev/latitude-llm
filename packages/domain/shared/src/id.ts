@@ -57,6 +57,7 @@ export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
 export type AlertIncidentId = Id<"AlertIncidentId">
 export type NotificationId = Id<"NotificationId">
+export type WrappedReportId = Id<"WrappedReportId">
 
 // Telemetry-related IDs
 export type TraceId = Id<"TraceId">
@@ -86,6 +87,7 @@ export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
 export const NotificationId = (value: string): NotificationId => value as NotificationId
+export const WrappedReportId = (value: string): WrappedReportId => value as WrappedReportId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
@@ -115,6 +117,7 @@ export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
 export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
+export const wrappedReportIdSchema = cuidSchema.transform(WrappedReportId)
 
 // The telemetry-related IDs have custom length constraints
 export const SESSION_ID_LENGTH = 128
