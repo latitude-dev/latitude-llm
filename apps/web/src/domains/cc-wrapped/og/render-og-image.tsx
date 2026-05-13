@@ -12,10 +12,15 @@ const OG_HEIGHT = 630
 /**
  * Server-side OG card renderer.
  *
- * 1200×630 accent-orange card. Left column: the archetype PNG (read from
- * disk, inlined as base64 so Satori doesn't have to do its own image
- * fetch). Right column: eyebrow + giant archetype title + owner-name
- * subtitle + cream divider + a single-line headline-numbers strip.
+ * 1200×630 accent-orange card. Left column: the archetype PNG. Right
+ * column: small "CLAUDE CODE WRAPPED" eyebrow → giant archetype name →
+ * owner-name subtitle.
+ *
+ * Sized for the small-preview reality: OG cards render at ~250-550px
+ * wide in Slack/Twitter/iMessage feeds (a 2-5× downscale of the 1200px
+ * source), so anything below ~30px in the source becomes unreadable.
+ * The two things that *must* land at small sizes are the archetype and
+ * the owner — stats / dividers don't earn the space.
  *
  * Colours invert the page palette so the unfurl pops in a chat surface:
  * accent background, cream as the primary foreground, a warm dark
@@ -47,8 +52,6 @@ const readPersonalityImageAsDataUrl = async (kind: string): Promise<string> => {
   return dataUrl
 }
 
-const formatCompact = (n: number): string => n.toLocaleString("en-US")
-
 export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise<Buffer> => {
   const [{ regular, semibold }, imageDataUrl] = await Promise.all([
     getOgFonts(),
@@ -56,11 +59,6 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
   ])
 
   const archetype = TITLE_FOR_KIND[record.report.personality.kind] ?? "The Wrapped"
-  const stats = [
-    `${formatCompact(record.report.loc.written)} lines`,
-    `${formatCompact(record.report.totals.sessions)} sessions`,
-    `${formatCompact(record.report.totals.commandsRun)} commands`,
-  ].join(" · ")
 
   const svg = await satori(
     <div
@@ -95,18 +93,18 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
       >
         <div
           style={{
-            fontSize: 18,
-            letterSpacing: 4,
+            fontSize: 30,
+            letterSpacing: 5,
             color: BLACKISH_CREAM,
             textTransform: "uppercase",
-            marginBottom: 18,
+            marginBottom: 28,
           }}
         >
           Claude Code Wrapped
         </div>
         <div
           style={{
-            fontSize: 92,
+            fontSize: 112,
             fontWeight: 600,
             color: WRAPPED_COLORS.cream,
             lineHeight: 1,
@@ -116,30 +114,12 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
         </div>
         <div
           style={{
-            fontSize: 30,
+            fontSize: 50,
             color: BLACKISH_CREAM,
-            marginTop: 22,
+            marginTop: 28,
           }}
         >
           {`${record.ownerName}'s week`}
-        </div>
-        <div
-          style={{
-            width: 96,
-            height: 4,
-            backgroundColor: WRAPPED_COLORS.cream,
-            marginTop: 32,
-            marginBottom: 32,
-            borderRadius: 2,
-          }}
-        />
-        <div
-          style={{
-            fontSize: 24,
-            color: WRAPPED_COLORS.cream,
-          }}
-        >
-          {stats}
         </div>
       </div>
     </div>,
