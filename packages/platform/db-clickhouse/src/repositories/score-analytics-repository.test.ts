@@ -810,4 +810,275 @@ describe("ScoreAnalyticsRepository", () => {
       expect(rollups[0]?.failedCount).toBe(1)
     })
   })
+
+  // ------------------------------------------------------------------
+  // escalationSignalsByIssues — feeds the seasonal anomaly detector with
+  // sliding-recent counts plus pooled (dow, hour ± 1) × prior 4 weeks
+  // expected/stddev from the scores_hourly_buckets MV.
+  // ------------------------------------------------------------------
+
+  describe("escalationSignalsByIssues", () => {
+    const issueId = "esc_signals_aaaaaaaaaaaa"
+    // Pick a fixed `now` so anchor arithmetic doesn't depend on the wall clock.
+    // 2026-04-29T12:00:00Z is a Wednesday at noon UTC — anchors for `now - week*7d`
+    // hit the same (dow, hour) bin on Wed at 12:00 four weeks running.
+    const NOW = new Date("2026-04-29T12:00:00.000Z")
+
+    const fmt = (date: Date): string => toClickHouseDateTime64(date)
+    const minus = (millis: number) => new Date(NOW.getTime() - millis)
+    const HOUR = 60 * 60 * 1000
+    const WEEK = 7 * 24 * HOUR
+
+    it("returns zero-filled signals when the issue has no scores", async () => {
+      const signals = await runCh(
+        repo.escalationSignalsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          now: NOW,
+        }),
+      )
+
+      expect(signals).toHaveLength(1)
+      expect(signals[0]).toMatchObject({
+        issueId,
+        recent1h: 0,
+        recent6h: 0,
+        recent24h: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+        samplesCount: 0,
+      })
+    })
+
+    it("computes sliding recents (1h / 6h / 24h) over raw scores against the overridable now", async () => {
+      // Scatter events into the trailing windows so the boundary semantics show up:
+      //   t-30m, t-2h, t-7h, t-20h, t-26h
+      // recent_1h = 1 (only t-30m)
+      // recent_6h = 2 (t-30m, t-2h)
+      // recent_24h = 4 (t-30m, t-2h, t-7h, t-20h) — t-26h is outside
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * HOUR)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(7 * HOUR)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(20 * HOUR)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(26 * HOUR)) }),
+      ])
+
+      const signals = await runCh(
+        repo.escalationSignalsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          now: NOW,
+        }),
+      )
+
+      expect(signals[0]).toMatchObject({ recent1h: 1, recent6h: 2, recent24h: 4 })
+    })
+
+    it("counts samplesCount as distinct prior weeks contributing to the (dow, hour) pool", async () => {
+      // Plant one row at the center anchor for each of weeks 1, 2, 3 (skip week 4)
+      // so the pool gathers samples from 3 distinct prior weeks.
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(3 * WEEK)) }),
+      ])
+
+      const signals = await runCh(
+        repo.escalationSignalsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          now: NOW,
+        }),
+      )
+
+      expect(signals[0]?.samplesCount).toBe(3)
+    })
+
+    it("pools (dow, hour ± 1) buckets across prior weeks into expected1h / stddev1h", async () => {
+      // Plant 1 event per week at the center anchor (week N · 7d before NOW)
+      // across all 4 prior weeks. With a constant count of 1, mean = 1 and stddev = 0.
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(3 * WEEK)) }),
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(4 * WEEK)) }),
+      ])
+
+      const signals = await runCh(
+        repo.escalationSignalsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          now: NOW,
+        }),
+      )
+
+      // 12 anchor slots (4 weeks × ±1h pool). Each week contributes one event
+      // into its center anchor, leaving the other two ±1h slots at 0. So the
+      // sample set is [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0] → mean = 4/12.
+      expect(signals[0]?.expected1h).toBeCloseTo(4 / 12, 5)
+      expect(signals[0]?.samplesCount).toBe(4)
+      expect(signals[0]?.stddev1h).toBeGreaterThan(0)
+    })
+
+    it("returns one signals row per requested issue", async () => {
+      const otherIssue = "esc_signals_bbbbbbbbbbbb"
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ issue_id: otherIssue, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ issue_id: otherIssue, created_at: fmt(minus(30 * 60 * 1000)) }),
+      ])
+
+      const signals = await runCh(
+        repo.escalationSignalsByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId), IssueId(otherIssue)],
+          now: NOW,
+        }),
+      )
+
+      expect(signals).toHaveLength(2)
+      const byId = Object.fromEntries(signals.map((s) => [s.issueId, s.recent1h]))
+      expect(byId[issueId]).toBe(1)
+      expect(byId[otherIssue]).toBe(2)
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // escalationThresholdHistogramByIssues — projects the entry band across
+  // a histogram's buckets so the trend chart can draw the dashed line.
+  // ------------------------------------------------------------------
+
+  describe("escalationThresholdHistogramByIssues", () => {
+    const issueId = "esc_thresh_aaaaaaaaaaaaa"
+
+    it("returns an empty array when no issue ids are passed", async () => {
+      const series = await runCh(
+        repo.escalationThresholdHistogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [],
+          timeRange: { from: new Date("2026-04-01"), to: new Date("2026-04-08") },
+          bucketSeconds: 12 * 60 * 60,
+          kShort: 3,
+        }),
+      )
+      expect(series).toEqual([])
+    })
+
+    it("returns an empty array when bucketSeconds < 1h (sub-hour buckets unsupported)", async () => {
+      const series = await runCh(
+        repo.escalationThresholdHistogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          timeRange: { from: new Date("2026-04-01"), to: new Date("2026-04-08") },
+          bucketSeconds: 30 * 60,
+          kShort: 3,
+        }),
+      )
+      expect(series).toEqual([])
+    })
+
+    it("emits NaN thresholds for issues without prior-pool history", async () => {
+      const trendFrom = new Date("2026-04-22T00:00:00.000Z")
+      const trendTo = new Date("2026-04-29T00:00:00.000Z")
+
+      const series = await runCh(
+        repo.escalationThresholdHistogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          timeRange: { from: trendFrom, to: trendTo },
+          bucketSeconds: 12 * 60 * 60,
+          kShort: 3,
+        }),
+      )
+
+      expect(series).toHaveLength(1)
+      expect(series[0]?.buckets.length).toBeGreaterThan(0)
+      for (const bucket of series[0]?.buckets ?? []) {
+        expect(Number.isNaN(bucket.thresholdCount)).toBe(true)
+      }
+    })
+
+    it("emits finite thresholds when prior-window history exists, and bucket keys align with the histogram scaffold", async () => {
+      const trendFrom = new Date("2026-04-22T00:00:00.000Z")
+      const trendTo = new Date("2026-04-29T00:00:00.000Z")
+      // Seed history inside the prior window [trendEnd − 4w, trendEnd) so the
+      // pool has data to fold into expected / σ.
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 11:00:00.000" }),
+        makeScoreRow({ issue_id: issueId, created_at: "2026-04-15 10:00:00.000" }),
+      ])
+
+      const series = await runCh(
+        repo.escalationThresholdHistogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueId)],
+          timeRange: { from: trendFrom, to: trendTo },
+          bucketSeconds: 12 * 60 * 60,
+          kShort: 3,
+        }),
+      )
+
+      expect(series).toHaveLength(1)
+      const buckets = series[0]?.buckets ?? []
+      expect(buckets.length).toBeGreaterThan(0)
+      // Every bucket should carry a finite threshold (variance floor keeps the
+      // band defined even on hours with no contributing samples).
+      for (const bucket of buckets) {
+        expect(Number.isFinite(bucket.thresholdCount)).toBe(true)
+        expect(bucket.thresholdCount).toBeGreaterThan(0)
+      }
+      // Bucket keys are 12h-aligned ISO timestamps starting at trendFrom.
+      expect(buckets[0]?.bucket).toBe("2026-04-22T00:00:00.000Z")
+      expect(buckets[1]?.bucket).toBe("2026-04-22T12:00:00.000Z")
+    })
+
+    it("scales the threshold with k_short — higher k widens the band", async () => {
+      const trendFrom = new Date("2026-04-22T00:00:00.000Z")
+      const trendTo = new Date("2026-04-29T00:00:00.000Z")
+      await insertScores([
+        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ issue_id: issueId, created_at: "2026-04-15 10:00:00.000" }),
+      ])
+
+      const [low, high] = await Promise.all([
+        runCh(
+          repo.escalationThresholdHistogramByIssues({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            issueIds: [IssueId(issueId)],
+            timeRange: { from: trendFrom, to: trendTo },
+            bucketSeconds: 12 * 60 * 60,
+            kShort: 3,
+          }),
+        ),
+        runCh(
+          repo.escalationThresholdHistogramByIssues({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            issueIds: [IssueId(issueId)],
+            timeRange: { from: trendFrom, to: trendTo },
+            bucketSeconds: 12 * 60 * 60,
+            kShort: 6,
+          }),
+        ),
+      ])
+
+      const lowMax = Math.max(...(low[0]?.buckets ?? []).map((b) => b.thresholdCount))
+      const highMax = Math.max(...(high[0]?.buckets ?? []).map((b) => b.thresholdCount))
+      expect(highMax).toBeGreaterThan(lowMax)
+    })
+  })
 })

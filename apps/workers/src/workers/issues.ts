@@ -20,11 +20,13 @@ import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  SettingsReaderLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, type WeaviateClient, withWeaviate } from "@platform/db-weaviate"
@@ -116,7 +118,7 @@ export const createIssuesWorker = async ({
     checkEscalation: (payload) =>
       checkIssueEscalationUseCase(payload).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(IssueRepositoryLive, OutboxEventWriterLive, AlertIncidentRepositoryLive, SettingsReaderLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),

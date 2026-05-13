@@ -195,7 +195,6 @@ export function IssuesView({
           states={issue.states}
           resolvedAt={issue.resolvedAt}
           escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
-          showEscalationThresholdGuide
         />
       ),
       renderSubheader: () => (

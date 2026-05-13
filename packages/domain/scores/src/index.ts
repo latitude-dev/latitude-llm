@@ -3,6 +3,8 @@ export {
   SCORE_PUBLICATION_DEBOUNCE,
   SCORE_SOURCE_ID_MAX_LENGTH,
   SCORE_SOURCES,
+  SEASONAL_BUCKET_POOLING_HOURS,
+  SEASONAL_HISTORY_WEEKS,
 } from "./constants.ts"
 export {
   ANNOTATION_ANCHOR_TEXT_FORMATS,
@@ -38,6 +40,9 @@ export {
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore } from "./helpers.ts"
 export {
+  type IssueEscalationSignals,
+  type IssueEscalationThresholdBucket,
+  type IssueEscalationThresholdSeries,
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
   type IssueTagsAggregate,

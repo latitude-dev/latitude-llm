@@ -1,6 +1,7 @@
 import type { AlertSeverity } from "@domain/alerts"
 import { ChartSkeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { formatCount } from "@repo/utils"
+import { useMemo } from "react"
 import type { AlertIncidentRecord } from "../../../../../../domains/alerts/alerts.functions.ts"
 import {
   formatIncidentKindLabel,
@@ -12,7 +13,6 @@ import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from ".
 const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
 const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
 const MAX_VISIBLE_BAR_HEIGHT_PERCENT = 88
-const BAR_TOP_HEADROOM_PERCENT = 100 - MAX_VISIBLE_BAR_HEIGHT_PERCENT
 const MINI_HISTOGRAM_GUIDE_LINE_COUNT = 5
 const MINI_HISTOGRAM_TOP_INSET_PX = 6
 const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
@@ -56,6 +56,40 @@ function resolveBarClasses(input: {
   }
 
   return DEFAULT_ROW_BAR_CLASSES
+}
+
+/**
+ * Build a single SVG `<path>` `d` attribute that smoothly connects the given points using a
+ * Catmull-Rom spline expressed as cubic Bezier segments. Endpoints duplicate themselves as
+ * virtual neighbours so the curve doesn't accelerate at the boundary. Coordinates are emitted
+ * with 3 decimals — enough for sub-pixel placement when the SVG scales to its container.
+ */
+function buildSmoothThresholdPath(points: readonly { readonly x: number; readonly y: number }[]): string {
+  if (points.length === 0) return ""
+  const first = points[0]
+  if (!first) return ""
+  if (points.length === 1) {
+    // Single point inside an otherwise-broken segment: draw a tiny horizontal dash so the
+    // datum is still visible (otherwise an isolated bucket would render as nothing).
+    return `M ${(first.x - 0.3).toFixed(3)} ${first.y.toFixed(3)} L ${(first.x + 0.3).toFixed(3)} ${first.y.toFixed(3)}`
+  }
+
+  const parts: string[] = [`M ${first.x.toFixed(3)} ${first.y.toFixed(3)}`]
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    if (!p1 || !p2) continue
+    const p0 = points[i - 1] ?? p1
+    const p3 = points[i + 2] ?? p2
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    parts.push(
+      `C ${cp1x.toFixed(3)} ${cp1y.toFixed(3)}, ${cp2x.toFixed(3)} ${cp2y.toFixed(3)}, ${p2.x.toFixed(3)} ${p2.y.toFixed(3)}`,
+    )
+  }
+  return parts.join(" ")
 }
 
 function getVisibleBucketLabelIndices(totalBuckets: number, maxVisibleBucketLabels: number): ReadonlySet<number> {
@@ -218,7 +252,7 @@ export function IssueTrendBar({
   states = [],
   resolvedAt = null,
   escalationOccurrenceThreshold = null,
-  showEscalationThresholdGuide = false,
+  escalationThresholds = null,
   incidents = [],
   bucketSeconds = DEFAULT_BUCKET_SECONDS,
 }: {
@@ -235,8 +269,20 @@ export function IssueTrendBar({
   readonly barVariant?: "row" | "details"
   readonly states?: readonly string[]
   readonly resolvedAt?: string | null
+  /**
+   * Legacy flat escalation threshold from the pre-seasonal detector. Used by the row variant
+   * for the per-bucket "escalating" highlight when `escalationThresholds` isn't supplied; the
+   * detail variant prefers the per-bucket series below.
+   */
   readonly escalationOccurrenceThreshold?: number | null
-  readonly showEscalationThresholdGuide?: boolean
+  /**
+   * Per-bucket seasonal entry-band projection from the detector. When provided, a dashed line
+   * traces the threshold across the chart and per-bucket coloring uses each bucket's own
+   * threshold instead of a single flat value. Buckets with `thresholdCount = NaN` represent a
+   * region of the chart with no contributing prior history — the line is hidden for those
+   * spans.
+   */
+  readonly escalationThresholds?: readonly { readonly bucket: string; readonly thresholdCount: number }[] | null
   /**
    * Incidents to overlay on the trend. Only honored when `barVariant="details"` so the
    * row-level mini-bars in the issues table stay clean. Caller is expected to have filtered to
@@ -249,6 +295,67 @@ export function IssueTrendBar({
    */
   readonly bucketSeconds?: number
 }) {
+  // All derived chart state lives in `useMemo` blocks so hooks run unconditionally above the
+  // early returns below and downstream consumers (segments, paths) skip recomputation when
+  // inputs haven't changed.
+  const chartBuckets = useMemo(() => {
+    // Map per-bucket thresholds by key so we can zip against `buckets` regardless of how the
+    // caller ordered them. NaN entries are kept so we know "history was missing here" vs
+    // "no series at all" — both yield no overlay for that bar.
+    const thresholdByBucket = new Map<string, number>()
+    if (escalationThresholds) {
+      for (const entry of escalationThresholds) thresholdByBucket.set(entry.bucket, entry.thresholdCount)
+    }
+    return buckets.map((bucket) => {
+      const threshold = thresholdByBucket.get(bucket.bucket)
+      return {
+        key: bucket.bucket,
+        label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
+        tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
+        count: bucket.count,
+        thresholdCount: threshold !== undefined && Number.isFinite(threshold) ? threshold : null,
+      }
+    })
+  }, [buckets, escalationThresholds, bucketSeconds])
+
+  const hasSeasonalThresholds = useMemo(
+    () => chartBuckets.some((bucket) => bucket.thresholdCount !== null),
+    [chartBuckets],
+  )
+
+  const visibleBucketLabelIndices = useMemo(
+    () => getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels),
+    [chartBuckets.length, maxVisibleBucketLabels],
+  )
+
+  // Threshold values participate in the scale so the dashed line never clips off the top.
+  const maxCount = useMemo(
+    () => Math.max(...chartBuckets.map((bucket) => Math.max(bucket.count, bucket.thresholdCount ?? 0)), 1),
+    [chartBuckets],
+  )
+
+  // Group consecutive buckets that carry a threshold into smoothable segments. A null
+  // breaks the line — that span had no contributing prior history, so any "expected" value
+  // would be misleading. SVG coordinates use the chart-wide viewBox set on the overlay below:
+  // x = bucket center (i + 0.5) in 0..N space, y = 100 − heightPercent in 0..100 space.
+  const thresholdSegments = useMemo<{ readonly x: number; readonly y: number }[][]>(() => {
+    const segments: { x: number; y: number }[][] = []
+    let active: { x: number; y: number }[] = []
+    chartBuckets.forEach((bucket, index) => {
+      if (bucket.thresholdCount === null) {
+        if (active.length > 0) {
+          segments.push(active)
+          active = []
+        }
+        return
+      }
+      const heightPercent = toVisibleHeightPercent(bucket.thresholdCount, maxCount)
+      active.push({ x: index + 0.5, y: 100 - heightPercent })
+    })
+    if (active.length > 0) segments.push(active)
+    return segments
+  }, [chartBuckets, maxCount])
+
   if (isLoading) {
     return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
   }
@@ -262,25 +369,10 @@ export function IssueTrendBar({
   }
 
   const bucketWidthMs = bucketSeconds * 1000
-  const chartBuckets = buckets.map((bucket) => ({
-    key: bucket.bucket,
-    label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
-    tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
-    count: bucket.count,
-  }))
-  const visibleBucketLabelIndices = getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels)
-  const maxCount = Math.max(...chartBuckets.map((bucket) => bucket.count), 1)
+
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
   const isRegressedIssue = states.includes("regressed")
   const isEscalatingIssue = states.includes("escalating")
-  const escalationGuideCount =
-    showEscalationThresholdGuide && isEscalatingIssue && escalationOccurrenceThreshold !== null
-      ? escalationOccurrenceThreshold
-      : null
-  const escalationGuideHeightPercent =
-    escalationGuideCount !== null ? toVisibleHeightPercent(escalationGuideCount, maxCount) : null
-  const escalationGuideBottomPercent =
-    escalationGuideHeightPercent !== null ? Math.max(0, escalationGuideHeightPercent - BAR_TOP_HEADROOM_PERCENT) : null
   const incidentsEnabled = barVariant === "details" && incidents.length > 0
   const incidentInfoByBucket = incidentsEnabled
     ? buildIncidentInfoByBucket(
@@ -295,11 +387,12 @@ export function IssueTrendBar({
     const bucketEndMs = toBucketEndMs(bucket.key, bucketWidthMs)
     const isRegressedBucket =
       isRegressedIssue && resolvedAtMs !== null && bucket.count > 0 && bucketEndMs > resolvedAtMs
+    // Per-bucket coloring: prefer the seasonal series when available so the highlight follows
+    // the same band the dashed line draws. Fall back to the legacy flat threshold (passed by
+    // the row variant in the issues table) when the seasonal series isn't loaded.
+    const escalatingThreshold = bucket.thresholdCount ?? escalationOccurrenceThreshold
     const isEscalatingBucket =
-      !isRegressedBucket &&
-      isEscalatingIssue &&
-      escalationOccurrenceThreshold !== null &&
-      bucket.count >= escalationOccurrenceThreshold
+      !isRegressedBucket && isEscalatingIssue && escalatingThreshold !== null && bucket.count >= escalatingThreshold
     // The "this bucket contains the resolved-at moment" marker — works for both daily and
     // sub-day buckets since we just check whether resolvedAt falls in the bucket's [start, end).
     const isResolvedBoundaryBucket =
@@ -344,9 +437,18 @@ export function IssueTrendBar({
             className="absolute inset-x-0 bottom-0 flex items-end gap-1"
             style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
           >
-            {visualBuckets.map((bucket) => {
+            {visualBuckets.map((bucket, index) => {
               const startedHere = bucket.incidentInfo.startedHere
               const coveringSeverity = bucket.incidentInfo.coveringRangeSeverity
+              // Adjacent buckets with the same severity should read as one continuous shaded
+              // band, not a strip of rounded blocks separated by the flex `gap-1` (4px). Extend
+              // the right edge of every-but-the-last bucket in a run to cover the gap, and
+              // suppress corner rounding on the merged sides so the run renders as a single
+              // rectangle with rounded outer ends.
+              const prevSeverity = visualBuckets[index - 1]?.incidentInfo.coveringRangeSeverity ?? null
+              const nextSeverity = visualBuckets[index + 1]?.incidentInfo.coveringRangeSeverity ?? null
+              const mergeLeft = coveringSeverity !== null && coveringSeverity === prevSeverity
+              const mergeRight = coveringSeverity !== null && coveringSeverity === nextSeverity
               const showIncidentExtras =
                 incidentsEnabled &&
                 (startedHere.length > 0 || coveringSeverity !== null || bucket.incidentInfo.ongoingRanges.length > 0)
@@ -356,10 +458,21 @@ export function IssueTrendBar({
                     <span className="group/bucket relative flex h-full min-w-0 flex-1 items-end">
                       {coveringSeverity !== null ? (
                         <span
-                          className="pointer-events-none absolute inset-0 z-[0] rounded-[2px]"
+                          className="pointer-events-none absolute z-[0]"
                           style={{
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
+                            // -4px matches the bars container's `gap-1`; carries the tint
+                            // across the gap to the next bucket. Only one side extends per pair
+                            // to avoid double-tinting in the gap.
+                            right: mergeRight ? -4 : 0,
                             background: INCIDENT_SEVERITY_COLOR[coveringSeverity],
                             opacity: 0.16,
+                            borderTopLeftRadius: mergeLeft ? 0 : 2,
+                            borderBottomLeftRadius: mergeLeft ? 0 : 2,
+                            borderTopRightRadius: mergeRight ? 0 : 2,
+                            borderBottomRightRadius: mergeRight ? 0 : 2,
                           }}
                           aria-hidden
                         />
@@ -428,16 +541,37 @@ export function IssueTrendBar({
               )
             })}
           </div>
-          {escalationGuideCount !== null && escalationGuideBottomPercent !== null ? (
+          {hasSeasonalThresholds ? (
+            // SVG is a replaced element — `height: auto` on it resolves to the viewBox's
+            // intrinsic ratio (e.g. 28×100 = 3.57:1 tall), NOT to the absolute-positioning
+            // top/bottom span. That made the previous inline `<svg className="h-auto ...">`
+            // render far taller than the chart and pushed the path below the clip.
+            // Wrap in a positioning div so the SVG can flex-fill via plain `h-full w-full`.
             <div
               className="pointer-events-none absolute inset-x-0 bottom-0 z-[2]"
               style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
               aria-hidden
             >
-              <div
-                className={`absolute inset-x-0 border-t border-dashed ${DEFAULT_MUTED_GUIDE_CLASSES}`}
-                style={{ bottom: `${escalationGuideBottomPercent}%` }}
-              />
+              <svg
+                className="block h-full w-full text-muted-foreground/60 dark:text-muted-foreground/70"
+                viewBox={`0 0 ${chartBuckets.length} 100`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="Escalation threshold"
+              >
+                <title>Escalation threshold</title>
+                {thresholdSegments.map((segment, segmentIndex) => (
+                  <path
+                    key={`th-seg-${segmentIndex}`}
+                    d={buildSmoothThresholdPath(segment)}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1}
+                    strokeDasharray="3 2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+              </svg>
             </div>
           ) : null}
         </div>

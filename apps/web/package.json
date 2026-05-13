@@ -17,7 +17,6 @@
   "dependencies": {
     "@domain/admin": "workspace:*",
     "@domain/alerts": "workspace:*",
-    "@intercom/messenger-js-sdk": "0.0.14",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
@@ -37,6 +36,7 @@
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/users": "workspace:*",
+    "@intercom/messenger-js-sdk": "0.0.14",
     "@lottiefiles/dotlottie-wc": "0.9.12",
     "@platform/ai": "workspace:*",
     "@platform/ai-voyage": "workspace:*",
@@ -71,6 +71,7 @@
     "rosetta-ai": "catalog:",
     "satori": "0.18.4",
     "ua-parser-js": "2.0.9",
+    "use-debounce": "10.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {

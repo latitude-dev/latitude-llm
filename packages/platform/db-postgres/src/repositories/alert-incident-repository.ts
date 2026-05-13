@@ -16,6 +16,8 @@ const toInsertRow = (incident: AlertIncident): typeof alertIncidents.$inferInser
   startedAt: incident.startedAt,
   endedAt: incident.endedAt,
   createdAt: incident.createdAt,
+  entrySignals: incident.entrySignals,
+  exitEligibleSince: incident.exitEligibleSince,
 })
 
 const toDomain = (row: typeof alertIncidents.$inferSelect): AlertIncident => alertIncidentSchema.parse(row)
@@ -40,6 +42,26 @@ export const AlertIncidentRepositoryLive = Layer.effect(
           if (!row) return yield* new NotFoundError({ entity: "AlertIncident", id })
           return toDomain(row)
         }),
+      findOpen: ({ sourceType, sourceId, kind }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(alertIncidents)
+              .where(
+                and(
+                  eq(alertIncidents.sourceType, sourceType),
+                  eq(alertIncidents.sourceId, sourceId),
+                  eq(alertIncidents.kind, kind),
+                  isNull(alertIncidents.endedAt),
+                ),
+              )
+              .limit(1),
+          )
+          const row = rows[0]
+          return row ? toDomain(row) : null
+        }),
       closeOpen: ({ sourceType, sourceId, kind, endedAt }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -62,6 +84,13 @@ export const AlertIncidentRepositoryLive = Layer.effect(
           )
           const closedId = rows[0]?.id
           return closedId ? (closedId as AlertIncidentId) : null
+        }),
+      updateExitDwell: ({ id, exitEligibleSince }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db.update(alertIncidents).set({ exitEligibleSince }).where(eq(alertIncidents.id, id)),
+          )
         }),
       listByProjectInRange: ({ organizationId, projectId, from, to, sourceType, sourceId }) =>
         Effect.gen(function* () {
