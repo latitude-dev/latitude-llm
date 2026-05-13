@@ -58,7 +58,6 @@ const handleWrappedReport = (input: {
   organizationId: string
   wrappedReportId: string
   projectName: string
-  archetype: string
   link: string
 }) => {
   const pgClient = getPostgresClient()
@@ -67,7 +66,6 @@ const handleWrappedReport = (input: {
     organizationId: OrganizationId(input.organizationId),
     wrappedReportId: input.wrappedReportId,
     projectName: input.projectName,
-    archetype: input.archetype,
     link: input.link,
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(input.organizationId)),
@@ -103,7 +101,6 @@ export const createNotificationsWorker = ({ consumer }: NotificationsDeps) => {
         organizationId: payload.organizationId,
         wrappedReportId: payload.wrappedReportId,
         projectName: payload.projectName,
-        archetype: payload.archetype,
         link: payload.link,
       }),
   })

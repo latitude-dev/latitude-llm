@@ -21,7 +21,6 @@ export interface CreateWrappedReportNotificationsInput {
    */
   readonly wrappedReportId: string
   readonly projectName: string
-  readonly archetype: string
   /** Absolute URL to `/cc-wrapped/<id>`. */
   readonly link: string
 }
@@ -48,7 +47,6 @@ export const createWrappedReportNotificationsUseCase = (input: CreateWrappedRepo
 
     const payload: WrappedReportNotificationPayload = {
       projectName: input.projectName,
-      archetype: input.archetype,
       link: input.link,
     }
 

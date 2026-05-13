@@ -1,21 +1,9 @@
-import { wrappedReportNotificationPayloadSchema } from "@domain/notifications"
-import { Icon, Text } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
-import { SparklesIcon } from "lucide-react"
-import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
-import { BaseNotification } from "../base-notification.tsx"
-
-const ARCHETYPE_LABEL: Record<string, string> = {
-  surgeon: "The Surgeon",
-  architect: "The Architect",
-  detective: "The Detective",
-  conductor: "The Conductor",
-  strategist: "The Strategist",
-  scholar: "The Scholar",
-  consultant: "The Consultant",
-  shipper: "The Shipper",
-  tester: "The Tester",
-}
+import { wrappedReportNotificationPayloadSchema } from "@domain/notifications";
+import { Icon, Text } from "@repo/ui";
+import { relativeTime } from "@repo/utils";
+import { SparklesIcon } from "lucide-react";
+import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts";
+import { BaseNotification } from "../base-notification.tsx";
 
 /**
  * Renders a Claude Code Wrapped notification — broadcast to every org
@@ -24,33 +12,42 @@ const ARCHETYPE_LABEL: Record<string, string> = {
  * the project name, the resolved archetype, and the absolute URL to the
  * public report page.
  */
-export function WrappedReportNotification({ notification }: { readonly notification: NotificationRecord }) {
-  const parsed = wrappedReportNotificationPayloadSchema.safeParse(notification.payload)
-  const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+export function WrappedReportNotification({
+  notification,
+}: {
+  readonly notification: NotificationRecord;
+}) {
+  const parsed = wrappedReportNotificationPayloadSchema.safeParse(
+    notification.payload,
+  );
+  const seenAt = notification.seenAt
+    ? new Date(notification.seenAt)
+    : undefined;
 
   if (!parsed.success) {
     return (
       <BaseNotification seenAt={seenAt}>
         <Text.H6 color="foregroundMuted">Unsupported notification</Text.H6>
       </BaseNotification>
-    )
+    );
   }
 
-  const { projectName, archetype, link } = parsed.data
-  const archetypeLabel = ARCHETYPE_LABEL[archetype] ?? "Your archetype"
-  const title = `Your Claude Code Wrapped for ${projectName} is ready`
-  const description = `You're ${archetypeLabel} this week — see your full Wrapped.`
-  const createdAt = new Date(notification.createdAt)
+  const { projectName, link } = parsed.data;
+  const title = `Your Claude Code Wrapped for ${projectName} is ready`;
+  const description = "Click here to see it";
+  const createdAt = new Date(notification.createdAt);
 
   return (
     <BaseNotification
       seenAt={seenAt}
-      icon={<Icon icon={SparklesIcon} className="h-4 w-4 text-foreground-muted" />}
+      icon={
+        <Icon icon={SparklesIcon} className="h-4 w-4 text-foreground-muted" />
+      }
       title={title}
       description={description}
       url={link}
     >
       <Text.H6 color="foregroundMuted">{relativeTime(createdAt)}</Text.H6>
     </BaseNotification>
-  )
+  );
 }

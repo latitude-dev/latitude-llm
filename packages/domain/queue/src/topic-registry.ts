@@ -97,7 +97,6 @@ const _registry = {
       readonly organizationId: string
       readonly wrappedReportId: string
       readonly projectName: string
-      readonly archetype: string
       readonly link: string
     }
   }>(),

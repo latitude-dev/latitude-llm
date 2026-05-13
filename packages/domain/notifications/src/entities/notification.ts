@@ -62,17 +62,11 @@ export type CustomMessageNotificationPayload = z.infer<typeof customMessageNotif
  * Payload for the Claude Code Wrapped notification. The persisted report
  * id lives in the row's `sourceId` column (so the partial unique index
  * dedupes per-user-per-report); the payload carries only what the
- * renderer needs to paint without a live lookup.
- *
- * `archetype` is left loosely typed as a string at this layer to avoid a
- * domain-to-domain dependency on `@domain/spans` for the type union; the
- * renderer narrows on read.
+ * renderer needs to paint a teaser without a live lookup.
  */
 export const wrappedReportNotificationPayloadSchema = z.object({
   /** Display name of the project the Wrapped covers. */
   projectName: z.string(),
-  /** Personality kind the report assigned (e.g. "surgeon", "strategist"). */
-  archetype: z.string(),
   /** Absolute URL to `/cc-wrapped/<id>`. */
   link: z.string(),
 })
