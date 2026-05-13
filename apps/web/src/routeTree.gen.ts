@@ -20,6 +20,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
+import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as AuthConsentRouteImport } from './routes/auth/consent'
@@ -107,6 +108,11 @@ const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
   id: '/button',
   path: '/button',
   getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const CcWrappedIdRoute = CcWrappedIdRouteImport.update({
+  id: '/cc-wrapped/$id',
+  path: '/cc-wrapped/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
   id: '/search',
@@ -310,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRoute
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -445,6 +454,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
     | '/downloads/export'
@@ -576,6 +588,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
+  CcWrappedIdRoute: typeof CcWrappedIdRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -663,6 +676,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/design-system/button'
       preLoaderRoute: typeof DesignSystemButtonRouteImport
       parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/cc-wrapped/$id': {
+      id: '/cc-wrapped/$id'
+      path: '/cc-wrapped/$id'
+      fullPath: '/cc-wrapped/$id'
+      preLoaderRoute: typeof CcWrappedIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/backoffice/search': {
       id: '/backoffice/search'
@@ -1054,6 +1074,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,
+  CcWrappedIdRoute: CcWrappedIdRoute,
   DownloadsExportRoute: DownloadsExportRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

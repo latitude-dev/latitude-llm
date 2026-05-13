@@ -1,7 +1,4 @@
-import {
-  createCustomMessageNotificationsUseCase,
-  createIncidentNotificationsUseCase,
-} from "@domain/notifications"
+import { createCustomMessageNotificationsUseCase, createIncidentNotificationsUseCase } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -74,15 +71,11 @@ const handleWrappedReport = (input: {
     withPostgres(repoLayer, pgClient, OrganizationId(input.organizationId)),
     Effect.tap((result) =>
       Effect.sync(() =>
-        logger.info(
-          `notifications.wrapped wrappedReportId=${input.wrappedReportId} inserted=${result.inserted}`,
-        ),
+        logger.info(`notifications.wrapped wrappedReportId=${input.wrappedReportId} inserted=${result.inserted}`),
       ),
     ),
     Effect.tapError((error) =>
-      Effect.sync(() =>
-        logger.error(`notifications.wrapped failed wrappedReportId=${input.wrappedReportId}`, error),
-      ),
+      Effect.sync(() => logger.error(`notifications.wrapped failed wrappedReportId=${input.wrappedReportId}`, error)),
     ),
     Effect.asVoid,
     withTracing,

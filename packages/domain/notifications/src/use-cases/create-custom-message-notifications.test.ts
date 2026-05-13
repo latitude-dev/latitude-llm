@@ -1,8 +1,4 @@
-import {
-  type Membership,
-  MembershipRepository,
-  type MembershipRole,
-} from "@domain/organizations"
+import { type Membership, MembershipRepository, type MembershipRole } from "@domain/organizations"
 import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
