@@ -16,9 +16,21 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
+import { relativeTime, toTitle } from "@repo/utils"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Loader2, LogOut } from "lucide-react"
+import {
+  Gamepad2,
+  Loader2,
+  LogOut,
+  type LucideIcon,
+  Microchip,
+  Monitor,
+  RectangleGoggles,
+  TabletSmartphone,
+  Tv,
+  Watch,
+} from "lucide-react"
 import { useCallback, useRef, useState } from "react"
 import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
 import {
@@ -98,10 +110,30 @@ const formatSessionLocation = (session: UserSessionDto): string => {
 }
 
 const formatDeviceLine = (session: UserSessionDto): string => {
-  const browser = session.browserName ?? "Unknown browser"
-  const os = session.osName ? ` on ${session.osName}` : ""
-  return `${browser}${os}`
+  const browser = session.browserName ? toTitle(session.browserName) : "Unknown browser"
+  const os = session.osName ? ` on ${toTitle(session.osName)}` : " on a"
+  const device = ` ${session.deviceKind.toLowerCase()}`
+  return `${browser}${os}${device}`
 }
+
+/**
+ * UA-Parser device-type → lucide icon. Keys mirror the values
+ * `UAParser().device.type` can return, plus our `"desktop"` fallback for the
+ * undefined case. Anything we don't recognize falls back to the generic
+ * `tablet-smartphone` so an unexpected value never breaks the row.
+ */
+const DEVICE_ICONS: Readonly<Record<string, LucideIcon>> = {
+  desktop: Monitor,
+  mobile: TabletSmartphone,
+  tablet: TabletSmartphone,
+  console: Gamepad2,
+  smarttv: Tv,
+  wearable: Watch,
+  xr: RectangleGoggles,
+  embedded: Microchip,
+}
+
+const deviceIconFor = (kind: string): LucideIcon => DEVICE_ICONS[kind] ?? TabletSmartphone
 
 function RevokeSessionConfirmModal({ session, onClose }: { session: UserSessionDto; onClose: () => void }) {
   const { toast } = useToast()
@@ -194,7 +226,12 @@ function SessionsSection() {
   const [sessionToRevoke, setSessionToRevoke] = useState<UserSessionDto | null>(null)
   const [revokeAllOpen, setRevokeAllOpen] = useState(false)
 
-  const sessions = data ?? []
+  // Current device pinned to the top so the user sees "this is me" first;
+  // every other session sorted by `createdAt` desc (newest connection first).
+  const sessions = (data ?? []).slice().sort((a, b) => {
+    if (a.current !== b.current) return a.current ? -1 : 1
+    return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+  })
   const otherCount = sessions.filter((s) => !s.current).length
 
   return (
@@ -203,7 +240,7 @@ function SessionsSection() {
         <div className="flex flex-col gap-1">
           <Text.H5 weight="semibold">Sessions</Text.H5>
           <Text.H5 color="foregroundMuted">
-            Devices currently signed in to your account. Revoke any device you don't recognize
+            Devices currently signed in to your account. Sign out of any device you don't recognize
           </Text.H5>
         </div>
         {otherCount > 0 ? (
@@ -224,8 +261,7 @@ function SessionsSection() {
               <TableRow>
                 <TableHead>Device</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Last active</TableHead>
-                <TableHead>Expires</TableHead>
+                <TableHead>Created at</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -233,7 +269,10 @@ function SessionsSection() {
               {sessions.map((s) => (
                 <TableRow key={s.id} verticalPadding hoverable={false}>
                   <TableCell>
-                    <div className="flex flex-col">
+                    <div className="inline-flex items-center gap-2">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <Icon icon={deviceIconFor(s.deviceKind)} size="sm" color="foregroundMuted" />
+                      </div>
                       <Text.H5>
                         {formatDeviceLine(s)}
                         {s.current ? (
@@ -242,7 +281,6 @@ function SessionsSection() {
                           </Text.H5>
                         ) : null}
                       </Text.H5>
-                      <Text.H6 color="foregroundMuted">on a {s.deviceKind}</Text.H6>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -254,10 +292,7 @@ function SessionsSection() {
                     </Text.H5>
                   </TableCell>
                   <TableCell>
-                    <Text.H5 color="foregroundMuted">{new Date(s.updatedAt).toLocaleString()}</Text.H5>
-                  </TableCell>
-                  <TableCell>
-                    <Text.H5 color="foregroundMuted">{new Date(s.expiresAt).toLocaleString()}</Text.H5>
+                    <Text.H5 color="foregroundMuted">{relativeTime(s.createdAt)}</Text.H5>
                   </TableCell>
                   <TableCell align="right">
                     {s.current ? null : (
