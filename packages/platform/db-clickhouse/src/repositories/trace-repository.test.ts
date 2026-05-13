@@ -645,6 +645,24 @@ describe("TraceRepository", () => {
       expect(ids).not.toContain(NOISE_TRACE)
     })
 
+    it("backtick phrases are case-insensitive to match the lower-cased text index", async () => {
+      await insertSearchRows()
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "`HANDOFFTOHUMAN TRUE`" },
+        }),
+      )
+
+      const ids = page.items.map((t) => t.traceId)
+      expect(ids).toContain(HYBRID_TRACE)
+      expect(ids).toContain(LEX_ONLY_TRACE)
+      expect(ids).not.toContain(SEM_ONLY_TRACE)
+      expect(ids).not.toContain(NOISE_TRACE)
+    })
+
     // ─── Shape 2: empty phrases, ≥1 semantic — pure semantic ranking ──────
     it("semantic-only: ranks by cosine similarity and applies the relevance floor", async () => {
       await insertSearchRows()

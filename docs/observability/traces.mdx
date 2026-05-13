@@ -70,7 +70,7 @@ The project **Search** page lets you search trace conversations in three ways. Y
 
 - **Semantic search**: write normal text without quotes. Latitude searches by meaning and ranks matching traces first. Example: `customer wants a refund` can find traces where the user says "I need my money back" even if the exact words differ.
 - **Literal match**: wrap text in double quotes. Latitude looks for that exact case-sensitive text in the searchable conversation. Example: `"handOffToHuman: true"` matches that exact string.
-- **Phrase match**: wrap text in backticks. Latitude searches for those words next to each other and in order, while ignoring punctuation between them. Example: `` `human-annotation` `` can match `human-annotation`, `human annotation`, or `"human": "annotation"`, but not `human something annotation`.
+- **Phrase match**: wrap text in backticks. Latitude searches for those words next to each other and in order, while ignoring case and punctuation between them. Example: `` `human-annotation` `` can match `human-annotation`, `Human annotation`, or `"human": "annotation"`, but not `human something annotation`.
 
 For example:
 

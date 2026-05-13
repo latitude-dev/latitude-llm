@@ -102,6 +102,8 @@ const COLOR_GROUPS: { title: string; colors: { token: string; label: string; fgT
     colors: [
       { token: "purple", label: "purple" },
       { token: "purple-foreground", label: "purple-foreground", fgToken: "purple" },
+      { token: "phrase", label: "phrase" },
+      { token: "phrase-foreground", label: "phrase-foreground", fgToken: "phrase" },
       { token: "yellow", label: "yellow" },
     ],
   },

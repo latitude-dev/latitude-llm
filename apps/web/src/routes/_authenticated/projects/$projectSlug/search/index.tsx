@@ -2,7 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { Button, cn, Icon, type SortDirection, SplitButton, Tooltip, toast, useMountEffect } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon } from "lucide-react"
+import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon, XIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import {
   useSavedSearchBySlug,
@@ -485,6 +485,31 @@ function serializeSearchSegments(segments: readonly SearchSegment[]): string {
     .join("")
 }
 
+function serializeSearchSegmentsWithinLimit(segments: readonly SearchSegment[], maxLength: number): string {
+  let remaining = maxLength
+  const parts: string[] = []
+
+  for (const segment of segments) {
+    if (remaining <= 0) break
+
+    if (segment.kind === "semantic") {
+      const text = segment.text.slice(0, remaining)
+      parts.push(text)
+      remaining -= text.length
+      continue
+    }
+
+    if (remaining < 2) break
+
+    const delimiter = delimiterForKind(segment.kind)
+    const text = segment.text.slice(0, remaining - 2)
+    parts.push(`${delimiter}${text}${delimiter}`)
+    remaining -= text.length + 2
+  }
+
+  return parts.join("")
+}
+
 function splitSegmentOnDelimiter(segment: SearchSegment, value: string): readonly SearchSegment[] {
   if (segment.kind !== "semantic") return [{ ...segment, text: value }]
   if (!value.includes('"') && !value.includes("`")) return [{ ...segment, text: value }]
@@ -502,11 +527,12 @@ function SearchInput({
   const [segments, setSegments] = useState(() => parseSearchSegments(initialValue))
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
 
-  const focusSegment = (id: string) => {
+  const focusSegment = (id: string, position: "start" | "end" = "end") => {
     window.setTimeout(() => {
       const input = inputRefs.current.get(id)
+      const cursor = position === "start" ? 0 : input?.value.length
       input?.focus()
-      input?.setSelectionRange(input.value.length, input.value.length)
+      if (cursor !== undefined) input?.setSelectionRange(cursor, cursor)
     }, 0)
   }
 
@@ -516,7 +542,11 @@ function SearchInput({
   })
 
   const submit = (nextSegments = segments) => {
-    const next = serializeSearchSegments(nextSegments).trim().slice(0, SEARCH_QUERY_MAX_LENGTH)
+    const serialized = serializeSearchSegments(nextSegments).trim()
+    const next =
+      serialized.length <= SEARCH_QUERY_MAX_LENGTH
+        ? serialized
+        : serializeSearchSegmentsWithinLimit(nextSegments, SEARCH_QUERY_MAX_LENGTH).trim()
     onSubmit(next)
   }
 
@@ -557,13 +587,13 @@ function SearchInput({
     focusSegment(nextSemantic.id)
   }
 
-  const removeEmptySegment = (segment: SearchSegment) => {
+  const removeSegment = (segment: SearchSegment, allowKeepingSingleSemantic = false) => {
     setSegments((current) => {
       const index = current.findIndex((item) => item.id === segment.id)
       if (index === -1) return current
 
       if (current.length === 1) {
-        if (segment.kind === "semantic") return current
+        if (segment.kind === "semantic" && allowKeepingSingleSemantic) return current
         const next = createSearchSegment("semantic")
         focusSegment(next.id)
         return [next]
@@ -574,6 +604,26 @@ function SearchInput({
       if (focusTarget) focusSegment(focusTarget.id)
       return next
     })
+  }
+
+  const focusSearchEnd = () => {
+    const last = segments[segments.length - 1]
+    if (!last) return
+    if (last.kind === "semantic") {
+      focusSegment(last.id)
+      return
+    }
+
+    const next = createSearchSegment("semantic")
+    setSegments((current) => [...current, next])
+    focusSegment(next.id)
+  }
+
+  const focusAdjacentSegment = (segment: SearchSegment, direction: "previous" | "next") => {
+    const index = segments.findIndex((item) => item.id === segment.id)
+    const focusTarget = direction === "previous" ? segments[index - 1] : segments[index + 1]
+    if (!focusTarget) return
+    focusSegment(focusTarget.id, direction === "previous" ? "end" : "start")
   }
 
   return (
@@ -587,8 +637,8 @@ function SearchInput({
           const label = segment.kind === "literal" ? "Literal" : "Phrase"
           const tooltip =
             segment.kind === "literal"
-              ? 'Literal match: searches for this exact case-sensitive text. Serialized with "quotes".'
-              : "Phrase match: searches for these tokens adjacent and in order, ignoring punctuation. Serialized with `backticks`."
+              ? "Exact text: results must contain this text exactly as typed, including capital letters and punctuation."
+              : "Words in order: results must contain these words next to each other, in this order. Capitalization and punctuation do not matter."
           const placeholder =
             isSemantic && index === 0 ? 'Search by meaning. Use "literal text" or `ordered token phrase`.' : ""
           const segmentInput = (
@@ -598,9 +648,7 @@ function SearchInput({
                 "inline-flex min-w-0 shrink-0 items-center",
                 isSemantic ? "" : "h-7 gap-1 rounded-full border px-2 text-xs font-medium shadow-sm",
                 segment.kind === "literal" ? "border-primary/25 bg-primary/10 text-primary" : "",
-                segment.kind === "token"
-                  ? "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300"
-                  : "",
+                segment.kind === "token" ? "border-phrase/30 bg-phrase/10 text-phrase-foreground" : "",
               )}
             >
               {!isSemantic ? <span className="shrink-0 opacity-70">{label}</span> : null}
@@ -625,7 +673,17 @@ function SearchInput({
                   }
                   if (event.key === "Backspace" && segment.text.length === 0) {
                     event.preventDefault()
-                    removeEmptySegment(segment)
+                    removeSegment(segment, true)
+                    return
+                  }
+                  if (event.key === "ArrowLeft" && event.currentTarget.selectionStart === 0) {
+                    event.preventDefault()
+                    focusAdjacentSegment(segment, "previous")
+                    return
+                  }
+                  if (event.key === "ArrowRight" && event.currentTarget.selectionStart === segment.text.length) {
+                    event.preventDefault()
+                    focusAdjacentSegment(segment, "next")
                   }
                 }}
                 placeholder={placeholder}
@@ -635,6 +693,17 @@ function SearchInput({
                   isSemantic ? "h-6 min-w-[1ch] text-sm" : "h-6 min-w-[2ch] font-mono text-xs",
                 )}
               />
+              {!isSemantic ? (
+                <button
+                  type="button"
+                  aria-label={`Remove ${label.toLowerCase()} search pill`}
+                  className="-mr-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-current/10 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => removeSegment(segment)}
+                >
+                  <Icon icon={XIcon} size="xs" />
+                </button>
+              ) : null}
             </span>
           )
 
@@ -646,6 +715,15 @@ function SearchInput({
             </Tooltip>
           )
         })}
+        <button
+          type="button"
+          aria-label="Continue typing search query"
+          className="h-6 min-w-4 flex-1 cursor-text bg-transparent outline-none"
+          onMouseDown={(event) => {
+            event.preventDefault()
+            focusSearchEnd()
+          }}
+        />
       </div>
     </div>
   )

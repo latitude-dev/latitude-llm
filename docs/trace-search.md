@@ -30,7 +30,7 @@ Secondary indexes on `search_text`:
 - `ngrambf_v1(3, 512, 3, 0)` for substring inclusion.
 - `TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(search_text))` for token-set lookup.
 
-Literal substring filters use case-sensitive `LIKE`, which can be assisted by the n-gram bloom filter. Backtick token-phrase filters use `hasAllTokens` to hit the text index before the query checks token adjacency with `hasSubstr(tokens(...), ...)`.
+Literal substring filters use case-sensitive `LIKE`, which can be assisted by the n-gram bloom filter. Backtick token-phrase filters are lower-cased to match the text-index preprocessor, then use `hasAllTokens` to hit the text index before the query checks token adjacency with `hasSubstr(tokens(lower(...)), ...)`.
 
 Retention: `TTL start_time + INTERVAL 90 DAY DELETE`.
 
@@ -91,7 +91,7 @@ Active search adds a single CH query with cursor-based pagination on the trace l
 
 - **Semantic prompt**: unquoted text. This is embedded with Voyage and used for semantic ranking.
 - **Literal phrases**: double-quoted text (`"..."`). Each literal phrase is normalized the same way as stored `search_text` and becomes a case-sensitive `LIKE` substring filter. `%`, `_`, and backslashes are escaped before building the parameterized pattern.
-- **Token phrases**: backtick text (`` `...` ``). Each token phrase is tokenized with the same `splitByNonAlpha` shape as the ClickHouse text index. ClickHouse 26.2 does not expose `hasPhrase`, so the query combines indexed `hasAllTokens(search_text, tokens)` with `hasSubstr(tokens(search_text, 'splitByNonAlpha'), tokens)` to enforce adjacency and order.
+- **Token phrases**: backtick text (`` `...` ``). Each token phrase is lower-cased and tokenized with the same `splitByNonAlpha` shape as the ClickHouse text index. ClickHouse 26.2 does not expose `hasPhrase`, so the query combines indexed `hasAllTokens(search_text, tokens)` with `hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), tokens)` to enforce adjacency and order.
 
 `buildSearchPlan` in `trace-repository.ts` picks one of three shapes:
 
@@ -194,7 +194,7 @@ There is no backfill path. Traces that completed before the worker started runni
 
 Double-quoted literals use case-sensitive `LIKE` over normalized `search_text`. This matches copy-pasted text closely and can use the existing n-gram bloom-filter index, but it does not ignore punctuation differences.
 
-Backtick token phrases use `hasAllTokens` as an indexed prefilter and `hasSubstr(tokens(...), ...)` as the ordered-adjacency check. This approximates phrase search on ClickHouse 26.2: punctuation and whitespace differences are ignored, but the tokens must stay adjacent and in order. It is not a relevance scorer; it is a boolean filter.
+Backtick token phrases use `hasAllTokens` as an indexed prefilter and `hasSubstr(tokens(lower(...)), ...)` as the ordered-adjacency check. This approximates phrase search on ClickHouse 26.2: case, punctuation, and whitespace differences are ignored, but the tokens must stay adjacent and in order. It is not a relevance scorer; it is a boolean filter.
 
 ### Semantic scan is linear over the embeddings table
 

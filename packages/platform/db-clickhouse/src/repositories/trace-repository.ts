@@ -66,11 +66,14 @@ const SEMANTIC_SCAN_LIMIT = 30_000
 
 /**
  * Tokenize a backtick phrase the same way the `search_text` text index does:
- * split on every non-alphanumeric ASCII byte (matching CH's `splitByNonAlpha`).
- * Empty fragments are dropped.
+ * lower-case first, then split on every non-alphanumeric ASCII byte (matching
+ * CH's `splitByNonAlpha`). Empty fragments are dropped.
  */
 function tokenizePhrase(phrase: string): readonly string[] {
-  return phrase.split(/[^A-Za-z0-9]+/).filter((t) => t.length > 0)
+  return phrase
+    .toLowerCase()
+    .split(/[^A-Za-z0-9]+/)
+    .filter((t) => t.length > 0)
 }
 
 function stripLoneSurrogates(text: string): string {
@@ -89,10 +92,10 @@ function escapeLikePattern(text: string): string {
  * Compose quoted-search filters:
  *   - `"..."` is a case-sensitive literal substring over normalized
  *     `search_text`, implemented with indexed `LIKE`.
- *   - `` `...` `` is a case-sensitive ordered token phrase. ClickHouse 26.2
+ *   - `` `...` `` is a case-insensitive ordered token phrase. ClickHouse 26.2
  *     does not expose `hasPhrase`, so we combine an indexed `hasAllTokens`
- *     prefilter with `hasSubstr(tokens(...), phraseTokens)` to enforce token
- *     adjacency and order.
+ *     prefilter with `hasSubstr(tokens(lower(...)), phraseTokens)` to enforce
+ *     token adjacency and order.
  *
  * A phrase that normalizes/tokenizes to nothing intentionally matches zero rows
  * rather than silently dropping the filter.
@@ -129,7 +132,7 @@ function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
   tokenized.forEach((tokens, phraseIdx) => {
     const paramName = `tokenPhrase${phraseIdx}`
     predicates.push(
-      `hasAllTokens(search_text, {${paramName}:Array(String)}) AND hasSubstr(tokens(search_text, 'splitByNonAlpha'), {${paramName}:Array(String)})`,
+      `hasAllTokens(search_text, {${paramName}:Array(String)}) AND hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), {${paramName}:Array(String)})`,
     )
     params[paramName] = [...tokens]
   })

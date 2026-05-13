@@ -109,6 +109,8 @@
 
   --color-purple: hsl(var(--purple));
   --color-purple-foreground: hsl(var(--purple-foreground));
+  --color-phrase: hsl(var(--phrase));
+  --color-phrase-foreground: hsl(var(--phrase-foreground));
 
   --color-yellow: hsl(var(--yellow));
 
@@ -215,6 +217,8 @@
   --yellow: 41 96% 91%;
   --purple: 289 51% 92%;
   --purple-foreground: 289 51% 14%;
+  --phrase: 271 91% 65%;
+  --phrase-foreground: 272 72% 47%;
   --muted: 220 14% 96%;
   --muted-foreground: 211 11% 45%;
   --accent: 210 100% 97%;
@@ -270,6 +274,8 @@
   --yellow: 41 90% 14%;
   --purple: 289 51% 14%;
   --purple-foreground: 289 51% 65%;
+  --phrase: 271 91% 65%;
+  --phrase-foreground: 269 97% 85%;
   --muted: 0 0% 14.9%;
   --muted-foreground: 0 0% 63.9%;
   --accent: 211 88% 10%;
