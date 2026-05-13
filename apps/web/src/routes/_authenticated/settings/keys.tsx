@@ -9,6 +9,7 @@ import {
   Input,
   Modal,
   Table,
+  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
@@ -22,7 +23,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
-import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react"
+import { ExternalLinkIcon, Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
   deleteApiKeyMutation,
@@ -410,9 +411,21 @@ function KeysSettingsPage() {
         </div>
         <div className="flex flex-col gap-2">
           {oauthKeysLoading ? (
-            <TableSkeleton cols={5} rows={2} />
+            <TableSkeleton cols={4} rows={2} />
           ) : oauthKeys.length === 0 ? (
-            <Text.H5 color="foregroundMuted">No OAuth clients connected yet.</Text.H5>
+            <TableBlankSlate
+              description={
+                <div className="flex flex-col justify-center items-center gap-4">
+                  No OAuth clients connected yet
+                  <a href="https://docs.latitude.so/getting-started/mcp" target="_blank" rel="noopener noreferrer">
+                    <Button>
+                      <Icon size="sm" icon={ExternalLinkIcon} />
+                      Connect through MCP
+                    </Button>
+                  </a>
+                </div>
+              }
+            />
           ) : (
             <OAuthKeysTable oauthKeys={oauthKeys} />
           )}
