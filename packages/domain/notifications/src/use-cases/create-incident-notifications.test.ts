@@ -138,6 +138,7 @@ function setup(opts: SetupOpts = {}) {
     findByIdForUpdate: () => Effect.die("not used"),
     findByIds: () => Effect.die("not used"),
     findByUuid: () => Effect.die("not used"),
+    listRecentWithCentroids: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
     list: () => Effect.die("not used"),
     countBySlug: () => Effect.die("not used"),
