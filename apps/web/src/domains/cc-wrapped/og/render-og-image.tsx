@@ -13,18 +13,21 @@ const OG_HEIGHT = 630
  * Server-side OG card renderer.
  *
  * 1200×630 accent-orange card. Left column: the archetype PNG. Right
- * column: small "CLAUDE CODE WRAPPED" eyebrow → giant archetype name →
- * owner-name subtitle.
+ * column (top-to-bottom): small "CLAUDE CODE WRAPPED" eyebrow → giant
+ * archetype name → owner-name subtitle → a row of two stat columns
+ * (Lines written, Sessions).
  *
  * Sized for the small-preview reality: OG cards render at ~250-550px
  * wide in Slack/Twitter/iMessage feeds (a 2-5× downscale of the 1200px
  * source), so anything below ~30px in the source becomes unreadable.
- * The two things that *must* land at small sizes are the archetype and
- * the owner — stats / dividers don't earn the space.
+ * Stats numbers at 64px → ~25px at iMessage, ~50px at Slack, both
+ * readable. Stat labels at 22px are smaller but contextually anchored
+ * by the large number above them.
  *
  * Colours invert the page palette so the unfurl pops in a chat surface:
- * accent background, cream as the primary foreground, a warm dark
- * (black-ish cream) for the subordinate eyebrow + subtitle text.
+ * accent background, cream as the primary foreground (archetype, stat
+ * numbers), a warm dark (black-ish cream) for the subordinate eyebrow /
+ * subtitle / stat labels.
  *
  * No project name anywhere by design — the report identifies via the
  * owner's name only.
@@ -59,6 +62,8 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
   ])
 
   const archetype = TITLE_FOR_KIND[record.report.personality.kind] ?? "The Wrapped"
+  const linesWritten = record.report.loc.written.toLocaleString("en-US")
+  const sessions = record.report.totals.sessions.toLocaleString("en-US")
 
   const svg = await satori(
     <div
@@ -120,6 +125,57 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
           }}
         >
           {`${record.ownerName}'s week`}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 60,
+            marginTop: 44,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontSize: 64,
+                fontWeight: 600,
+                color: WRAPPED_COLORS.cream,
+                lineHeight: 1,
+              }}
+            >
+              {linesWritten}
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                color: BLACKISH_CREAM,
+                marginTop: 8,
+              }}
+            >
+              Lines written
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontSize: 64,
+                fontWeight: 600,
+                color: WRAPPED_COLORS.cream,
+                lineHeight: 1,
+              }}
+            >
+              {sessions}
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                color: BLACKISH_CREAM,
+                marginTop: 8,
+              }}
+            >
+              Sessions
+            </div>
+          </div>
         </div>
       </div>
     </div>,
