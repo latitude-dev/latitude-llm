@@ -1794,6 +1794,9 @@ importers:
       '@domain/simulations':
         specifier: workspace:*
         version: link:../../domain/simulations
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../../domain/spans
       '@domain/users':
         specifier: workspace:*
         version: link:../../domain/users
