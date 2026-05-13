@@ -35,7 +35,7 @@ The skill covers TypeScript and Python, the providers and frameworks listed in [
 
 ## Manual installation
 
-One function sets up everything: auto-instrumentation, the Latitude exporter, and async context propagation:
+One SDK bootstrap class sets up everything: auto-instrumentation, the Latitude exporter, and async context propagation:
 
 <Tabs>
   <Tab title="TypeScript">
@@ -44,10 +44,10 @@ One function sets up everything: auto-instrumentation, the Latitude exporter, an
     ```
 
     ```ts
-    import { initLatitude } from "@latitude-data/telemetry"
+    import { Latitude } from "@latitude-data/telemetry"
     import OpenAI from "openai"
 
-    const latitude = initLatitude({
+    const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
       projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
       instrumentations: ["openai"],
@@ -70,10 +70,10 @@ One function sets up everything: auto-instrumentation, the Latitude exporter, an
     ```
 
     ```python
-    from latitude_telemetry import init_latitude
+    from latitude_telemetry import Latitude
     from openai import OpenAI
 
-    latitude = init_latitude(
+    latitude = Latitude(
         api_key="your-api-key",
         project_slug="your-project-slug",
         instrumentations=["openai"],
@@ -85,7 +85,7 @@ One function sets up everything: auto-instrumentation, the Latitude exporter, an
         messages=[{"role": "user", "content": "Hello"}],
     )
 
-    latitude["shutdown"]()
+    latitude.shutdown()
     ```
   </Tab>
 </Tabs>
@@ -99,9 +99,9 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
 <Tabs>
   <Tab title="TypeScript">
     ```ts
-    import { initLatitude, capture } from "@latitude-data/telemetry"
+    import { Latitude, capture } from "@latitude-data/telemetry"
 
-    const latitude = initLatitude({
+    const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
       projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
       instrumentations: ["openai"],
@@ -131,9 +131,9 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
   </Tab>
   <Tab title="Python">
     ```python
-    from latitude_telemetry import init_latitude, capture
+    from latitude_telemetry import Latitude, capture
 
-    latitude = init_latitude(
+    latitude = Latitude(
         api_key="your-api-key",
         project_slug="your-project-slug",
         instrumentations=["openai"],
@@ -153,7 +153,7 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
         },
     )
 
-    latitude["shutdown"]()
+    latitude.shutdown()
     ```
   </Tab>
 </Tabs>
@@ -209,7 +209,7 @@ Latitude Telemetry is built on OpenTelemetry standards:
 2. **`LatitudeSpanProcessor`** filters for LLM-relevant spans (`gen_ai.*`, `ai.*`, `openinference.*` attributes) and exports them to Latitude via OTLP.
 3. **`capture()`** uses OpenTelemetry's native `context.with()` to attach Latitude-specific attributes (user, session, tags) to spans within its scope.
 
-If you already run OpenTelemetry for other backends, you can add `LatitudeSpanProcessor` alongside your existing processors. See the [TypeScript SDK](typescript) or [Python SDK](python) reference for advanced setup.
+If you already run Sentry or another OpenTelemetry-compatible SDK, initialize it first and construct `Latitude` second so Latitude can attach to the existing provider when possible. You can also add `LatitudeSpanProcessor` explicitly alongside existing processors. See the [TypeScript SDK](typescript) or [Python SDK](python) reference for advanced setup.
 
 ## Supported Integrations
 

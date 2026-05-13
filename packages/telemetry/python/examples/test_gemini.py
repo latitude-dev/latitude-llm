@@ -10,10 +10,10 @@ Install: uv add google-genai
 
 import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry BEFORE importing google.genai so instrumentation can patch it
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["google_generativeai"],
@@ -38,4 +38,4 @@ def test_gemini_completion():
 
 if __name__ == "__main__":
     test_gemini_completion()
-    latitude["flush"]()
+    latitude.flush()

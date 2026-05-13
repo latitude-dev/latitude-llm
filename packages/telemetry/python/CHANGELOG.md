@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0a5] - 2026-05-13
+
+### Added
+
+- **Class-based bootstrap API** — `Latitude(...)` is now the primary entry point, matching the TypeScript SDK. It exposes `.provider`, `.flush()`, and `.shutdown()`, attaches to an existing OpenTelemetry provider when one is registered, and keeps `init_latitude()` as a backwards-compatible wrapper.
+
+### Changed
+
+- **Existing OpenTelemetry provider coexistence** — `Latitude(...)` attaches the Latitude span processor to a registered or explicitly passed provider when possible instead of replacing the application's provider or propagator setup.
+- **`service_name` ownership is provider-aware** — when Latitude creates its own provider, `service_name` is applied to the provider resource as `service.name`; when Latitude attaches to an existing provider, the host SDK remains the source of truth for `service.name`.
+
+### Fixed
+
+- **Provider detection no longer depends on private OpenTelemetry globals** — the SDK now uses the public tracer provider API and treats proxy/no-op providers as unregistered providers.
+
 ## [3.0.0a4] - 2026-05-08
 
 ### Changed
@@ -17,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **OpenAI Agents SDK auto-instrumentation** — new `"openai-agents"` instrumentation type wires `openinference-instrumentation-openai-agents` (Arize OpenInference) into the SDK. Spans cover agent runs, generations, responses, function calls, handoffs, and guardrails. Pass `instrumentations=["openai-agents"]` to `init_latitude()` and install the `openai-agents` package in your project.
+- **OpenAI Agents SDK auto-instrumentation** — new `"openai-agents"` instrumentation type wires `openinference-instrumentation-openai-agents` (Arize OpenInference) into the SDK. Spans cover agent runs, generations, responses, function calls, handoffs, and guardrails. Pass `instrumentations=["openai-agents"]` to `Latitude(...)` and install the `openai-agents` package in your project.
 
 
 

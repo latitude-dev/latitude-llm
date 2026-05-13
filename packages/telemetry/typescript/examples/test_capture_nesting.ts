@@ -14,11 +14,11 @@
  * Install: npm install openai
  */
 
-import { capture, initLatitude } from "../src"
+import { capture, Latitude } from "../src"
 import OpenAI from "openai"
 
 // Initialize telemetry
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],

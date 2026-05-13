@@ -1,5 +1,5 @@
 export { capture } from "./context.ts"
-export { initLatitude } from "./init.ts"
+export { initLatitude, Latitude } from "./init.ts"
 export type { InstrumentationType } from "./instrumentations.ts"
 export { registerLatitudeInstrumentations } from "./instrumentations.ts"
 export { LatitudeSpanProcessor } from "./processor.ts"
@@ -18,4 +18,4 @@ export {
   RedactThenExportSpanProcessor,
 } from "./span-filter.ts"
 export { getLatitudeTracer } from "./tracer.ts"
-export type { ContextOptions, InitLatitudeOptions, LatitudeSpanProcessorOptions } from "./types.ts"
+export type { ContextOptions, InitLatitudeOptions, LatitudeOptions, LatitudeSpanProcessorOptions } from "./types.ts"

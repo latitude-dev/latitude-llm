@@ -57,9 +57,9 @@ npm install @latitude-data/telemetry
 ### Instrument
 
 ```ts
-import { initLatitude } from "@latitude-data/telemetry"
+import { Latitude } from "@latitude-data/telemetry"
 
-initLatitude({
+new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],

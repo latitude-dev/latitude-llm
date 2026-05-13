@@ -19,10 +19,10 @@ import os
 
 from openai import OpenAI
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry pointing to local instance
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
@@ -54,7 +54,7 @@ def agent_with_manual_spans():
     print(f"DEBUG agent_with_manual_spans: current_span={current_span}, is_recording={is_recording}")
 
     # Get tracer from the provider - this is a standard OTel tracer
-    tracer = latitude["provider"].get_tracer("custom.manual.instrumentation")
+    tracer = latitude.provider.get_tracer("custom.manual.instrumentation")
 
     # Create a custom span for a non-LLM operation
     # This span will receive latitude.tags, latitude.metadata, etc.
@@ -108,7 +108,7 @@ def outer_with_manual_spans():
     is_recording = current_span.is_recording() if current_span else False
     print(f"DEBUG outer_with_manual_spans: current_span={current_span}, is_recording={is_recording}")
 
-    tracer = latitude["provider"].get_tracer("custom.manual.instrumentation")
+    tracer = latitude.provider.get_tracer("custom.manual.instrumentation")
 
     # Manual span in outer context
     with tracer.start_as_current_span("outer.preprocess") as span:
@@ -140,7 +140,7 @@ def inner_with_manual_spans():
     is_recording = current_span.is_recording() if current_span else False
     print(f"DEBUG inner_with_manual_spans: current_span={current_span}, is_recording={is_recording}")
 
-    tracer = latitude["provider"].get_tracer("custom.manual.instrumentation")
+    tracer = latitude.provider.get_tracer("custom.manual.instrumentation")
 
     # Manual span in inner context
     with tracer.start_as_current_span("inner.llm_prep") as span:
@@ -167,7 +167,7 @@ def test_manual_spans_with_callback():
         is_recording = current_span.is_recording() if current_span else False
         print(f"DEBUG callback agent_logic: current_span={current_span}, is_recording={is_recording}")
 
-        tracer = latitude["provider"].get_tracer("custom.manual.instrumentation")
+        tracer = latitude.provider.get_tracer("custom.manual.instrumentation")
 
         # Manual span in callback
         with tracer.start_as_current_span("callback.data_fetch") as span:
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     print("Expected spans: callback.data_fetch (with latitude.* attributes)")
 
     print("\nFlushing telemetry...")
-    latitude["flush"]()
+    latitude.flush()
 
     print("\n" + "=" * 60)
     print("Done! Check Latitude dashboard for verification:")

@@ -15,12 +15,12 @@ npm install @latitude-data/telemetry
 
 ## Bootstrap (Recommended)
 
-The fastest way to start. One function sets up a complete OpenTelemetry pipeline with LLM auto-instrumentation and the Latitude exporter:
+The fastest way to start. One class detects an existing OpenTelemetry pipeline (Sentry, Datadog, New Relic, Honeycomb, etc.) or creates one when none exists, then adds LLM auto-instrumentation and the Latitude exporter:
 
 ```ts
-import { initLatitude } from "@latitude-data/telemetry"
+import { Latitude } from "@latitude-data/telemetry"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -36,10 +36,11 @@ const response = await openai.chat.completions.create({
 await latitude.shutdown()
 ```
 
-`initLatitude` returns **immediately**. Instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
+`new Latitude()` returns **immediately**. Instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
 
 - **Fire-and-forget**: Start using your LLM clients right away. Early spans are captured once instrumentations finish registering.
 - **Optional `await latitude.ready`**: If you need instrumentations fully registered before making LLM calls, await the `ready` promise.
+- **Existing tracing SDKs**: Initialize Sentry or another tracing SDK first, then construct `new Latitude()`. Latitude attaches its span processor to the existing provider when possible. `latitude.shutdown()` only shuts down Latitude-owned processing and does not shut down the other SDK.
 
 ## Using `capture()` for Context
 
@@ -51,9 +52,9 @@ Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when 
 - **Filter and analyze**: Use tags and metadata to filter traces in Latitude
 
 ```ts
-import { initLatitude, capture } from "@latitude-data/telemetry"
+import { Latitude, capture } from "@latitude-data/telemetry"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -89,9 +90,33 @@ await latitude.shutdown()
 | `metadata` | Shallow merge |
 | `tags` | Append and dedupe, preserving order |
 
-## Existing OpenTelemetry Setup (Advanced)
+## Existing Sentry or OpenTelemetry Setup
 
-If your app already uses OpenTelemetry, add Latitude alongside your existing processors:
+For Sentry, Datadog, New Relic, Honeycomb, and other OpenTelemetry-compatible SDKs, initialize the existing SDK first and construct `new Latitude()` second. Latitude detects the installed provider and attaches its processor when possible without replacing the existing SDK's context manager, propagator, sampler, or processors:
+
+```ts
+import * as Sentry from "@sentry/node"
+import { Latitude } from "@latitude-data/telemetry"
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN!,
+  tracesSampleRate: 1.0,
+})
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: ["openai"],
+})
+
+await latitude.ready
+
+// LLM spans are exported to both Sentry and Latitude.
+await latitude.flush()
+await latitude.shutdown()
+```
+
+If you want full control over provider construction, add Latitude alongside your existing processors explicitly:
 
 ```ts
 import { NodeSDK } from "@opentelemetry/sdk-node"
@@ -118,25 +143,25 @@ await registerLatitudeInstrumentations({
 })
 ```
 
-For examples of integrating with **Datadog**, **Sentry**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
+For examples of integrating with **Datadog**, **Sentry**, **New Relic**, **Honeycomb**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
 
 ## Public API Reference
 
 ```ts
 import {
-  initLatitude,
+  Latitude,
   LatitudeSpanProcessor,
   capture,
   registerLatitudeInstrumentations,
 } from "@latitude-data/telemetry"
 ```
 
-### `initLatitude(options)`
+### `new Latitude(options)`
 
 Bootstraps a complete OpenTelemetry setup with LLM instrumentations and Latitude export.
 
 ```ts
-type InitLatitudeOptions = {
+type LatitudeOptions = {
   apiKey: string
   projectSlug: string
   instrumentations?: InstrumentationType[]
@@ -148,10 +173,12 @@ type InitLatitudeOptions = {
   disableRedact?: boolean
   redact?: RedactSpanProcessorOptions
   exporter?: SpanExporter
+  tracerProvider?: TracerProvider
 }
 
-function initLatitude(options: InitLatitudeOptions): {
-  provider: NodeTracerProvider
+class Latitude {
+  constructor(options: LatitudeOptions)
+  provider: TracerProvider
   ready: Promise<void>
   flush(): Promise<void>
   shutdown(): Promise<void>
@@ -327,4 +354,4 @@ import { context } from "@opentelemetry/api"
 context.setGlobalContextManager(new AsyncLocalStorageContextManager())
 ```
 
-`initLatitude()` does this automatically. For shared-provider setups, your existing OTel setup should already have this.
+`new Latitude()` does this automatically. For shared-provider setups, your existing OTel setup should already have this.

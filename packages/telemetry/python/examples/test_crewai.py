@@ -13,11 +13,11 @@ import os
 
 from crewai import Agent, Crew, Task
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry pointing to local instance
 # Note: CrewAI uses OpenAI by default, so we instrument both
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["crewai", "openai"],
@@ -52,4 +52,4 @@ def test_crewai_crew():
 
 if __name__ == "__main__":
     test_crewai_crew()
-    latitude["flush"]()
+    latitude.flush()
