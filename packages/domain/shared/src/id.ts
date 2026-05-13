@@ -29,6 +29,7 @@ export type UserId = Id<"UserId">
 // Organization/Workspace-related IDs (workspace is now organization)
 export type OrganizationId = Id<"OrganizationId">
 export type MembershipId = Id<"MembershipId">
+export type InvitationId = Id<"InvitationId">
 
 // Project-related IDs
 export type ProjectId = Id<"ProjectId">
@@ -69,6 +70,7 @@ export const UserId = (value: string): UserId => value as UserId
 export const SessionId = (value: string): SessionId => value as SessionId
 export const OrganizationId = (value: string): OrganizationId => value as OrganizationId
 export const MembershipId = (value: string): MembershipId => value as MembershipId
+export const InvitationId = (value: string): InvitationId => value as InvitationId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const FeatureFlagId = (value: string): FeatureFlagId => value as FeatureFlagId
@@ -95,6 +97,7 @@ export const ExternalUserId = (value: string): ExternalUserId => value as Extern
 export const userIdSchema = cuidSchema.transform(UserId)
 export const organizationIdSchema = cuidSchema.transform(OrganizationId)
 export const membershipIdSchema = cuidSchema.transform(MembershipId)
+export const invitationIdSchema = cuidSchema.transform(InvitationId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
 export const featureFlagIdSchema = cuidSchema.transform(FeatureFlagId)

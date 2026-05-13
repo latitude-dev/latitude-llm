@@ -37,6 +37,7 @@ export {
   type AdminCreateFeatureFlagInput,
   type AdminDisableFeatureFlagForOrganizationInput,
   type AdminEnableFeatureFlagForOrganizationInput,
+  type AdminFeatureFlagEligibility,
   type AdminFeatureFlagMutationError,
   AdminFeatureFlagRepository,
   type AdminFeatureFlagRepositoryShape,

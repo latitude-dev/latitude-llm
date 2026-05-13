@@ -1,5 +1,12 @@
 export const emailDesignTokens = {
   fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fonts: {
+    /** Serif stack used by the Claude Code Wrapped template. Georgia is the
+     *  most-installed serif across mail clients, so we don't need @font-face. */
+    serif: 'Georgia, "Times New Roman", "Source Serif Pro", serif',
+    /** Same as fontFamily — kept here as a token so templates can reference it. */
+    sans: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
   colors: {
     border: "#E5E5E5",
     foreground: "#030712",
@@ -9,6 +16,17 @@ export const emailDesignTokens = {
     accent: "#EFF7FF",
     secondary: "#F9FAFB",
     white: "#FFFFFF",
+    /** Anthropic / Claude Code branding tokens — scoped here, not used by the
+     *  default ContainerLayout. The Wrapped template opts in. */
+    claude: {
+      accent: "#D97555",
+      accentForegroundOnLight: "#0F0F0F",
+      accentForegroundOnDark: "#FFFFFF",
+      cream: "#F0EEE6",
+      creamDeep: "#E8E4D8",
+      ink: "#1A1A1A",
+      mutedInk: "#5C5C5C",
+    },
   },
   typography: {
     heading: "text-lg leading-7 font-medium",
@@ -49,6 +67,13 @@ export const emailTailwindConfig = {
         },
         secondary: {
           DEFAULT: emailDesignTokens.colors.secondary,
+        },
+        claude: {
+          accent: emailDesignTokens.colors.claude.accent,
+          cream: emailDesignTokens.colors.claude.cream,
+          "cream-deep": emailDesignTokens.colors.claude.creamDeep,
+          ink: emailDesignTokens.colors.claude.ink,
+          "muted-ink": emailDesignTokens.colors.claude.mutedInk,
         },
       },
     },

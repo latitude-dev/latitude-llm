@@ -5,21 +5,29 @@ description = "Latitude GEPA optimization runtime"
 requires-python = ">=3.13, <3.14"
 dependencies = [
     "gepa==0.0.27",
-    "pydantic>=2.11.9",
-    "typing-extensions>=4.15.0",
+    "pydantic==2.12.5",
+    "typing-extensions==4.15.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest-asyncio>=1.2.0",
-    "pytest-xdist>=3.8.0",
-    "pytest>=8.4.2",
-    "respx>=0.22.0",
-    "pyright>=1.1.405",
-    "ruff>=0.13.0",
-    "sh>=2.2.2",
-    "psutil>=7.0.0",
+    "pytest-asyncio==1.3.0",
+    "pytest-xdist==3.8.0",
+    "pytest==9.0.3",
+    "respx==0.23.1",
+    "pyright==1.1.408",
+    "ruff==0.15.9",
+    "sh==2.2.2",
+    "psutil==7.2.2",
 ]
+
+[tool.uv]
+# Refuse to resolve PyPI packages published less than 7 days ago.
+# Mirrors `.npmrc minimum-release-age` on the JS side and buys time for
+# malicious releases to be yanked before we pick them up (see the May 2026
+# Mini Shai-Hulud campaign for why). Relative durations land a rolling cutoff
+# — no need to bump a fixed date.
+exclude-newer = "7d"
 
 [tool.pyright]
 pythonVersion = "3.13"

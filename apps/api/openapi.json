@@ -63,28 +63,72 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable project identifier (CUID2)."
           },
           "organizationId": {
-            "type": "string"
+            "type": "string",
+            "description": "Organization that owns this project."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable name."
           },
           "slug": {
-            "type": "string"
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
+          },
+          "settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "keepMonitoring": {
+                "type": "boolean"
+              },
+              "alertNotifications": {
+                "type": "object",
+                "properties": {
+                  "issue.new": {
+                    "type": "boolean"
+                  },
+                  "issue.regressed": {
+                    "type": "boolean"
+                  },
+                  "issue.escalating": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+          },
+          "firstTraceAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands."
           },
           "deletedAt": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+          },
+          "lastEditedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent name/settings edit."
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata change."
           }
         },
         "required": [
@@ -92,7 +136,10 @@
           "organizationId",
           "name",
           "slug",
+          "settings",
+          "firstTraceAt",
           "deletedAt",
+          "lastEditedAt",
           "createdAt",
           "updatedAt"
         ]
@@ -114,25 +161,39 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Project name"
+            "description": "Human-readable name for the project. Must be unique within the organization."
           }
         },
         "required": [
           "name"
         ]
       },
-      "ProjectList": {
+      "PaginatedProjects": {
         "type": "object",
         "properties": {
-          "projects": {
+          "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Project"
-            }
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
           }
         },
         "required": [
-          "projects"
+          "items",
+          "nextCursor",
+          "hasMore"
         ]
       },
       "UpdateProjectBody": {
@@ -141,7 +202,30 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "New project name"
+            "description": "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable)."
+          },
+          "settings": {
+            "type": "object",
+            "properties": {
+              "keepMonitoring": {
+                "type": "boolean"
+              },
+              "alertNotifications": {
+                "type": "object",
+                "properties": {
+                  "issue.new": {
+                    "type": "boolean"
+                  },
+                  "issue.regressed": {
+                    "type": "boolean"
+                  },
+                  "issue.escalating": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI."
           }
         }
       },
@@ -1013,38 +1097,42 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable API-key identifier."
           },
           "organizationId": {
-            "type": "string"
+            "type": "string",
+            "description": "Organization that owns this API key."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable name."
           },
           "token": {
             "type": "string",
-            "description": "The API key token. Only included in the creation response — store it securely."
-          },
-          "tokenHash": {
-            "type": "string"
+            "description": "The full API key token. Returned by create / get / update — store it securely; treat it as a password."
           },
           "lastUsedAt": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
           },
           "deletedAt": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch)."
           }
         },
         "required": [
@@ -1052,7 +1140,6 @@
           "organizationId",
           "name",
           "token",
-          "tokenHash",
           "lastUsedAt",
           "deletedAt",
           "createdAt",
@@ -1065,7 +1152,7 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Human-readable name for the API key"
+            "description": "Human-readable name for the API key. Used to distinguish keys in the UI."
           }
         },
         "required": [
@@ -1090,41 +1177,364 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable API-key identifier."
           },
           "organizationId": {
-            "type": "string"
+            "type": "string",
+            "description": "Organization that owns this API key."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "token": {
+            "type": "string",
+            "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{id}` to retrieve the full token."
           },
           "lastUsedAt": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "ISO-8601 timestamp of the most recent successful authentication. `null` until first use."
           },
           "deletedAt": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "ISO-8601 timestamp at which the key was revoked. `null` while the key is active."
           },
           "createdAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last metadata update."
           }
         },
         "required": [
           "id",
           "organizationId",
           "name",
+          "token",
           "lastUsedAt",
           "deletedAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "UpdateApiKeyBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New human-readable name for the API key."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AccountResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AccountUser"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/AccountOrganization"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              null
+            ],
+            "description": "Caller's role in the organization. `null` for API-key callers (no real user behind the credential)."
+          }
+        },
+        "required": [
+          "user",
+          "organization",
+          "role"
+        ]
+      },
+      "AccountUser": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable user identifier across the API."
+          },
+          "email": {
+            "type": "string",
+            "description": "Verified email address of the authenticated user."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name, when set. `null` until the user completes onboarding."
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Profile image URL, when set."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "image"
+        ],
+        "description": "The user the request is acting on behalf of. `null` for API-key callers — API keys are org-scoped, not user-scoped."
+      },
+      "AccountOrganization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable organization identifier across the API."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable organization name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug. Regenerated when the organization is renamed — don't use it as a stable key."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "description": "Organization the request is scoped to."
+      },
+      "MemberList": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          }
+        },
+        "required": [
+          "members"
+        ]
+      },
+      "Member": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ActiveMember"
+          },
+          {
+            "$ref": "#/components/schemas/InvitedMember"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "status",
+          "mapping": {
+            "active": "#/components/schemas/ActiveMember",
+            "invited": "#/components/schemas/InvitedMember"
+          }
+        }
+      },
+      "ActiveMember": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active"
+            ],
+            "description": "Discriminator for confirmed members — the user has accepted their invitation and joined the org."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable membership identifier. Use this to address the row in update/remove endpoints."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization this membership belongs to."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Identifier of the user the membership represents."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ],
+            "description": "Member's role within the organization."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of the user. `null` if the user hasn't completed onboarding."
+          },
+          "email": {
+            "type": "string",
+            "description": "User's email address, verified at signup."
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "User's profile image URL, when set."
+          },
+          "joinedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the user joined the organization."
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "organizationId",
+          "userId",
+          "role",
+          "name",
+          "email",
+          "image",
+          "joinedAt"
+        ]
+      },
+      "InvitedMember": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "invited"
+            ],
+            "description": "Discriminator for pending invitations — the invitee hasn't accepted yet, so no user record exists."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable invitation identifier. Distinct from membership ids."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization the invitation grants access to."
+          },
+          "userId": {
+            "type": "null",
+            "description": "Always `null` — no user record exists until the invitation is accepted."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              null
+            ],
+            "description": "Role the invitee will get once they accept. `null` means the default (`member`)."
+          },
+          "name": {
+            "type": "null",
+            "description": "Always `null` — no user record exists yet."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address the invitation was sent to."
+          },
+          "image": {
+            "type": "null",
+            "description": "Always `null` — no user record exists yet."
+          },
+          "invitedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the invitation was created."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the invitation expires."
+          },
+          "inviterId": {
+            "type": "string",
+            "description": "User id of the member who issued the invitation."
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "organizationId",
+          "userId",
+          "role",
+          "name",
+          "email",
+          "image",
+          "invitedAt",
+          "expiresAt",
+          "inviterId"
+        ]
+      },
+      "InviteMemberBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address to invite. The invitee receives an accept link by email."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ],
+            "description": "Role to grant on acceptance. Defaults to `member` when omitted."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "UpdateMemberRoleBody": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "description": "New role. Owners cannot be changed via this endpoint — owner-transfer happens on the web."
+          }
+        },
+        "required": [
+          "role"
         ]
       }
     },
@@ -1176,17 +1586,19 @@
     },
     "/v1/projects": {
       "post": {
-        "operationId": "projects.create",
         "tags": [
           "Projects"
         ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "create",
         "summary": "Create project",
-        "description": "Creates a new project within the organization.",
+        "description": "Creates a new project within the organization. The name must be unique within the org.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "createProject",
         "requestBody": {
           "required": true,
           "content": {
@@ -1199,7 +1611,7 @@
         },
         "responses": {
           "201": {
-            "description": "Project created successfully",
+            "description": "Project created",
             "content": {
               "application/json": {
                 "schema": {
@@ -1241,73 +1653,36 @@
         }
       },
       "get": {
-        "operationId": "projects.list",
         "tags": [
           "Projects"
         ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "list",
         "summary": "List projects",
-        "description": "Returns all projects in the organization.",
+        "description": "Returns every project in the organization. The response uses the standard paginated shape; the project list currently fits in a single page (`nextCursor` is always `null`).",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "listProjects",
         "responses": {
           "200": {
             "description": "List of projects",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectList"
+                  "$ref": "#/components/schemas/PaginatedProjects"
                 }
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "400": {
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}": {
-      "get": {
-        "operationId": "projects.get",
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Get project",
-        "description": "Returns a single project by slug.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Project details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Project"
                 }
               }
             }
@@ -1323,7 +1698,78 @@
             }
           },
           "404": {
-            "description": "Project not found",
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get project",
+        "description": "Returns a single project by slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getProject",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1335,17 +1781,19 @@
         }
       },
       "patch": {
-        "operationId": "projects.update",
         "tags": [
           "Projects"
         ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "update",
         "summary": "Update project",
-        "description": "Updates a project's name and/or description.",
+        "description": "Updates a project's name and/or settings. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "updateProject",
         "parameters": [
           {
             "schema": {
@@ -1412,17 +1860,19 @@
         }
       },
       "delete": {
-        "operationId": "projects.delete",
         "tags": [
           "Projects"
         ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "delete",
         "summary": "Delete project",
-        "description": "Soft-deletes a project by slug.",
+        "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "deleteProject",
         "parameters": [
           {
             "schema": {
@@ -1437,7 +1887,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Project deleted successfully"
+            "description": "Project deleted"
           },
           "401": {
             "description": "Unauthorized",
@@ -1727,6 +2177,154 @@
       }
     },
     "/v1/api-keys/{id}": {
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "x-fern-sdk-group-name": "apiKeys",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get API key",
+        "description": "Returns a single API key including the full unmasked `token`. Useful for retrieving a stored token by id without rotating it.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getApiKey",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "API Keys"
+        ],
+        "x-fern-sdk-group-name": "apiKeys",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update API key",
+        "description": "Renames an API key. The token itself is immutable — use create + revoke if you need a new value.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateApiKey",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApiKeyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "API key updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "API Keys"
@@ -1756,6 +2354,393 @@
         "responses": {
           "204": {
             "description": "API key revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/account": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "x-fern-sdk-group-name": "account",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get account",
+        "description": "Returns the caller's account snapshot: the organization the request is scoped to, plus the user record and their role when the request was made by a real user (OAuth). API-key callers receive `user: null` and `role: null` because API keys aren't tied to a specific user.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getAccount",
+        "responses": {
+          "200": {
+            "description": "Account snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/members": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "x-fern-sdk-group-name": "members",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List members",
+        "description": "Returns every active member of the caller's organization with their role and user details.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMembers",
+        "responses": {
+          "200": {
+            "description": "List of members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "x-fern-sdk-group-name": "members",
+        "x-fern-sdk-method-name": "invite",
+        "summary": "Invite a member",
+        "description": "Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "inviteMember",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMemberBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitedMember"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/members/{id}": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "x-fern-sdk-group-name": "members",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get member",
+        "description": "Returns a single member of the caller's organization, including their role and user details.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getMember",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveMember"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Members"
+        ],
+        "x-fern-sdk-group-name": "members",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update a member",
+        "description": "Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateMember",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberRoleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Member with the updated role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveMember"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Members"
+        ],
+        "x-fern-sdk-group-name": "members",
+        "x-fern-sdk-method-name": "remove",
+        "summary": "Remove a member",
+        "description": "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "removeMember",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Resource ID"
+            },
+            "required": true,
+            "description": "Resource ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Member removed"
           },
           "401": {
             "description": "Unauthorized",

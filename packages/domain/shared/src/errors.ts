@@ -138,6 +138,15 @@ export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   }
 }
 
+export class ForbiddenError extends Data.TaggedError("ForbiddenError")<{
+  readonly message: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return this.message
+  }
+}
+
 export class RateLimitError extends Data.TaggedError("RateLimitError")<{
   readonly message: string
   readonly retryAfterSeconds: number

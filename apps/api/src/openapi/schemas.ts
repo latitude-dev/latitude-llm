@@ -59,11 +59,11 @@ export const TracesRefSchema = z
 // so the path schemas carry only resource identifiers — not the organization.
 
 export const IdParamsSchema = z.object({
-  id: z.string().openapi({ description: "Resource ID" }),
+  id: z.string().describe("Resource ID"),
 })
 
 export const ProjectParamsSchema = z.object({
-  projectSlug: z.string().openapi({ description: "Project slug (human-readable identifier)" }),
+  projectSlug: z.string().describe("Project slug (human-readable identifier)"),
 })
 
 /** Security scheme applied to protected endpoints. */

@@ -1,3 +1,4 @@
+import type { FilterSet } from "@domain/shared"
 import {
   Button,
   CloseTrigger,
@@ -12,7 +13,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { BellPlusIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
+import { BellPlusIcon, FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -26,6 +27,7 @@ import {
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
+import { EvaluationFilterModal } from "./evaluation-filter-modal.tsx"
 import { formatPercent, getAlignmentVariant } from "./issue-formatters.ts"
 
 const POLL_INTERVAL_MS = 5000
@@ -99,6 +101,21 @@ function AlignmentTooltipContent({
 }
 
 function SamplingModal({
+  evaluation,
+  projectId,
+  issueId,
+  onClose,
+}: {
+  readonly evaluation: EvaluationSummaryRecord | null
+  readonly projectId: string
+  readonly issueId: string
+  readonly onClose: () => void
+}) {
+  if (evaluation === null) return null
+  return <SamplingModalForm evaluation={evaluation} projectId={projectId} issueId={issueId} onClose={onClose} />
+}
+
+function SamplingModalForm({
   evaluation,
   projectId,
   issueId,
@@ -183,6 +200,14 @@ function SamplingModal({
   )
 }
 
+function countFilterConditions(filter: FilterSet): number {
+  let total = 0
+  for (const conditions of Object.values(filter)) {
+    if (conditions.length > 0) total += 1
+  }
+  return total
+}
+
 const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => {
   if (state.kind === "generating") {
     return { kind: "initial" }
@@ -215,8 +240,9 @@ export function IssueDrawerEvaluations({
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
-  const [statsEvaluationId, setStatsEvaluationId] = useState<string | null>(null)
-  const [samplingEvaluationId, setSamplingEvaluationId] = useState<string | null>(null)
+  const [statsEvaluation, setStatsEvaluation] = useState<EvaluationSummaryRecord | null>(null)
+  const [samplingEvaluation, setSamplingEvaluation] = useState<EvaluationSummaryRecord | null>(null)
+  const [filterEvaluation, setFilterEvaluation] = useState<EvaluationSummaryRecord | null>(null)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -414,21 +440,22 @@ export function IssueDrawerEvaluations({
             monitorButton
           )}
         </div>
-        <Modal.Root open={monitorModalOpen} onOpenChange={setMonitorModalOpen}>
-          <Modal.Content dismissible>
-            <Modal.Header
-              title="Monitor issue"
-              description="We will use the latest traces and related human annotations to generate an evaluation aligned to monitor this issue. This may take some time"
-            />
-            <Modal.Footer>
+        <Modal
+          open={monitorModalOpen}
+          onOpenChange={setMonitorModalOpen}
+          dismissible
+          title="Monitor issue"
+          description="We will use the latest traces and related human annotations to generate an evaluation aligned to monitor this issue. This may take some time"
+          footer={
+            <>
               <CloseTrigger />
               <Button onClick={() => void handleGenerate()} disabled={isActionPending} isLoading={isStartingGenerate}>
                 <Icon icon={BellPlusIcon} size="sm" />
                 {isStartingGenerate ? "Generating" : "Monitor"}
               </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Root>
+            </>
+          }
+        />
       </>
     )
   }
@@ -454,7 +481,7 @@ export function IssueDrawerEvaluations({
                 >
                   <AlignmentTooltipContent
                     evaluation={primaryEvaluation}
-                    onOpenStats={() => setStatsEvaluationId(primaryEvaluation.id)}
+                    onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
                   />
                 </Tooltip>
               }
@@ -467,7 +494,7 @@ export function IssueDrawerEvaluations({
                   trigger={
                     <button
                       type="button"
-                      onClick={() => setSamplingEvaluationId(primaryEvaluation.id)}
+                      onClick={() => setSamplingEvaluation(primaryEvaluation)}
                       disabled={isActionPending}
                       className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -483,16 +510,55 @@ export function IssueDrawerEvaluations({
                 </Tooltip>
               }
             />
+            <SummaryField
+              label="Scope"
+              value={(() => {
+                const conditionCount = countFilterConditions(primaryEvaluation.trigger.filter)
+                const summary =
+                  conditionCount === 0 ? "All traces" : `${conditionCount} filter${conditionCount === 1 ? "" : "s"}`
+                return (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <button
+                        type="button"
+                        onClick={() => setFilterEvaluation(primaryEvaluation)}
+                        disabled={isActionPending}
+                        className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
+                        <Text.H5 color="foreground">{summary}</Text.H5>
+                        <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                      </button>
+                    }
+                  >
+                    <Text.H6 color="foregroundMuted">
+                      {conditionCount === 0
+                        ? "Click to limit which traces this evaluation runs on."
+                        : "Click to change which traces this evaluation runs on."}
+                    </Text.H6>
+                  </Tooltip>
+                )
+              })()}
+            />
             <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
-              <Button
-                variant="ghost"
-                className="text-foreground group-hover:text-secondary-foreground/80"
-                onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
-                disabled={isActionPending}
+              <Tooltip
+                asChild
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-foreground group-hover:text-secondary-foreground/80"
+                    onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
+                    disabled={isActionPending}
+                    aria-label="Unmonitor"
+                  >
+                    <Icon icon={XIcon} size="sm" />
+                  </Button>
+                }
               >
-                <Icon icon={XIcon} size="sm" />
-                Unmonitor
-              </Button>
+                <Text.H6 color="foregroundMuted">Unmonitor</Text.H6>
+              </Tooltip>
               <Button
                 variant="outline"
                 onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
@@ -513,16 +579,14 @@ export function IssueDrawerEvaluations({
         ) : null}
       </div>
 
-      <Modal.Root
+      <Modal
         open={realignEvaluationId !== null}
         onOpenChange={(open) => (!open ? setRealignEvaluationId(null) : undefined)}
-      >
-        <Modal.Content dismissible>
-          <Modal.Header
-            title="Realign evaluation"
-            description="We realign evaluations to the latest traces periodically to ensure they are up to date. You can realign this evaluation on demand. This may take some time"
-          />
-          <Modal.Footer>
+        dismissible
+        title="Realign evaluation"
+        description="We realign evaluations to the latest traces periodically to ensure they are up to date. You can realign this evaluation on demand. This may take some time"
+        footer={
+          <>
             <CloseTrigger />
             <Button
               onClick={() => (realignEvaluationId ? void handleRealign(realignEvaluationId) : undefined)}
@@ -532,52 +596,42 @@ export function IssueDrawerEvaluations({
               <Icon icon={RotateCwIcon} size="sm" />
               {isStartingRealign ? "Realigning" : "Realign"}
             </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
+          </>
+        }
+      />
 
-      <Modal.Root
+      <Modal
         open={deleteEvaluationId !== null}
         onOpenChange={(open) => (!open ? setDeleteEvaluationId(null) : undefined)}
-      >
-        <Modal.Content dismissible>
-          <Modal.Header
-            title="Unmonitor issue"
-            description="Are you sure you want to remove the evaluation monitoring this issue? You can generate a new evaluation at any time"
-          />
-          <Modal.Footer>
+        dismissible
+        title="Unmonitor issue"
+        description="Are you sure you want to remove the evaluation monitoring this issue? You can generate a new evaluation at any time"
+        footer={
+          <>
             <CloseTrigger />
             <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
               <Icon icon={XIcon} size="sm" />
               Unmonitor
             </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
-
-      <AlignmentStatsModal
-        evaluation={
-          statsEvaluationId === null
-            ? null
-            : (visibleEvaluations.find((evaluation) => evaluation.id === statsEvaluationId) ?? null)
+          </>
         }
-        onClose={() => setStatsEvaluationId(null)}
       />
 
-      {samplingEvaluationId !== null
-        ? (() => {
-            const target = visibleEvaluations.find((evaluation) => evaluation.id === samplingEvaluationId)
-            if (!target) return null
-            return (
-              <SamplingModal
-                evaluation={target}
-                projectId={projectId}
-                issueId={issueId}
-                onClose={() => setSamplingEvaluationId(null)}
-              />
-            )
-          })()
-        : null}
+      <AlignmentStatsModal evaluation={statsEvaluation} onClose={() => setStatsEvaluation(null)} />
+
+      <SamplingModal
+        evaluation={samplingEvaluation}
+        projectId={projectId}
+        issueId={issueId}
+        onClose={() => setSamplingEvaluation(null)}
+      />
+
+      <EvaluationFilterModal
+        evaluation={filterEvaluation}
+        projectId={projectId}
+        issueId={issueId}
+        onClose={() => setFilterEvaluation(null)}
+      />
     </>
   )
 }

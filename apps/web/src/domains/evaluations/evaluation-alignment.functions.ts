@@ -6,10 +6,19 @@ import {
   isActiveEvaluation,
   softDeleteEvaluation,
   updateEvaluationSampling,
+  updateEvaluationTriggerFilter,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import type { WorkflowAlreadyStartedError } from "@domain/queue"
-import { BadRequestError, EvaluationId, generateId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import {
+  BadRequestError,
+  EvaluationId,
+  filterSetSchema,
+  generateId,
+  IssueId,
+  OrganizationId,
+  ProjectId,
+} from "@domain/shared"
 import { EvaluationRepositoryLive, IssueRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -40,6 +49,13 @@ const updateEvaluationSamplingInputSchema = z.object({
   issueId: z.string(),
   evaluationId: z.string(),
   sampling: z.number().int().min(0).max(100),
+})
+
+const updateEvaluationTriggerFilterInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  evaluationId: z.string(),
+  filter: filterSetSchema,
 })
 
 const issueAlignmentStateInputSchema = z.object({
@@ -340,6 +356,33 @@ export const updateIssueEvaluationSampling = createServerFn({ method: "POST" })
         }
 
         const updatedEvaluation = updateEvaluationSampling({ evaluation, sampling: data.sampling })
+        yield* repository.save(updatedEvaluation)
+
+        return toEvaluationSummaryRecord(updatedEvaluation)
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
+    )
+  })
+
+export const updateIssueEvaluationTriggerFilter = createServerFn({ method: "POST" })
+  .inputValidator(updateEvaluationTriggerFilterInputSchema)
+  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationRepository
+        const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
+
+        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+          return yield* new BadRequestError({
+            message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
+          })
+        }
+
+        const updatedEvaluation = updateEvaluationTriggerFilter({ evaluation, filter: data.filter })
         yield* repository.save(updatedEvaluation)
 
         return toEvaluationSummaryRecord(updatedEvaluation)

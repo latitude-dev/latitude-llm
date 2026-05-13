@@ -131,12 +131,35 @@ export interface PublishOptions {
   }
 }
 
+/**
+ * Options for `scheduleRepeatable`. `key` is the scheduler id — calling
+ * `scheduleRepeatable` again with the same key replaces the existing
+ * schedule, which makes it safe to register on every worker boot.
+ * `pattern` is a cron expression; `tz` defaults to `"UTC"`.
+ */
+export interface ScheduleRepeatableOptions {
+  readonly key: string
+  readonly pattern: string
+  readonly tz?: string
+}
+
 export interface QueuePublisherShape {
   readonly publish: <T extends QueueName, K extends TaskName<T>>(
     queue: T,
     task: K,
     payload: TaskPayload<T, K>,
     options?: PublishOptions,
+  ) => Effect.Effect<void, QueuePublishError>
+  /**
+   * Register (or replace) a recurring schedule that publishes `task` on
+   * `queue` at every cron tick. Idempotent by `options.key` — re-running
+   * with the same key updates the schedule in place.
+   */
+  readonly scheduleRepeatable: <T extends QueueName, K extends TaskName<T>>(
+    queue: T,
+    task: K,
+    payload: TaskPayload<T, K>,
+    options: ScheduleRepeatableOptions,
   ) => Effect.Effect<void, QueuePublishError>
   readonly close: () => Effect.Effect<void>
 }

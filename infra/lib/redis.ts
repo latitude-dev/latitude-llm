@@ -15,6 +15,7 @@ export interface RedisOutput {
   cache: {
     subnetGroup: ElasticacheSubnetGroup | MemorydbSubnetGroup
     cluster: ElasticacheCluster | MemorydbCluster
+    parameterGroup?: RedisParameterGroup
     connectionInfo: pulumi.Output<{ host: string; port: number }>
   }
   bullmq: {
@@ -47,7 +48,7 @@ export function createRedis(
 function createElastiCache(
   name: string,
   purpose: string,
-  config: { nodeType: string; numNodes: number; multiAz: boolean },
+  config: { nodeType: string; numNodes: number; multiAz: boolean; evictionPolicy: string },
   privateSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
 ): RedisOutput["cache"] {
@@ -59,6 +60,21 @@ function createElastiCache(
     },
   })
 
+  const parameterGroup = new aws.elasticache.ParameterGroup(`${name}-${purpose}-params`, {
+    family: "redis7",
+    description: "Custom parameter group for cache Redis with LRU eviction policy",
+    parameters: [
+      {
+        name: "maxmemory-policy",
+        value: config.evictionPolicy,
+      },
+    ],
+    tags: {
+      Name: `${name}-${purpose}-params`,
+      Environment: name.includes("staging") ? "staging" : "production",
+    },
+  })
+
   const cluster = new aws.elasticache.Cluster(`${name}-${purpose}`, {
     engine: "redis",
     engineVersion: "7.0",
@@ -66,6 +82,7 @@ function createElastiCache(
     numCacheNodes: config.numNodes,
     subnetGroupName: subnetGroup.name,
     securityGroupIds: [securityGroup.id],
+    parameterGroupName: parameterGroup.name,
     tags: {
       Name: `${name}-${purpose}`,
       Environment: name.includes("staging") ? "staging" : "production",
@@ -77,7 +94,7 @@ function createElastiCache(
     port: 6379,
   })
 
-  return { subnetGroup, cluster, connectionInfo }
+  return { subnetGroup, cluster, parameterGroup, connectionInfo }
 }
 
 function createElastiCacheBullMQ(
@@ -134,7 +151,7 @@ function createElastiCacheBullMQ(
 function createMemoryDB(
   name: string,
   purpose: string,
-  config: { nodeType: string; numNodes: number; multiAz: boolean },
+  config: { nodeType: string; numNodes: number; multiAz: boolean; evictionPolicy: string },
   privateSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
 ): RedisOutput["cache"] {
@@ -146,6 +163,21 @@ function createMemoryDB(
     },
   })
 
+  const parameterGroup = new aws.memorydb.ParameterGroup(`${name}-${purpose}-params`, {
+    family: "memorydb_redis7",
+    description: "Custom parameter group for cache Redis with LRU eviction policy",
+    parameters: [
+      {
+        name: "maxmemory-policy",
+        value: config.evictionPolicy,
+      },
+    ],
+    tags: {
+      Name: `${name}-${purpose}-params`,
+      Environment: name.includes("staging") ? "staging" : "production",
+    },
+  })
+
   const cluster = new aws.memorydb.Cluster(`${name}-${purpose}`, {
     aclName: "open-access",
     nodeType: config.nodeType,
@@ -153,6 +185,7 @@ function createMemoryDB(
     numReplicasPerShard: config.numNodes - 1,
     subnetGroupName: subnetGroup.name,
     securityGroupIds: [securityGroup.id],
+    parameterGroupName: parameterGroup.name,
     tags: {
       Name: `${name}-${purpose}`,
       Environment: name.includes("staging") ? "staging" : "production",
@@ -164,7 +197,7 @@ function createMemoryDB(
     port: 6379,
   })
 
-  return { subnetGroup, cluster, connectionInfo }
+  return { subnetGroup, cluster, parameterGroup, connectionInfo }
 }
 
 function createMemoryDBBullMQ(

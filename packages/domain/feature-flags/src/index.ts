@@ -1,4 +1,8 @@
-export { FEATURE_FLAG_IDENTIFIER_MAX_LENGTH, FEATURE_FLAG_NAME_MAX_LENGTH } from "./constants.ts"
+export {
+  CLAUDE_CODE_WRAPPED_FLAG,
+  FEATURE_FLAG_IDENTIFIER_MAX_LENGTH,
+  FEATURE_FLAG_NAME_MAX_LENGTH,
+} from "./constants.ts"
 export {
   createFeatureFlag,
   createOrganizationFeatureFlag,

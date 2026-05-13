@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { cn } from "../../utils/cn.ts"
+import { LatitudeLogo } from "../brand-icons/index.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { Avatar, type AvatarSize } from "./avatar.tsx"
 
@@ -11,10 +12,42 @@ const overflowChipClass: Record<AvatarSize, string> = {
   xl: "h-14 min-w-14 text-xl",
 }
 
+const agentAvatarSizeClass: Record<AvatarSize, string> = {
+  xs: "h-5 w-5",
+  sm: "h-6 w-6",
+  md: "h-7 w-7",
+  lg: "h-8 w-8",
+  xl: "h-14 w-14",
+}
+
+const agentLogoSizeClass: Record<AvatarSize, string> = {
+  xs: "h-3.5 w-3.5",
+  sm: "h-4 w-4",
+  md: "h-5 w-5",
+  lg: "h-6 w-6",
+  xl: "h-10 w-10",
+}
+
 export interface AvatarGroupItem {
   readonly id?: string
   readonly name: string
   readonly imageSrc?: string | null
+  /** Render as a non-human entity (e.g. the Latitude agent) instead of a personal avatar. */
+  readonly kind?: "agent"
+}
+
+function AgentAvatar({ size, stacked }: { readonly size: AvatarSize; readonly stacked: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-background",
+        stacked && "border-2 border-background",
+        agentAvatarSizeClass[size],
+      )}
+    >
+      <LatitudeLogo className={agentLogoSizeClass[size]} />
+    </span>
+  )
 }
 
 export interface AvatarGroupProps {
@@ -51,7 +84,11 @@ export function AvatarGroup({
       {visible.map((item, i) => {
         const avatar = (
           <span className={cn("relative inline-flex", i > 0 && "-ml-2")} style={{ zIndex: visible.length - i }}>
-            <Avatar name={item.name} imageSrc={item.imageSrc ?? null} size={size} stacked />
+            {item.kind === "agent" ? (
+              <AgentAvatar size={size} stacked />
+            ) : (
+              <Avatar name={item.name} imageSrc={item.imageSrc ?? null} size={size} stacked />
+            )}
           </span>
         )
         if (disableTooltips) {

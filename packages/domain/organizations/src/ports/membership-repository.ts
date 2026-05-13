@@ -10,6 +10,7 @@ export interface MemberWithUser {
   createdAt: Date
   name: string | null
   email: string
+  emailVerified: boolean
   image: string | null
 }
 
@@ -25,6 +26,13 @@ export class MembershipRepository extends Context.Service<
       userId: string,
     ) => Effect.Effect<Membership, NotFoundError | RepositoryError, SqlClient>
     listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError, SqlClient>
+    findByIdWithUser: (id: MembershipId) => Effect.Effect<MemberWithUser, NotFoundError | RepositoryError, SqlClient>
+    /**
+     * Returns true if the email belongs to a confirmed member of the caller's organization (resolved
+     * from the RLS context). Case-insensitive comparison; returns false (not a `NotFoundError`) when
+     * no match — callers don't usually need to distinguish "no row" from a failure here.
+     */
+    findMemberByEmail: (email: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     save: (membership: Membership) => Effect.Effect<void, RepositoryError, SqlClient>

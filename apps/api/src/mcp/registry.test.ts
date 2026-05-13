@@ -1,14 +1,16 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { beforeEach, describe, expect, it } from "vitest"
 import { defineApiEndpoint } from "./define-endpoint.ts"
-import { collectToolDescriptors, mountWithMcp, resetEndpointRegistry } from "./registry.ts"
+import { collectToolDescriptors, resetEndpointRegistry } from "./registry.ts"
 
 type TestEnv = { Variables: Record<string, never> }
-const endpoint = defineApiEndpoint<TestEnv>()
+
+const itemEndpoint = defineApiEndpoint<TestEnv>("/items")
+const widgetEndpoint = defineApiEndpoint<TestEnv>("/widgets")
 
 const ItemSchema = z.object({ id: z.string() })
 
-const listEp = endpoint({
+const listItems = itemEndpoint({
   route: createRoute({
     method: "get",
     path: "/",
@@ -24,7 +26,7 @@ const listEp = endpoint({
   handler: async (c) => c.json({ items: [] }, 200),
 })
 
-const getEp = endpoint({
+const getItem = itemEndpoint({
   route: createRoute({
     method: "get",
     path: "/{id}",
@@ -38,7 +40,7 @@ const getEp = endpoint({
   handler: async (c) => c.json({ id: c.req.valid("param").id }, 200),
 })
 
-const deleteEp = endpoint({
+const deleteItem = itemEndpoint({
   route: createRoute({
     method: "delete",
     path: "/{id}",
@@ -50,7 +52,7 @@ const deleteEp = endpoint({
   handler: async (c) => c.body(null, 204),
 })
 
-const hiddenEp = endpoint({
+const hiddenItem = itemEndpoint({
   route: createRoute({
     method: "get",
     path: "/internal",
@@ -62,59 +64,68 @@ const hiddenEp = endpoint({
   tool: false,
 })
 
+const getWidget = widgetEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{id}",
+    name: "getWidget",
+    description: "Get a widget",
+    request: { params: z.object({ id: z.string() }) },
+    responses: {
+      200: { content: { "application/json": { schema: ItemSchema } }, description: "OK" },
+    },
+  }),
+  handler: async (c) => c.json({ id: c.req.valid("param").id }, 200),
+})
+
 describe("registry", () => {
   beforeEach(() => {
     resetEndpointRegistry()
   })
 
-  describe("mountWithMcp", () => {
-    it("mounts each endpoint's HTTP handler under the given prefix", async () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp, getEp])
-
-      const listRes = await parent.fetch(new Request("http://localhost/items"))
-      expect(listRes.status).toBe(200)
-
-      const getRes = await parent.fetch(new Request("http://localhost/items/abc"))
-      expect(getRes.status).toBe(200)
-      expect(await getRes.json()).toEqual({ id: "abc" })
-    })
-
-    it("registers tool-eligible endpoints with the MCP registry", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp, getEp])
+  describe("mountHttp registration", () => {
+    it("registers tool-eligible endpoints with the MCP registry as they're mounted", () => {
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      getItem.mountHttp(sub)
 
       const tools = collectToolDescriptors()
       expect(tools.map((t) => t.name)).toEqual(["listItems", "getItem"])
     })
 
     it("skips endpoints with `tool: false` from the MCP registry but still mounts their HTTP route", async () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp, hiddenEp])
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      hiddenItem.mountHttp(sub)
 
       const tools = collectToolDescriptors()
       expect(tools.map((t) => t.name)).toEqual(["listItems"])
 
-      // The HTTP route still works.
+      // The HTTP route still works — wire the sub-app on a parent so we hit
+      // the real path the inner endpoint declared (`/internal` on the
+      // `/items` sub-app becomes `/items/internal`).
+      const parent = new OpenAPIHono<TestEnv>()
+      parent.route("/items", sub)
       const res = await parent.fetch(new Request("http://localhost/items/internal"))
       expect(res.status).toBe(200)
     })
 
-    it("records the prefix on each registered descriptor", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp])
-      mountWithMcp(parent, "/widgets", [getEp])
+    it("records the prefix from `defineApiEndpoint` on each registered descriptor", () => {
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      getWidget.mountHttp(sub)
 
       const tools = collectToolDescriptors()
       expect(tools.find((t) => t.name === "listItems")?.routerPrefix).toBe("/items")
-      expect(tools.find((t) => t.name === "getItem")?.routerPrefix).toBe("/widgets")
+      expect(tools.find((t) => t.name === "getWidget")?.routerPrefix).toBe("/widgets")
     })
   })
 
   describe("resetEndpointRegistry", () => {
     it("clears all registered descriptors", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp, getEp])
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      getItem.mountHttp(sub)
       expect(collectToolDescriptors()).toHaveLength(2)
 
       resetEndpointRegistry()
@@ -124,8 +135,8 @@ describe("registry", () => {
 
   describe("collectToolDescriptors", () => {
     it("includes flattened input schema, output schema, and routing metadata", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [getEp])
+      const sub = new OpenAPIHono<TestEnv>()
+      getItem.mountHttp(sub)
 
       const [tool] = collectToolDescriptors()
       expect(tool).toBeDefined()
@@ -139,19 +150,19 @@ describe("registry", () => {
     })
 
     it("returns undefined `output` for routes whose success response has no body (204)", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [deleteEp])
+      const sub = new OpenAPIHono<TestEnv>()
+      deleteItem.mountHttp(sub)
 
       const [tool] = collectToolDescriptors()
       expect(tool?.output).toBeUndefined()
     })
 
     it("falls back to `name` when `summary` is absent", () => {
-      const parent = new OpenAPIHono<TestEnv>()
-      mountWithMcp(parent, "/items", [listEp])
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
 
       const [tool] = collectToolDescriptors()
-      // listEp has no `summary` set, so title falls back to `name`.
+      // listItems has no `summary` set, so title falls back to `name`.
       expect(tool?.title).toBe("listItems")
     })
   })

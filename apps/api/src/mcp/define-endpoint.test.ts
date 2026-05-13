@@ -1,10 +1,18 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import { defineApiEndpoint } from "./define-endpoint.ts"
+import { resetEndpointRegistry } from "./registry.ts"
 
 type TestEnv = { Variables: Record<string, never> }
 
-const endpoint = defineApiEndpoint<TestEnv>()
+// `mountHttp` pushes tool-eligible endpoints into the module-global MCP
+// registry as a side effect. Reset between tests so nothing accumulates from
+// previous cases or sibling test files.
+beforeEach(() => {
+  resetEndpointRegistry()
+})
+
+const endpoint = defineApiEndpoint<TestEnv>("/test")
 
 describe("defineApiEndpoint", () => {
   it("returns the original route untouched (preserves `name`)", () => {
