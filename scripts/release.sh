@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+# Prevent gh and git from invoking a pager (less) on long output — otherwise
+# `gh pr list` or `gh pr create` can drop the terminal into a `less` screen
+# that traps keys other than `q`, making it confusing to dismiss.
+export GH_PAGER=cat
+export GIT_PAGER=cat
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "GitHub CLI (gh) is required. Install: https://cli.github.com"
   exit 1
@@ -29,17 +35,37 @@ echo "Development differs from main:"
 git diff --shortstat origin/main..origin/development
 echo ""
 
-main_only_commits=$(git log \
-  --format='%h %s' \
+# Candidate main-only commits by SHA reachability. We verify each below by
+# checking whether the files it touched still differ between main and
+# development — this catches cherry-picks that were squash-merged, which
+# `git log --cherry-pick` (patch-id based) cannot detect.
+candidate_shas=$(git log \
+  --format='%H' \
   --right-only \
   --invert-grep \
   --grep='^Deploy production' \
   --grep='^Release -' \
   origin/development...origin/main)
 
+main_only_commits=""
+while IFS= read -r sha; do
+  [ -z "$sha" ] && continue
+  reflected=true
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    if ! git diff --quiet origin/development origin/main -- "$file" 2>/dev/null; then
+      reflected=false
+      break
+    fi
+  done < <(git show --name-only --format='' "$sha")
+  if [ "$reflected" = false ]; then
+    main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
+  fi
+done <<<"$candidate_shas"
+
 if [ -n "$main_only_commits" ]; then
   echo "main has non-release commits that development does not contain:"
-  printf '%s\n' "$main_only_commits"
+  printf '%s' "$main_only_commits"
   echo ""
   echo "Promoting development would remove these changes from production."
   echo "Cherry-pick or merge them into development first, then run this script again."
@@ -51,7 +77,8 @@ existing_pr=$(gh pr list \
   --state open \
   --limit 100 \
   --json number,headRefName,url \
-  --jq '[.[] | select(.headRefName | startswith("release/"))]')
+  --jq '[.[] | select(.headRefName | startswith("release/"))]' \
+  </dev/null)
 
 if [ "$(echo "$existing_pr" | jq 'length')" -gt 0 ]; then
   url=$(echo "$existing_pr" | jq -r '.[0].url')
@@ -94,4 +121,5 @@ gh pr create \
   --base main \
   --head "$branch" \
   --title "Release ${timestamp}" \
-  --body "$body"
+  --body "$body" \
+  </dev/null
