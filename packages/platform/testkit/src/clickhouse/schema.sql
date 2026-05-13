@@ -380,3 +380,28 @@ ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
 PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
 ORDER BY (organization_id, project_id, trace_id, chunk_index);
+
+CREATE TABLE scores_hourly_buckets
+(
+    organization_id LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    project_id LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    issue_id FixedString(24) CODEC(ZSTD(1)),
+    ts_hour DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
+    count SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1))
+)
+ENGINE = AggregatingMergeTree
+PARTITION BY toYYYYMM(ts_hour)
+PRIMARY KEY (organization_id, project_id, issue_id)
+ORDER BY (organization_id, project_id, issue_id, ts_hour);
+
+CREATE MATERIALIZED VIEW scores_hourly_buckets_mv TO scores_hourly_buckets
+AS
+SELECT
+    organization_id,
+    project_id,
+    issue_id,
+    toStartOfHour(created_at) AS ts_hour,
+    count() AS count
+FROM scores
+WHERE issue_id != ''
+GROUP BY organization_id, project_id, issue_id, ts_hour;
