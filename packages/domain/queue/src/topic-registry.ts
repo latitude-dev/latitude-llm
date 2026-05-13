@@ -93,6 +93,12 @@ const _registry = {
       readonly organizationId: string
       readonly alertIncidentId: string
     }
+    "create-from-wrapped-report": {
+      readonly organizationId: string
+      readonly wrappedReportId: string
+      readonly projectName: string
+      readonly link: string
+    }
   }>(),
 
   "alert-incidents": payloads<{

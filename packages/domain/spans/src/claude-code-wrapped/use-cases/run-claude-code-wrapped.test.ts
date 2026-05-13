@@ -329,6 +329,7 @@ describe("runClaudeCodeWrappedUseCase", () => {
     expect(result.status).toBe("sent")
     if (result.status !== "sent") throw new Error("unreachable")
     expect(result.recipientCount).toBe(2)
+    expect(result.projectName).toBe("Test project")
     expect(typeof result.reportId).toBe("string")
     expect(result.reportId.length).toBeGreaterThan(0)
     expect(sent.map((e) => e.to).sort()).toEqual(["alice@test.com", "bob@test.com"])

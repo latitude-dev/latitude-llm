@@ -59,7 +59,12 @@ export interface RunClaudeCodeWrappedDeps {
 export type RunClaudeCodeWrappedSkippedReason = "flag-off" | "no-activity" | "no-recipients"
 
 export type RunClaudeCodeWrappedResult =
-  | { readonly status: "sent"; readonly recipientCount: number; readonly reportId: WrappedReportId }
+  | {
+      readonly status: "sent"
+      readonly recipientCount: number
+      readonly reportId: WrappedReportId
+      readonly projectName: string
+    }
   | { readonly status: "skipped"; readonly reason: RunClaudeCodeWrappedSkippedReason }
 
 /**
@@ -173,5 +178,10 @@ export const runClaudeCodeWrappedUseCase = (deps: RunClaudeCodeWrappedDeps) =>
       discard: true,
     })
 
-    return { status: "sent", recipientCount: recipients.length, reportId } satisfies RunClaudeCodeWrappedResult
+    return {
+      status: "sent",
+      recipientCount: recipients.length,
+      reportId,
+      projectName: project.name,
+    } satisfies RunClaudeCodeWrappedResult
   })

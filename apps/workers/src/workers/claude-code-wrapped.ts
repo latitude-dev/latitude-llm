@@ -120,14 +120,33 @@ export const createClaudeCodeWrappedWorker = ({
         windowEnd,
       }).pipe(
         Effect.tap((result) =>
-          Effect.sync(() => {
-            if (result.status === "sent") {
-              logger.info(
-                `claude-code-wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId} (report ${result.reportId})`,
-              )
-            } else {
+          Effect.gen(function* () {
+            if (result.status !== "sent") {
               logger.info(`claude-code-wrapped: skipped ${projectId} (${result.reason})`)
+              return
             }
+            logger.info(
+              `claude-code-wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId} (report ${result.reportId})`,
+            )
+            // Fan out an in-app notification per org member, linking to the
+            // public report URL. `sourceId = wrappedReportId` gives natural
+            // idempotency at the DB level — re-deliveries of the BullMQ job
+            // won't duplicate notifications.
+            yield* publisher
+              .publish("notifications", "create-from-wrapped-report", {
+                organizationId: payload.organizationId,
+                wrappedReportId: result.reportId,
+                projectName: result.projectName,
+                link: `${webAppUrl}/cc-wrapped/${result.reportId}`,
+              })
+              .pipe(
+                Effect.tapError((cause) =>
+                  Effect.sync(() =>
+                    logger.error(`claude-code-wrapped notification publish failed for ${projectId}`, cause),
+                  ),
+                ),
+                Effect.ignore,
+              )
           }),
         ),
         Effect.tapError((error) =>

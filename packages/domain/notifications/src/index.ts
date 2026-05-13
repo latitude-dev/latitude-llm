@@ -26,6 +26,11 @@ export type {
 } from "./ports/notification-repository.ts"
 export { NotificationRepository } from "./ports/notification-repository.ts"
 export type {
+  CreateCustomMessageNotificationsError,
+  CreateCustomMessageNotificationsInput,
+} from "./use-cases/create-custom-message-notifications.ts"
+export { createCustomMessageNotificationsUseCase } from "./use-cases/create-custom-message-notifications.ts"
+export type {
   CreateIncidentNotificationsError,
   CreateIncidentNotificationsInput,
 } from "./use-cases/create-incident-notifications.ts"
