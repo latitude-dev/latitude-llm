@@ -114,6 +114,7 @@ export type {
 export { selectTraceEndItemsUseCase } from "./use-cases/select-trace-end-items.ts"
 export type { TraceEndItemDecisionCounts } from "./use-cases/summarize-trace-end-item-decisions.ts"
 export { summarizeTraceEndItemDecisions } from "./use-cases/summarize-trace-end-item-decisions.ts"
+export { WRAPPED_REPORT_TYPES, type WrappedReportType } from "./wrapped/entities/wrapped-report-record.ts"
 
 // Intentionally omit OTLP ingestion exports from the browser entry so Vite's client
 // resolver does not pull in protobufjs or @domain/models transitively.
