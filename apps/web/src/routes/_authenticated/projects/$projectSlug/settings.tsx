@@ -14,6 +14,7 @@ import {
   useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
@@ -24,7 +25,8 @@ import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/f
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
-import { extractFieldErrors, toUserMessage } from "../../../../lib/errors.ts"
+import { toUserMessage } from "../../../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../../../lib/form-server-action.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
@@ -165,32 +167,52 @@ function ProjectSettingsPage() {
     }
   }
 
-  // Slider fires on every step; debounce so we don't flood the API with one
-  // update per tick. Pattern mirrors `handleProjectRename` above.
-  const handleSensitivityChange = useDebouncedCallback((value: number) => {
-    const transaction = updateProjectMutation(currentProject.id, {
-      settings: {
-        ...currentProject.settings,
-        alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
+  // Run the sensitivity save through the codebase's standard
+  // `createFormSubmitHandler` wrapper so error extraction stays consistent
+  // with other settings forms. The slider isn't a typical form (no
+  // submit button, no field-level UI for errors), so the form is a thin
+  // shell: `defaultValues` seeds from the current setting, each slider
+  // tick pushes the new value via `form.setFieldValue` and the debounced
+  // `form.handleSubmit` actually fires the mutation.
+  const sensitivityForm = useForm({
+    defaultValues: {
+      escalationSensitivity:
+        currentProject.settings.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K,
+    },
+    onSubmit: createFormSubmitHandler<{ escalationSensitivity: number }, void>(
+      async ({ escalationSensitivity }) => {
+        const transaction = updateProjectMutation(currentProject.id, {
+          settings: {
+            ...currentProject.settings,
+            alertNotifications: {
+              ...(currentProject.settings.alertNotifications ?? {}),
+              escalationSensitivity,
+            },
+          },
+        })
+        await transaction.isPersisted.promise
       },
-    })
-    void transaction.isPersisted.promise
-      .then(() => {
-        toast({ description: "Escalation sensitivity updated" })
-      })
-      .catch((error) => {
-        // Server-function Zod failures arrive as JSON-encoded issues; running
-        // them through `toUserMessage` would surface the raw `[{path,message}]`
-        // payload in the toast. Pull the first validation message when present
-        // and fall back to the generic message otherwise — same shape
-        // `createFormSubmitHandler` uses to drive field-level error UI.
-        const fieldErrors = extractFieldErrors(error)
-        const message = fieldErrors
-          ? (Object.values(fieldErrors).flat()[0] ?? toUserMessage(error))
-          : toUserMessage(error)
-        toast({ variant: "destructive", description: message })
-      })
+      {
+        onSuccess: () => {
+          toast({ description: "Escalation sensitivity updated" })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
+  })
+
+  // Slider fires on every step; debounce the submit so we don't flood
+  // the API. Each tick already pushed the new value via setFieldValue.
+  const submitSensitivity = useDebouncedCallback(() => {
+    void sensitivityForm.handleSubmit()
   }, 400)
+
+  const handleSensitivityChange = (value: number) => {
+    sensitivityForm.setFieldValue("escalationSensitivity", value)
+    submitSensitivity()
+  }
 
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
     if (savingAlertKind !== null) return
