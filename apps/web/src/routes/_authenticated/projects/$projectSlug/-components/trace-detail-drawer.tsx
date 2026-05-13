@@ -334,7 +334,10 @@ export function TraceDetailDrawer({
       <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
         {visitedTabs.has("spans") && (
           <SpansTab
+            projectId={projectId}
             traceId={traceId}
+            startTimeFrom={traceRecord?.startTime}
+            startTimeTo={traceRecord?.endTime}
             selectedSpanId={selectedSpanId}
             onSelectSpan={navigateToSpan}
             isActive={activeTab === "spans"}

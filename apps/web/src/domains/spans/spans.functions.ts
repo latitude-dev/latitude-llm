@@ -139,14 +139,27 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 })
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ traceId: z.string() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceId: z.string(),
+      startTimeFrom: z.string().datetime().optional(),
+      startTimeTo: z.string().datetime().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.listByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
+        return yield* repo.listByTraceId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          traceId: TraceId(data.traceId),
+          ...(data.startTimeFrom ? { startTimeFrom: new Date(data.startTimeFrom) } : {}),
+          ...(data.startTimeTo ? { startTimeTo: new Date(data.startTimeTo) } : {}),
+        })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
     return spans.map(serializeSpan)
@@ -193,7 +206,15 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
   )
 
 export const getSpanDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ traceId: z.string(), spanId: z.string() }))
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceId: z.string(),
+      spanId: z.string(),
+      startTimeFrom: z.string().datetime().optional(),
+      startTimeTo: z.string().datetime().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -202,8 +223,11 @@ export const getSpanDetail = createServerFn({ method: "GET" })
         const repo = yield* SpanRepository
         return yield* repo.findBySpanId({
           organizationId: orgId,
+          projectId: ProjectId(data.projectId),
           traceId: TraceId(data.traceId),
           spanId: SpanId(data.spanId),
+          ...(data.startTimeFrom ? { startTimeFrom: new Date(data.startTimeFrom) } : {}),
+          ...(data.startTimeTo ? { startTimeTo: new Date(data.startTimeTo) } : {}),
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

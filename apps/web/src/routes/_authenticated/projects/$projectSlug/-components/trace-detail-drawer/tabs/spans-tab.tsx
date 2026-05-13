@@ -5,17 +5,23 @@ import { SpanDetail } from "./spans-tab/span-detail/index.tsx"
 import { SpanTree, scrollSpanIntoView } from "./spans-tab/span-tree/index.tsx"
 
 export function SpansTab({
+  projectId,
   traceId,
+  startTimeFrom,
+  startTimeTo,
   selectedSpanId,
   onSelectSpan,
   isActive,
 }: {
+  readonly projectId: string
   readonly traceId: string
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
   readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
-  const { data: spans, isLoading } = useSpansByTraceCollection(traceId)
+  const { data: spans, isLoading } = useSpansByTraceCollection({ projectId, traceId, startTimeFrom, startTimeTo })
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -76,7 +82,16 @@ export function SpansTab({
         onToggleMinimized={handleToggleMinimized}
         isActive={isActive}
       />
-      {selectedSpanId !== "" && <SpanDetail traceId={traceId} spanId={selectedSpanId} onClose={handleCloseDetail} />}
+      {selectedSpanId !== "" && (
+        <SpanDetail
+          projectId={projectId}
+          traceId={traceId}
+          spanId={selectedSpanId}
+          startTimeFrom={startTimeFrom}
+          startTimeTo={startTimeTo}
+          onClose={handleCloseDetail}
+        />
+      )}
     </div>
   )
 }
