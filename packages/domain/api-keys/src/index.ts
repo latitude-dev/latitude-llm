@@ -9,6 +9,7 @@ export {
   touch,
 } from "./entities/api-key.ts"
 export { ApiKeyAlreadyRevokedError, ApiKeyNotFoundError, InvalidApiKeyNameError } from "./errors.ts"
+export { maskApiKeyToken } from "./helpers/mask-token.ts"
 export { ApiKeyRepository } from "./ports/api-key-repository.ts"
 export {
   type GenerateApiKeyError,

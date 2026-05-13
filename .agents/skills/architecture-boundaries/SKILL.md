@@ -35,6 +35,7 @@ No business logic in handlers, controllers, or jobs.
 - Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
 - Latitude product capabilities should be equally accessible to humans through the web UI and to other LLM agents through MCP/API surfaces.
 - Do not dead-end product behavior into UI-only flows. Preserve the boundary rules above, but design schemas, use-cases, and public capabilities so machine-facing access can exist without redesign.
+- For the concrete recipe — `defineApiEndpoint`, `createXxxRoutes` factories, `pnpm openapi:emit` / `pnpm mcp:emit`, schema-description rules that fan out to the TS SDK and MCP tools — see [api-endpoints](../api-endpoints/SKILL.md).
 
 ## Cross-cutting implementation constraints
 

@@ -45,6 +45,7 @@ export interface TracesExportPayload extends BaseExportPayload {
   readonly kind: "traces"
   readonly filters?: FilterSet | undefined
   readonly selection?: ExportSelection | undefined
+  readonly searchQuery?: string | undefined
 }
 
 /**

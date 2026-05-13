@@ -44,6 +44,34 @@ const makeTrace = (traceId: string, overrides: Partial<Trace> = {}): Trace =>
   }) satisfies Trace
 
 describe("buildTracesExportUseCase", () => {
+  it('forwards searchQuery to listByProjectId for `mode: "all"` selections so saved-search results aren\'t widened', async () => {
+    const trace = makeTrace("a".repeat(32))
+    const calls: Array<{ searchQuery?: string }> = []
+    const { repository } = createFakeTraceRepository({
+      listByProjectId: ({ options }) => {
+        calls.push({ ...(options.searchQuery ? { searchQuery: options.searchQuery } : {}) })
+        if (calls.length === 1) {
+          return Effect.succeed({ items: [trace], hasMore: false })
+        }
+        return Effect.succeed({ items: [], hasMore: false })
+      },
+    })
+
+    await Effect.runPromise(
+      buildTracesExportUseCase({
+        organizationId,
+        projectId,
+        selection: { mode: "all" },
+        searchQuery: "checkout flow",
+      }).pipe(
+        Effect.provideService(TraceRepository, repository),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+      ),
+    )
+
+    expect(calls).toEqual([{ searchQuery: "checkout flow" }])
+  })
+
   it("exports only the selected traces that still match the active filters", async () => {
     const firstTrace = makeTrace("a".repeat(32), { rootSpanName: "alpha" })
     const secondTrace = makeTrace("b".repeat(32), { rootSpanName: "beta" })

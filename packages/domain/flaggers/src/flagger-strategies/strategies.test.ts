@@ -2,6 +2,7 @@ import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, Spa
 import type { TraceDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 
+import { emptyResponseStrategy } from "./empty-response.ts"
 import { frustrationStrategy } from "./frustration.ts"
 import { lazinessStrategy } from "./laziness.ts"
 import { refusalStrategy } from "./refusal.ts"
@@ -62,6 +63,14 @@ let toolCallCounter = 0
 const assistantToolCall = (name: string, args: unknown): TraceMessage => ({
   role: "assistant",
   parts: [{ type: "tool_call", id: `tc_${++toolCallCounter}`, name, arguments: args }],
+})
+
+const assistantToolCallWithText = (name: string, args: unknown, text: string): TraceMessage => ({
+  role: "assistant",
+  parts: [
+    { type: "tool_call", id: `tc_${++toolCallCounter}`, name, arguments: args },
+    { type: "text", content: text },
+  ],
 })
 
 // ---------------------------------------------------------------------------
@@ -512,6 +521,85 @@ describe("frustrationStrategy.detectDeterministically", () => {
         user("I already told you three times — use TypeScript."),
       ])
       expect(frustrationStrategy.detectDeterministically?.(trace)).toEqual({ kind: "ambiguous" })
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Empty Response
+// ---------------------------------------------------------------------------
+
+describe("emptyResponseStrategy.detectDeterministically", () => {
+  describe("matched on empty assistant response", () => {
+    it("matches empty text content", () => {
+      const trace = makeTrace([user("hi"), assistant("")])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toMatchObject({
+        kind: "matched",
+        feedback: "Assistant response was empty or whitespace only",
+      })
+    })
+
+    it("matches whitespace-only content", () => {
+      const trace = makeTrace([user("hi"), assistant("   ")])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toMatchObject({
+        kind: "matched",
+        feedback: "Assistant response was empty or whitespace only",
+      })
+    })
+
+    it("matches degenerate repeated character", () => {
+      const trace = makeTrace([user("hi"), assistant("aaa")])
+      const result = emptyResponseStrategy.detectDeterministically?.(trace)
+      expect(result?.kind).toBe("matched")
+      if (result?.kind === "matched") {
+        expect(result.feedback).toContain("degenerate")
+        expect(result.feedback).toContain('"a"')
+      }
+    })
+  })
+
+  describe("no-match on valid responses", () => {
+    it("no-match on normal text response", () => {
+      const trace = makeTrace([user("hi"), assistant("Hello! How can I help?")])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when assistant only emits a tool call (no text part)", () => {
+      const trace = makeTrace([user("check the weather"), assistantToolCall("get_weather", { city: "NYC" })])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when assistant has tool call WITH empty text part", () => {
+      // This is the key regression test: previously this would incorrectly match as "empty response"
+      const trace = makeTrace([
+        user("check the weather"),
+        assistantToolCallWithText("get_weather", { city: "NYC" }, ""),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when assistant has tool call with whitespace-only text part", () => {
+      const trace = makeTrace([
+        user("check the weather"),
+        assistantToolCallWithText("get_weather", { city: "NYC" }, "   "),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match on empty conversation", () => {
+      expect(emptyResponseStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "no-match" })
+    })
+  })
+
+  describe("hasRequiredContext", () => {
+    it("is true when there are output messages", () => {
+      const trace = makeTrace([user("hi"), assistant("hello")])
+      expect(emptyResponseStrategy.hasRequiredContext(trace)).toBe(true)
+    })
+
+    it("is false when there are no output messages", () => {
+      const trace = makeTrace([])
+      expect(emptyResponseStrategy.hasRequiredContext(trace)).toBe(false)
     })
   })
 })

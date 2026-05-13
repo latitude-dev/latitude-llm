@@ -36,11 +36,11 @@ const toSystemJson = (content: string) => JSON.stringify([{ type: "text", conten
 const makeEnvelope = (payload: {
   readonly organizationId: string
   readonly projectId: string
-  readonly traceId: string
+  readonly traceIds: readonly string[]
 }): EventEnvelope => ({
   id: "evt-trace-end",
   event: {
-    name: "SpanIngested",
+    name: "TracesIngested",
     organizationId: payload.organizationId,
     payload,
   },
@@ -202,6 +202,7 @@ const createQueueHarness = () => {
           delayed.set(delayedMessageKey(queue, options.dedupeKey), message)
         }
       }),
+    scheduleRepeatable: () => Effect.void,
     close: () => Effect.void,
   }
 
@@ -235,7 +236,7 @@ describe("live monitoring integration", () => {
     await pg.db.delete(evaluations)
   })
 
-  it("debounces SpanIngested into trace-end:run before publishing execute work", async () => {
+  it("debounces TracesIngested into trace-end:run before publishing execute work", async () => {
     await ch.client.insert({
       table: "spans",
       values: [makeTraceRow()],
@@ -260,7 +261,7 @@ describe("live monitoring integration", () => {
     const envelope = makeEnvelope({
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      traceId: TRACE_ID,
+      traceIds: [TRACE_ID],
     })
 
     await harness.consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -315,7 +316,7 @@ describe("live monitoring integration", () => {
     })
   })
 
-  it("replaces debounced trace-end:run when SpanIngested is dispatched twice for the same trace", async () => {
+  it("replaces debounced trace-end:run when TracesIngested is dispatched twice for the same trace", async () => {
     await ch.client.insert({
       table: "spans",
       values: [makeTraceRow()],
@@ -340,7 +341,7 @@ describe("live monitoring integration", () => {
     const envelope = makeEnvelope({
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      traceId: TRACE_ID,
+      traceIds: [TRACE_ID],
     })
     const dispatchPayload = envelopeToDispatchPayload(envelope)
 

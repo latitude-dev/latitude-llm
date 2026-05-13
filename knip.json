@@ -3,7 +3,10 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      "project": ["src/**/*.ts"]
+      "entry": ["src/openapi/pagination.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreBinaries": ["mcp-inspector"],
+      "ignoreDependencies": ["@modelcontextprotocol/inspector"]
     },
     "apps/ingest": {
       "project": ["src/**/*.ts"]
@@ -15,11 +18,14 @@
     "apps/workflows": {
       "project": ["src/**/*.ts"],
       "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker"]
+      "ignoreDependencies": ["@temporalio/worker", "voyageai"]
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignore": [
+        "src/domains/feature-flags/feature-flags.collection.ts"
+      ],
       "ignoreDependencies": ["@temporalio/client"]
     },
     "infra": {
@@ -65,20 +71,10 @@
       "project": []
     },
     "packages/telemetry/typescript": {
-      "project": ["src/**/*.ts"],
+      "entry": ["examples/**/*.ts"],
+      "project": ["src/**/*.ts", "examples/**/*.ts"],
       "ignore": ["src/constants/**/*.ts"],
-      "ignoreDependencies": [
-        "@ai-sdk/openai",
-        "@anthropic-ai/sdk",
-        "@aws-sdk/client-bedrock-runtime",
-        "@google-cloud/vertexai",
-        "@langchain/openai",
-        "ai",
-        "cohere-ai",
-        "langchain",
-        "llamaindex",
-        "openai"
-      ]
+      "ignoreDependencies": ["@sentry/node", "dd-trace", "together-ai"]
     },
     "tools/ai-benchmarks": {
       "entry": ["src/scripts/**/*.ts"],

@@ -1,0 +1,137 @@
+---
+title: Saved Searches
+description: Bookmark useful searches, assign ownership, and track what your team has reviewed
+---
+
+# Saved Searches
+
+A saved search is a named bookmark for a search query plus its filters. Instead of re-typing _"failed payments where cost is over five dollars in the last seven days"_ every Monday, you save it once and the whole team can return to it from the Search landing page.
+
+<Frame>
+  <img src="/images/search/saved-searches-list.png" alt="Saved searches table with columns for last found, assignee, annotated count, and total count" />
+</Frame>
+
+## What a Saved Search Stores
+
+Each saved search stores three things:
+
+- **A query**: The text you typed into the search bar
+- **A filter set**: Any filters that were active when you saved
+- **A name**: A human-readable label
+
+A saved search can have a query, a filter set, or both, but not neither. _"All errors in production this week"_ might have no query at all, only filters; _"jailbreak attempts"_ might rely entirely on a query. Both are valid.
+
+Saved searches are scoped to a project. Two projects can have saved searches with the same name; they're independent.
+
+## The Saved Searches Page
+
+The Search landing page (when you haven't typed a query yet) is the saved searches table. Each row shows:
+
+| Column | What it shows |
+| --- | --- |
+| **Saved search** | The name, plus a preview of the query, filter count, and creation date |
+| **Last found** | The timestamp of the most recent matching trace |
+| **Assigned To** | The team member responsible for this search (optional) |
+| **Annotated** | How many matching traces have at least one annotation on them |
+| **Total** | How many traces match the saved search right now |
+
+Click a row to open the saved search. Latitude loads it back into the search page with the query and filters restored, exactly as they were when the search was saved.
+
+## Creating a Saved Search
+
+1. Open the **Search** page and run a query (or apply filters).
+2. Click **Save search** in the toolbar.
+3. Give it a descriptive name.
+4. Confirm.
+
+You'll land back on the Search page, with the saved search loaded. The new entry will be visible in the saved searches table the next time you clear the search.
+
+<Tip>
+  Good names describe what's in the cohort, not how you searched for it. _"Failed payments last week"_ is more useful at a glance than _"q: payment errors filter: status=error"_.
+</Tip>
+
+## Assigning Ownership
+
+Each saved search can be assigned to a member of your organization. Assignment doesn't restrict access; everyone can still see and open the search. It's a lightweight ownership signal so your team knows who's responsible for reviewing matches.
+
+To assign or reassign:
+
+- Open the row's actions menu and pick **Assign to**, or
+- Click the assignee cell directly in the table and choose a member from the dropdown.
+
+The **Annotated / Total** ratio in the table makes assignment more useful: the assignee can see, at a glance, how much of their cohort still needs review.
+
+## Renaming and Deleting
+
+The row's actions menu has:
+
+- **Assign to**: Change the assignee
+- **Rename**: Update the saved search's name (this also changes its URL slug)
+- **Delete**: Remove the saved search. The underlying traces are not affected — only the bookmark is removed.
+
+## Editing a Saved Search
+
+When a saved search is loaded and you change the query or filters, Latitude detects the drift and surfaces a split action button:
+
+- **Update saved search**: Overwrite the saved search with the current query and filters.
+- **Save as new search**: Keep the original and create a new saved search from the current state.
+
+This is the right pattern for two common cases:
+
+- _"My saved search is fine but I want to look at last 30 days instead of 7"_: choose **Update saved search**.
+- _"I want a sibling of this saved search that adds a model filter"_: choose **Save as new search**.
+
+The Update action is disabled until there's an actual change to save.
+
+## Saved Searches Replace Annotation Queues
+
+If your team used annotation queues, saved searches are the direct replacement for the queue-list and queue-review workflows. The mapping is straightforward:
+
+| Old concept | New concept |
+| --- | --- |
+| Manual annotation queue | Saved search with no automatic refresh — assign someone and have them annotate the matches |
+| Live annotation queue | Saved search with filters that match the same cohort; the Total and Annotated counts refresh automatically |
+| System annotation queue | A [flagger](../annotations/flaggers), configured in project settings |
+| Queue review screen | The trace detail view — open a matching trace and annotate inline |
+| Queue assignee | The saved search's assignee |
+| Queue completion | The Annotated / Total ratio plus your team's own definition of "done" |
+
+The conceptual shift is from a managed queue with explicit completion to a working set you scope yourself and chip away at. The same coverage signals are still available — Annotated count tells you progress, assignee tells you ownership, and the Last found timestamp tells you whether new matches are arriving.
+
+## Workflows
+
+### Investigate a specific cohort
+
+You're investigating reports that the agent gets confused on multi-turn checkout flows.
+
+1. Run a search like `"checkout"` and add a filter for `metadata.flow = "checkout"` and `spanCount >= 5`.
+2. Save it as _"Checkout flows over 5 steps"_.
+3. Assign it to yourself.
+4. Work through the matches over a few days; the Total count tells you how many remain, and Annotated tells you how much you've already reviewed.
+
+### Watch for a recurring issue
+
+You've resolved an issue around tool retries and want to make sure it doesn't come back.
+
+1. Run a search filtered to the relevant tag or metadata.
+2. Save it as _"Tool retry regressions"_.
+3. Check it weekly; the Last found timestamp tells you when the latest matching trace appeared.
+
+### Share a cohort with a teammate
+
+You've built a search that surfaces interesting jailbreak attempts. You want a teammate to take a closer look.
+
+1. Save the search.
+2. Reassign it to the teammate.
+3. They'll see it in the table with their avatar on it the next time they open the Search page.
+
+## What Saved Searches Don't Do
+
+Saved searches are bookmarks, not subscriptions. They don't notify you when a new trace matches, don't generate evaluation scores, and don't run any background processing. If you want automated detection that produces scores and feeds issue discovery, see [Flaggers](../annotations/flaggers).
+
+## Next Steps
+
+- [Search Overview](./overview): How search itself works
+- [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
+- [Inline Annotations](../annotations/inline-annotations): Leave feedback on traces from your saved search
+- [Filters](../observability/filters): The shared filter system used inside searches

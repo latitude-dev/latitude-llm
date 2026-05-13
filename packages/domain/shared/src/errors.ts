@@ -138,6 +138,15 @@ export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   }
 }
 
+export class ForbiddenError extends Data.TaggedError("ForbiddenError")<{
+  readonly message: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return this.message
+  }
+}
+
 export class RateLimitError extends Data.TaggedError("RateLimitError")<{
   readonly message: string
   readonly retryAfterSeconds: number
@@ -179,6 +188,24 @@ export type DomainError =
 
 export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
   new RepositoryError({ cause, operation })
+
+/**
+ * Walks `error` and nested `cause` chains (e.g. Drizzle → pg) for Postgres SQLSTATE `23505` (unique_violation).
+ */
+export const causesIncludePostgresUniqueViolation = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "23505") {
+      return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
 
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 

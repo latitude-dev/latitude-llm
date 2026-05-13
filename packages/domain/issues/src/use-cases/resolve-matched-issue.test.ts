@@ -13,6 +13,7 @@ const projectId = "pppppppppppppppppppppppp"
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
   uuid: "11111111-1111-4111-8111-111111111111",
+  slug: "test-issue",
   organizationId,
   projectId,
   name: "Token leakage in responses",
@@ -51,7 +52,7 @@ describe("resolveMatchedIssueUseCase", () => {
     const { repository: issueRepository } = createFakeIssueRepository([issue], {
       findByUuid: (input) => {
         findByUuidCalls.push(input)
-        return Effect.succeed(issue)
+        return Effect.succeed({ ...issue, lifecycle: { isEscalating: false, isRegressed: false } })
       },
     })
 

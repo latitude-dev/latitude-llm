@@ -1,10 +1,18 @@
+// Lifecycle helpers (`getLifecycleStatesForDisplay`, `getPrimaryLifecycleState`,
+// `formatLifecycleLabel`) moved to a shared location so the in-app
+// notifications UI can reuse them. Re-exported here so existing in-route
+// imports keep working unchanged.
+export {
+  formatLifecycleLabel,
+  getLifecycleStatesForDisplay,
+  getPrimaryLifecycleState,
+} from "../../../../../../components/issues/lifecycle-formatters.ts"
+
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
-const lifecycleDisplayOrder = ["regressed", "escalating", "new", "ongoing", "resolved", "ignored"] as const
-const lifecycleDisplayOrderSet = new Set<string>(lifecycleDisplayOrder)
 
 function formatCompactElapsed(elapsedMs: number): string {
   if (elapsedMs < HOUR_MS) {
@@ -70,50 +78,45 @@ export function formatPercent(value: number): string {
   return `${Math.round(percent)}%`
 }
 
-export function formatDayBucketLabel(bucket: string): string {
-  return new Date(`${bucket}T00:00:00.000Z`).toLocaleDateString(undefined, {
+const DAY_SECONDS = 24 * 60 * 60
+
+/**
+ * Bucket-size-aware label suitable for an x-axis tick. Daily buckets show just the date;
+ * sub-day buckets include the start hour so the user can place sub-day incident overlays.
+ *
+ * Accepts either an ISO timestamp (`YYYY-MM-DDTHH:MM:SS.000Z`) or the legacy `YYYY-MM-DD`
+ * shape — the latter is normalized to UTC midnight.
+ */
+export function formatHistogramBucketLabel(bucket: string, bucketSeconds: number): string {
+  const date = parseHistogramBucket(bucket)
+  if (Number.isNaN(date.getTime())) return bucket
+  if (bucketSeconds >= DAY_SECONDS) {
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+  }
+  return date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })
 }
 
-export function formatDayBucketTooltipLabel(bucket: string): string {
-  return new Date(`${bucket}T00:00:00.000Z`).toLocaleDateString(undefined, {
+export function formatHistogramBucketTooltipLabel(bucket: string, bucketSeconds: number): string {
+  const date = parseHistogramBucket(bucket)
+  if (Number.isNaN(date.getTime())) return bucket
+  if (bucketSeconds >= DAY_SECONDS) {
+    return date.toLocaleDateString(undefined, { month: "long", day: "numeric" })
+  }
+  return date.toLocaleString(undefined, {
     month: "long",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })
 }
 
-export function getLifecycleStatesForDisplay(states: readonly string[]): readonly string[] {
-  const stateSet = new Set(states)
-
-  return [
-    ...lifecycleDisplayOrder.filter((state) => stateSet.has(state)),
-    ...states.filter((state) => !lifecycleDisplayOrderSet.has(state)),
-  ]
-}
-
-// Mirrors the backend's `getPrimaryStatePriority` so the table can display the
-// same single state used for sorting by status.
-export function getPrimaryLifecycleState(states: readonly string[]): string | undefined {
-  return getLifecycleStatesForDisplay(states)[0]
-}
-
-export function formatLifecycleLabel(state: string): string {
-  switch (state) {
-    case "new":
-      return "New"
-    case "escalating":
-      return "Escalating"
-    case "ongoing":
-      return "Ongoing"
-    case "resolved":
-      return "Resolved"
-    case "regressed":
-      return "Regressed"
-    case "ignored":
-      return "Ignored"
-    default:
-      return state
-  }
+function parseHistogramBucket(bucket: string): Date {
+  // Legacy `YYYY-MM-DD` strings are still emitted by the per-issue list mini-bar; everything
+  // else is already ISO. Normalize the daily shape to UTC midnight.
+  return new Date(bucket.length === 10 ? `${bucket}T00:00:00.000Z` : bucket)
 }

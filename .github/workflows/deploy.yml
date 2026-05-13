@@ -799,3 +799,49 @@ jobs:
         env:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
+
+  # ── Publish public packages (after production rollout) ──
+  # Each publish workflow no-ops when the repo version already matches the
+  # registry, so it's safe to call them on every successful production deploy.
+
+  publish-typescript-telemetry:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-typescript-telemetry.yml
+    secrets: inherit
+
+  publish-typescript-sdk:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-typescript-sdk.yml
+    secrets: inherit
+
+  publish-claude-code-telemetry:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-claude-code-telemetry.yml
+    secrets: inherit
+
+  publish-openclaw-telemetry:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-openclaw-telemetry.yml
+    secrets: inherit
+
+  publish-openclaw-telemetry-cli:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-openclaw-telemetry-cli.yml
+    secrets: inherit
+
+  publish-python-telemetry:
+    needs: production-apply
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-python-telemetry.yml
+    secrets: inherit

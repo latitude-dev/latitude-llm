@@ -29,12 +29,17 @@ export type UserId = Id<"UserId">
 // Organization/Workspace-related IDs (workspace is now organization)
 export type OrganizationId = Id<"OrganizationId">
 export type MembershipId = Id<"MembershipId">
+export type InvitationId = Id<"InvitationId">
 
 // Project-related IDs
 export type ProjectId = Id<"ProjectId">
 
 // API Key IDs
 export type ApiKeyId = Id<"ApiKeyId">
+
+// Feature flag IDs
+export type FeatureFlagId = Id<"FeatureFlagId">
+export type OrganizationFeatureFlagId = Id<"OrganizationFeatureFlagId">
 
 // Dataset-related IDs
 export type DatasetId = Id<"DatasetId">
@@ -50,6 +55,8 @@ export type AnnotationQueueId = Id<"AnnotationQueueId">
 export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
 export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
+export type AlertIncidentId = Id<"AlertIncidentId">
+export type NotificationId = Id<"NotificationId">
 
 // Telemetry-related IDs
 export type TraceId = Id<"TraceId">
@@ -63,8 +70,12 @@ export const UserId = (value: string): UserId => value as UserId
 export const SessionId = (value: string): SessionId => value as SessionId
 export const OrganizationId = (value: string): OrganizationId => value as OrganizationId
 export const MembershipId = (value: string): MembershipId => value as MembershipId
+export const InvitationId = (value: string): InvitationId => value as InvitationId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
+export const FeatureFlagId = (value: string): FeatureFlagId => value as FeatureFlagId
+export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
+  value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
 export const IssueId = (value: string): IssueId => value as IssueId
 export const EvaluationId = (value: string): EvaluationId => value as EvaluationId
@@ -73,6 +84,8 @@ export const AnnotationQueueId = (value: string): AnnotationQueueId => value as 
 export const AnnotationQueueItemId = (value: string): AnnotationQueueItemId => value as AnnotationQueueItemId
 export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
+export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
+export const NotificationId = (value: string): NotificationId => value as NotificationId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
@@ -84,8 +97,11 @@ export const ExternalUserId = (value: string): ExternalUserId => value as Extern
 export const userIdSchema = cuidSchema.transform(UserId)
 export const organizationIdSchema = cuidSchema.transform(OrganizationId)
 export const membershipIdSchema = cuidSchema.transform(MembershipId)
+export const invitationIdSchema = cuidSchema.transform(InvitationId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const featureFlagIdSchema = cuidSchema.transform(FeatureFlagId)
+export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
 export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
@@ -97,6 +113,8 @@ export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueI
 export const flaggerIdSchema = cuidSchema.transform(FlaggerId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
+export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
+export const notificationIdSchema = cuidSchema.transform(NotificationId)
 
 // The telemetry-related IDs have custom length constraints
 export const SESSION_ID_LENGTH = 128

@@ -23,10 +23,18 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly userId: string
   }
-  SpanIngested: {
+  TracesIngested: {
     readonly organizationId: string
     readonly projectId: string
-    readonly traceId: string
+    readonly traceIds: readonly string[]
+    readonly billing?: {
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
   }
   ScoreCreated: {
     readonly organizationId: string
@@ -39,6 +47,86 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly issueId: string
+  }
+  /**
+   * Emitted by `createIssueFromScoreUseCase` after the issue row is saved.
+   * Drives the alert pipeline's `issue.new` incident creation.
+   */
+  IssueCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly createdAt: string
+  }
+  /**
+   * Emitted by `assignScoreToIssueUseCase` when assigning a score whose
+   * `lastSeenAt` is later than the issue's `resolvedAt`. The use case clears
+   * `resolvedAt` on the same transaction (reifying the regression as a stored
+   * fact); idempotency on subsequent regression-causing scores is enforced by
+   * the cleared field, so a second event will not be emitted in the same cycle.
+   * `triggerScoreId` discriminates per regression cycle so a future regression
+   * after re-resolution is a distinct event.
+   */
+  IssueRegressed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly regressedAt: string
+    readonly triggerScoreId: string
+  }
+  /**
+   * Emitted by `checkIssueEscalationUseCase` when an issue transitions into
+   * the escalating state. The use case does not write the issue itself —
+   * idempotency comes from `IssueRepository`'s joined `lifecycle.isEscalating`
+   * flag (which reads the open `alert_incidents` row). Drives the
+   * `issue.escalating` incident's open transition (the alert-incidents
+   * worker inserts the new row).
+   */
+  IssueEscalated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly escalatedAt: string
+  }
+  /**
+   * Emitted by `checkIssueEscalationUseCase` when an escalating issue's
+   * recent occurrence count drops below the hysteresis exit threshold.
+   * Drives the `issue.escalating` incident's close transition — the
+   * alert-incidents worker sets `ended_at` on the open row, which is what
+   * flips `lifecycle.isEscalating` back to `false` on subsequent reads.
+   */
+  IssueEscalationEnded: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    readonly endedAt: string
+  }
+  /**
+   * Emitted by the alert-incidents worker after an `alert_incidents` row is
+   * inserted. Consumed by the in-app notifications worker (and, later, by
+   * email/Slack channel workers) to fan out to delivery channels.
+   */
+  IncidentCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly alertIncidentId: string
+    readonly kind: "issue.new" | "issue.regressed" | "issue.escalating"
+    readonly sourceType: "issue"
+    readonly sourceId: string
+  }
+  /**
+   * Emitted by the alert-incidents worker after an `alert_incidents` row's
+   * `ended_at` is set (only sustained kinds — currently `issue.escalating` —
+   * can close). Symmetric to `IncidentCreated`. Consumed by the notifications
+   * worker to fire a "closed" notification for the same incident.
+   */
+  IncidentClosed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly alertIncidentId: string
+    readonly kind: "issue.escalating"
+    readonly sourceType: "issue"
+    readonly sourceId: string
   }
   AnnotationDeleted: {
     readonly organizationId: string
@@ -72,6 +160,19 @@ export interface EventPayloads {
     readonly userId: string
     readonly email: string
   }
+  /**
+   * Emitted when a user finishes the project-onboarding form (role + stack
+   * choice + free-text job title). Drives the Loops contact update so
+   * marketing has `jobTitle` and `userGroup` for newly-onboarded users. The
+   * outbox envelope's `organizationId` is `"system"` — onboarding spans the
+   * user's identity and isn't tied to a specific tenant. Job title itself is
+   * persisted on the `users` row; the worker re-fetches it instead of carrying
+   * mutable strings on the event payload.
+   */
+  UserOnboardingCompleted: {
+    readonly userId: string
+    readonly stackChoice: "coding-agent-machine" | "production-agent"
+  }
   MemberJoined: {
     readonly organizationId: string
     readonly userId: string
@@ -96,6 +197,20 @@ export interface EventPayloads {
     readonly datasetId: string
     readonly name: string
   }
+  FlaggerToggled: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly flaggerSlug: string
+    readonly enabled: boolean
+  }
+  SavedSearchCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly searchId: string
+    readonly name: string
+  }
   EvaluationConfigured: {
     readonly organizationId: string
     readonly actorUserId: string
@@ -114,6 +229,17 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
+  }
+  BillingUsagePeriodUpdated: {
+    readonly organizationId: string
+    readonly periodStart: string
+    readonly periodEnd: string
+    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly overageAllowed: boolean
+    readonly includedCredits: number
+    readonly consumedCredits: number
+    readonly overageCredits: number
+    readonly reportedOverageCredits: number
   }
   /**
    * Emitted when a platform admin begins impersonating another user via

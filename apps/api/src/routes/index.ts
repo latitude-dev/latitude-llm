@@ -1,14 +1,19 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { API_VERSION } from "../constants.ts"
+import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
+import { createAuthRateLimiter, createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
+import { accountPath, createAccountRoutes } from "./account.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
-import { createApiKeysRoutes } from "./api-keys.ts"
+import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
-import { createProjectsRoutes } from "./projects.ts"
+import { createMembersRoutes, membersPath } from "./members.ts"
+import { createProjectsRoutes, projectsPath } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
+import { registerWellKnownRoutes } from "./well-known.ts"
 
 /**
  * Register all API routes with versioning.
@@ -18,6 +23,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   const routes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute({ app })
+  registerWellKnownRoutes({ app })
 
   v1.use("*", async (c, next) => {
     c.set("db", options.database.db)
@@ -37,16 +43,26 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
       logTouchBuffer: options.logTouchBuffer,
     }),
   )
-  // The org entity is loaded on every protected request from the API key's
-  // resolved org id. No path param feeds into it — see the middleware.
   routes.use("*", createOrganizationContextMiddleware())
 
-  routes.route("/projects", createProjectsRoutes())
+  routes.use(projectsPath, createTierRateLimiter("medium"))
+  routes.route(projectsPath, createProjectsRoutes())
+
   routes.route("/projects/:projectSlug/scores", createScoresRoutes())
   routes.route("/projects/:projectSlug/annotations", createAnnotationsRoutes())
-  routes.route("/api-keys", createApiKeysRoutes())
+
+  routes.use(apiKeysPath, createTierRateLimiter("low"))
+  routes.route(apiKeysPath, createApiKeysRoutes())
+
+  routes.use(accountPath, createTierRateLimiter("low"))
+  routes.route(accountPath, createAccountRoutes())
+
+  routes.use(membersPath, createTierRateLimiter("medium"))
+  routes.route(membersPath, createMembersRoutes())
+
+  registerMcpRoute({ app, routes })
 
   v1.route("/", routes)
 
-  app.route("/v1", v1)
+  app.route(`/${API_VERSION}`, v1)
 }

@@ -85,19 +85,19 @@ To group traces into sessions, pass a `session_id` when capturing telemetry:
 
 Every `capture()` call with the same `session_id` will be grouped into the same session.
 
-## Sessions and Annotation Queues
+## Sessions in Search and Annotations
 
-When you add a session to an annotation queue, Latitude resolves it to the session's newest trace. The queue item stores that trace, and the reviewer sees the full conversation context derived from all traces sharing the same session ID.
+Search, annotations, and most reliability features operate at the trace level. Sessions are an aggregation _on top of_ traces, not a separate primitive.
 
-This means:
+When you encounter a session in the product (for example, by clicking a session in the sessions view), Latitude opens the session's most recent trace and shows the full conversation derived from every trace sharing the session ID. You can:
 
-- Queue items always reference a specific trace
-- Session context is derived at review time from related traces
-- Reviewers see the conversation in full, not just one isolated turn
+- **Run a [saved search](../search/saved-searches)** scoped to `sessionId` to track every trace in a specific conversation.
+- **Annotate** any individual trace within the session from its detail view — the conversation context spans the full session, so annotators see the whole arc, not just one turn.
+- **Filter analytics** by session-derived properties when you want session-level rollups instead of per-turn metrics.
 
 ## Next Steps
 
 - [Traces](./traces): The individual interactions that make up a session
+- [Search](../search/overview): Find traces (including session-scoped ones)
 - [Scores](../scores/overview): How scores attach to traces and sessions
 - [Evaluations](../evaluations/triggers): Configuring evaluations to target sessions
-- [Annotation Queues](../annotations/annotation-queues): Adding sessions to review backlogs

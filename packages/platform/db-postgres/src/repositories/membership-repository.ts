@@ -35,35 +35,66 @@ export const MembershipRepositoryLive = Layer.effect(
           .pipe(Effect.map((rows) => rows.map(toDomainMembership)))
       })
 
+    const memberWithUserColumns = {
+      id: members.id,
+      organizationId: members.organizationId,
+      userId: members.userId,
+      role: members.role,
+      createdAt: members.createdAt,
+      name: users.name,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      image: users.image,
+    }
+
+    const toMemberWithUser = (
+      row: typeof members.$inferSelect & {
+        name: string | null
+        email: string
+        emailVerified: boolean
+        image: string | null
+      },
+    ) => ({
+      ...row,
+      id: MembershipId(row.id),
+      organizationId: OrganizationId(row.organizationId),
+      userId: UserId(row.userId),
+    })
+
     const listMembersWithUser = (organizationId: OrganizationId) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         return yield* sqlClient
           .query((db) =>
             db
-              .select({
-                id: members.id,
-                organizationId: members.organizationId,
-                userId: members.userId,
-                role: members.role,
-                createdAt: members.createdAt,
-                name: users.name,
-                email: users.email,
-                image: users.image,
-              })
+              .select(memberWithUserColumns)
               .from(members)
               .innerJoin(users, eq(members.userId, users.id))
               .where(eq(members.organizationId, organizationId)),
           )
+          .pipe(Effect.map((rows) => rows.map(toMemberWithUser)))
+      })
+
+    const findByIdWithUser = (id: MembershipId) =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db, organizationId) =>
+            db
+              .select(memberWithUserColumns)
+              .from(members)
+              .innerJoin(users, eq(members.userId, users.id))
+              .where(and(eq(members.organizationId, organizationId), eq(members.id, id)))
+              .limit(1),
+          )
           .pipe(
-            Effect.map((rows) =>
-              rows.map((row) => ({
-                ...row,
-                id: MembershipId(row.id),
-                organizationId: OrganizationId(row.organizationId),
-                userId: UserId(row.userId),
-              })),
-            ),
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Membership", id }))
+              }
+              return Effect.succeed(toMemberWithUser(result))
+            }),
           )
       })
 
@@ -117,6 +148,26 @@ export const MembershipRepositoryLive = Layer.effect(
         }),
 
       listMembersWithUser,
+
+      findByIdWithUser,
+
+      findMemberByEmail: (email: string) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: members.id })
+                .from(members)
+                .innerJoin(users, eq(members.userId, users.id))
+                // Both stored and provided emails are case-insensitive — `LOWER(email)` on both
+                // sides matches what `LOWER(...) = LOWER(...)` would do but lets PG use the
+                // case-insensitive index if one exists.
+                .where(and(eq(members.organizationId, organizationId), eq(users.email, email.toLowerCase())))
+                .limit(1),
+            )
+            .pipe(Effect.map((results) => results.length > 0))
+        }),
 
       isMember: (organizationId: OrganizationId, userId: string) =>
         Effect.gen(function* () {

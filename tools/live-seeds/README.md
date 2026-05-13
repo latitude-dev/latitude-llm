@@ -13,7 +13,7 @@ Today this package contains one main tool:
 This is useful when you want to test the full live ingestion path end to end:
 
 - ingest receives spans
-- `SpanIngested` is emitted
+- `TracesIngested` is emitted
 - trace-end debounce finishes
 - `TraceEnded` fans out
 - live evaluations enqueue and execute

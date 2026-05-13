@@ -2,7 +2,7 @@ import { DatasetRepository } from "@domain/datasets"
 import { IssueProjectionRepository, listIssuesUseCase } from "@domain/issues"
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { isValidId, OrganizationId, ProjectId } from "@domain/shared"
+import { ALERT_INCIDENT_KINDS, isValidId, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -32,6 +32,7 @@ const toRecord = (project: Project) => ({
   slug: project.slug,
   settings: {
     keepMonitoring: project.settings?.keepMonitoring,
+    alertNotifications: project.settings?.alertNotifications,
   },
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
@@ -102,6 +103,7 @@ export const createProject = createServerFn({ method: "POST" })
 
 const projectSettingsSchema = z.object({
   keepMonitoring: z.boolean().optional(),
+  alertNotifications: z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean()).optional(),
 })
 
 export const updateProject = createServerFn({ method: "POST" })

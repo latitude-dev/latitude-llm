@@ -15,6 +15,7 @@
   "dependencies": {
     "@domain/annotations": "workspace:*",
     "@domain/ai": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
@@ -39,7 +40,8 @@
     "@temporalio/workflow": "catalog:",
     "@temporalio/worker": "catalog:",
     "effect": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "voyageai": "catalog:"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

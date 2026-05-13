@@ -173,22 +173,22 @@ describe("SavedSearchRepositoryLive", () => {
     const collidesWithOther = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SavedSearchRepository
-        return yield* repo.existsBySlug({ projectId: PROJECT_ID, slug: "errors" })
+        return yield* repo.countBySlug({ projectId: PROJECT_ID, slug: "errors" })
       }),
     )
-    expect(collidesWithOther).toBe(true)
+    expect(collidesWithOther).toBe(1)
 
     const collidesWithSelfExcluded = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SavedSearchRepository
-        return yield* repo.existsBySlug({
+        return yield* repo.countBySlug({
           projectId: PROJECT_ID,
           slug: "errors",
           excludeId: created.id,
         })
       }),
     )
-    expect(collidesWithSelfExcluded).toBe(false)
+    expect(collidesWithSelfExcluded).toBe(0)
   })
 
   it("lists saved searches by project ordered by createdAt desc", async () => {

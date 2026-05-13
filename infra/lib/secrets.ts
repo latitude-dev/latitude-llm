@@ -273,6 +273,61 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["github-oauth-client-secret"] = githubOauthClientSecret.secret
   secretVersions["github-oauth-client-secret"] = githubOauthClientSecret.secretVersion
 
+  const stripeSecretKey = createSingleSecret(
+    baseName,
+    "stripe-secret-key",
+    "Stripe secret key — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_STRIPE_SECRET_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["stripe-secret-key"] = stripeSecretKey.secret
+  secretVersions["stripe-secret-key"] = stripeSecretKey.secretVersion
+
+  const stripeWebhookSecret = createSingleSecret(
+    baseName,
+    "stripe-webhook-secret",
+    "Stripe webhook signing secret — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_STRIPE_WEBHOOK_SECRET ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["stripe-webhook-secret"] = stripeWebhookSecret.secret
+  secretVersions["stripe-webhook-secret"] = stripeWebhookSecret.secretVersion
+
+  const stripeProPriceId = createSingleSecret(
+    baseName,
+    "stripe-pro-price-id",
+    "Stripe Pro subscription price ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_STRIPE_PRO_PRICE_ID ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["stripe-pro-price-id"] = stripeProPriceId.secret
+  secretVersions["stripe-pro-price-id"] = stripeProPriceId.secretVersion
+
+  const stripeProOveragePriceId = createSingleSecret(
+    baseName,
+    "stripe-pro-overage-price-id",
+    "Stripe Pro overage price ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_STRIPE_PRO_OVERAGE_PRICE_ID ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["stripe-pro-overage-price-id"] = stripeProOveragePriceId.secret
+  secretVersions["stripe-pro-overage-price-id"] = stripeProOveragePriceId.secretVersion
+
+  const stripeProOverageMeterEventName = createSingleSecret(
+    baseName,
+    "stripe-pro-overage-meter-event-name",
+    "Stripe Pro overage meter event name",
+    process.env.LAT_STRIPE_PRO_OVERAGE_METER_EVENT_NAME ?? "latitude_pro_overage_credits",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["stripe-pro-overage-meter-event-name"] = stripeProOverageMeterEventName.secret
+  secretVersions["stripe-pro-overage-meter-event-name"] = stripeProOverageMeterEventName.secretVersion
+
   const temporalApiKey = createSingleSecret(
     baseName,
     "temporal-api-key",
@@ -316,6 +371,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   )
   secrets["posthog-api-key"] = posthogApiKey.secret
   secretVersions["posthog-api-key"] = posthogApiKey.secretVersion
+
+  const loopsApiKey = createSingleSecret(
+    baseName,
+    "loops-api-key",
+    "Loops marketing API key for contact lifecycle sync (workers)",
+    process.env.LAT_LOOPS_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["loops-api-key"] = loopsApiKey.secret
+  secretVersions["loops-api-key"] = loopsApiKey.secretVersion
 
   const latitudeTelemetryApiKey = createSingleSecret(
     baseName,

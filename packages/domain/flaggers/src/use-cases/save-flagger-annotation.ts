@@ -24,6 +24,7 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
 export interface SaveFlaggerAnnotationInput extends FlaggerAnnotateInput {
   readonly feedback: string
   readonly traceCreatedAt: string
+  readonly messageIndex?: number | undefined
 }
 
 export type SaveFlaggerAnnotationError =
@@ -51,6 +52,7 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
     sessionId: parsedInput.sessionId ?? null,
     simulationId: parsedInput.simulationId ?? null,
     feedback: input.feedback,
+    messageIndex: input.messageIndex,
   })
 
   return flaggerAnnotateOutputSchema.parse({

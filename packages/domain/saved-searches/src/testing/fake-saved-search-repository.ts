@@ -66,7 +66,8 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
         return yield* new SavedSearchNotFoundError({ savedSearchId: `${projectId}/${slug}` })
       }),
 
-    existsBySlug: ({ projectId, slug, excludeId }) => Effect.sync(() => collidesOnSlug(projectId, slug, excludeId)),
+    countBySlug: ({ projectId, slug, excludeId }) =>
+      Effect.sync(() => (collidesOnSlug(projectId, slug, excludeId) ? 1 : 0)),
 
     listByProject: ({ projectId, assignedUserId }) =>
       Effect.sync(() => {

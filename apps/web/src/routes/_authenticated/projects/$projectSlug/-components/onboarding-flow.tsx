@@ -1,5 +1,6 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
+import type { JobTitle } from "@domain/users"
+import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -16,6 +17,8 @@ import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useSt
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
+import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -40,7 +43,7 @@ import {
   type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
-type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
+type OnboardingRole = JobTitle
 type OnboardingStep = "role" | "stack" | "telemetry"
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
@@ -92,13 +95,13 @@ const STACK_CHOICE_OPTIONS: ReadonlyArray<{
   {
     id: "coding-agent-machine",
     title: "Coding agent",
-    description: "Receive traces and monitor issues in your Claude Code or OpenClaw agent",
+    description: "Monitor your Claude Code or OpenClaw agent",
     leading: { type: "logo", src: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
   },
   {
     id: "production-agent",
-    title: "Production agent traces",
-    description: "Set up Latitude directly in your project running on any available provider",
+    title: "Production app or agent",
+    description: "Track and debug LLM-powered features running in your own application",
     leading: { type: "icon", Icon: SquareDashedBottomCode },
   },
 ]
@@ -407,9 +410,12 @@ export function OnboardingFlow({
   readonly projectSlug: string
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
+  const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
+  const [customJobTitle, setCustomJobTitle] = useState("")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
+  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
@@ -532,7 +538,7 @@ export function OnboardingFlow({
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
-      <div className="flex h-full min-h-0 w-1/2 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-r border-border px-24 pt-24 pb-32 [scrollbar-gutter:stable]">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
           <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
             <div className="flex w-full flex-col gap-8">
@@ -566,6 +572,17 @@ export function OnboardingFlow({
                   )
                 })}
               </div>
+              {role === "other" && (
+                <input
+                  type="text"
+                  aria-label="Custom job title"
+                  placeholder="What's your role?"
+                  value={customJobTitle}
+                  onChange={(e) => setCustomJobTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  maxLength={256}
+                />
+              )}
               <div>
                 <Button onClick={() => setStep("stack")}>Next</Button>
               </div>
@@ -579,8 +596,10 @@ export function OnboardingFlow({
                   <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">Select your stack</Text.H2>
-                  <Text.H4 color="foregroundMuted">What do you want to monitor with Latitude?</Text.H4>
+                  <Text.H2 weight="medium">What do you want to monitor?</Text.H2>
+                  <Text.H4 color="foregroundMuted">
+                    Choose the type of AI system you want to observe with Latitude.
+                  </Text.H4>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
@@ -624,10 +643,22 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={stackChoice === null}
-                  onClick={() => {
-                    if (stackChoice === null) return
-                    setStep("telemetry")
+                  disabled={
+                    stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())
+                  }
+                  onClick={async () => {
+                    if (stackChoice === null || isSubmittingOnboarding) return
+                    setIsSubmittingOnboarding(true)
+                    try {
+                      const onboardingData =
+                        role === "other" ? { customJobTitle, stackChoice } : { jobTitle: role, stackChoice }
+                      await submitOnboarding({ data: onboardingData })
+                      setStep("telemetry")
+                    } catch (error) {
+                      toast({ variant: "destructive", description: toUserMessage(error) })
+                    } finally {
+                      setIsSubmittingOnboarding(false)
+                    }
                   }}
                 >
                   Continue
@@ -672,7 +703,7 @@ export function OnboardingFlow({
                     Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set
                     up Latitude telemetry in your project.
                   </Text.H5>
-                  <CodeBlock value={codingAgentPrompt} copyable wrapLines={false} />
+                  <CodeBlock value={codingAgentPrompt} copyable wrapLines />
                 </div>
               ) : (
                 <>
@@ -868,7 +899,7 @@ export function OnboardingFlow({
         )}
       </div>
 
-      <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
+      <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24 [scrollbar-gutter:stable]">
           {step === "role" ? (
             <div className="flex h-fit w-full flex-col items-center gap-4">

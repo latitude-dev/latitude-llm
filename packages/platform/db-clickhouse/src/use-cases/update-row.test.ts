@@ -52,7 +52,7 @@ describe("updateRow", () => {
     datasetRepo = fake.repository
     await Effect.runPromise(
       datasetRepo
-        .create({ id: DATASET_ID, projectId: PROJECT_ID, name: "update-row-test" })
+        .create({ id: DATASET_ID, projectId: PROJECT_ID, slug: "existing-dataset", name: "update-row-test" })
         .pipe(Effect.provideService(SqlClient, inertSqlClient)),
     )
   })

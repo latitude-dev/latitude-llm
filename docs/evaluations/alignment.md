@@ -88,5 +88,6 @@ This iterative calibration process is how you keep automated evaluations trustwo
 ## Next Steps
 
 - [Annotations](../annotations/overview): How human review produces the ground truth for alignment
-- [Annotation Queues](../annotations/annotation-queues): Building focused review backlogs
+- [Flaggers](../annotations/flaggers): Automatic annotators that contribute to alignment data
+- [Search](../search/overview): Build cohorts of traces to annotate
 - [Issues](../issues/overview): How failed evaluations become trackable issues

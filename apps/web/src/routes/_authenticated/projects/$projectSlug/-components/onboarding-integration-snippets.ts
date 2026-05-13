@@ -1220,9 +1220,6 @@ ${slugLine}`
   return extra ? `${commonSdk}\n${extra}` : commonSdk
 }
 
-const LATITUDE_DOCS_TELEMETRY_OVERVIEW = "https://docs.latitude.so/telemetry/overview"
-const LATITUDE_DOCS_TELEMETRY_OTEL = "https://docs.latitude.so/telemetry/otel-exporter"
-
 /** Language SDK examples aligned with https://docs.latitude.so/telemetry/otel-exporter (cURL is separate in the UI). */
 export type OtelExporterLanguageId = "go" | "java" | "ruby" | "dotnet"
 
@@ -1365,16 +1362,28 @@ export function getOtelExporterLanguageSnippet(
 }
 
 /**
- * Short paste for coding agents: public telemetry docs, concrete project slug, repo-aware setup.
+ * Mirrors the public telemetry docs prompt
+ * (https://docs.latitude.so/telemetry/overview#ask-your-coding-agent), with the
+ * project slug + API key pre-filled so the agent doesn't need to ask.
  */
 export function getCodingAgentTelemetryPrompt(params: {
   readonly projectSlug: string
   readonly apiKey: string | null
 }): string {
   const { projectSlug, apiKey } = params
+  const apiKeyLine = apiKey ? `LATITUDE_API_KEY=${apiKey}` : ""
   return [
-    `Read ${LATITUDE_DOCS_TELEMETRY_OVERVIEW} and ${LATITUDE_DOCS_TELEMETRY_OTEL} first, then implement Latitude telemetry in this repository per the documentation (env vars, TypeScript/Python SDK for your LLM provider, or OTLP to ${OTLP_TRACES_ENDPOINT}).`,
-    `Target this Latitude project slug: \`${projectSlug}\` — set LATITUDE_PROJECT_SLUG (and X-Latitude-Project for OTLP) accordingly.${apiKey ? ` Use this Latitude API key: \`${apiKey}\`.` : " Use a Latitude API key from Settings."} Never commit secrets.`,
+    "Install the Latitude AI skill from github.com/latitude-dev/skills.",
+    'Try: `npx skills add latitude-dev/skills --skill "latitude-telemetry"`',
+    "If does not work clone the repo in your skills directory.",
+    "Use it to add tracing to this application with Latitude,",
+    "following best practices.",
+    "",
+    "Put this in your environment variables:",
+    `LATITUDE_API_KEY=${projectSlug}`,
+    apiKeyLine,
+    "",
+    "IMPORTANT: Never commit secrets in your git repository.",
   ].join("\n")
 }
 

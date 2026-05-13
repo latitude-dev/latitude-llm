@@ -1,14 +1,25 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
 import type { QueuePublishError } from "@domain/queue"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { generateId } from "@domain/shared"
+import type { RedisClient } from "@platform/cache-redis"
 import { queryClickhouse } from "@platform/db-clickhouse"
+import { eq } from "@platform/db-postgres"
+import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/schema/billing"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
-import { setupTestClickHouse } from "@platform/testkit"
+import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
+import { createBillingWorker } from "./billing.ts"
+import { createDomainEventsWorker } from "./domain-events.ts"
 import { createSpanIngestionWorker } from "./span-ingestion.ts"
 
 const ch = setupTestClickHouse()
+const pg = setupTestPostgres()
+
+/** Span ingestion always provisions {@link RedisCacheStoreLive}; a stub is enough for these worker tests. */
+const testRedisClient = {} as RedisClient
 
 function createFakeEventsPublisher(): EventsPublisher<QueuePublishError> & {
   readonly published: DomainEvent[]
@@ -48,6 +59,37 @@ const validRequest = {
       ],
     },
   ],
+}
+
+const dispatchValidIngest = async (
+  consumer: TestQueueConsumer,
+  fileKey: string,
+  organizationId: string,
+  projectId: string,
+) => {
+  await consumer.dispatchTask("span-ingestion", "ingest", {
+    fileKey,
+    inlinePayload: null,
+    contentType: "application/json",
+    organizationId,
+    projectId,
+    apiKeyId: `api-key-${organizationId}`,
+    ingestedAt: "2026-03-18T10:00:00.000Z",
+  })
+}
+
+const dispatchPublishedDomainEvents = async (
+  consumer: TestQueueConsumer,
+  published: readonly DomainEvent[],
+  offset: number,
+) => {
+  for (const [index, event] of published.slice(offset).entries()) {
+    await consumer.dispatchTask("domain-events", "dispatch", {
+      id: `evt-${offset + index}`,
+      event,
+      occurredAt: new Date("2026-03-18T10:00:00.000Z").toISOString(),
+    })
+  }
 }
 
 const vercelWrapperRequest = {
@@ -109,7 +151,14 @@ describe("createSpanIngestionWorker", () => {
     const fileKey = "span-ingestion/test-valid.json"
     disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
-    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,
@@ -146,11 +195,13 @@ describe("createSpanIngestionWorker", () => {
     expect(rows[0]?.ingested_at).toContain("2026-03-18 10:00:00")
 
     expect(pub.published).toHaveLength(1)
-    expect(pub.published[0]?.name).toBe("SpanIngested")
-    expect(pub.published[0]?.payload).toEqual({
-      organizationId: "org_span_ingestion_test",
-      projectId: "proj_span_ingestion_test",
-      traceId: "0af7651916cd43dd8448eb211c80319c",
+    expect(pub.published[0]).toMatchObject({
+      name: "TracesIngested",
+      payload: {
+        organizationId: "org_span_ingestion_test",
+        projectId: "proj_span_ingestion_test",
+        traceIds: ["0af7651916cd43dd8448eb211c80319c"],
+      },
     })
   })
 
@@ -159,7 +210,14 @@ describe("createSpanIngestionWorker", () => {
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
 
-    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey: null,
@@ -192,7 +250,14 @@ describe("createSpanIngestionWorker", () => {
       const fileKey = "span-ingestion/test-invalid.json"
       disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
 
-      createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+      createSpanIngestionWorker({
+        consumer,
+        eventsPublisher: pub,
+        clickhouseClient: ch.client,
+        disk,
+        postgresClient: pg.appPostgresClient,
+        redisClient: testRedisClient,
+      })
 
       await consumer.dispatchTask("span-ingestion", "ingest", {
         fileKey,
@@ -226,7 +291,14 @@ describe("createSpanIngestionWorker", () => {
     const fileKey = "span-ingestion/test-vercel-wrapper.json"
     disk.putBytes(fileKey, Buffer.from(JSON.stringify(vercelWrapperRequest), "utf-8"))
 
-    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,
@@ -291,10 +363,80 @@ describe("createSpanIngestionWorker", () => {
     expect(rows[1]?.model).toBe("gpt-4o")
 
     expect(pub.published).toHaveLength(1)
-    expect(pub.published[0]?.payload).toEqual({
-      organizationId: "org_vercel_wrapper_test",
-      projectId: "proj_vercel_wrapper_test",
-      traceId: "11111111111111111111111111111111",
+    expect(pub.published[0]).toMatchObject({
+      name: "TracesIngested",
+      payload: {
+        organizationId: "org_vercel_wrapper_test",
+        projectId: "proj_vercel_wrapper_test",
+        traceIds: ["11111111111111111111111111111111"],
+      },
     })
+  })
+
+  it("records trace usage only once across repeated ingest requests for the same trace", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const queue = createFakeQueuePublisher()
+    const fileKey = `span-ingestion/${generateId()}-duplicate.json`
+    const organizationId = generateId()
+    const projectId = generateId()
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+    createDomainEventsWorker({ consumer, publisher: queue.publisher })
+    createBillingWorker({
+      consumer,
+      postgresClient: pg.appPostgresClient,
+    })
+
+    let processedEvents = 0
+
+    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
+    processedEvents = pub.published.length
+    for (const message of queue.published.filter(
+      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
+    )) {
+      await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
+    }
+
+    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
+    processedEvents = pub.published.length
+    for (const message of queue.published
+      .filter((message) => message.queue === "billing" && message.task === "recordTraceUsageBatch")
+      .slice(1)) {
+      await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
+    }
+
+    const events = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+    const periods = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.action).toBe("trace")
+    expect(events[0]?.credits).toBe(1)
+
+    expect(periods).toHaveLength(1)
+    expect(periods[0]?.consumedCredits).toBe(1)
+    expect(periods[0]?.overageCredits).toBe(0)
+
+    const billingPublishes = queue.published.filter(
+      (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
+    )
+    expect(billingPublishes).toHaveLength(2)
   })
 })

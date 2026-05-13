@@ -20,21 +20,20 @@ const latitude = initLatitude({
 })
 
 async function main() {
-  // Wait for instrumentations to be ready
   await latitude.ready
 
   const client = new Anthropic()
 
-  await capture(
+  const result = await capture(
     "anthropic-chat",
     async () => {
       const response = await client.messages.create({
-        model: "claude-3-5-haiku-latest",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 50,
         messages: [
           {
             role: "user",
-            content: "Say 'Hello from Anthropic!' in exactly 5 words.",
+            content: "Say 'Hello from Anthropic!' in exactly 10 words. No ending punctuation.",
           },
         ],
       })
@@ -45,7 +44,9 @@ async function main() {
     { tags: ["test", "anthropic"], sessionId: "example" },
   )
 
+  console.log("Anthropic response:", result)
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

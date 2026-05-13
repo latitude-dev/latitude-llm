@@ -16,12 +16,11 @@ This guide walks you through the Latitude web interface. You'll learn how to nav
 
 When you open a project, you'll see the main navigation with these sections:
 
+- **Search**: Find traces by meaning, and bookmark useful searches for later
 - **Traces**: Every interaction your agent has had, shown as a timeline
-- **Sessions**: Multi-turn conversations grouped together
-- **Evaluations**: Automated monitoring scripts and their results
 - **Issues**: Failure patterns discovered from your agent's interactions
-- **Annotation Queues**: Review backlogs where your team provides human feedback
-- **Simulations**: Test runs of your agent against scenarios
+- **Datasets**: Saved trace collections for offline analysis and simulations
+- **Settings**: Project configuration, including flaggers
 
 ## Exploring Traces
 
@@ -36,35 +35,49 @@ Click on a trace to see:
 
 Use the filter sidebar to narrow traces by status, cost, duration, model, provider, tags, or custom metadata.
 
-## Reviewing Annotation Queues
+## Finding Traces with Search
 
-Annotation queues are where your team provides human judgment on agent interactions. Your project starts with default queues that automatically flag common problems:
+The **Search** page is where you go to investigate a specific kind of trace. Type a plain-English query — _"failed payments"_, _"frustrated user"_, _"long latency on signup"_ — and Latitude returns the most relevant traces, ranked by a hybrid of keyword and semantic match. Use `"quotes"` for exact phrases.
+
+Filters work alongside the query, so you can scope to a time range, a specific model, traces with errors, or any custom metadata your application sends.
+
+When a search is one you'll come back to, click **Save search** in the toolbar. Saved searches appear on the Search landing page in a table with the columns:
+
+- **Saved search**: The name, plus a preview of the query and filters
+- **Last found**: When the most recent matching trace appeared
+- **Assigned To**: A team member responsible for reviewing matches
+- **Annotated**: How many matching traces have been reviewed
+- **Total**: How many traces currently match
+
+This is the workflow that used to live in the old **Annotation Queues** page. Instead of a managed queue with start/finish semantics, you scope your own cohort with a saved search and the Annotated/Total ratio tells you how far through it your team is. See [Saved Searches](../search/saved-searches) for details.
+
+## Automatic Detection with Flaggers
+
+Some failure categories are common enough that Latitude detects them for you. Every project starts with a set of built-in **flaggers** running on every completed trace:
 
 - **Jailbreaking**: Attempts to bypass safety constraints
+- **NSFW**: Sexual or otherwise inappropriate content
 - **Refusal**: The agent refuses requests it should handle
 - **Frustration**: Clear user dissatisfaction
 - **Forgetting**: The agent loses conversation context
 - **Laziness**: The agent avoids doing the requested work
-- **Inappropriate Content**: Sexual or otherwise not-safe-for-work content
 - **Trashing**: The agent cycles between tools without making progress
 - **Tool Call Errors**: Failed tool invocations
-- **Resource Outliers**: Unusually high latency or cost
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
 
-Open a queue and click into it to start reviewing. The review screen shows three sections:
+When a flagger matches, it writes an annotation directly on the trace — no queue, no human approval step. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list and detection logic.
 
-1. **Metadata**: Timestamp, duration, tokens, cost, and existing scores for the current trace
-2. **Conversation**: The full message exchange between user and agent
-3. **Annotations**: Queue instructions, existing annotations, and a button to create new ones
+## Reviewing Traces
 
-To annotate:
+To leave human feedback on a trace, open it from any list (Search, Traces, an issue's logs) and use the annotation panel on the right:
 
-- Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level annotation
-- Mark it as positive (thumbs up) or negative (thumbs down)
-- Write feedback describing what you observed
-- Optionally link it to an existing issue, or leave issue assignment automatic
-- Click "Fully Annotated" when you've finished reviewing the trace
+- Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level one.
+- Mark it as positive (thumbs up) or negative (thumbs down).
+- Write feedback describing what you observed.
+- Optionally link it to an existing issue, or leave issue assignment automatic.
+
+A typical review session combines saved searches and inline annotations: open the saved search you're responsible for, click the first trace, annotate, move on. The saved search's Annotated count goes up as you work.
 
 ## Understanding Issues
 
@@ -108,6 +121,9 @@ Scores appear throughout the product: on traces, in evaluation dashboards, in is
 
 ## What's Next
 
+- [Search](../search/overview): Build cohorts of traces with hybrid search
+- [Saved Searches](../search/saved-searches): Bookmark useful searches and assign ownership
+- [Flaggers](../annotations/flaggers): Built-in automatic annotators for common failures
 - [Scores](../scores/overview): Deep dive into how scores work
 - [Annotations](../annotations/overview): Human review workflows
 - [Issues](../issues/overview): Learn about issue lifecycle and management

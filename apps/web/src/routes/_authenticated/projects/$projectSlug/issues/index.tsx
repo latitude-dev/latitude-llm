@@ -1,6 +1,7 @@
 import {
   Button,
   CloseTrigger,
+  DotIndicator,
   Icon,
   Input,
   Label,
@@ -8,10 +9,45 @@ import {
   Switch,
   Tabs,
   Text,
+  Tooltip,
   toast,
   useValueWithDefault,
 } from "@repo/ui"
-import { createFileRoute } from "@tanstack/react-router"
+import { eq } from "@tanstack/react-db"
+import { createFileRoute, useParams } from "@tanstack/react-router"
+import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
+import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
+
+function IssuesBreadcrumb() {
+  const { projectSlug } = useParams({ strict: false })
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project: p }) => eq(p.slug, projectSlug ?? "")).findOne(),
+    [projectSlug],
+  )
+  const { data: flaggers = [] } = useProjectFlaggers(project?.id ?? "")
+  const hasActiveFlaggers = flaggers.some((f) => f.enabled)
+
+  return (
+    <span className="flex items-center gap-0">
+      <BreadcrumbText variant="current">Issues</BreadcrumbText>
+      {hasActiveFlaggers && (
+        <Tooltip
+          side="bottom"
+          align="center"
+          trigger={
+            <span className="flex h-5 w-5 items-center justify-center cursor-default">
+              <DotIndicator variant="primary" size="md" ping />
+            </span>
+          }
+        >
+          Latitude is always scanning for common issues
+        </Tooltip>
+      )}
+    </span>
+  )
+}
+
 import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
@@ -66,6 +102,9 @@ function parseSorting(raw: string): IssuesTableSorting {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
+  staticData: {
+    breadcrumb: IssuesBreadcrumb,
+  },
   component: IssuesPage,
 })
 
@@ -308,6 +347,22 @@ function IssuesPage() {
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
+              <ColumnsSelector
+                columns={columnSettings.columns}
+                selectedColumnIds={columnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
+                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
+              />
+              <div className="relative">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search issues"
+                  size="sm"
+                  className="w-64 pl-8 rounded-lg"
+                />
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
               <Tabs
                 variant="bordered"
                 size="sm"
@@ -325,22 +380,6 @@ function IssuesPage() {
                 ]}
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
-              />
-              <div className="relative">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search issues"
-                  size="sm"
-                  className="w-64 pl-8"
-                />
-                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              </div>
-              <ColumnsSelector
-                columns={columnSettings.columns}
-                selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
               />
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
@@ -376,6 +415,7 @@ function IssuesPage() {
         )}
         <div className="px-6">
           <IssuesAnalyticsPanel
+            projectId={project.id}
             analytics={analytics}
             isLoading={showSkeletons}
             onRangeSelect={(range) => {

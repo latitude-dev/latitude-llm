@@ -9,6 +9,7 @@
 import type { PostHog } from "posthog-js"
 
 const POSTHOG_DEFAULT_HOST = "https://eu.i.posthog.com"
+const INTERNAL_EMAIL_DOMAIN = "latitude.so"
 
 interface PostHogEnv {
   readonly apiKey: string
@@ -20,6 +21,11 @@ const readEnv = (): PostHogEnv | null => {
   if (!apiKey) return null
   const host = import.meta.env.VITE_LAT_POSTHOG_HOST ?? POSTHOG_DEFAULT_HOST
   return { apiKey, host }
+}
+
+export const isLatitudeStaffEmail = (email: string): boolean => {
+  const host = email.trim().split("@").pop()?.toLowerCase()
+  return host === INTERNAL_EMAIL_DOMAIN
 }
 
 // Module-level singletons. These are re-created across HMR module reloads,
@@ -60,6 +66,8 @@ const loadInstance = (): Promise<PostHog | null> => {
         capture_pageview: true,
         autocapture: true,
         disable_session_recording: false,
+        // Start silent — syncPostHogSession opts in for real customers once the authenticated layout mounts
+        opt_out_capturing_by_default: true,
       })
       return posthog
     })
@@ -77,17 +85,48 @@ export const initPostHog = async (): Promise<void> => {
   await loadInstance()
 }
 
+const setPostHogCaptureEnabled = async (enabled: boolean): Promise<void> => {
+  const posthog = await loadInstance()
+  if (!posthog) return
+  if (enabled) {
+    posthog.opt_in_capturing()
+  } else {
+    posthog.opt_out_capturing()
+  }
+}
+
 interface IdentifyUserInput {
   readonly id: string
   readonly email: string
   readonly name?: string | null
 }
 
-export const identifyUser = async (input: IdentifyUserInput): Promise<void> => {
-  const previousUserId = getLastIdentifiedUserId()
-  const userChanged = !!(previousUserId && previousUserId !== input.id)
+interface SyncSessionInput {
+  readonly user: IdentifyUserInput
+  readonly organizationId: string
+  readonly organizationName?: string | null | undefined
+  readonly excludeFromAnalytics: boolean
+}
 
-  setLastIdentifiedUserId(input.id)
+/**
+ * Single entry-point for the authenticated layout to sync PostHog state.
+ *
+ * When the session is internal (staff email or impersonation), opt out of
+ * capturing so no events, recordings, or person records are created. When
+ * it's a real customer session, opt in, handle user-change resets, and
+ * call identify + group.
+ */
+export const syncPostHogSession = async (input: SyncSessionInput): Promise<void> => {
+  if (input.excludeFromAnalytics) {
+    await setPostHogCaptureEnabled(false)
+    return
+  }
+
+  await setPostHogCaptureEnabled(true)
+
+  const previousUserId = getLastIdentifiedUserId()
+  const userChanged = !!(previousUserId && previousUserId !== input.user.id)
+  setLastIdentifiedUserId(input.user.id)
 
   const posthog = await loadInstance()
   if (!posthog) return
@@ -96,30 +135,24 @@ export const identifyUser = async (input: IdentifyUserInput): Promise<void> => {
     posthog.reset()
   }
 
-  posthog.identify(input.id, {
-    email: input.email,
-    ...(input.name ? { name: input.name } : {}),
+  posthog.identify(input.user.id, {
+    email: input.user.email,
+    ...(input.user.name ? { name: input.user.name } : {}),
   })
-}
 
-interface IdentifyOrganizationInput {
-  readonly id: string
-  readonly name?: string | null
-}
-
-export const identifyOrganization = async (input: IdentifyOrganizationInput): Promise<void> => {
-  const posthog = await loadInstance()
-  if (!posthog) return
-  posthog.group("organization", input.id, input.name ? { name: input.name } : undefined)
+  posthog.group(
+    "organization",
+    input.organizationId,
+    input.organizationName ? { name: input.organizationName } : undefined,
+  )
 }
 
 /**
- * Clear the current identity and session. Called on explicit logout and
- * automatically by {@link identifyUser} when the user id changes (i.e. impersonation)
+ * Clear the current identity and session. Called on explicit logout.
  *
- * Do not call from the authenticated layout on mount: `posthog.reset()`
- * starts a fresh recording session, and layout remounts (including React
- * Strict Mode in dev) would fragment recordings.
+ * Does NOT re-enable capturing — `opt_out_capturing_by_default: true` in the
+ * init config keeps unauthenticated routes silent. The next authenticated
+ * mount will call `syncPostHogSession`, which opts in for real customers.
  */
 export const resetPostHog = async (): Promise<void> => {
   const posthog = await loadInstance()

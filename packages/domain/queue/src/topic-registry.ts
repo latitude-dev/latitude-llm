@@ -84,6 +84,45 @@ const _registry = {
     }
   }>(),
 
+  notifications: payloads<{
+    "create-from-incident-opened": {
+      readonly organizationId: string
+      readonly alertIncidentId: string
+    }
+    "create-from-incident-closed": {
+      readonly organizationId: string
+      readonly alertIncidentId: string
+    }
+  }>(),
+
+  "alert-incidents": payloads<{
+    "issue-created": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly createdAt: string
+    }
+    "issue-regressed": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly regressedAt: string
+      readonly triggerScoreId: string
+    }
+    "issue-escalated": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly escalatedAt: string
+    }
+    "issue-escalation-ended": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly endedAt: string
+    }
+  }>(),
+
   issues: payloads<{
     discovery: {
       readonly organizationId: string
@@ -92,6 +131,11 @@ const _registry = {
       readonly issueId: string | null
     }
     refresh: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+    }
+    checkEscalation: {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string
@@ -233,6 +277,23 @@ const _registry = {
     }
   }>(),
 
+  // Outbound contact lifecycle sync to the marketing tool (Loops in v2). Each
+  // task targets a specific contact update; they are dispatched from
+  // `domain-events` as users move through signup, organization creation,
+  // onboarding, and first-trace.
+  "marketing-contacts": payloads<{
+    "register-user": {
+      readonly userId: string
+    }
+    "update-onboarding": {
+      readonly userId: string
+      readonly stackChoice: "coding-agent-machine" | "production-agent"
+    }
+    "mark-telemetry-enabled": {
+      readonly organizationId: string
+    }
+  }>(),
+
   "trace-search": payloads<{
     refreshTrace: {
       readonly organizationId: string
@@ -240,6 +301,54 @@ const _registry = {
       readonly traceId: string
       readonly startTime: string
       readonly rootSpanName: string
+    }
+  }>(),
+
+  billing: payloads<{
+    recordBillableAction: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly action: "trace" | "flagger-scan" | "live-eval-scan" | "eval-generation"
+      readonly idempotencyKey: string
+      readonly context: {
+        readonly planSlug: "free" | "pro" | "enterprise"
+        readonly planSource: "override" | "subscription" | "free-fallback"
+        readonly periodStart: string
+        readonly periodEnd: string
+        readonly includedCredits: number
+        readonly overageAllowed: boolean
+      }
+      readonly traceId?: string
+      readonly metadata?: Record<string, unknown>
+    }
+    recordTraceUsageBatch: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceIds: readonly string[]
+      readonly planSlug: "free" | "pro" | "enterprise"
+      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly includedCredits: number
+      readonly overageAllowed: boolean
+    }
+  }>(),
+
+  "billing-overage": payloads<{
+    reportOverage: {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+      /**
+       * Cumulative `overageCredits` observed when this report was enqueued.
+       * The worker reports up to this value (not "current O at job-read time")
+       * so retries are stable: the Stripe meter-event identifier is derived
+       * from this snapshot, and bullmq retries reuse the same payload, which
+       * makes Stripe deduplicate retries even after additional accrual. The
+       * pending job may be replaced with a newer snapshot before it fires, but
+       * the fired payload stays stable across retries.
+       */
+      readonly snapshotOverageCredits: number
     }
   }>(),
 
@@ -261,6 +370,20 @@ const _registry = {
       readonly review:
         | { readonly decision: "good"; readonly comment?: string }
         | { readonly decision: "bad"; readonly comment: string }
+    }
+  }>(),
+
+  // Weekly "Claude Code Wrapped" digest. `triggerWeeklyRun` is fired by a
+  // BullMQ repeatable schedule; the handler derives the 7-day window from
+  // Date.now() and fans out one `runForProject` per eligible (orgId, projectId)
+  // pair. The manual backoffice button publishes `runForProject` directly.
+  "claude-code-wrapped": payloads<{
+    triggerWeeklyRun: Record<string, never>
+    runForProject: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly windowStartIso: string
+      readonly windowEndIso: string
     }
   }>(),
 }

@@ -1,10 +1,10 @@
-import type { IssueOccurrenceAggregate, ScoreSource } from "@domain/scores"
+import type { ScoreSource } from "@domain/scores"
 import {
-  AUTO_RESOLVE_INACTIVITY_DAYS,
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_EXIT_THRESHOLD_FACTOR,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_STATES,
@@ -184,7 +184,9 @@ export const normalizeEmbedding = (embedding: readonly number[]): number[] => {
 
 export interface DeriveIssueLifecycleStatesInput {
   readonly issue: Issue
-  readonly occurrence?: IssueOccurrenceAggregate | null
+  /** Lifecycle flags joined from `alert_incidents` by `IssueRepository` reads. */
+  readonly isEscalating: boolean
+  readonly isRegressed: boolean
   readonly now?: Date
 }
 
@@ -194,34 +196,52 @@ export const getEscalationOccurrenceThreshold = (baselineAvgOccurrences: number)
     Math.floor(Math.max(0, baselineAvgOccurrences) * ESCALATION_THRESHOLD_FACTOR) + 1,
   )
 
+/**
+ * Hysteresis exit threshold: an escalating issue exits only when its recent
+ * occurrence count drops below this value. Always strictly less than
+ * `getEscalationOccurrenceThreshold(baselineAvgOccurrences)` so the entry
+ * and exit conditions cannot both hold simultaneously at the same baseline.
+ */
+export const getEscalationExitThreshold = (baselineAvgOccurrences: number): number =>
+  Math.floor(getEscalationOccurrenceThreshold(baselineAvgOccurrences) * ESCALATION_EXIT_THRESHOLD_FACTOR)
+
+/**
+ * An issue is "new" while its first seen timestamp is within
+ * `NEW_ISSUE_AGE_DAYS` of `now`. New issues are excluded from escalation
+ * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
+ * filled in yet, so any volume above the floor would falsely trip the
+ * threshold. The discrete `issue.new` alert covers this case.
+ */
+export const isIssueNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
+  firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
+
 export const deriveIssueLifecycleStates = ({
   issue,
-  occurrence,
+  isEscalating,
+  isRegressed,
   now = new Date(),
 }: DeriveIssueLifecycleStatesInput): readonly IssueStateValue[] => {
-  const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
-  const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
   const states = new Set<IssueStateValue>()
-  const isNew = firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
 
-  if (isNew) {
+  if (isIssueNew(issue.createdAt, now)) {
     states.add(IssueState.New)
   }
 
-  const recentOccurrences = occurrence?.recentOccurrences ?? 0
-  const baselineAverage = occurrence?.baselineAvgOccurrences ?? 0
-  if (!isNew && recentOccurrences >= getEscalationOccurrenceThreshold(baselineAverage)) {
+  // Escalating and regressed flags are sourced from `alert_incidents` rows
+  // joined onto the issue read by `IssueRepository`. They're authoritative
+  // — consumers don't recompute them from the occurrence aggregate.
+  if (isEscalating) {
     states.add(IssueState.Escalating)
   }
 
-  const isRegressed = issue.resolvedAt !== null && lastSeenAt.getTime() > issue.resolvedAt.getTime()
-  if (isRegressed) {
+  // Regressed only when the issue has actually-active regression history
+  // AND the user hasn't re-resolved it. `resolvedAt` set wins: it means
+  // the user has acknowledged the regression by resolving again.
+  if (issue.resolvedAt === null && isRegressed) {
     states.add(IssueState.Regressed)
   }
 
-  const isResolvedByInactivity =
-    lastSeenAt.getTime() < now.getTime() - AUTO_RESOLVE_INACTIVITY_DAYS * MILLISECONDS_PER_DAY
-  if (!isRegressed && (issue.resolvedAt !== null || isResolvedByInactivity)) {
+  if (issue.resolvedAt !== null) {
     states.add(IssueState.Resolved)
   }
 

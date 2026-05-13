@@ -9,7 +9,15 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
   const users = new Map<string, User>()
   const namesSet: { userId: string; name: string }[] = []
 
+  const jobTitlesSet: { userId: string; jobTitle: string }[] = []
+
   const repository: UserRepositoryShape = {
+    findById: (userId) => {
+      const user = users.get(userId)
+      if (!user) return Effect.fail(new NotFoundError({ entity: "User", id: userId }))
+      return Effect.succeed(user)
+    },
+
     findByEmail: (email) => {
       const user = [...users.values()].find((u) => u.email === email)
       if (!user) return Effect.fail(new NotFoundError({ entity: "User", id: email }))
@@ -23,6 +31,17 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
         }
       }),
 
+    setJobTitle: (params) =>
+      Effect.sync(() => {
+        const trimmed = params.jobTitle.trim()
+        if (!trimmed) return
+        jobTitlesSet.push({ userId: params.userId, jobTitle: trimmed })
+        const existing = users.get(params.userId)
+        if (existing) {
+          users.set(params.userId, { ...existing, jobTitle: trimmed })
+        }
+      }),
+
     delete: (userId) =>
       Effect.sync(() => {
         users.delete(userId)
@@ -30,5 +49,5 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
     ...overrides,
   }
 
-  return { repository, users, namesSet }
+  return { repository, users, namesSet, jobTitlesSet }
 }

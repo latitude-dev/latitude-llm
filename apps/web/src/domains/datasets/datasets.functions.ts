@@ -14,6 +14,7 @@ import {
   listRows,
   parseDatasetCsv,
   type TraceSelection,
+  type TraceSource,
   updateDatasetDetails,
   updateRow,
 } from "@domain/datasets"
@@ -21,6 +22,8 @@ import {
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
+  filterSetSchema,
+  IssueId,
   isValidId,
   OrganizationId,
   ProjectId,
@@ -31,7 +34,12 @@ import {
 } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  DatasetRowRepositoryLive,
+  ScoreAnalyticsRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -594,12 +602,19 @@ function toTraceSelection(sel: z.infer<typeof rowSelectionSchema>): TraceSelecti
   return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
 }
 
+function toTraceSource(issueId: string | undefined): TraceSource {
+  return issueId ? { kind: "issue", issueId: IssueId(issueId) } : { kind: "project" }
+}
+
 export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
       datasetId: z.string(),
+      issueId: z.string().optional(),
       selection: rowSelectionSchema,
+      searchQuery: z.string().max(500).optional(),
+      filters: filterSetSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
@@ -611,11 +626,15 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
       addTracesToDataset({
         projectId: ProjectId(data.projectId),
         datasetId: DatasetId(data.datasetId),
+        source: toTraceSource(data.issueId),
         selection: toTraceSelection(data.selection),
+        ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+        ...(data.filters ? { filters: data.filters } : {}),
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
         withClickHouse(TraceRepositoryLive, chClient, orgId),
+        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
@@ -640,8 +659,11 @@ export const createDatasetFromTracesFunction = createServerFn({
           message: "Invalid dataset id",
         }),
       projectId: z.string(),
+      issueId: z.string().optional(),
       name: z.string().min(1),
       selection: rowSelectionSchema,
+      searchQuery: z.string().max(500).optional(),
+      filters: filterSetSchema.optional(),
     }),
   )
   .handler(
@@ -663,11 +685,15 @@ export const createDatasetFromTracesFunction = createServerFn({
           ...(data.datasetId ? { datasetId: DatasetId(data.datasetId) } : {}),
           projectId: ProjectId(data.projectId),
           name: data.name,
+          source: toTraceSource(data.issueId),
           selection: toTraceSelection(data.selection),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
+          ...(data.filters ? { filters: data.filters } : {}),
         }).pipe(
           withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
+          withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
           withAi(AIEmbedLive, getRedisClient()),
           withTracing,
         ),

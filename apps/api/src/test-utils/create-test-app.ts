@@ -4,7 +4,13 @@ import { generateId } from "@domain/shared"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
-import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
+import {
+  members,
+  oauthAccessTokens,
+  oauthApplications,
+  organizations,
+  users,
+} from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
   createInMemoryPostgres,
@@ -15,6 +21,7 @@ import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import type { TestContext } from "vitest"
 import { afterAll, beforeAll, beforeEach } from "vitest"
+import { resetEndpointRegistry } from "../mcp/registry.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
 import { registerRoutes } from "../routes/index.ts"
@@ -78,11 +85,17 @@ export const setupTestApi = () => {
     database = await acquireDatabase()
     redis = createFakeRedis()
 
+    // The MCP endpoint registry is module-global. Multiple test files mounted in
+    // the same vitest worker would otherwise accumulate entries across
+    // `registerRoutes` calls — reset before each test app boot.
+    resetEndpointRegistry()
+
     app = new OpenAPIHono<AppEnv>()
     app.onError(honoErrorHandler)
 
     const fakePublisher: QueuePublisherShape = {
       publish: () => Effect.void,
+      scheduleRepeatable: () => Effect.void,
       close: () => Effect.void,
     }
 
@@ -110,6 +123,7 @@ export const setupTestApi = () => {
 }
 
 interface TenantSetup {
+  readonly userId: string
   readonly organizationId: string
   readonly apiKeyToken: string
   readonly authApiKeyId: string
@@ -154,5 +168,58 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
     name: "auth-key",
   })
 
-  return { organizationId, apiKeyToken, authApiKeyId }
+  return { userId, organizationId, apiKeyToken, authApiKeyId }
 }
+
+interface OAuthTenantSetup extends TenantSetup {
+  /** Bearer token to use as `Authorization: Bearer <oauthAccessToken>` on the test client. */
+  readonly oauthAccessToken: string
+  /** Stable id of the seeded `oauth_applications` row. */
+  readonly oauthClientId: string
+}
+
+/**
+ * Extends {@link createTenantSetup} with an OAuth application + access token
+ * bound to the same org and user. Use this when a route requires OAuth auth
+ * (mutations on `/v1/members`, anything that needs `c.var.auth.method` ===
+ * `"oauth"`).
+ *
+ * The seeded token is a fresh random string; the API's `validateOAuthAccessToken`
+ * looks it up directly in the shared `oauthAccessTokens` table, so any
+ * 36-character-ish value works for tests.
+ */
+export const createOAuthTenantSetup = async (database: InMemoryPostgres): Promise<OAuthTenantSetup> => {
+  const tenant = await createTenantSetup(database)
+
+  const clientId = `lct_${generateId()}`
+  const oauthAccessToken = `loa_${crypto.randomUUID()}`
+  const oneHour = 60 * 60 * 1000
+
+  await database.db.insert(oauthApplications).values({
+    id: generateId(),
+    name: "Test MCP Client",
+    clientId,
+    userId: tenant.userId,
+    organizationId: tenant.organizationId,
+    disabled: false,
+  })
+
+  await database.db.insert(oauthAccessTokens).values({
+    id: generateId(),
+    accessToken: oauthAccessToken,
+    clientId,
+    userId: tenant.userId,
+    accessTokenExpiresAt: new Date(Date.now() + oneHour),
+    scopes: "openid profile email",
+  })
+
+  return { ...tenant, oauthAccessToken, oauthClientId: clientId }
+}
+
+/**
+ * Builds `Authorization: Bearer <token>` headers for an OAuth-authenticated
+ * test request. Pair with {@link createOAuthTenantSetup}.
+ */
+export const createOAuthAuthHeaders = (oauthAccessToken: string): Record<string, string> => ({
+  Authorization: `Bearer ${oauthAccessToken}`,
+})

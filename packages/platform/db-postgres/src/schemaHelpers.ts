@@ -38,9 +38,25 @@ export function timestamps() {
 }
 
 /**
- * Generate a unique ID using CUID2.
- * CUID2 provides 24 character URL-safe unique identifiers.
+ * `varchar(24)` column holding a CUID2 — 24-character URL-safe unique id.
+ *
+ * `default` (defaults to `true`) controls whether Drizzle synthesises a
+ * fresh CUID2 when the field is `undefined` at insert time. Pass `false`
+ * for FK columns where the value is set by something outside our control
+ * (e.g. Better Auth's adapter picks `userId` from the session and leaves
+ * it undefined when there is no session): `undefined` then inserts as
+ * `NULL` so the FK constraint accepts it, instead of letting Drizzle make
+ * up an id that can't possibly match any existing row.
+ *
+ * Overloaded so each branch returns its own concrete type — a single
+ * implementation with a ternary would collapse the return into a union,
+ * which erases Drizzle's `hasDefault` flag on the default-true path and
+ * forces every `id`-bearing insert in the codebase to pass `id`
+ * explicitly.
  */
-export function cuid(name: string) {
-  return varchar(name, { length: 24 }).$defaultFn(() => createId())
+export function cuid(name: string): ReturnType<ReturnType<typeof varchar>["$defaultFn"]>
+export function cuid(name: string, options: { default: false }): ReturnType<typeof varchar>
+export function cuid(name: string, options?: { default?: boolean }) {
+  const column = varchar(name, { length: 24 })
+  return options?.default === false ? column : column.$defaultFn(() => createId())
 }

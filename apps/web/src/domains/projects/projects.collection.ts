@@ -70,7 +70,7 @@ export function createProjectMutation(name: string) {
     organizationId: OrganizationId(""),
     name,
     slug: "",
-    settings: { keepMonitoring: undefined },
+    settings: { keepMonitoring: undefined, alertNotifications: undefined },
     deletedAt: null,
     createdAt: now,
     updatedAt: now,

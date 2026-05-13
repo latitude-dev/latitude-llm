@@ -1,9 +1,11 @@
+import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
 import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
 import { issueSeeders } from "./issues/index.ts"
+import { notificationSeeders } from "./notifications/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
 import { projectSeeders } from "./projects/index.ts"
 import { scoreSeeders } from "./scores/index.ts"
@@ -29,6 +31,15 @@ export const contentSeeders: readonly Seeder[] = [
   ...scoreSeeders,
   ...annotationQueueSeeders,
   ...flaggerSeeders,
+  // Runs after issues + scores so it can derive "currently escalating"
+  // from real occurrence patterns in the seeded data via the same
+  // threshold the production worker uses, instead of a fixture flag.
+  ...alertIncidentSeeders,
+  // Spawns in-app notifications mirroring what the runtime worker would
+  // produce for the seeded incidents — so a fresh `pg:seed` lights up
+  // the bell instead of leaving it empty. Must run after
+  // alertIncidentSeeders.
+  ...notificationSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [

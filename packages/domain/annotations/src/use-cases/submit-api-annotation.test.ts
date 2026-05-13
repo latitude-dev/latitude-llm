@@ -300,8 +300,8 @@ describe("submitApiAnnotationUseCase", () => {
     })
   })
 
-  describe("draft vs published branching", () => {
-    it("writes a published annotation by default (draftedAt=null)", async () => {
+  describe("publication", () => {
+    it("always writes a published annotation (draftedAt=null) — the public API does not expose draft state", async () => {
       const { store, events, layer } = createTestLayers()
 
       const score = await Effect.runPromise(
@@ -309,7 +309,7 @@ describe("submitApiAnnotationUseCase", () => {
           trace: { by: "id", id: traceIdRaw },
           value: 0.5,
           passed: true,
-          feedback: "Published by default",
+          feedback: "Always published",
           organizationId: cuid,
           projectId: ProjectId(projectCuid),
         }).pipe(Effect.provide(layer)),
@@ -321,31 +321,6 @@ describe("submitApiAnnotationUseCase", () => {
         expect.objectContaining({
           eventName: "ScoreCreated",
           payload: expect.objectContaining({ status: "published" }),
-        }),
-      ])
-    })
-
-    it("writes a draft annotation when draft=true", async () => {
-      const { store, events, layer } = createTestLayers()
-
-      const score = await Effect.runPromise(
-        submitApiAnnotationUseCase({
-          trace: { by: "id", id: traceIdRaw },
-          draft: true,
-          value: 0.5,
-          passed: false,
-          feedback: "Explicit draft",
-          organizationId: cuid,
-          projectId: ProjectId(projectCuid),
-        }).pipe(Effect.provide(layer)),
-      )
-
-      expect(score.draftedAt).toBeInstanceOf(Date)
-      expect(store.size).toBe(1)
-      expect(events).toEqual([
-        expect.objectContaining({
-          eventName: "ScoreCreated",
-          payload: expect.objectContaining({ status: "draft" }),
         }),
       ])
     })

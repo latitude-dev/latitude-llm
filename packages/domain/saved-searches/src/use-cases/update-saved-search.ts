@@ -1,11 +1,9 @@
-import type { FilterSet, SavedSearchId, UserId } from "@domain/shared"
-import { toSlug } from "@domain/shared"
+import { type FilterSet, generateSlug, type SavedSearchId, toSlug, type UserId } from "@domain/shared"
 import { Effect } from "effect"
-import { SAVED_SEARCH_NAME_MAX_LENGTH, SAVED_SEARCH_SLUG_MAX_LENGTH } from "../constants.ts"
+import { SAVED_SEARCH_NAME_MAX_LENGTH } from "../constants.ts"
 import { isEmptySearch } from "../entities/saved-search.ts"
 import { EmptySavedSearchError, InvalidSavedSearchNameError } from "../errors.ts"
 import { SavedSearchRepository } from "../ports/saved-search-repository.ts"
-import { generateUniqueSlug } from "./generate-unique-slug.ts"
 
 export interface UpdateSavedSearchInput {
   readonly id: SavedSearchId
@@ -59,16 +57,14 @@ export const updateSavedSearch = Effect.fn("savedSearches.updateSavedSearch")(fu
     return yield* new EmptySavedSearchError({})
   }
 
+  // Skip slug regeneration when the name change is purely cosmetic (toSlug
+  // is a lossy transformation; "Foo" and "foo" map to the same slug).
   let nextSlug: string | undefined
-  if (nameChanged) {
-    const candidateSlug = toSlug(nextName).slice(0, SAVED_SEARCH_SLUG_MAX_LENGTH)
-    if (candidateSlug !== current.slug) {
-      nextSlug = yield* generateUniqueSlug({
-        projectId: current.projectId,
-        name: nextName,
-        excludeId: input.id,
-      })
-    }
+  if (nameChanged && toSlug(nextName) !== current.slug) {
+    nextSlug = yield* generateSlug({
+      name: nextName,
+      count: (slug) => repo.countBySlug({ projectId: current.projectId, slug, excludeId: input.id }),
+    })
   }
 
   return yield* repo.update({

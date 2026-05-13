@@ -109,6 +109,42 @@ describe("createFakeQueuePublisher", () => {
     expect(listDeduped()).toHaveLength(1)
   })
 
+  it("preserves the latest payload for repeated publishes with the same dedupeKey + latestThrottleMs", async () => {
+    const { publisher, getPublishedByDedupeKey, listDeduped } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish(
+        "billing-overage",
+        "reportOverage",
+        {
+          organizationId: "o",
+          periodStart: "2026-01-01T00:00:00.000Z",
+          periodEnd: "2026-02-01T00:00:00.000Z",
+          snapshotOverageCredits: 30,
+        },
+        { dedupeKey: "overage", latestThrottleMs: 1000 },
+      ),
+    )
+    await Effect.runPromise(
+      publisher.publish(
+        "billing-overage",
+        "reportOverage",
+        {
+          organizationId: "o",
+          periodStart: "2026-01-01T00:00:00.000Z",
+          periodEnd: "2026-02-01T00:00:00.000Z",
+          snapshotOverageCredits: 1000,
+        },
+        { dedupeKey: "overage", latestThrottleMs: 1000 },
+      ),
+    )
+
+    const pending = getPublishedByDedupeKey("billing-overage", "overage")
+    expect(pending).toBeDefined()
+    expect((pending?.payload as { snapshotOverageCredits: number }).snapshotOverageCredits).toBe(1000)
+    expect(listDeduped()).toHaveLength(1)
+  })
+
   it("records throttleMs on the published message alongside dedupeKey", async () => {
     const { publisher, published } = createFakeQueuePublisher()
 
@@ -122,6 +158,26 @@ describe("createFakeQueuePublisher", () => {
     )
 
     expect(published[0]?.options).toEqual({ dedupeKey: "k", throttleMs: 3600000 })
+  })
+
+  it("records latestThrottleMs on the published message alongside dedupeKey", async () => {
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      publisher.publish(
+        "billing-overage",
+        "reportOverage",
+        {
+          organizationId: "o",
+          periodStart: "2026-01-01T00:00:00.000Z",
+          periodEnd: "2026-02-01T00:00:00.000Z",
+          snapshotOverageCredits: 30,
+        },
+        { dedupeKey: "k", latestThrottleMs: 60000 },
+      ),
+    )
+
+    expect(published[0]?.options).toEqual({ dedupeKey: "k", latestThrottleMs: 60000 })
   })
 
   it("ignores publishes without a dedupeKey in the deduped view", async () => {

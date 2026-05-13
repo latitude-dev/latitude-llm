@@ -3,12 +3,17 @@ import type { MouseEvent } from "react"
 import { useMemo, useState } from "react"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { AnnotationPopoverContent, AnnotationPopoverWrapper } from "./annotation-popover-content.tsx"
-import { type AnnotationFormData, useTraceAnnotationsData } from "./hooks/use-trace-annotations-data.ts"
+import {
+  type AnnotationFormData,
+  getAnnotatorIdForBucketing,
+  useTraceAnnotationsData,
+} from "./hooks/use-trace-annotations-data.ts"
 
 interface Annotator {
   readonly id: string
   readonly name: string
   readonly imageSrc: string | null
+  readonly kind?: "agent"
 }
 
 export function MessageAnnotationTrigger({
@@ -43,7 +48,8 @@ export function MessageAnnotationTrigger({
     const positive: Annotator[] = []
     const negative: Annotator[] = []
     for (const a of annotations) {
-      const annotator = a.annotatorId ? annotatorById.get(a.annotatorId) : undefined
+      const lookupId = getAnnotatorIdForBucketing(a)
+      const annotator = lookupId ? annotatorById.get(lookupId) : undefined
       if (!annotator) continue
 
       const bucket = a.passed ? "up" : "down"

@@ -10,7 +10,8 @@
         "VITE_LAT_WEB_URL",
         "VITE_LAT_TURNSTILE_SITE_KEY",
         "VITE_LAT_POSTHOG_KEY",
-        "VITE_LAT_POSTHOG_HOST"
+        "VITE_LAT_POSTHOG_HOST",
+        "VITE_LAT_GTM_CONTAINER_ID"
       ]
     },
     "dev": {

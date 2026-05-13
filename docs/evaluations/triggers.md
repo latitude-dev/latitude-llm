@@ -17,7 +17,7 @@ When a trace completes (after a debounce window with no new spans), Latitude che
 
 If a trace passes all checks, the evaluation runs. If it fails at any stage, it's skipped.
 
-Triggers use the same **shared filter system** as the trace view and annotation queues. This means the filtering capabilities you see in the trace dashboard are the same ones available for evaluation triggers.
+Triggers use the same **shared filter system** as the trace view and saved searches. The filtering capabilities you see in the trace dashboard or in the Search page are the same ones available for evaluation triggers.
 
 ## Trigger Fields
 
@@ -79,19 +79,21 @@ A debounce time in seconds. When set, the evaluation waits for the debounce peri
 - Turn: last
 - Debounce: 0
 
-## Triggers and Annotation Queues
+## Triggers, Search, and Annotations
 
-Triggers work in concert with annotation queues. A common pattern:
+Triggers, search, and annotations form a feedback loop:
 
 1. An evaluation monitors traces with a broad trigger
-2. Failed scores feed into issue discovery
-3. A linked annotation queue surfaces failing traces for human review
-4. Human annotations measure alignment with the evaluation
+2. Failed scores feed into [issue discovery](../issues/overview)
+3. A [saved search](../search/saved-searches) scopes a reviewer to the failing cohort
+4. Reviewers leave [inline annotations](../annotations/inline-annotations) on those traces
+5. Human annotations measure alignment with the evaluation
 
-This creates a feedback loop where triggers determine the scope of automated monitoring, and annotation queues determine the scope of human oversight.
+Triggers determine the scope of automated monitoring; saved searches and annotations determine the scope of human oversight. [Flaggers](../annotations/flaggers) handle the same loop fully automatically for a fixed list of well-known categories.
 
 ## Next Steps
 
 - [Alignment](./alignment): How human annotations calibrate evaluations
 - [Evaluations Overview](./overview): How evaluation scripts work
-- [Annotation Queues](../annotations/annotation-queues): The human side of the feedback loop
+- [Annotations](../annotations/overview): The human side of the feedback loop
+- [Search](../search/overview): Build cohorts of traces to review

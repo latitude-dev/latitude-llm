@@ -24,19 +24,33 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { basicAuth } from "hono/basic-auth"
-import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
+import {
+  getAdminPostgresClient,
+  getClickhouseClient,
+  getPostgresClient,
+  getPostHogClient,
+  getRedisClient,
+  getStorageDisk,
+  getWorkflowStarter,
+} from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
+import { createBillingWorker } from "./workers/billing.ts"
+import { createBillingOverageWorker } from "./workers/billing-overage.ts"
+import { createClaudeCodeWrappedWorker } from "./workers/claude-code-wrapped.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
+import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
+import { createMarketingContactsWorker } from "./workers/domain-events/marketing-contacts.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createNotificationsWorker } from "./workers/notifications.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
@@ -45,6 +59,7 @@ import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
+import type { WorkersContext } from "./workers-context.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -139,20 +154,37 @@ const bootstrap = async () => {
       }).pipe(withTracing),
     )
     const workflowStarter = await getWorkflowStarter()
+    const redisClient = getRedisClient()
+    const clickhouseClient = getClickhouseClient()
 
     const ctx = {
       consumer: queueConsumer,
       publisher: queuePublisher,
       eventsPublisher,
       workflowStarter,
-    }
+      postgresClient: pgClient,
+      redisClient,
+      clickhouseClient,
+    } satisfies WorkersContext
 
     createDomainEventsWorker(ctx)
     createMagicLinkEmailWorker(ctx)
     createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
+    createMarketingContactsWorker(ctx)
+    createAlertIncidentsWorker(ctx)
+    createNotificationsWorker(ctx)
     createApiKeysWorker(ctx)
-    createSpanIngestionWorker(ctx)
+    createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
+    createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
+    createSpanIngestionWorker({
+      consumer: ctx.consumer,
+      eventsPublisher: ctx.eventsPublisher,
+      clickhouseClient: ctx.clickhouseClient,
+      disk: getStorageDisk(),
+      postgresClient: ctx.postgresClient,
+      redisClient: ctx.redisClient,
+    })
     createExportsWorker(ctx)
     await createIssuesWorker(ctx)
     createEvaluationsWorker(ctx)
@@ -166,7 +198,34 @@ const bootstrap = async () => {
     createScoresWorker(ctx)
     createPostHogAnalyticsWorker(ctx)
     createProductFeedbackWorker(ctx)
-    createTraceSearchWorker(ctx)
+    createTraceSearchWorker({
+      consumer: ctx.consumer,
+      clickhouseClient: ctx.clickhouseClient,
+      postgresClient: ctx.postgresClient,
+      redisClient: ctx.redisClient,
+    })
+    createClaudeCodeWrappedWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      clickhouseClient: ctx.clickhouseClient,
+    })
+
+    // Register (or refresh) the weekly Claude Code Wrapped trigger. upsert
+    // semantics make this idempotent across worker restarts. The handler
+    // derives the 7-day window from Date.now() at fire time so the stored
+    // job payload doesn't go stale.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "claude-code-wrapped",
+          "triggerWeeklyRun",
+          {},
+          { key: "claude-code-wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))

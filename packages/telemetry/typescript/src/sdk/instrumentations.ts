@@ -7,6 +7,7 @@ import { type Instrumentation, registerInstrumentations } from "@opentelemetry/i
  */
 export type InstrumentationType =
   | "openai"
+  | "openai-agents"
   | "anthropic"
   | "bedrock"
   | "cohere"
@@ -50,14 +51,34 @@ interface InstrumentationConfig {
   packageName: string
   moduleName: string
   defaultEnrichTokens?: boolean
+  /**
+   * Picks the object handed to `manuallyInstrument`. Defaults to the imported namespace.
+   * Traceloop's `manuallyInstrument` shape is inconsistent across SDKs — anthropic's
+   * reads `module.Anthropic.Messages`, but openai's reads `module.Chat.Completions`,
+   * so the openai entry unwraps to the `OpenAI` class rather than the namespace.
+   */
+  resolveInstrumentationTarget?: (moduleRef: unknown) => unknown
+}
+
+const resolveOpenAITarget = (moduleRef: unknown): unknown => {
+  const ns = moduleRef as { OpenAI?: unknown; default?: unknown } | null | undefined
+  return ns?.OpenAI ?? ns?.default ?? moduleRef
 }
 
 const INSTRUMENTATION_MAP: Record<InstrumentationType, InstrumentationConfig> = {
   openai: {
-    loadCtor: async () => (await import("@traceloop/instrumentation-openai")).OpenAIInstrumentation,
+    loadCtor: async () =>
+      (await import("./instrumentations/openai/instrumentation.ts")).OpenAIInstrumentationWithResponses,
     packageName: "@traceloop/instrumentation-openai",
     moduleName: "openai",
     defaultEnrichTokens: true,
+    resolveInstrumentationTarget: resolveOpenAITarget,
+  },
+  "openai-agents": {
+    loadCtor: async () =>
+      (await import("./instrumentations/openai-agents/instrumentation.ts")).OpenAIAgentsInstrumentation,
+    packageName: "@openai/agents",
+    moduleName: "@openai/agents",
   },
   anthropic: {
     loadCtor: async () => (await import("@traceloop/instrumentation-anthropic")).AnthropicInstrumentation,
@@ -137,7 +158,8 @@ async function createLatitudeInstrumentations(options: CreateInstrumentationsOpt
       )
       continue
     }
-    inst.manuallyInstrument?.(moduleRef)
+    const target = config.resolveInstrumentationTarget?.(moduleRef) ?? moduleRef
+    inst.manuallyInstrument?.(target)
 
     result.push(inst)
   }
@@ -150,10 +172,11 @@ async function tryRequire(moduleName: string): Promise<unknown | undefined> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require(moduleName)
   } catch {
-    // Fallback to dynamic import for ESM environments
+    // Fallback to dynamic import for ESM environments. Return the full module
+    // namespace; traceloop instrumentations expect the namespace shape (e.g.
+    // anthropic reaches into `module.Anthropic.Messages.prototype`).
     try {
-      const mod = await import(/* @vite-ignore */ moduleName)
-      return mod.default ?? mod
+      return await import(/* @vite-ignore */ moduleName)
     } catch {
       return undefined
     }

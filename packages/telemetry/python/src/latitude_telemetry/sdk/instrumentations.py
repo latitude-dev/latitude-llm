@@ -22,6 +22,15 @@ INSTRUMENTATION_MAP: dict[InstrumentationType, InstrConfig] = {
         "package": "openai",
         "manual": False,
     },
+    "openai-agents": {
+        "module": "openinference.instrumentation.openai_agents",
+        "class": "OpenAIAgentsInstrumentor",
+        # The host package's PyPI distribution name is `openai-agents` (its import
+        # name is `agents`). `is_package_installed` checks PyPI distribution names,
+        # and the warning text doubles as a `pip install` hint, so use the PyPI name.
+        "package": "openai-agents",
+        "manual": False,
+    },
     "anthropic": {
         "module": "opentelemetry.instrumentation.anthropic",
         "class": "AnthropicInstrumentor",

@@ -8,6 +8,7 @@ const dotIndicatorVariants = cva("inline-block shrink-0 rounded-full", {
     variant: {
       success: "bg-green-500",
       default: "bg-muted-foreground",
+      primary: "bg-primary",
     },
     size: {
       sm: "size-1.5",
@@ -20,24 +21,31 @@ const dotIndicatorVariants = cva("inline-block shrink-0 rounded-full", {
   },
 })
 
-export type DotIndicatorProps = ComponentPropsWithRef<"span"> & VariantProps<typeof dotIndicatorVariants>
+export type DotIndicatorProps = ComponentPropsWithRef<"span"> &
+  VariantProps<typeof dotIndicatorVariants> & {
+    ping?: boolean
+  }
 
 function DotIndicator({
   ref,
   className,
   variant,
   size,
+  ping = false,
   "aria-hidden": ariaHidden = true,
   ...props
 }: DotIndicatorProps) {
-  return (
-    <span
-      ref={ref}
-      aria-hidden={ariaHidden}
-      className={cn(dotIndicatorVariants({ variant, size }), className)}
-      {...props}
-    />
-  )
+  const dotClass = dotIndicatorVariants({ variant, size })
+
+  if (ping) {
+    return (
+      <span ref={ref} aria-hidden={ariaHidden} className={cn(dotClass, "relative inline-flex", className)} {...props}>
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-inherit opacity-75" />
+      </span>
+    )
+  }
+
+  return <span ref={ref} aria-hidden={ariaHidden} className={cn(dotClass, className)} {...props} />
 }
 
 export { DotIndicator }

@@ -1,6 +1,5 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
-import type { BulkSelection, SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 
 export const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
@@ -30,30 +29,4 @@ export function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): strin
   if (!conds) return undefined
   const match = conds.find((c) => c.op === op)
   return match ? String(match.value) : undefined
-}
-
-export function getSelectedCount(state: SelectionState<string>, total: number): number {
-  switch (state.mode) {
-    case "all":
-      return total - state.excludedIds.size
-    case "none":
-      return 0
-    case "partial":
-      return state.selectedIds.size
-    case "allExcept":
-      return total - state.excludedIds.size
-  }
-}
-
-export function getBulkSelection(state: SelectionState<string>): BulkSelection<string> | null {
-  switch (state.mode) {
-    case "all":
-      return { mode: "all" }
-    case "allExcept":
-      return { mode: "allExcept", rowIds: Array.from(state.excludedIds) }
-    case "partial":
-      return state.selectedIds.size > 0 ? { mode: "selected", rowIds: Array.from(state.selectedIds) } : null
-    case "none":
-      return null
-  }
 }

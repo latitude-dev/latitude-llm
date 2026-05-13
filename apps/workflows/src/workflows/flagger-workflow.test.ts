@@ -5,12 +5,20 @@ const TEST_TRACE_CREATED_AT = "2024-01-15T10:00:00.000Z"
 const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
     runFlagger: vi.fn(async (): Promise<{ matched: boolean }> => ({ matched: false })),
-    draftAnnotate: vi.fn(async () => ({
-      traceId: "trace-1",
-      feedback: "Test feedback",
-      traceCreatedAt: "2024-01-15T10:00:00.000Z",
-      scoreId: "score-default",
-    })),
+    draftAnnotate: vi.fn(
+      async (): Promise<{
+        traceId: string
+        feedback: string
+        traceCreatedAt: string
+        scoreId: string
+        messageIndex?: number | undefined
+      }> => ({
+        traceId: "trace-1",
+        feedback: "Test feedback",
+        traceCreatedAt: "2024-01-15T10:00:00.000Z",
+        scoreId: "score-default",
+      }),
+    ),
     saveAnnotation: vi.fn(async () => ({
       flaggerId: "flagger-1",
       traceId: "trace-1",
@@ -124,6 +132,37 @@ describe("flaggerWorkflow", () => {
       traceCreatedAt: TEST_TRACE_CREATED_AT,
       scoreId: "score-from-draft",
     })
+  })
+
+  it("passes messageIndex from draftAnnotate through to saveAnnotation when present", async () => {
+    mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
+    mockActivities.draftAnnotate.mockResolvedValueOnce({
+      traceId: "trace-1",
+      feedback: "Generated feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
+      scoreId: "score-msg-idx",
+      messageIndex: 5,
+    })
+    mockActivities.saveAnnotation.mockResolvedValueOnce({
+      flaggerId: FLAGGER_ID,
+      traceId: "trace-1",
+      draftAnnotationId: "draft-789",
+    })
+
+    await flaggerWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-1",
+      flaggerId: FLAGGER_ID,
+      flaggerSlug: "jailbreaking",
+    })
+
+    expect(mockActivities.saveAnnotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageIndex: 5,
+        scoreId: "score-msg-idx",
+      }),
+    )
   })
 
   it("propagates draftAnnotate errors for Temporal retry", async () => {

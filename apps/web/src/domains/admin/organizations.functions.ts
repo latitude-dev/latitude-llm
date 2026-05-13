@@ -1,21 +1,32 @@
 import {
+  type AdminOrganizationBilling,
   type AdminOrganizationDetails,
   type AdminOrganizationUsageCursor,
   type AdminOrganizationUsageSummary,
   adminOrganizationUsageCursorSchema,
+  clearBillingOverrideUseCase,
   createDemoProjectUseCase,
+  getOrganizationBillingUseCase,
   getOrganizationDetailsUseCase,
   type ListOrganizationsByUsageOutput,
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
+  upsertBillingOverrideUseCase,
 } from "@domain/admin"
 import { WorkflowStarter } from "@domain/queue"
 import { OrganizationId, UserId } from "@domain/shared"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AdminOrganizationRepositoryLive,
+  BillingOverrideRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  invalidateEffectivePlanCache,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  resolveEffectivePlanCached,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -23,7 +34,12 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
-import { getAdminPostgresClient, getClickhouseClient, getWorkflowStarter } from "../../server/clients.ts"
+import {
+  getAdminPostgresClient,
+  getClickhouseClient,
+  getRedisClient,
+  getWorkflowStarter,
+} from "../../server/clients.ts"
 
 export interface AdminOrganizationMemberDto {
   membershipId: string
@@ -53,6 +69,30 @@ interface AdminOrganizationDetailsDto {
   projects: AdminOrganizationProjectDto[]
   createdAt: string
   updatedAt: string
+}
+
+export interface AdminOrganizationBillingDto {
+  effectivePlanSlug: "free" | "pro" | "enterprise"
+  effectivePlanSource: "override" | "subscription" | "free-fallback"
+  stripeSubscriptionPlan: string | null
+  stripeSubscriptionStatus: string | null
+  periodStart: string
+  periodEnd: string
+  /** `null` when entitlement is effectively unlimited over JSON/API (Enterprise logical allowance). */
+  includedCredits: number | null
+  consumedCredits: number
+  overageCredits: number
+  overageAmountMills: number
+  retentionDays: number
+  currentSpendMills: number | null
+  spendingLimitCents: number | null
+  override: {
+    plan: "free" | "pro" | "enterprise"
+    includedCredits: number | null
+    retentionDays: number | null
+    notes: string | null
+    updatedAt: string
+  } | null
 }
 
 const toDto = (details: AdminOrganizationDetails): AdminOrganizationDetailsDto => ({
@@ -88,6 +128,14 @@ export const adminGetOrganizationInputSchema = z.object({
   organizationId: z.string().min(1).max(256),
 })
 
+const adminUpdateOrganizationBillingOverrideInputSchema = z.object({
+  organizationId: z.string().min(1).max(256),
+  plan: z.enum(["free", "pro", "enterprise"]),
+  includedCredits: z.number().int().nonnegative().nullable(),
+  retentionDays: z.number().int().positive().nullable(),
+  notes: z.string().nullable(),
+})
+
 /**
  * Backoffice organisation-detail fetch.
  *
@@ -111,6 +159,104 @@ export const adminGetOrganization = createServerFn({ method: "GET" })
     )
 
     return toDto(details)
+  })
+
+const toBillingDto = (billing: AdminOrganizationBilling): AdminOrganizationBillingDto => ({
+  effectivePlanSlug: billing.effectivePlanSlug,
+  effectivePlanSource: billing.effectivePlanSource,
+  stripeSubscriptionPlan: billing.stripeSubscriptionPlan,
+  stripeSubscriptionStatus: billing.stripeSubscriptionStatus,
+  periodStart: billing.periodStart.toISOString(),
+  periodEnd: billing.periodEnd.toISOString(),
+  includedCredits: billing.includedCredits,
+  consumedCredits: billing.consumedCredits,
+  overageCredits: billing.overageCredits,
+  overageAmountMills: billing.overageAmountMills,
+  retentionDays: billing.retentionDays,
+  currentSpendMills: billing.currentSpendMills,
+  spendingLimitCents: billing.spendingLimitCents,
+  override: billing.override
+    ? {
+        plan: billing.override.plan,
+        includedCredits: billing.override.includedCredits,
+        retentionDays: billing.override.retentionDays,
+        notes: billing.override.notes,
+        updatedAt: billing.override.updatedAt.toISOString(),
+      }
+    : null,
+})
+
+export const adminGetOrganizationBilling = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminGetOrganizationInputSchema)
+  .handler(async ({ data }): Promise<AdminOrganizationBillingDto> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    const billing = await Effect.runPromise(
+      Effect.gen(function* () {
+        const resolvedPlan = yield* resolveEffectivePlanCached(organizationId)
+        return yield* getOrganizationBillingUseCase({ organizationId, resolvedPlan })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            BillingOverrideRepositoryLive,
+            BillingUsagePeriodRepositoryLive,
+            SettingsReaderLive,
+            StripeSubscriptionLookupLive,
+          ),
+          client,
+        ),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+
+    return toBillingDto(billing)
+  })
+
+export const adminUpdateOrganizationBillingOverride = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminUpdateOrganizationBillingOverrideInputSchema)
+  .handler(async ({ data }): Promise<void> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* upsertBillingOverrideUseCase({
+          organizationId,
+          plan: data.plan,
+          includedCredits: data.includedCredits,
+          retentionDays: data.retentionDays,
+          notes: data.notes,
+        })
+        yield* invalidateEffectivePlanCache(organizationId)
+      }).pipe(
+        withPostgres(BillingOverrideRepositoryLive, client),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+  })
+
+export const adminClearOrganizationBillingOverride = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminGetOrganizationInputSchema)
+  .handler(async ({ data }): Promise<void> => {
+    const client = getAdminPostgresClient()
+    const organizationId = OrganizationId(data.organizationId)
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* clearBillingOverrideUseCase({ organizationId })
+        yield* invalidateEffectivePlanCache(organizationId)
+      }).pipe(
+        withPostgres(BillingOverrideRepositoryLive, client),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
   })
 
 // ───────────────────────────────────────────────────────────────────

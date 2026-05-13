@@ -1,5 +1,12 @@
 import { Effect } from "effect"
-import type { PublishOptions, QueueName, QueuePublisherShape, TaskName, TaskPayload } from "../index.ts"
+import type {
+  PublishOptions,
+  QueueName,
+  QueuePublisherShape,
+  ScheduleRepeatableOptions,
+  TaskName,
+  TaskPayload,
+} from "../index.ts"
 
 export interface PublishedMessage {
   readonly queue: QueueName
@@ -8,10 +15,19 @@ export interface PublishedMessage {
   readonly options?: PublishOptions
 }
 
+interface ScheduledRepeatable {
+  readonly queue: QueueName
+  readonly task: string
+  readonly payload: unknown
+  readonly options: ScheduleRepeatableOptions
+}
+
 export interface FakeQueuePublisherHandle {
   readonly publisher: QueuePublisherShape
   /** Every publish call in order, including duplicates — use this for call-count assertions. */
   readonly published: PublishedMessage[]
+  /** Latest `scheduleRepeatable` call per scheduler key (later upserts overwrite). */
+  readonly scheduled: Map<string, ScheduledRepeatable>
   /**
    * Pending (coalesced) message per `(queue, dedupeKey)` — mirrors BullMQ's
    * dedupe-by-jobId behavior where repeated publishes under the same
@@ -22,6 +38,9 @@ export interface FakeQueuePublisherHandle {
    *   → the **latest** payload wins.
    * - `throttleMs` (first-publish-wins, `extend: false, replace: false` in
    *   BullMQ) → the **first** payload wins and later publishes are dropped.
+   * - `latestThrottleMs` (fixed fire time, latest payload, `extend: false,
+   *   replace: true` in BullMQ) → the **latest** payload wins without sliding
+   *   the window.
    *
    * Plain `dedupeKey` with no window defaults to debounce-style overwrite
    * so existing tests keep their prior semantics.
@@ -39,6 +58,7 @@ const dedupeMapKey = (queue: QueueName, dedupeKey: string) => `${queue}::${dedup
 export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape>): FakeQueuePublisherHandle => {
   const published: PublishedMessage[] = []
   const deduped = new Map<string, PublishedMessage>()
+  const scheduled = new Map<string, ScheduledRepeatable>()
 
   const publisher: QueuePublisherShape = {
     publish: <T extends QueueName, K extends TaskName<T>>(
@@ -55,8 +75,8 @@ export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape
         // Throttle semantics: first publish wins. Mirrors BullMQ's
         // `extend: false, replace: false` — subsequent publishes within the
         // window are dropped and the pending payload is not touched.
-        // Debounce semantics (and plain `dedupeKey` with no window) fall
-        // through to the overwrite path — `extend: true, replace: true`.
+        // Debounce/latest-throttle semantics (and plain `dedupeKey` with no
+        // window) fall through to the overwrite path — latest payload wins.
         if (options.throttleMs !== undefined) {
           if (!deduped.has(key)) {
             deduped.set(key, message)
@@ -67,6 +87,15 @@ export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape
       }
       return Effect.void
     },
+    scheduleRepeatable: <T extends QueueName, K extends TaskName<T>>(
+      queue: T,
+      task: K,
+      payload: TaskPayload<T, K>,
+      options: ScheduleRepeatableOptions,
+    ) => {
+      scheduled.set(options.key, { queue, task, payload, options })
+      return Effect.void
+    },
     close: () => Effect.void,
     ...overrides,
   }
@@ -74,6 +103,7 @@ export const createFakeQueuePublisher = (overrides?: Partial<QueuePublisherShape
   return {
     publisher,
     published,
+    scheduled,
     getPublishedByDedupeKey: (queue, dedupeKey) => deduped.get(dedupeMapKey(queue, dedupeKey)),
     listDeduped: () => Array.from(deduped.values()),
   }

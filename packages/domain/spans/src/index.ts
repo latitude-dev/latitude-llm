@@ -1,3 +1,52 @@
+// Claude Code Wrapped (server-only — intentionally omitted from browser.ts
+// since it pulls in per-org repositories that the browser bundle doesn't
+// need).
+export {
+  type AssembleReportInput,
+  assembleReport,
+  type BashPatternRow,
+  type BiggestWriteRow,
+  type BranchRow,
+  type BuildReportInput,
+  type BusiestDayRow,
+  buildReportUseCase,
+  ClaudeCodeSpanReader,
+  type ClaudeCodeSpanReaderShape,
+  type ClaudeCodeWrappedEmailSender,
+  type ClaudeCodeWrappedRenderedEmail,
+  type FileLine,
+  type FileTouchesRow,
+  type HeatmapCellRow,
+  type LocStats,
+  type LocStatsRow,
+  listProjectsWithClaudeCodeSpansUseCase,
+  type OrgProjectPair,
+  PERSONALITY_KINDS,
+  type Personality,
+  type PersonalityKind,
+  type ProjectWindowInput,
+  pickReadAnchor,
+  pickWrittenAnchor,
+  type Report,
+  type RunClaudeCodeWrappedDeps,
+  type RunClaudeCodeWrappedInput,
+  type RunClaudeCodeWrappedResult,
+  type RunClaudeCodeWrappedSkippedReason,
+  reportSchema,
+  runClaudeCodeWrappedUseCase,
+  type SessionDurationStatsRow,
+  TOOL_BUCKETS,
+  type ToolBucket,
+  type ToolMix,
+  type ToolMixRow,
+  type TopBashCommand,
+  toolBucketFor,
+  type WindowInput,
+  type WorkspaceDeepDive,
+  type WorkspaceDeepDiveRow,
+  type WorkspaceRow,
+  type WrappedTotalsRow,
+} from "./claude-code-wrapped/index.ts"
 export {
   SESSION_ID_MAX_LENGTH,
   SPAN_ID_LENGTH,
@@ -5,6 +54,10 @@ export {
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
+  TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
+  TRACE_SEARCH_CHUNK_MAX_CHARS,
+  TRACE_SEARCH_CHUNK_OVERLAP_CHARS,
+  TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS,
   TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS,
@@ -35,6 +88,15 @@ export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
+export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  resolveTraceIdFromRef,
+  resolveTraceIdsFromRef,
+  type TraceRef,
+  type TracesRef,
+  traceRefSchema,
+  tracesRefSchema,
+} from "./helpers/trace-ref.ts"
 export {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,
@@ -117,6 +179,7 @@ export {
   traceResourceOutlierSeverityRank,
 } from "./trace-cohorts.ts"
 export type {
+  TraceSearchChunk,
   TraceSearchDocument,
   TraceSearchDocumentInput,
 } from "./use-cases/build-trace-search-document.ts"
@@ -130,6 +193,7 @@ export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-coh
 export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
+export { ingestSpansWithBillingUseCase } from "./use-cases/ingest-spans-with-billing.ts"
 export type {
   LoadTraceForTraceEndFound,
   LoadTraceForTraceEndResult,
@@ -137,6 +201,8 @@ export type {
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
+export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type {

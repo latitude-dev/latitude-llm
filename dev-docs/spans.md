@@ -18,8 +18,8 @@ Reliability adds:
 
 - `simulation_id` on spans as an optional simulation link stored as a non-null `FixedString(24)` with the empty-string sentinel when absent
 - propagation of `simulation_id` into trace/session-level reporting where needed
-- a `SpanIngested` domain event emitted directly through `createEventsPublisher(queuePublisher)` after the span-ingestion process durably writes spans for a trace
-- one debounced downstream runtime task, `trace-end:run`, published directly from the `SpanIngested` handler with a debounce window defined by a named constant whose initial default is `90 seconds`
+- a `TracesIngested` domain event emitted directly through `createEventsPublisher(queuePublisher)` after the span-ingestion process durably writes one ingest batch and dedupes its `traceIds`
+- one debounced downstream runtime task, `trace-end:run`, published once per deduped trace id from the `TracesIngested` handler with a debounce window defined by a named constant whose initial default is `90 seconds`
 
 These telemetry additions should land through new ClickHouse migrations rather than by rewriting existing migration history. Because they are additive extensions to existing unreleased tables, ordinary additive statements and sensible defaults are preferred over bespoke compatibility choreography unless a later change truly requires a rebuild.
 
@@ -29,8 +29,8 @@ Reliability should not treat each span arrival as the moment a trace is complete
 
 Instead:
 
-- the span-ingestion process publishes `SpanIngested` directly through `createEventsPublisher(queuePublisher)` after the span write succeeds
-- the `domain-events` dispatcher reacts to `SpanIngested` by publishing `trace-end:run`, debounced and deduped by `(organizationId, projectId, traceId)`
+- the span-ingestion process publishes `TracesIngested` directly through `createEventsPublisher(queuePublisher)` after spans are durable, carrying a deduped `traceIds` array plus the billing snapshot for that ingest batch when available
+- the `domain-events` dispatcher reacts to `TracesIngested` by publishing one `trace-end:run` per deduped trace id, each debounced and deduped by `(organizationId, projectId, traceId)`
 - if another span for that trace arrives before the debounce window elapses, the pending tasks are replaced/rescheduled so the window starts over
 - when the debounce window elapses, `trace-end:run` loads the trace once, samples candidate live evaluations, live queues, and system queues, batches shared live filters into one trace query, and then applies the selected downstream work
 - downstream side effects stay split by responsibility: `live-evaluations:execute` remains the execution rail for evaluation runs, live queue membership is inserted directly, and sampled system queues start `systemQueueFlaggerWorkflow`
@@ -99,3 +99,14 @@ The trace-search document is normalized before storage and embedding. The local 
 When the normalized conversation exceeds that cap, truncation keeps both ends of the conversation: the initial half of the cap, an omission marker, and the final half of the cap. The middle is omitted. This preserves the setup and final outcome of long conversations while keeping budget accounting predictable.
 
 Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
+
+## Billing And Retention Stamping
+
+Span ingestion is the canonical trace-billing boundary.
+
+- after spans are durably inserted, the worker meters one `trace` usage event per distinct trace id in the payload
+- the idempotency key is `trace:{organizationId}:{projectId}:{traceId}` so repeated ingest requests for the same trace do not double-charge
+
+Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
+
+The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.

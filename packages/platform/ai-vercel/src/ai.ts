@@ -22,7 +22,7 @@ type ProviderModel = GenerateTextCall["model"]
 type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
-const MAX_ERROR_TEXT_LENGTH = 500
+const MAX_ERROR_TEXT_LENGTH = 4_000
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
 /**

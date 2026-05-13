@@ -11,7 +11,14 @@ import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
-import { EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
+import {
+  EMPTY_SELECTION,
+  getBulkSelection,
+  getSelectedCount,
+  type SelectionState,
+} from "../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
+import { AddToDatasetModal } from "./-components/add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
@@ -22,8 +29,6 @@ import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import {
   DEFAULT_TRACE_SORTING,
-  getBulkSelection,
-  getSelectedCount,
   getTimeFilterValue,
   parseFilters,
   serializeFilters,
@@ -31,9 +36,11 @@ import {
 import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
-import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
+  staticData: {
+    breadcrumb: () => <BreadcrumbText variant="current">Traces</BreadcrumbText>,
+  },
   component: ProjectPage,
 })
 
@@ -259,7 +266,7 @@ function ProjectPage() {
               trigger={
                 <Button
                   variant={filtersOpen ? "outline" : "ghost"}
-                  size="sm"
+                  size="default"
                   onClick={() => setFiltersOpen(!filtersOpen)}
                 >
                   <FilterIcon className="h-4 w-4" />
@@ -381,6 +388,7 @@ function ProjectPage() {
             selection={bulkSelection}
             selectedCount={selectedCount}
             onSuccess={clearSelections}
+            {...(hasActiveFilters ? { filters } : {})}
           />
         </>
       )}

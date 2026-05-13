@@ -70,6 +70,7 @@
           "telemetry/typescript",
           "telemetry/python",
           "telemetry/claude-code",
+          "telemetry/openclaw",
           {
             "group": "Providers",
             "pages": [
@@ -97,8 +98,10 @@
             "group": "Frameworks",
             "pages": [
               "telemetry/frameworks/vercel-ai-sdk",
+              "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/langchain",
               "telemetry/frameworks/llamaindex",
+              "telemetry/frameworks/mastra",
               "telemetry/frameworks/crewai",
               "telemetry/frameworks/dspy",
               "telemetry/frameworks/haystack"
@@ -111,7 +114,15 @@
         "pages": [
           "observability/overview",
           "observability/traces",
-          "observability/sessions"
+          "observability/sessions",
+          "observability/filters"
+        ]
+      },
+      {
+        "group": "Search",
+        "pages": [
+          "search/overview",
+          "search/saved-searches"
         ]
       },
       {
@@ -126,8 +137,8 @@
         "group": "Annotations",
         "pages": [
           "annotations/overview",
-          "annotations/annotation-queues",
-          "annotations/inline-annotations"
+          "annotations/inline-annotations",
+          "annotations/flaggers"
         ]
       },
       {

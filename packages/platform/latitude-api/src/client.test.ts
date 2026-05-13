@@ -94,7 +94,6 @@ describe("createLatitudeApiClient", () => {
         by: "filters",
         filters: { "metadata.scoreId": [{ op: "eq", value: "upstream-score-abc" }] },
       },
-      draft: false,
       passed: true,
       value: 1,
       feedback: "Approved",

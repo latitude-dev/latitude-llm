@@ -1,13 +1,16 @@
+import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
-import { generateId, type StorageDiskPort } from "@domain/shared"
-import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
+import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import {
   createBetterAuth,
   createOutboxWriter,
   createPostgresClient,
+  invalidateEffectivePlanCache,
   type PostgresClient,
   SqlClientLive,
+  type StripePlanConfig,
 } from "@platform/db-postgres"
 import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -20,6 +23,7 @@ import {
   loadTemporalConfig,
 } from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
+import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 
@@ -157,7 +161,36 @@ export const getBetterAuth = () => {
 
     const captchaSecretKey = Effect.runSync(parseEnvOptional("LAT_TURNSTILE_SECRET_KEY", "string"))
     const allowedEmailDomain = Effect.runSync(parseEnvOptional("LAT_ALLOWED_EMAIL_DOMAIN", "string"))
+    const stripeSecretKey = Effect.runSync(parseEnvOptional("LAT_STRIPE_SECRET_KEY", "string"))
+    const stripeProPriceId = Effect.runSync(parseEnvOptional("LAT_STRIPE_PRO_PRICE_ID", "string"))
+    const stripeWebhookSecret = Effect.runSync(parseEnvOptional("LAT_STRIPE_WEBHOOK_SECRET", "string"))
     const outboxWriter = getOutboxWriter()
+
+    const invalidateBillingPlanCache = async (organizationId: string) => {
+      await Effect.runPromise(
+        invalidateEffectivePlanCache(OrganizationId(organizationId)).pipe(
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      )
+    }
+
+    const selfServePlans: StripePlanConfig[] = SELF_SERVE_PLAN_SLUGS.flatMap((slug) => {
+      if (slug === "pro" && stripeProPriceId) {
+        return [
+          {
+            name: slug,
+            priceId: stripeProPriceId,
+            limits: {
+              credits: PRO_PLAN_CONFIG.includedCredits,
+              retentionDays: PRO_PLAN_CONFIG.retentionDays,
+            },
+          },
+        ]
+      }
+
+      return []
+    })
 
     betterAuthInstance = createBetterAuth({
       client: adminClient,
@@ -167,7 +200,43 @@ export const getBetterAuth = () => {
       trustedOrigins,
       ...(captchaSecretKey ? { captchaSecretKey } : {}),
       ...(allowedEmailDomain ? { allowedEmailDomain } : {}),
-      extraPlugins: [tanstackStartCookies()],
+      ...(stripeSecretKey ? { stripeSecretKey } : {}),
+      ...(stripeWebhookSecret ? { stripeWebhookSecret } : {}),
+      ...(selfServePlans.length > 0 ? { subscriptionPlans: selfServePlans } : {}),
+      extraPlugins: [
+        tanstackStartCookies(),
+        // OAuth2/OIDC authorization server for MCP clients (Claude Code,
+        // Cursor, …). Issues opaque random access + refresh tokens that the
+        // API resource server validates via `@platform/oauth-token-auth`.
+        // The consent page binds the issued token to a specific organization;
+        // until that route ships, the default BA consent UI renders and
+        // tokens get issued with `oauth_applications.organization_id IS NULL`,
+        // which the API auth middleware rejects (so no usable tokens leak out).
+        mcp({
+          loginPage: `${webUrl}/login`,
+          oidcConfig: {
+            // BA's `OIDCOptions` type requires `loginPage` here too even though
+            // the `mcp` plugin already takes one at the top level. Pass the
+            // same value so consent redirects use the same login URL.
+            loginPage: `${webUrl}/login`,
+            consentPage: `${webUrl}/auth/consent`,
+            requirePKCE: true,
+            // RFC 7591 dynamic client registration. MCP clients (Claude Code,
+            // Cursor, ...) hit `POST /api/auth/mcp/register` before any user
+            // has signed in — they're bootstrapping themselves. Without this
+            // flag the BA endpoint requires a session (see
+            // `better-auth@1.6.9/dist/plugins/oidc-provider/index.mjs:830`)
+            // and every MCP client registration would 401. Enabling it is
+            // safe: registered clients only become useful once a user
+            // completes the consent flow at `/auth/consent`, which is what
+            // binds the application to an organization. Until that binding
+            // happens `oauth_applications.organization_id IS NULL` and the
+            // API auth middleware rejects any tokens issued against the
+            // unbound row.
+            allowDynamicClientRegistration: true,
+          },
+        }),
+      ],
       onUserCreated: async (user) => {
         await Effect.runPromise(
           outboxWriter
@@ -254,6 +323,9 @@ export const getBetterAuth = () => {
             })
             .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )
+      },
+      onSubscriptionChanged: async ({ referenceId }) => {
+        await invalidateBillingPlanCache(referenceId)
       },
     })
   }

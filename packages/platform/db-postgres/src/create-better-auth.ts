@@ -13,6 +13,9 @@ import {
   accounts,
   invitations,
   members,
+  oauthAccessTokens,
+  oauthApplications,
+  oauthConsents,
   organizations,
   sessions,
   subscriptions,
@@ -52,6 +55,16 @@ export interface BetterAuthConfig {
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
+  readonly onSubscriptionChanged?: (subscription: {
+    referenceId: string
+    subscriptionId: string
+    eventType:
+      | "subscription-complete"
+      | "subscription-created"
+      | "subscription-updated"
+      | "subscription-canceled"
+      | "subscription-deleted"
+  }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
   readonly captchaSecretKey?: string
@@ -107,6 +120,14 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       members,
       invitations,
       subscriptions,
+      // OIDC Provider plugin tables — required when the caller installs the
+      // `mcp` (or `oidcProvider`) plugin via `extraPlugins`. Including them
+      // in the shared adapter is harmless when the plugin is not installed:
+      // the tables exist in the DB regardless, and BA only writes to them
+      // when the plugin runs.
+      oauthApplications,
+      oauthAccessTokens,
+      oauthConsents,
     },
   }) as unknown as DBAdapter
 
@@ -122,6 +143,21 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     // we do NOT need a separate `user.additionalFields.role` entry —
     // declaring both produces duplicate-field warnings. `input: false`
     // still holds: the role is read-only through sign-up / update APIs.
+    user: {
+      additionalFields: {
+        // Free-text job title captured during the project-onboarding form.
+        // `input: false` keeps it out of Better Auth's signup / update API
+        // surface — we write it via our own onboarding server function.
+        jobTitle: { type: "string", required: false, input: false },
+      },
+    },
+    /**
+     * `create.after` hooks run **after** the surrounding transaction commits
+     * (Better Auth ≥ 1.6.0). If the outbox write below fails, the user/member
+     * row is already persisted and no event is emitted — we accept that
+     * trade-off because the alternative (running side effects inside the auth
+     * transaction) holds DB locks and risks deadlocks on retries.
+     */
     databaseHooks: {
       user: {
         create: {
@@ -245,6 +281,41 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               subscription: {
                 enabled: true,
                 plans: config.subscriptionPlans ?? [],
+                onSubscriptionComplete: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-complete",
+                  })
+                },
+                onSubscriptionCreated: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-created",
+                  })
+                },
+                onSubscriptionUpdate: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-updated",
+                  })
+                },
+                onSubscriptionCancel: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-canceled",
+                  })
+                },
+                onSubscriptionDeleted: async ({ subscription }) => {
+                  await config.onSubscriptionChanged?.({
+                    referenceId: subscription.referenceId,
+                    subscriptionId: subscription.id,
+                    eventType: "subscription-deleted",
+                  })
+                },
                 authorizeReference: async ({
                   user: stripeUser,
                   referenceId,
@@ -253,10 +324,16 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
                   referenceId: string
                   action: string
                 }) => {
-                  if (referenceId !== stripeUser.id) {
-                    return true
-                  }
-                  return true
+                  const { and, eq: eq_ } = await import("drizzle-orm")
+                  const memberRole = await config.client.db
+                    .select({ role: members.role })
+                    .from(members)
+                    .where(and(eq_(members.organizationId, referenceId), eq_(members.userId, stripeUser.id)))
+                    .limit(1)
+                    .then((rows) => rows[0]?.role)
+
+                  if (!memberRole) return false
+                  return memberRole === "owner" || memberRole === "admin"
                 },
               },
               organization: {

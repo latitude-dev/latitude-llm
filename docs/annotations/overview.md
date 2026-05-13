@@ -5,40 +5,46 @@ description: Review your agent's interactions and provide human feedback
 
 # Annotations
 
-Annotations let your team review traces and leave feedback on your agent's interactions. Each annotation is a thumbs-up or thumbs-down verdict with a text explanation, attached to a conversation or a specific message.
+Annotations are how humans (and Latitude's built-in flaggers) leave verdicts on individual traces. Each annotation is a thumbs-up or thumbs-down verdict with a text explanation, attached to a conversation or a specific message.
+
+## How Annotations Get Created
+
+There are three ways an annotation appears on a trace:
+
+1. **A human creates it inline** from any trace detail view. See [Inline Annotations](./inline-annotations).
+2. **A flagger creates it automatically** when a trace matches a known failure category like _jailbreaking_, _frustration_, or _tool call errors_. See [Flaggers](./flaggers).
+3. **An external system submits it through the API** when you're building your own annotation or feedback UI. See the [Annotations API](../scores/api).
+
+All three produce the same kind of artifact: a score with `source = "annotation"` and a `verdict`, `feedback`, and optional `issueId`. Once finalized, an annotation feeds the rest of the reliability system the same way regardless of where it came from.
 
 ## How to Annotate
 
 Every annotation has the same structure: a **verdict** (positive or negative), **feedback** (why), and an optional **issue link**.
 
-1. **Choose your scope**: Annotate an entire conversation, a single message, or highlight a specific text range within a message
-2. **Give a verdict**: Thumbs up if the interaction was good, thumbs down if something went wrong
-3. **Write feedback**: Explain what was good or what went wrong. Keep it natural; Latitude enriches short notes with conversation context automatically so they work well for issue clustering
-4. **Optionally link an issue**: Associate your annotation with a known issue, or leave it on automatic and let Latitude match it during issue discovery
+1. **Choose your scope**: Annotate an entire conversation, a single message, or highlight a specific text range within a message.
+2. **Give a verdict**: Thumbs up if the interaction was good, thumbs down if something went wrong.
+3. **Write feedback**: Explain what was good or what went wrong. Keep it natural; Latitude enriches short notes with conversation context automatically so they work well for issue clustering.
+4. **Optionally link an issue**: Associate your annotation with a known issue, or leave it on automatic and let Latitude match it during issue discovery.
 
 Annotations save as drafts immediately (so you won't lose work if the page refreshes) and finalize automatically after 5 minutes of inactivity. Once finalized, they become permanent.
 
 ## Where to Annotate
 
-There are two places to annotate in Latitude:
+### From a Trace Detail View
 
-### Annotation Queues
+Open any trace, anywhere in the product — from the Traces page, from a search result, from an issue's logs — and use the annotation panel on the right. This is the primary annotation surface.
 
-[Annotation queues](./annotation-queues) are managed review backlogs. Traces are routed to a queue either automatically (through filters and sampling) or manually (by selecting traces from the dashboard). Queues provide:
+A common workflow is to build a [saved search](../search/saved-searches) that scopes you to the cohort you want to review, then work through the matching traces one at a time, annotating from the detail view.
 
-- A focused review interface with instructions, conversation context, and annotation controls side by side
-- Progress tracking so you know how much of the backlog has been reviewed
-- Sequential navigation to work through traces efficiently
+See [Inline Annotations](./inline-annotations) for details on the annotation panel and scope choices.
 
-Use queues for systematic review work, like reviewing a random sample of production traffic or investigating traces flagged by a specific evaluation.
+### From a Flagger
 
-### Inline from Trace Views
+Latitude's flaggers run automatically on every completed trace and write annotations directly when they match. You don't have to open a trace for this to happen. See [Flaggers](./flaggers).
 
-You can also [annotate any trace directly](./inline-annotations) from its detail view. Just open a trace and use the annotation panel on the right side. This is best for:
+### From the API
 
-- Quick spot checks while browsing traces
-- Adding feedback to a trace you're already investigating
-- Ad-hoc observations that don't fit into a queue workflow
+If you're building your own feedback UI, you can submit annotations programmatically. See the [Annotations API](../scores/api).
 
 ## Why Annotate
 
@@ -58,9 +64,12 @@ Annotations are the foundation of Latitude's reliability loop. They serve three 
 | **[Issues](../issues/overview)**           | Failed annotations enter the issue discovery pipeline, where similar failures are clustered into trackable issues     |
 | **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy                                                    |
 | **[Alignment](../evaluations/alignment)**  | When human and machine scores overlap on the same traces, Latitude computes alignment metrics (MCC, confusion matrix) |
+| **[Search](../search/overview)**           | Search and saved searches are the primary way to scope yourself to a cohort of traces to annotate                     |
+| **[Flaggers](./flaggers)**                 | Automatic annotators that handle a fixed list of common failure categories without human review                       |
 
 ## Next Steps
 
-- [Annotation Queues](./annotation-queues): Set up managed review backlogs
 - [Inline Annotations](./inline-annotations): Annotate directly from trace views
+- [Flaggers](./flaggers): Automatic annotators for common failure categories
+- [Search](../search/overview): Build cohorts to annotate
 - [Evaluation Alignment](../evaluations/alignment): See how annotations calibrate your evaluations

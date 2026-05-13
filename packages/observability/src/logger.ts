@@ -22,6 +22,12 @@ const toSerializable = (value: unknown): unknown => {
       message: value.message,
       stack: value.stack,
     }
+
+    for (const [key, entry] of Object.entries(value)) {
+      if (key === "name" || key === "message" || key === "stack" || key === "cause") continue
+      result[key] = toSerializable(entry)
+    }
+
     if ("cause" in value && value.cause !== undefined) {
       result.cause = toSerializable(value.cause)
     }

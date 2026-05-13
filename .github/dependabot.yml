@@ -1,11 +1,38 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot version updates.
+#
+# `cooldown` enforces a minimum-release-age (in days) before Dependabot will
+# open a PR for a fresh version — mirror of `.npmrc minimum-release-age` for
+# the bot-driven update path, and our primary supply-chain defense for pip
+# (uv has no native minimum-release-age flag).
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: pip
+    directories:
+      - /packages/telemetry/python
+      - /packages/platform/op-gepa/python
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

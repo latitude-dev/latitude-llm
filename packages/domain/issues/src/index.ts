@@ -1,10 +1,12 @@
 export {
-  AUTO_RESOLVE_INACTIVITY_DAYS,
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_CHECK_THROTTLE_MS,
+  ESCALATION_EXIT_THRESHOLD_FACTOR,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
+  ESCALATION_RECHECK_DELAY_MS,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
@@ -39,6 +41,7 @@ export {
   IssueDiscoveryLockUnavailableError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
+  IssueNotFoundForEscalationCheckError,
   isEligibilityError,
   MissingIssueOccurrencesForDetailsGenerationError,
   MissingScoreFeedbackForDiscoveryError,
@@ -52,7 +55,9 @@ export {
   createIssueCentroid,
   type DeriveIssueLifecycleStatesInput,
   deriveIssueLifecycleStates,
+  getEscalationExitThreshold,
   getEscalationOccurrenceThreshold,
+  isIssueNew,
   normalizeEmbedding,
   normalizeIssueCentroid,
   type UpdateIssueCentroidInput,
@@ -71,7 +76,14 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
-export { IssueRepository } from "./ports/issue-repository.ts"
+export {
+  type IssueLifecycleFlags,
+  type IssueListPage,
+  IssueRepository,
+  type IssueRepositoryShape,
+  type IssueWithLifecycle,
+  type ListIssuesRepositoryInput,
+} from "./ports/issue-repository.ts"
 export {
   type ApplyIssueLifecycleCommandError,
   type ApplyIssueLifecycleCommandInput,
@@ -93,6 +105,13 @@ export {
   buildIssuesExportUseCase,
 } from "./use-cases/build-issues-export.ts"
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
+export {
+  type CheckIssueEscalationError,
+  type CheckIssueEscalationInput,
+  type CheckIssueEscalationResult,
+  type CheckIssueEscalationTransition,
+  checkIssueEscalationUseCase,
+} from "./use-cases/check-issue-escalation.ts"
 export {
   type CreateIssueFromScoreError,
   type CreateIssueFromScoreInput,

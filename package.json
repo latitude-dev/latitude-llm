@@ -21,18 +21,20 @@
     "reset": "pnpm clean && pnpm install && pnpm build && pnpm db:reset",
     "catchup": "pnpm clean && pnpm install && pnpm build && pnpm db:up",
     "openapi:emit": "pnpm --filter @app/api openapi:emit",
+    "mcp:emit": "pnpm --filter @app/api mcp:emit",
+    "mcp:inspect": "pnpm --filter @app/api mcp:inspect",
     "sdk:check": "./fern/invoke.sh check",
     "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local --local --force",
     "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@effect/language-service": "^0.84.2",
+    "@effect/language-service": "0.84.3",
     "@types/node": "catalog:",
-    "fern-api": "4.80.1",
-    "knip": "^6.1.0",
-    "turbo": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "fern-api": "4.80.1",
+    "knip": "6.6.2",
+    "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
@@ -46,6 +48,7 @@
       "@ai-sdk/provider": "4.0.0-beta.7",
       "@opentelemetry/api": "1.9.1",
       "drizzle-orm": "1.0.0-beta.15-859cf75",
+      "hono": "4.12.16",
       "tslib": "2.8.1"
     }
   }

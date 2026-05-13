@@ -20,10 +20,14 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/billing": "workspace:*",
     "@repo/utils": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",
+    "@domain/feature-flags": "workspace:*",
     "@domain/models": "workspace:*",
+    "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",

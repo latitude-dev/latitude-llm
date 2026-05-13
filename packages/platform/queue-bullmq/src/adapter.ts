@@ -3,6 +3,7 @@ import type {
   QueueConsumer,
   QueueName,
   QueuePublisherShape,
+  ScheduleRepeatableOptions,
   SubscribeOptions,
   TaskHandlers,
   TaskName,
@@ -110,35 +111,43 @@ export const createBullMqQueuePublisher = (
       ) =>
         Effect.tryPromise({
           try: async () => {
-            if (options?.debounceMs !== undefined && options?.throttleMs !== undefined) {
-              throw new Error(`publish(${queue}, ${String(task)}): debounceMs and throttleMs are mutually exclusive`)
+            const coalescingOptions = [options?.debounceMs, options?.throttleMs, options?.latestThrottleMs].filter(
+              (value) => value !== undefined,
+            )
+            if (coalescingOptions.length > 1) {
+              throw new Error(
+                `publish(${queue}, ${String(task)}): debounceMs, throttleMs and latestThrottleMs are mutually exclusive`,
+              )
             }
-            if (options?.throttleMs !== undefined && !options.dedupeKey) {
-              throw new Error(`publish(${queue}, ${String(task)}): throttleMs requires a dedupeKey`)
+            if ((options?.throttleMs !== undefined || options?.latestThrottleMs !== undefined) && !options.dedupeKey) {
+              throw new Error(`publish(${queue}, ${String(task)}): throttleMs and latestThrottleMs require a dedupeKey`)
             }
 
             const bullmqOptions: Record<string, unknown> = {}
             if (options?.dedupeKey) {
               bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
             }
-            // `debounceMs` and `throttleMs` both map to BullMQ's `delay` + `deduplication`,
-            // but the dedup flags differ:
+            // Delayed coalescing options map to BullMQ's `delay` + `deduplication`,
+            // but the dedup flags differ by semantic:
             //   - debounce: `extend: true, replace: true` — each publish within the TTL
             //     pushes the fire time forward and overwrites the payload. Fires after
             //     `debounceMs` of quiet.
             //   - throttle: `extend: false, replace: false` — the first publish wins.
             //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
             //     exactly `throttleMs` after the first publish.
-            const delayMs = options?.debounceMs ?? options?.throttleMs
+            //   - latest-throttle: `extend: false, replace: true` — the first publish
+            //     sets the fire time, later publishes update the payload only.
+            const delayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
             if (delayMs !== undefined) {
               bullmqOptions.delay = delayMs
               if (options?.dedupeKey) {
-                const isThrottle = options.throttleMs !== undefined
+                const extendsWindow = options.debounceMs !== undefined
+                const replacesPayload = options.throttleMs === undefined
                 bullmqOptions.deduplication = {
                   id: options.dedupeKey,
                   ttl: delayMs,
-                  extend: !isThrottle,
-                  replace: !isThrottle,
+                  extend: extendsWindow,
+                  replace: replacesPayload,
                 }
               }
             }
@@ -153,6 +162,27 @@ export const createBullMqQueuePublisher = (
             }
             const readyQueue = await getReadyQueue(queue)
             await readyQueue.add(task, { payload } satisfies BullMqJobData, bullmqOptions)
+          },
+          catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
+        }),
+      scheduleRepeatable: <T extends QueueName, K extends TaskName<T>>(
+        queue: T,
+        task: K,
+        payload: TaskPayload<T, K>,
+        options: ScheduleRepeatableOptions,
+      ) =>
+        Effect.tryPromise({
+          try: async () => {
+            const readyQueue = await getReadyQueue(queue)
+            await readyQueue.upsertJobScheduler(
+              options.key,
+              { pattern: options.pattern, tz: options.tz ?? "UTC" },
+              {
+                name: String(task),
+                data: { payload } satisfies BullMqJobData,
+                opts: { removeOnComplete: { count: 1000 }, removeOnFail: { count: 1000 } },
+              },
+            )
           },
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
         }),

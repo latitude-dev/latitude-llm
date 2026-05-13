@@ -73,13 +73,13 @@ AWS infrastructure for the Latitude LLM observability platform using Pulumi (Typ
 
 All services listen on port 8080 inside the container (mapped via ALB target groups).
 
-| Service   | Health Check  | Description                                                                 |
-| --------- | ------------- | --------------------------------------------------------------------------- |
-| web       | `/api/health` | TanStack Start SSR app                                                      |
-| api       | `/health`     | Hono public API                                                             |
-| ingest    | `/health`     | Hono telemetry ingestion                                                    |
-| workers   | `/health`     | BullMQ background workers (no ALB, internal health only)                    |
-| workflows | `/health`     | Temporal worker → **Temporal Cloud** (API key in Secrets Manager; no ALB)   |
+| Service   | Health Check  | Description                                                               |
+| --------- | ------------- | ------------------------------------------------------------------------- |
+| web       | `/api/health` | TanStack Start SSR app                                                    |
+| api       | `/health`     | Hono public API                                                           |
+| ingest    | `/health`     | Hono telemetry ingestion                                                  |
+| workers   | `/health`     | BullMQ background workers (no ALB, internal health only)                  |
+| workflows | `/health`     | Temporal worker → **Temporal Cloud** (API key in Secrets Manager; no ALB) |
 
 Set `latitude-infra:temporalCloudNamespace` (and optionally `temporalCloudAddress` / `temporalTaskQueue`) in `Pulumi.<stack>.yaml`. Put the real Temporal Cloud API key in the `latitude-<env>-temporal-api-key` secret (see `LAT_TEMPORAL_API_KEY` when running `pulumi up` with env vars, or update the secret in AWS).
 
@@ -129,27 +129,28 @@ To deploy to production:
 1. **Promote `development` into `main`**: open a PR from `development` to `main` and merge it after review.
 
 2. **Ensure all checks pass**: The deployment workflow requires the CI jobs to succeed. This includes:
-    - Type checking (`pnpm typecheck`)
-    - Formatting and lint checks (`pnpm check`)
-    - Tests (`pnpm test`)
+   - Type checking (`pnpm typecheck`)
+   - Formatting and lint checks (`pnpm check`)
+   - Tests (`pnpm test`)
 
 3. **Merge to `main`**:
-    ```bash
-    gh pr create --base main --head development --fill
-    ```
+
+   ```bash
+   gh pr create --base main --head development --fill
+   ```
 
    Merging the PR triggers the production deployment automatically.
 
 4. **Monitor the deployment**: The workflow will:
-    - Run all checks in parallel
-    - Build and push container images to GHCR
-    - Execute database migrations via ECS task
-    - Deploy services to ECS Fargate with zero-downtime rolling updates
+   - Run all checks in parallel
+   - Build and push container images to GHCR
+   - Execute database migrations via ECS task
+   - Deploy services to ECS Fargate with zero-downtime rolling updates
 
 5. **Verify deployment**: Check service health via their endpoints:
-    - `https://console.latitude.so/api/health`
-    - `https://api.latitude.so/health`
-    - `https://ingest.latitude.so/health`
+   - `https://console.latitude.so/api/health`
+   - `https://api.latitude.so/health`
+   - `https://ingest.latitude.so/health`
 
 Manual deployments must be dispatched from the matching branch:
 

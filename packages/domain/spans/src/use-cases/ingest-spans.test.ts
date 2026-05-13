@@ -1,12 +1,25 @@
+import {
+  BillingOverrideRepository,
+  BillingUsagePeriodRepository,
+  NoCreditsRemainingError,
+  StripeSubscriptionLookup,
+} from "@domain/billing"
+import {
+  createFakeBillingOverrideRepository,
+  createFakeBillingUsagePeriodRepository,
+  createFakeStripeSubscriptionLookup,
+  seedBillingUsagePeriod,
+} from "@domain/billing/testing"
 import type { QueuePublisherShape } from "@domain/queue"
 import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort } from "@domain/shared"
-import { createFakeStorageDisk } from "@domain/shared/testing"
+import { OrganizationId, ProjectId, SettingsReader, SqlClient, StorageDisk, type StorageDiskPort } from "@domain/shared"
+import { createFakeSqlClient, createFakeStorageDisk } from "@domain/shared/testing"
 import { base64Decode } from "@repo/utils"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { ingestSpansUseCase } from "./ingest-spans.ts"
+import { ingestSpansWithBillingUseCase } from "./ingest-spans-with-billing.ts"
 
 const smallPayload = new TextEncoder().encode('{"spans":[]}')
 
@@ -24,6 +37,26 @@ const runUseCase = (input: ReturnType<typeof makeInput>, diskPort: StorageDiskPo
   ingestSpansUseCase(input).pipe(
     Effect.provide(Layer.merge(Layer.succeed(StorageDisk, diskPort), Layer.succeed(QueuePublisher, publisher))),
   )
+
+const createBillingLayer = () => {
+  const { repository: billingOverrides } = createFakeBillingOverrideRepository()
+  const { repository: billingPeriods } = createFakeBillingUsagePeriodRepository()
+  const { service: stripeSubscriptions } = createFakeStripeSubscriptionLookup()
+
+  return {
+    billingPeriods,
+    layer: Layer.mergeAll(
+      Layer.succeed(BillingOverrideRepository, billingOverrides),
+      Layer.succeed(BillingUsagePeriodRepository, billingPeriods),
+      Layer.succeed(StripeSubscriptionLookup, stripeSubscriptions),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: makeInput(smallPayload).organizationId })),
+      Layer.succeed(SettingsReader, {
+        getOrganizationSettings: () => Effect.succeed(null),
+        getProjectSettings: () => Effect.die("ingestSpansWithBillingUseCase tests do not read project settings"),
+      }),
+    ),
+  }
+}
 
 describe("ingestSpansUseCase", () => {
   it("inlines small payloads without writing to disk", async () => {
@@ -121,5 +154,65 @@ describe("ingestSpansUseCase", () => {
     expect(payload.projectId).toBe("proj-1")
     expect(payload.apiKeyId).toBe("key-1")
     expect(payload.ingestedAt).toBeDefined()
+  })
+})
+
+describe("ingestSpansWithBillingUseCase", () => {
+  it("checks billing before enqueueing spans", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { layer } = createBillingLayer()
+
+    await Effect.runPromise(
+      ingestSpansWithBillingUseCase(makeInput(smallPayload)).pipe(
+        Effect.provide(
+          Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+        ),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+  })
+
+  it("fails before enqueueing when billing blocks the request", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { billingPeriods, layer } = createBillingLayer()
+
+    await Effect.runPromise(
+      billingPeriods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: makeInput(smallPayload).organizationId,
+            planSlug: "free",
+            periodStart: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)),
+            periodEnd: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)),
+            includedCredits: 20_000,
+            consumedCredits: 20_000,
+          }),
+        )
+        .pipe(
+          Effect.provideService(
+            SqlClient,
+            createFakeSqlClient({ organizationId: makeInput(smallPayload).organizationId }),
+          ),
+        ),
+    )
+
+    const result = await Effect.runPromise(
+      Effect.result(
+        ingestSpansWithBillingUseCase(makeInput(smallPayload)).pipe(
+          Effect.provide(
+            Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+          ),
+        ),
+      ),
+    )
+
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(NoCreditsRemainingError)
+    }
+    expect(published).toHaveLength(0)
   })
 })

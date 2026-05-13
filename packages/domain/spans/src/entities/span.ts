@@ -97,6 +97,7 @@ export const spanSchema = z.object({
   resourceString: z.record(z.string(), z.string()).readonly(),
   scopeName: z.string(),
   scopeVersion: z.string(),
+  retentionDays: z.number().int().positive().optional(),
   ingestedAt: z.date(),
 })
 

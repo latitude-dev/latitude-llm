@@ -10,6 +10,7 @@ from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcess
 
 InstrumentationType = Literal[
     "openai",
+    "openai-agents",
     "anthropic",
     "bedrock",
     "cohere",

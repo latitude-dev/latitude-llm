@@ -1,5 +1,6 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, generateSlug, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Issue, IssueSource } from "../entities/issue.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -68,12 +69,14 @@ const buildNewIssueFromScore = ({
   assignedAt,
   name,
   description,
+  slug,
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
   readonly assignedAt: Date
   readonly name: string
   readonly description: string
+  readonly slug: string
 }): Issue => {
   const centroid = updateIssueCentroid({
     centroid: {
@@ -97,6 +100,7 @@ const buildNewIssueFromScore = ({
     uuid: crypto.randomUUID(),
     organizationId: score.organizationId,
     projectId: score.projectId,
+    slug,
     name,
     description,
     source,
@@ -139,6 +143,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
       Effect.gen(function* () {
         const issueRepository = yield* IssueRepository
         const scoreRepository = yield* ScoreRepository
+        const outboxEventWriter = yield* OutboxEventWriter
 
         const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
         if (scoreResult.action === "already-assigned") {
@@ -150,12 +155,21 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
 
         const score = scoreResult.score
         const assignedAt = new Date()
+        // Slug must be unique per (org, project). Re-derived inside the
+        // transaction so it's contention-aware (previous slugs in this project
+        // are visible to the existence check) and so we don't have to retry on
+        // a unique-constraint conflict.
+        const slug = yield* generateSlug({
+          name: issueDetails.name,
+          count: (slug) => issueRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
+        })
         const issue = buildNewIssueFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
           assignedAt,
           name: issueDetails.name,
           description: issueDetails.description,
+          slug,
         })
 
         const claimed = yield* scoreRepository.assignIssueIfUnowned({
@@ -179,6 +193,19 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         }
 
         yield* issueRepository.save(issue)
+
+        yield* outboxEventWriter.write({
+          eventName: "IssueCreated",
+          aggregateType: "issue",
+          aggregateId: issue.id,
+          organizationId: issue.organizationId,
+          payload: {
+            organizationId: issue.organizationId,
+            projectId: issue.projectId,
+            issueId: issue.id,
+            createdAt: issue.createdAt.toISOString(),
+          },
+        })
 
         return {
           action: "created",

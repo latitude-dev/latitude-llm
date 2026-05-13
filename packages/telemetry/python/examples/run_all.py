@@ -16,6 +16,7 @@ from pathlib import Path
 # Map of test names to their required env vars
 TESTS = {
     "openai": ["OPENAI_API_KEY"],
+    "openai_agents": ["OPENAI_API_KEY"],
     "anthropic": ["ANTHROPIC_API_KEY"],
     "groq": ["GROQ_API_KEY"],
     "mistral": ["MISTRAL_API_KEY"],

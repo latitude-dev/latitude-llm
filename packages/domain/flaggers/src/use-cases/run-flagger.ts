@@ -12,7 +12,8 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
-import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
+import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
+import { FlaggerRepository } from "../ports/flagger-repository.ts"
 
 export interface RunFlaggerInput {
   readonly organizationId: string
@@ -143,6 +144,15 @@ export const runFlaggerUseCase = Effect.fn("flaggers.runFlagger")(function* (inp
 
   const strategy = getFlaggerStrategy(input.flaggerSlug)
   if (!strategy || !isLlmCapableStrategy(strategy)) {
+    return { matched: false }
+  }
+
+  const flaggerRepo = yield* FlaggerRepository
+  const flagger = yield* flaggerRepo.findByProjectAndSlug({
+    projectId: ProjectId(input.projectId),
+    slug: input.flaggerSlug as FlaggerSlug,
+  })
+  if (!flagger || !flagger.enabled) {
     return { matched: false }
   }
 
