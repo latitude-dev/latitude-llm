@@ -81,6 +81,8 @@ export const WrappedReportRepositoryLive = Layer.effect(
             ownerName: record.ownerName,
             reportVersion: record.reportVersion ?? CURRENT_REPORT_VERSION,
             report: record.report,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
           }),
         )
       }),

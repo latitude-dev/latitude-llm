@@ -264,8 +264,11 @@ function PersonalityReveal({ personality }: { personality: WrappedReportRecord["
       >
         {personality.evidence
           .filter((line) => line.trim().length > 0)
-          .map((line) => (
-            <li key={line}>{line}</li>
+          .map((line, idx) => (
+            // Evidence lines are a fixed-order, non-reorderable list, and
+            // can plausibly repeat — compound `idx-line` so duplicates
+            // don't collide on the React key.
+            <li key={`${idx}-${line}`}>{line}</li>
           ))}
       </ul>
     </section>

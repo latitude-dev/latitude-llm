@@ -62,9 +62,12 @@ export const Route = createFileRoute("/wrapped/$id/og/png")({
             },
           })
         } catch (cause) {
+          // Don't leak the underlying error message — render failures can
+          // surface stack trace fragments, file paths, or dependency
+          // versions, and this endpoint is unauthenticated. The full cause
+          // already lands in the structured log.
           logger.error(`wrapped.og: render failed for ${params.id}`, cause)
-          const message = cause instanceof Error ? cause.message : String(cause)
-          return new Response(`OG render failed: ${message}`, { status: 500 })
+          return new Response("Internal error", { status: 500 })
         }
       },
     },
