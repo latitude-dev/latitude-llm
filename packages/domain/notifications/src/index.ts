@@ -4,6 +4,7 @@ export type {
   IncidentNotificationPayload,
   Notification,
   NotificationType,
+  WrappedReportNotificationPayload,
 } from "./entities/notification.ts"
 export {
   customMessageNotificationPayloadSchema,
@@ -13,6 +14,7 @@ export {
   NOTIFICATION_TYPES,
   notificationSchema,
   notificationTypeSchema,
+  wrappedReportNotificationPayloadSchema,
 } from "./entities/notification.ts"
 export type { ResolveRecipientsInput } from "./helpers/resolve-recipients.ts"
 export { resolveRecipients } from "./helpers/resolve-recipients.ts"
@@ -30,6 +32,11 @@ export type {
   CreateIncidentNotificationsInput,
 } from "./use-cases/create-incident-notifications.ts"
 export { createIncidentNotificationsUseCase } from "./use-cases/create-incident-notifications.ts"
+export type {
+  CreateWrappedReportNotificationsError,
+  CreateWrappedReportNotificationsInput,
+} from "./use-cases/create-wrapped-report-notifications.ts"
+export { createWrappedReportNotificationsUseCase } from "./use-cases/create-wrapped-report-notifications.ts"
 export type {
   GetUnreadNotificationCountError,
   GetUnreadNotificationCountInput,

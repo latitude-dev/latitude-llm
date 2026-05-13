@@ -1,4 +1,4 @@
-import { createIncidentNotificationsUseCase } from "@domain/notifications"
+import { createIncidentNotificationsUseCase, createWrappedReportNotificationsUseCase } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -29,7 +29,7 @@ const repoLayer = Layer.mergeAll(
   SettingsReaderLive,
 )
 
-const handle = (input: { alertIncidentId: string; event: "opened" | "closed"; organizationId: string }) => {
+const handleIncident = (input: { alertIncidentId: string; event: "opened" | "closed"; organizationId: string }) => {
   const pgClient = getPostgresClient()
 
   return createIncidentNotificationsUseCase({
@@ -54,11 +54,54 @@ const handle = (input: { alertIncidentId: string; event: "opened" | "closed"; or
   )
 }
 
+const handleWrappedReport = (input: {
+  organizationId: string
+  wrappedReportId: string
+  projectName: string
+  link: string
+}) => {
+  const pgClient = getPostgresClient()
+
+  return createWrappedReportNotificationsUseCase({
+    organizationId: OrganizationId(input.organizationId),
+    wrappedReportId: input.wrappedReportId,
+    projectName: input.projectName,
+    link: input.link,
+  }).pipe(
+    withPostgres(repoLayer, pgClient, OrganizationId(input.organizationId)),
+    Effect.tap((result) =>
+      Effect.sync(() =>
+        logger.info(`notifications.wrapped wrappedReportId=${input.wrappedReportId} inserted=${result.inserted}`),
+      ),
+    ),
+    Effect.tapError((error) =>
+      Effect.sync(() => logger.error(`notifications.wrapped failed wrappedReportId=${input.wrappedReportId}`, error)),
+    ),
+    Effect.asVoid,
+    withTracing,
+  )
+}
+
 export const createNotificationsWorker = ({ consumer }: NotificationsDeps) => {
   consumer.subscribe("notifications", {
     "create-from-incident-opened": (payload) =>
-      handle({ alertIncidentId: payload.alertIncidentId, event: "opened", organizationId: payload.organizationId }),
+      handleIncident({
+        alertIncidentId: payload.alertIncidentId,
+        event: "opened",
+        organizationId: payload.organizationId,
+      }),
     "create-from-incident-closed": (payload) =>
-      handle({ alertIncidentId: payload.alertIncidentId, event: "closed", organizationId: payload.organizationId }),
+      handleIncident({
+        alertIncidentId: payload.alertIncidentId,
+        event: "closed",
+        organizationId: payload.organizationId,
+      }),
+    "create-from-wrapped-report": (payload) =>
+      handleWrappedReport({
+        organizationId: payload.organizationId,
+        wrappedReportId: payload.wrappedReportId,
+        projectName: payload.projectName,
+        link: payload.link,
+      }),
   })
 }

@@ -5,10 +5,6 @@ export type { EmailContent, TemplatedEmail } from "./entities/email.ts"
 export { emailContentSchema, templatedEmailSchema } from "./entities/email.ts"
 export { EmailSendError } from "./errors.ts"
 export type { EmailMessage, EmailSender } from "./ports/email-sender.ts"
-export {
-  type ClaudeCodeWrappedEmailData,
-  claudeCodeWrappedTemplate,
-} from "./templates/claude-code-wrapped/index.tsx"
 export { type DatasetExportEmailData, datasetExportTemplate } from "./templates/dataset-export/index.tsx"
 export { type ExportFailedEmailData, exportFailedTemplate } from "./templates/export-failed/index.tsx"
 export { type ExportReadyEmailData, exportReadyTemplate } from "./templates/export-ready/index.tsx"
@@ -24,4 +20,8 @@ export {
 } from "./templates/signup-magic-link/index.tsx"
 // Templates
 export type { RenderedEmail } from "./templates/types.ts"
+export {
+  type WrappedEmailData,
+  wrappedEmailTemplate,
+} from "./templates/wrapped/index.tsx"
 export { type SendEmail, sendEmail } from "./use-cases/send-email.ts"

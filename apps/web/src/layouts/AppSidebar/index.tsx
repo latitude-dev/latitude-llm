@@ -46,6 +46,7 @@ function NavItemDisclosureIcon({ expanded, className }: { expanded: boolean; cla
 
 function NavItemActionWrapper({
   to,
+  external,
   collapsed,
   label,
   rowClassName,
@@ -55,6 +56,8 @@ function NavItemActionWrapper({
   children,
 }: {
   to: string | undefined
+  /** When true, render `<a target="_blank">` instead of TanStack's `Link`. */
+  external: boolean
   collapsed: boolean
   label: string
   rowClassName: string
@@ -78,7 +81,21 @@ function NavItemActionWrapper({
   )
 
   const content =
-    to && !hasChildren ? (
+    to && !hasChildren && external ? (
+      <a
+        href={to}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(rowClassName, "flex items-center", {
+          "w-full gap-2": !collapsed,
+          "justify-center": collapsed,
+        })}
+        title={collapsed ? label : undefined}
+        aria-label={collapsed ? label : undefined}
+      >
+        {children}
+      </a>
+    ) : to && !hasChildren ? (
       <Link
         to={to}
         className={cn(rowClassName, "flex items-center", {
@@ -173,6 +190,7 @@ export function NavItem({
   icon,
   label,
   to,
+  external = false,
   active,
   badge,
   children,
@@ -182,6 +200,8 @@ export function NavItem({
   icon: NavItemIcon
   label: string
   to?: string
+  /** When true, open `to` in a new tab via `<a target="_blank">`. */
+  external?: boolean
   active?: boolean
   badge?: number
   children?: ReactNode
@@ -205,6 +225,7 @@ export function NavItem({
     <div className="flex flex-col">
       <NavItemActionWrapper
         to={to}
+        external={external}
         collapsed={collapsed}
         label={label}
         rowClassName={rowClassName}

@@ -1,7 +1,7 @@
-import { Icon, Text } from "@repo/ui"
+import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
-import { ArrowRightIcon, CheckIcon, MinusIcon, SparklesIcon } from "lucide-react"
+import { ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
 import {
@@ -126,8 +126,8 @@ function BackofficeProjectDetailPage() {
         description="Operational actions for this project — manually trigger background jobs, etc."
       >
         <ActionRow
-          icon={SparklesIcon}
-          title="Run Claude Code Wrapped"
+          icon={ClaudeCodeIcon}
+          title="Generate Claude Code Wrapped"
           description="Enqueue the weekly summary email now. Worker still gates on the claude-code-wrapped feature flag and on Claude Code activity in the last 7 days."
           action={<WrappedTriggerButton projectId={project.id} projectName={project.name} />}
         />

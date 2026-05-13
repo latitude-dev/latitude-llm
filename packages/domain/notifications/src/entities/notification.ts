@@ -14,7 +14,7 @@ import { z } from "zod"
  * Adding a new system that needs to surface notifications = add a new value
  * here + a renderer entry on the web side. The schema doesn't change.
  */
-export const NOTIFICATION_TYPES = ["incident", "custom_message"] as const
+export const NOTIFICATION_TYPES = ["incident", "custom_message", "wrapped_report"] as const
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES)
 export type NotificationType = z.infer<typeof notificationTypeSchema>
 
@@ -57,6 +57,20 @@ export const customMessageNotificationPayloadSchema = z.object({
   link: z.string().optional(),
 })
 export type CustomMessageNotificationPayload = z.infer<typeof customMessageNotificationPayloadSchema>
+
+/**
+ * Payload for the Claude Code Wrapped notification. The persisted report
+ * id lives in the row's `sourceId` column (so the partial unique index
+ * dedupes per-user-per-report); the payload carries only what the
+ * renderer needs to paint a teaser without a live lookup.
+ */
+export const wrappedReportNotificationPayloadSchema = z.object({
+  /** Display name of the project the Wrapped covers. */
+  projectName: z.string(),
+  /** Absolute URL to `/wrapped/<id>`. */
+  link: z.string(),
+})
+export type WrappedReportNotificationPayload = z.infer<typeof wrappedReportNotificationPayloadSchema>
 
 /**
  * Storage shape — `payload` is loosely typed at this layer since the row is
