@@ -11,6 +11,11 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getRedisClient } from "../../server/clients.ts"
 
+const dateTimeParamSchema = z
+  .string()
+  .datetime()
+  .transform((value) => new Date(value))
+
 export interface SpanRecord {
   readonly organizationId: string
   readonly projectId: string
@@ -143,8 +148,8 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     z.object({
       projectId: z.string(),
       traceId: z.string(),
-      startTimeFrom: z.string().datetime().optional(),
-      startTimeTo: z.string().datetime().optional(),
+      startTimeFrom: dateTimeParamSchema.optional(),
+      startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<SpanRecord[]> => {
@@ -157,8 +162,8 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           traceId: TraceId(data.traceId),
-          ...(data.startTimeFrom ? { startTimeFrom: new Date(data.startTimeFrom) } : {}),
-          ...(data.startTimeTo ? { startTimeTo: new Date(data.startTimeTo) } : {}),
+          ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
+          ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -211,8 +216,8 @@ export const getSpanDetail = createServerFn({ method: "GET" })
       projectId: z.string(),
       traceId: z.string(),
       spanId: z.string(),
-      startTimeFrom: z.string().datetime().optional(),
-      startTimeTo: z.string().datetime().optional(),
+      startTimeFrom: dateTimeParamSchema.optional(),
+      startTimeTo: dateTimeParamSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
@@ -226,8 +231,8 @@ export const getSpanDetail = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           traceId: TraceId(data.traceId),
           spanId: SpanId(data.spanId),
-          ...(data.startTimeFrom ? { startTimeFrom: new Date(data.startTimeFrom) } : {}),
-          ...(data.startTimeTo ? { startTimeTo: new Date(data.startTimeTo) } : {}),
+          ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
+          ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
