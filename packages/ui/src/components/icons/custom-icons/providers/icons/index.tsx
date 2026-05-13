@@ -1,6 +1,7 @@
 export { AmazonQIcon } from "./amazon-q.tsx"
 export { AnthropicIcon } from "./anthropic.tsx"
 export { AzureIcon } from "./azure.tsx"
+export {ClaudeCodeIcon } from "./claude-code.tsx"
 export { ClaudeIcon } from "./claude.tsx"
 export { CloudflareIcon } from "./cloudflare.tsx"
 export { CloudflareWorkersIcon } from "./cloudflare-workers.tsx"
