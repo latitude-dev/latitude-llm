@@ -16,7 +16,7 @@ When new issues appear, your team should:
 3. **Assess severity**: Is this a critical safety issue, a quality degradation, or a minor edge case?
 4. **Decide on action**:
    - **Generate an evaluation** to start automated monitoring
-   - **Create an annotation queue** to gather more human feedback
+   - **Save a search** scoped to the issue's traces and assign it to a reviewer to gather more human feedback
    - **Ignore** if the issue is irrelevant or too rare to track
 
 ## Investigating an Issue
@@ -42,7 +42,7 @@ If the issue has linked evaluations, review their configuration:
 
 ### Gather Human Feedback
 
-Create an annotation queue filtered to traces where the issue was detected. Have reviewers annotate these traces to:
+Run a search filtered to traces where the issue was detected and save it. Assign the saved search to a reviewer, who can work through the matches one by one in the trace detail view. Annotations on these traces:
 
 - Confirm whether the automated detection is correct
 - Provide richer feedback about what went wrong
@@ -98,4 +98,5 @@ As your project matures, you'll accumulate many issues. Keep them manageable:
 
 - [Issues Overview](./overview): How issues are discovered
 - [Evaluations](../evaluations/overview): Generating evaluations from issues
-- [Annotation Queues](../annotations/annotation-queues): Building review workflows for investigation
+- [Saved Searches](../search/saved-searches): Build a review workflow around an issue's traces
+- [Annotations](../annotations/overview): Leave human feedback on traces tied to an issue
