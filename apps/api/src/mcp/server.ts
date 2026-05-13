@@ -139,14 +139,17 @@ const buildInternalRequestUrl = (
   params: Record<string, unknown>,
   query: Record<string, unknown>,
 ): string => {
-  let path = route.pathTemplate
-  for (const [name, value] of Object.entries(params)) {
-    path = path.replaceAll(`{${name}}`, encodeURIComponent(String(value)))
-  }
+  const path = route.pathTemplate
   const prefix = route.routerPrefix.replace(/\/$/, "")
   // `pathTemplate === "/"` collapses to the bare prefix — Hono treats
   // `/api-keys` and `/api-keys/` as distinct routes; ours mount un-trailing.
-  const joined = path === "/" ? prefix : `${prefix}${path.startsWith("/") ? path : `/${path}`}`
+  let joined = path === "/" ? prefix : `${prefix}${path.startsWith("/") ? path : `/${path}`}`
+  // Substitute `{name}` placeholders across the full joined string — params
+  // can appear either in the route's own path (e.g. `/api-keys/{id}`) or in
+  // the mount prefix (e.g. `/projects/{projectSlug}/annotations`).
+  for (const [name, value] of Object.entries(params)) {
+    joined = joined.replaceAll(`{${name}}`, encodeURIComponent(String(value)))
+  }
   const subAppPath = joined === "" ? "/" : joined
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {
