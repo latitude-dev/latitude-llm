@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "ce27fd4b-0ab7-44dc-afcf-bc0cbbe4cc3e",
+  "id": "3f09cd98-db10-444d-acc9-5be2f60c65c8",
   "prevIds": [
-    "569982f9-dbaf-4e9e-ac05-616bd659e626"
+    "182bea67-7989-45c4-bb90-ca54a7458130"
   ],
   "ddl": [
     {
@@ -189,6 +189,12 @@
     {
       "isRlsEnabled": true,
       "name": "simulations",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "wrapped_reports",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -4600,6 +4606,149 @@
       "table": "simulations"
     },
     {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'claude_code'",
+      "generated": null,
+      "identity": null,
+      "name": "type",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "window_start",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "window_end",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_name",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "report_version",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "report",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
       "nameExplicit": true,
       "columns": [
         {
@@ -6315,6 +6464,62 @@
       "table": "simulations"
     },
     {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "wrapped_reports_organization_id_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": false,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "wrapped_reports_type_project_recent_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "wrapped_reports"
+    },
+    {
       "nameExplicit": false,
       "columns": [
         "user_id"
@@ -6827,6 +7032,16 @@
       "name": "simulations_pkey",
       "schema": "latitude",
       "table": "simulations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "wrapped_reports_pkey",
+      "schema": "latitude",
+      "table": "wrapped_reports",
       "entityType": "pks"
     },
     {
@@ -7373,6 +7588,19 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "simulations"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "wrapped_reports_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "wrapped_reports"
     }
   ],
   "renames": []
