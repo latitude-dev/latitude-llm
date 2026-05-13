@@ -73,6 +73,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               icon={ClaudeCodeIcon}
               label="Claude Code Wrapped"
               to={`/cc-wrapped/${latestWrapped.id}`}
+              external
               collapsed={collapsed}
             />
           ) : null}
