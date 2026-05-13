@@ -1,7 +1,9 @@
-import { CopyableText } from "@repo/ui"
+import { ClaudeCodeIcon, CopyableText } from "@repo/ui"
+import { useQuery } from "@tanstack/react-query"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { getLatestWrappedReportForProject } from "../../../domains/cc-wrapped/cc-wrapped.functions.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
@@ -30,6 +32,14 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   },
 })
 
+/**
+ * Polled client-side after the page loads. Reports are immutable + only
+ * generated weekly, so a long staleTime + a short retry window are fine —
+ * a missing row is by far the common case (most orgs / weeks don't have
+ * one) and we don't want to hammer the server.
+ */
+const WRAPPED_REPORT_STALE_TIME_MS = 10 * 60 * 1000
+
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
@@ -42,18 +52,38 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
 
+  // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
+  // week's Wrapped report when one exists. Returns null for the typical
+  // case (no report or report > 7 days old) and we just render nothing.
+  const { data: latestWrapped } = useQuery({
+    queryKey: ["cc-wrapped", "latest", project.id],
+    queryFn: () => getLatestWrappedReportForProject({ data: { projectId: project.id } }),
+    staleTime: WRAPPED_REPORT_STALE_TIME_MS,
+    retry: false,
+  })
+
   return (
     <AppSidebar
       title={project.name}
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" />}
       footer={({ collapsed }) => (
-        <NavItem
-          icon={SettingsIcon}
-          label="Settings"
-          to={`/projects/${projectSlug}/settings`}
-          active={isSettingsActive}
-          collapsed={collapsed}
-        />
+        <>
+          {latestWrapped ? (
+            <NavItem
+              icon={ClaudeCodeIcon}
+              label="This week's Claude Code Wrapped"
+              to={`/cc-wrapped/${latestWrapped.id}`}
+              collapsed={collapsed}
+            />
+          ) : null}
+          <NavItem
+            icon={SettingsIcon}
+            label="Settings"
+            to={`/projects/${projectSlug}/settings`}
+            active={isSettingsActive}
+            collapsed={collapsed}
+          />
+        </>
       )}
     >
       {({ collapsed }) => (

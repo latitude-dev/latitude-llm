@@ -1,5 +1,5 @@
-import { BotIcon, type LucideProps } from "lucide-react";
-import type { ComponentType } from "react";
+import { BotIcon, type LucideProps } from "lucide-react"
+import type { ComponentType } from "react"
 import {
   AmazonQIcon,
   AzureIcon,
@@ -29,9 +29,9 @@ import {
   TogetheraiIcon,
   V0Icon,
   VercelIcon,
-} from "./icons/index.tsx";
+} from "./icons/index.tsx"
 
-type ProviderIconComponent = ComponentType<LucideProps>;
+type ProviderIconComponent = ComponentType<LucideProps>
 
 // Providers from https://models.dev/
 // Icons from https://svgl.app/
@@ -75,4 +75,4 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   v0: V0Icon,
   vercel: VercelIcon,
   xai: GrokIcon, // Alternative: XaiIcon
-};
+}

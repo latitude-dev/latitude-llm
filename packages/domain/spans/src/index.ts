@@ -52,6 +52,7 @@ export {
   type WrappedReportRecord,
   WrappedReportRepository,
   type WrappedReportRepositoryShape,
+  type WrappedReportSummary,
   type WrappedTotalsRow,
 } from "./claude-code-wrapped/index.ts"
 export {

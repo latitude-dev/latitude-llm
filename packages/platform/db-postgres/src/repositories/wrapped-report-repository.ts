@@ -2,6 +2,7 @@ import {
   NotFoundError,
   OrganizationId,
   ProjectId,
+  type ProjectId as ProjectIdType,
   SqlClient,
   type SqlClientShape,
   toRepositoryError,
@@ -15,8 +16,9 @@ import {
   SCHEMA_BY_VERSION,
   type WrappedReportRecord,
   WrappedReportRepository,
+  type WrappedReportSummary,
 } from "@domain/spans"
-import { eq } from "drizzle-orm"
+import { and, desc, eq, gte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { claudeCodeWrappedReports } from "../schema/claude-code-wrapped-reports.ts"
@@ -91,6 +93,38 @@ export const WrappedReportRepositoryLive = Layer.effect(
         if (!row) return yield* new NotFoundError({ entity: "WrappedReport", id })
 
         return yield* toDomainRecord(row)
+      }),
+
+    findLatestForProject: ({
+      projectId,
+      sinceCreatedAt,
+    }: {
+      projectId: ProjectIdType
+      sinceCreatedAt: Date
+    }): Effect.Effect<WrappedReportSummary | null, ReturnType<typeof toRepositoryError>, SqlClient> =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        // Org-scoped read — the session SqlClient carries the caller's org
+        // and the table's RLS policy enforces isolation. No JSONB validation
+        // here: the caller only needs the id + timestamp for navigation.
+        const [row] = yield* sqlClient.query((db) =>
+          db
+            .select({
+              id: claudeCodeWrappedReports.id,
+              createdAt: claudeCodeWrappedReports.createdAt,
+            })
+            .from(claudeCodeWrappedReports)
+            .where(
+              and(
+                eq(claudeCodeWrappedReports.projectId, projectId),
+                gte(claudeCodeWrappedReports.createdAt, sinceCreatedAt),
+              ),
+            )
+            .orderBy(desc(claudeCodeWrappedReports.createdAt))
+            .limit(1),
+        )
+        if (!row) return null
+        return { id: WrappedReportId(row.id), createdAt: row.createdAt }
       }),
   }),
 )

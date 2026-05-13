@@ -137,6 +137,57 @@ describe("WrappedReportRepositoryLive", () => {
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
+  // The repo's `save()` lets the DB default `created_at` to now(); these
+  // two tests need controlled timestamps so we bypass save() and seed
+  // directly via the db client.
+  const seedRow = async (overrides: { id: string; createdAt: Date }) => {
+    const record = makeRecord({ id: WrappedReportId(overrides.id) })
+    await pg.db.insert(claudeCodeWrappedReports).values({
+      id: record.id,
+      organizationId: record.organizationId,
+      projectId: record.projectId,
+      windowStart: record.windowStart,
+      windowEnd: record.windowEnd,
+      ownerName: record.ownerName,
+      reportVersion: record.reportVersion,
+      report: record.report,
+      createdAt: overrides.createdAt,
+      updatedAt: overrides.createdAt,
+    })
+  }
+
+  it("findLatestForProject returns the most recent row created on or after the cutoff", async () => {
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    await seedRow({ id: "ccwst".padEnd(24, "1"), createdAt: tenDaysAgo })
+    await seedRow({ id: "ccwst".padEnd(24, "2"), createdAt: threeDaysAgo })
+    await seedRow({ id: "ccwst".padEnd(24, "3"), createdAt: yesterday })
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const found = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLatestForProject({ projectId: PROJECT_A, sinceCreatedAt: sevenDaysAgo })
+      }),
+    )
+    expect(found?.id).toBe("ccwst".padEnd(24, "3"))
+  })
+
+  it("findLatestForProject returns null when no row matches the project + cutoff", async () => {
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+    await seedRow({ id: "ccwst".padEnd(24, "9"), createdAt: tenDaysAgo })
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const found = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLatestForProject({ projectId: PROJECT_A, sinceCreatedAt: sevenDaysAgo })
+      }),
+    )
+    expect(found).toBeNull()
+  })
+
   it("findById crosses org boundaries when used with the system SqlClient (no-auth public route flow)", async () => {
     const otherOrg = OrganizationId("z".repeat(24))
     const record = makeRecord({ organizationId: otherOrg })

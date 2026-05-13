@@ -37,7 +37,11 @@ export {
   type WorkspaceRow,
   type WrappedTotalsRow,
 } from "./ports/claude-code-span-reader.ts"
-export { WrappedReportRepository, type WrappedReportRepositoryShape } from "./ports/wrapped-report-repository.ts"
+export {
+  WrappedReportRepository,
+  type WrappedReportRepositoryShape,
+  type WrappedReportSummary,
+} from "./ports/wrapped-report-repository.ts"
 export {
   type AssembleReportInput,
   assembleReport,
