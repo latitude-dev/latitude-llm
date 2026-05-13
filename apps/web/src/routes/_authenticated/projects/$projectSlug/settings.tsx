@@ -17,7 +17,8 @@ import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { useState } from "react"
+import { useDebouncedCallback } from "use-debounce"
 import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
@@ -68,8 +69,6 @@ function ProjectSettingsPage() {
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
-  const sensitivityDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const { data: notificationsEnabled = false } = useQuery({
     queryKey: ["feature-flag", NOTIFICATIONS_FEATURE_FLAG],
@@ -135,26 +134,19 @@ function ProjectSettingsPage() {
     },
   ]
 
-  const handleProjectRename = useCallback(
-    (name: string) => {
-      if (renameDebounceRef.current) clearTimeout(renameDebounceRef.current)
+  const handleProjectRename = useDebouncedCallback((name: string) => {
+    const trimmedName = name.trim()
+    if (!trimmedName || trimmedName === currentProject.name) return
 
-      renameDebounceRef.current = setTimeout(() => {
-        const trimmedName = name.trim()
-        if (!trimmedName || trimmedName === currentProject.name) return
-
-        const transaction = updateProjectMutation(currentProject.id, { name: trimmedName })
-        void transaction.isPersisted.promise
-          .then(() => {
-            toast({ description: "Project name updated" })
-          })
-          .catch((error) => {
-            toast({ variant: "destructive", description: toUserMessage(error) })
-          })
-      }, 600)
-    },
-    [currentProject.id, currentProject.name, toast],
-  )
+    const transaction = updateProjectMutation(currentProject.id, { name: trimmedName })
+    void transaction.isPersisted.promise
+      .then(() => {
+        toast({ description: "Project name updated" })
+      })
+      .catch((error) => {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+      })
+  }, 600)
 
   const handleKeepMonitoringChange = async (checked: boolean) => {
     if (isSavingKeepMonitoring) return
@@ -173,30 +165,23 @@ function ProjectSettingsPage() {
     }
   }
 
-  const handleSensitivityChange = useCallback(
-    (value: number) => {
-      // Slider fires on every step; debounce so we don't flood the API with one
-      // update per tick. Pattern mirrors `handleProjectRename` above.
-      if (sensitivityDebounceRef.current) clearTimeout(sensitivityDebounceRef.current)
-
-      sensitivityDebounceRef.current = setTimeout(() => {
-        const transaction = updateProjectMutation(currentProject.id, {
-          settings: {
-            ...currentProject.settings,
-            alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
-          },
-        })
-        void transaction.isPersisted.promise
-          .then(() => {
-            toast({ description: "Escalation sensitivity updated" })
-          })
-          .catch((error) => {
-            toast({ variant: "destructive", description: toUserMessage(error) })
-          })
-      }, 400)
-    },
-    [currentProject.id, currentProject.settings, toast],
-  )
+  // Slider fires on every step; debounce so we don't flood the API with one
+  // update per tick. Pattern mirrors `handleProjectRename` above.
+  const handleSensitivityChange = useDebouncedCallback((value: number) => {
+    const transaction = updateProjectMutation(currentProject.id, {
+      settings: {
+        ...currentProject.settings,
+        alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), escalationSensitivity: value },
+      },
+    })
+    void transaction.isPersisted.promise
+      .then(() => {
+        toast({ description: "Escalation sensitivity updated" })
+      })
+      .catch((error) => {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+      })
+  }, 400)
 
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
     if (savingAlertKind !== null) return
