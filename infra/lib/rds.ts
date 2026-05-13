@@ -24,6 +24,14 @@ export interface RdsOutput {
   secretVersion: SecretsmanagerSecretVersion
   adminSecret: SecretsmanagerSecret
   adminSecretVersion: SecretsmanagerSecretVersion
+  encryptedMigrationCluster?: RdsCluster
+  encryptedMigrationInstance?: RdsClusterInstance
+  encryptedMigrationConnectionInfo?: pulumi.Output<{
+    host: string
+    port: number
+    database: string
+    username: string
+  }>
   connectionInfo: pulumi.Output<{
     host: string
     port: number
@@ -173,11 +181,66 @@ function createAuroraServerless(
     username: username,
   })
 
+  const encryptedMigrationCluster = config.name === "production"
+    ? new aws.rds.Cluster(`${name}-aurora-encrypted-migration`, {
+        clusterIdentifier: `${name}-aurora`,
+        engine: "aurora-postgresql",
+        engineVersion: "16.4",
+        databaseName: databaseName,
+        masterUsername: username,
+        masterPassword: password,
+        dbSubnetGroupName: subnetGroup.name,
+        vpcSecurityGroupIds: [securityGroup.id],
+        skipFinalSnapshot: false,
+        finalSnapshotIdentifier: `${name}-aurora-encrypted-final-snapshot`,
+        serverlessv2ScalingConfiguration: {
+          minCapacity: config.rds.minAcu!,
+          maxCapacity: config.rds.maxAcu!,
+        },
+        backupRetentionPeriod: config.rds.backupDays,
+        storageEncrypted: true,
+        preferredBackupWindow: "03:00-04:00",
+        enabledCloudwatchLogsExports: ["postgresql"],
+        tags: {
+          Name: `${name}-aurora`,
+          Environment: config.name,
+          Migration: "rds-encryption",
+        },
+      }, { protect: true })
+    : undefined
+
+  const encryptedMigrationInstance = encryptedMigrationCluster
+    ? new aws.rds.ClusterInstance(`${name}-aurora-encrypted-migration-instance`, {
+        identifier: `${name}-aurora-instance`,
+        clusterIdentifier: encryptedMigrationCluster.id,
+        instanceClass: "db.serverless",
+        engine: "aurora-postgresql",
+        engineVersion: "16.4",
+        tags: {
+          Name: `${name}-aurora-instance`,
+          Environment: config.name,
+          Migration: "rds-encryption",
+        },
+      }, { protect: true })
+    : undefined
+
+  const encryptedMigrationConnectionInfo = encryptedMigrationCluster
+    ? pulumi.output({
+        host: encryptedMigrationCluster.endpoint,
+        port: 5432,
+        database: databaseName,
+        username: username,
+      })
+    : undefined
+
   return {
     subnetGroup,
     parameterGroup,
     cluster,
     instance,
+    encryptedMigrationCluster,
+    encryptedMigrationInstance,
+    encryptedMigrationConnectionInfo,
     secret,
     secretVersion,
     adminSecret,
@@ -212,12 +275,14 @@ function createStandardInstance(
   })
 
   const dbInstance = new aws.rds.Instance(`${name}-postgres`, {
+    identifier: `${name}-postgres`,
     engine: "postgres",
     engineVersion: "16.6",
     instanceClass: config.rds.instanceType!,
     allocatedStorage: 20,
     maxAllocatedStorage: 100,
     storageType: "gp3",
+    storageEncrypted: true,
     dbName: databaseName,
     username: username,
     password: password,
@@ -237,7 +302,7 @@ function createStandardInstance(
 
   const secretVersion = new aws.secretsmanager.SecretVersion(`${name}-db-secret-version`, {
     secretId: secret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}`,
+    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}?uselibpqcompat=true&sslmode=require`,
   })
 
   const adminSecret = new aws.secretsmanager.Secret(`${name}-admin-db-secret`, {
@@ -251,7 +316,7 @@ function createStandardInstance(
 
   const adminSecretVersion = new aws.secretsmanager.SecretVersion(`${name}-admin-db-secret-version`, {
     secretId: adminSecret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}`,
+    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}?uselibpqcompat=true&sslmode=require`,
   })
 
   const connectionInfo = pulumi.output({

@@ -116,6 +116,7 @@ export const outputs = {
   albZoneId: alb.alb.zoneId,
 
   rdsEndpoint: rds.cluster?.endpoint ?? rds.dbInstance!.address,
+  rdsEncryptedMigrationEndpoint: rds.encryptedMigrationCluster?.endpoint,
   rdsSecretArn: rds.secret.arn,
 
   redisCacheEndpoint: redis.cache.connectionInfo.host,
