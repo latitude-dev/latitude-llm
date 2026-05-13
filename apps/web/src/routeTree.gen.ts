@@ -46,6 +46,7 @@ import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_
 import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
+import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og.png'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
@@ -257,6 +258,11 @@ const AuthenticatedProjectsProjectSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const CcWrappedIdOgPngRoute = CcWrappedIdOgPngRouteImport.update({
+  id: '/og/png',
+  path: '/og/png',
+  getParentRoute: () => CcWrappedIdRoute,
+} as any)
 const ApiAuthMcpAuthorizeRoute = ApiAuthMcpAuthorizeRouteImport.update({
   id: '/api/auth/mcp/authorize',
   path: '/api/auth/mcp/authorize',
@@ -316,7 +322,7 @@ export interface FileRoutesByFullPath {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
-  '/cc-wrapped/$id': typeof CcWrappedIdRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
+  '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -358,7 +365,7 @@ export interface FileRoutesByTo {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
-  '/cc-wrapped/$id': typeof CcWrappedIdRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
+  '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -405,7 +413,7 @@ export interface FileRoutesById {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
-  '/cc-wrapped/$id': typeof CcWrappedIdRoute
+  '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
@@ -434,6 +442,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
+  '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
@@ -482,6 +491,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
+    | '/cc-wrapped/$id/og/png'
     | '/projects/$projectSlug/'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets/'
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
+    | '/cc-wrapped/$id/og/png'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
     | '/projects/$projectSlug/datasets'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
+    | '/cc-wrapped/$id/og/png'
     | '/_authenticated/projects/$projectSlug/'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
     | '/_authenticated/projects/$projectSlug/datasets/'
@@ -588,7 +600,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthConsentRoute: typeof AuthConsentRoute
   AuthInviteRoute: typeof AuthInviteRoute
-  CcWrappedIdRoute: typeof CcWrappedIdRoute
+  CcWrappedIdRoute: typeof CcWrappedIdRouteWithChildren
   DownloadsExportRoute: typeof DownloadsExportRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -859,6 +871,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/cc-wrapped/$id/og/png': {
+      id: '/cc-wrapped/$id/og/png'
+      path: '/og/png'
+      fullPath: '/cc-wrapped/$id/og/png'
+      preLoaderRoute: typeof CcWrappedIdOgPngRouteImport
+      parentRoute: typeof CcWrappedIdRoute
+    }
     '/api/auth/mcp/authorize': {
       id: '/api/auth/mcp/authorize'
       path: '/api/auth/mcp/authorize'
@@ -1062,6 +1081,18 @@ const Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren =
     Char91DotwellKnownChar93OpenidConfigurationRouteChildren,
   )
 
+interface CcWrappedIdRouteChildren {
+  CcWrappedIdOgPngRoute: typeof CcWrappedIdOgPngRoute
+}
+
+const CcWrappedIdRouteChildren: CcWrappedIdRouteChildren = {
+  CcWrappedIdOgPngRoute: CcWrappedIdOgPngRoute,
+}
+
+const CcWrappedIdRouteWithChildren = CcWrappedIdRoute._addFileChildren(
+  CcWrappedIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   BackofficeRouteRoute: BackofficeRouteRouteWithChildren,
   DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
@@ -1074,7 +1105,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthConsentRoute: AuthConsentRoute,
   AuthInviteRoute: AuthInviteRoute,
-  CcWrappedIdRoute: CcWrappedIdRoute,
+  CcWrappedIdRoute: CcWrappedIdRouteWithChildren,
   DownloadsExportRoute: DownloadsExportRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
