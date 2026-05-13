@@ -30,7 +30,7 @@ export function WrappedReportNotification({ notification }: { readonly notificat
   return (
     <BaseNotification
       seenAt={seenAt}
-      icon={<Icon icon={ClaudeCodeIcon} className="h-4 w-4 text-foreground-muted" />}
+      icon={<Icon icon={ClaudeCodeIcon} className="h-5 w-5 text-foreground-muted" />}
       title={title}
       description={description}
       url={link}
