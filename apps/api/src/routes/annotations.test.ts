@@ -8,7 +8,13 @@ import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
+import {
+  type ApiTestContext,
+  createOAuthAuthHeaders,
+  createOAuthTenantSetup,
+  createTenantSetup,
+  setupTestApi,
+} from "../test-utils/create-test-app.ts"
 
 const API_TEST_ANCHOR_TRACE_ID = "22222222222222222222222222222222" as const
 
@@ -153,6 +159,51 @@ describe("Annotations Routes Integration", () => {
     expect(persistedScores[0]?.source).toBe("annotation")
     expect(persistedScores[0]?.sourceId).toBe("API")
     expect(persistedScores[0]?.draftedAt).toBeNull()
+    expect(persistedScores[0]?.annotatorId).toBeNull()
+  })
+
+  it<ApiTestContext>("attributes the annotation to the caller when authenticated via OAuth", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const projectId = "ffffffffffffffffffffffff"
+    const traceId = "44444444444444444444444444444444"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId,
+    })
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/annotations`, {
+        method: "POST",
+        headers: {
+          ...createOAuthAuthHeaders(tenant.oauthAccessToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          value: 0.9,
+          passed: true,
+          feedback: "Great answer",
+          trace: { by: "id", id: traceId },
+        }),
+      }),
+    )
+
+    expect(response.status).toBe(201)
+    const body = (await response.json()) as { annotatorId: string | null }
+    expect(body.annotatorId).toBe(tenant.userId)
+
+    const persistedScores = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.organizationId, tenant.organizationId))
+    expect(persistedScores).toHaveLength(1)
+    expect(persistedScores[0]?.annotatorId).toBe(tenant.userId)
   })
 
   it<ApiTestContext>("resolves a trace by filters when exactly one trace matches", async ({

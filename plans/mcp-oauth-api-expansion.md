@@ -554,8 +554,7 @@ Account, Members, finish API Keys, finish Projects (incl. pagination migration +
 **Projects**:
 - `apps/api/src/routes/projects.ts` — switch list response to `Paginated(ProjectSchema, "PaginatedProjects")`. Add slug-on-rename via `generateUniqueSlug` in `updateProjectUseCase`. Move schemas to `apps/api/src/openapi/entities/project.ts`.
 
-**Slug-on-rename for organizations**:
-- `updateOrganizationUseCase` (or wherever org rename lives — verify in `@domain/organizations`) regenerates slug. Consult Better Auth's organization plugin: it owns the `organizations.slug` column, so we either hook into BA's update path or run our own update. Likely we hook BA's `databaseHooks.organization.update.after` to regenerate.
+**Slug-on-rename for organizations**: **dropped from scope.** Org slugs aren't user-facing in our app (no routes key off them) and Better Auth owns the column. Not worth the BA-hook plumbing for a value nobody reads.
 
 ### M4 — Traces + bulk export
 
@@ -684,3 +683,76 @@ CI:
 - Existing typecheck + test jobs gate the PR.
 - New job: `pnpm openapi:emit && git diff --exit-code apps/api/openapi.json` — fails on drift.
 - Same for `pnpm mcp:emit && git diff --exit-code apps/api/mcp.json`.
+
+## Tasklist (status as of 2026-05-13)
+
+Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
+
+### Done
+
+- **M1 — Groundwork**
+  - [x] OAuth schema migrations + Drizzle defs (`oauth_applications`, `oauth_access_tokens`, `oauth_consents`)
+  - [x] `slug` columns on `issues` and `datasets`
+  - [x] `tracesRefSchema` + `resolveTraceIdsFromRef` in `@domain/spans`
+  - [x] `generateUniqueSlug` helper in `@domain/shared`
+  - [x] `apps/api/src/openapi/pagination.ts` (`Paginated`, `PaginatedQueryParamsSchema`)
+  - [x] `TracesRefSchema` in `apps/api/src/openapi/schemas.ts`
+  - [x] Tier rate-limit presets (`low`/`medium`/`high`/`critical`)
+  - [x] MCP scaffolding (`apps/api/src/mcp/*`, `pnpm mcp:emit`)
+  - [x] `@platform/oauth-token-auth` package (pure Drizzle, Redis cache)
+- **M2 — OAuth + MCP wiring (API + web)**
+  - [x] `apps/web/src/server/clients.ts` — `mcp()` plugin installed in `getBetterAuth()`
+  - [x] `apps/web/src/routes/auth/consent.tsx` — org-picker consent page
+  - [x] `apps/web/src/domains/oauth/oauth-consent.functions.ts` — server-fn flow
+  - [x] `apps/web/src/routes/[.well-known]/oauth-authorization-server.ts` — root-level AS discovery
+  - [x] `apps/api/src/routes/well-known.ts` — protected-resource discovery
+  - [x] `apps/api/src/middleware/auth.ts` — unified API-key + OAuth dispatch
+  - [x] Three-ring `apps/api/src/routes/index.ts`
+  - [x] `api-keys.ts` migrated to `defineApiEndpoint` (smoke test)
+- **M3 — Identity ergonomics**
+  - [x] **Account**: `GET /account`
+  - [x] **Members**: list / get / invite / update / remove (all 5 endpoints, OAuth-only for mutations, owner-protection)
+  - [x] **API Keys**: list (masked) / get (unmasked) / create / update / revoke (all 5 endpoints)
+  - [x] **Projects**: list (paginated) / get / create / update (incl. settings + per-flagger toggle) / delete (all 5 endpoints)
+  - [x] Slug-on-rename for projects in `updateProjectUseCase`
+  - [x] **Org slug-on-rename**: dropped from scope (see decision above)
+
+### Outstanding
+
+- **M2 — proof-of-concept loose ends**
+  - [x] Migrate `apps/api/src/routes/annotations.ts` to `defineApiEndpoint`; OAuth callers' annotations carry `annotatorId = auth.userId`
+  - [x] Migrate `apps/api/src/routes/scores.ts` to `defineApiEndpoint`
+  - [x] End-to-end verification with an MCP client against a running web+API stack — confirmed working from Cursor
+- **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
+  - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
+  - [ ] `GET /{traceId}` — get (`medium` tier)
+  - [ ] `POST /export` — `tracesRef` + `recipientEmail`, validates recipient is an org member, enqueues worker (`critical` tier)
+  - [ ] `packages/domain/spans/src/use-cases/build-traces-export.ts` — accept `TracesRef`
+- **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`, `medium` tier across)
+  - [ ] `GET /`, `GET /{searchSlug}`, `POST /`, `PATCH /{searchSlug}`, `DELETE /{searchSlug}`
+  - [ ] `POST /{searchSlug}/assign` — new `assignSavedSearchUseCase` in `@domain/saved-searches` (validates assignee membership)
+- **M6 — Issues** (8 endpoints, prefix `/projects/{projectSlug}/issues`)
+  - [ ] `IssueRepository.findBySlug` + `existsBySlug`
+  - [ ] Wire `generateUniqueSlug` into `createIssueFromScoreUseCase` + `discoverIssueUseCase`
+  - [ ] `@domain/evaluations/src/use-cases/monitor-issue.ts` + `unmonitor-issue.ts`; migrate `evaluation-alignment.functions.ts` web fns to delegate
+  - [ ] Inject `getWorkflowStarter()` through `apps/api/src/clients.ts` + `ApiOptions`
+  - [ ] `GET /` (`high`), `GET /{issueSlug}` (`medium`)
+  - [ ] `POST /resolve`, `POST /unresolve`, `POST /ignore`, `POST /unignore` — bulk by id list (`medium`)
+  - [ ] `POST /{issueSlug}/monitor` (`critical`), `POST /{issueSlug}/unmonitor` (`medium`)
+  - [ ] `POST /export` (`critical`) — `recipientEmail` validated; reuses `buildIssuesExportUseCase`
+- **M7 — Datasets** (10 endpoints, prefix `/projects/{projectSlug}/datasets`)
+  - [ ] `DatasetRepository.findBySlug` + `existsBySlug`
+  - [ ] Slug generation in `createDataset`; slug regeneration in `renameDataset` + `updateDatasetDetails`
+  - [ ] Datasets CRUD: `GET /` (`low`), `GET /{datasetSlug}` (`low`), `POST /` (`medium`), `PATCH /{datasetSlug}` (`medium`), `DELETE /{datasetSlug}` (`medium`)
+  - [ ] Rows: `GET /{datasetSlug}/rows` (`high`), `POST /{datasetSlug}/rows` (`medium`), `DELETE /{datasetSlug}/rows` (`medium`)
+  - [ ] `POST /{datasetSlug}/rows/import/traces` (`critical`) — takes `tracesRef`
+  - [ ] `POST /{datasetSlug}/rows/export` (`critical`) — recipient-email validated
+  - [ ] CSV import (`POST /rows/import/files`) — **deferred (D16)**; leave `// TODO(file-imports)` comment
+  - [ ] Refactor `addTracesToDataset` to take `TracesRef` (or thin route-level adapter)
+- **M-Settings (web)** — independent of M4–M7; ships standalone
+  - [ ] Sessions section in `settings/account.tsx` (BA `listSessions` / `revokeSession` / `revokeOtherSessions`)
+  - [ ] Rename `settings/api-keys.tsx` → `settings/keys.tsx` (+ redirect from old URL)
+  - [ ] OAuth Keys table + "Revoke OAuth key" server-fn (deletes `oauth_access_tokens` rows by `(client_id, user_id)`, disables `oauth_applications` row when last token removed)
+- **Wrap-up**
+  - [ ] `pnpm generate:sdk` — batched at the end of the plan, single PR (per the standing memo)
+  - [ ] CI drift jobs for `apps/api/openapi.json` and `apps/api/mcp.json` (verification §)

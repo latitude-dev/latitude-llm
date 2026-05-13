@@ -1,5 +1,19 @@
-import { FILTER_OPERATORS, traceIdSchema } from "@domain/shared"
+import { FILTER_OPERATORS, SESSION_ID_LENGTH, SPAN_ID_LENGTH, TRACE_ID_LENGTH } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
+
+// Plain (non-transformed) telemetry-id schemas for use in request / response
+// bodies exposed via OpenAPI + MCP. The domain's branded variants
+// (`traceIdSchema = z.string().length(...).transform(TraceId)`, etc.) can't be
+// serialized to JSON Schema — transforms have no JSON-Schema representation,
+// and the MCP SDK fails when registering a tool whose inputSchema contains one.
+// We keep the same length validation as the domain schemas but drop the brand
+// transform; handlers cast to the branded type at the boundary where needed.
+export const traceIdSchema = z.string().length(TRACE_ID_LENGTH).describe("32-character trace identifier.")
+export const spanIdSchema = z.string().length(SPAN_ID_LENGTH).describe("16-character span identifier.")
+export const sessionIdSchema = z
+  .string()
+  .max(SESSION_ID_LENGTH)
+  .describe(`Session identifier lifted from instrumentation. Up to ${SESSION_ID_LENGTH} characters.`)
 
 const ErrorSchema = z
   .object({
@@ -23,17 +37,36 @@ const ErrorSchema = z
 // chain so each level emits as a named OpenAPI component.
 const FilterConditionSchema = z
   .object({
-    op: z.enum(FILTER_OPERATORS),
-    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
+    op: z
+      .enum(FILTER_OPERATORS)
+      .describe(
+        "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference.",
+      ),
+    value: z
+      .union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))])
+      .describe("Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."),
   })
   .openapi("FilterCondition")
 
-const FilterSetSchema = z.record(z.string(), z.array(FilterConditionSchema)).openapi("FilterSet")
+const FilterSetSchema = z
+  .record(z.string(), z.array(FilterConditionSchema))
+  .describe(
+    "Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set.",
+  )
+  .openapi("FilterSet")
 
 export const TraceRefSchema = z
   .discriminatedUnion("by", [
-    z.object({ by: z.literal("id"), id: traceIdSchema }),
-    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
+    z.object({
+      by: z.literal("id").describe("Match a single trace by its identifier. Pair with `id`."),
+      id: traceIdSchema,
+    }),
+    z.object({
+      by: z
+        .literal("filters")
+        .describe("Match a single trace by a filter set. Pair with `filters`; exactly one trace must match."),
+      filters: FilterSetSchema,
+    }),
   ])
   .openapi("TraceRef")
 
@@ -49,8 +82,16 @@ export const TraceRefSchema = z
  */
 export const TracesRefSchema = z
   .discriminatedUnion("by", [
-    z.object({ by: z.literal("ids"), ids: z.array(traceIdSchema).min(1) }),
-    z.object({ by: z.literal("filters"), filters: FilterSetSchema }),
+    z.object({
+      by: z.literal("ids").describe("Match an explicit list of traces by their identifiers. Pair with `ids`."),
+      ids: z.array(traceIdSchema).min(1).describe("Non-empty list of trace identifiers."),
+    }),
+    z.object({
+      by: z
+        .literal("filters")
+        .describe("Match every trace produced by a filter set. Pair with `filters`; result count is not bounded."),
+      filters: FilterSetSchema,
+    }),
   ])
   .openapi("TracesRef")
 
