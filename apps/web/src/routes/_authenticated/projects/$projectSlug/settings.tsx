@@ -24,7 +24,7 @@ import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/f
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
-import { toUserMessage } from "../../../../lib/errors.ts"
+import { extractFieldErrors, toUserMessage } from "../../../../lib/errors.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
@@ -179,7 +179,16 @@ function ProjectSettingsPage() {
         toast({ description: "Escalation sensitivity updated" })
       })
       .catch((error) => {
-        toast({ variant: "destructive", description: toUserMessage(error) })
+        // Server-function Zod failures arrive as JSON-encoded issues; running
+        // them through `toUserMessage` would surface the raw `[{path,message}]`
+        // payload in the toast. Pull the first validation message when present
+        // and fall back to the generic message otherwise — same shape
+        // `createFormSubmitHandler` uses to drive field-level error UI.
+        const fieldErrors = extractFieldErrors(error)
+        const message = fieldErrors
+          ? (Object.values(fieldErrors).flat()[0] ?? toUserMessage(error))
+          : toUserMessage(error)
+        toast({ variant: "destructive", description: message })
       })
   }, 400)
 
