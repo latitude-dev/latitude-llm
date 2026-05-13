@@ -12,14 +12,23 @@ const OG_HEIGHT = 630
 /**
  * Server-side OG card renderer.
  *
- * 1200×630 cream card. Left column: the archetype PNG (read from disk,
- * inlined as base64 so Satori doesn't have to do its own image fetch).
- * Right column: eyebrow + giant archetype title + owner-name subtitle +
- * accent divider + a single-line headline-numbers strip.
+ * 1200×630 accent-orange card. Left column: the archetype PNG (read from
+ * disk, inlined as base64 so Satori doesn't have to do its own image
+ * fetch). Right column: eyebrow + giant archetype title + owner-name
+ * subtitle + cream divider + a single-line headline-numbers strip.
+ *
+ * Colours invert the page palette so the unfurl pops in a chat surface:
+ * accent background, cream as the primary foreground, a warm dark
+ * (black-ish cream) for the subordinate eyebrow + subtitle text.
  *
  * No project name anywhere by design — the report identifies via the
  * owner's name only.
  */
+
+// Warm dark tone used for the secondary text. Sits in the cream family
+// (no pure black) so the inverted palette stays cohesive against the
+// orange.
+const BLACKISH_CREAM = "#2A2520"
 
 const personalityImageCache = new Map<string, string>()
 
@@ -59,7 +68,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
         display: "flex",
         width: "100%",
         height: "100%",
-        backgroundColor: WRAPPED_COLORS.cream,
+        backgroundColor: WRAPPED_COLORS.accent,
         fontFamily: "Source Serif Pro",
         padding: 60,
       }}
@@ -88,7 +97,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
           style={{
             fontSize: 18,
             letterSpacing: 4,
-            color: WRAPPED_COLORS.muted,
+            color: BLACKISH_CREAM,
             textTransform: "uppercase",
             marginBottom: 18,
           }}
@@ -99,7 +108,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
           style={{
             fontSize: 92,
             fontWeight: 600,
-            color: WRAPPED_COLORS.ink,
+            color: WRAPPED_COLORS.cream,
             lineHeight: 1,
           }}
         >
@@ -108,7 +117,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
         <div
           style={{
             fontSize: 30,
-            color: WRAPPED_COLORS.muted,
+            color: BLACKISH_CREAM,
             marginTop: 22,
           }}
         >
@@ -118,7 +127,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
           style={{
             width: 96,
             height: 4,
-            backgroundColor: WRAPPED_COLORS.accent,
+            backgroundColor: WRAPPED_COLORS.cream,
             marginTop: 32,
             marginBottom: 32,
             borderRadius: 2,
@@ -127,7 +136,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
         <div
           style={{
             fontSize: 24,
-            color: WRAPPED_COLORS.ink,
+            color: WRAPPED_COLORS.cream,
           }}
         >
           {stats}

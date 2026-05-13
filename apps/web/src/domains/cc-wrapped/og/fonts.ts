@@ -16,10 +16,8 @@
 
 // Pinned to a specific version so the URLs don't drift if @latest changes.
 const FONT_URLS = {
-  regular:
-    "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_400Regular.ttf",
-  semibold:
-    "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_600SemiBold.ttf",
+  regular: "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_400Regular.ttf",
+  semibold: "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_600SemiBold.ttf",
 } as const
 
 type Weight = keyof typeof FONT_URLS
