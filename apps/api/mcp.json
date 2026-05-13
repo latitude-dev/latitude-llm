@@ -92,7 +92,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -208,7 +208,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+                  "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
                 },
                 "lastEditedAt": {
                   "type": "string",
@@ -352,7 +352,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -422,6 +422,28 @@
               }
             },
             "additionalProperties": false
+          },
+          "flaggers": {
+            "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "frustration",
+                "nsfw",
+                "refusal",
+                "laziness",
+                "jailbreaking",
+                "forgetting",
+                "trashing",
+                "tool-call-errors",
+                "output-schema-validation",
+                "empty-response"
+              ]
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
           }
         },
         "required": [
@@ -500,7 +522,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -533,7 +555,7 @@
     {
       "name": "deleteProject",
       "title": "Delete project",
-      "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+      "description": "Deletes a project by slug.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -891,7 +913,7 @@
     {
       "name": "revokeApiKey",
       "title": "Revoke API key",
-      "description": "Soft-deletes an API key, immediately invalidating it.",
+      "description": "Revokes an API key.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

@@ -1,4 +1,6 @@
 import { generateId } from "@domain/shared"
+import { and, eq } from "@platform/db-postgres"
+import { flaggers as flaggersTable } from "@platform/db-postgres/schema/flaggers"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
@@ -127,6 +129,72 @@ describe("Projects Routes Integration", () => {
     expect(body.slug).not.toBe(project.slug)
     expect(body.slug).toContain("completely-different")
     expect(body.settings).toEqual({ keepMonitoring: true })
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug toggles flaggers when the body includes them", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Flagger Host")
+
+    // Seed two flaggers for the project so the toggle has a row to update.
+    await database.db.insert(flaggersTable).values([
+      {
+        id: generateId(),
+        organizationId: tenant.organizationId,
+        projectId: project.id,
+        slug: "frustration",
+        enabled: true,
+        sampling: 10,
+      },
+      {
+        id: generateId(),
+        organizationId: tenant.organizationId,
+        projectId: project.id,
+        slug: "refusal",
+        enabled: true,
+        sampling: 10,
+      },
+    ])
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ flaggers: { frustration: false } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+
+    const frustration = await database.db
+      .select({ enabled: flaggersTable.enabled })
+      .from(flaggersTable)
+      .where(and(eq(flaggersTable.projectId, project.id), eq(flaggersTable.slug, "frustration")))
+    expect(frustration[0]?.enabled).toBe(false)
+
+    // Untouched slug stays enabled.
+    const refusal = await database.db
+      .select({ enabled: flaggersTable.enabled })
+      .from(flaggersTable)
+      .where(and(eq(flaggersTable.projectId, project.id), eq(flaggersTable.slug, "refusal")))
+    expect(refusal[0]?.enabled).toBe(true)
+  })
+
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug rejects unknown flagger slugs", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Slug Guard")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ flaggers: { "not-a-real-flagger": false } }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
   })
 
   it<ApiTestContext>("DELETE /v1/projects/:projectSlug does not delete cross-tenant project", async ({

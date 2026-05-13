@@ -1,3 +1,4 @@
+import { FLAGGER_STRATEGY_SLUGS, type FlaggerSlug, updateFlaggerUseCase } from "@domain/flaggers"
 import {
   type CreateProjectInput,
   createProjectUseCase,
@@ -7,7 +8,13 @@ import {
 } from "@domain/projects"
 import { projectSettingsSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
+import {
+  FlaggerRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
@@ -54,7 +61,7 @@ const ResponseSchema = z
     deletedAt: z
       .string()
       .nullable()
-      .describe("ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."),
+      .describe("ISO-8601 timestamp at which the project was deleted. `null` while the project is active."),
     lastEditedAt: z.string().describe("ISO-8601 timestamp of the most recent name/settings edit."),
     createdAt: z.string().describe("ISO-8601 timestamp of creation."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last metadata change."),
@@ -82,6 +89,12 @@ const UpdateRequestSchema = z
       .optional()
       .describe(
         "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+      ),
+    flaggers: z
+      .partialRecord(z.enum(FLAGGER_STRATEGY_SLUGS), z.boolean())
+      .optional()
+      .describe(
+        "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.",
       ),
   })
   .openapi("UpdateProjectBody")
@@ -211,17 +224,42 @@ const updateProject = projectEndpoint({
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
     const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+    const actorUserId = c.var.auth?.method === "oauth" ? (c.var.auth.userId as string) : undefined
 
     const updatedProject = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         const project = yield* repo.findBySlug(projectSlug)
-        return yield* updateProjectUseCase({
+
+        const updated = yield* updateProjectUseCase({
           id: project.id,
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.settings !== undefined ? { settings: body.settings } : {}),
         })
-      }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
+
+        if (body.flaggers) {
+          for (const [slug, enabled] of Object.entries(body.flaggers)) {
+            yield* updateFlaggerUseCase({
+              organizationId,
+              projectId: updated.id,
+              slug: slug as FlaggerSlug,
+              enabled,
+              ...(actorUserId !== undefined ? { actorUserId } : {}),
+            })
+          }
+        }
+
+        return updated
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, FlaggerRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          c.var.organization.id,
+        ),
+        Effect.provide(RedisCacheStoreLive(c.var.redis)),
+        withTracing,
+      ),
     )
 
     return c.json(toResponse(updatedProject), 200)
@@ -236,7 +274,7 @@ const deleteProject = projectEndpoint({
     tags: ["Projects"],
     ...projectsFernGroup("delete"),
     summary: "Delete project",
-    description: "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+    description: "Deletes a project by slug.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
     responses: openApiNoContentResponses({ description: "Project deleted" }),
