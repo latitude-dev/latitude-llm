@@ -45,6 +45,7 @@ export { InvitationRepositoryLive } from "./repositories/invitation-repository.t
 export { IssueRepositoryLive } from "./repositories/issue-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { NotificationRepositoryLive } from "./repositories/notification-repository.ts"
+export { OAuthKeyRepositoryLive } from "./repositories/oauth-key-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"

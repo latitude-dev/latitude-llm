@@ -393,7 +393,12 @@ function KeysSettingsPage() {
   const { data: apiKeyData, isLoading: apiKeysLoading } = useApiKeysCollection()
   const { data: oauthKeyData, isLoading: oauthKeysLoading } = useOAuthKeysCollection()
   const apiKeys = apiKeyData ?? []
-  const oauthKeys = oauthKeyData ?? []
+  // `useLiveQuery` doesn't preserve the server-fn's ORDER BY — TanStack DB
+  // iterates the collection by item key, not by insertion order — so we sort
+  // here to match the "Connected" column the user reads. Newest first.
+  const oauthKeys = (oauthKeyData ?? [])
+    .slice()
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
 
   return (
     <Container className="flex flex-col gap-12 pt-14">

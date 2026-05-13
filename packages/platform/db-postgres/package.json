@@ -42,6 +42,7 @@
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/notifications": "workspace:*",
+    "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/saved-searches": "workspace:*",
