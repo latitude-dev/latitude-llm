@@ -182,6 +182,38 @@ filters: filterSetSchema, // ← what shape? what semantics? agent has to guess.
 
 If you find yourself writing `.openapi({ description })`, replace it with `.describe()` — descriptions hidden in the openapi WeakMap are invisible to MCP clients, which silently degrades agent UX.
 
+### Don't leak internal implementation into descriptions
+
+User-facing descriptions (route `description`, schema `.describe()`, `openApiResponses({ description })`) are read by SDK users and AI agents. They aren't release notes for our backend. Keep them about the *contract*, not how we implement it.
+
+Concretely, avoid:
+
+- **Storage mechanics**: "soft-deletes", "hard-deletes", "marks as deleted", "removes from cache", "writes to outbox", "RLS-scoped", "via the admin connection". Just say "deletes" / "revokes" / "creates".
+- **Side-effect details on related data**: "Traces remain in storage but the project no longer appears in lists.", "The associated rows are kept for auditing." If the caller can't observe it through the API, don't mention it.
+- **Internal table or column names**, queue names, worker names, event-bus topics.
+- **Comments about why the code is structured a certain way** — those belong in code comments, not in `description:`.
+
+Examples:
+
+```ts
+// Bad — leaks soft-delete + retention behavior of an unrelated entity
+description: "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists."
+// Good
+description: "Deletes a project by slug."
+
+// Bad — describes the mechanism
+description: "Revokes an API key by setting deletedAt and busting the Redis cache."
+// Good
+description: "Revokes an API key."
+
+// Bad — leaks that we don't actually delete the row
+deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was soft-deleted...")
+// Good
+deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was deleted...")
+```
+
+Same rule for the verbs used in route/operation `summary`: "Delete project" beats "Soft-delete project".
+
 ## Rate limiting — every new endpoint group needs a tier
 
 `createTierRateLimiter(tier)` is keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota. Apply it at the parent router, **before** the matching `routes.route(prefix, …)` call:

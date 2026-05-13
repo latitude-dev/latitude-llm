@@ -183,6 +183,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../packages/domain/flaggers
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations

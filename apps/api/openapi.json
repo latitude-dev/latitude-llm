@@ -116,7 +116,7 @@
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -226,6 +226,42 @@
               }
             },
             "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI."
+          },
+          "flaggers": {
+            "type": "object",
+            "properties": {
+              "frustration": {
+                "type": "boolean"
+              },
+              "nsfw": {
+                "type": "boolean"
+              },
+              "refusal": {
+                "type": "boolean"
+              },
+              "laziness": {
+                "type": "boolean"
+              },
+              "jailbreaking": {
+                "type": "boolean"
+              },
+              "forgetting": {
+                "type": "boolean"
+              },
+              "trashing": {
+                "type": "boolean"
+              },
+              "tool-call-errors": {
+                "type": "boolean"
+              },
+              "output-schema-validation": {
+                "type": "boolean"
+              },
+              "empty-response": {
+                "type": "boolean"
+              }
+            },
+            "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched."
           }
         }
       },
@@ -1866,7 +1902,7 @@
         "x-fern-sdk-group-name": "projects",
         "x-fern-sdk-method-name": "delete",
         "summary": "Delete project",
-        "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+        "description": "Deletes a project by slug.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -2332,7 +2368,7 @@
         "x-fern-sdk-group-name": "apiKeys",
         "x-fern-sdk-method-name": "revoke",
         "summary": "Revoke API key",
-        "description": "Soft-deletes an API key, immediately invalidating it.",
+        "description": "Revokes an API key.",
         "security": [
           {
             "ApiKeyAuth": []
