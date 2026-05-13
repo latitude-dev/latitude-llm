@@ -200,8 +200,9 @@ Inside locked serialization must:
 5. assign the score to the matched issue if the locked re-check now finds one
 6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank/Postgres resolution check
 7. assign to the project-lock match if one is found
-8. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
-9. sync the issue projection before releasing the locks
+8. otherwise compare the incoming normalized embedding against recent project issue centroids from Postgres and assign to the best above-threshold centroid match
+9. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
+10. sync the issue projection before releasing the locks
 
 This intentionally moves the long external retrieval/rerank/generation section outside Postgres transactions. Lock acquisition must use Redis `SET ... NX EX`; if the key is already held, serialization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. Redis lock keys must be organization-prefixed (`org:${organizationId}:...`) and released with token comparison so one worker cannot release another worker's lock after TTL expiry.
 
@@ -211,7 +212,7 @@ The correctness invariant is:
 - contended workers retry instead of waiting on Postgres or holding database transactions
 - project-level brand-new issue creation is serialized by the Redis project lock
 - assignment to an existing issue remains row-safe through the issue row lock and conditional score ownership claim
-- Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows
+- Weaviate projection lag can delay matching quality, but it must not allow duplicate issue creation from concurrent no-match workflows; the project-locked no-match path uses Postgres centroids as the final duplicate guard before creating a new issue
 
 Concrete v1 mechanics worth carrying forward:
 

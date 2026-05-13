@@ -239,6 +239,21 @@ const issueRepositoryCoreLive = Layer.effect(
             )
         }),
 
+      listRecentWithCentroids: ({ projectId, limit }: { readonly projectId: ProjectId; readonly limit: number }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(issues)
+                .where(and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)))
+                .orderBy(desc(issues.createdAt))
+                .limit(limit),
+            )
+            .pipe(Effect.map((rows) => rows.map(toDomainIssue).filter((issue) => issue.centroid.mass > 0)))
+        }),
+
       save: (issue: Issue) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

@@ -60,6 +60,14 @@ export const createFakeIssueRepository = (
         return withLifecycle(issue)
       }),
 
+    listRecentWithCentroids: ({ projectId, limit }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && issue.centroid.mass > 0)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, limit),
+      ),
+
     save: (issue) =>
       Effect.sync(() => {
         issues.set(issue.id, issue)

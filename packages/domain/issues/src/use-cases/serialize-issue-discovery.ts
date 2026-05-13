@@ -4,11 +4,15 @@ import { Effect } from "effect"
 import {
   ISSUE_DISCOVERY_FEEDBACK_LOCK_KEY,
   ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
+  ISSUE_DISCOVERY_POSTGRES_CENTROID_GUARD_CANDIDATES,
+  ISSUE_DISCOVERY_POSTGRES_CENTROID_MIN_SIMILARITY,
   ISSUE_DISCOVERY_PROJECT_LOCK_KEY,
   ISSUE_DISCOVERY_PROJECT_LOCK_TTL_SECONDS,
 } from "../constants.ts"
 import { type CheckEligibilityError, type IssueDiscoveryLockUnavailableError, isEligibilityError } from "../errors.ts"
+import { normalizeEmbedding, normalizeIssueCentroid } from "../helpers.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
+import { IssueRepository } from "../ports/issue-repository.ts"
 import type { AssignScoreToIssueError, AssignScoreToIssueResult } from "./assign-score-to-issue.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
@@ -90,6 +94,38 @@ const createIssue = (input: SerializeIssueDiscoveryInput) =>
     normalizedEmbedding: input.normalizedEmbedding,
   })
 
+const cosineSimilarity = (left: readonly number[], right: readonly number[]): number => {
+  if (left.length === 0 || left.length !== right.length) {
+    return 0
+  }
+
+  let sum = 0
+  for (let index = 0; index < left.length; index++) {
+    sum += (left[index] ?? 0) * (right[index] ?? 0)
+  }
+  return sum
+}
+
+const findPostgresCentroidMatchedIssueId = (input: SerializeIssueDiscoveryInput) =>
+  Effect.gen(function* () {
+    const issueRepository = yield* IssueRepository
+    const queryVector = normalizeEmbedding(input.normalizedEmbedding)
+    const candidates = yield* issueRepository.listRecentWithCentroids({
+      projectId: ProjectId(input.projectId),
+      limit: ISSUE_DISCOVERY_POSTGRES_CENTROID_GUARD_CANDIDATES,
+    })
+
+    const best = candidates
+      .map((issue) => ({
+        issueId: issue.id,
+        similarity: cosineSimilarity(queryVector, normalizeIssueCentroid(issue.centroid)),
+      }))
+      .filter((candidate) => candidate.similarity >= ISSUE_DISCOVERY_POSTGRES_CENTROID_MIN_SIMILARITY)
+      .sort((left, right) => right.similarity - left.similarity)[0]
+
+    return best?.issueId ?? null
+  })
+
 export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
@@ -127,6 +163,11 @@ export const serializeIssueDiscoveryUseCase = (input: SerializeIssueDiscoveryInp
             const projectMatchedIssueId = yield* findMatchedIssueId(input)
             if (projectMatchedIssueId !== null) {
               return yield* assignToIssue(input, projectMatchedIssueId)
+            }
+
+            const postgresCentroidMatchedIssueId = yield* findPostgresCentroidMatchedIssueId(input)
+            if (postgresCentroidMatchedIssueId !== null) {
+              return yield* assignToIssue(input, postgresCentroidMatchedIssueId)
             }
 
             return yield* createIssue(input)

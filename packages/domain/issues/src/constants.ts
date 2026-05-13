@@ -138,6 +138,16 @@ export const ISSUE_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
 export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
 
 // ---------------------------------------------------------------------------
+// Postgres centroid duplicate guard
+// ---------------------------------------------------------------------------
+
+/** Maximum recent project issues compared by the Postgres centroid duplicate guard. */
+export const ISSUE_DISCOVERY_POSTGRES_CENTROID_GUARD_CANDIDATES = 250
+
+/** Minimum cosine similarity for assigning to an existing issue during locked no-match serialization. */
+export const ISSUE_DISCOVERY_POSTGRES_CENTROID_MIN_SIMILARITY = 0.92
+
+// ---------------------------------------------------------------------------
 // Discovery serialization locks
 // ---------------------------------------------------------------------------
 

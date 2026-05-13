@@ -49,6 +49,10 @@ export interface IssueRepositoryShape {
     readonly projectId: ProjectId
     readonly uuid: string
   }): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+  listRecentWithCentroids(input: {
+    readonly projectId: ProjectId
+    readonly limit: number
+  }): Effect.Effect<readonly Issue[], RepositoryError, SqlClient>
   /**
    * Returns the number of non-deleted issues with this slug in the project,
    * scoped to the active organization (issues aren't soft-deleted, so this

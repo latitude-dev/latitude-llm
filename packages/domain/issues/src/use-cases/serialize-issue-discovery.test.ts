@@ -157,6 +157,74 @@ describe("serializeIssueDiscoveryUseCase", () => {
     expect(fakeAi.calls.generate).toHaveLength(0)
   })
 
+  it("uses a Postgres centroid guard inside the project lock before creating a duplicate issue", async () => {
+    const existingIssue = makeIssue({
+      centroid: {
+        ...createIssueCentroid(),
+        base: makeEmbedding(),
+        mass: 1,
+      },
+    })
+    const score = makeScore()
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
+    const lockCalls: string[] = []
+    const writtenEvents: unknown[] = []
+    const fakeAi = createFakeAI({
+      generate: (input) =>
+        Effect.succeed({
+          object: input.schema.parse({
+            name: "Token leakage in assistant responses",
+            description: "The assistant exposes secrets or tokens in its replies.",
+          }),
+          tokens: 10,
+          duration: 5,
+        }),
+    })
+
+    scores.set(score.id, score)
+
+    const result = await Effect.runPromise(
+      serializeIssueDiscoveryUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(IssueDiscoveryLockRepository, {
+          withLock: (input, effect) =>
+            Effect.gen(function* () {
+              lockCalls.push(`${input.organizationId}:${input.projectId}:${input.lockKey}`)
+              return yield* effect
+            }),
+        }),
+        Effect.provideService(OutboxEventWriter, {
+          write: (event) =>
+            Effect.sync(() => {
+              writtenEvents.push(event)
+            }),
+        }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result).toEqual({ action: "assigned", issueId: existingIssue.id })
+    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+    expect(issues.size).toBe(1)
+    expect(lockCalls).toHaveLength(3)
+    expect(lockCalls[0]).toMatch(new RegExp(`^${organizationId}:${projectId}:feedback:[a-f0-9]{64}$`))
+    expect(lockCalls[1]).toBe(`${organizationId}:${projectId}:project`)
+    expect(lockCalls[2]).toBe(`${organizationId}:${projectId}:issue:${existingIssue.id}`)
+    expect(writtenEvents).toHaveLength(1)
+    expect(fakeAi.calls.generate).toHaveLength(0)
+  })
+
   it("falls through to the project lock before creating a new issue", async () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
