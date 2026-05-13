@@ -34,7 +34,7 @@ const baseInput: AssembleReportInput = {
     commandsRun: 15,
     workspaces: 1,
     branches: 2,
-    commits: 7,
+    commits: 3,
     repos: 1,
     streakDays: 5,
     testsRun: 9,
@@ -74,7 +74,7 @@ const baseInput: AssembleReportInput = {
       row: {
         toolCalls: 100,
         sessions: 5,
-        commits: 7,
+        commits: 3,
         workspacePath: WORKSPACE_PATH,
         topFiles: [
           { path: `${WORKSPACE_PATH}/src/index.ts`, touches: 23, linesAdded: 234, linesRemoved: 132, reads: 5 },
@@ -116,8 +116,17 @@ describe("toolBucketFor", () => {
     expect(toolBucketFor("TaskUpdate")).toBe("plan")
   })
 
+  it("maps WebFetch and WebSearch to research", () => {
+    expect(toolBucketFor("WebFetch")).toBe("research")
+    expect(toolBucketFor("WebSearch")).toBe("research")
+  })
+
+  it("maps TodoWrite to plan alongside TaskCreate / TaskUpdate", () => {
+    expect(toolBucketFor("TodoWrite")).toBe("plan")
+  })
+
   it("falls back to other for unknown tools", () => {
-    expect(toolBucketFor("WebFetch")).toBe("other")
+    expect(toolBucketFor("MysteryTool")).toBe("other")
     expect(toolBucketFor("")).toBe("other")
   })
 })
@@ -136,6 +145,7 @@ describe("assembleReport", () => {
     expect(report.toolMix.write).toBe(5)
     expect(report.toolMix.search).toBe(5)
     expect(report.toolMix.plan).toBe(0)
+    expect(report.toolMix.research).toBe(0)
     expect(report.toolMix.other).toBe(0)
   })
 
@@ -157,8 +167,8 @@ describe("assembleReport", () => {
     expect(report.loc.added).toBe(600)
     expect(report.loc.removed).toBe(180)
     expect(report.loc.read).toBe(9_200)
-    expect(report.loc.writtenAnchor.length).toBeGreaterThan(0)
-    expect(report.loc.readAnchor.length).toBeGreaterThan(0)
+    expect(report.loc.writtenAnchor.emphasis.length).toBeGreaterThan(0)
+    expect(report.loc.readAnchor.emphasis.length).toBeGreaterThan(0)
   })
 
   it("zero-fills the 7×24 heatmap and places known cells correctly", () => {

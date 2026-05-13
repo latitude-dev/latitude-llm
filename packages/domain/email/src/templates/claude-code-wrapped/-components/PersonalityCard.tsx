@@ -1,3 +1,4 @@
+import type { PersonalityKind } from "@domain/spans"
 import { Img } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -5,30 +6,37 @@ import React from "react"
 import { EmailHeading } from "../../../components/EmailHeading.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
 
-export type PersonalityKindLocal = "surgeon" | "architect" | "detective" | "conductor" | "marathoner" | "strategist"
-
 interface PersonalityCardProps {
-  readonly kind: PersonalityKindLocal
+  readonly kind: PersonalityKind
   readonly evidence: readonly [string, string, string]
   readonly imageBaseUrl: string
 }
 
-const TITLE_FOR_KIND: Record<PersonalityKindLocal, string> = {
+// Title + descriptor copy lives next to the component so adding an archetype
+// to `PERSONALITY_KINDS` in @domain/spans gives an exhaustiveness error here
+// until the maps are filled in.
+const TITLE_FOR_KIND: Record<PersonalityKind, string> = {
   surgeon: "The Surgeon",
   architect: "The Architect",
   detective: "The Detective",
   conductor: "The Conductor",
-  marathoner: "The Marathoner",
   strategist: "The Strategist",
+  scholar: "The Scholar",
+  consultant: "The Consultant",
+  shipper: "The Shipper",
+  tester: "The Tester",
 }
 
-const DESCRIPTOR_FOR_KIND: Record<PersonalityKindLocal, string> = {
+const DESCRIPTOR_FOR_KIND: Record<PersonalityKind, string> = {
   surgeon: "You changed code with sub-line precision.",
   architect: "You started from a blank page more than most.",
   detective: "You read and searched before you wrote.",
   conductor: "You ran the orchestra from the terminal.",
-  marathoner: "You stayed in flow for long stretches.",
   strategist: "You planned twice, coded once.",
+  scholar: "You sent Claude to the library.",
+  consultant: "You dropped in, asked, and moved on.",
+  shipper: "You closed the loop, again and again.",
+  tester: "You don't trust it until it's green.",
 }
 
 /**
