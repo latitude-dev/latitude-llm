@@ -1,9 +1,10 @@
 import { NoCreditsRemainingError } from "@domain/billing"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import { ingestSpansWithBillingUseCase } from "@domain/spans"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  ProjectRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -26,9 +27,23 @@ interface TracesRouteContext {
 const traceIngestionBillingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  ProjectRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
 )
+
+/**
+ * Docs URL surfaced in OTLP `partial_success.errorMessage` so a customer's exporter logs point
+ * them at the right page. **Hard-coded by contract** — if the docs path moves, the docs page's
+ * link-integrity test (in `docs/`) will fail, prompting a coordinated update of this string.
+ */
+const PROJECT_SCOPING_DOCS_URL = "https://docs.latitude.so/telemetry/project-scoping"
+
+const buildRejectionMessage = (rejected: number): string =>
+  `${rejected} span(s) rejected: no project could be resolved ` +
+  "(missing `latitude.project` attribute, missing OTEL resource attribute, and no " +
+  "`X-Latitude-Project` header), or the resolved slug doesn't belong to this organization. " +
+  `See ${PROJECT_SCOPING_DOCS_URL} for project-scoping options.`
 
 export const registerTracesRoute = ({ app }: TracesRouteContext) => {
   app.post("/v1/traces", authMiddleware, projectMiddleware, async (c) => {
@@ -39,7 +54,6 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const rateLimit = await checkTraceIngestionRateLimit({
       redis: getRedisClient(),
       organizationId: c.get("organizationId"),
-      projectId: c.get("projectId"),
       apiKeyId: c.get("apiKeyId"),
       payloadBytes: body.byteLength,
     })
@@ -61,20 +75,18 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     }
 
     const organization = OrganizationId(c.get("organizationId"))
-    const project = ProjectId(c.get("projectId"))
     const apiKeyId = c.get("apiKeyId")
+    const defaultProjectSlug = c.get("defaultProjectSlug")
 
     const disk = getStorageDisk()
     const publisher = await getQueuePublisher()
     const postgresClient = getPostgresClient()
-    const ingestionEffect = Effect.gen(function* () {
-      yield* ingestSpansWithBillingUseCase({
-        organizationId: organization,
-        projectId: project,
-        apiKeyId,
-        payload: new Uint8Array(body),
-        contentType,
-      })
+    const ingestionEffect = ingestSpansWithBillingUseCase({
+      organizationId: organization,
+      apiKeyId,
+      payload: new Uint8Array(body),
+      contentType,
+      ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
     }).pipe(
       withPostgres(traceIngestionBillingLayers, postgresClient, organization),
       Effect.provide(Layer.mergeAll(StorageDiskLive(disk), QueuePublisherLive(publisher))),
@@ -89,9 +101,39 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
         const err = failure.value
         return c.json({ error: err.httpMessage, kind: "NoCreditsRemaining" }, err.httpStatus)
       }
+      if (Option.isSome(failure) && (failure.value as { _tag?: string })._tag === "SpanDecodingError") {
+        const err = failure.value as { httpMessage?: string }
+        return c.json({ error: err.httpMessage ?? "Invalid OTLP payload" }, 400)
+      }
       throw new Error(Cause.pretty(exit.cause))
     }
 
-    return c.json({}, 202)
+    const result = exit.value
+
+    // OTLP response contract:
+    //  - All-valid batch                   → 200 OK, empty `ExportTraceServiceResponse`
+    //  - Mixed (some rejected, some kept)  → 200 OK + `partialSuccess { rejectedSpans, errorMessage }`
+    //    (spec §3.2: `partialSuccess` ONLY belongs on 2xx — it conveys "we kept some")
+    //  - Empty batch (no spans to ingest)  → 202 Accepted (legacy no-op, OTLP-permissive)
+    //  - All rejected                      → 400 with a `google.rpc.Status`-shaped body
+    //    ({ code, message }) — NOT `partialSuccess`, since nothing was persisted
+    if (result.totalSpans === 0) {
+      return c.json({}, 202)
+    }
+
+    if (result.acceptedSpans === 0) {
+      return c.json({ code: 400, message: buildRejectionMessage(result.rejectedSpans) }, 400)
+    }
+
+    if (result.rejectedSpans > 0) {
+      return c.json({
+        partialSuccess: {
+          rejectedSpans: result.rejectedSpans,
+          errorMessage: buildRejectionMessage(result.rejectedSpans),
+        },
+      })
+    }
+
+    return c.json({})
   })
 }

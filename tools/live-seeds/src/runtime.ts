@@ -905,7 +905,8 @@ async function postSpanToIngest(
     body: JSON.stringify(request),
   })
 
-  if (response.status !== 202) {
+  // OTLP allows 200 (full success / partial_success) and we also accept the legacy 202.
+  if (response.status < 200 || response.status >= 300) {
     const body = await response.text()
     throw new Error(`Failed to ingest trace ${traceId}: ${response.status} ${response.statusText}\n${body}`)
   }

@@ -73,6 +73,54 @@ describe("capture", () => {
     )
   })
 
+  it("propagates projectSlug from capture options onto the context", () => {
+    capture(
+      "scoped",
+      () => {
+        const ctx = context.active()
+        const data = getLatitudeContext(ctx)
+        expect(data?.projectSlug).toBe("call-summariser")
+      },
+      { projectSlug: "call-summariser" },
+    )
+  })
+
+  it("nested capture without projectSlug inherits the outer one", () => {
+    capture(
+      "outer",
+      () => {
+        capture(
+          "inner",
+          () => {
+            const ctx = context.active()
+            const data = getLatitudeContext(ctx)
+            expect(data?.projectSlug).toBe("primary")
+          },
+          { tags: ["inner"] },
+        )
+      },
+      { projectSlug: "primary" },
+    )
+  })
+
+  it("inner capture's projectSlug overrides the outer default", () => {
+    capture(
+      "outer",
+      () => {
+        capture(
+          "inner",
+          () => {
+            const ctx = context.active()
+            const data = getLatitudeContext(ctx)
+            expect(data?.projectSlug).toBe("evaluation-runs")
+          },
+          { projectSlug: "evaluation-runs" },
+        )
+      },
+      { projectSlug: "primary" },
+    )
+  })
+
   it("should allow inner capture to override sessionId and userId", () => {
     capture(
       "outer",

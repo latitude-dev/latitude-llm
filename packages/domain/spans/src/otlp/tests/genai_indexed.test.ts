@@ -28,9 +28,10 @@ const SPAN_IDS = {
 
 const CONTEXT: TransformContext = {
   organizationId: "org_test",
-  projectId: "proj_test",
   apiKeyId: "key_test",
   ingestedAt: new Date("2026-03-16T12:00:00Z"),
+  defaultProjectId: "proj_test",
+  projectIdBySlug: new Map(),
 }
 
 // ─── Span builders (Traceloop/OpenLLMetry flattened indexed format) ──
@@ -120,7 +121,7 @@ describe("Traceloop/OpenLLMetry — flattened indexed gen_ai.prompt/completion",
   }
 
   beforeAll(() => {
-    spans = transformOtlpToSpans(buildTrace(), CONTEXT)
+    spans = transformOtlpToSpans(buildTrace(), CONTEXT).spans as typeof spans
   })
 
   describe("trace structure", () => {

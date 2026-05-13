@@ -13,7 +13,8 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
-    "seed:live-seeds": "node --import tsx src/scripts/send-live-seeds.ts"
+    "seed:live-seeds": "node --import tsx src/scripts/send-live-seeds.ts",
+    "seed:multi-project-demo": "node --import tsx src/scripts/send-multi-project-demo.ts"
   },
   "dependencies": {
     "@domain/annotation-queues": "workspace:*",
