@@ -1,7 +1,7 @@
 import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { reportSchema } from "../entities/report.ts"
+import { reportV1Schema } from "../entities/report.ts"
 import { type AssembleReportInput, assembleReport, toolBucketFor } from "./build-report.ts"
 
 const ORG_ID = OrganizationId("org-build".padEnd(24, "x").slice(0, 24))
@@ -134,7 +134,7 @@ describe("toolBucketFor", () => {
 describe("assembleReport", () => {
   it("produces a report that validates against the schema", () => {
     const report = assembleReport(baseInput)
-    expect(() => reportSchema.parse(report)).not.toThrow()
+    expect(() => reportV1Schema.parse(report)).not.toThrow()
   })
 
   it("bucketises tool mix correctly", () => {

@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import {
   type FileLine,
   type Report,
-  reportSchema,
+  reportV1Schema,
   type ToolBucket,
   type ToolMix,
   type WorkspaceDeepDive,
@@ -172,7 +172,7 @@ export interface AssembleReportInput {
 /**
  * Pure assembly step — no Effect, no I/O. Bucketises the tool mix, computes
  * relative paths + anchors, fills the 7×24 heatmap, assigns the personality,
- * and runs the assembled object through `reportSchema.parse` so callers can
+ * and runs the assembled object through `reportV1Schema.parse` so callers can
  * rely on the returned value being a `Report`.
  */
 export const assembleReport = (input: AssembleReportInput): Report => {
@@ -229,7 +229,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
   // return being a `Report` even when something upstream (a query, an
   // adapter, a refactor) drifts away from the schema. Cheap — one Zod
   // parse per Wrapped run, fired ~once per project per week.
-  return reportSchema.parse({
+  return reportV1Schema.parse({
     project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
     organization: input.organization,
     window: { start: input.windowStart, end: input.windowEnd },

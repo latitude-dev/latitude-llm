@@ -2,6 +2,22 @@ import { organizationIdSchema, projectIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 /**
+ * Schema versions for the persisted Claude Code Wrapped report.
+ *
+ * Every persisted row carries a `report_version` integer; the renderer
+ * dispatch on both the email and web sides picks the version-scoped
+ * component by reading it. When the data shape changes, freeze the
+ * existing V1 schema + components and add V2 alongside — old shares stay
+ * rendering with their original schema and template.
+ *
+ * The blob in Postgres is the raw `Report` (no version field embedded);
+ * the version metadata lives in the DB column and in this constant.
+ */
+export const REPORT_VERSIONS = [1] as const
+export type ReportVersion = (typeof REPORT_VERSIONS)[number]
+export const CURRENT_REPORT_VERSION: ReportVersion = 1
+
+/**
  * Tool-call buckets used by the personality algorithm and the
  * (personality-internal) tool-mix evidence. The standalone tool-mix bar
  * is gone — the percentages live inside the personality reveal.
@@ -127,10 +143,11 @@ const locSchema = z.object({
 export type LocStats = z.infer<typeof locSchema>
 
 /**
- * Data shape passed to the Claude Code Wrapped email template. Every field is
- * a directly-renderable value — no computation happens in the template.
+ * V1 data shape for the Claude Code Wrapped report. Every field is a
+ * directly-renderable value — no computation happens in the template /
+ * web component. Frozen-in-amber when V2 ever ships.
  */
-export const reportSchema = z.object({
+export const reportV1Schema = z.object({
   project: z.object({ id: projectIdSchema, name: z.string(), slug: z.string() }),
   organization: z.object({ id: organizationIdSchema, name: z.string() }),
   window: z.object({ start: z.date(), end: z.date() }),
@@ -191,4 +208,19 @@ export const reportSchema = z.object({
   personality: personalitySchema,
 })
 
-export type Report = z.infer<typeof reportSchema>
+export type ReportV1 = z.infer<typeof reportV1Schema>
+
+/**
+ * Single-version alias for now. Becomes a discriminated union (`ReportV1 |
+ * ReportV2`) once V2 ships; consumers that care will switch on the
+ * persisted `report_version` column to narrow.
+ */
+export type Report = ReportV1
+
+/**
+ * Maps a persisted `report_version` to the Zod schema that validates its
+ * blob on read. Keep the keys aligned with `REPORT_VERSIONS`.
+ */
+export const SCHEMA_BY_VERSION = {
+  1: reportV1Schema,
+} as const satisfies Record<ReportVersion, z.ZodTypeAny>
