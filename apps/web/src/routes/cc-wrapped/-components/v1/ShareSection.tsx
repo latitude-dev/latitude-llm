@@ -78,7 +78,7 @@ export function ShareSection({ archetypeTitle }: ShareSectionProps) {
           type="button"
           onClick={onShare}
           disabled={!pageUrl}
-          className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-base transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-6 py-3 text-base transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             backgroundColor: "#D97555",
             color: "#fff",
@@ -93,7 +93,7 @@ export function ShareSection({ archetypeTitle }: ShareSectionProps) {
           type="button"
           onClick={writeToClipboard}
           disabled={!pageUrl}
-          className="text-sm underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer text-sm underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
           style={{ color: "#6E6A5E", fontFamily: "Georgia, serif" }}
         >
           {copied ? "Link copied to clipboard" : "or copy the link"}
