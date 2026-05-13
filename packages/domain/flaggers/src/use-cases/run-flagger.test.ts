@@ -19,7 +19,7 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_MODEL } from "../constants.ts"
+import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -133,7 +133,7 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
       ...FLAGGER_MODEL,
-      maxTokens: 512,
+      maxTokens: FLAGGER_MAX_TOKENS,
       telemetry: {
         spanName: "flagger.classify",
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
@@ -497,8 +497,7 @@ describe("runFlaggerUseCase", () => {
       generate: () =>
         Effect.fail(
           new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
             cause: sdkError,
           }),
         ),
@@ -542,8 +541,7 @@ describe("runFlaggerUseCase", () => {
       generate: () =>
         Effect.fail(
           new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
             cause: new Error("No object generated: response did not match schema."),
           }),
         ),
