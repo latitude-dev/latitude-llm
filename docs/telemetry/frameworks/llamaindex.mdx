@@ -69,12 +69,12 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { Latitude, capture } from "@latitude-data/telemetry"
         import { Settings } from "llamaindex"
         import { openai } from "@llamaindex/openai"
         import { agent } from "@llamaindex/workflow"
 
-        const latitude = initLatitude({
+        const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
           instrumentations: ["llamaindex"],
@@ -95,10 +95,10 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       </Tab>
       <Tab title="Python">
         ```python
-        from latitude_telemetry import init_latitude, capture
+        from latitude_telemetry import Latitude, capture
         from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 
-        latitude = init_latitude(
+        latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
             instrumentations=["llamaindex"],

@@ -1,3 +1,4 @@
+import type { TracerProvider } from "@opentelemetry/api"
 import type { SpanExporter } from "@opentelemetry/sdk-trace-node"
 import type { InstrumentationType } from "./instrumentations.ts"
 import type { RedactSpanProcessorOptions } from "./redact.ts"
@@ -11,7 +12,7 @@ export type ContextOptions = {
   userId?: string
 }
 
-export type InitLatitudeOptions = SmartFilterOptions & {
+export type LatitudeOptions = SmartFilterOptions & {
   apiKey: string
   projectSlug: string
   instrumentations?: InstrumentationType[]
@@ -19,16 +20,37 @@ export type InitLatitudeOptions = SmartFilterOptions & {
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
-  /** Sets `service.name` on exported spans (and on the provider resource when using `initLatitude`). */
+  /**
+   * Existing OpenTelemetry tracer provider to attach Latitude to.
+   * Usually omitted because `new Latitude()` detects the global provider installed by Sentry,
+   * Datadog, New Relic, Honeycomb, or a custom OTel SDK setup.
+   */
+  tracerProvider?: TracerProvider
+  /**
+   * Sets the OpenTelemetry `service.name` resource attribute on the Latitude-owned provider.
+   * Honored only when `new Latitude()` creates its own provider. When piggy-backing on an
+   * existing provider (via `tracerProvider` or the detected global), this option is ignored
+   * and the host provider's `service.name` is used — overriding the host's resource would
+   * silently relabel spans the host SDK also processes.
+   */
   serviceName?: string
 }
+
+/**
+ * @deprecated Use `LatitudeOptions` with `new Latitude(options)` instead.
+ */
+export type InitLatitudeOptions = LatitudeOptions
 
 export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   disableRedact?: boolean
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
-  /** Sets `service.name` on each span so Latitude ingest can attribute telemetry to your service. */
+  /**
+   * Overrides the `service.name` resource attribute on spans exported through this processor.
+   * Applied via an exporter wrapper, so other span processors on the host provider continue
+   * to see the host's original resource.
+   */
   serviceName?: string
 }
 

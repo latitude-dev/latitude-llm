@@ -473,9 +473,8 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
-          // TODO(observability): enable when we want to start tracing Latitude with Latitude
-          // { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
-          // { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
+          { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+          { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
           { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
           // Loops sync is production-only. Injecting the placeholder secret in

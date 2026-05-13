@@ -1,5 +1,6 @@
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi"
 import type { Env } from "hono"
+import { honoPathToOpenApi } from "./normalize-path.ts"
 import { registerEndpoint } from "./registry.ts"
 
 /**
@@ -64,6 +65,12 @@ export interface AnyApiEndpoint {
  * prefix as a constant (e.g. `export const apiKeysPath = "/api-keys"`) and pass
  * it both here and to the parent — so the value is declared once.
  *
+ * Accepts either Hono-style `:param` syntax or OpenAPI-style `{param}` syntax;
+ * the registry stores the OpenAPI form so the dispatcher only has to substitute
+ * one placeholder shape. This lets route files declare a single Hono-form
+ * constant (`/projects/:projectSlug/annotations`) usable both at the parent
+ * mount and here.
+ *
  * The two-step shape (`defineApiEndpoint<E>(prefix)(args)`) exists because
  * TypeScript can't partially-infer one type argument while accepting another
  * explicitly: we need the caller to specify `Env` (which depends on which
@@ -109,11 +116,15 @@ export const defineApiEndpoint =
     // the OpenAPI spec and the MCP tool registry.
     const { name, ...rest } = route
     const routeForHono = { ...rest, operationId: name } as unknown as R
+    // Canonicalize the mount prefix to OpenAPI form (`{param}`) for the registry —
+    // the dispatcher in server.ts only knows how to substitute that shape. Hono's
+    // `parent.route(prefix, …)` happily accepts either form.
+    const normalizedPrefix = honoPathToOpenApi(prefix)
     const endpoint: ApiEndpoint<R, E> = {
       route,
       handler,
       tool,
-      prefix,
+      prefix: normalizedPrefix,
       mountHttp(app) {
         // Cast through `any` because OpenAPIHono.openapi is parameterised on a
         // concrete RouteConfig, not our AppRouteConfig superset. The runtime call

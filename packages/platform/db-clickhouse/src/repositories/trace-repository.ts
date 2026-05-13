@@ -65,36 +65,49 @@ import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-sub
 const SEMANTIC_SCAN_LIMIT = 30_000
 
 /**
- * Tokenize a phrase the same way the `search_text` text index does at
- * storage: split on every non-alphanumeric ASCII byte (matching CH's
- * `splitByNonAlpha`) and lowercase. Empty fragments are dropped.
- *
- * Keeping the TS tokenizer in lock-step with the CH `tokenizer` setting on
- * `idx_search_text_text` is what makes the storage-vs-query whitespace
- * asymmetry from LAT-562 disappear: the user's typed `"key": true` and the
- * indexed `"key":true` produce the same `[key, true]` array on both sides.
+ * Tokenize a backtick phrase the same way the `search_text` text index does:
+ * lower-case first, then split on every non-alphanumeric ASCII byte (matching
+ * CH's `splitByNonAlpha`). Empty fragments are dropped.
  */
 function tokenizePhrase(phrase: string): readonly string[] {
   return phrase
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
+    .split(/[^A-Za-z0-9]+/)
     .filter((t) => t.length > 0)
 }
 
+function stripLoneSurrogates(text: string): string {
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�")
+}
+
+function normalizeLiteralPhrase(text: string): string {
+  return stripLoneSurrogates(text.trim().replace(/\s+/g, " "))
+}
+
+function escapeLikePattern(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
+}
+
 /**
- * Multi-token phrases match as a token bag (every token present, order not
- * enforced). Swap the per-token loop for `hasPhrase` once we're on CH 26.4+
- * to recover phrase-order semantics.
+ * Compose quoted-search filters:
+ *   - `"..."` is a case-sensitive literal substring over normalized
+ *     `search_text`, implemented with indexed `LIKE`.
+ *   - `` `...` `` is a case-insensitive ordered token phrase. ClickHouse 26.2
+ *     does not expose `hasPhrase`, so we combine an indexed `hasAllTokens`
+ *     prefilter with `hasSubstr(tokens(lower(...)), phraseTokens)` to enforce
+ *     token adjacency and order.
  *
- * A phrase that tokenizes to nothing (only punctuation between the quotes)
- * intentionally matches zero rows rather than silently dropping the filter.
+ * A phrase that normalizes/tokenizes to nothing intentionally matches zero rows
+ * rather than silently dropping the filter.
  */
-function buildLexicalSearchSubquery(phrases: readonly string[]): {
+function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
   subquery: string
   params: Record<string, unknown>
 } {
-  const tokenized = phrases.map(tokenizePhrase)
-  const matchNothing = tokenized.length > 0 && tokenized.some((tokens) => tokens.length === 0)
+  const literalPhrases = parsed.literalPhrases.map(normalizeLiteralPhrase)
+  const tokenized = parsed.tokenPhrases.map(tokenizePhrase)
+  const matchNothing =
+    literalPhrases.some((phrase) => phrase.length === 0) || tokenized.some((tokens) => tokens.length === 0)
 
   if (matchNothing) {
     return {
@@ -109,12 +122,19 @@ function buildLexicalSearchSubquery(phrases: readonly string[]): {
 
   const predicates: string[] = []
   const params: Record<string, unknown> = {}
+
+  literalPhrases.forEach((phrase, phraseIdx) => {
+    const paramName = `literalPhrase${phraseIdx}`
+    predicates.push(`search_text LIKE {${paramName}:String}`)
+    params[paramName] = `%${escapeLikePattern(phrase)}%`
+  })
+
   tokenized.forEach((tokens, phraseIdx) => {
-    tokens.forEach((token, tokenIdx) => {
-      const paramName = `phrase${phraseIdx}_${tokenIdx}`
-      predicates.push(`hasTokenCaseInsensitive(search_text, {${paramName}:String})`)
-      params[paramName] = token
-    })
+    const paramName = `tokenPhrase${phraseIdx}`
+    predicates.push(
+      `hasAllTokens(search_text, {${paramName}:Array(String)}) AND hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), {${paramName}:Array(String)})`,
+    )
+    params[paramName] = [...tokens]
   })
 
   const phraseClause = predicates.length > 0 ? `AND ${predicates.join(" AND ")}` : ""
@@ -179,11 +199,11 @@ type SearchPlan = {
 }
 
 /**
- * Translate `(phrases, semanticPrompt, queryEmbedding)` into one of three
- * shapes (the spec's table collapses to three live shapes — the empty/empty
- * case is gated upstream by `isActiveSearch`):
+ * Translate `(literalPhrases, tokenPhrases, semanticPrompt, queryEmbedding)`
+ * into one of three shapes (the spec's table collapses to three live shapes —
+ * the empty/empty case is gated upstream by `isActiveSearch`):
  *
- *   - phrases-only (`ranked=false`): AND-ed `hasAllTokens` filter.
+ *   - phrase-only (`ranked=false`): literal and/or token-phrase filter.
  *   - semantic-only (`ranked=true`): cosine ranker with the relevance floor.
  *   - hybrid (`ranked=true`): phrase filter narrows the candidate set, cosine
  *     similarity ranks the survivors. Phrase matches without an embedding
@@ -191,17 +211,17 @@ type SearchPlan = {
  *     precision, so the semantic floor is dropped to avoid losing them.
  *
  * If a semantic prompt was typed but the embedder is unavailable, the plan
- * collapses to phrases-only (no semantic ranking) when phrases are present,
+ * collapses to phrase-only (no semantic ranking) when phrases are present,
  * or to a deliberate empty result when there are no phrases — same fallback
  * shape the previous design relied on.
  */
 function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly number[] | undefined): SearchPlan {
-  const hasPhrases = parsed.phrases.length > 0
+  const hasPhrases = parsed.literalPhrases.length > 0 || parsed.tokenPhrases.length > 0
   const hasSemantic = parsed.semanticPrompt.length > 0
   const hasEmbedding = !!queryEmbedding && queryEmbedding.length > 0
 
   if (hasPhrases && !hasSemantic) {
-    const lex = buildLexicalSearchSubquery(parsed.phrases)
+    const lex = buildLexicalSearchSubquery(parsed)
     return {
       ranked: false,
       subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
@@ -232,7 +252,7 @@ function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly num
   }
 
   // hasPhrases && hasSemantic
-  const lex = buildLexicalSearchSubquery(parsed.phrases)
+  const lex = buildLexicalSearchSubquery(parsed)
   if (!hasEmbedding) {
     return {
       ranked: false,
@@ -261,7 +281,7 @@ function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly num
  * the search subquery. Empty-input or whitespace-only inputs short-circuit.
  */
 function isActiveSearch(parsed: ParsedSearchQuery): boolean {
-  return parsed.phrases.length > 0 || parsed.semanticPrompt.length > 0
+  return parsed.literalPhrases.length > 0 || parsed.tokenPhrases.length > 0 || parsed.semanticPrompt.length > 0
 }
 
 const LIST_SELECT = `

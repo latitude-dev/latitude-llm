@@ -167,6 +167,49 @@ describe("AdminFeatureFlagRepositoryLive", () => {
     expect(updated.description).toBe("New desc.")
   })
 
+  it("findEligibilityForFlag returns explicitly enabled organizations", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "scoped-flag" })
+        yield* repo.enableForOrganization({
+          organizationId: ORG_ID,
+          identifier: "scoped-flag",
+          enabledByAdminUserId: ADMIN_USER_ID,
+        })
+        return yield* repo.findEligibilityForFlag("scoped-flag")
+      }),
+    )
+
+    expect(result.enabledForAll).toBe(false)
+    expect(result.organizationIds).toEqual([ORG_ID])
+  })
+
+  it("findEligibilityForFlag short-circuits with enabledForAll=true", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.create({ identifier: "global-flag" })
+        yield* repo.enableForAll("global-flag")
+        return yield* repo.findEligibilityForFlag("global-flag")
+      }),
+    )
+
+    expect(result.enabledForAll).toBe(true)
+    expect(result.organizationIds).toEqual([])
+  })
+
+  it("findEligibilityForFlag fails with FeatureFlagNotFoundError for unknown identifiers", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminFeatureFlagRepository
+          return yield* repo.findEligibilityForFlag("does-not-exist")
+        }),
+      ),
+    ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
+  })
+
   it("toggles enable-for-all on the flag", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {

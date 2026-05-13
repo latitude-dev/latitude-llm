@@ -242,10 +242,10 @@ export const AIGenerateLive = Layer.effect(
   AIGenerate,
   Effect.gen(function* () {
     const generate = Effect.fn("ai.generate")(function* <T>(input: GenerateInput<T>) {
-      yield* Effect.annotateCurrentSpan("ai.provider", input.provider)
-      yield* Effect.annotateCurrentSpan("ai.model", input.model)
+      yield* Effect.annotateCurrentSpan("effect.ai.provider", input.provider)
+      yield* Effect.annotateCurrentSpan("effect.ai.model", input.model)
       if (input.telemetry?.spanName !== undefined) {
-        yield* Effect.annotateCurrentSpan("ai.telemetry.span_name", input.telemetry.spanName)
+        yield* Effect.annotateCurrentSpan("effect.ai.telemetry_span_name", input.telemetry.spanName)
       }
 
       const providerModel = yield* createProviderModel(input.provider, input.model)

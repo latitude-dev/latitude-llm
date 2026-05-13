@@ -31,9 +31,25 @@ export interface AdminDisableFeatureFlagForOrganizationInput {
   readonly identifier: string
 }
 
+/**
+ * Eligibility snapshot for a single flag — used by cross-org workers that
+ * want to skip work for orgs that don't have the flag enabled.
+ *
+ * When `enabledForAll` is true, every organization in the system is eligible
+ * regardless of `organizationIds`. The list is not enumerated in that case to
+ * avoid pulling every organization id into memory.
+ */
+export interface AdminFeatureFlagEligibility {
+  readonly enabledForAll: boolean
+  readonly organizationIds: readonly OrganizationId[]
+}
+
 export interface AdminFeatureFlagRepositoryShape {
   list(): Effect.Effect<readonly AdminFeatureFlagSummary[], RepositoryError>
   listArchived(): Effect.Effect<readonly AdminFeatureFlagSummary[], RepositoryError>
+  findEligibilityForFlag(
+    identifier: string,
+  ): Effect.Effect<AdminFeatureFlagEligibility, FeatureFlagNotFoundError | RepositoryError>
   create(
     input: AdminCreateFeatureFlagInput,
   ): Effect.Effect<AdminFeatureFlagSummary, DuplicateFeatureFlagIdentifierError | RepositoryError>

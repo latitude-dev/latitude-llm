@@ -3,6 +3,7 @@ import type {
   QueueConsumer,
   QueueName,
   QueuePublisherShape,
+  ScheduleRepeatableOptions,
   SubscribeOptions,
   TaskHandlers,
   TaskName,
@@ -161,6 +162,27 @@ export const createBullMqQueuePublisher = (
             }
             const readyQueue = await getReadyQueue(queue)
             await readyQueue.add(task, { payload } satisfies BullMqJobData, bullmqOptions)
+          },
+          catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
+        }),
+      scheduleRepeatable: <T extends QueueName, K extends TaskName<T>>(
+        queue: T,
+        task: K,
+        payload: TaskPayload<T, K>,
+        options: ScheduleRepeatableOptions,
+      ) =>
+        Effect.tryPromise({
+          try: async () => {
+            const readyQueue = await getReadyQueue(queue)
+            await readyQueue.upsertJobScheduler(
+              options.key,
+              { pattern: options.pattern, tz: options.tz ?? "UTC" },
+              {
+                name: String(task),
+                data: { payload } satisfies BullMqJobData,
+                opts: { removeOnComplete: { count: 1000 }, removeOnFail: { count: 1000 } },
+              },
+            )
           },
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
         }),

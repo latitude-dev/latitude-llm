@@ -53,6 +53,7 @@ export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts
 export { StripeBillingProviderLive } from "./repositories/stripe-billing-provider.ts"
 export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
+export { WrappedReportRepositoryLive } from "./repositories/wrapped-report-repository.ts"
 export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"
 export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation

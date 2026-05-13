@@ -49,6 +49,7 @@ const member = (userId: UserId, role: string, createdAt: Date, email: string, su
   role,
   createdAt,
   email,
+  emailVerified: true,
   name: null,
   image: null,
 })

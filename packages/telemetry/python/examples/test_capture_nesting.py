@@ -18,10 +18,10 @@ import os
 
 from openai import OpenAI
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry pointing to local instance
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
@@ -147,5 +147,5 @@ if __name__ == "__main__":
     result2 = test_nested_capture_with_callback()
     print(f"Callback result: {result2}")
 
-    latitude["flush"]()
+    latitude.flush()
     print("\nDone! Check Latitude dashboard for context merging verification.")

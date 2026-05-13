@@ -202,6 +202,7 @@ const createQueueHarness = () => {
           delayed.set(delayedMessageKey(queue, options.dedupeKey), message)
         }
       }),
+    scheduleRepeatable: () => Effect.void,
     close: () => Effect.void,
   }
 

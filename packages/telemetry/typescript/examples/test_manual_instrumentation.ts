@@ -17,10 +17,10 @@
 
 import { trace } from "@opentelemetry/api"
 import OpenAI from "openai"
-import { capture, initLatitude } from "../src"
+import { capture, Latitude } from "../src"
 
 // Initialize telemetry
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],

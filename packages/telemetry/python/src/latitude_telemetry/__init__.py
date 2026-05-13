@@ -5,9 +5,9 @@ Instruments AI provider calls and forwards traces to Latitude.
 Built on OpenTelemetry.
 
 Example (Bootstrap - Recommended):
-    from latitude_telemetry import init_latitude, capture
+    from latitude_telemetry import Latitude, capture
 
-    latitude = init_latitude(
+    latitude = Latitude(
         api_key="your-api-key",
         project_slug="my-project",
         instrumentations=["openai", "anthropic"],
@@ -22,15 +22,16 @@ Example (Bootstrap - Recommended):
     # Or with the functional pattern:
     result = capture("agent-run", lambda: agent.process(input), {"tags": ["prod"]})
 
-    await latitude.shutdown()
+    latitude.shutdown()
 
 Example (Advanced - Existing OTel Setup):
+    from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
     from latitude_telemetry import LatitudeSpanProcessor, register_latitude_instrumentations
 
     provider = TracerProvider()
     provider.add_span_processor(LatitudeSpanProcessor("api-key", "project-slug"))
-    provider.register()
+    trace.set_tracer_provider(provider)
 
     register_latitude_instrumentations(["openai"], provider)
 """
@@ -40,6 +41,8 @@ from latitude_telemetry.sdk import (
     ContextOptions,
     InitLatitudeOptions,
     InstrumentationType,
+    Latitude,
+    LatitudeOptions,
     LatitudeSpanProcessorOptions,
     SmartFilterOptions,
     capture,
@@ -66,6 +69,7 @@ from latitude_telemetry.telemetry.span_filter import (
 
 __all__ = [
     # New SDK API (OpenTelemetry-first)
+    "Latitude",
     "init_latitude",
     "capture",
     "register_latitude_instrumentations",
@@ -74,6 +78,7 @@ __all__ = [
     "ContextOptions",
     "InitLatitudeOptions",
     "InstrumentationType",
+    "LatitudeOptions",
     "LatitudeSpanProcessorOptions",
     "SmartFilterOptions",
     # Span Processor (composable mode)

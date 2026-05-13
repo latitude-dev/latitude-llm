@@ -271,10 +271,10 @@ export function getOnboardingSnippet(
 }
 
 function snippetTsOpenai() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import OpenAI from "openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -298,10 +298,10 @@ await latitude.shutdown()
 
 function snippetPyOpenai() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from openai import OpenAI
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
@@ -318,15 +318,15 @@ def generate_support_reply():
 
 capture("generate-support-reply", generate_support_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsAnthropic() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import Anthropic from "@anthropic-ai/sdk"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["anthropic"],
@@ -351,10 +351,10 @@ await latitude.shutdown()
 
 function snippetPyAnthropic() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from anthropic import Anthropic
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["anthropic"],
@@ -372,18 +372,18 @@ def generate_reply():
 
 capture("generate-reply", generate_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsBedrock() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["bedrock"],
@@ -414,10 +414,10 @@ await latitude.shutdown()
 function snippetPyBedrock() {
   return `import json
 import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 import boto3
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["bedrock"],
@@ -439,15 +439,15 @@ def generate_reply():
 
 capture("generate-reply", generate_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsCohere() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { CohereClient } from "cohere-ai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["cohere"],
@@ -471,10 +471,10 @@ await latitude.shutdown()
 
 function snippetPyCohere() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 import cohere
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["cohere"],
@@ -491,15 +491,15 @@ def generate_reply():
 
 capture("generate-reply", generate_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsTogether() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import Together from "together-ai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["togetherai"],
@@ -523,10 +523,10 @@ await latitude.shutdown()
 
 function snippetPyTogether() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from together import Together
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["togetherai"],
@@ -543,15 +543,15 @@ def generate_reply():
 
 capture("generate-reply", generate_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsVertex() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { VertexAI } from "@google-cloud/vertexai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["vertexai"],
@@ -576,11 +576,11 @@ await latitude.shutdown()
 
 function snippetPyVertex() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["vertexai"],
@@ -595,15 +595,15 @@ def generate_reply():
 
 capture("generate-reply", generate_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsAiplatform() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { PredictionServiceClient } from "@google-cloud/aiplatform"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["aiplatform"],
@@ -628,10 +628,10 @@ await latitude.shutdown()
 
 function snippetPyAiplatform() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from google.cloud import aiplatform
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["aiplatform"],
@@ -646,15 +646,15 @@ def generate_prediction():
 
 capture("generate-prediction", generate_prediction)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsAzureOpenai() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { AzureOpenAI } from "openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
@@ -682,10 +682,10 @@ await latitude.shutdown()
 
 function snippetPyAzureOpenai() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from openai import AzureOpenAI
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
@@ -706,16 +706,16 @@ def generate_support_reply():
 
 capture("generate-support-reply", generate_support_reply)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsVercelAiSdk() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
 })
@@ -738,11 +738,11 @@ await latitude.shutdown()
 }
 
 function snippetTsLangchain() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { ChatOpenAI } from "@langchain/openai"
 import { HumanMessage } from "@langchain/core/messages"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["langchain"],
@@ -763,11 +763,11 @@ await latitude.shutdown()
 
 function snippetPyLangchain() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["langchain"],
@@ -781,17 +781,17 @@ def langchain_query():
 
 capture("langchain-query", langchain_query)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetTsLlamaindex() {
-  return `import { initLatitude, capture } from "@latitude-data/telemetry"
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
 import { Settings } from "llamaindex"
 import { openai } from "@llamaindex/openai"
 import { agent } from "@llamaindex/workflow"
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["llamaindex"],
@@ -813,10 +813,10 @@ await latitude.shutdown()
 
 function snippetPyLlamaindex() {
   return `import os
-from latitude_telemetry import init_latitude, capture
+from latitude_telemetry import Latitude, capture
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["llamaindex"],
@@ -832,17 +832,17 @@ def llamaindex_query():
 
 capture("llamaindex-query", llamaindex_query)
 
-latitude["shutdown"]()
+latitude.shutdown()
 `
 }
 
 function snippetPyGemini() {
   return `import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry before importing google.genai so instrumentation can patch it.
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["google_generativeai"],
@@ -863,16 +863,16 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
 function snippetPyGroq() {
   return `import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["groq"],
@@ -894,16 +894,16 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
 function snippetPyMistral() {
   return `import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["mistralai"],
@@ -926,7 +926,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -934,9 +934,9 @@ function snippetPyOllama() {
   return `import os
 
 import ollama
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["ollama"],
@@ -954,7 +954,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -962,9 +962,9 @@ function snippetPyLitellm() {
   return `import os
 
 import litellm
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["litellm"],
@@ -983,7 +983,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -991,9 +991,9 @@ function snippetPyReplicate() {
   return `import os
 
 import replicate
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["replicate"],
@@ -1011,7 +1011,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -1020,9 +1020,9 @@ function snippetPySagemaker() {
 import os
 
 import boto3
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["sagemaker"],
@@ -1052,7 +1052,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -1061,9 +1061,9 @@ function snippetPyWatsonx() {
 
 from ibm_watsonx_ai.foundation_models import Model
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["watsonx"],
@@ -1088,7 +1088,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
@@ -1096,9 +1096,9 @@ function snippetPyAlephAlpha() {
   return `import os
 
 from aleph_alpha_client import Client, CompletionRequest, Prompt
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["aleph_alpha"],
@@ -1118,17 +1118,17 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 
 function snippetPyTransformers() {
   return `import os
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 from transformers import pipeline
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["transformers"],
@@ -1148,7 +1148,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    latitude["shutdown"]()
+    latitude.shutdown()
 `
 }
 

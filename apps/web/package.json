@@ -49,6 +49,7 @@
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@resvg/resvg-js": "2.6.2",
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
     "@tanstack/query-db-collection": "1.0.30",
@@ -68,6 +69,7 @@
     "react-dom": "catalog:",
     "react-use": "17.6.0",
     "rosetta-ai": "catalog:",
+    "satori": "0.18.4",
     "ua-parser-js": "2.0.9",
     "use-debounce": "10.1.1",
     "zod": "catalog:"

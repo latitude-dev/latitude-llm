@@ -17,7 +17,7 @@
 
 import { openai } from "@ai-sdk/openai"
 import { generateText, streamText } from "ai"
-import { capture, initLatitude } from "../src"
+import { capture, Latitude } from "../src"
 
 const apiKey = process.env.LATITUDE_API_KEY
 const projectSlug = process.env.LATITUDE_PROJECT_SLUG
@@ -30,7 +30,7 @@ if (!projectSlug) {
   throw new Error("LATITUDE_PROJECT_SLUG is required")
 }
 
-const latitude = initLatitude({
+const latitude = new Latitude({
   apiKey,
   projectSlug,
   disableBatch: true,

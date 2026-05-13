@@ -472,39 +472,42 @@ function MembersTable({
                   <Text.H5 color="foregroundMuted">-</Text.H5>
                 )}
               </TableCell>
-              <TableCell align="right">
-                {isAdmin && (member.status === "active" || member.status === "invited") ? (
-                  <Tooltip
-                    asChild
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setPendingMemberMutation(
-                            member.status === "invited"
-                              ? {
-                                  type: "cancel-invite",
-                                  inviteId: member.id,
-                                  email: member.email,
-                                  name: member.name,
-                                }
-                              : {
-                                  type: "remove-member",
-                                  membershipId: member.id,
-                                  email: member.email,
-                                  name: member.name,
-                                },
-                          )
-                        }}
-                      >
-                        <Icon icon={Trash2} size="sm" />
-                      </Button>
-                    }
-                  >
-                    {member.status === "invited" ? "Cancel invitation" : "Remove member"}
-                  </Tooltip>
-                ) : null}
-              </TableCell>
+              {isAdmin && (
+                <TableCell align="right">
+                  {(member.status === "active" || member.status === "invited") &&
+                  !(member.role === "owner" && !isOwner) ? (
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setPendingMemberMutation(
+                              member.status === "invited"
+                                ? {
+                                    type: "cancel-invite",
+                                    inviteId: member.id,
+                                    email: member.email,
+                                    name: member.name,
+                                  }
+                                : {
+                                    type: "remove-member",
+                                    membershipId: member.id,
+                                    email: member.email,
+                                    name: member.name,
+                                  },
+                            )
+                          }}
+                        >
+                          <Icon icon={Trash2} size="sm" />
+                        </Button>
+                      }
+                    >
+                      {member.status === "invited" ? "Cancel invitation" : "Remove member"}
+                    </Tooltip>
+                  ) : null}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

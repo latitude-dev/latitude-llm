@@ -25,6 +25,7 @@ import { Effect } from "effect"
 import { Hono } from "hono"
 import { basicAuth } from "hono/basic-auth"
 import {
+  getAdminPostgresClient,
   getClickhouseClient,
   getPostgresClient,
   getPostHogClient,
@@ -57,6 +58,7 @@ import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
+import { createWrappedWorker } from "./workers/wrapped.ts"
 import type { WorkersContext } from "./workers-context.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
@@ -202,6 +204,28 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
     })
+    createWrappedWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      clickhouseClient: ctx.clickhouseClient,
+    })
+
+    // Register (or refresh) the weekly Wrapped trigger. upsert semantics
+    // make this idempotent across worker restarts. The handler derives
+    // the 7-day window from Date.now() at fire time so the stored job
+    // payload doesn't go stale.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "wrapped",
+          "triggerWeeklyRun",
+          {},
+          { key: "wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
 
     await Effect.runPromise(outboxConsumer.start().pipe(withTracing))
     await Effect.runPromise(queueConsumer.start().pipe(withTracing))

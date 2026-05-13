@@ -16,10 +16,10 @@ import os
 
 import boto3
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry pointing to local instance
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["sagemaker"],
@@ -58,4 +58,4 @@ def test_sagemaker_completion():
 
 if __name__ == "__main__":
     test_sagemaker_completion()
-    latitude["flush"]()
+    latitude.flush()

@@ -1,4 +1,4 @@
-"""Tests for LLM instrumentation with init_latitude()."""
+"""Tests for LLM instrumentation registration."""
 
 from datetime import datetime
 from unittest import mock
@@ -9,7 +9,7 @@ from openai.types.chat import ChatCompletionMessage as OpenAIChatCompletionMessa
 from openai.types.chat.chat_completion import Choice as OpenAIChoice
 from openai.types.completion_usage import CompletionUsage as OpenAICompletionUsage
 
-from latitude_telemetry import init_latitude, register_latitude_instrumentations
+from latitude_telemetry import register_latitude_instrumentations
 from tests.utils import TestCase
 
 

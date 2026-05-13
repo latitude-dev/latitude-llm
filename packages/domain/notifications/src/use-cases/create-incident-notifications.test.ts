@@ -74,6 +74,7 @@ function setup(opts: SetupOpts = {}) {
     createdAt: new Date(),
     name: null,
     email: `${uid}@test.com`,
+    emailVerified: true,
     image: null,
   }))
 
@@ -94,6 +95,8 @@ function setup(opts: SetupOpts = {}) {
     listByUserId: () => Effect.succeed([]),
     findByOrganizationAndUser: () => Effect.die("not used"),
     listMembersWithUser: () => Effect.succeed(members),
+    findByIdWithUser: () => Effect.die("not used"),
+    findMemberByEmail: () => Effect.succeed(false),
     isMember: () => Effect.succeed(true),
     isAdmin: () => Effect.succeed(false),
     save: () => Effect.die("not used"),

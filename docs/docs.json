@@ -114,7 +114,15 @@
         "pages": [
           "observability/overview",
           "observability/traces",
-          "observability/sessions"
+          "observability/sessions",
+          "observability/filters"
+        ]
+      },
+      {
+        "group": "Search",
+        "pages": [
+          "search/overview",
+          "search/saved-searches"
         ]
       },
       {
@@ -129,8 +137,8 @@
         "group": "Annotations",
         "pages": [
           "annotations/overview",
-          "annotations/annotation-queues",
-          "annotations/inline-annotations"
+          "annotations/inline-annotations",
+          "annotations/flaggers"
         ]
       },
       {

@@ -7,6 +7,20 @@ description: Adding or changing routes in `apps/api`. One source of truth (`defi
 
 **When to use:** Adding a new endpoint to `apps/api`, changing an existing one, or wondering why `mcp.json` / `openapi.json` / the SDK aren't in sync.
 
+## Before you start — reuse the UI's logic via the domain layer
+
+When you add a new API endpoint, check whether the same action or read is already available in the web UI. The plan only ships a specific list of API endpoints (see the inventory in `plans/mcp-oauth-api-expansion.md`); the goal isn't full surface parity, it's not duplicating logic that the web already implements.
+
+For each new endpoint, open **`apps/web/src/domains/<entity>/<entity>.functions.ts`**. Three cases:
+
+- **The web's server fn already calls a domain use-case** (imports `*UseCase` from `@domain/*`): reuse that use-case in the API route handler. Don't reimplement the logic in `apps/api`.
+- **The web's server fn has the logic inline** (raw repository calls, validation, side effects in the server fn body itself): **extract it into a new domain use-case first**, then have both the web server fn AND your API route call it. The domain use-case becomes the shared seam.
+- **The web's server fn delegates to a third-party API** like `getBetterAuth().api.*`: the API process can't reach the same in-process instance. Write a domain use-case that replicates that behavior (carefully — read the third-party source so your use-case matches its rules), then point both the web and API at the use-case. Adds parity tests so the migration doesn't silently drift.
+
+The domain use-case is the shared seam between web and API. Duplicating logic in both surfaces creates drift — one gets a bug fix the other doesn't.
+
+If the entity doesn't have a `.functions.ts` because the UI doesn't expose this action yet, you're designing fresh. That's fine; just don't lose the option to share later — put the business logic in a `@domain/*` use-case from the start rather than inline in the route handler.
+
 ## What you're really doing
 
 Every endpoint in `apps/api` is **one declaration that fans out four ways**:
@@ -167,6 +181,38 @@ filters: filterSetSchema, // ← what shape? what semantics? agent has to guess.
 **TL;DR**: prefer `.describe()` / `.meta()`. Use `.openapi("Name")` to register named schema components. Reach for `.openapi({...})` for fields ONLY when you need an OpenAPI-only knob like `format: "uri"`.
 
 If you find yourself writing `.openapi({ description })`, replace it with `.describe()` — descriptions hidden in the openapi WeakMap are invisible to MCP clients, which silently degrades agent UX.
+
+### Don't leak internal implementation into descriptions
+
+User-facing descriptions (route `description`, schema `.describe()`, `openApiResponses({ description })`) are read by SDK users and AI agents. They aren't release notes for our backend. Keep them about the *contract*, not how we implement it.
+
+Concretely, avoid:
+
+- **Storage mechanics**: "soft-deletes", "hard-deletes", "marks as deleted", "removes from cache", "writes to outbox", "RLS-scoped", "via the admin connection". Just say "deletes" / "revokes" / "creates".
+- **Side-effect details on related data**: "Traces remain in storage but the project no longer appears in lists.", "The associated rows are kept for auditing." If the caller can't observe it through the API, don't mention it.
+- **Internal table or column names**, queue names, worker names, event-bus topics.
+- **Comments about why the code is structured a certain way** — those belong in code comments, not in `description:`.
+
+Examples:
+
+```ts
+// Bad — leaks soft-delete + retention behavior of an unrelated entity
+description: "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists."
+// Good
+description: "Deletes a project by slug."
+
+// Bad — describes the mechanism
+description: "Revokes an API key by setting deletedAt and busting the Redis cache."
+// Good
+description: "Revokes an API key."
+
+// Bad — leaks that we don't actually delete the row
+deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was soft-deleted...")
+// Good
+deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the project was deleted...")
+```
+
+Same rule for the verbs used in route/operation `summary`: "Delete project" beats "Soft-delete project".
 
 ## Rate limiting — every new endpoint group needs a tier
 

@@ -3,20 +3,26 @@ import { createFakeAI } from "@domain/ai/testing"
 import {
   ChSqlClient,
   ExternalUserId,
+  FlaggerId,
+  generateId,
   OrganizationId,
   ProjectId,
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
-import { createFakeChSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_MODEL } from "../constants.ts"
+import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
+import type { Flagger } from "../entities/flagger.ts"
+import { FlaggerRepository } from "../ports/flagger-repository.ts"
+import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import { type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
 
 const INPUT: RunFlaggerInput = {
@@ -25,6 +31,20 @@ const INPUT: RunFlaggerInput = {
   flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
 }
+
+const { repository: defaultFlaggerRepo } = createFakeFlaggerRepository([], {
+  findByProjectAndSlug: () =>
+    Effect.succeed({
+      id: FlaggerId(generateId()),
+      organizationId: INPUT.organizationId,
+      projectId: INPUT.projectId,
+      slug: "jailbreaking",
+      enabled: true,
+      sampling: 10,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Flagger),
+})
 
 // Schema from the implementation - for testing default behavior
 const flaggerOutputSchema = z.object({
@@ -101,6 +121,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -111,7 +133,7 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
       ...FLAGGER_MODEL,
-      maxTokens: 512,
+      maxTokens: FLAGGER_MAX_TOKENS,
       telemetry: {
         spanName: "flagger.classify",
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
@@ -153,6 +175,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -195,6 +219,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -247,6 +273,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -289,6 +317,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -313,6 +343,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -337,6 +369,48 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("returns { matched: false } when the flagger is disabled without loading the trace or calling AI", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.die("trace must not be loaded when flagger is disabled"),
+    })
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI must not be called when flagger is disabled"),
+    })
+
+    const { repository: disabledFlaggerRepo } = createFakeFlaggerRepository([], {
+      findByProjectAndSlug: () =>
+        Effect.succeed({
+          id: FlaggerId(generateId()),
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          slug: "jailbreaking",
+          enabled: false,
+          sampling: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Flagger),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "jailbreaking" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, disabledFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -378,6 +452,8 @@ describe("runFlaggerUseCase", () => {
                 ChSqlClient,
                 createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) }),
               ),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+              Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
               aiLayer,
             ),
           ),
@@ -421,8 +497,7 @@ describe("runFlaggerUseCase", () => {
       generate: () =>
         Effect.fail(
           new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
             cause: sdkError,
           }),
         ),
@@ -434,6 +509,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -464,8 +541,7 @@ describe("runFlaggerUseCase", () => {
       generate: () =>
         Effect.fail(
           new AIError({
-            message:
-              "AI generation failed (amazon-bedrock/amazon.nova-2-lite-v1:0): No object generated: response did not match schema.",
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
             cause: new Error("No object generated: response did not match schema."),
           }),
         ),
@@ -477,6 +553,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -518,6 +596,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),
@@ -567,6 +647,8 @@ describe("runFlaggerUseCase", () => {
           Layer.mergeAll(
             Layer.succeed(TraceRepository, repository),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
           ),
         ),

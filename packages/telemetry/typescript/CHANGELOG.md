@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.9] - 2026-05-13
+
+### Breaking Changes
+
+- **Bootstrap API is now class-based** — `new Latitude(options)` replaces `initLatitude(options)` as the public TypeScript SDK entry point. `LatitudeOptions` replaces `InitLatitudeOptions`.
+
+### Changed
+
+- **Automatic existing OTel provider coexistence** — `new Latitude()` detects common existing tracing providers (Sentry, Datadog, New Relic, Honeycomb, and custom OpenTelemetry SDKs) and attaches the Latitude span processor when possible instead of replacing their tracer provider, context manager, propagator, sampler, or processors.
+- **`serviceName` ownership is provider-aware** — when Latitude creates its own provider, `serviceName` is applied to the provider resource as `service.name`; when Latitude attaches to an existing provider, the host SDK remains the source of truth for `service.name`.
+
+### Fixed
+
+- **Provider detection no longer relies on private constructor names** — the SDK now uses OpenTelemetry's proxy provider delegate API and known span-processor containers to detect and attach to existing providers more reliably, including OTel JS v2 and Datadog bridge setups.
+
 ## [3.0.0-alpha.8] - 2026-05-08
 
 ### Changed

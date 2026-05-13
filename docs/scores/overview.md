@@ -34,9 +34,9 @@ Evaluation scores are the backbone of continuous monitoring: they run on every m
 
 ### Annotation Scores
 
-Produced by human reviewers. When someone annotates a trace through an [annotation queue](../annotations/annotation-queues) or [inline from the trace view](../annotations/inline-annotations), their verdict becomes a score.
+Produced by human reviewers or by built-in [flaggers](../annotations/flaggers). When someone annotates a trace [inline from the trace view](../annotations/inline-annotations) — or when a flagger matches a trace automatically — the resulting verdict becomes a score.
 
-Annotation scores serve as **ground truth**. They represent what a human actually thinks about the agent's behavior and anchor [evaluation alignment](../evaluations/alignment) metrics.
+Annotation scores serve as **ground truth**. They represent what a human (or a Latitude-defined classifier) thinks about the agent's behavior and anchor [evaluation alignment](../evaluations/alignment) metrics.
 
 ### Custom Scores
 
@@ -52,11 +52,11 @@ Submitted by your own code through the [Latitude API](./api). Use custom scores 
 Scores from human annotations start as **drafts**. A draft score:
 
 - Persists immediately so it survives page refreshes
-- Is visible in annotation queue review and in-progress editing
+- Is visible in the trace's annotation panel while you're still editing
 - Does not appear in analytics, issue discovery, or alignment metrics
 - Can be edited and revised while still in draft state
 
-Drafts are finalized automatically after a quiet period (default: 5 minutes after the last edit). System-created drafts (from automatic queue classification) wait for explicit human review before finalization.
+Drafts are finalized automatically after a quiet period (default: 5 minutes after the last edit). Flagger-created annotations are written as published scores directly and skip the draft state.
 
 Once a score is finalized, it becomes permanent and cannot be edited.
 

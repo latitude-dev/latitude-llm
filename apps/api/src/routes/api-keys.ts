@@ -260,7 +260,7 @@ const revokeApiKey = apiKeyEndpoint({
     tags: ["API Keys"],
     ...apiKeysFernGroup("revoke"),
     summary: "Revoke API key",
-    description: "Soft-deletes an API key, immediately invalidating it.",
+    description: "Revokes an API key.",
     security: PROTECTED_SECURITY,
     request: { params: IdParamsSchema },
     responses: openApiNoContentResponses({ description: "API key revoked" }),

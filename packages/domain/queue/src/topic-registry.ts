@@ -93,6 +93,12 @@ const _registry = {
       readonly organizationId: string
       readonly alertIncidentId: string
     }
+    "create-from-wrapped-report": {
+      readonly organizationId: string
+      readonly wrappedReportId: string
+      readonly projectName: string
+      readonly link: string
+    }
   }>(),
 
   "alert-incidents": payloads<{
@@ -382,6 +388,24 @@ const _registry = {
       readonly review:
         | { readonly decision: "good"; readonly comment?: string }
         | { readonly decision: "bad"; readonly comment: string }
+    }
+  }>(),
+
+  // Weekly Wrapped digest. `triggerWeeklyRun` is fired by a BullMQ
+  // repeatable schedule; the handler derives the 7-day window from
+  // Date.now() and fans out one `runForProject` per eligible
+  // (type, orgId, projectId) tuple. The manual backoffice button
+  // publishes `runForProject` directly. Today the only `type` value
+  // is `"claude_code"`; future Wrapped types (Openclaw, Codex, …)
+  // publish on the same topic with their own `type` discriminator.
+  wrapped: payloads<{
+    triggerWeeklyRun: Record<string, never>
+    runForProject: {
+      readonly type: string
+      readonly organizationId: string
+      readonly projectId: string
+      readonly windowStartIso: string
+      readonly windowEndIso: string
     }
   }>(),
 }
