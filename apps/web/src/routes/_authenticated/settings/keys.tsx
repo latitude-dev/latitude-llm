@@ -403,6 +403,24 @@ function KeysSettingsPage() {
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
 
       <section className="flex flex-col gap-4">
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <Text.H4 weight="bold">API Keys</Text.H4>
+            <Text.H5 color="foregroundMuted">
+              Application keys with access to this organization (through API or SDK)
+            </Text.H5>
+          </div>
+          <Button variant="outline" onClick={() => setCreateOpen(true)}>
+            <Icon size="sm" icon={PlusIcon} />
+            API Key
+          </Button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <Text.H4 weight="bold">OAuth Keys</Text.H4>
           <Text.H5 color="foregroundMuted">
@@ -429,24 +447,6 @@ function KeysSettingsPage() {
           ) : (
             <OAuthKeysTable oauthKeys={oauthKeys} />
           )}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <Text.H4 weight="bold">API Keys</Text.H4>
-            <Text.H5 color="foregroundMuted">
-              Application keys with access to this organization (through API or SDK)
-            </Text.H5>
-          </div>
-          <Button variant="outline" onClick={() => setCreateOpen(true)}>
-            <Icon size="sm" icon={PlusIcon} />
-            API Key
-          </Button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
         </div>
       </section>
     </Container>
