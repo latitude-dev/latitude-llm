@@ -26,7 +26,13 @@ export type LatitudeOptions = SmartFilterOptions & {
    * Datadog, New Relic, Honeycomb, or a custom OTel SDK setup.
    */
   tracerProvider?: TracerProvider
-  /** Sets `service.name` on exported spans (and on the provider resource when using `new Latitude()`). */
+  /**
+   * Sets the OpenTelemetry `service.name` resource attribute on the Latitude-owned provider.
+   * Honored only when `new Latitude()` creates its own provider. When piggy-backing on an
+   * existing provider (via `tracerProvider` or the detected global), this option is ignored
+   * and the host provider's `service.name` is used — overriding the host's resource would
+   * silently relabel spans the host SDK also processes.
+   */
   serviceName?: string
 }
 
@@ -40,7 +46,11 @@ export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
-  /** Sets `service.name` on each span so Latitude ingest can attribute telemetry to your service. */
+  /**
+   * Overrides the `service.name` resource attribute on spans exported through this processor.
+   * Applied via an exporter wrapper, so other span processors on the host provider continue
+   * to see the host's original resource.
+   */
   serviceName?: string
 }
 

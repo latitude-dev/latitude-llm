@@ -15,7 +15,7 @@ from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SpanExporter
-from opentelemetry.trace import NoOpTracerProvider
+from opentelemetry.trace import NoOpTracerProvider, ProxyTracerProvider
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
@@ -37,11 +37,24 @@ class _InitLatitudeResult(TypedDict):
 
 
 def _get_registered_tracer_provider() -> TracerProvider | None:
-    registered_provider = cast(TracerProvider | None, getattr(trace, "_TRACER_PROVIDER", None))
-    if registered_provider is None or isinstance(registered_provider, NoOpTracerProvider):
+    # `trace.get_tracer_provider()` returns the singleton ProxyTracerProvider when nothing has been
+    # explicitly registered, and the real provider once `trace.set_tracer_provider()` has been called.
+    # Using the public API instead of the module-private `_TRACER_PROVIDER` makes this resilient to
+    # OTel internal refactors.
+    provider = trace.get_tracer_provider()
+    if isinstance(provider, (ProxyTracerProvider, NoOpTracerProvider)):
         return None
 
-    return registered_provider
+    return cast(TracerProvider, provider)
+
+
+def _attach_span_processor(provider: object, processor: LatitudeSpanProcessor) -> bool:
+    add = getattr(provider, "add_span_processor", None)
+    if callable(add):
+        add(processor)
+        return True
+
+    return False
 
 
 class Latitude:
@@ -77,6 +90,14 @@ class Latitude:
         if not project_slug or not project_slug.strip():
             raise ValueError("[Latitude] project_slug is required and cannot be empty")
 
+        target_provider = tracer_provider or _get_registered_tracer_provider()
+
+        # `service_name` is a Latitude-owned-provider concern. When piggy-backing on an existing
+        # provider, the host's resource is the source of truth for `service.name` — overriding it
+        # would silently relabel spans the host SDK also processes. So we only pass `service_name`
+        # to the processor when Latitude will create + own its own provider.
+        processor_service_name = service_name if target_provider is None else None
+
         self._latitude_processor = LatitudeSpanProcessor(
             api_key=api_key,
             project_slug=project_slug,
@@ -88,26 +109,43 @@ class Latitude:
                 should_export_span=should_export_span,
                 blocked_instrumentation_scopes=tuple(blocked_instrumentation_scopes or []),
                 exporter=exporter,
-                service_name=service_name,
+                service_name=processor_service_name,
             ),
         )
 
-        existing_provider = tracer_provider or _get_registered_tracer_provider()
-        if existing_provider is not None:
-            existing_provider.add_span_processor(self._latitude_processor)
-            self.provider = existing_provider
+        attached = _attach_span_processor(target_provider, self._latitude_processor) if target_provider else False
+
+        if target_provider is not None and not attached:
+            source = (
+                "the provider passed via `tracer_provider`"
+                if tracer_provider is not None
+                else "the global OpenTelemetry provider"
+            )
+            logger.warning(
+                "[Latitude] Could not attach LatitudeSpanProcessor to %s: it does not expose "
+                "`add_span_processor`. Falling back to a Latitude-owned provider that is NOT "
+                "registered globally — instrumentations will still send spans to Latitude, but "
+                "the host SDK's spans will not. To fix, pass a provider exposing "
+                "`add_span_processor` (e.g. `opentelemetry.sdk.trace.TracerProvider`).",
+                source,
+            )
+
+        if target_provider is not None and attached:
+            self.provider = target_provider
             self._owns_provider = False
         else:
             raw_service_name = service_name.strip() if service_name else ""
             resource_service_name = raw_service_name or SERVICE_NAME_DEFAULT
 
-            set_global_textmap(CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()]))
+            if target_provider is None:
+                set_global_textmap(CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()]))
 
             provider = TracerProvider(
                 resource=Resource.create({SERVICE_NAME: resource_service_name}),
             )
             provider.add_span_processor(self._latitude_processor)
-            trace.set_tracer_provider(provider)
+            if target_provider is None:
+                trace.set_tracer_provider(provider)
 
             self.provider = provider
             self._owns_provider = True

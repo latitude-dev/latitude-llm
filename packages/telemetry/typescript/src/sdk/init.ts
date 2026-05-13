@@ -1,4 +1,4 @@
-import { context, propagation, type TracerProvider, trace } from "@opentelemetry/api"
+import { context, ProxyTracerProvider, propagation, type TracerProvider, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
 import { resourceFromAttributes } from "@opentelemetry/resources"
@@ -9,13 +9,10 @@ import { LatitudeSpanProcessor } from "./processor.ts"
 import type { InitLatitudeOptions, LatitudeOptions } from "./types.ts"
 
 const SERVICE_NAME = process.env.npm_package_name || "unknown"
+const DETECT_PROBE = "@latitude-data/telemetry-detect"
 
 /** Module-level flag to prevent duplicate signal handler registration on repeated Latitude construction */
 let shutdownHandlersRegistered = false
-
-interface ProxyTracerProviderLike extends TracerProvider {
-  getDelegate?: () => TracerProvider
-}
 
 interface ProviderWithSpanProcessor extends TracerProvider {
   addSpanProcessor?: (processor: SpanProcessor) => void
@@ -28,10 +25,16 @@ interface ProviderWithSpanProcessor extends TracerProvider {
 }
 
 function getRegisteredTracerProvider(): TracerProvider | undefined {
-  const provider = trace.getTracerProvider() as ProxyTracerProviderLike
-  const delegate = provider.getDelegate?.() ?? provider
+  const provider = trace.getTracerProvider()
 
-  return delegate.constructor.name === "NoopTracerProvider" ? undefined : delegate
+  // The OTel global is a ProxyTracerProvider that's installed at module load. `getDelegateTracer`
+  // returns `undefined` when nothing has been registered behind the proxy — this is the public way
+  // to detect "no global provider set" without reaching into `constructor.name` or private state.
+  if (provider instanceof ProxyTracerProvider) {
+    return provider.getDelegateTracer(DETECT_PROBE) === undefined ? undefined : provider.getDelegate()
+  }
+
+  return provider
 }
 
 function addSpanProcessor(provider: TracerProvider, processor: SpanProcessor): boolean {
@@ -68,7 +71,7 @@ export class Latitude {
   private readonly ownsProvider: boolean
 
   constructor(options: LatitudeOptions) {
-    const { apiKey, projectSlug, instrumentations = [], tracerProvider, ...processorOptions } = options
+    const { apiKey, projectSlug, instrumentations = [], tracerProvider, ...processorOptionsRaw } = options
 
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")
@@ -77,28 +80,53 @@ export class Latitude {
       throw new Error("[Latitude] projectSlug is required and cannot be empty")
     }
 
-    this.latitudeProcessor = new LatitudeSpanProcessor(apiKey, projectSlug, processorOptions)
-    const existingProvider = tracerProvider ?? getRegisteredTracerProvider()
+    const targetProvider = tracerProvider ?? getRegisteredTracerProvider()
 
-    if (existingProvider && addSpanProcessor(existingProvider, this.latitudeProcessor)) {
-      this.provider = existingProvider
+    // `serviceName` is a Latitude-owned-provider concern. When piggy-backing on an existing
+    // provider, the host's resource is the source of truth for `service.name`; overriding it
+    // would silently relabel spans the host SDK is also processing. Strip it here so the
+    // exporter wrapper inside LatitudeSpanProcessor is not installed in the piggy-back path.
+    let processorOptions = processorOptionsRaw
+    if (targetProvider) {
+      const { serviceName: _ignored, ...rest } = processorOptionsRaw
+      processorOptions = rest
+    }
+
+    this.latitudeProcessor = new LatitudeSpanProcessor(apiKey, projectSlug, processorOptions)
+    const attached = targetProvider ? addSpanProcessor(targetProvider, this.latitudeProcessor) : false
+
+    if (targetProvider && !attached) {
+      const source = tracerProvider ? "the provider passed via `tracerProvider`" : "the global OpenTelemetry provider"
+      console.warn(
+        `[Latitude] Could not attach LatitudeSpanProcessor to ${source}: it exposes neither ` +
+          "`addSpanProcessor` nor a known internal span-processor list (OTel JS v2 / Datadog). " +
+          "Falling back to a Latitude-owned provider that is NOT registered globally — instrumentations " +
+          "will still send spans to Latitude, but the host SDK's spans will not. To fix, pass a provider " +
+          "exposing `addSpanProcessor` or attach `LatitudeSpanProcessor` to your provider manually.",
+      )
+    }
+
+    if (targetProvider && attached) {
+      this.provider = targetProvider
       this.ownsProvider = false
     } else {
-      const contextManager = new AsyncLocalStorageContextManager()
-      contextManager.enable()
-
-      const propagator = new CompositePropagator({
-        propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
-      })
-
-      if (!existingProvider) {
+      // We only install global context manager + propagator when no provider was discovered or
+      // explicitly passed — otherwise the host SDK already owns those, and replacing them would
+      // break their propagation pipeline.
+      if (!targetProvider) {
+        const contextManager = new AsyncLocalStorageContextManager()
+        contextManager.enable()
         context.setGlobalContextManager(contextManager)
-        propagation.setGlobalPropagator(propagator)
+        propagation.setGlobalPropagator(
+          new CompositePropagator({
+            propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
+          }),
+        )
       }
 
       const resourceServiceName =
-        typeof processorOptions.serviceName === "string" && processorOptions.serviceName.trim() !== ""
-          ? processorOptions.serviceName.trim()
+        typeof processorOptionsRaw.serviceName === "string" && processorOptionsRaw.serviceName.trim() !== ""
+          ? processorOptionsRaw.serviceName.trim()
           : SERVICE_NAME
 
       const latitudeProvider = new NodeTracerProvider({
@@ -108,7 +136,7 @@ export class Latitude {
         spanProcessors: [this.latitudeProcessor],
       })
 
-      if (!existingProvider) {
+      if (!targetProvider) {
         latitudeProvider.register()
       }
 
