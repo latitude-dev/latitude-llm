@@ -89,8 +89,12 @@ export const WrappedReportRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         // Cross-org read — the public share URL has no org context. The
-        // caller MUST build the SqlClient with `OrganizationId("system")`
-        // so RLS is bypassed; otherwise the row will be invisible.
+        // caller MUST provide the admin Postgres client (a role with
+        // BYPASSRLS) so the policy doesn't filter the row out; the
+        // `OrganizationId("system")` sentinel alone is not enough —
+        // `SqlClientLive` simply skips setting `app.current_organization_id`
+        // for `system`, which makes the RLS predicate evaluate to false
+        // on a normal-privilege connection.
         const [row] = yield* sqlClient.query((db) =>
           db.select().from(wrappedReports).where(eq(wrappedReports.id, id)).limit(1),
         )

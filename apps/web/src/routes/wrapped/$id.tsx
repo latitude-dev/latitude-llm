@@ -17,12 +17,12 @@ import { WrappedReportV1 } from "./-components/claude-code/v1/WrappedReportV1.ts
  */
 export const Route = createFileRoute("/wrapped/$id")({
   loader: async ({ params }) => {
-    try {
-      return { record: await getWrappedReportById({ data: { id: params.id } }) }
-    } catch {
-      // The repo throws NotFoundError on miss; collapse to a 404.
-      throw notFound()
-    }
+    // `getWrappedReportById` returns `null` only on genuine miss; anything
+    // else (DB outage, parse failure) propagates as a 500 so it surfaces
+    // in logs instead of being silently masked as a 404.
+    const record = await getWrappedReportById({ data: { id: params.id } })
+    if (!record) throw notFound()
+    return { record }
   },
   head: ({ loaderData, params }) => {
     if (!loaderData) {

@@ -40,12 +40,14 @@ export const Route = createFileRoute("/wrapped/$id/og/png")({
             }).pipe(withPostgres(WrappedReportRepositoryLive, getAdminPostgresClient()), withTracing),
           )
         } catch (cause) {
-          // NotFoundError → genuine 404. Anything else is unexpected and
-          // worth surfacing in logs.
-          if (!(cause instanceof NotFoundError)) {
-            logger.error(`wrapped.og: lookup failed for ${params.id}`, cause)
+          // NotFoundError → genuine 404. Anything else (DB outage, parse
+          // failure, …) is a real error: log it and return 500 so the
+          // failure is discoverable instead of masked behind a cached 404.
+          if (cause instanceof NotFoundError) {
+            return new Response("Not found", { status: 404 })
           }
-          return new Response("Not found", { status: 404 })
+          logger.error(`wrapped.og: lookup failed for ${params.id}`, cause)
+          return new Response("Internal error", { status: 500 })
         }
 
         const renderer = OG_RENDERER_BY_TYPE[record.type] ?? OG_RENDERER_BY_TYPE.claude_code

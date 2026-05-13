@@ -170,7 +170,10 @@ export const runWrappedUseCase = (deps: RunWrappedDeps) =>
       projectId: input.projectId,
       windowStart: input.windowStart,
       windowEnd: input.windowEnd,
-      ownerName: resolveOwnerName(recipients, organization.name),
+      // Resolve from the full member list, not `recipients` — the org owner
+      // may not have a verified email but their name still anchors the
+      // greeting on the public report.
+      ownerName: resolveOwnerName(members, organization.name),
       reportVersion: CURRENT_REPORT_VERSION,
       report,
       createdAt: now,

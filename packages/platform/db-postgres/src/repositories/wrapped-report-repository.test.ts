@@ -17,11 +17,6 @@ const runWithLive = <A, E>(
   org: OrganizationId = OrganizationId("system"),
 ) => Effect.runPromise(effect.pipe(withPostgres(WrappedReportRepositoryLive, pg.adminPostgresClient, org)))
 
-const runWithLivePromise = <A, E>(
-  effect: Effect.Effect<A, E, WrappedReportRepository | SqlClient>,
-  org: OrganizationId = OrganizationId("system"),
-) => Effect.runPromise(effect.pipe(withPostgres(WrappedReportRepositoryLive, pg.adminPostgresClient, org)))
-
 const sampleReport: Report = {
   project: { id: PROJECT_A, name: "poncho-ios", slug: "poncho-ios" },
   organization: { id: ORG_A, name: "Acme" },
@@ -129,7 +124,7 @@ describe("WrappedReportRepositoryLive", () => {
 
   it("findById fails with NotFoundError for an unknown id", async () => {
     await expect(
-      runWithLivePromise(
+      runWithLive(
         Effect.gen(function* () {
           const repo = yield* WrappedReportRepository
           return yield* repo.findById(WrappedReportId("nope-".padEnd(24, "x").slice(0, 24)))

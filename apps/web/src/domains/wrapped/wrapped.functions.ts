@@ -17,23 +17,27 @@ import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.
 const byIdInputSchema = z.object({ id: wrappedReportIdSchema })
 
 /**
- * Resolve a persisted Claude Code Wrapped report by its public CUID. No auth
- * — the route is intentionally public, and the CUID is the only access
- * control. Uses the admin Postgres client with the "system" org sentinel so
- * RLS is bypassed (the CUID doesn't carry org context).
+ * Resolve a persisted Wrapped report by its public CUID. No auth — the
+ * route is intentionally public, and the CUID is the only access control.
+ * Uses the admin Postgres client (BYPASSRLS role) so cross-org reads
+ * succeed; the share URL has no org context to route on.
  *
- * Returns the full record (the loader passes it to the version-scoped
- * renderer); throws on miss (TanStack's route loader turns this into a 404
- * via the route's `errorComponent`).
+ * Returns the record on hit, `null` on miss. The route loader collapses
+ * null → `notFound()`; any other error (DB outage, parse failure, …)
+ * propagates as a 500 so it surfaces in logs.
  */
 export const getWrappedReportById = createServerFn({ method: "GET" })
   .inputValidator(byIdInputSchema)
-  .handler(async ({ data }): Promise<WrappedReportRecord> => {
+  .handler(async ({ data }): Promise<WrappedReportRecord | null> => {
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* WrappedReportRepository
         return yield* repo.findById(WrappedReportId(data.id))
-      }).pipe(withPostgres(WrappedReportRepositoryLive, getAdminPostgresClient()), withTracing),
+      }).pipe(
+        Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+        withPostgres(WrappedReportRepositoryLive, getAdminPostgresClient()),
+        withTracing,
+      ),
     )
   })
 

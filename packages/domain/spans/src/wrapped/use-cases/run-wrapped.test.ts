@@ -372,6 +372,32 @@ describe("runWrappedUseCase", () => {
     expect(harness.saved[0]?.ownerName).toBe("Alex Owner")
   })
 
+  it("uses the org owner's name even when the owner has no verified email", async () => {
+    // Regression: the persisted owner_name was previously resolved from the
+    // email-verified subset, so an unverified owner would silently fall
+    // back to the org name on the public report's greeting.
+    harness = setupHarness({
+      members: [
+        { ...makeMember("a", "owner@test.com", false), role: "owner", name: "Alex Owner" },
+        makeMember("b", "bob@test.com", true),
+      ],
+      sessions: 5,
+      enableFlag: true,
+    })
+    await harness.enableFlag()
+
+    await Effect.runPromise(
+      runWrappedUseCase(makeDeps(sent))({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        windowStart: WINDOW_START,
+        windowEnd: WINDOW_END,
+      }).pipe(Effect.provide(harness.layer)),
+    )
+
+    expect(harness.saved[0]?.ownerName).toBe("Alex Owner")
+  })
+
   it("falls back to the org name when no owner is in the member list", async () => {
     harness = setupHarness({
       members: [makeMember("b", "bob@test.com", true)],
