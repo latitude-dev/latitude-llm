@@ -1,11 +1,13 @@
-import { WrappedReportId } from "@domain/shared"
-import { WrappedReportRepository } from "@domain/spans"
+import { NotFoundError, WrappedReportId } from "@domain/shared"
+import { type WrappedReportRecord, WrappedReportRepository } from "@domain/spans"
 import { WrappedReportRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { withTracing } from "@repo/observability"
+import { createLogger, withTracing } from "@repo/observability"
 import { createFileRoute } from "@tanstack/react-router"
 import { Effect } from "effect"
 import { renderWrappedOgImage } from "../../domains/cc-wrapped/og/render-og-image.tsx"
 import { getAdminPostgresClient } from "../../server/clients.ts"
+
+const logger = createLogger("cc-wrapped.og")
 
 /**
  * Dynamic OG card for a persisted Wrapped report.
@@ -21,14 +23,24 @@ export const Route = createFileRoute("/cc-wrapped/$id/og/png")({
   server: {
     handlers: {
       GET: async ({ params }: { params: { id: string } }) => {
+        let record: WrappedReportRecord
         try {
-          const record = await Effect.runPromise(
+          record = await Effect.runPromise(
             Effect.gen(function* () {
               const repo = yield* WrappedReportRepository
               return yield* repo.findById(WrappedReportId(params.id))
             }).pipe(withPostgres(WrappedReportRepositoryLive, getAdminPostgresClient()), withTracing),
           )
+        } catch (cause) {
+          // NotFoundError → genuine 404. Anything else is unexpected and
+          // worth surfacing in logs.
+          if (!(cause instanceof NotFoundError)) {
+            logger.error(`cc-wrapped.og: lookup failed for ${params.id}`, cause)
+          }
+          return new Response("Not found", { status: 404 })
+        }
 
+        try {
           const png = await renderWrappedOgImage(record)
           // biome-ignore lint/suspicious/noExplicitAny: Node Buffer is a valid BodyInit; TS lib types disagree.
           return new Response(png as any, {
@@ -38,8 +50,10 @@ export const Route = createFileRoute("/cc-wrapped/$id/og/png")({
               "Cache-Control": "public, max-age=31536000, immutable",
             },
           })
-        } catch {
-          return new Response("Not found", { status: 404 })
+        } catch (cause) {
+          logger.error(`cc-wrapped.og: render failed for ${params.id}`, cause)
+          const message = cause instanceof Error ? cause.message : String(cause)
+          return new Response(`OG render failed: ${message}`, { status: 500 })
         }
       },
     },

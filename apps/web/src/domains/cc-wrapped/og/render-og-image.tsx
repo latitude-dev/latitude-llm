@@ -60,7 +60,7 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
         width: "100%",
         height: "100%",
         backgroundColor: WRAPPED_COLORS.cream,
-        fontFamily: "Source Serif 4",
+        fontFamily: "Source Serif Pro",
         padding: 60,
       }}
     >
@@ -138,8 +138,8 @@ export const renderWrappedOgImage = async (record: WrappedReportRecord): Promise
       width: OG_WIDTH,
       height: OG_HEIGHT,
       fonts: [
-        { name: "Source Serif 4", data: regular, weight: 400, style: "normal" },
-        { name: "Source Serif 4", data: semibold, weight: 600, style: "normal" },
+        { name: "Source Serif Pro", data: regular, weight: 400, style: "normal" },
+        { name: "Source Serif Pro", data: semibold, weight: 600, style: "normal" },
       ],
     },
   )
