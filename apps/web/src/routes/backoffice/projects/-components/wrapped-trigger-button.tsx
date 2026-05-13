@@ -26,14 +26,14 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
     try {
       await adminTriggerClaudeCodeWrapped({ data: { projectId } })
       toast({
-        description: `Claude Code Wrapped enqueued for ${projectName}. Members receive an email if the flag is on and the project had activity this week.`,
+        description: `Claude Code Wrapped enqueued for ${projectName}. Members will receive a notification if the flag is on and the project had activity this week.`,
       })
       setIsOpen(false)
       void router.invalidate()
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Could not enqueue Wrapped",
+        title: "Could not generate Wrapped",
         description: toUserMessage(error),
       })
     } finally {
@@ -49,24 +49,27 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
       <Modal.Root open={isOpen} onOpenChange={setIsOpen}>
         <Modal.Content dismissible size="large">
           <Modal.Header
-            title="Trigger Claude Code Wrapped"
+            title="Generate Claude Code Wrapped"
             description={
               <Text.H5 color="foregroundMuted">
-                Send the weekly Claude Code summary email for{" "}
+                Generate the weekly Claude Code Wrapped for{" "}
                 <span className="font-medium text-foreground">{projectName}</span> right now.
               </Text.H5>
             }
           />
           <Modal.Body>
+            <Text.H5 color="foregroundMuted">
+              All users in the organization will receive a notification and an email when the Wrapped has been generated.
+            </Text.H5>
             <Alert
               variant="warning"
-              description="The worker only sends emails if the organization has the `claude-code-wrapped` feature flag enabled and the project recorded Claude Code activity in the last 7 days. Otherwise the job is logged as skipped."
+              description="The wrapped will only be generated if the organization has the `claude-code-wrapped` feature flag enabled and the project recorded Claude Code activity in the last 7 days. Otherwise the generation is skipped."
             />
           </Modal.Body>
           <Modal.Footer>
             <CloseTrigger />
             <Button type="button" size="sm" disabled={isSubmitting} onClick={() => void handleConfirm()}>
-              {isSubmitting ? "Enqueueing…" : "Enqueue"}
+              {isSubmitting ? "Generating…" : "Generate"}
             </Button>
           </Modal.Footer>
         </Modal.Content>
