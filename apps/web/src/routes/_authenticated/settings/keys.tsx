@@ -19,6 +19,7 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
+import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react"
@@ -220,6 +221,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Key</TableHead>
+            <TableHead>Created at</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -239,6 +241,9 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   }
                   tooltip="Copy API Key"
                 />
+              </TableCell>
+              <TableCell>
+                <Text.H5 color="foregroundMuted">{relativeTime(apiKey.createdAt)}</Text.H5>
               </TableCell>
               <TableCell align="right">
                 <div className="flex flex-row items-center gap-1">
@@ -294,11 +299,6 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
     }
   }
 
-  const fmtRelative = (iso: string | null) => {
-    if (!iso) return "—"
-    return new Date(iso).toLocaleString()
-  }
-
   return (
     <>
       <Table>
@@ -306,8 +306,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
           <TableRow>
             <TableHead>Client</TableHead>
             <TableHead>Authorized by</TableHead>
-            <TableHead>Last activity</TableHead>
-            <TableHead>Connected</TableHead>
+            <TableHead>Connected at</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -338,10 +337,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
                 </div>
               </TableCell>
               <TableCell>
-                <Text.H5 color="foregroundMuted">{fmtRelative(row.lastActivityAt)}</Text.H5>
-              </TableCell>
-              <TableCell>
-                <Text.H5 color="foregroundMuted">{fmtRelative(row.createdAt)}</Text.H5>
+                <Text.H5 color="foregroundMuted">{relativeTime(row.createdAt)}</Text.H5>
               </TableCell>
               <TableCell align="right">
                 <Tooltip
@@ -392,13 +388,14 @@ function KeysSettingsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const { data: apiKeyData, isLoading: apiKeysLoading } = useApiKeysCollection()
   const { data: oauthKeyData, isLoading: oauthKeysLoading } = useOAuthKeysCollection()
-  const apiKeys = apiKeyData ?? []
   // `useLiveQuery` doesn't preserve the server-fn's ORDER BY — TanStack DB
   // iterates the collection by item key, not by insertion order — so we sort
-  // here to match the "Connected" column the user reads. Newest first.
-  const oauthKeys = (oauthKeyData ?? [])
-    .slice()
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+  // here to match the "Created at" / "Connected at" columns the user reads.
+  // Newest first.
+  const byCreatedAtDesc = <T extends { readonly createdAt: string }>(a: T, b: T): number =>
+    a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+  const apiKeys = (apiKeyData ?? []).slice().sort(byCreatedAtDesc)
+  const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
     <Container className="flex flex-col gap-12 pt-14">

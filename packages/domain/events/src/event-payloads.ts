@@ -190,6 +190,17 @@ export interface EventPayloads {
     readonly apiKeyId: string
     readonly name: string
   }
+  /**
+   * Fired when a user approves an OAuth client to act on this organization's
+   * behalf (the consent flow's accept branch). Today nothing consumes it; it
+   * exists so future MCP-usage analytics can backfill from the outbox.
+   */
+  OAuthKeyCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly clientId: string
+    readonly clientName: string | null
+  }
   DatasetCreated: {
     readonly organizationId: string
     readonly actorUserId: string
