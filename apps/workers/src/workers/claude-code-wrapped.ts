@@ -12,6 +12,7 @@ import {
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   withPostgres,
+  WrappedReportRepositoryLive,
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"
@@ -109,7 +110,8 @@ export const createClaudeCodeWrappedWorker = ({
       const windowEnd = new Date(payload.windowEndIso)
 
       return runClaudeCodeWrappedUseCase({
-        renderEmail: ({ userName, report }) => claudeCodeWrappedTemplate({ userName, report, webAppUrl }),
+        renderEmail: ({ userName, report, reportId }) =>
+          claudeCodeWrappedTemplate({ userName, report, webAppUrl, reportId }),
         sendEmail: sendEmailUseCase,
       })({
         organizationId,
@@ -120,7 +122,9 @@ export const createClaudeCodeWrappedWorker = ({
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.status === "sent") {
-              logger.info(`claude-code-wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId}`)
+              logger.info(
+                `claude-code-wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId} (report ${result.reportId})`,
+              )
             } else {
               logger.info(`claude-code-wrapped: skipped ${projectId} (${result.reason})`)
             }
@@ -135,6 +139,7 @@ export const createClaudeCodeWrappedWorker = ({
             MembershipRepositoryLive,
             OrganizationRepositoryLive,
             ProjectRepositoryLive,
+            WrappedReportRepositoryLive,
           ),
           postgresClient,
           organizationId,

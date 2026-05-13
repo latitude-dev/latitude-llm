@@ -1,10 +1,11 @@
 import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
 import { MembershipRepository, type MemberWithUser, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
-import type { OrganizationId, ProjectId } from "@domain/shared"
+import { generateId, type OrganizationId, type ProjectId, type WrappedReportId } from "@domain/shared"
 import { Effect } from "effect"
-import type { Report } from "../entities/report.ts"
+import { CURRENT_REPORT_VERSION, type Report } from "../entities/report.ts"
 import { ClaudeCodeSpanReader } from "../ports/claude-code-span-reader.ts"
+import { WrappedReportRepository } from "../ports/wrapped-report-repository.ts"
 import { buildReportUseCase } from "./build-report.ts"
 
 /**
@@ -40,11 +41,13 @@ export interface RunClaudeCodeWrappedDeps {
   /**
    * Renders the email body for a single recipient. The worker passes the
    * template function from `@domain/email`; tests pass a fake that captures
-   * the rendered output.
+   * the rendered output. `reportId` is the persisted report's id — the
+   * template uses it to build the "See your full week →" CTA URL.
    */
   readonly renderEmail: (data: {
     readonly userName: string
     readonly report: Report
+    readonly reportId: WrappedReportId
   }) => Promise<ClaudeCodeWrappedRenderedEmail>
   /**
    * Sends one rendered email. Typically the SendEmail use case from
@@ -56,7 +59,7 @@ export interface RunClaudeCodeWrappedDeps {
 export type RunClaudeCodeWrappedSkippedReason = "flag-off" | "no-activity" | "no-recipients"
 
 export type RunClaudeCodeWrappedResult =
-  | { readonly status: "sent"; readonly recipientCount: number }
+  | { readonly status: "sent"; readonly recipientCount: number; readonly reportId: WrappedReportId }
   | { readonly status: "skipped"; readonly reason: RunClaudeCodeWrappedSkippedReason }
 
 /**
@@ -72,20 +75,32 @@ const SEND_CONCURRENCY = 5
  */
 const isEligibleRecipient = (member: MemberWithUser): boolean => member.emailVerified
 
-const renderForRecipient = (deps: RunClaudeCodeWrappedDeps, report: Report) => (member: MemberWithUser) =>
-  Effect.gen(function* () {
-    const rendered = yield* Effect.tryPromise(() =>
-      deps.renderEmail({ userName: member.name ?? "there", report }),
-    ).pipe(
-      Effect.mapError((cause) => new Error("Failed to render Claude Code Wrapped email", { cause: cause as Error })),
-    )
-    yield* deps.sendEmail({
-      to: member.email,
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
+const renderForRecipient =
+  (deps: RunClaudeCodeWrappedDeps, report: Report, reportId: WrappedReportId) => (member: MemberWithUser) =>
+    Effect.gen(function* () {
+      const rendered = yield* Effect.tryPromise(() =>
+        deps.renderEmail({ userName: member.name ?? "there", report, reportId }),
+      ).pipe(
+        Effect.mapError((cause) => new Error("Failed to render Claude Code Wrapped email", { cause: cause as Error })),
+      )
+      yield* deps.sendEmail({
+        to: member.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      })
     })
-  })
+
+/**
+ * Returns the org owner's display name. Falls back to the org name if no
+ * owner is in the member list (shouldn't normally happen, but defends in
+ * depth so the persisted row's `owner_name` always has *something* to
+ * render in the web view's greeting).
+ */
+const resolveOwnerName = (members: readonly MemberWithUser[], organizationName: string): string => {
+  const owner = members.find((m) => m.role === "owner")
+  return owner?.name?.trim() || organizationName
+}
 
 /**
  * Runs the per-project Claude Code Wrapped pipeline. Triggered by either the
@@ -133,10 +148,30 @@ export const runClaudeCodeWrappedUseCase = (deps: RunClaudeCodeWrappedDeps) =>
       windowEnd: input.windowEnd,
     })
 
-    yield* Effect.forEach(recipients, renderForRecipient(deps, report), {
+    // Persist *before* sending emails so the CTA the email links to
+    // resolves the moment any recipient clicks it. Failures here are real
+    // failures — we don't want to send "See your full week →" links that
+    // 404 because the row never landed.
+    const reportRepo = yield* WrappedReportRepository
+    const reportId = generateId<"WrappedReportId">()
+    const now = new Date()
+    yield* reportRepo.save({
+      id: reportId,
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      windowStart: input.windowStart,
+      windowEnd: input.windowEnd,
+      ownerName: resolveOwnerName(recipients, organization.name),
+      reportVersion: CURRENT_REPORT_VERSION,
+      report,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    yield* Effect.forEach(recipients, renderForRecipient(deps, report, reportId), {
       concurrency: SEND_CONCURRENCY,
       discard: true,
     })
 
-    return { status: "sent", recipientCount: recipients.length } satisfies RunClaudeCodeWrappedResult
+    return { status: "sent", recipientCount: recipients.length, reportId } satisfies RunClaudeCodeWrappedResult
   })

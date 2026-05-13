@@ -16,12 +16,9 @@ import type { WrappedReportRecord } from "../entities/wrapped-report-record.ts"
 export interface WrappedReportRepositoryShape {
   save: (record: WrappedReportRecord) => Effect.Effect<void, RepositoryError, SqlClient>
 
-  findById: (
-    id: WrappedReportId,
-  ) => Effect.Effect<WrappedReportRecord, NotFoundError | RepositoryError, SqlClient>
+  findById: (id: WrappedReportId) => Effect.Effect<WrappedReportRecord, NotFoundError | RepositoryError, SqlClient>
 }
 
-export class WrappedReportRepository extends Context.Service<
-  WrappedReportRepository,
-  WrappedReportRepositoryShape
->()("@domain/spans/WrappedReportRepository") {}
+export class WrappedReportRepository extends Context.Service<WrappedReportRepository, WrappedReportRepositoryShape>()(
+  "@domain/spans/WrappedReportRepository",
+) {}

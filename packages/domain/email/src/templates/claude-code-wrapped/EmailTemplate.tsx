@@ -17,10 +17,16 @@ interface ClaudeCodeWrappedEmailProps {
   readonly report: Report
   /**
    * Public base URL of the web app (no trailing slash). The template derives
-   * personality PNG URLs, the project deep-link, the unsubscribe link, and
-   * the Latitude logo from it. Worker passes `LAT_WEB_URL`.
+   * personality PNG URLs, the project deep-link, the unsubscribe link, the
+   * Latitude logo, and the full-report URL from it. Worker passes `LAT_WEB_URL`.
    */
   readonly webAppUrl: string
+  /**
+   * Persisted report id. Step 5 trims this email down to a teaser and points
+   * a "See your full week →" CTA at `${webAppUrl}/cc-wrapped/${reportId}`;
+   * for now the prop just flows through.
+   */
+  readonly reportId: string
 }
 
 const DATE_RANGE_FMT = new Intl.DateTimeFormat("en-US", {
@@ -480,7 +486,7 @@ function WrappedFooter({
 // Root template
 // ─────────────────────────────────────────────────────────────────────────
 
-export function ClaudeCodeWrappedEmail({ userName, report, webAppUrl }: ClaudeCodeWrappedEmailProps) {
+export function ClaudeCodeWrappedEmail({ userName, report, webAppUrl, reportId: _reportId }: ClaudeCodeWrappedEmailProps) {
   const base = webAppUrl.replace(/\/$/, "")
   const imageBaseUrl = `${base}/email-branding/claude-code-wrapped/personalities`
   const projectUrl = `${base}/projects/${report.project.slug}`
@@ -517,6 +523,7 @@ export function ClaudeCodeWrappedEmail({ userName, report, webAppUrl }: ClaudeCo
 ClaudeCodeWrappedEmail.PreviewProps = {
   userName: "Alex",
   webAppUrl: "http://localhost:3000",
+  reportId: "ccwprv".padEnd(24, "x").slice(0, 24),
   report: {
     project: { id: ProjectId("proj-preview"), name: "poncho-ios", slug: "poncho-ios" },
     organization: { id: OrganizationId("org-preview"), name: "Acme" },

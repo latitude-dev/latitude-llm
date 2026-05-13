@@ -17,7 +17,6 @@ export {
   type WorkspaceDeepDive,
 } from "./entities/report.ts"
 export type { WrappedReportRecord } from "./entities/wrapped-report-record.ts"
-export { WrappedReportRepository, type WrappedReportRepositoryShape } from "./ports/wrapped-report-repository.ts"
 export { pickReadAnchor, pickWrittenAnchor } from "./helpers/anchors.ts"
 export {
   type BashPatternRow,
@@ -38,6 +37,7 @@ export {
   type WorkspaceRow,
   type WrappedTotalsRow,
 } from "./ports/claude-code-span-reader.ts"
+export { WrappedReportRepository, type WrappedReportRepositoryShape } from "./ports/wrapped-report-repository.ts"
 export {
   type AssembleReportInput,
   assembleReport,

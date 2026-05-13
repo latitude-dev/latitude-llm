@@ -1,4 +1,5 @@
 import type { Report } from "@domain/spans"
+import type { WrappedReportId } from "@domain/shared"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers (tsx/esbuild classic transform)
 import React from "react"
@@ -17,17 +18,28 @@ export interface ClaudeCodeWrappedEmailData {
   /**
    * Public base URL of the web app (no trailing slash). The template derives
    * every downstream link from this — personality PNGs, project deep-link,
-   * unsubscribe / settings page, Latitude logo. Worker passes the value of
-   * `LAT_WEB_URL` so it follows the deployment.
+   * unsubscribe / settings page, Latitude logo, and the public report URL
+   * the "See your full week →" CTA points at. Worker passes `LAT_WEB_URL`.
    */
   readonly webAppUrl: string
+  /**
+   * Persisted report id — the email teaser links to `${webAppUrl}/cc-wrapped/${reportId}`
+   * for the full report.
+   */
+  readonly reportId: WrappedReportId
 }
 
 export async function claudeCodeWrappedTemplate(data: ClaudeCodeWrappedEmailData): Promise<RenderedEmail> {
   const projectName = data.report.project.name
+  const fullReportUrl = `${data.webAppUrl.replace(/\/$/, "")}/cc-wrapped/${data.reportId}`
   return {
     html: await renderEmail(
-      <ClaudeCodeWrappedEmail userName={data.userName} report={data.report} webAppUrl={data.webAppUrl} />,
+      <ClaudeCodeWrappedEmail
+        userName={data.userName}
+        report={data.report}
+        webAppUrl={data.webAppUrl}
+        reportId={data.reportId}
+      />,
     ),
     subject: `Your Claude Code week in ${projectName}`,
     text: `Hi ${data.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(
@@ -35,6 +47,6 @@ export async function claudeCodeWrappedTemplate(data: ClaudeCodeWrappedEmailData
       data.report.window.end,
     )} UTC):\n\n• ${data.report.totals.sessions.toLocaleString("en-US")} sessions\n• ${data.report.totals.toolCalls.toLocaleString(
       "en-US",
-    )} tool calls\n• ${data.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nOpen the HTML version for the full breakdown — including your archetype reveal.`,
+    )} tool calls\n• ${data.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nSee your full week:\n${fullReportUrl}`,
   }
 }

@@ -17,11 +17,14 @@ import {
   ProjectId,
   SqlClient,
   UserId,
+  type WrappedReportId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
+import type { WrappedReportRecord } from "../entities/wrapped-report-record.ts"
 import { ClaudeCodeSpanReader, type ClaudeCodeSpanReaderShape } from "../ports/claude-code-span-reader.ts"
+import { WrappedReportRepository } from "../ports/wrapped-report-repository.ts"
 import { type ClaudeCodeWrappedRenderedEmail, runClaudeCodeWrappedUseCase } from "./run-claude-code-wrapped.ts"
 
 const ORG_ID = OrganizationId("org-cc-wrapped".padEnd(24, "x").slice(0, 24))
@@ -141,10 +144,12 @@ interface TestHarness {
     | ProjectRepository
     | OrganizationRepository
     | MembershipRepository
+    | WrappedReportRepository
     | SqlClient
     | ChSqlClient
   >
   readonly sent: Array<{ to: string; subject: string; html: string; text: string }>
+  readonly saved: WrappedReportRecord[]
   readonly enableFlag: () => Promise<void>
 }
 
@@ -171,12 +176,22 @@ const setupHarness = (options: {
     transaction: () => Effect.die("chSqlClient.transaction not used"),
   }
 
+  const saved: WrappedReportRecord[] = []
+  const wrappedReportRepo: (typeof WrappedReportRepository)["Service"] = {
+    save: (record) =>
+      Effect.sync(() => {
+        saved.push(record)
+      }),
+    findById: (id) => Effect.fail(new NotFoundError({ entity: "WrappedReport", id })),
+  }
+
   const layer = Layer.mergeAll(
     Layer.succeed(FeatureFlagRepository, fakeFlags.repository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(OrganizationRepository, organizationRepo),
     Layer.succeed(ClaudeCodeSpanReader, reader),
+    Layer.succeed(WrappedReportRepository, wrappedReportRepo),
     Layer.succeed(SqlClient, sqlClient),
     Layer.succeed(ChSqlClient, chSqlClient),
   )
@@ -184,6 +199,7 @@ const setupHarness = (options: {
   return {
     layer,
     sent: [],
+    saved,
     enableFlag: async () => {
       if (!options.enableFlag) return
       await Effect.runPromise(
@@ -203,13 +219,15 @@ const makeDeps = (sent: TestHarness["sent"]) => ({
   renderEmail: async ({
     userName,
     report,
+    reportId,
   }: {
     userName: string
     report: { project: { name: string } }
+    reportId: WrappedReportId
   }): Promise<ClaudeCodeWrappedRenderedEmail> => ({
-    html: `<p>Hi ${userName}, your week in ${report.project.name}</p>`,
+    html: `<p>Hi ${userName}, your week in ${report.project.name}</p><a href="/cc-wrapped/${reportId}">See it</a>`,
     subject: `Wrapped: ${report.project.name}`,
-    text: `Hi ${userName}, your week in ${report.project.name}`,
+    text: `Hi ${userName}, your week in ${report.project.name} — /cc-wrapped/${reportId}`,
   }),
   sendEmail: (email: { to: string; subject: string; html: string; text: string }) =>
     Effect.sync(() => {
@@ -308,11 +326,64 @@ describe("runClaudeCodeWrappedUseCase", () => {
       }).pipe(Effect.provide(harness.layer)),
     )
 
-    expect(result).toEqual({ status: "sent", recipientCount: 2 })
+    expect(result.status).toBe("sent")
+    if (result.status !== "sent") throw new Error("unreachable")
+    expect(result.recipientCount).toBe(2)
+    expect(typeof result.reportId).toBe("string")
+    expect(result.reportId.length).toBeGreaterThan(0)
     expect(sent.map((e) => e.to).sort()).toEqual(["alice@test.com", "bob@test.com"])
     for (const email of sent) {
       expect(email.subject).toBe("Wrapped: Test project")
       expect(email.html).toContain("Test project")
+      expect(email.html).toContain(`/cc-wrapped/${result.reportId}`)
     }
+    // The report was persisted exactly once before the emails went out.
+    expect(harness.saved).toHaveLength(1)
+    expect(harness.saved[0]?.id).toBe(result.reportId)
+    expect(harness.saved[0]?.organizationId).toBe(ORG_ID)
+    expect(harness.saved[0]?.projectId).toBe(PROJECT_ID)
+  })
+
+  it("uses the org owner's name for the persisted ownerName (web greeting); the email still gets the recipient's name", async () => {
+    harness = setupHarness({
+      members: [
+        { ...makeMember("a", "owner@test.com", true), role: "owner", name: "Alex Owner" },
+        makeMember("b", "bob@test.com", true),
+      ],
+      sessions: 5,
+      enableFlag: true,
+    })
+    await harness.enableFlag()
+
+    await Effect.runPromise(
+      runClaudeCodeWrappedUseCase(makeDeps(sent))({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        windowStart: WINDOW_START,
+        windowEnd: WINDOW_END,
+      }).pipe(Effect.provide(harness.layer)),
+    )
+
+    expect(harness.saved[0]?.ownerName).toBe("Alex Owner")
+  })
+
+  it("falls back to the org name when no owner is in the member list", async () => {
+    harness = setupHarness({
+      members: [makeMember("b", "bob@test.com", true)],
+      sessions: 5,
+      enableFlag: true,
+    })
+    await harness.enableFlag()
+
+    await Effect.runPromise(
+      runClaudeCodeWrappedUseCase(makeDeps(sent))({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        windowStart: WINDOW_START,
+        windowEnd: WINDOW_END,
+      }).pipe(Effect.provide(harness.layer)),
+    )
+
+    expect(harness.saved[0]?.ownerName).toBe("Acme")
   })
 })

@@ -13,8 +13,8 @@ import {
   type Report,
   type ReportVersion,
   SCHEMA_BY_VERSION,
-  WrappedReportRepository,
   type WrappedReportRecord,
+  WrappedReportRepository,
 } from "@domain/spans"
 import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"

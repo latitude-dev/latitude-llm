@@ -49,9 +49,9 @@ export {
   type WorkspaceDeepDive,
   type WorkspaceDeepDiveRow,
   type WorkspaceRow,
+  type WrappedReportRecord,
   WrappedReportRepository,
   type WrappedReportRepositoryShape,
-  type WrappedReportRecord,
   type WrappedTotalsRow,
 } from "./claude-code-wrapped/index.ts"
 export {
