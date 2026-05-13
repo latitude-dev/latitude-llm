@@ -8,7 +8,7 @@ import { WrappedLayout } from "../../components/WrappedLayout.tsx"
 import { emailDesignTokens } from "../../tokens/design-system.ts"
 import { Heatmap } from "./-components/Heatmap.tsx"
 import { MomentCard } from "./-components/MomentCard.tsx"
-import { PersonalityCard, type PersonalityKindLocal } from "./-components/PersonalityCard.tsx"
+import { PersonalityCard } from "./-components/PersonalityCard.tsx"
 import { StatCard } from "./-components/StatCard.tsx"
 import { WorkspaceSection } from "./-components/WorkspaceSection.tsx"
 
@@ -416,11 +416,7 @@ function PersonalityRevealSection({
   const [e1 = "", e2 = "", e3 = ""] = personality.evidence
   return (
     <Section style={sectionStyle}>
-      <PersonalityCard
-        kind={personality.kind as PersonalityKindLocal}
-        evidence={[e1, e2, e3]}
-        imageBaseUrl={imageBaseUrl}
-      />
+      <PersonalityCard kind={personality.kind} evidence={[e1, e2, e3]} imageBaseUrl={imageBaseUrl} />
     </Section>
   )
 }
