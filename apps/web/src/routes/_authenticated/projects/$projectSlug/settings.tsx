@@ -171,9 +171,8 @@ function ProjectSettingsPage() {
   // `createFormSubmitHandler` wrapper so error extraction stays consistent
   // with other settings forms. The slider isn't a typical form (no
   // submit button, no field-level UI for errors), so the form is a thin
-  // shell: `defaultValues` seeds from the current setting, each slider
-  // tick pushes the new value via `form.setFieldValue` and the debounced
-  // `form.handleSubmit` actually fires the mutation.
+  // shell: `defaultValues` seeds from the current setting and the slider's
+  // `onValueCommit` fires `setFieldValue` + `handleSubmit` once on release.
   const sensitivityForm = useForm({
     defaultValues: {
       escalationSensitivity:
@@ -203,15 +202,9 @@ function ProjectSettingsPage() {
     ),
   })
 
-  // Slider fires on every step; debounce the submit so we don't flood
-  // the API. Each tick already pushed the new value via setFieldValue.
-  const submitSensitivity = useDebouncedCallback(() => {
-    void sensitivityForm.handleSubmit()
-  }, 400)
-
   const handleSensitivityChange = (value: number) => {
     sensitivityForm.setFieldValue("escalationSensitivity", value)
-    submitSensitivity()
+    void sensitivityForm.handleSubmit()
   }
 
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
@@ -389,9 +382,16 @@ function EscalationSensitivityControl({ value, onChange }: EscalationSensitivity
           max={6}
           step={1}
           value={[draft]}
+          // `onValueChange` fires on every tick while dragging; keep it local so
+          // the thumb tracks the pointer smoothly. The actual save runs in
+          // `onValueCommit`, which Radix fires only on pointer-up / keyboard
+          // commit — so users only persist a value once they release the slider.
           onValueChange={(values) => {
             const next = values[0] ?? value
             setDraft(next)
+          }}
+          onValueCommit={(values) => {
+            const next = values[0] ?? value
             onChange(next)
           }}
           aria-label="Escalation sensitivity"
