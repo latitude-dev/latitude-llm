@@ -428,6 +428,9 @@ importers:
       '@platform/ai-voyage':
         specifier: workspace:*
         version: link:../../packages/platform/ai-voyage
+      '@platform/api-key-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/api-key-auth
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
@@ -443,6 +446,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/oauth-token-auth
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
@@ -1967,6 +1973,9 @@ importers:
 
   packages/platform/oauth-token-auth:
     dependencies:
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../../domain/oauth-keys
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../cache-redis

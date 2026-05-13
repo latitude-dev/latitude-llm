@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/oauth-keys": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",

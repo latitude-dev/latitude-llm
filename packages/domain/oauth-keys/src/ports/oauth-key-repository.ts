@@ -3,6 +3,24 @@ import { Context, type Effect } from "effect"
 import type { OAuthKey } from "../entities/oauth-key.ts"
 
 /**
+ * Port for busting cached OAuth-token validations on revoke. The platform
+ * implementation lives in `@platform/oauth-token-auth`
+ * (`OAuthTokenCacheInvalidatorLive`) so the domain stays free of any
+ * Redis / cache-key knowledge.
+ *
+ * Errors are absorbed by the implementation — the DB is the source of
+ * truth, so a missed invalidation degrades to the validator's TTL window
+ * rather than crashing the revoke flow.
+ */
+export class OAuthTokenCacheInvalidator extends Context.Service<
+  OAuthTokenCacheInvalidator,
+  {
+    /** Drops the cached positive-validation entry for the given access token. */
+    invalidate: (accessToken: string) => Effect.Effect<void, never>
+  }
+>()("@domain/oauth-keys/OAuthTokenCacheInvalidator") {}
+
+/**
  * Repository port for the OAuth-keys settings surface. Every method resolves
  * `SqlClient` per call (per the platform convention) so the RLS policy on
  * `oauth_applications` enforces tenant scoping automatically — no method
@@ -31,14 +49,18 @@ export class OAuthKeyRepository extends Context.Service<
      */
     applicationBelongsToOrganization: (clientId: string) => Effect.Effect<boolean, RepositoryError, SqlClient>
     /**
-     * Deletes every `oauth_access_tokens` row for the given pair. The
-     * tokens table has no RLS, so callers MUST verify org ownership via
+     * Deletes every `oauth_access_tokens` row for the given pair and
+     * returns the plaintext `access_token` values that were removed.
+     * Callers feed those back through `OAuthTokenCacheInvalidator` so
+     * the Redis-cached positive validations don't keep a revoked token
+     * usable until its TTL expires. The tokens table has no RLS, so
+     * callers MUST verify org ownership via
      * `applicationBelongsToOrganization` first.
      */
     deleteTokensForPair: (input: {
       readonly clientId: string
       readonly userId: string
-    }) => Effect.Effect<void, RepositoryError, SqlClient>
+    }) => Effect.Effect<readonly string[], RepositoryError, SqlClient>
     /**
      * Returns `true` when at least one `oauth_access_tokens` row remains
      * for the given `clientId` (any user). Used to decide whether to

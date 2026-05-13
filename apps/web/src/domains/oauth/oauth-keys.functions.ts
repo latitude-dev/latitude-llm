@@ -10,12 +10,13 @@
  */
 import { listOAuthKeysUseCase, type OAuthKey, revokeOAuthKeyUseCase } from "@domain/oauth-keys"
 import { OAuthKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 export interface OAuthKeyRecord {
   /** Stable key for the row — composite of client + user since neither alone is unique. */
@@ -70,9 +71,11 @@ export const revokeOAuthKey = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ readonly success: true }> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
+    const redis = getRedisClient()
 
     await Effect.runPromise(
       revokeOAuthKeyUseCase({ clientId: data.clientId, userId: data.userId }).pipe(
+        Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
         withPostgres(OAuthKeyRepositoryLive, client, organizationId),
         withTracing,
       ),

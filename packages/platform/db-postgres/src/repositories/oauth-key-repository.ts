@@ -93,17 +93,19 @@ export const OAuthKeyRepositoryLive = Layer.effect(
     deleteTokensForPair: (input) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-        yield* sqlClient
+        const rows = yield* sqlClient
           .query((db) =>
             db
               .delete(oauthAccessTokens)
-              .where(and(eq(oauthAccessTokens.clientId, input.clientId), eq(oauthAccessTokens.userId, input.userId))),
+              .where(and(eq(oauthAccessTokens.clientId, input.clientId), eq(oauthAccessTokens.userId, input.userId)))
+              .returning({ accessToken: oauthAccessTokens.accessToken }),
           )
           .pipe(
             Effect.mapError(
               (cause): RepositoryError => new RepositoryError({ operation: "deleteTokensForPair", cause }),
             ),
           )
+        return rows.map((r) => r.accessToken).filter((t): t is string => t !== null)
       }),
 
     hasRemainingTokensForApplication: (clientId: string) =>
