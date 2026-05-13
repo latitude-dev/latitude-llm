@@ -187,10 +187,15 @@ export const assembleReport = (input: AssembleReportInput): Report => {
   const otherWorkspaceCount = Math.max(0, workspaces.length - MAX_WORKSPACE_DEEP_DIVES)
   const workspaceDeepDives = input.deepDives.map(({ workspace, row }) => buildDeepDive(workspace, row))
 
-  const linesWritten = input.locStats.writeLines + input.locStats.editAdded
-  const linesAdded = input.locStats.editAdded
+  // Two distinct measurements that together make up "lines that came into
+  // existence this week". Kept separate so the personality function can sum
+  // them without double-counting, and so the email's "Lines written" stat
+  // can show the total.
+  const writeLines = input.locStats.writeLines
+  const editAdded = input.locStats.editAdded
   const linesRemoved = input.locStats.editRemoved
   const linesRead = input.locStats.readLines
+  const totalLinesWritten = writeLines + editAdded
 
   const personality = assignPersonality({
     toolMix,
@@ -199,8 +204,8 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     commandsRun: input.totals.commandsRun,
     commits: input.totals.commits,
     testsRun: input.totals.testsRun,
-    linesAdded,
-    linesWritten,
+    editAdded,
+    writeLines,
     linesRead,
   })
 
@@ -243,11 +248,11 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     },
     toolMix,
     loc: {
-      written: linesWritten,
+      written: totalLinesWritten,
       read: linesRead,
-      added: linesAdded,
+      added: editAdded,
       removed: linesRemoved,
-      writtenAnchor: pickWrittenAnchor(linesWritten),
+      writtenAnchor: pickWrittenAnchor(totalLinesWritten),
       readAnchor: pickReadAnchor(linesRead),
     },
     topBashCommand,

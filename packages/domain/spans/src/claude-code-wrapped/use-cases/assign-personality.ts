@@ -77,8 +77,10 @@ interface AssignPersonalityInput {
   readonly commandsRun: number
   readonly commits: number
   readonly testsRun: number
-  readonly linesAdded: number
-  readonly linesWritten: number
+  /** Lines added by Edit / MultiEdit / NotebookEdit — the "+N" component. */
+  readonly editAdded: number
+  /** Lines written by Write / NotebookEdit `content` — disjoint from `editAdded`. */
+  readonly writeLines: number
   readonly linesRead: number
 }
 
@@ -108,7 +110,7 @@ interface Candidate {
  * stable sort — a small bias toward the rarer archetypes when scores match.
  */
 export function assignPersonality(input: AssignPersonalityInput): Personality {
-  const { toolMix, sessions, filesTouched, commandsRun, commits, testsRun, linesAdded, linesWritten, linesRead } = input
+  const { toolMix, sessions, filesTouched, commandsRun, commits, testsRun, editAdded, writeLines, linesRead } = input
   const total = sumMix(toolMix)
 
   // Guarded by the no-activity short-circuit upstream — but defend in depth
@@ -133,7 +135,8 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
 
   const commitsPerSession = sessions > 0 ? commits / sessions : 0
   const testsPerSession = sessions > 0 ? testsRun / sessions : 0
-  const linesTouchedTotal = linesAdded + linesWritten
+  // Total lines of code touched this week (disjoint components — no overlap).
+  const linesTouchedTotal = editAdded + writeLines
 
   const candidates: readonly Candidate[] = [
     {

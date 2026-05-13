@@ -20,8 +20,8 @@ const argsBase = {
   commandsRun: 0,
   commits: 0,
   testsRun: 0,
-  linesAdded: 5_000,
-  linesWritten: 5_000,
+  editAdded: 5_000,
+  writeLines: 5_000,
   linesRead: 50_000,
 }
 
@@ -85,8 +85,8 @@ describe("assignPersonality (gate-then-rank)", () => {
       toolMix: { ...baseMix, read: 50, bash: 30, edit: 20 },
       sessions: 12,
       filesTouched: 4,
-      linesAdded: 0,
-      linesWritten: 50,
+      editAdded: 0,
+      writeLines: 50,
     })
     expect(result.kind).toBe("consultant")
   })
@@ -95,8 +95,8 @@ describe("assignPersonality (gate-then-rank)", () => {
     const result = run({
       toolMix: { ...baseMix, read: 50, bash: 30, edit: 20 },
       sessions: 3,
-      linesAdded: 0,
-      linesWritten: 0,
+      editAdded: 0,
+      writeLines: 0,
     })
     expect(result.kind).not.toBe("consultant")
   })
@@ -105,8 +105,8 @@ describe("assignPersonality (gate-then-rank)", () => {
     const result = run({
       toolMix: { ...baseMix, edit: 50, read: 50 },
       sessions: 8,
-      linesAdded: 600,
-      linesWritten: 200,
+      editAdded: 600,
+      writeLines: 200,
     })
     expect(result.kind).not.toBe("consultant")
   })
