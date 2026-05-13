@@ -12,12 +12,17 @@ import {
 
 const queryClient = getQueryClient()
 
-const makeSpansByTraceCollection = (traceId: string) =>
+const makeSpansByTraceCollection = (
+  projectId: string,
+  traceId: string,
+  startTimeFrom: string | undefined,
+  startTimeTo: string | undefined,
+) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", "trace", traceId],
-      queryFn: () => listSpansByTrace({ data: { traceId } }),
+      queryKey: ["spans", "trace", projectId, traceId, startTimeFrom, startTimeTo],
+      queryFn: () => listSpansByTrace({ data: { projectId, traceId, startTimeFrom, startTimeTo } }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
   )
@@ -25,22 +30,50 @@ const makeSpansByTraceCollection = (traceId: string) =>
 type SpansByTraceCollection = ReturnType<typeof makeSpansByTraceCollection>
 const traceCollectionsCache: Record<string, SpansByTraceCollection> = {}
 
-const getSpansByTraceCollection = (traceId: string): SpansByTraceCollection => {
-  if (!traceCollectionsCache[traceId]) {
-    traceCollectionsCache[traceId] = makeSpansByTraceCollection(traceId)
+const getSpansByTraceCollection = (
+  projectId: string,
+  traceId: string,
+  startTimeFrom: string | undefined,
+  startTimeTo: string | undefined,
+): SpansByTraceCollection => {
+  const cacheKey = `${projectId}:${traceId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
+  if (!traceCollectionsCache[cacheKey]) {
+    traceCollectionsCache[cacheKey] = makeSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo)
   }
-  return traceCollectionsCache[traceId]
+  return traceCollectionsCache[cacheKey]
 }
 
-export const useSpansByTraceCollection = (traceId: string) => {
-  const collection = getSpansByTraceCollection(traceId)
+export const useSpansByTraceCollection = ({
+  projectId,
+  traceId,
+  startTimeFrom,
+  startTimeTo,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
+}) => {
+  const collection = getSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo)
   return useLiveQuery((q) => q.from({ span: collection }))
 }
 
-export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: string }) => {
+export const useSpanDetail = ({
+  projectId,
+  traceId,
+  spanId,
+  startTimeFrom,
+  startTimeTo,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly spanId: string
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
+}) => {
   return useQuery<SpanDetailRecord>({
-    queryKey: ["spanDetail", traceId, spanId],
-    queryFn: () => getSpanDetail({ data: { traceId, spanId } }),
+    queryKey: ["spanDetail", projectId, traceId, spanId, startTimeFrom, startTimeTo],
+    queryFn: () => getSpanDetail({ data: { projectId, traceId, spanId, startTimeFrom, startTimeTo } }),
     staleTime: Infinity, // Span data is immutable once ingested
   })
 }
