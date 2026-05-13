@@ -1,6 +1,6 @@
 import { ClaudeCodeIcon, CopyableText } from "@repo/ui"
-import { useQuery } from "@tanstack/react-query"
 import { eq } from "@tanstack/react-db"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { getLatestWrappedReportForProject } from "../../../domains/cc-wrapped/cc-wrapped.functions.ts"
@@ -71,7 +71,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
           {latestWrapped ? (
             <NavItem
               icon={ClaudeCodeIcon}
-              label="This week's Claude Code Wrapped"
+              label="Claude Code Wrapped"
               to={`/cc-wrapped/${latestWrapped.id}`}
               collapsed={collapsed}
             />
