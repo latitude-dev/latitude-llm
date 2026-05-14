@@ -31,8 +31,37 @@ describe("LatitudeSpanProcessor", () => {
     expect(() => new LatitudeSpanProcessor("", projectSlug)).toThrow("apiKey is required")
   })
 
-  it("should throw if projectSlug is empty", () => {
-    expect(() => new LatitudeSpanProcessor(apiKey, "")).toThrow("projectSlug is required")
+  it("allows an undefined projectSlug (per-capture scoping covers the rest)", () => {
+    expect(() => new LatitudeSpanProcessor(apiKey, undefined)).not.toThrow()
+    expect(() => new LatitudeSpanProcessor(apiKey, "")).not.toThrow()
+  })
+
+  it("stamps `latitude.project` on the span when capture sets projectSlug", () => {
+    const processor = new LatitudeSpanProcessor(apiKey, "fallback-slug")
+    const mockSpan = createMockRootSpan()
+
+    capture(
+      "agent-run",
+      () => {
+        const ctx = context.active()
+        processor.onStart(mockSpan as unknown as Span, ctx)
+
+        expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, "call-summariser")
+      },
+      { projectSlug: "call-summariser" },
+    )
+  })
+
+  it("does not stamp `latitude.project` when no projectSlug is provided anywhere", () => {
+    const processor = new LatitudeSpanProcessor(apiKey, undefined)
+    const mockSpan = createMockRootSpan()
+
+    capture("agent-run", () => {
+      const ctx = context.active()
+      processor.onStart(mockSpan as unknown as Span, ctx)
+
+      expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(ATTRIBUTES.project, expect.anything())
+    })
   })
 
   it("should stamp latitude attributes from context on span start", () => {

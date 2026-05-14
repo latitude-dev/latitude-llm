@@ -17,9 +17,10 @@ const USER_ID = "4ea2a748152ed22e21039407af95bbe77b563ab0ada3836ed3fd3879e835930
 
 const context: TransformContext = {
   organizationId: "org-1",
-  projectId: "proj-1",
   apiKeyId: "key-1",
   ingestedAt: new Date("2026-04-10T12:00:00.000Z"),
+  defaultProjectId: "proj-1",
+  projectIdBySlug: new Map(),
 }
 
 function runTransform(span: OtlpSpan): SpanDetail {
@@ -31,7 +32,8 @@ function runTransform(span: OtlpSpan): SpanDetail {
       },
     ],
   }
-  const [out] = transformOtlpToSpans(req, context)
+  const [out] = transformOtlpToSpans(req, context).spans
+  if (!out) throw new Error("expected at least one span from transform")
   return out
 }
 

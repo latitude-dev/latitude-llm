@@ -1,39 +1,20 @@
-import { ProjectRepository } from "@domain/projects"
-import { isNotFoundError, OrganizationId } from "@domain/shared"
-import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { withTracing } from "@repo/observability"
-import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"
-import { getPostgresClient } from "../clients.ts"
 import type { IngestEnv } from "../types.ts"
 
 /**
- * Resolves the project from the X-Latitude-Project header (project slug).
- * Must run after auth middleware (requires organizationId on context).
+ * Reads the optional `X-Latitude-Project` header and exposes it as the per-request default
+ * project slug.
+ *
+ * Best-effort: this middleware does not validate the slug or hit Postgres. Per-span resolution
+ * (and the OTLP `partial_success` accounting that follows from it) happens in the ingest use
+ * case. When the header is missing, spans must carry a `latitude.project` attribute on the span
+ * or its OTEL resource — otherwise they're rejected with `400` or counted as partial_success
+ * rejections, depending on whether any span in the batch resolved.
  */
 export const projectMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
   const projectSlug = c.req.header("X-Latitude-Project")
-  if (!projectSlug) {
-    return c.json({ error: "X-Latitude-Project header is required" }, 400)
+  if (projectSlug) {
+    c.set("defaultProjectSlug", projectSlug)
   }
-
-  const organizationId = c.get("organizationId")
-  const client = getPostgresClient()
-
-  try {
-    const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        return yield* repo.findBySlug(projectSlug)
-      }).pipe(withPostgres(ProjectRepositoryLive, client, OrganizationId(organizationId)), withTracing),
-    )
-
-    c.set("projectId", project.id as string)
-    await next()
-  } catch (error) {
-    if (isNotFoundError(error)) {
-      return c.json({ error: "Project not found" }, 404)
-    }
-    throw error
-  }
+  await next()
 }
