@@ -69,8 +69,22 @@ export interface BiggestWriteRow {
 }
 
 export interface SessionDurationStatsRow {
+  /**
+   * Total active "Claude time" across all sessions in the window —
+   * computed as the sum of per-session durations, where each session's
+   * duration is the sum of its traces' wall-clock bursts. Excludes
+   * between-turn idle time (user reading output, thinking, typing the
+   * next prompt) so the number reflects work, not session-open time.
+   */
   readonly totalDurationMs: number
+  /**
+   * The single session with the largest summed turn-burst duration.
+   * Same "active time only" semantics as `totalDurationMs` — a session
+   * that stayed open for 6 hours but only had 30 minutes of actual
+   * turns reads as 30 minutes.
+   */
   readonly longestDurationMs: number
+  /** Workspace name of the longest session (by `longestDurationMs`). */
   readonly longestWorkspace: string | null
 }
 
