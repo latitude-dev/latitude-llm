@@ -11,6 +11,8 @@ Install: uv add crewai
 
 import os
 
+import crewai
+import openai
 from crewai import Agent, Crew, Task
 
 from latitude_telemetry import Latitude, capture
@@ -20,12 +22,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["crewai", "openai"],
+    instrumentations={"crewai": crewai, "openai": openai},
     disable_batch=True,
 )
 
 
-@capture("test-crewai-crew", {"tags": ["test"], "session_id": "example"})
+@capture("test-crewai-crew", {"tags": ["python", "test"], "session_id": "example"})
 def test_crewai_crew():
     researcher = Agent(
         role="Researcher",

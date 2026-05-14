@@ -11,6 +11,7 @@ Install: uv add aleph-alpha-client
 
 import os
 
+import aleph_alpha_client
 from aleph_alpha_client import Client, CompletionRequest, Prompt
 
 from latitude_telemetry import Latitude, capture
@@ -19,12 +20,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["aleph_alpha"],
+    instrumentations={"aleph_alpha": aleph_alpha_client},
     disable_batch=True,
 )
 
 
-@capture("test-aleph-alpha-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-aleph-alpha-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_aleph_alpha_completion():
     client = Client(token=os.environ["ALEPH_ALPHA_API_KEY"])
 

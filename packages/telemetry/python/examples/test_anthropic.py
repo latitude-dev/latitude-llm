@@ -11,6 +11,7 @@ Install: uv add anthropic
 
 import os
 
+import anthropic
 from anthropic import Anthropic
 
 from latitude_telemetry import Latitude, capture
@@ -19,12 +20,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["anthropic"],
+    instrumentations={"anthropic": anthropic},
     disable_batch=True,
 )
 
 
-@capture("test-anthropic-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-anthropic-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_anthropic_completion():
     client = Anthropic()
 

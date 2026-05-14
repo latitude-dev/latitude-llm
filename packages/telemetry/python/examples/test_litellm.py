@@ -18,12 +18,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["litellm"],
+    instrumentations={"litellm": litellm},
     disable_batch=True,
 )
 
 
-@capture("test-litellm-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-litellm-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_litellm_completion():
     # LiteLLM can call any provider - using OpenAI here as example
     response = litellm.completion(

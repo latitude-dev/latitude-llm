@@ -71,7 +71,7 @@ export class Latitude {
   private readonly ownsProvider: boolean
 
   constructor(options: LatitudeOptions) {
-    const { apiKey, projectSlug, instrumentations = [], tracerProvider, ...processorOptionsRaw } = options
+    const { apiKey, projectSlug, instrumentations = {}, tracerProvider, ...processorOptionsRaw } = options
 
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")

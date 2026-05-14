@@ -72,7 +72,7 @@
       "entry": ["examples/**/*.ts"],
       "project": ["src/**/*.ts", "examples/**/*.ts"],
       "ignore": ["src/constants/**/*.ts"],
-      "ignoreDependencies": ["@sentry/node", "dd-trace", "together-ai"]
+      "ignoreDependencies": ["@sentry/node", "dd-trace", "langchain", "together-ai"]
     },
     "tools/ai-benchmarks": {
       "entry": ["src/scripts/**/*.ts"],

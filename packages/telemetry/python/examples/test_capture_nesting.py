@@ -16,6 +16,7 @@ Install: uv add openai
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -24,7 +25,7 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
@@ -32,7 +33,7 @@ latitude = Latitude(
 @capture(
     "outer-capture",
     {
-        "tags": ["outer-tag", "shared-tag"],
+        "tags": ["python", "outer-tag", "shared-tag"],
         "session_id": "outer-session",
         "user_id": "outer-user",
         "metadata": {"outer_key": "outer_value", "shared_key": "outer_shared"},
@@ -69,7 +70,7 @@ def outer_function():
 @capture(
     "inner-capture",
     {
-        "tags": ["inner-tag", "shared-tag"],  # shared-tag should be deduplicated
+        "tags": ["python", "inner-tag", "shared-tag"],  # shared-tag should be deduplicated
         "session_id": "inner-session",  # should override outer-session
         "user_id": "inner-user",  # should override outer-user
         "metadata": {"inner_key": "inner_value", "shared_key": "inner_shared"},  # shared_key should be overridden
@@ -108,7 +109,7 @@ def test_nested_capture_with_callback():
             "callback-inner",
             inner_callback,
             {
-                "tags": ["callback-inner"],
+                "tags": ["python", "callback-inner"],
                 "session_id": "callback-inner-session",
                 "user_id": "callback-inner-user",
                 "metadata": {"callback_inner": "value"},
@@ -130,7 +131,7 @@ def test_nested_capture_with_callback():
         "callback-outer",
         outer_callback,
         {
-            "tags": ["callback-outer"],
+            "tags": ["python", "callback-outer"],
             "session_id": "callback-outer-session",
             "user_id": "callback-outer-user",
             "metadata": {"callback_outer": "value"},

@@ -26,13 +26,14 @@ Run from `packages/telemetry/python/`:
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
@@ -42,7 +43,7 @@ CALL_SUMMARISER_SLUG = os.environ.get("LATITUDE_SECONDARY_PROJECT_SLUG", "second
 
 @capture(
     "full-stack-agent-run",
-    {"project_slug": FULL_STACK_AGENT_SLUG, "tags": ["agent:full-stack"]},
+    {"project_slug": FULL_STACK_AGENT_SLUG, "tags": ["python", "agent:full-stack"]},
 )
 def run_full_stack_agent() -> None:
     client = OpenAI()
@@ -56,7 +57,7 @@ def run_full_stack_agent() -> None:
 
 @capture(
     "call-summariser-run",
-    {"project_slug": CALL_SUMMARISER_SLUG, "tags": ["agent:summariser"]},
+    {"project_slug": CALL_SUMMARISER_SLUG, "tags": ["python", "agent:summariser"]},
 )
 def run_call_summariser() -> None:
     client = OpenAI()

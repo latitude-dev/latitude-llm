@@ -9,7 +9,7 @@ from opentelemetry.sdk.trace.export import SpanExporter
 
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
-InstrumentationType = Literal[
+InstrumentationName = Literal[
     "openai",
     "openai-agents",
     "anthropic",
@@ -20,7 +20,30 @@ InstrumentationType = Literal[
     "togetherai",
     "vertexai",
     "aiplatform",
+    "aleph_alpha",
+    "crewai",
+    "dspy",
+    "google_generativeai",
+    "groq",
+    "haystack",
+    "litellm",
+    "mistralai",
+    "ollama",
+    "replicate",
+    "sagemaker",
+    "transformers",
+    "watsonx",
 ]
+
+# Back-compat alias — kept so existing imports of `InstrumentationType` keep
+# working while the canonical name aligns with the TypeScript SDK.
+InstrumentationType = InstrumentationName
+
+# Map of integration name → the LLM SDK module the consumer imports in app code.
+# Example: ``{"openai": openai, "anthropic": anthropic}``. Anything other than a
+# plain dict (including the legacy list-of-strings form) raises ``TypeError`` at
+# register time.
+InstrumentationsInput = dict[InstrumentationName, object]
 
 
 class SmartFilterOptions(TypedDict, total=False):
@@ -47,7 +70,7 @@ class LatitudeOptions(SmartFilterOptions, total=False):
     # forwards it as the `X-Latitude-Project` header so spans without a per-span override
     # land in this project.
     project_slug: NotRequired[str]
-    instrumentations: list[InstrumentationType]
+    instrumentations: InstrumentationsInput
     disable_redact: bool
     redact: RedactSpanProcessorOptions
     disable_batch: bool

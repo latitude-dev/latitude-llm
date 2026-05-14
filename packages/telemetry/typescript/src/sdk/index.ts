@@ -1,6 +1,6 @@
 export { capture } from "./context.ts"
 export { initLatitude, Latitude } from "./init.ts"
-export type { InstrumentationType } from "./instrumentations.ts"
+export type { InstrumentationName, InstrumentationsInput } from "./instrumentations.ts"
 export { registerLatitudeInstrumentations } from "./instrumentations.ts"
 export { LatitudeSpanProcessor } from "./processor.ts"
 export {
