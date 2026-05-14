@@ -751,13 +751,19 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   argMax(workspace, session_duration_s) AS longest_workspace
                 FROM (
                   SELECT
-                    session_id,
+                    sess_id,
                     sum(trace_duration_s) AS session_duration_s,
                     any(workspace)        AS workspace
                   FROM (
+                    -- Aliases are deliberately NOT named after the underlying
+                    -- columns (e.g. \`any(session_id) AS sess_id\` rather than
+                    -- \`… AS session_id\`). ClickHouse's analyser resolves
+                    -- the WHERE clause against SELECT-list aliases and would
+                    -- otherwise complain "Aggregate function any(session_id)
+                    -- found in WHERE" when it sees \`AND session_id != ''\`.
                     SELECT
                       trace_id,
-                      any(session_id)                                    AS session_id,
+                      any(session_id)                                    AS sess_id,
                       any(metadata['workspace.name'])                    AS workspace,
                       dateDiff('second', min(start_time), max(end_time)) AS trace_duration_s
                     FROM spans
@@ -766,7 +772,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                       AND trace_id != ''
                     GROUP BY trace_id
                   )
-                  GROUP BY session_id
+                  GROUP BY sess_id
                 )
               `,
               query_params: projectWindowParams(params),
