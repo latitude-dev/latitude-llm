@@ -51,43 +51,6 @@ export function createGithubActionsOidc(
     url: "https://token.actions.githubusercontent.com",
   })
 
-  const legacyAssumeRolePolicy = pulumi.interpolate`{
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Principal": {
-          "Federated": "${oidcProvider.arn}"
-        },
-        "Action": "sts:AssumeRoleWithWebIdentity",
-        "Condition": {
-          "StringEquals": {
-            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-          },
-          "StringLike": {
-            "token.actions.githubusercontent.com:sub": "repo:${githubOwner}/${githubRepo}:*"
-          }
-        }
-      }
-    ]
-  }`
-
-  // Keep the original role in state until deployments have been verified on the
-  // environment-scoped OIDC role below. Do not delete this alongside the legacy
-  // Terraform IAM user cutover.
-  const legacyDeployRole = new aws.iam.Role(`${name}-github-deploy-role`, {
-    assumeRolePolicy: legacyAssumeRolePolicy,
-    tags: {
-      Name: `${name}-github-deploy-role`,
-      Environment: environment,
-    },
-  })
-
-  new aws.iam.RolePolicy(`${name}-deploy-policy`, {
-    role: legacyDeployRole.name,
-    policy: createDeployPolicy(environment),
-  })
-
   const assumeRolePolicy = pulumi.interpolate`{
     "Version": "2012-10-17",
     "Statement": [
