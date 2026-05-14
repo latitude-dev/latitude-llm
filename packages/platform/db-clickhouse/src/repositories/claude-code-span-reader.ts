@@ -80,14 +80,50 @@ const filePathDispositionSql = (workspacePathExpr: string, filePathExpr: string)
   )
 `
 
-/** SQL predicate selecting only file_paths that should count toward LOC stats. */
-const workspaceFilePathPredicate = (workspacePathExpr: string, filePathExpr: string): string => `
+/**
+ * Lenient predicate — keeps anything that represents "real iteration this
+ * week" regardless of which workspace it happened in. Used for the
+ * *headline* LOC / file-touch counters that are presented at the project
+ * level ("Lines written: 14,832"). Includes plan-mode files because
+ * iterating on a plan is genuine writing work.
+ *
+ *   workspace files     ✓ count
+ *   .claude/plans/*.md  ✓ count (real iteration)
+ *   other .claude/**    ✗ excluded (config / history noise)
+ *   external scratch    ✗ excluded (not part of this project's week)
+ *
+ * `file_path = ''` is allowed defensively — the path-aware tools always
+ * carry a `file_path`, but if a malformed input ever lands the row's line
+ * counts still aggregate.
+ */
+const loCountablePathPredicate = (workspacePathExpr: string, filePathExpr: string): string => `
   (
     ${filePathExpr} = ''
+    OR match(${filePathExpr}, '/\\\\.claude/plans/[^/]+\\\\.md$')
     OR (
       positionUTF8(${filePathExpr}, '/.claude/') = 0
-      AND (${workspacePathExpr} = '' OR startsWith(${filePathExpr}, ${workspacePathExpr}))
+      AND ${workspacePathExpr} != ''
+      AND startsWith(${filePathExpr}, ${workspacePathExpr})
     )
+  )
+`
+
+/**
+ * Strict predicate — keeps only file_paths that sit inside the span's own
+ * `workspace.path`. Used for the *workspace-specific* views (top files
+ * per workspace, "biggest write" display, "mostly X" dominant-tool
+ * inference). Plan files are explicitly excluded — they're not part of
+ * any project's source tree.
+ *
+ * Requires `workspace.path` to be present; an empty workspace path makes
+ * the span ambiguous as to "what counts as inside" and we err on the
+ * side of excluding rather than allowing.
+ */
+const workspaceStrictPathPredicate = (workspacePathExpr: string, filePathExpr: string): string => `
+  (
+    positionUTF8(${filePathExpr}, '/.claude/') = 0
+    AND ${workspacePathExpr} != ''
+    AND startsWith(${filePathExpr}, ${workspacePathExpr})
   )
 `
 
@@ -317,7 +353,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     JSONExtractString(tool_input, 'file_path'),
                     tool_name IN (${FILE_PATH_TOOLS_SQL})
                     AND JSONExtractString(tool_input, 'file_path') != ''
-                    AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
+                    AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                   )                                                                                   AS files_touched,
                   (SELECT count() FROM bash_segments)                                                 AS commands_run,
                   countDistinctIf(metadata['workspace.name'], metadata['workspace.name'] != '')       AS workspaces,
@@ -377,40 +413,41 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
             // to "lines of code" when measured by '\n'. We treat the final
             // line as "complete enough" for the aggregate.
             //
-            // Each per-tool-name aggregation also gates on
-            // `workspaceFilePathPredicate` so edits to `.claude/**` and
-            // out-of-workspace scratch files don't inflate the headline
-            // "lines written" / "lines read" numbers.
+            // These are the *headline* LOC counters — they include
+            // plan-mode iterations (`~/.claude/plans/*.md` edits) because
+            // those are real lines you wrote this week, while still
+            // excluding `.claude/` config noise and out-of-workspace
+            // scratch.
             const result = await client.query({
               query: `
                 SELECT
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'content'),    '\\n'),
                         tool_name = 'Write'
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS write_lines,
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'new_string'), '\\n'),
                         tool_name IN ('Edit', 'NotebookEdit')
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS edit_added,
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'old_string'), '\\n'),
                         tool_name IN ('Edit', 'NotebookEdit')
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS edit_removed,
                   sumIf(arraySum(arrayMap(
                           x -> countSubstrings(JSONExtractString(x, 'new_string'), '\\n'),
                           JSONExtractArrayRaw(tool_input, 'edits')
                         )), tool_name = 'MultiEdit'
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS multiedit_added,
                   sumIf(arraySum(arrayMap(
                           x -> countSubstrings(JSONExtractString(x, 'old_string'), '\\n'),
                           JSONExtractArrayRaw(tool_input, 'edits')
                         )), tool_name = 'MultiEdit'
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS multiedit_removed,
                   sumIf(countSubstrings(tool_output, '\\n'),
                         tool_name IN ('Read', 'NotebookRead')
-                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                        AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
                                                                                        AS read_lines
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
@@ -445,11 +482,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                 WHERE ${PROJECT_WINDOW_FILTER}
                   AND tool_name = 'Write'
                   AND JSONExtractString(tool_input, 'file_path') != ''
-                  AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
-                  AND (
-                    metadata['workspace.path'] = ''
-                    OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
-                  )
+                  AND ${workspaceStrictPathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                 ORDER BY lines DESC
                 LIMIT 1
               `,
@@ -598,11 +631,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                 WHERE ${PROJECT_WINDOW_FILTER}
                   AND tool_name IN (${FILE_PATH_TOOLS_SQL})
                   AND JSONExtractString(tool_input, 'file_path') != ''
-                  AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
-                  AND (
-                    metadata['workspace.path'] = ''
-                    OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
-                  )
+                  AND ${workspaceStrictPathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                 GROUP BY path
                 ORDER BY touches DESC
                 LIMIT 5
@@ -756,11 +785,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     AND metadata['workspace.name'] = {workspaceName:String}
                     AND tool_name IN ${PATH_AWARE_TOOLS_SQL}
                     AND JSONExtractString(tool_input, 'file_path') != ''
-                    AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
-                    AND (
-                      metadata['workspace.path'] = ''
-                      OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
-                    )
+                    AND ${workspaceStrictPathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                   GROUP BY path
                   ORDER BY touches DESC
                   LIMIT 3
@@ -797,7 +822,23 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   (SELECT topKIf(3)(metadata['git.branch'], metadata['git.branch'] != '') FROM spans
                     WHERE ${PROJECT_WINDOW_FILTER}
                       AND metadata['workspace.name'] = {workspaceName:String}) AS top_branches,
-                  (SELECT topKIf(1)(tool_name, operation = 'execute_tool' AND tool_name != '') FROM spans
+                  -- "Mostly X" descriptor. Path-aware tools (Read/Edit/Write/…)
+                  -- only count when their file_path is inside the workspace
+                  -- path — an Edit targeting a sibling project shouldn't make
+                  -- you look like an "Edit-mostly" user *in this workspace*.
+                  -- Non-path-aware tools (Bash/Grep/Glob/TaskCreate/…) carry
+                  -- no file_path and count as-is.
+                  (SELECT topKIf(1)(tool_name,
+                    operation = 'execute_tool'
+                    AND tool_name != ''
+                    AND (
+                      tool_name NOT IN ${PATH_AWARE_TOOLS_SQL}
+                      OR (
+                        JSONExtractString(tool_input, 'file_path') != ''
+                        AND ${workspaceStrictPathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
+                      )
+                    )
+                  ) FROM spans
                     WHERE ${PROJECT_WINDOW_FILTER}
                       AND metadata['workspace.name'] = {workspaceName:String}) AS dominant_tool,
                   (SELECT groupArray(path)          FROM files) AS top_file_paths,
