@@ -72,9 +72,10 @@ const dispatchValidIngest = async (
     inlinePayload: null,
     contentType: "application/json",
     organizationId,
-    projectId,
     apiKeyId: `api-key-${organizationId}`,
     ingestedAt: "2026-03-18T10:00:00.000Z",
+    defaultProjectId: projectId,
+    projectIdBySlug: {},
   })
 }
 
@@ -165,9 +166,10 @@ describe("createSpanIngestionWorker", () => {
       inlinePayload: null,
       contentType: "application/json",
       organizationId: "org_span_ingestion_test",
-      projectId: "proj_span_ingestion_test",
       apiKeyId: "api_key_span_ingestion_test",
       ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_span_ingestion_test",
+      projectIdBySlug: {},
     })
 
     const rows = await Effect.runPromise(
@@ -205,6 +207,54 @@ describe("createSpanIngestionWorker", () => {
     })
   })
 
+  it("falls back to legacy `projectId` field when `defaultProjectId` and `projectIdBySlug` are missing", async () => {
+    // Covers in-flight queue messages enqueued before the per-span scoping refactor:
+    // they carried `projectId` at the batch level and had no `projectIdBySlug`. The
+    // worker treats the legacy `projectId` as the default so the queue drains cleanly
+    // during rollout. See span-ingestion.ts:60-65.
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const fileKey = "span-ingestion/test-legacy-shape.json"
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_legacy_shape_test",
+      apiKeyId: "api_key_legacy_shape_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+      projectId: "proj_legacy_shape_test",
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{ project_id: string }>(
+        ch.client,
+        "SELECT project_id FROM spans WHERE organization_id = {organizationId:String}",
+        { organizationId: "org_legacy_shape_test" },
+      ),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.project_id).toBe("proj_legacy_shape_test")
+
+    expect(pub.published).toHaveLength(1)
+    expect(pub.published[0]).toMatchObject({
+      name: "TracesIngested",
+      payload: { projectId: "proj_legacy_shape_test" },
+    })
+  })
+
   it("returns early when neither inlinePayload nor fileKey is provided", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
@@ -224,9 +274,10 @@ describe("createSpanIngestionWorker", () => {
       inlinePayload: null,
       contentType: "application/json",
       organizationId: "org_no_payload_test",
-      projectId: "proj_no_payload_test",
       apiKeyId: "api_key_no_payload_test",
       ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_no_payload_test",
+      projectIdBySlug: {},
     })
 
     const [count] = await Effect.runPromise(
@@ -264,9 +315,10 @@ describe("createSpanIngestionWorker", () => {
         inlinePayload: null,
         contentType: "application/json",
         organizationId: "org_span_ingestion_test",
-        projectId: "proj_span_ingestion_test",
         apiKeyId: "api_key_span_ingestion_test",
         ingestedAt: "2026-03-18T10:00:00.000Z",
+        defaultProjectId: "proj_span_ingestion_test",
+        projectIdBySlug: {},
       })
 
       const [count] = await Effect.runPromise(
@@ -305,9 +357,10 @@ describe("createSpanIngestionWorker", () => {
       inlinePayload: null,
       contentType: "application/json",
       organizationId: "org_vercel_wrapper_test",
-      projectId: "proj_vercel_wrapper_test",
       apiKeyId: "api_key_vercel_wrapper_test",
       ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_vercel_wrapper_test",
+      projectIdBySlug: {},
     })
 
     const rows = await Effect.runPromise(

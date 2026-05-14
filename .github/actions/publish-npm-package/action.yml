@@ -53,7 +53,6 @@ runs:
       with:
         node-version: 25
         cache: pnpm
-        registry-url: https://registry.npmjs.org
 
     - name: Install dependencies
       if: steps.check_version.outputs.should_publish == 'true'
@@ -84,6 +83,8 @@ runs:
       if: steps.check_version.outputs.should_publish == 'true'
       shell: bash
       run: pnpm publish --access public --provenance --filter ${{ inputs.pnpm_filter }} --no-git-checks
+      env:
+        NODE_AUTH_TOKEN: ""
 
     - name: Extract changelog
       if: steps.check_version.outputs.should_publish == 'true'

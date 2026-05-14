@@ -1,6 +1,6 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
+import { OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -52,11 +52,17 @@ export const createSpanIngestionWorker = ({
     {
       ingest: (wire) => {
         const organizationId = wire.organizationId
-        const projectId = wire.projectId
-        if (!organizationId || !projectId) {
-          logger.error("Span ingestion: missing organizationId or projectId in message")
+        if (!organizationId) {
+          logger.error("Span ingestion: missing organizationId in message")
           return Effect.void
         }
+
+        // In-flight queue messages enqueued before this PR carried `projectId` at the batch
+        // level and no `projectIdBySlug`. Treat them as a single-project ingest using that
+        // legacy `projectId` as the default — keeps the queue draining cleanly during rollout.
+        const legacy = wire as unknown as { projectId?: string }
+        const defaultProjectId = wire.defaultProjectId ?? legacy.projectId ?? null
+        const projectIdBySlug = wire.projectIdBySlug ?? {}
 
         const processEffect = Effect.gen(function* () {
           const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
@@ -65,12 +71,13 @@ export const createSpanIngestionWorker = ({
 
           yield* processSpans({
             organizationId: OrganizationId(organizationId),
-            projectId: ProjectId(projectId),
             apiKeyId: wire.apiKeyId,
             contentType: wire.contentType || "application/json",
             ingestedAt: wire.ingestedAt ? new Date(wire.ingestedAt) : new Date(),
             inlinePayload: wire.inlinePayload,
             fileKey: wire.fileKey,
+            defaultProjectId,
+            projectIdBySlug,
             ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
             ...(orgPlan
               ? {

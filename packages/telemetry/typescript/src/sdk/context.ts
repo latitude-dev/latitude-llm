@@ -20,6 +20,7 @@ type LatitudeContextData = {
   metadata: Record<string, unknown> | undefined
   sessionId: string | undefined
   userId: string | undefined
+  projectSlug: string | undefined
 }
 
 export function getLatitudeContext(ctx: Context): LatitudeContextData | undefined {
@@ -49,6 +50,7 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     metadata: { ...existingData?.metadata, ...options.metadata },
     sessionId: options.sessionId ?? existingData?.sessionId,
     userId: options.userId ?? existingData?.userId,
+    projectSlug: options.projectSlug ?? existingData?.projectSlug,
   }
 
   const newContext = parentContext.setValue(LATITUDE_CONTEXT_KEY, mergedData)

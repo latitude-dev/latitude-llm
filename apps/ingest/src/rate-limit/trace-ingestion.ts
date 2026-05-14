@@ -34,7 +34,6 @@ export interface TraceIngestionRateLimitRedis {
 interface CheckTraceIngestionRateLimitInput {
   readonly redis: TraceIngestionRateLimitRedis
   readonly organizationId: string
-  readonly projectId: string
   readonly apiKeyId: string
   readonly payloadBytes: number
   readonly config?: TraceIngestionRateLimitConfig
@@ -83,7 +82,7 @@ const normalizeRetryAfterSeconds = (ttl: number, fallback: number): number => {
 const buildRateLimitKey = (
   input: Omit<CheckTraceIngestionRateLimitInput, "redis" | "payloadBytes" | "config">,
 ): string => {
-  return `ratelimit:ingest:traces:${input.organizationId}:${input.projectId}:${input.apiKeyId}`
+  return `ratelimit:ingest:traces:${input.organizationId}:${input.apiKeyId}`
 }
 
 export const checkTraceIngestionRateLimit = async (

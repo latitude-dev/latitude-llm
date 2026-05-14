@@ -73,9 +73,10 @@ const TOOL_DEFS = [
 
 const CONTEXT: TransformContext = {
   organizationId: "org_test",
-  projectId: "proj_test",
   apiKeyId: "key_test",
   ingestedAt: new Date("2026-03-16T12:00:00Z"),
+  defaultProjectId: "proj_test",
+  projectIdBySlug: new Map(),
 }
 
 // ─── Span builders (Vercel AI SDK convention) ─────────────
@@ -467,7 +468,7 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
   }
 
   beforeAll(() => {
-    spans = transformOtlpToSpans(buildTrace(), CONTEXT)
+    spans = transformOtlpToSpans(buildTrace(), CONTEXT).spans as typeof spans
   })
 
   // ── Trace structure (Vercel dual-span pattern) ────────
@@ -927,7 +928,7 @@ function buildDuplicatedOuterUsageTrace(): OtlpExportTraceServiceRequest {
 
 describe("Vercel AI SDK duplicate usage normalization", () => {
   it("preserves raw outer wrapper usage before ingestion-time sanitization", () => {
-    const spans = transformOtlpToSpans(buildDuplicatedOuterUsageTrace(), CONTEXT)
+    const { spans } = transformOtlpToSpans(buildDuplicatedOuterUsageTrace(), CONTEXT)
     const outer = spans.find((span) => span.spanId === "cccccccccccccccc")
     const inner = spans.find((span) => span.spanId === "dddddddddddddddd")
 
@@ -991,7 +992,7 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
     ["ai.generateObject"],
   ])("%s surfaces ai.response.object as assistant output", (operationId) => {
     const obj = { city: "Barcelona", temperature: 22 }
-    const spans = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
+    const { spans } = transformOtlpToSpans(buildObjectSpan(operationId, obj), CONTEXT)
     const span = spans[0]
     expect(span).toBeDefined()
 
@@ -1008,7 +1009,7 @@ describe("Vercel AI SDK streamObject / generateObject output", () => {
 
 describe("Vercel AI SDK top-level prompt fallback", () => {
   it("treats ai.prompt.prompt as a user input message when ai.prompt.messages is absent", () => {
-    const spans = transformOtlpToSpans(
+    const { spans } = transformOtlpToSpans(
       {
         resourceSpans: [
           {

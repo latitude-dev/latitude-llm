@@ -4,4 +4,5 @@ export const ATTRIBUTES = {
   metadata: "latitude.metadata",
   sessionId: "session.id",
   userId: "user.id",
+  project: "latitude.project",
 } as const
