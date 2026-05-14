@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { appendTrackingParams, pickTrackingParams } from "../../../../lib/analytics/gtm.ts"
+import { pickTrackingParams } from "../../../../lib/analytics/gtm.ts"
+import { buildOAuthCallbackUrls } from "../../../../lib/auth/oauth-redirects.ts"
 import { getBetterAuth } from "../../../../server/clients.ts"
 
 const SUPPORTED_PROVIDERS = new Set(["google", "github"])
@@ -21,12 +22,11 @@ export const Route = createFileRoute("/api/auth/$provider/start")({
 
         const url = new URL(request.url)
         const tracking = pickTrackingParams(url.searchParams)
-        const redirectParam = url.searchParams.get("redirect") ?? "/"
-        const safeRedirect = redirectParam.startsWith("/") ? redirectParam : "/"
-
-        const callbackURL = appendTrackingParams(safeRedirect, tracking)
-        const newUserCallbackURL = appendTrackingParams("/welcome", { ...tracking, signup: provider })
-        const errorCallbackURL = appendTrackingParams("/login", tracking)
+        const { callbackURL, newUserCallbackURL, errorCallbackURL } = buildOAuthCallbackUrls({
+          provider: provider as "google" | "github",
+          redirect: url.searchParams.get("redirect"),
+          tracking,
+        })
 
         const apiResponse = await getBetterAuth().api.signInSocial({
           body: {
