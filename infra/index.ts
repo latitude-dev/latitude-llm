@@ -9,6 +9,7 @@ import { createRds } from "./lib/rds.ts"
 import { createRedis } from "./lib/redis.ts"
 import { createS3 } from "./lib/s3.ts"
 import { createApplicationSecrets } from "./lib/secrets.ts"
+import { createSecurityCompliance } from "./lib/security-compliance.ts"
 import { createSecurityGroups } from "./lib/security-groups.ts"
 import { createVpc } from "./lib/vpc.ts"
 import { createVpcEndpoints } from "./lib/vpc-endpoints.ts"
@@ -76,6 +77,8 @@ const bastion = createBastion(name, envConfig, vpc.vpc, vpc.publicSubnets, secur
 
 const s3 = createS3(name, envConfig)
 
+const securityCompliance = environment === "staging" ? createSecurityCompliance(name, envConfig) : undefined
+
 const appSecrets = createApplicationSecrets(name, environment)
 
 const ecs = createEcs(
@@ -132,6 +135,15 @@ export const outputs = {
   githubActionsRoleArn: githubActions.deployRole.arn,
 
   bastionInstanceId: bastion.instance.id,
+
+  ...(securityCompliance
+    ? {
+        awsConfigRecorderName: securityCompliance.configRecorder.name,
+        cloudTrailName: securityCompliance.cloudTrail.name,
+        cloudTrailLogGroupName: securityCompliance.cloudTrailLogGroup.name,
+        guardDutyDetectorId: securityCompliance.guardDutyDetector.id,
+      }
+    : {}),
 
   domains: envConfig.domains,
 
