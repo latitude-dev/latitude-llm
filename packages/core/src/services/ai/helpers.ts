@@ -52,6 +52,9 @@ function createAmazonBedrockProvider(
     createAmazonBedrock({
       fetch: instrumentedFetch(),
       region: config.region,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+      sessionToken: config.sessionToken,
     }),
   )
 }
