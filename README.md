@@ -13,11 +13,6 @@
   <a href="https://x.com/trylatitude">X</a>
 </p>
 
-> [!WARNING]
-> You are viewing the **Latitude v2 Alpha** branch (`main`). This branch is in **active development** and is **not ready for production use**. APIs, features, and data formats may change without notice.
->
-> For production use, please use the stable release on the [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1) branch.
-
 <p align="center">
   <img src="docs/assets/readme/gif-ui.gif?raw=true" alt="Demo of the Latitude UI showing LLM observability, issue tracking, and evals" width="800"/>
 </p>
