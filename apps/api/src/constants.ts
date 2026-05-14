@@ -20,4 +20,8 @@ export const MCP_INFO = {
     { src: "https://framerusercontent.com/images/fPQsqC1Gx3CiQElnbBSmbQVYcA.png", theme: "light" },
     { src: "https://framerusercontent.com/images/l5c1DNVxQ3iAvTDihvg9pFw2l2k.png", theme: "dark" },
   ],
-} as McpInfo
+  instructions:
+    "All Latitude MCP methods have descriptions and input/output schemas. For any doubt visit the Latitude documentation: https://docs.latitude.so/llms.txt",
+} as McpInfo & {
+  instructions: string
+}

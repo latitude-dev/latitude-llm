@@ -90,6 +90,47 @@ export const OAuthKeyRepositoryLive = Layer.effect(
         return rows.length > 0
       }),
 
+    findByPair: (input) =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        const rows = yield* sqlClient.query((db, organizationId) =>
+          db
+            .select({
+              clientId: oauthApplications.clientId,
+              clientName: oauthApplications.name,
+              clientIcon: oauthApplications.icon,
+              disabled: oauthApplications.disabled,
+              userId: oauthAccessTokens.userId,
+              userName: users.name,
+              userEmail: users.email,
+              lastActivityAt: max(oauthAccessTokens.updatedAt),
+              connectedAt: max(oauthAccessTokens.createdAt),
+            })
+            .from(oauthApplications)
+            .innerJoin(oauthAccessTokens, eq(oauthAccessTokens.clientId, oauthApplications.clientId))
+            .innerJoin(users, eq(users.id, oauthAccessTokens.userId))
+            .where(
+              and(
+                eq(oauthApplications.organizationId, organizationId),
+                eq(oauthApplications.clientId, input.clientId),
+                eq(oauthAccessTokens.userId, input.userId),
+              ),
+            )
+            .groupBy(
+              oauthApplications.clientId,
+              oauthApplications.name,
+              oauthApplications.icon,
+              oauthApplications.disabled,
+              oauthAccessTokens.userId,
+              users.name,
+              users.email,
+            )
+            .limit(1),
+        )
+        const row = rows[0]
+        return row ? toDomain(row) : null
+      }),
+
     deleteTokensForPair: (input) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
