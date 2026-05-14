@@ -7,7 +7,6 @@ import {
   markNotificationSeen,
   type NotificationRecord,
 } from "../../../../domains/notifications/notifications.functions.ts"
-import { useNotificationFeed } from "./notification-feed-context.tsx"
 import { LIST_QUERY_KEY, UNREAD_QUERY_KEY } from "./notification-query-keys.ts"
 
 const HOVER_MARK_SEEN_DEBOUNCE_MS = 400
@@ -28,22 +27,9 @@ interface BaseNotificationProps {
   readonly children?: ReactNode
 }
 
-/**
- * A notification is "unseen for this popover open" when either:
- *   - it has never been seen (`seenAt === undefined`), or
- *   - its `seenAt` is newer than the timestamp captured when the popover
- *     opened (i.e. it was just marked seen during this open — by hover, click,
- *     or "Mark all as read" — but should still visually read as unseen until
- *     the user closes & reopens the popover).
- *
- * Without an active feed context (`openedAt === null`) we treat everything
- * as seen — there's no "this open" to compare against.
- */
-function computeIsUnseen(seenAt: Date | undefined, openedAt: Date | null): boolean {
-  if (openedAt === null) return false
-  if (seenAt === undefined) return true
-  return seenAt > openedAt
-}
+// "Unseen" is just "not yet seen" — once the row is optimistically marked seen
+// (on hover, click, or via "Mark all as read"), the visual state updates
+// immediately so the user gets feedback that the action took effect.
 
 type ListPage = {
   readonly items: readonly NotificationRecord[]
@@ -141,8 +127,7 @@ function BaseNotificationContent({
   description,
   children,
 }: Omit<BaseNotificationProps, "url" | "notificationId">) {
-  const { openedAt } = useNotificationFeed()
-  const isUnseen = computeIsUnseen(seenAt, openedAt)
+  const isUnseen = seenAt === undefined
 
   return (
     <>

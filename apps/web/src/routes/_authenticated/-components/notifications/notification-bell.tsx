@@ -8,7 +8,6 @@ import {
   listNotifications,
   markAllNotificationsSeen,
 } from "../../../../domains/notifications/notifications.functions.ts"
-import { NotificationFeedProvider } from "./notification-feed-context.tsx"
 import { NotificationItem } from "./notification-item.tsx"
 import { LIST_QUERY_KEY, PAGE_SIZE, UNREAD_QUERY_KEY } from "./notification-query-keys.ts"
 
@@ -33,7 +32,6 @@ export function NotificationBell() {
 function NotificationBellEnabled() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [openedAt, setOpenedAt] = useState<Date | null>(null)
 
   const { data: unreadData } = useQuery({
     queryKey: UNREAD_QUERY_KEY,
@@ -57,17 +55,11 @@ function NotificationBellEnabled() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (next) {
-          // Snapshot when this open started so the feed can decide which rows
-          // to render as "unseen for this open" vs "seen on a previous open".
-          // Reset every open so the highlight state is fresh each time.
-          //
-          // Opening NO LONGER marks anything seen — per-item hover handles that
+        if (!next) {
+          // Discard cached pages so reopening starts fresh from the top.
+          // Opening doesn't mark anything seen — per-item hover handles that
           // (see base-notification.tsx). The header's "Mark all as read"
           // button is the explicit bulk action.
-          setOpenedAt(new Date())
-        } else {
-          // Discard cached pages so reopening starts fresh from the top.
           queryClient.removeQueries({ queryKey: LIST_QUERY_KEY })
         }
       }}
@@ -94,10 +86,10 @@ function NotificationBellEnabled() {
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="w-[360px] p-0">
         {open ? (
-          <NotificationFeedProvider value={{ openedAt }}>
+          <>
             <NotificationHeader unread={unread} onMarkAll={() => markSeen.mutate()} pending={markSeen.isPending} />
             <NotificationFeed />
-          </NotificationFeedProvider>
+          </>
         ) : null}
       </PopoverContent>
     </Popover>
