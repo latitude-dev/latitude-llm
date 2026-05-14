@@ -335,6 +335,27 @@ describe("extractBashTokens + classifyToolMixRow (end-to-end on raw segments)", 
     // `echo` → plumbing → excluded.
     expect(classify("\\\n  echo something")).toBe("excluded")
   })
+
+  it("bash block-start keywords (`for`/`while`/`if`/`case`) classify as excluded", () => {
+    // After dropping `;` from the chain splitter, a loop or conditional
+    // is a single segment whose prefix is the block-start keyword.
+    // `for x in *; do something; done` → prefix `for`. None of these
+    // are commands the user "ran" — they're bash reserved words.
+    expect(classify("for x in *; do echo $x; done")).toBe("excluded")
+    expect(classify("while read line; do something; done < file")).toBe("excluded")
+    expect(classify("if [ -z $x ]; then echo empty; fi")).toBe("excluded")
+    expect(classify("case $x in foo) bar;; esac")).toBe("excluded")
+  })
+
+  it("after-`;` keywords (`do`/`then`/`fi`) also classify as excluded if they ever surface as a prefix", () => {
+    // Defensive: covers the edge case where some other split lands a
+    // keyword at the start of a segment. With `;` no longer in the
+    // splitter this is rare in practice, but the plumbing entry keeps
+    // the contract clean.
+    for (const kw of ["do", "done", "then", "else", "elif", "fi", "esac", "in"]) {
+      expect(classify(`${kw} something`)).toBe("excluded")
+    }
+  })
 })
 
 describe("classifyToolMixRow — Bash sub-classification", () => {

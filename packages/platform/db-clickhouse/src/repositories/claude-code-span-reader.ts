@@ -46,16 +46,27 @@ const FILE_PATH_TOOLS = ["Read", "Edit", "Write", "NotebookEdit", "MultiEdit"] a
 const FILE_PATH_TOOLS_SQL = FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")
 const PATH_AWARE_TOOLS_SQL = `('Edit','MultiEdit','NotebookEdit','Write','Read','NotebookRead')`
 
-// Splits a Bash command string into its `&&` / `||` / `;` / `|`-separated
-// segments. Order in the alternation matters — `||` and `&&` are tried
-// before the single `|` so the two-char operators win at each position
-// (RE2 alternation is greedy left-to-right per position).
+// Splits a Bash command string into its `&&` / `||`-separated segments.
 //
-// Wraps each operator in optional whitespace so the resulting segments
-// come back already trimmed. Subshells (`$(…)`, backticks) are *not*
-// handled — rare enough that the regex approach is good enough and
-// proper handling needs a tokeniser.
-const BASH_SEGMENT_REGEX = "\\\\s*(?:&&|\\\\|\\\\||;|\\\\|)\\\\s*"
+// We deliberately do NOT split on `|` or `;`:
+//   - `|` appears constantly inside grep / sed regex alternations
+//     (`grep "foo\|bar"`), shell pipes for plumbing (`… | tail`), and
+//     quoted strings. Splitting on it produced junk segments like
+//     `api[_-]key\` and `BUILD)"` from quote-broken content.
+//   - `;` appears inside SQL strings (`psql -c "INSERT …; UPDATE …;"`)
+//     and shell loop bodies (`for x in *; do …; done`). Splitting on it
+//     produced segments starting with `set(evals_sched)` or `do`.
+//
+// Cost: piped-after commands and bare-`;`-chained commands don't get
+// their own segment. In practice the RHS of a pipe is almost always a
+// plumbing tool (`| tail`, `| grep`, `| wc`) we already exclude, and
+// Claude rarely uses bare `;` for chaining (it uses `&&`). So the net
+// change to `commandsRun` and bucket counts is small, and the
+// junk-token elimination is worth far more.
+//
+// Subshells (`$(…)`, backticks) are still not handled — proper handling
+// would need a real shell tokeniser, not worth it.
+const BASH_SEGMENT_REGEX = "\\\\s*(?:&&|\\\\|\\\\|)\\\\s*"
 
 // Path classifier used by every query that has to decide whether a file
 // touch counts. Mirrors the TS `classifyToolMixRow` rules in
@@ -131,15 +142,20 @@ const workspaceStrictPathPredicate = (workspacePathExpr: string, filePathExpr: s
 const GIT_WRITE_SUBCOMMANDS_SQL = `('commit','push','merge','rebase','tag','revert','cherry-pick')`
 
 /**
- * Pure output-shaping / orchestration commands. Excluded from segment
+ * Tokens that look like commands but aren't. Excluded from segment
  * counting so they don't pollute `commandsRun` or dominate the
- * top-commands list. Mirrors `BASH_PLUMBING_PREFIXES` in `build-report.ts`
- * — these two lists must stay in lockstep.
+ * top-commands list. Three groups: output shapers, navigation, and bash
+ * control-flow keywords. Mirrors `BASH_PLUMBING_PREFIXES` in
+ * `build-report.ts` — these two lists must stay in lockstep.
  */
 const BASH_PLUMBING_PREFIXES_SQL = `(
+  -- output shapers (almost always after a pipe)
   'head','tail','cat','less','more',
   'echo','printf','sed','awk','wc','sort','uniq','cut','tr','xargs','tee',
-  'cd','pwd','pushd','popd','clear','exit','open','claude'
+  -- navigation / shell admin
+  'cd','pwd','pushd','popd','clear','exit','open','claude',
+  -- bash control-flow keywords (loop/conditional bodies)
+  'do','done','if','then','else','elif','fi','for','while','until','case','esac','in','select','function'
 )`
 
 /**
