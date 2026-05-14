@@ -1,6 +1,5 @@
 import { wrappedReportNotificationPayloadSchema } from "@domain/notifications"
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
 
@@ -13,10 +12,11 @@ import { BaseNotification } from "../base-notification.tsx"
 export function WrappedReportNotification({ notification }: { readonly notification: NotificationRecord }) {
   const parsed = wrappedReportNotificationPayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+  const createdAt = new Date(notification.createdAt)
 
   if (!parsed.success) {
     return (
-      <BaseNotification seenAt={seenAt}>
+      <BaseNotification notificationId={notification.id} seenAt={seenAt} createdAt={createdAt}>
         <Text.H6 color="foregroundMuted">Unsupported notification</Text.H6>
       </BaseNotification>
     )
@@ -25,17 +25,16 @@ export function WrappedReportNotification({ notification }: { readonly notificat
   const { projectName, link } = parsed.data
   const title = `Your Claude Code Wrapped for ${projectName} is ready`
   const description = "Click here to see it"
-  const createdAt = new Date(notification.createdAt)
 
   return (
     <BaseNotification
+      notificationId={notification.id}
       seenAt={seenAt}
+      createdAt={createdAt}
       icon={<Icon icon={ClaudeCodeIcon} className="h-5 w-5 text-foreground-muted" />}
       title={title}
       description={description}
       url={link}
-    >
-      <Text.H6 color="foregroundMuted">{relativeTime(createdAt)}</Text.H6>
-    </BaseNotification>
+    />
   )
 }
