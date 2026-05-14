@@ -1,3 +1,4 @@
+import { OAuthTokenCacheInvalidator } from "@domain/oauth-keys"
 import type { RedisClient } from "@platform/cache-redis"
 // `eq` is re-exported by `@platform/db-postgres` to keep all consumers on one
 // drizzle-orm version (peer-dep collisions cause private-property typecheck
@@ -5,7 +6,7 @@ import type { RedisClient } from "@platform/cache-redis"
 import { eq, type PostgresClient } from "@platform/db-postgres"
 import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import { hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 
 /**
  * Minimum time spent inside the validator before returning, in milliseconds.
@@ -119,6 +120,33 @@ const invalidateCache = (redis: RedisClient, tokenHash: string): Effect.Effect<v
     try: () => withTimeout(redis.del(getCacheKey(tokenHash)) as Promise<unknown>, undefined),
     catch: () => undefined,
   }).pipe(Effect.orDie)
+
+/**
+ * Best-effort `DEL oauth:${sha256(token)}` so a freshly-revoked OAuth
+ * access token stops validating on cache hits before its TTL would have
+ * expired. Hashes the raw token internally to match the format
+ * `validateOAuthAccessToken` writes — callers pass the plaintext token
+ * straight out of `oauth_access_tokens.access_token`.
+ *
+ * Silently swallows Redis / hash errors: the DB is the source of truth,
+ * so a missed invalidation degrades to the usual 5-minute stale window
+ * rather than throwing the revoke call on the floor.
+ */
+export const invalidateOAuthTokenCache = (redis: RedisClient, token: string): Effect.Effect<void, never> =>
+  hash(token).pipe(
+    Effect.flatMap((tokenHash) => invalidateCache(redis, tokenHash)),
+    Effect.catchCause(() => Effect.void),
+  )
+
+/**
+ * Live implementation of {@link OAuthTokenCacheInvalidator}. Closure
+ * captures the Redis client so callers wire it once, the same way they
+ * wire `RedisCacheStoreLive(redis)` or `ApiKeyCacheInvalidatorLive(redis)`.
+ */
+export const OAuthTokenCacheInvalidatorLive = (redis: RedisClient) =>
+  Layer.succeed(OAuthTokenCacheInvalidator, {
+    invalidate: (accessToken: string) => invalidateOAuthTokenCache(redis, accessToken),
+  })
 
 const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<void, never> => {
   const elapsed = Date.now() - startTime

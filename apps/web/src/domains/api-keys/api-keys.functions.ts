@@ -1,12 +1,19 @@
-import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
+import {
+  type ApiKey,
+  ApiKeyRepository,
+  generateApiKeyUseCase,
+  revokeApiKeyUseCase,
+  updateApiKeyUseCase,
+} from "@domain/api-keys"
 import { ApiKeyId, isValidId } from "@domain/shared"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 export interface ApiKeyRecord {
   readonly id: string
@@ -93,11 +100,13 @@ export const deleteApiKey = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
+    const redis = getRedisClient()
 
     await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ApiKeyRepository
-        yield* repo.delete(ApiKeyId(data.id))
-      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId), withTracing),
+      revokeApiKeyUseCase({ id: ApiKeyId(data.id) }).pipe(
+        Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+        withPostgres(ApiKeyRepositoryLive, client, organizationId),
+        withTracing,
+      ),
     )
   })

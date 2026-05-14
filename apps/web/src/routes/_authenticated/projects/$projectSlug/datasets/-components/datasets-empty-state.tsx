@@ -15,15 +15,15 @@ export function DatasetsEmptyState({
           <Icon icon={DatabaseIcon} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3>No datasets yet</Text.H3>
-          <Text.H5 color="foregroundMuted">
+          <Text.H3 centered>No datasets yet</Text.H3>
+          <Text.H5 color="foregroundMuted" centered>
             Datasets let you curate traces for evaluation and regression testing. Create your first dataset to get
             started.
           </Text.H5>
         </div>
         <Button onClick={onCreate} disabled={creating} isLoading={creating}>
           <Icon size="sm" icon={DatabaseAddIcon} />
-          Create dataset
+          Dataset
         </Button>
       </div>
     </div>

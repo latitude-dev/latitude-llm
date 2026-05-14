@@ -40,6 +40,7 @@ import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/obse
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings/organization'
 import { Route as AuthenticatedSettingsMembersRouteImport } from './routes/_authenticated/settings/members'
+import { Route as AuthenticatedSettingsKeysRouteImport } from './routes/_authenticated/settings/keys'
 import { Route as AuthenticatedSettingsBillingRouteImport } from './routes/_authenticated/settings/billing'
 import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_authenticated/settings/api-keys'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
@@ -223,6 +224,12 @@ const AuthenticatedSettingsMembersRoute =
     path: '/members',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsKeysRoute =
+  AuthenticatedSettingsKeysRouteImport.update({
+    id: '/keys',
+    path: '/keys',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsBillingRoute =
   AuthenticatedSettingsBillingRouteImport.update({
     id: '/billing',
@@ -348,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
+  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -393,6 +401,7 @@ export interface FileRoutesByTo {
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
   '/settings/billing': typeof AuthenticatedSettingsBillingRoute
+  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -444,6 +453,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
   '/_authenticated/settings/billing': typeof AuthenticatedSettingsBillingRoute
+  '/_authenticated/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/_authenticated/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/api-keys'
     | '/settings/billing'
+    | '/settings/keys'
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
@@ -540,6 +551,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/api-keys'
     | '/settings/billing'
+    | '/settings/keys'
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
@@ -590,6 +602,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/api-keys'
     | '/_authenticated/settings/billing'
+    | '/_authenticated/settings/keys'
     | '/_authenticated/settings/members'
     | '/_authenticated/settings/organization'
     | '/api/auth/$'
@@ -854,6 +867,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsMembersRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/keys': {
+      id: '/_authenticated/settings/keys'
+      path: '/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof AuthenticatedSettingsKeysRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/billing': {
       id: '/_authenticated/settings/billing'
       path: '/billing'
@@ -1020,6 +1040,7 @@ interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsApiKeysRoute: typeof AuthenticatedSettingsApiKeysRoute
   AuthenticatedSettingsBillingRoute: typeof AuthenticatedSettingsBillingRoute
+  AuthenticatedSettingsKeysRoute: typeof AuthenticatedSettingsKeysRoute
   AuthenticatedSettingsMembersRoute: typeof AuthenticatedSettingsMembersRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -1029,6 +1050,7 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
   AuthenticatedSettingsApiKeysRoute: AuthenticatedSettingsApiKeysRoute,
   AuthenticatedSettingsBillingRoute: AuthenticatedSettingsBillingRoute,
+  AuthenticatedSettingsKeysRoute: AuthenticatedSettingsKeysRoute,
   AuthenticatedSettingsMembersRoute: AuthenticatedSettingsMembersRoute,
   AuthenticatedSettingsOrganizationRoute:
     AuthenticatedSettingsOrganizationRoute,

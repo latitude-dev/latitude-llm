@@ -64,6 +64,10 @@ API Keys
     - Update API Key                                            [PATCH /api-keys/{apiKeyId}]
         - Name
     - Delete API Key                                            [DELETE /api-keys/{apiKeyId}]
+OAuth Keys                                                       (no tokens ever leave the server — see notes)
+    - List OAuth Keys                                           [GET /oauth-keys]
+    - Get OAuth Key details                                     [GET /oauth-keys/{oauthKeyId}]
+    - Revoke OAuth Key                                          [DELETE /oauth-keys/{oauthKeyId}]
 Traces
     - List Traces (including all filters,                       [GET /projects/{projectSlug}/traces]
                    including semantic search filter,
@@ -117,6 +121,9 @@ Datasets
 - Transfer organization ownership — high-blast-radius, kept on the web with extra confirmation.
 - Cancel pending member invitation — covered by the web's invitation lifecycle. Reconsider if real demand emerges.
 - Separate "list pending invitations" endpoint — pending invites surface through the web; the API stays focused on confirmed members.
+- Create / update OAuth Keys via API — these rows only come into existence through the OAuth consent flow on the web; an API surface to mint them would either bypass the consent UX or duplicate it. The DELETE endpoint exists because revocation is a legitimate machine-driven action (rotating credentials, automation).
+
+**Notes on the OAuth Keys API responses:** never expose `oauth_access_tokens.access_token`, `refresh_token`, or any other secret. The list / get responses return the same metadata the web's OAuth Keys table renders today (client name + icon, authorizing user, `connectedAt`, `disabled`) and nothing else — even masked tokens are out, since unlike API keys there's no flow where the caller would copy a token from this surface.
 
 ## Architecture
 
@@ -709,6 +716,9 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `apps/api/src/middleware/auth.ts` — unified API-key + OAuth dispatch
   - [x] Three-ring `apps/api/src/routes/index.ts`
   - [x] `api-keys.ts` migrated to `defineApiEndpoint` (smoke test)
+  - [x] `annotations.ts` migrated to `defineApiEndpoint`; OAuth callers' annotations carry `annotatorId = auth.userId`
+  - [x] `scores.ts` migrated to `defineApiEndpoint`
+  - [x] End-to-end verification with an MCP client against a running web+API stack — confirmed working from Cursor
 - **M3 — Identity ergonomics**
   - [x] **Account**: `GET /account`
   - [x] **Members**: list / get / invite / update / remove (all 5 endpoints, OAuth-only for mutations, owner-protection)
@@ -716,13 +726,22 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] **Projects**: list (paginated) / get / create / update (incl. settings + per-flagger toggle) / delete (all 5 endpoints)
   - [x] Slug-on-rename for projects in `updateProjectUseCase`
   - [x] **Org slug-on-rename**: dropped from scope (see decision above)
+- **M-Settings (web)**
+  - [x] Sessions section in `settings/account.tsx` — UA-parsed device / OS, geoip city/region/country, "Sign out everywhere else" and per-row revoke (BA `listSessions` / `revokeSession` / `revokeOtherSessions`). Backed by `apps/web/src/domains/sessions/user-sessions.functions.ts`. Confirmation modals on both revoke flows. Device icons + relative timestamps.
+  - [x] Renamed `settings/api-keys.tsx` → `settings/keys.tsx`; nav label "API Keys" → "Keys"; `settings/api-keys.tsx` kept as a `redirect()`-only route for old bookmarks. Tables sorted by `createdAt` desc, timestamps use `relativeTime`.
+  - [x] OAuth Keys table on `settings/keys` + `revokeOAuthKey({ clientId, userId })` server-fn. List + revoke routed through `@domain/oauth-keys` use-cases (`OAuthKeyRepository` impl in `@platform/db-postgres`, RLS-scoped via tenant `SqlClient`). Empty state uses `TableBlankSlate` with a docs link.
+  - [x] `OAuthKeyCreated` domain event emitted from `decideOAuthConsent` after BA accepts (no-op handler in `apps/workers`).
+  - [x] Theme switcher moved from the navbar to the user-menu dropdown.
+  - [x] Cache-invalidation on revoke (both API keys + OAuth keys): web's `deleteApiKey` routed through `revokeApiKeyUseCase`; `revokeOAuthKeyUseCase` busts every deleted access token's Redis entry. `ApiKeyCacheInvalidatorLive` lives in `@platform/api-key-auth`; new `OAuthTokenCacheInvalidatorLive` lives in `@platform/oauth-token-auth`. Session cookie cache (BA, 5-min TTL) left as-is — known trade-off; document where security-sensitive.
 
 ### Outstanding
 
-- **M2 — proof-of-concept loose ends**
-  - [x] Migrate `apps/api/src/routes/annotations.ts` to `defineApiEndpoint`; OAuth callers' annotations carry `annotatorId = auth.userId`
-  - [x] Migrate `apps/api/src/routes/scores.ts` to `defineApiEndpoint`
-  - [x] End-to-end verification with an MCP client against a running web+API stack — confirmed working from Cursor
+- **M-OAuthKeysApi — Public OAuth Keys endpoints** (3 endpoints, prefix `/oauth-keys`, **never expose tokens**)
+  - [ ] `GET /` — list, `low` tier. Reuses `listOAuthKeysUseCase` from `@domain/oauth-keys`. Response is the metadata-only `OAuthKey` shape (id, clientId, clientName, clientIcon, userId, userName, userEmail, lastActivityAt, connectedAt, disabled). **No `access_token` / `refresh_token` / hashed-token / masked-token field on any response.**
+  - [ ] `GET /{oauthKeyId}` — get one by composite `${clientId}:${userId}` id, `low` tier. Use-case extension: add `findById(id)` to `@domain/oauth-keys` (parses the composite, then JOIN-reads the same row shape `listForOrganization` returns, RLS-scoped). 404s on miss / cross-tenant.
+  - [ ] `DELETE /{oauthKeyId}` — revoke, `medium` tier. Parses the composite id and reuses `revokeOAuthKeyUseCase` (already cache-invalidates and disables the application when the last token is removed). 204 on success, 404 when the id doesn't resolve under the caller's org.
+  - [ ] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint` from the start. Mounted with `low` tier; the DELETE endpoint applies `medium` via the per-tier override. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`.
+  - [ ] No POST / PATCH. Out-of-scope notes already in the "Endpoint inventory" section above.
 - **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
   - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
   - [ ] `GET /{traceId}` — get (`medium` tier)
@@ -749,10 +768,6 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [ ] `POST /{datasetSlug}/rows/export` (`critical`) — recipient-email validated
   - [ ] CSV import (`POST /rows/import/files`) — **deferred (D16)**; leave `// TODO(file-imports)` comment
   - [ ] Refactor `addTracesToDataset` to take `TracesRef` (or thin route-level adapter)
-- **M-Settings (web)** — independent of M4–M7; ships standalone
-  - [ ] Sessions section in `settings/account.tsx` (BA `listSessions` / `revokeSession` / `revokeOtherSessions`)
-  - [ ] Rename `settings/api-keys.tsx` → `settings/keys.tsx` (+ redirect from old URL)
-  - [ ] OAuth Keys table + "Revoke OAuth key" server-fn (deletes `oauth_access_tokens` rows by `(client_id, user_id)`, disables `oauth_applications` row when last token removed)
 - **Wrap-up**
   - [ ] `pnpm generate:sdk` — batched at the end of the plan, single PR (per the standing memo)
   - [ ] CI drift jobs for `apps/api/openapi.json` and `apps/api/mcp.json` (verification §)

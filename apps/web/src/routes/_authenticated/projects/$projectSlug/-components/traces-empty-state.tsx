@@ -1,5 +1,5 @@
 import { Button, Icon, Text } from "@repo/ui"
-import { TelescopeIcon } from "lucide-react"
+import { ExternalLinkIcon, TelescopeIcon } from "lucide-react"
 
 export function TracesEmptyState({ isLoading = false }: { readonly isLoading?: boolean }) {
   return (
@@ -9,16 +9,19 @@ export function TracesEmptyState({ isLoading = false }: { readonly isLoading?: b
           <Icon icon={TelescopeIcon} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3>{isLoading ? "Loading traces" : "No traces yet"}</Text.H3>
-          <Text.H5 color="foregroundMuted">
+          <Text.H3 centered>{isLoading ? "Loading traces" : "No traces yet"}</Text.H3>
+          <Text.H5 color="foregroundMuted" centered>
             {isLoading
               ? "Preparing your traces view."
               : "Traces capture every LLM call your application makes. Instrument your app with the Latitude SDK to start streaming traces into this project."}
           </Text.H5>
         </div>
         {!isLoading ? (
-          <a href="https://docs.latitude.so/telemetry/overview" target="_blank" rel="noopener noreferrer">
-            <Button>Read the docs</Button>
+          <a href="https://docs.latitude.so/observability/traces" target="_blank" rel="noopener noreferrer">
+            <Button>
+              <Icon size="sm" icon={ExternalLinkIcon} />
+              Read the docs
+            </Button>
           </a>
         ) : null}
       </div>

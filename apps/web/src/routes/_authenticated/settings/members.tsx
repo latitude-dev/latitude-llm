@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Button,
   CloseTrigger,
   Container,
@@ -23,10 +24,10 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
+import { relativeTime, toTitle } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
-import { ChevronDown, Trash2 } from "lucide-react"
+import { ChevronDown, Trash2, UserPlusIcon } from "lucide-react"
 import { useState } from "react"
 import {
   cancelMemberInviteMutation,
@@ -404,7 +405,7 @@ function MembersTable({
       <Table>
         <TableHeader>
           <TableRow verticalPadding>
-            <TableHead>Name</TableHead>
+            <TableHead>Member</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
@@ -416,7 +417,17 @@ function MembersTable({
           {members.map((member) => (
             <TableRow key={member.id} verticalPadding hoverable={false}>
               <TableCell>
-                <Text.H5>{member.name ?? "-"}</Text.H5>
+                {member.name ? (
+                  <div className="inline-flex justify-center items-center gap-2">
+                    <Avatar name={member.name} size="sm" imageSrc={member.image} />
+                    <Text.H5>
+                      {member.name}{" "}
+                      {member.userId === currentUserId && <span className="text-muted-foreground">· You</span>}
+                    </Text.H5>
+                  </div>
+                ) : (
+                  <Text.H5>-</Text.H5>
+                )}
               </TableCell>
               <TableCell>
                 <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
@@ -427,7 +438,7 @@ function MembersTable({
                     <DropdownMenuRoot>
                       <DropdownMenuTrigger asChild>
                         <div className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-colors hover:bg-muted">
-                          <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                          <Text.H5 color="foregroundMuted">{toTitle(member.role)}</Text.H5>
                           <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
                         </div>
                       </DropdownMenuTrigger>
@@ -448,7 +459,7 @@ function MembersTable({
                       </DropdownMenuContent>
                     </DropdownMenuRoot>
                   ) : (
-                    <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                    <Text.H5 color="foregroundMuted">{toTitle(member.role)}</Text.H5>
                   )}
                 </div>
               </TableCell>
@@ -475,7 +486,8 @@ function MembersTable({
               {isAdmin && (
                 <TableCell align="right">
                   {(member.status === "active" || member.status === "invited") &&
-                  !(member.role === "owner" && !isOwner) ? (
+                  !(member.role === "owner" && !isOwner) &&
+                  member.userId !== currentUserId ? (
                     <Tooltip
                       asChild
                       trigger={
@@ -527,21 +539,27 @@ function MembersSettingsPage() {
 
   return (
     <Container className="flex flex-col gap-8 pt-14">
-      <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
-      <div className="flex flex-row items-center justify-between">
-        <Text.H4 weight="bold">Members</Text.H4>
-        {isAdmin ? (
-          <Button variant="outline" onClick={() => setInviteOpen(true)}>
-            Add Member
-          </Button>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-2">
-        {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
-        {!isLoading && members.length > 0 ? (
-          <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
-        ) : null}
-      </div>
+      <section className="flex flex-col gap-4">
+        <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <Text.H4 weight="bold">Members</Text.H4>
+            <Text.H5 color="foregroundMuted">Members and pending invitations of this organization</Text.H5>
+          </div>
+          {isAdmin ? (
+            <Button variant="outline" onClick={() => setInviteOpen(true)}>
+              <Icon size="sm" icon={UserPlusIcon} />
+              Member
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
+          {!isLoading && members.length > 0 ? (
+            <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
+          ) : null}
+        </div>
+      </section>
     </Container>
   )
 }

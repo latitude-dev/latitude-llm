@@ -1,9 +1,9 @@
-import { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyCacheInvalidator, ApiKeyRepository } from "@domain/api-keys"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { hash } from "@repo/utils"
-import { Effect, Option } from "effect"
+import { Effect, Layer, Option } from "effect"
 
 /**
  * Minimum time for API key validation in milliseconds.
@@ -22,6 +22,40 @@ const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> =>
   ])
 
 const getApiKeyCacheKey = (tokenHash: string): string => `apikey:${tokenHash}`
+
+/**
+ * Best-effort `DEL apikey:${tokenHash}` so a freshly-revoked key stops
+ * validating on cache hits before its TTL would have expired. Used by
+ * revoke server-fns / routes — the DB row is already updated; this just
+ * keeps the Redis side from serving the stale positive validation.
+ *
+ * Silently swallows Redis errors: the DB is the source of truth, so even
+ * a missed invalidation degrades to the usual 5-minute stale window
+ * rather than throwing the revoke call on the floor.
+ */
+export const invalidateApiKeyCache = (redis: RedisClient, tokenHash: string): Promise<void> =>
+  withTimeout(
+    redis.del(getApiKeyCacheKey(tokenHash)).then(
+      () => undefined,
+      () => undefined,
+    ),
+    undefined,
+  )
+
+/**
+ * Live implementation of {@link ApiKeyCacheInvalidator}. Wraps
+ * {@link invalidateApiKeyCache} in the Effect shape the use-case yields.
+ * Closure captures the Redis client so callers wire it once, the same way
+ * they wire `RedisCacheStoreLive(redis)`.
+ */
+export const ApiKeyCacheInvalidatorLive = (redis: RedisClient) =>
+  Layer.succeed(ApiKeyCacheInvalidator, {
+    delete: (tokenHash: string) =>
+      Effect.tryPromise({
+        try: () => invalidateApiKeyCache(redis, tokenHash),
+        catch: () => undefined,
+      }).pipe(Effect.orDie),
+  })
 
 export type ApiKeyAuthResult = { organizationId: string; keyId: string }
 

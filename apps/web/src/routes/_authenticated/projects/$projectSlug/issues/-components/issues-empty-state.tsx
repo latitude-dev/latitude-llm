@@ -1,5 +1,5 @@
-import { Icon, Text } from "@repo/ui"
-import { SearchAlert } from "lucide-react"
+import { Button, Icon, Text } from "@repo/ui"
+import { ExternalLinkIcon, SearchAlert } from "lucide-react"
 
 export function IssuesEmptyState() {
   return (
@@ -9,12 +9,18 @@ export function IssuesEmptyState() {
           <Icon icon={SearchAlert} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3>No issues yet</Text.H3>
-          <Text.H5 color="foregroundMuted">
+          <Text.H3 centered>No issues yet</Text.H3>
+          <Text.H5 color="foregroundMuted" centered>
             Issues are discovered automatically by grouping failed annotations left on your traces. Start annotating
             traces to surface recurring problems here.
           </Text.H5>
         </div>
+        <a href="https://docs.latitude.so/issues/overview" target="_blank" rel="noopener noreferrer">
+          <Button>
+            <Icon size="sm" icon={ExternalLinkIcon} />
+            Read the docs
+          </Button>
+        </a>
       </div>
     </div>
   )
