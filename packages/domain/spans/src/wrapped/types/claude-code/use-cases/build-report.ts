@@ -262,8 +262,7 @@ export const isGitWriteSegment = (row: ToolMixRow): boolean => {
     return GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
   }
   if (row.bashPrefix === "gh") {
-    const writes = GH_WRITE_OPS[row.bashSecondToken]
-    return writes !== undefined && writes.has(row.bashThirdToken)
+    return GH_WRITE_OPS[row.bashSecondToken]?.has(row.bashThirdToken) === true
   }
   return false
 }

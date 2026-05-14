@@ -4,9 +4,7 @@
     ".": {},
     "apps/api": {
       "entry": ["src/openapi/pagination.ts"],
-      "project": ["src/**/*.ts"],
-      "ignoreBinaries": ["mcp-inspector"],
-      "ignoreDependencies": ["@modelcontextprotocol/inspector"]
+      "project": ["src/**/*.ts"]
     },
     "apps/ingest": {
       "project": ["src/**/*.ts"]
