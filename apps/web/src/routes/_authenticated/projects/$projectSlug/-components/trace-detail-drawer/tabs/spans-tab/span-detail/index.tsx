@@ -4,15 +4,21 @@ import { useSpanDetail } from "../../../../../../../../../domains/spans/spans.co
 import { SpanDetailContent } from "./span-detail-content.tsx"
 
 export function SpanDetail({
+  projectId,
   traceId,
   spanId,
+  startTimeFrom,
+  startTimeTo,
   onClose,
 }: {
+  readonly projectId: string
   readonly traceId: string
   readonly spanId: string
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
   readonly onClose: () => void
 }) {
-  const { data: span, isLoading } = useSpanDetail({ traceId, spanId })
+  const { data: span, isLoading } = useSpanDetail({ projectId, traceId, spanId, startTimeFrom, startTimeTo })
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden border-t border-border">

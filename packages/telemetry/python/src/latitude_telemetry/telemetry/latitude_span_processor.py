@@ -6,12 +6,14 @@ without replacing your current telemetry setup.
 """
 
 import json
+import typing
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from opentelemetry.context import Context
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter, SpanExportResult
 
 from latitude_telemetry.constants import ATTRIBUTES
 from latitude_telemetry.env import env
@@ -29,6 +31,52 @@ from latitude_telemetry.telemetry.span_filter import (
 )
 
 
+class _ResourceOverrideSpan:
+    """
+    Lightweight ReadableSpan-shaped wrapper that delegates everything to the underlying span
+    except `resource`, which is replaced with a merged copy carrying the Latitude override.
+
+    Used by `_ServiceNameResourceExporter` so we don't mutate the original span (which is shared
+    with other span processors on the host TracerProvider).
+    """
+
+    def __init__(self, span: ReadableSpan, resource: Resource) -> None:
+        self._span = span
+        self._resource = resource
+
+    @property
+    def resource(self) -> Resource:
+        return self._resource
+
+    def __getattr__(self, name: str) -> typing.Any:
+        return getattr(self._span, name)
+
+
+class _ServiceNameResourceExporter(SpanExporter):
+    """
+    Wraps a SpanExporter and rewrites each exported span's resource to carry the configured
+    `service.name`. `service.name` is a resource attribute per OTel semantic conventions, not a
+    span attribute — exporting through this wrapper keeps Latitude spec-compliant even when
+    piggy-backing on a host SDK's TracerProvider (whose resource we can't change).
+    """
+
+    def __init__(self, inner: SpanExporter, service_name: str) -> None:
+        self._inner = inner
+        self._overlay = Resource.create({SERVICE_NAME: service_name})
+
+    def export(self, spans: typing.Sequence[ReadableSpan]) -> SpanExportResult:
+        overridden = [
+            typing.cast(ReadableSpan, _ResourceOverrideSpan(span, span.resource.merge(self._overlay))) for span in spans
+        ]
+        return self._inner.export(overridden)
+
+    def shutdown(self) -> None:
+        self._inner.shutdown()
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return self._inner.force_flush(timeout_millis)
+
+
 @dataclass
 class LatitudeSpanProcessorOptions:
     disable_redact: bool = False
@@ -37,6 +85,8 @@ class LatitudeSpanProcessorOptions:
     disable_smart_filter: bool = False
     should_export_span: Callable[[ReadableSpan], bool] | None = None
     blocked_instrumentation_scopes: tuple[str, ...] = ()
+    exporter: SpanExporter | None = None
+    service_name: str | None = None
 
 
 class LatitudeSpanProcessor(SpanProcessor):
@@ -55,7 +105,7 @@ class LatitudeSpanProcessor(SpanProcessor):
     ):
         options = options or LatitudeSpanProcessorOptions()
 
-        exporter = create_exporter(
+        base_exporter = options.exporter or create_exporter(
             ExporterOptions(
                 api_key=api_key,
                 project_slug=project_slug,
@@ -63,6 +113,9 @@ class LatitudeSpanProcessor(SpanProcessor):
                 timeout=30,
             )
         )
+
+        raw_service_name = options.service_name.strip() if options.service_name else ""
+        exporter = _ServiceNameResourceExporter(base_exporter, raw_service_name) if raw_service_name else base_exporter
 
         if options.disable_redact:
             redact: RedactSpanProcessor | None = None

@@ -15,7 +15,7 @@ const navItems = [
   { label: "Organization", to: "/settings/organization", icon: Building2 },
   { label: "Members", to: "/settings/members", icon: Users },
   { label: "Billing", to: "/settings/billing", icon: CreditCard },
-  { label: "API Keys", to: "/settings/api-keys", icon: Key },
+  { label: "Keys", to: "/settings/keys", icon: Key },
   { label: "Account", to: "/settings/account", icon: UserRound },
 ] as const
 

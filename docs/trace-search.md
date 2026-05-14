@@ -28,8 +28,9 @@ Secondary indexes on `search_text`:
 
 - `tokenbf_v1(32768, 3, 0)` for token/word lookup.
 - `ngrambf_v1(3, 512, 3, 0)` for substring inclusion.
+- `TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(search_text))` for token-set lookup.
 
-These are bloom filters (ClickHouse 25.2 compatible). Plain `ILIKE '%…%'` is the runtime query form because the bloom filters only accelerate anchored-term matches. Once the production cluster upgrades to ClickHouse 26.2+, `TYPE text` would give a proper inverted index and eliminate the partition scan — see "Future Work".
+Literal substring filters use case-sensitive `LIKE`, which can be assisted by the n-gram bloom filter. Backtick token-phrase filters are lower-cased to match the text-index preprocessor, then use `hasAllTokens` to hit the text index before the query checks token adjacency with `hasSubstr(tokens(lower(...)), ...)`.
 
 Retention: `TTL start_time + INTERVAL 90 DAY DELETE`.
 
@@ -84,13 +85,27 @@ The worker is best-effort: any error in the pipeline is logged and swallowed via
 
 Active search adds a single CH query with cursor-based pagination on the trace list, mirroring the shape of the non-search list path. `count`, `metrics`, and `histogram` use the same search-plan subquery as a filter (`trace_id IN (SELECT trace_id FROM <plan>)`), so aggregate numbers agree with the list without drift.
 
-### Search plan (phrases, semantic prompt, or both)
+### Search plan (literal filters, token-phrase filters, semantic prompt, or a mix)
+
+`parseSearchQuery` splits the search bar input into three independent parts:
+
+- **Semantic prompt**: unquoted text. This is embedded with Voyage and used for semantic ranking.
+- **Literal phrases**: double-quoted text (`"..."`). Each literal phrase is normalized the same way as stored `search_text` and becomes a case-sensitive `LIKE` substring filter. `%`, `_`, and backslashes are escaped before building the parameterized pattern.
+- **Token phrases**: backtick text (`` `...` ``). Each token phrase is lower-cased and tokenized with the same `splitByNonAlpha` shape as the ClickHouse text index. ClickHouse 26.2 does not expose `hasPhrase`, so the query combines indexed `hasAllTokens(search_text, tokens)` with `hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), tokens)` to enforce adjacency and order.
 
 `buildSearchPlan` in `trace-repository.ts` picks one of three shapes:
 
-- **Phrases only** (`ranked = false`). Quoted phrases become an AND of `hasTokenCaseInsensitive` checks over `search_text` (same tokenizer as the `text` index). Results keep the caller's normal chronological sort.
+- **Lexical only** (`ranked = false`). Literal and token-phrase filters are AND-ed together against `trace_search_documents`. Results keep the caller's normal chronological sort.
 - **Semantic only** (`ranked = true`). The inner scan ranks **chunk rows** by cosine similarity, `ORDER BY semantic_score DESC LIMIT SEMANTIC_SCAN_LIMIT`, then rolls up with `max(semantic_score) GROUP BY trace_id` so each trace's score is its best-matching chunk. A `WHERE semantic_score >= TRACE_SEARCH_MIN_RELEVANCE_SCORE` gate drops noise on pure semantic queries.
-- **Hybrid** (`ranked = true`). Lexical phrase filter on `trace_search_documents` (precision) `LEFT JOIN` the per-trace semantic rollup. Phrase matches without embeddings stay in with `relevance_score = 0.0`; the floor is **not** re-applied so lexical precision is not lost.
+- **Hybrid** (`ranked = true`). Lexical filters on `trace_search_documents` (precision) `LEFT JOIN` the per-trace semantic rollup. Lexical matches without embeddings stay in with `relevance_score = 0.0`; the floor is **not** re-applied so lexical precision is not lost.
+
+For this query:
+
+```txt
+refund "handOffToHuman: true" `human-annotation`
+```
+
+The literal filter requires the exact `handOffToHuman: true` substring, the token-phrase filter requires adjacent ordered `human`/`annotation` tokens, and the semantic prompt `refund` ranks the filtered traces.
 
 The lexical document is always built from the **full** normalized conversation string in `buildTraceSearchDocument` (`search_text`), independent of which turns were packed into embedding chunks.
 
@@ -175,9 +190,11 @@ TTL alone handles "recency bias" and "storage ceiling" cleanly, with no cleanup 
 
 There is no backfill path. Traces that completed before the worker started running are invisible to search. Re-enqueuing `trace-search:refreshTrace` for historical traces works mechanically but is not a sanctioned production procedure. If a customer asks for historical search, treat it as a separate feature.
 
-### Lexical search uses `ILIKE`, not `text` index
+### Literal and token-phrase matching have different precision/performance tradeoffs
 
-Until ClickHouse 26.2+, the lexical query runs `search_text ILIKE '%<query>%'` which ignores the bloom-filter indexes for leading-wildcard matches. This forces a partition scan of `trace_search_documents`. At current corpus sizes this is fine — a few hundred thousand rows scan in tens of milliseconds — but cost grows with total documents in the 90-day window.
+Double-quoted literals use case-sensitive `LIKE` over normalized `search_text`. This matches copy-pasted text closely and can use the existing n-gram bloom-filter index, but it does not ignore punctuation differences.
+
+Backtick token phrases use `hasAllTokens` as an indexed prefilter and `hasSubstr(tokens(lower(...)), ...)` as the ordered-adjacency check. This approximates phrase search on ClickHouse 26.2: case, punctuation, and whitespace differences are ignored, but the tokens must stay adjacent and in order. It is not a relevance scorer; it is a boolean filter.
 
 ### Semantic scan is linear over the embeddings table
 
@@ -259,9 +276,9 @@ Several constants will likely become tenant-tiered:
 
 The shape is a resolver port (`SubscriptionPlanResolver` or similar) that takes an `organizationId` and returns the resolved knob values. No per-row schema change needed.
 
-### ClickHouse 26.2 `TYPE text` migration
+### Native phrase search
 
-When production moves to CH 26.2+, the lexical query path can switch from `ILIKE` + bloom filters to a proper inverted-term index via `TYPE text`. This would accelerate lexical lookup from partition scan to true index seek, which matters as the 90-day document corpus grows past ~10M rows.
+ClickHouse 26.2 has the `TYPE text` index and token-set functions used by trace search, but it does not expose the `hasPhrase` query shape needed for native ordered phrase matching. Backtick token-phrase search currently approximates that behavior with `hasAllTokens` plus `hasSubstr(tokens(...), ...)`. If a future ClickHouse version exposes a compatible indexed phrase function, replace the two-step predicate with the native phrase predicate.
 
 ### Session-level search
 

@@ -157,7 +157,10 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
         const spanRepository = yield* SpanRepository
         const spans = yield* spanRepository.listByTraceId({
           organizationId: OrganizationId(annotationScore.organizationId),
+          projectId: ProjectId(annotationScore.projectId),
           traceId: TraceId(annotationScore.traceId),
+          startTimeFrom: detail.startTime,
+          startTimeTo: detail.endTime,
         })
         resolvedSpanId = resolveLastLlmCompletionSpanId(spans) ?? null
       }

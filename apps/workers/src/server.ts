@@ -38,7 +38,6 @@ import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
-import { createClaudeCodeWrappedWorker } from "./workers/claude-code-wrapped.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
@@ -59,6 +58,7 @@ import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
+import { createWrappedWorker } from "./workers/wrapped.ts"
 import type { WorkersContext } from "./workers-context.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
@@ -204,7 +204,7 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
     })
-    createClaudeCodeWrappedWorker({
+    createWrappedWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
       postgresClient: ctx.postgresClient,
@@ -212,17 +212,17 @@ const bootstrap = async () => {
       clickhouseClient: ctx.clickhouseClient,
     })
 
-    // Register (or refresh) the weekly Claude Code Wrapped trigger. upsert
-    // semantics make this idempotent across worker restarts. The handler
-    // derives the 7-day window from Date.now() at fire time so the stored
-    // job payload doesn't go stale.
+    // Register (or refresh) the weekly Wrapped trigger. upsert semantics
+    // make this idempotent across worker restarts. The handler derives
+    // the 7-day window from Date.now() at fire time so the stored job
+    // payload doesn't go stale.
     await Effect.runPromise(
       queuePublisher
         .scheduleRepeatable(
-          "claude-code-wrapped",
+          "wrapped",
           "triggerWeeklyRun",
           {},
-          { key: "claude-code-wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+          { key: "wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
         )
         .pipe(withTracing),
     )

@@ -1,6 +1,5 @@
 import {
   type ApiKey,
-  ApiKeyCacheInvalidator,
   ApiKeyNotFoundError,
   ApiKeyRepository,
   generateApiKeyUseCase,
@@ -10,7 +9,7 @@ import {
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import type { RedisClient } from "@platform/cache-redis"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
@@ -123,16 +122,6 @@ const apiKeysFernGroup = (methodName: string) =>
     "x-fern-sdk-group-name": "apiKeys",
     "x-fern-sdk-method-name": methodName,
   }) as const
-
-const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
-  delete: (tokenHash: string) =>
-    Effect.tryPromise({
-      try: () => redis.del(`apikey:${tokenHash}`),
-      catch: () => {
-        // Silently ignore - DB is source of truth
-      },
-    }).pipe(Effect.orDie),
-})
 
 export const apiKeysPath = "/api-keys"
 
@@ -260,7 +249,7 @@ const revokeApiKey = apiKeyEndpoint({
     tags: ["API Keys"],
     ...apiKeysFernGroup("revoke"),
     summary: "Revoke API key",
-    description: "Soft-deletes an API key, immediately invalidating it.",
+    description: "Revokes an API key.",
     security: PROTECTED_SECURITY,
     request: { params: IdParamsSchema },
     responses: openApiNoContentResponses({ description: "API key revoked" }),
@@ -270,7 +259,7 @@ const revokeApiKey = apiKeyEndpoint({
 
     await Effect.runPromise(
       revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
-        Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
+        Effect.provide(ApiKeyCacheInvalidatorLive(c.var.redis)),
         withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,
       ),

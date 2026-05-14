@@ -1,5 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
+  IssueEscalationSignals,
+  IssueEscalationThresholdBucket,
+  IssueEscalationThresholdSeries,
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
   IssueTagsAggregate,
@@ -15,7 +18,7 @@ import type {
   SessionScoreRollup,
   TraceScoreRollup,
 } from "@domain/scores"
-import { ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, SEASONAL_BUCKET_POOLING_HOURS, SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 import {
   ChSqlClient,
   type ChSqlClientShape,
@@ -77,6 +80,32 @@ const scopeParams = (organizationId: OrganizationId, projectId: ProjectId) => ({
   projectId: projectId as string,
 })
 
+const HOUR_MS = 60 * 60 * 1000
+const WEEK_MS = 7 * 24 * HOUR_MS
+
+/**
+ * Builds the 12 (or `(2 * pooling + 1) * weeks`) anchor bucket timestamps
+ * used as the 1h-sample centers for the seasonal escalation read. Each
+ * anchor's 6h sample sums six consecutive MV rows ending at the anchor.
+ * Returned in epoch-milliseconds for caller-side mapping convenience.
+ */
+const computeSeasonalAnchors = (now: Date): readonly number[] => {
+  const alignedHourMs = Math.floor(now.getTime() / HOUR_MS) * HOUR_MS
+  const anchors: number[] = []
+  for (let week = 1; week <= SEASONAL_HISTORY_WEEKS; week++) {
+    for (let offset = -SEASONAL_BUCKET_POOLING_HOURS; offset <= SEASONAL_BUCKET_POOLING_HOURS; offset++) {
+      anchors.push(alignedHourMs - week * WEEK_MS + offset * HOUR_MS)
+    }
+  }
+  return anchors
+}
+
+const toClickHouseDateTime = (ms: number): string => {
+  // `DateTime('UTC')` accepts `"YYYY-MM-DD HH:MM:SS"`.
+  const iso = new Date(ms).toISOString()
+  return `${iso.slice(0, 10)} ${iso.slice(11, 19)}`
+}
+
 // ---------------------------------------------------------------------------
 // Row types for ClickHouse JSON responses
 // ---------------------------------------------------------------------------
@@ -136,6 +165,19 @@ type IssueOccurrenceRow = {
 
 type IssueOccurrenceBucketRow = {
   bucket: string
+  count: string
+}
+
+type RecentCountsRow = {
+  issue_id: string
+  recent_1h: string
+  recent_6h: string
+  recent_24h: string
+}
+
+type HourlyBucketRow = {
+  issue_id: string
+  ts_hour: string
   count: string
 }
 
@@ -242,12 +284,214 @@ const toIssueOccurrenceBucket = (row: IssueOccurrenceBucketRow): IssueOccurrence
   count: Number(row.count),
 })
 
+/**
+ * Merge the sliding-recents read and the seasonal-bucket read into the
+ * `IssueEscalationSignals` shape consumed by the escalation detector.
+ *
+ * For each issue, computes the 12 (or `(2P+1) × N_WEEKS`) per-anchor 1h and
+ * 6h-span samples by indexing into the MV bucket map, then aggregates them
+ * into mean / stddev. The σ floor is applied in the helper, not here — this
+ * function emits the raw observation.
+ */
+const mergeEscalationSignals = (input: {
+  readonly issueIds: readonly string[]
+  readonly anchors: readonly number[]
+  readonly nowMs: number
+  readonly recentRows: readonly RecentCountsRow[]
+  readonly bucketRows: readonly HourlyBucketRow[]
+}): readonly IssueEscalationSignals[] => {
+  const { issueIds, anchors, recentRows, bucketRows } = input
+  // (issueId, ts_hour_ms) → count
+  const bucketMap = new Map<string, Map<number, number>>()
+  for (const row of bucketRows) {
+    const issueId = normalizeCHString(row.issue_id)
+    const tsHourMs = parseCHDate(row.ts_hour).getTime()
+    const count = Number(row.count)
+    let perIssue = bucketMap.get(issueId)
+    if (!perIssue) {
+      perIssue = new Map()
+      bucketMap.set(issueId, perIssue)
+    }
+    perIssue.set(tsHourMs, (perIssue.get(tsHourMs) ?? 0) + count)
+  }
+
+  const recentByIssue = new Map<string, RecentCountsRow>()
+  for (const row of recentRows) {
+    recentByIssue.set(normalizeCHString(row.issue_id), row)
+  }
+
+  const meanStddev = (values: readonly number[]): { readonly mean: number; readonly stddev: number } => {
+    if (values.length === 0) return { mean: 0, stddev: 0 }
+    const mean = values.reduce((acc, v) => acc + v, 0) / values.length
+    const variance = values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length
+    return { mean, stddev: Math.sqrt(variance) }
+  }
+
+  return issueIds.map<IssueEscalationSignals>((issueId) => {
+    const recent = recentByIssue.get(issueId)
+    const perIssueBuckets = bucketMap.get(issueId) ?? new Map<number, number>()
+
+    const oneHourSamples: number[] = []
+    const sixHourPerHourSamples: number[] = []
+    const weeksContributing = new Set<number>()
+
+    for (const anchorMs of anchors) {
+      const oneH = perIssueBuckets.get(anchorMs) ?? 0
+      let sixH = 0
+      for (let i = 0; i <= 5; i++) {
+        sixH += perIssueBuckets.get(anchorMs - i * HOUR_MS) ?? 0
+      }
+      oneHourSamples.push(oneH)
+      sixHourPerHourSamples.push(sixH / 6)
+      if (oneH > 0 || sixH > 0) {
+        // Round-to-nearest weeks-ago so anchors offset by ±SEASONAL_BUCKET_POOLING_HOURS
+        // within the same prior-week pool all map to the same week index. A floor
+        // would dump the `+1h` offset of week N into bucket N-1 and undercount
+        // contributing weeks; round keeps the whole pool grouped together, which
+        // is the property `samplesCount` is actually measuring.
+        const weekIndex = Math.round((input.nowMs - anchorMs) / WEEK_MS)
+        weeksContributing.add(weekIndex)
+      }
+    }
+
+    const oneStats = meanStddev(oneHourSamples)
+    const sixStats = meanStddev(sixHourPerHourSamples)
+
+    return {
+      issueId: toIssueId(issueId),
+      recent1h: recent ? Number(recent.recent_1h) : 0,
+      recent6h: recent ? Number(recent.recent_6h) : 0,
+      recent24h: recent ? Number(recent.recent_24h) : 0,
+      expected1h: oneStats.mean,
+      expected6hPerHour: sixStats.mean,
+      stddev1h: oneStats.stddev,
+      stddev6hPerHour: sixStats.stddev,
+      samplesCount: weeksContributing.size,
+    }
+  })
+}
+
 const toIssueWindowMetric = (row: IssueWindowMetricRow): IssueWindowMetric => ({
   issueId: toIssueId(normalizeCHString(row.issue_id)),
   occurrences: Number(row.occurrences),
   firstSeenAt: parseCHDate(row.first_seen_at),
   lastSeenAt: parseCHDate(row.last_seen_at),
 })
+
+const SECOND_MS = 1000
+const DAYS_PER_WEEK = 7
+
+/**
+ * Sample stddev with the same variance floor the detector helper uses, so
+ * the chart line matches the live decision rule visually.
+ */
+const sigmaEffective = (observed: number, expected: number): number =>
+  Math.max(observed, Math.sqrt(Math.max(0, expected)), 1.0)
+
+/**
+ * Build a `(dow, hour)` → mean/stddev/samples table from the prior-history
+ * rows, with the same `(dow, hour ± SEASONAL_BUCKET_POOLING_HOURS)` pool
+ * across `SEASONAL_HISTORY_WEEKS` prior weeks used by the live detector.
+ *
+ * Returned as a 7×24 grid so per-hour lookups during bucket projection are
+ * O(1) and the projection cost scales with the number of chart hours, not
+ * with the size of the history.
+ */
+const buildSeasonalGrid = (rows: readonly HourlyBucketRow[]): { mean: number; sigma: number; samples: number }[][] => {
+  // grid[dow][hour] = { sums: number[], samples: number } where each entry is
+  // the bucket count for one prior week's matching (dow, hour) cell. Stored
+  // as raw counts so we can later sum them into the ±1h pool without losing
+  // the originals.
+  const cells: number[][][] = Array.from({ length: DAYS_PER_WEEK }, () =>
+    Array.from({ length: 24 }, () => [] as number[]),
+  )
+
+  for (const row of rows) {
+    const ts = parseCHDate(row.ts_hour)
+    const dow = ts.getUTCDay()
+    const hour = ts.getUTCHours()
+    const cell = cells[dow]?.[hour]
+    if (cell) cell.push(Number(row.count))
+  }
+
+  const grid: { mean: number; sigma: number; samples: number }[][] = Array.from({ length: DAYS_PER_WEEK }, () =>
+    Array.from({ length: 24 }, () => ({ mean: 0, sigma: 0, samples: 0 })),
+  )
+
+  for (let dow = 0; dow < DAYS_PER_WEEK; dow++) {
+    for (let hour = 0; hour < 24; hour++) {
+      const pooled: number[] = []
+      for (let offset = -SEASONAL_BUCKET_POOLING_HOURS; offset <= SEASONAL_BUCKET_POOLING_HOURS; offset++) {
+        // Hour-wrap intentionally crosses into the adjacent dow so the pool
+        // for (Mon, 00) includes (Sun, 23) and (Mon, 01) — matches what the
+        // live detector does when its anchors fall near midnight.
+        const wrappedDow = (dow + Math.floor((hour + offset) / 24) + DAYS_PER_WEEK) % DAYS_PER_WEEK
+        const wrappedHour = (((hour + offset) % 24) + 24) % 24
+        const samples = cells[wrappedDow]?.[wrappedHour]
+        if (samples) pooled.push(...samples)
+      }
+
+      const cell = grid[dow]?.[hour]
+      if (!cell) continue
+      if (pooled.length === 0) continue
+
+      const mean = pooled.reduce((acc, v) => acc + v, 0) / pooled.length
+      const variance = pooled.reduce((acc, v) => acc + (v - mean) ** 2, 0) / pooled.length
+      cell.mean = mean
+      cell.sigma = Math.sqrt(variance)
+      cell.samples = pooled.length
+    }
+  }
+
+  return grid
+}
+
+/**
+ * Project a stable entry-band threshold across the histogram's buckets.
+ *
+ * For each bucket spanning `bucketHours` hours, the per-hour expected counts
+ * are summed and the per-hour variances are added in quadrature (independent
+ * hours), then the 1h-band `k_short` and the 6h-band `k_long = max(1,
+ * k_short - 1)` are both applied. The line is the max of the two — the
+ * harder one to clear — which matches what the detector's AND-of-windows
+ * trip rule effectively asks the bucket to cross.
+ *
+ * Hours that fall on a `(dow, hour)` cell with no contributing samples
+ * still contribute the σ floor (≈1.0 occurrences) to the bucket's variance.
+ * That keeps the line drawn across "dead" stretches at a low but
+ * informative level — an event in a normally-quiet bin really is anomalous
+ * — instead of breaking the line every time the histogram crosses an
+ * empty `(dow, hour)`. The caller short-circuits to `Number.NaN` when the
+ * issue has no history at all anywhere in the pool.
+ */
+const projectBucketThresholds = (input: {
+  readonly grid: readonly (readonly { readonly mean: number; readonly sigma: number; readonly samples: number }[])[]
+  readonly bucketStartMs: number
+  readonly bucketEndMs: number
+  readonly kShort: number
+}): number => {
+  const { grid, bucketStartMs, bucketEndMs, kShort } = input
+  const kLong = Math.max(1, kShort - 1)
+  let sumExpected = 0
+  let sumVariance = 0
+
+  for (let cursor = bucketStartMs; cursor < bucketEndMs; cursor += HOUR_MS) {
+    const d = new Date(cursor)
+    const dow = d.getUTCDay()
+    const hour = d.getUTCHours()
+    const cell = grid[dow]?.[hour]
+    const expected = cell?.mean ?? 0
+    const sigmaObs = cell?.sigma ?? 0
+    sumExpected += expected
+    const sigmaEff = sigmaEffective(sigmaObs, expected)
+    sumVariance += sigmaEff * sigmaEff
+  }
+
+  const bucketSigma = Math.sqrt(sumVariance)
+  const t1h = sumExpected + kShort * bucketSigma
+  const t6h = sumExpected + kLong * bucketSigma
+  return Math.max(t1h, t6h)
+}
 
 const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly IssueTrendSeries[] => {
   const bucketsByIssueId = new Map<string, IssueOccurrenceBucket[]>()
@@ -594,6 +838,95 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
         }),
 
+      // -- escalationSignalsByIssues -----------------------------------------
+      // Two reads merged in TypeScript:
+      //   1. Sliding 1h / 6h / 24h counts from raw `scores` (single-issue PK
+      //      lookup, tiny scan over the trailing 24h).
+      //   2. Same-(dow, hour ± 1) bucket counts from `scores_hourly_buckets`
+      //      for the prior `SEASONAL_HISTORY_WEEKS` weeks. 6h-band samples are
+      //      reconstructed from six consecutive bucket rows ending at each
+      //      anchor; aggregation to mean/stddev happens in TS because the
+      //      sample set is small (12 anchors × N issues).
+      escalationSignalsByIssues: ({ organizationId, projectId, issueIds, now, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          const resolvedNow = now ?? new Date()
+          const nowMs = resolvedNow.getTime()
+          const anchors = computeSeasonalAnchors(resolvedNow)
+          // Bind the SQL sliding-window edges to the same `now` the JS side uses
+          // for anchor computation; otherwise tests overriding `now` would
+          // compute anchors against the override while the SQL still reads
+          // `now()` from the DB clock, silently desyncing the two halves of
+          // the read.
+          const nowParam = toClickHouseDateTime(nowMs)
+          // Buckets we need from the MV: each anchor + the 5 hourly buckets
+          // preceding it (for the 6h-span sum). Deduplicated since 6h spans
+          // can overlap across adjacent hour-offsets.
+          const neededBucketSet = new Set<number>()
+          for (const anchorMs of anchors) {
+            for (let i = 0; i <= 5; i++) neededBucketSet.add(anchorMs - i * HOUR_MS)
+          }
+          const neededBuckets = [...neededBucketSet].map(toClickHouseDateTime)
+
+          const [recentRows, bucketRows] = yield* Effect.all(
+            [
+              chSqlClient.query<RecentCountsRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          issue_id,
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 HOUR) AS recent_1h,
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 6 HOUR) AS recent_6h,
+                          countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY)  AS recent_24h
+                        FROM scores
+                        WHERE ${scopeClause(options)}
+                          AND issue_id IN ({issueIds:Array(String)})
+                          AND created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY
+                        GROUP BY issue_id`,
+                  query_params: {
+                    ...scopeParams(organizationId, projectId),
+                    issueIds: Array.from(issueIds) as string[],
+                    now: nowParam,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<RecentCountsRow>()
+              }),
+              chSqlClient.query<HourlyBucketRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          issue_id,
+                          ts_hour,
+                          sum(count) AS count
+                        FROM scores_hourly_buckets
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND issue_id IN ({issueIds:Array(String)})
+                          AND ts_hour IN ({tsHours:Array(DateTime)})
+                        GROUP BY issue_id, ts_hour`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    issueIds: Array.from(issueIds) as string[],
+                    tsHours: neededBuckets,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<HourlyBucketRow>()
+              }),
+            ],
+            { concurrency: 2 },
+          )
+
+          return mergeEscalationSignals({
+            issueIds: issueIds.map((id) => id as string),
+            anchors,
+            nowMs,
+            recentRows,
+            bucketRows,
+          })
+        }),
+
       // -- aggregateTagsByIssues ---------------------------------------------
       // Performance shape (read carefully before relaxing the bounds):
       //   * `scores` is partitioned by `toYYYYMM(created_at)` and PK is
@@ -799,6 +1132,102 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceBucketRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+        }),
+      escalationThresholdHistogramByIssues: ({
+        organizationId,
+        projectId,
+        issueIds,
+        timeRange,
+        bucketSeconds,
+        kShort,
+      }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (issueIds.length === 0) return []
+          // Sub-hour buckets aren't supported — the MV is hourly so anything
+          // finer than that would round to the same band repeated across the
+          // bucket and read more like noise than a meaningful line.
+          if (bucketSeconds < 3600) return []
+          if (!timeRange.from || !timeRange.to) return []
+
+          const histogramStartMs = timeRange.from.getTime()
+          const histogramEndMs = timeRange.to.getTime()
+          // Anchor the seasonal pool on the chart's end, not its start. This
+          // matches the live detector's `now - week*W` anchors when the chart
+          // ends at "now", and — more importantly — newer issues whose data
+          // is contained in the chart window still get a meaningful line.
+          // Anchoring on `from` would require ≥4 weeks of pre-chart history
+          // and silently emit empty thresholds for anything younger.
+          const historyEndMs = histogramEndMs
+          const historyStartMs = historyEndMs - SEASONAL_HISTORY_WEEKS * WEEK_MS
+
+          const bucketRows = yield* chSqlClient.query<HourlyBucketRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      issue_id,
+                      ts_hour,
+                      sum(count) AS count
+                    FROM scores_hourly_buckets
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND issue_id IN ({issueIds:Array(String)})
+                      AND ts_hour >= toDateTime({historyStart:String}, 'UTC')
+                      AND ts_hour <  toDateTime({historyEnd:String}, 'UTC')
+                    GROUP BY issue_id, ts_hour`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                issueIds: Array.from(issueIds) as string[],
+                historyStart: toClickHouseDateTime(historyStartMs),
+                historyEnd: toClickHouseDateTime(historyEndMs),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<HourlyBucketRow>()
+          })
+
+          // Group history rows by issue, then project per-issue thresholds.
+          const rowsByIssue = new Map<string, HourlyBucketRow[]>()
+          for (const row of bucketRows) {
+            const issueId = normalizeCHString(row.issue_id)
+            const list = rowsByIssue.get(issueId) ?? []
+            list.push(row)
+            rowsByIssue.set(issueId, list)
+          }
+
+          // Bucket scaffold aligned to `toStartOfInterval(... , INTERVAL N SECOND)`
+          // — same alignment ClickHouse uses for `histogramByIssues`, so each
+          // threshold bucket's key matches its histogram counterpart 1:1.
+          const bucketWidthMs = bucketSeconds * SECOND_MS
+          const firstBucketStartMs = Math.floor(histogramStartMs / bucketWidthMs) * bucketWidthMs
+          const bucketStarts: number[] = []
+          for (let start = firstBucketStartMs; start < histogramEndMs; start += bucketWidthMs) {
+            bucketStarts.push(start)
+          }
+
+          return issueIds.map<IssueEscalationThresholdSeries>((issueId) => {
+            const issueRows = rowsByIssue.get(issueId as string) ?? []
+            // No history at all in the pool → don't fabricate a line. The
+            // floor σ would still produce a low constant threshold, but it
+            // would carry no real meaning and the renderer can drop it.
+            const hasAnyHistory = issueRows.length > 0
+            const grid = buildSeasonalGrid(issueRows)
+
+            const buckets: IssueEscalationThresholdBucket[] = bucketStarts.map((bucketStartMs) => {
+              const bucketEndMs = bucketStartMs + bucketWidthMs
+              const thresholdCount = hasAnyHistory
+                ? projectBucketThresholds({
+                    grid,
+                    bucketStartMs,
+                    bucketEndMs,
+                    kShort,
+                  })
+                : Number.NaN
+              const iso = `${new Date(bucketStartMs).toISOString().slice(0, 19)}.000Z`
+              return { bucket: iso, thresholdCount }
+            })
+            return { issueId, buckets }
+          })
         }),
       trendByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) =>
         Effect.gen(function* () {

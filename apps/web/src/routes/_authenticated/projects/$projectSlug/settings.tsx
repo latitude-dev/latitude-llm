@@ -1,3 +1,4 @@
+import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
 import type { AlertIncidentKind } from "@domain/shared"
 import {
   DetailSection,
@@ -5,22 +6,27 @@ import {
   type InfiniteTableColumn,
   Input,
   Label,
+  Slider,
   Switch,
   Text,
   Tooltip,
   useToast,
+  useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FolderIcon, ScanSearchIcon, ShieldAlertIcon } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { useState } from "react"
+import { useDebouncedCallback } from "use-debounce"
 import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../domains/flaggers/flaggers.functions.ts"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../../../lib/form-server-action.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "./-route-data.ts"
 
@@ -65,7 +71,6 @@ function ProjectSettingsPage() {
   const routeProject = useRouteProject()
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
-  const renameDebounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const { data: notificationsEnabled = false } = useQuery({
     queryKey: ["feature-flag", NOTIFICATIONS_FEATURE_FLAG],
@@ -131,26 +136,19 @@ function ProjectSettingsPage() {
     },
   ]
 
-  const handleProjectRename = useCallback(
-    (name: string) => {
-      if (renameDebounceRef.current) clearTimeout(renameDebounceRef.current)
+  const handleProjectRename = useDebouncedCallback((name: string) => {
+    const trimmedName = name.trim()
+    if (!trimmedName || trimmedName === currentProject.name) return
 
-      renameDebounceRef.current = setTimeout(() => {
-        const trimmedName = name.trim()
-        if (!trimmedName || trimmedName === currentProject.name) return
-
-        const transaction = updateProjectMutation(currentProject.id, { name: trimmedName })
-        void transaction.isPersisted.promise
-          .then(() => {
-            toast({ description: "Project name updated" })
-          })
-          .catch((error) => {
-            toast({ variant: "destructive", description: toUserMessage(error) })
-          })
-      }, 600)
-    },
-    [currentProject.id, currentProject.name, toast],
-  )
+    const transaction = updateProjectMutation(currentProject.id, { name: trimmedName })
+    void transaction.isPersisted.promise
+      .then(() => {
+        toast({ description: "Project name updated" })
+      })
+      .catch((error) => {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+      })
+  }, 600)
 
   const handleKeepMonitoringChange = async (checked: boolean) => {
     if (isSavingKeepMonitoring) return
@@ -167,6 +165,46 @@ function ProjectSettingsPage() {
     } finally {
       setIsSavingKeepMonitoring(false)
     }
+  }
+
+  // Run the sensitivity save through the codebase's standard
+  // `createFormSubmitHandler` wrapper so error extraction stays consistent
+  // with other settings forms. The slider isn't a typical form (no
+  // submit button, no field-level UI for errors), so the form is a thin
+  // shell: `defaultValues` seeds from the current setting and the slider's
+  // `onValueCommit` fires `setFieldValue` + `handleSubmit` once on release.
+  const sensitivityForm = useForm({
+    defaultValues: {
+      escalationSensitivity:
+        currentProject.settings.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K,
+    },
+    onSubmit: createFormSubmitHandler<{ escalationSensitivity: number }, void>(
+      async ({ escalationSensitivity }) => {
+        const transaction = updateProjectMutation(currentProject.id, {
+          settings: {
+            ...currentProject.settings,
+            alertNotifications: {
+              ...(currentProject.settings.alertNotifications ?? {}),
+              escalationSensitivity,
+            },
+          },
+        })
+        await transaction.isPersisted.promise
+      },
+      {
+        onSuccess: () => {
+          toast({ description: "Escalation sensitivity updated" })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
+  })
+
+  const handleSensitivityChange = (value: number) => {
+    sensitivityForm.setFieldValue("escalationSensitivity", value)
+    void sensitivityForm.handleSubmit()
   }
 
   const handleAlertNotificationChange = async (kind: AlertIncidentKind, checked: boolean) => {
@@ -252,8 +290,9 @@ function ProjectSettingsPage() {
                   onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
                 />
               </div>
-              {notificationsEnabled
-                ? ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
+              {notificationsEnabled ? (
+                <>
+                  {ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
                     const inputId = `alert-notification-${toggle.kind}`
                     const checked = currentProject.settings.alertNotifications?.[toggle.kind] ?? true
                     return (
@@ -273,8 +312,16 @@ function ProjectSettingsPage() {
                         />
                       </div>
                     )
-                  })
-                : null}
+                  })}
+                  <EscalationSensitivityControl
+                    value={
+                      currentProject.settings.alertNotifications?.escalationSensitivity ??
+                      DEFAULT_ESCALATION_SENSITIVITY_K
+                    }
+                    onChange={handleSensitivityChange}
+                  />
+                </>
+              ) : null}
             </div>
           </DetailSection>
           <DetailSection
@@ -303,5 +350,56 @@ function ProjectSettingsPage() {
         </Layout.List>
       </Layout.Content>
     </Layout>
+  )
+}
+
+interface EscalationSensitivityControlProps {
+  readonly value: number
+  readonly onChange: (value: number) => void
+}
+
+// Local presentational state so dragging the slider feels responsive while
+// the actual save is debounced through the parent's `onChange`. The hook
+// follows `value` whenever it changes externally (initial load, saved value
+// coming back, project switch) while still letting local drags override it
+// without a `useEffect` round-trip.
+function EscalationSensitivityControl({ value, onChange }: EscalationSensitivityControlProps) {
+  const [draft, setDraft] = useValueWithDefault(value)
+
+  return (
+    <div className="flex w-full flex-col gap-3 border-t border-border pt-4">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="escalation-sensitivity">Escalation sensitivity</Label>
+        <Text.H6 color="foregroundMuted">
+          Controls how aggressively the detector flags escalating issues. Lower values trigger sooner but produce more
+          false positives; higher values wait for stronger signal.
+        </Text.H6>
+      </div>
+      <div className="flex w-full flex-row items-center gap-4">
+        <Slider
+          id="escalation-sensitivity"
+          min={1}
+          max={6}
+          step={1}
+          value={[draft]}
+          // `onValueChange` fires on every tick while dragging; keep it local so
+          // the thumb tracks the pointer smoothly. The actual save runs in
+          // `onValueCommit`, which Radix fires only on pointer-up / keyboard
+          // commit — so users only persist a value once they release the slider.
+          onValueChange={(values) => {
+            const next = values[0] ?? value
+            setDraft(next)
+          }}
+          onValueCommit={(values) => {
+            const next = values[0] ?? value
+            onChange(next)
+          }}
+          aria-label="Escalation sensitivity"
+        />
+        <Text.H5 weight="medium" className="w-8 text-right">
+          {draft}
+        </Text.H5>
+      </div>
+    </div>
   )
 }

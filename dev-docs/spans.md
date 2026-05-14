@@ -100,6 +100,18 @@ When the normalized conversation exceeds that cap, truncation keeps both ends of
 
 Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
 
+## Trace Search Query Semantics
+
+Trace search parses the search bar into three independent text-search components:
+
+- unquoted text is the semantic prompt. It is embedded with Voyage using `inputType: "query"` and supplies relevance ordering for semantic-only and hybrid searches.
+- double-quoted text (`"..."`) is a literal phrase. It is normalized like stored `search_text`, escaped as a parameterized `LIKE` pattern, and matched case-sensitively as a substring.
+- backtick text (`` `...` ``) is an ordered token phrase. It is lower-cased and tokenized with the same `splitByNonAlpha` shape as the ClickHouse text index. ClickHouse 26.2 does not expose `hasPhrase`, so the repository composes `hasAllTokens(search_text, tokens)` as the indexed prefilter with `hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), tokens)` as the adjacency/order check.
+
+When a query contains both lexical components and semantic text, lexical components are mandatory filters and the semantic prompt ranks the remaining traces. Hybrid search uses a `LEFT JOIN` from lexical matches to semantic scores so traces that satisfy the literal/token filters still appear when embeddings are missing or expired; those rows receive a zero relevance score. The semantic relevance floor only applies to semantic-only searches.
+
+The UI editor mirrors these semantics: regular text remains semantic, `"..."` renders as a literal pill, and `` `...` `` renders as an ordered token-phrase pill. Pasted mixed syntax is parsed into the same segments before serialization back to `searchQuery`.
+
 ## Billing And Retention Stamping
 
 Span ingestion is the canonical trace-billing boundary.

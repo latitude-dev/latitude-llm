@@ -25,11 +25,13 @@ function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: (
   return (
     <Container className="flex flex-col gap-6 pt-14">
       <div className="flex flex-col gap-2">
-        <Text.H4 weight="bold">Billing</Text.H4>
-        <Text.H6 color="foregroundMuted">
-          We couldn't load your billing data right now. This usually clears up after a refresh. If it keeps happening,
-          contact support.
-        </Text.H6>
+        <div className="flex flex-col gap-1">
+          <Text.H4 weight="bold">Billing</Text.H4>
+          <Text.H5 color="foregroundMuted">
+            We couldn't load your billing data right now. This usually clears up after a refresh. If it keeps happening,
+            contact support.
+          </Text.H5>
+        </div>
       </div>
       <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-5">
         <Text.H6 color="destructive">Billing data unavailable</Text.H6>
@@ -166,11 +168,11 @@ function BillingActionsSection() {
         <Text.H4 weight="bold" color="primary">
           Upgrade to Pro
         </Text.H4>
-        <Text.H6 color="primary">
+        <Text.H5 color="primary">
           Move to {currencyFormatter.format(PRO_PLAN_CONFIG.priceCents / 100)}/month for{" "}
           {numberFormatter.format(PRO_PLAN_CONFIG.includedCredits)} included credits, {PRO_PLAN_CONFIG.retentionDays}
           -day retention, and automatic overage billing instead of a hard cap.
-        </Text.H6>
+        </Text.H5>
       </div>
       <div>
         <Button disabled={pendingAction !== null} onClick={() => void openUpgrade()}>
@@ -184,9 +186,9 @@ function BillingActionsSection() {
     <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
       <div className="flex flex-col gap-2">
         <Text.H4 weight="bold">Manage subscription</Text.H4>
-        <Text.H6 color="foregroundMuted">
+        <Text.H5 color="foregroundMuted">
           Update payment methods, download invoices, or review your subscription directly in Stripe Billing Portal.
-        </Text.H6>
+        </Text.H5>
       </div>
       <div>
         <Button variant="outline" disabled={pendingAction !== null} onClick={() => void openPortal()}>
@@ -200,10 +202,10 @@ function BillingActionsSection() {
     <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
       <div className="flex flex-col gap-2">
         <Text.H4 weight="bold">Enterprise contract</Text.H4>
-        <Text.H6 color="foregroundMuted">
+        <Text.H5 color="foregroundMuted">
           This organization is on a manual billing contract. Included credits, retention, and any overage terms are
           managed directly by Latitude staff.
-        </Text.H6>
+        </Text.H5>
       </div>
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">Manual provisioning</Badge>
@@ -280,7 +282,7 @@ function SpendingLimitSection() {
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2">
           <Text.H4 weight="bold">Monthly spend limit</Text.H4>
-          <Text.H6 color="foregroundMuted">Caps this organization's total Pro spend for the billing period.</Text.H6>
+          <Text.H5 color="foregroundMuted">Caps this organization's total Pro spend for the billing period.</Text.H5>
         </div>
 
         <div className="flex items-center gap-3">
@@ -348,12 +350,12 @@ function BillingSettingsPage() {
           <Badge
             variant={overview.planSlug === "free" ? "secondary" : overview.planSlug === "pro" ? "default" : "outline"}
           >
-            {overview.planSlug}
+            {overview.planSlug?.toUpperCase()}
           </Badge>
         </div>
-        <Text.H6 color="foregroundMuted">
+        <Text.H5 color="foregroundMuted">
           Current period: {formatPeriodDate(overview.periodStart)} to {formatPeriodDate(overview.periodEnd)}
-        </Text.H6>
+        </Text.H5>
       </div>
 
       <BillingOverviewCards />

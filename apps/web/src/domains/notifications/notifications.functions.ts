@@ -27,7 +27,7 @@ const notificationCursorSchema = z.object({
 // `customMessageNotificationPayloadSchema` at the consumption site.
 // Index signature uses `{}` to match TanStack Start's JSON-serialized return
 // inference (Record<string, unknown> would over-narrow during the round-trip).
-type JsonRecord = Readonly<Record<string, {}>>
+type JsonRecord = Readonly<Record<string, object>>
 
 export interface NotificationRecord {
   readonly id: string

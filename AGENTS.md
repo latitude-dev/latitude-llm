@@ -22,25 +22,30 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **17** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **22** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
 | Skill | Path | Use when |
 | --- | --- | --- |
 | **Agentation watch mode** | [.agents/skills/agentation-watch-mode/SKILL.md](.agents/skills/agentation-watch-mode/SKILL.md) | Agentation annotation watch loops, continuous feedback handling, or when the user says **`watch mode`** and wants annotations acknowledged, fixed, and resolved as they arrive |
+| **Analyze problem** | [.agents/skills/analyze-problem/SKILL.md](.agents/skills/analyze-problem/SKILL.md) | Investigating a bug, task, or reported issue to explain behavior, root cause, proposed fix, and verification steps before implementation |
 | **API endpoints (HTTP, MCP, SDK)** | [.agents/skills/api-endpoints/SKILL.md](.agents/skills/api-endpoints/SKILL.md) | Adding or changing routes in **`apps/api`**, **`defineApiEndpoint`**, **`openapi.json` / `mcp.json` regen**, **`createXxxRoutes`** factories, writing **field descriptions** that propagate to both the **TS SDK** and **MCP tool** consumers |
 | **Architecture and boundaries** | [.agents/skills/architecture-boundaries/SKILL.md](.agents/skills/architecture-boundaries/SKILL.md) | Layering, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **web-standard APIs in domain/shared/utils**, multi-tenancy, DDD layout, anti-patterns, **machine-facing MCP/API product surfaces** |
 | **Background jobs and events** | [.agents/skills/async-jobs-and-events/SKILL.md](.agents/skills/async-jobs-and-events/SKILL.md) | **Queues/workers**, **domain events**, side effects **outside** HTTP handlers, task payload design, debounce/dedupe, delayed job semantics, **domain event naming**, **publisher–consumer decoupling** |
 | **Authentication** | [.agents/skills/authentication/SKILL.md](.agents/skills/authentication/SKILL.md) | **Better Auth**, sessions, web session helpers, org context on session, **`@domain/auth`** flows |
 | **Backoffice** | [.agents/skills/backoffice/SKILL.md](.agents/skills/backoffice/SKILL.md) | Staff-only `/backoffice` features, **`createAdminServerFn`** factory, admin guards + RLS-bypass path, `@domain/admin` feature-folder layout |
 | **Better Auth best practices** | [.agents/skills/better-auth-best-practices/SKILL.md](.agents/skills/better-auth-best-practices/SKILL.md) | **Better Auth** server/client setup, DB adapters, sessions, plugins, env (`auth.ts`); email/password, OAuth; **better-auth.com** API reference |
+| **CI watchdog** | [.agents/skills/ci-watchdog/SKILL.md](.agents/skills/ci-watchdog/SKILL.md) | Watching GitHub PR checks, monitoring CI status, diagnosing failures from logs, and looping on fixes until checks pass |
 | **Code style and TypeScript** | [.agents/skills/code-style/SKILL.md](.agents/skills/code-style/SKILL.md) | Biome, imports, strict TS, naming, **Zod-first shared contracts**, literal-union enums, named constants, generated files |
+| **Create PR** | [.agents/skills/create-pr/SKILL.md](.agents/skills/create-pr/SKILL.md) | Creating PRs, writing PR descriptions, summarizing changes, and preparing a reviewable pull request |
 | **ClickHouse and Weaviate** | [.agents/skills/database-clickhouse-weaviate/SKILL.md](.agents/skills/database-clickhouse-weaviate/SKILL.md) | Parameterized CH queries, Goose migrations, append-only migration rules, Weaviate collections/migrations |
 | **Postgres and SqlClient** | [.agents/skills/database-postgres/SKILL.md](.agents/skills/database-postgres/SKILL.md) | Drizzle schema, RLS, SqlClient, migrations (Drizzle Kit), no-FK rules, repository mappers |
 | **Documentation and specs** | [.agents/skills/docs/SKILL.md](.agents/skills/docs/SKILL.md) | **`dev-docs/*.md`** (domain), **`docs/`** (ADRs, Mintlify), **`specs/*.md`**, durable documentation sync, spec structure, promoting stable knowledge into `dev-docs/` |
 | **Effect and errors** | [.agents/skills/effect-and-errors/SKILL.md](.agents/skills/effect-and-errors/SKILL.md) | `Effect` composition, `Data.TaggedError`, `HttpError`, boundary error handling |
 | **Environment configuration** | [.agents/skills/env-configuration/SKILL.md](.agents/skills/env-configuration/SKILL.md) | **`LAT_*` / `VITE_LAT_*`**, `.env.example`, **`parseEnv` / `parseEnvOptional`** |
+| **GitHub issues** | [.agents/skills/gh-issue/SKILL.md](.agents/skills/gh-issue/SKILL.md) | Creating clear, actionable GitHub issues for bugs, features, and improvements, optimized for LLM/actionability |
+| **Review PR comments** | [.agents/skills/review-pr-comments/SKILL.md](.agents/skills/review-pr-comments/SKILL.md) | Loading issue-level and inline PR feedback with GitHub CLI/API, deduping comments, replying in the right thread, and resolving addressed review threads |
 | **Temporal workflows** | [.agents/skills/temporal-developer/SKILL.md](.agents/skills/temporal-developer/SKILL.md) | Editing workflows or activities in **`apps/workflows`**, **reordering/inserting activities** in a running workflow, **`patched()` / `deprecatePatch()` / Worker Versioning**, debugging **non-determinism errors**, terminating stuck workflows, replay/history semantics |
 | **Testing** | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md) | Vitest layers, PGlite/chdb testkit, **`/testing` package exports**, avoiding `vi.mock` for repositories |
 | **Toolchain and commands** | [.agents/skills/toolchain-commands/SKILL.md](.agents/skills/toolchain-commands/SKILL.md) | Node/pnpm/Turbo/Vitest/Biome, scripts, filters, CI, `.env.*` setup, **Docker Compose, dev servers, Mailpit** |

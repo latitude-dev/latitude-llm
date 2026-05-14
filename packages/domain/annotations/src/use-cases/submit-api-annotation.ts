@@ -1,4 +1,4 @@
-import { BadRequestError, type ProjectId } from "@domain/shared"
+import { BadRequestError, type ProjectId, type UserId } from "@domain/shared"
 import { resolveTraceIdFromRef, traceRefSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -26,11 +26,13 @@ const PUBLIC_API_SOURCE_ID = "API" as const
  *     span defaulted to the last LLM completion). Internal callers can still
  *     pass concrete values via the lower-level `writeDraftAnnotationUseCase`
  *     / `writePublishedAnnotationUseCase` primitives.
- *   - `annotatorId` — API keys are organization-scoped, not user-scoped, so
- *     there is no real Latitude user behind an API request. The use case
- *     forces `annotatorId = null`; lying about authorship by accepting a
- *     caller-supplied user id would let any token holder attribute work to
- *     any teammate.
+ *   - `annotatorId` — the body never carries it. The route layer attaches
+ *     it from the verified auth context: an OAuth caller's token is bound to
+ *     a specific user, so we set `annotatorId = auth.userId`; an API-key
+ *     caller is organization-scoped (no real user), so it stays `null`.
+ *     Accepting a caller-supplied user id from the body would let any token
+ *     holder attribute work to any teammate, hence it lives in the context
+ *     parameter — not the request schema.
  *
  * The public API does not expose draft state: every API-submitted annotation
  * is written as published. Internal callers that need a draft path go through
@@ -64,6 +66,12 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, fallbackMess
 interface SubmitApiAnnotationContext {
   readonly organizationId: string
   readonly projectId: ProjectId
+  /**
+   * Authenticated user id, when known. OAuth callers carry a real user
+   * behind the token; API-key callers don't, so they pass `null` (or omit).
+   * The route layer is the trusted source — never the request body.
+   */
+  readonly annotatorId?: UserId | null
 }
 
 type SubmitApiAnnotationRequest = z.input<typeof submitApiAnnotationInputSchema> & SubmitApiAnnotationContext
@@ -102,8 +110,9 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
   // the session from the trace and pins the annotation to the trace's last
   // LLM completion span — the public API doesn't accept overrides for these.
   // `id` is omitted entirely so `writeScoreUseCase` mints a fresh one — the
-  // public API is creation-only. `annotatorId` is forced to null — see the
-  // schema doc-block for the rationale.
+  // public API is creation-only. `annotatorId` comes from the context (set by
+  // the route layer from the verified auth), never the body — see the schema
+  // doc-block for the rationale.
   return yield* writePublishedAnnotationUseCase({
     projectId: input.projectId,
     sourceId: PUBLIC_API_SOURCE_ID,
@@ -112,7 +121,7 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
     spanId: null,
     simulationId: parsed.simulationId,
     issueId: parsed.issueId,
-    annotatorId: null,
+    annotatorId: input.annotatorId ?? null,
     value: parsed.value,
     passed: parsed.passed,
     feedback: parsed.feedback,

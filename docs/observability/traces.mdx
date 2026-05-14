@@ -64,9 +64,23 @@ Click on a trace to open the detail view, which shows:
   <img src="/images/traces/trace-detailed.png" alt="Trace detail view showing conversation, span tree, and metadata" />
 </Frame>
 
-## Filtering Traces
+## Searching and Filtering Traces
 
-Click the **Filters** button in the toolbar to open the filter panel. You can combine any number of filters to narrow your trace view.
+The project **Search** page lets you search trace conversations in three ways. You can combine them in one query:
+
+- **Semantic search**: write normal text without quotes. Latitude searches by meaning and ranks matching traces first. Example: `customer wants a refund` can find traces where the user says "I need my money back" even if the exact words differ.
+- **Literal match**: wrap text in double quotes. Latitude looks for that exact case-sensitive text in the searchable conversation. Example: `"handOffToHuman: true"` matches that exact string.
+- **Phrase match**: wrap text in backticks. Latitude searches for those words next to each other and in order, while ignoring case and punctuation between them. Example: `` `human-annotation` `` can match `human-annotation`, `Human annotation`, or `"human": "annotation"`, but not `human something annotation`.
+
+For example:
+
+```txt
+refund "handOffToHuman: true" `human-annotation`
+```
+
+This finds traces that contain the literal text `handOffToHuman: true`, contain the adjacent phrase tokens `human` and `annotation`, and ranks the remaining matches by how semantically close they are to `refund`.
+
+Click the **Filters** button in the toolbar to open the filter panel. You can combine any number of filters with search to narrow your trace view.
 
 ### Available Filters
 

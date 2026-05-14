@@ -73,27 +73,6 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 })
 
-function ThemeToggle() {
-  const initialTheme = useRootThemePreference()
-  const { theme, setTheme } = useThemePreference(initialTheme)
-  const nextTheme = theme === "dark" ? "light" : "dark"
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      aria-label={`Switch to ${nextTheme} mode`}
-      title={`Switch to ${nextTheme} mode`}
-      aria-pressed={theme === "dark"}
-      className="h-8 w-8 group-hover:text-foreground"
-      onClick={() => setTheme(nextTheme)}
-    >
-      <Icon icon={theme === "dark" ? Sun : Moon} size="sm" />
-    </Button>
-  )
-}
-
 function BillingCreditCounter({ organizationId }: { readonly organizationId: string }) {
   const { toast } = useToast()
   const [isUpgradePending, setIsUpgradePending] = useState(false)
@@ -213,6 +192,9 @@ function NavHeader() {
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
   const isAdmin = (user as { role?: string }).role === "admin"
+  const initialTheme = useRootThemePreference()
+  const { theme, setTheme } = useThemePreference(initialTheme)
+  const nextTheme = theme === "dark" ? "light" : "dark"
 
   if (!org) return null
 
@@ -259,7 +241,6 @@ function NavHeader() {
       <div className="flex items-center gap-4">
         <BillingCreditCounter organizationId={organizationId} />
         <NotificationBell />
-        <ThemeToggle />
         {supportEnabled && (
           <button
             type="button"
@@ -285,6 +266,11 @@ function NavHeader() {
           side="bottom"
           align="end"
           options={[
+            {
+              label: `Switch theme`,
+              iconProps: { icon: theme === "dark" ? Sun : Moon, size: "sm" as const },
+              onClick: () => setTheme(nextTheme),
+            },
             ...(isAdmin
               ? [
                   {

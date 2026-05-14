@@ -28,7 +28,7 @@
  */
 import { MembershipRepository } from "@domain/organizations"
 import { OrganizationId, UnauthorizedError } from "@domain/shared"
-import { eq, MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { eq, MembershipRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { oauthApplications, verifications } from "@platform/db-postgres/schema/better-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -36,7 +36,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireUserSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 import { listOrganizations } from "../organizations/organizations.functions.ts"
 
 const consentDecisionSchema = z
@@ -152,6 +152,9 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
     const userId = await requireUserSession()
     const headers = await getRequestHeaders()
 
+    let acceptedApplicationId: string | null = null
+    let acceptedClientName: string | null = null
+
     if (data.accept) {
       const organizationId = OrganizationId(data.organizationId)
       const adminClient = getAdminPostgresClient()
@@ -169,10 +172,13 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
       // Bind the OAuth application to the picked org. The row's RLS is scoped
       // on `organization_id`, so we use the admin connection — no `set
       // organization_id` precondition exists for the row we're about to claim.
-      await adminClient.db
+      const [boundApp] = await adminClient.db
         .update(oauthApplications)
         .set({ organizationId, updatedAt: new Date() })
         .where(eq(oauthApplications.clientId, data.clientId))
+        .returning({ id: oauthApplications.id, name: oauthApplications.name })
+      acceptedApplicationId = boundApp?.id ?? null
+      acceptedClientName = boundApp?.name ?? null
     }
 
     // See {@link OAuthConsentApi} for why we cast — extra-plugin endpoints
@@ -199,6 +205,30 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
     }
 
     if (typeof result?.redirectURI === "string" && result.redirectURI.length > 0) {
+      // Fire the `OAuthKeyCreated` domain event once BA has accepted the
+      // consent — nothing consumes it yet, but it's the durable hook future
+      // MCP-usage analytics will lean on. Deny / failure branches never get
+      // here so we don't emit a phantom "created" event for them.
+      if (data.accept && acceptedApplicationId) {
+        const outboxWriter = getOutboxWriter()
+        const adminClient = getAdminPostgresClient()
+        await Effect.runPromise(
+          outboxWriter
+            .write({
+              eventName: "OAuthKeyCreated",
+              aggregateType: "oauth_key",
+              aggregateId: acceptedApplicationId,
+              organizationId: data.organizationId,
+              payload: {
+                organizationId: data.organizationId,
+                actorUserId: userId,
+                clientId: data.clientId,
+                clientName: acceptedClientName,
+              },
+            })
+            .pipe(Effect.provide(SqlClientLive(adminClient, OrganizationId(data.organizationId))), withTracing),
+        )
+      }
       return { redirectUrl: result.redirectURI }
     }
     throw new UnauthorizedError({ message: "OAuth consent did not return a redirect URL" })

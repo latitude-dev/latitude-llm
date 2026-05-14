@@ -1,7 +1,12 @@
 import { OutboxEventWriter } from "@domain/events"
 import { AlertIncidentId, generateId, OrganizationId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { type AlertIncident, type AlertIncidentKind, SEVERITY_FOR_KIND } from "../entities/alert-incident.ts"
+import {
+  type AlertIncident,
+  type AlertIncidentKind,
+  type EntrySignalsSnapshot,
+  SEVERITY_FOR_KIND,
+} from "../entities/alert-incident.ts"
 import { AlertIncidentRepository } from "../ports/alert-incident-repository.ts"
 
 export interface CreateAlertIncidentFromIssueEventInput {
@@ -10,6 +15,14 @@ export interface CreateAlertIncidentFromIssueEventInput {
   readonly projectId: string
   readonly issueId: string
   readonly occurredAt: Date
+  /**
+   * Snapshot of the seasonal-anomaly signals at the moment of entry. Carried
+   * on `issue.escalating` incidents so the close-side detector can reference
+   * the conditions that tripped open. `null` for kinds that don't escalate
+   * and (during the rollout) for legacy `IssueEscalated` events emitted
+   * before the seasonal detector started snapshotting.
+   */
+  readonly entrySignals?: EntrySignalsSnapshot | null
 }
 
 export type CreateAlertIncidentFromIssueEventError = RepositoryError
@@ -39,6 +52,8 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
           startedAt: input.occurredAt,
           endedAt: null,
           createdAt: now,
+          entrySignals: input.entrySignals ?? null,
+          exitEligibleSince: null,
         }
 
         yield* alertIncidentRepository.insert(incident)

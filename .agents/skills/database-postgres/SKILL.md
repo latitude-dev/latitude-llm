@@ -105,15 +105,21 @@ export const ProjectRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
-            .query((db) => db.select().from(projects).where(eq(projects.id, id)))
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(projects)
+                .where(and(eq(projects.organizationId, organizationId), eq(projects.id, id)))
+                .limit(1),
+            )
             .pipe(Effect.flatMap(...))
         }),
 
       save: (project) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          yield* sqlClient.query((db) =>
-            db.insert(projects).values(row).onConflictDoUpdate({...})
+          yield* sqlClient.query((db, organizationId) =>
+            db.insert(projects).values({ ...row, organizationId }).onConflictDoUpdate({...})
           )
         }),
     }
@@ -122,6 +128,54 @@ export const ProjectRepositoryLive = Layer.effect(
 ```
 
 The layer-build effect doesn't `yield* SqlClient` at all — the dependency is declared via each method's `R` channel, and resolved per call. A build-time yield is redundant and (if captured) re-introduces the very bug this pattern avoids.
+
+### Pull `organizationId` from the RLS context, not from method params
+
+The `query((db, organizationId) => …)` callback receives the active organization id from the `SqlClient`'s RLS context. **Use that value** in `WHERE` predicates and `INSERT … VALUES` rows. Don't accept `organizationId` as a parameter on the repository method just to re-thread it into the SQL.
+
+Why:
+
+- **Consistency** — every repo call is scoped the same way regardless of which caller invokes it. Use-cases don't get to pick a different org from the one their request authenticated against.
+- **Defense in depth alongside RLS** — RLS already filters rows by `app.current_organization_id`, but the explicit predicate makes intent obvious in the query plan and catches accidental "I forgot RLS is on" mistakes during code review.
+- **Insert safety** — for `create`/`save` methods, writing the RLS-supplied org id (instead of trusting `entity.organizationId`) prevents a caller from fabricating an entity for a different org and inserting it through the right org's transaction.
+
+```ts
+// Good — orgId comes from RLS, name reflects the actual action.
+findMemberByEmail: (email: string) =>
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    return yield* sqlClient.query((db, organizationId) =>
+      db
+        .select({ id: members.id })
+        .from(members)
+        .where(and(eq(members.organizationId, organizationId), eq(members.email, email.toLowerCase())))
+        .limit(1),
+    )
+  }),
+
+create: (invitation: Invitation) =>
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    yield* sqlClient.query((db, organizationId) =>
+      db.insert(invitations).values({ ...row, organizationId }),
+    )
+  }),
+
+// Bad — orgId is a redundant input the caller could mis-pass.
+findMemberByEmail: ({ email, organizationId }: { email: string; organizationId: OrganizationId }) =>
+  /* … query((db) => …where(eq(members.organizationId, organizationId))) */,
+
+// Bad — trusts the entity for the inserted org id; nothing stops a caller
+// from passing an entity for a different org through this org's transaction.
+create: (invitation: Invitation) =>
+  /* … query((db) => db.insert(invitations).values({ ...invitation })) */,
+```
+
+Naming: if dropping the explicit param makes the method's name redundant (e.g. `listPendingByOrganizationId` → `listPending`), rename it. The repository contract should describe what the method *does*, not which scope it's bound to — the scope is the RLS context by construction.
+
+**Exceptions** — methods that legitimately operate outside the current RLS org are rare and should be obvious from the name and a comment:
+- `findPublicPendingPreviewById(invitationId)` — invite landing pages query before the invitee has authenticated, so there is no RLS context to lean on. Document the cross-org scope explicitly.
+- Admin/maintenance scripts that go through `withAdmin(...)` rather than `withPostgres(...)`.
 
 The repository port's method signatures must list `SqlClient` in their `R` channel:
 

@@ -116,7 +116,7 @@
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -226,6 +226,42 @@
               }
             },
             "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI."
+          },
+          "flaggers": {
+            "type": "object",
+            "properties": {
+              "frustration": {
+                "type": "boolean"
+              },
+              "nsfw": {
+                "type": "boolean"
+              },
+              "refusal": {
+                "type": "boolean"
+              },
+              "laziness": {
+                "type": "boolean"
+              },
+              "jailbreaking": {
+                "type": "boolean"
+              },
+              "forgetting": {
+                "type": "boolean"
+              },
+              "trashing": {
+                "type": "boolean"
+              },
+              "tool-call-errors": {
+                "type": "boolean"
+              },
+              "output-schema-validation": {
+                "type": "boolean"
+              },
+              "empty-response": {
+                "type": "boolean"
+              }
+            },
+            "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched."
           }
         }
       },
@@ -245,24 +281,28 @@
           "id": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Stable score identifier."
           },
           "organizationId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Organization that owns this score."
           },
           "projectId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Project this score lives in."
           },
           "sessionId": {
             "type": [
               "string",
               "null"
             ],
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Session id lifted from the trace, when set. `null` when the trace has no session."
           },
           "traceId": {
             "type": [
@@ -270,7 +310,8 @@
               "null"
             ],
             "minLength": 32,
-            "maxLength": 32
+            "maxLength": 32,
+            "description": "Identifier of the scored trace."
           },
           "spanId": {
             "type": [
@@ -278,7 +319,8 @@
               "null"
             ],
             "minLength": 16,
-            "maxLength": 16
+            "maxLength": 16,
+            "description": "Span the score pins to. Defaults to the trace's last LLM-completion span."
           },
           "simulationId": {
             "type": [
@@ -286,7 +328,8 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Simulation reference, if any."
           },
           "issueId": {
             "type": [
@@ -294,47 +337,57 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Issue this score contributes to, if any."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the score marks the output as passing."
           },
           "feedback": {
-            "type": "string"
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
           },
           "error": {
             "type": [
               "string",
               "null"
             ],
-            "minLength": 1
+            "minLength": 1,
+            "description": "Generation error text, when score generation itself errored. `null` for successful scores."
           },
           "errored": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "`true` when the score could not be generated successfully."
           },
           "duration": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Score generation duration in nanoseconds."
           },
           "tokens": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "LLM tokens consumed generating the score."
           },
           "cost": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Score cost in microcents (1/1,000,000 of a USD)."
           },
           "draftedAt": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores."
           },
           "annotatorId": {
             "type": [
@@ -342,30 +395,36 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "User who authored the score, if any."
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp at which the score was created."
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp of the last metadata update."
           },
           "source": {
             "type": "string",
             "enum": [
               "custom"
-            ]
+            ],
+            "description": "Discriminator. `\"custom\"` denotes a user-supplied score."
           },
           "sourceId": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "User-supplied tag identifying the score's origin (echoed from the request)."
           },
           "metadata": {
             "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "Arbitrary user-supplied metadata persisted alongside the score."
           }
         },
         "required": [
@@ -400,24 +459,28 @@
           "id": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Stable score identifier."
           },
           "organizationId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Organization that owns this score."
           },
           "projectId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Project this score lives in."
           },
           "sessionId": {
             "type": [
               "string",
               "null"
             ],
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Session id lifted from the trace, when set. `null` when the trace has no session."
           },
           "traceId": {
             "type": [
@@ -425,7 +488,8 @@
               "null"
             ],
             "minLength": 32,
-            "maxLength": 32
+            "maxLength": 32,
+            "description": "Identifier of the scored trace."
           },
           "spanId": {
             "type": [
@@ -433,7 +497,8 @@
               "null"
             ],
             "minLength": 16,
-            "maxLength": 16
+            "maxLength": 16,
+            "description": "Span the score pins to. Defaults to the trace's last LLM-completion span."
           },
           "simulationId": {
             "type": [
@@ -441,7 +506,8 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Simulation reference, if any."
           },
           "issueId": {
             "type": [
@@ -449,47 +515,57 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Issue this score contributes to, if any."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the score marks the output as passing."
           },
           "feedback": {
-            "type": "string"
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
           },
           "error": {
             "type": [
               "string",
               "null"
             ],
-            "minLength": 1
+            "minLength": 1,
+            "description": "Generation error text, when score generation itself errored. `null` for successful scores."
           },
           "errored": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "`true` when the score could not be generated successfully."
           },
           "duration": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Score generation duration in nanoseconds."
           },
           "tokens": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "LLM tokens consumed generating the score."
           },
           "cost": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Score cost in microcents (1/1,000,000 of a USD)."
           },
           "draftedAt": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores."
           },
           "annotatorId": {
             "type": [
@@ -497,37 +573,34 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "User who authored the score, if any."
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp at which the score was created."
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp of the last metadata update."
           },
           "source": {
             "type": "string",
             "enum": [
               "evaluation"
-            ]
+            ],
+            "description": "Discriminator. `\"evaluation\"` denotes a platform-generated evaluation score."
           },
           "sourceId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "CUID of the evaluation that produced this score."
           },
           "metadata": {
-            "type": "object",
-            "properties": {
-              "evaluationHash": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "evaluationHash"
-            ]
+            "$ref": "#/components/schemas/EvaluationScoreMetadata"
           }
         },
         "required": [
@@ -556,6 +629,19 @@
           "metadata"
         ]
       },
+      "EvaluationScoreMetadata": {
+        "type": "object",
+        "properties": {
+          "evaluationHash": {
+            "type": "string",
+            "description": "Hash of the evaluation script that produced this score; lets the platform track which version generated it."
+          }
+        },
+        "required": [
+          "evaluationHash"
+        ],
+        "description": "Evaluation-specific metadata."
+      },
       "CreateScoreBody": {
         "anyOf": [
           {
@@ -576,18 +662,22 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "default": null
+            "default": null,
+            "description": "Simulation this score is tied to, if any. `null` (default) when not part of a simulation."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the scored output passes the evaluator's bar."
           },
           "feedback": {
-            "type": "string"
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
           },
           "error": {
             "type": [
@@ -595,22 +685,26 @@
               "null"
             ],
             "minLength": 1,
-            "default": null
+            "default": null,
+            "description": "Generation error text, when score generation itself failed. `null` (default) for successful scores."
           },
           "duration": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "Score generation duration in nanoseconds. `0` for externally-computed scores."
           },
           "tokens": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "LLM tokens consumed generating the score, if any. `0` for externally-computed scores."
           },
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -618,19 +712,22 @@
           "sourceId": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "User-supplied tag identifying the score's origin (e.g. `\"prod-pipeline\"`, `\"qa-script-v2\"`)."
           },
           "metadata": {
             "type": "object",
             "additionalProperties": {},
-            "default": {}
+            "default": {},
+            "description": "Arbitrary user-supplied metadata persisted alongside the score."
           },
           "_evaluation": {
             "type": "boolean",
             "enum": [
               false
             ],
-            "default": false
+            "default": false,
+            "description": "Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores."
           }
         },
         "required": [
@@ -650,12 +747,14 @@
                 "type": "string",
                 "enum": [
                   "id"
-                ]
+                ],
+                "description": "Match a single trace by its identifier. Pair with `id`."
               },
               "id": {
                 "type": "string",
                 "minLength": 32,
-                "maxLength": 32
+                "maxLength": 32,
+                "description": "32-character trace identifier."
               }
             },
             "required": [
@@ -670,7 +769,8 @@
                 "type": "string",
                 "enum": [
                   "filters"
-                ]
+                ],
+                "description": "Match a single trace by a filter set. Pair with `filters`; exactly one trace must match."
               },
               "filters": {
                 "$ref": "#/components/schemas/FilterSet"
@@ -681,7 +781,8 @@
               "filters"
             ]
           }
-        ]
+        ],
+        "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
       },
       "FilterSet": {
         "type": "object",
@@ -690,7 +791,8 @@
           "items": {
             "$ref": "#/components/schemas/FilterCondition"
           }
-        }
+        },
+        "description": "Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set."
       },
       "FilterCondition": {
         "type": "object",
@@ -709,7 +811,8 @@
               "contains",
               "notContains",
               "gtePercentile"
-            ]
+            ],
+            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
           },
           "value": {
             "anyOf": [
@@ -735,7 +838,8 @@
                   ]
                 }
               }
-            ]
+            ],
+            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
           }
         },
         "required": [
@@ -753,18 +857,22 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "default": null
+            "default": null,
+            "description": "Simulation this score is tied to, if any. `null` (default) when not part of a simulation."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the scored output passes the evaluator's bar."
           },
           "feedback": {
-            "type": "string"
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
           },
           "error": {
             "type": [
@@ -772,22 +880,26 @@
               "null"
             ],
             "minLength": 1,
-            "default": null
+            "default": null,
+            "description": "Generation error text, when score generation itself failed. `null` (default) for successful scores."
           },
           "duration": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "Score generation duration in nanoseconds. `0` for externally-computed scores."
           },
           "tokens": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "LLM tokens consumed generating the score, if any. `0` for externally-computed scores."
           },
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "default": 0
+            "default": 0,
+            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -796,23 +908,17 @@
             "type": "boolean",
             "enum": [
               true
-            ]
+            ],
+            "description": "Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom."
           },
           "sourceId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "CUID of the evaluation that produced this score."
           },
           "metadata": {
-            "type": "object",
-            "properties": {
-              "evaluationHash": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "evaluationHash"
-            ]
+            "$ref": "#/components/schemas/EvaluationScoreMetadata"
           }
         },
         "required": [
@@ -832,24 +938,28 @@
           "id": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Stable annotation-score identifier."
           },
           "organizationId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Organization that owns this annotation."
           },
           "projectId": {
             "type": "string",
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Project this annotation lives in."
           },
           "sessionId": {
             "type": [
               "string",
               "null"
             ],
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Session id lifted from the trace, when set. `null` when the trace has no session."
           },
           "traceId": {
             "type": [
@@ -857,7 +967,8 @@
               "null"
             ],
             "minLength": 32,
-            "maxLength": 32
+            "maxLength": 32,
+            "description": "Identifier of the annotated trace."
           },
           "spanId": {
             "type": [
@@ -865,7 +976,8 @@
               "null"
             ],
             "minLength": 16,
-            "maxLength": 16
+            "maxLength": 16,
+            "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
           },
           "simulationId": {
             "type": [
@@ -873,7 +985,8 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Simulation reference, if any."
           },
           "issueId": {
             "type": [
@@ -881,47 +994,57 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "Issue this annotation contributes to, if any."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the annotation marks the output as passing."
           },
           "feedback": {
-            "type": "string"
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
           },
           "error": {
             "type": [
               "string",
               "null"
             ],
-            "minLength": 1
+            "minLength": 1,
+            "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
           },
           "errored": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "`true` when the annotation could not be generated successfully."
           },
           "duration": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Generation duration in nanoseconds. `0` for human annotations."
           },
           "tokens": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Total LLM tokens consumed generating the score, if any. `0` for human annotations."
           },
           "cost": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Total LLM cost in microcents (1/1,000,000 of a USD). `0` for human annotations."
           },
           "draftedAt": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Always `null` for public-API annotations — they're written as published."
           },
           "annotatorId": {
             "type": [
@@ -929,21 +1052,25 @@
               "null"
             ],
             "minLength": 24,
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "User who authored the annotation. `null` for API-key callers (organization-scoped); set to the authenticated user for OAuth callers."
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp at which the annotation was created."
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO-8601 timestamp of the last metadata update."
           },
           "source": {
             "type": "string",
             "enum": [
               "annotation"
-            ]
+            ],
+            "description": "Always `\"annotation\"` for this endpoint's responses."
           },
           "sourceId": {
             "anyOf": [
@@ -960,40 +1087,11 @@
                 "minLength": 24,
                 "maxLength": 24
               }
-            ]
+            ],
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows. Public-API annotations are always `\"API\"`."
           },
           "metadata": {
-            "type": "object",
-            "properties": {
-              "rawFeedback": {
-                "type": "string"
-              },
-              "messageIndex": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "partIndex": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "startOffset": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "endOffset": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "textFormat": {
-                "type": "string",
-                "enum": [
-                  "pretty-json"
-                ]
-              }
-            },
-            "required": [
-              "rawFeedback"
-            ]
+            "$ref": "#/components/schemas/AnnotationScoreMetadata"
           }
         },
         "required": [
@@ -1022,6 +1120,46 @@
           "metadata"
         ]
       },
+      "AnnotationScoreMetadata": {
+        "type": "object",
+        "properties": {
+          "rawFeedback": {
+            "type": "string",
+            "description": "Original feedback text before enrichment. Human-authored for human annotations, model-authored for system drafts."
+          },
+          "messageIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0-based message index inside the conversation. Omit for conversation-level annotations."
+          },
+          "partIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`."
+          },
+          "startOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`."
+          },
+          "endOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`."
+          },
+          "textFormat": {
+            "type": "string",
+            "enum": [
+              "pretty-json"
+            ],
+            "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing."
+          }
+        },
+        "required": [
+          "rawFeedback"
+        ],
+        "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+      },
       "CreateAnnotationBody": {
         "type": "object",
         "properties": {
@@ -1032,7 +1170,8 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "default": null
+            "default": null,
+            "description": "Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation."
           },
           "issueId": {
             "type": [
@@ -1041,46 +1180,26 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "default": null
+            "default": null,
+            "description": "Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation."
           },
           "value": {
             "type": "number",
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
           },
           "passed": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the annotated output passes the reviewer's bar."
           },
           "feedback": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Free-text feedback explaining the score. Surfaced alongside the trace."
           },
           "anchor": {
-            "type": "object",
-            "properties": {
-              "messageIndex": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "partIndex": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "startOffset": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "endOffset": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "textFormat": {
-                "type": "string",
-                "enum": [
-                  "pretty-json"
-                ]
-              }
-            }
+            "$ref": "#/components/schemas/AnnotationAnchor"
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -1092,6 +1211,39 @@
           "feedback",
           "trace"
         ]
+      },
+      "AnnotationAnchor": {
+        "type": "object",
+        "properties": {
+          "messageIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0-based message index inside the conversation. Omit for conversation-level annotations."
+          },
+          "partIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`."
+          },
+          "startOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`."
+          },
+          "endOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`."
+          },
+          "textFormat": {
+            "type": "string",
+            "enum": [
+              "pretty-json"
+            ],
+            "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing."
+          }
+        },
+        "description": "Optional anchor pinning the annotation to a specific message / part / offset range inside the trace."
       },
       "ApiKey": {
         "type": "object",
@@ -1866,7 +2018,7 @@
         "x-fern-sdk-group-name": "projects",
         "x-fern-sdk-method-name": "delete",
         "summary": "Delete project",
-        "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+        "description": "Deletes a project by slug.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -1914,10 +2066,11 @@
     },
     "/v1/projects/{projectSlug}/scores": {
       "post": {
-        "operationId": "scores.create",
         "tags": [
           "Scores"
         ],
+        "x-fern-sdk-group-name": "scores",
+        "x-fern-sdk-method-name": "create",
         "summary": "Create project score",
         "description": "Creates a score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required). Annotations use the separate `/annotations` endpoint.",
         "security": [
@@ -1925,6 +2078,7 @@
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "createScore",
         "parameters": [
           {
             "schema": {
@@ -1949,7 +2103,7 @@
         },
         "responses": {
           "201": {
-            "description": "Score created successfully",
+            "description": "Score created",
             "content": {
               "application/json": {
                 "schema": {
@@ -1993,17 +2147,19 @@
     },
     "/v1/projects/{projectSlug}/annotations": {
       "post": {
-        "operationId": "annotations.create",
         "tags": [
           "Annotations"
         ],
+        "x-fern-sdk-group-name": "annotations",
+        "x-fern-sdk-method-name": "create",
         "summary": "Create project annotation",
-        "description": "Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required).",
+        "description": "Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required). When called with an OAuth token, the annotation is attributed to the authenticated user.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
+        "operationId": "createAnnotation",
         "parameters": [
           {
             "schema": {
@@ -2028,7 +2184,7 @@
         },
         "responses": {
           "201": {
-            "description": "Annotation created successfully",
+            "description": "Annotation created",
             "content": {
               "application/json": {
                 "schema": {
@@ -2332,7 +2488,7 @@
         "x-fern-sdk-group-name": "apiKeys",
         "x-fern-sdk-method-name": "revoke",
         "summary": "Revoke API key",
-        "description": "Soft-deletes an API key, immediately invalidating it.",
+        "description": "Revokes an API key.",
         "security": [
           {
             "ApiKeyAuth": []

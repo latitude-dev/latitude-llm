@@ -92,7 +92,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -208,7 +208,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+                  "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
                 },
                 "lastEditedAt": {
                   "type": "string",
@@ -352,7 +352,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -422,6 +422,28 @@
               }
             },
             "additionalProperties": false
+          },
+          "flaggers": {
+            "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "frustration",
+                "nsfw",
+                "refusal",
+                "laziness",
+                "jailbreaking",
+                "forgetting",
+                "trashing",
+                "tool-call-errors",
+                "output-schema-validation",
+                "empty-response"
+              ]
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
           }
         },
         "required": [
@@ -500,7 +522,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the project was soft-deleted. `null` while the project is active."
+            "description": "ISO-8601 timestamp at which the project was deleted. `null` while the project is active."
           },
           "lastEditedAt": {
             "type": "string",
@@ -533,7 +555,7 @@
     {
       "name": "deleteProject",
       "title": "Delete project",
-      "description": "Soft-deletes a project by slug. Traces remain in storage but the project no longer appears in lists.",
+      "description": "Deletes a project by slug.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -545,6 +567,929 @@
         },
         "required": [
           "projectSlug"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "createScore",
+      "title": "Create project score",
+      "description": "Creates a score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required). Annotations use the separate `/annotations` endpoint.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "simulationId": {
+                    "default": null,
+                    "description": "Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 24,
+                        "maxLength": 24
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Normalized score value in [0, 1]. Higher = better."
+                  },
+                  "passed": {
+                    "type": "boolean",
+                    "description": "Whether the scored output passes the evaluator's bar."
+                  },
+                  "feedback": {
+                    "type": "string",
+                    "description": "Free-text feedback explaining the score."
+                  },
+                  "error": {
+                    "default": null,
+                    "description": "Generation error text, when score generation itself failed. `null` (default) for successful scores.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "duration": {
+                    "default": 0,
+                    "description": "Score generation duration in nanoseconds. `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tokens": {
+                    "default": 0,
+                    "description": "LLM tokens consumed generating the score, if any. `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cost": {
+                    "default": 0,
+                    "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "trace": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "const": "id",
+                            "description": "Match a single trace by its identifier. Pair with `id`."
+                          },
+                          "id": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 32,
+                            "description": "32-character trace identifier."
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "const": "filters",
+                            "description": "Match a single trace by a filter set. Pair with `filters`; exactly one trace must match."
+                          },
+                          "filters": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "eq",
+                                      "neq",
+                                      "gt",
+                                      "gte",
+                                      "lt",
+                                      "lte",
+                                      "in",
+                                      "notIn",
+                                      "contains",
+                                      "notContains",
+                                      "gtePercentile"
+                                    ],
+                                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                                  },
+                                  "value": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "number"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ],
+                                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "filters"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
+                  },
+                  "sourceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "User-supplied tag identifying the score's origin (e.g. `\"prod-pipeline\"`, `\"qa-script-v2\"`)."
+                  },
+                  "metadata": {
+                    "default": {},
+                    "description": "Arbitrary user-supplied metadata persisted alongside the score.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "_evaluation": {
+                    "default": false,
+                    "description": "Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores.",
+                    "type": "boolean",
+                    "const": false
+                  }
+                },
+                "required": [
+                  "simulationId",
+                  "value",
+                  "passed",
+                  "feedback",
+                  "error",
+                  "duration",
+                  "tokens",
+                  "cost",
+                  "trace",
+                  "sourceId",
+                  "metadata",
+                  "_evaluation"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "simulationId": {
+                    "default": null,
+                    "description": "Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 24,
+                        "maxLength": 24
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Normalized score value in [0, 1]. Higher = better."
+                  },
+                  "passed": {
+                    "type": "boolean",
+                    "description": "Whether the scored output passes the evaluator's bar."
+                  },
+                  "feedback": {
+                    "type": "string",
+                    "description": "Free-text feedback explaining the score."
+                  },
+                  "error": {
+                    "default": null,
+                    "description": "Generation error text, when score generation itself failed. `null` (default) for successful scores.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "duration": {
+                    "default": 0,
+                    "description": "Score generation duration in nanoseconds. `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tokens": {
+                    "default": 0,
+                    "description": "LLM tokens consumed generating the score, if any. `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cost": {
+                    "default": 0,
+                    "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "trace": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "const": "id",
+                            "description": "Match a single trace by its identifier. Pair with `id`."
+                          },
+                          "id": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 32,
+                            "description": "32-character trace identifier."
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "by": {
+                            "type": "string",
+                            "const": "filters",
+                            "description": "Match a single trace by a filter set. Pair with `filters`; exactly one trace must match."
+                          },
+                          "filters": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "eq",
+                                      "neq",
+                                      "gt",
+                                      "gte",
+                                      "lt",
+                                      "lte",
+                                      "in",
+                                      "notIn",
+                                      "contains",
+                                      "notContains",
+                                      "gtePercentile"
+                                    ],
+                                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                                  },
+                                  "value": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "number"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    ],
+                                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "by",
+                          "filters"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
+                  },
+                  "_evaluation": {
+                    "type": "boolean",
+                    "const": true,
+                    "description": "Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom."
+                  },
+                  "sourceId": {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24,
+                    "description": "CUID of the evaluation that produced this score."
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "evaluationHash": {
+                        "type": "string",
+                        "description": "Hash of the evaluation script that produced this score; lets the platform track which version generated it."
+                      }
+                    },
+                    "required": [
+                      "evaluationHash"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Evaluation-specific metadata."
+                  }
+                },
+                "required": [
+                  "simulationId",
+                  "value",
+                  "passed",
+                  "feedback",
+                  "error",
+                  "duration",
+                  "tokens",
+                  "cost",
+                  "trace",
+                  "_evaluation",
+                  "sourceId",
+                  "metadata"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "createAnnotation",
+      "title": "Create project annotation",
+      "description": "Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = \"id\"`) or by a filter set (`trace.by = \"filters\"`, exactly one match required). When called with an OAuth token, the annotation is attributed to the authenticated user.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "simulationId": {
+            "default": null,
+            "description": "Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issueId": {
+            "default": null,
+            "description": "Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether the annotated output passes the reviewer's bar."
+          },
+          "feedback": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-text feedback explaining the score. Surfaced alongside the trace."
+          },
+          "anchor": {
+            "description": "Optional anchor pinning the annotation to a specific message / part / offset range inside the trace.",
+            "type": "object",
+            "properties": {
+              "messageIndex": {
+                "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "partIndex": {
+                "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "startOffset": {
+                "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endOffset": {
+                "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "textFormat": {
+                "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "trace": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "id",
+                    "description": "Match a single trace by its identifier. Pair with `id`."
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 32,
+                    "description": "32-character trace identifier."
+                  }
+                },
+                "required": [
+                  "by",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "filters",
+                    "description": "Match a single trace by a filter set. Pair with `filters`; exactly one trace must match."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "by",
+                  "filters"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Target trace. Either an explicit id or a filter set matching exactly one trace."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "trace"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable annotation-score identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this annotation."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this annotation lives in."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session id lifted from the trace, when set. `null` when the trace has no session."
+          },
+          "traceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32,
+                "description": "32-character trace identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the annotated trace."
+          },
+          "spanId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 16,
+                "maxLength": 16,
+                "description": "16-character span identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Simulation reference, if any."
+          },
+          "issueId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Issue this annotation contributes to, if any."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether the annotation marks the output as passing."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
+          },
+          "errored": {
+            "type": "boolean",
+            "description": "`true` when the annotation could not be generated successfully."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Generation duration in nanoseconds. `0` for human annotations."
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM tokens consumed generating the score, if any. `0` for human annotations."
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM cost in microcents (1/1,000,000 of a USD). `0` for human annotations."
+          },
+          "draftedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Always `null` for public-API annotations — they're written as published."
+          },
+          "annotatorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who authored the annotation. `null` for API-key callers (organization-scoped); set to the authenticated user for OAuth callers."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp at which the annotation was created."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp of the last metadata update."
+          },
+          "source": {
+            "type": "string",
+            "const": "annotation",
+            "description": "Always `\"annotation\"` for this endpoint's responses."
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UI",
+                  "API",
+                  "SYSTEM"
+                ]
+              },
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              }
+            ],
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows. Public-API annotations are always `\"API\"`."
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "rawFeedback": {
+                "type": "string",
+                "description": "Original feedback text before enrichment. Human-authored for human annotations, model-authored for system drafts."
+              },
+              "messageIndex": {
+                "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "partIndex": {
+                "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "startOffset": {
+                "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endOffset": {
+                "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "textFormat": {
+                "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
+              }
+            },
+            "required": [
+              "rawFeedback"
+            ],
+            "additionalProperties": false,
+            "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
         ],
         "additionalProperties": false
       }
@@ -891,7 +1836,7 @@
     {
       "name": "revokeApiKey",
       "title": "Revoke API key",
-      "description": "Soft-deletes an API key, immediately invalidating it.",
+      "description": "Revokes an API key.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

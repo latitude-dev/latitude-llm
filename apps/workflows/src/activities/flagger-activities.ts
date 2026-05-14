@@ -21,6 +21,7 @@ import {
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  FlaggerRepositoryLive,
   OutboxEventWriterLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
@@ -41,6 +42,7 @@ export const runFlagger = async (input: {
 }): Promise<RunFlaggerResult> =>
   Effect.runPromise(
     runFlaggerUseCase(input).pipe(
+      withPostgres(FlaggerRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       withTracing,

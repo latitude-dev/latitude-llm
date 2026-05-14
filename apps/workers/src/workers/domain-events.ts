@@ -303,6 +303,7 @@ export const createDomainEventsWorker = ({
 
     MemberInvited: () => Effect.void,
     ApiKeyCreated: () => Effect.void,
+    OAuthKeyCreated: () => Effect.void,
     DatasetCreated: () => Effect.void,
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,

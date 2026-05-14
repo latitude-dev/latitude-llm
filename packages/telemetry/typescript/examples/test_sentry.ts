@@ -14,10 +14,9 @@
  * Install: npm install openai @sentry/node
  */
 
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import * as Sentry from "@sentry/node"
 import OpenAI from "openai"
-import { capture, LatitudeSpanProcessor, registerLatitudeInstrumentations } from "../src"
+import { capture, Latitude } from "../src"
 
 // ─── 1. Initialize Sentry (native SDK) ───────────────────
 
@@ -27,20 +26,15 @@ Sentry.init({
   // Sentry auto-instruments HTTP, DB, etc. and sends to Sentry
 })
 
-// ─── 2. Add Latitude to Sentry's OTel provider ─────────────
+// ─── 2. Initialize Latitude second ────────────────────────
 
-// Get Sentry's tracer provider (when using Sentry's OTel integration)
-// Note: This requires Sentry's custom OTel setup. See Sentry docs for details.
-const provider = new NodeTracerProvider({
-  spanProcessors: [new LatitudeSpanProcessor(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!)],
-})
-
-await registerLatitudeInstrumentations({
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
-  tracerProvider: provider,
 })
 
-provider.register()
+await latitude.ready
 
 // ─── 3. Use instrumented clients ──────────────────────────
 
@@ -74,8 +68,8 @@ async function main() {
     console.log("Error captured by Sentry")
   }
 
-  await provider.forceFlush()
-  await provider.shutdown()
+  await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

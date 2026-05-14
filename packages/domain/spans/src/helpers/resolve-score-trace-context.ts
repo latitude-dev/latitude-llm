@@ -69,6 +69,7 @@ export const resolveScoreTraceContext = (input: {
       const spanRepository = yield* SpanRepository
       const spans = yield* spanRepository.listByTraceId({
         organizationId: input.organizationId,
+        projectId: input.projectId,
         traceId: input.traceId,
       })
       const resolvedSpanId = resolveLastLlmCompletionSpanId(spans)

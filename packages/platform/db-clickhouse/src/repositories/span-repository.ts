@@ -307,17 +307,49 @@ const toInsertRow = (span: SpanDetail) => ({
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
-    const listByTraceId: SpanRepositoryShape["listByTraceId"] = ({ organizationId, traceId }) =>
+    const listByTraceId: SpanRepositoryShape["listByTraceId"] = ({
+      organizationId,
+      projectId,
+      traceId,
+      startTimeFrom,
+      startTimeTo,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const startFromClause = startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
+        const startToClause = startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
-                    WHERE organization_id = {organizationId:String}
-                      AND trace_id = {traceId:FixedString(32)}
+              // Dedupe ReplacingMergeTree rows with `LIMIT 1 BY span_id`
+              // instead of `FINAL`. `FINAL` forces a query-time merge over all
+              // matching parts and is expensive for traces with many spans or
+              // large payload columns. The newest ingested row wins, matching
+              // the table's ReplacingMergeTree(ingested_at) semantics.
+              query: `SELECT ${LIST_COLUMNS}
+                    FROM (
+                      SELECT ${LIST_COLUMNS}
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                        ${startFromClause}
+                        ${startToClause}
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
                     ORDER BY start_time ASC`,
-              query_params: { organizationId: organizationId as string, traceId },
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceId,
+                ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
+                ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+              },
               format: "JSONEachRow",
             })
             return result.json<SpanListRow>()
@@ -331,24 +363,34 @@ export const SpanRepositoryLive = Layer.effect(
     const listByProjectId: SpanRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const startFromClause = options.startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
+        const startToClause = options.startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                      AND ({hasStartFrom:Bool} = false OR start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
-                      AND ({hasStartTo:Bool} = false OR start_time <= {startTimeTo:DateTime64(9, 'UTC')})
+              query: `SELECT ${LIST_COLUMNS}
+                    FROM (
+                      SELECT ${LIST_COLUMNS}
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        ${startFromClause}
+                        ${startToClause}
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
                     ORDER BY start_time DESC
                     LIMIT {limit:UInt32}
                     OFFSET {offset:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                hasStartFrom: options.startTimeFrom !== undefined,
-                startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-                hasStartTo: options.startTimeTo !== undefined,
-                startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                ...(options.startTimeFrom ? { startTimeFrom: toClickhouseDateTime(options.startTimeFrom) } : {}),
+                ...(options.startTimeTo ? { startTimeTo: toClickhouseDateTime(options.startTimeTo) } : {}),
                 limit: options.limit ?? 50,
                 offset: options.offset ?? 0,
               },
@@ -389,21 +431,35 @@ export const SpanRepositoryLive = Layer.effect(
 
       listByProjectId,
 
-      findBySpanId: ({ organizationId, traceId, spanId }) =>
+      findBySpanId: ({ organizationId, projectId, traceId, spanId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const startFromClause = startTimeFrom
+            ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+            : ""
+          const startToClause = startTimeTo
+            ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+            : ""
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT * FROM spans FINAL
+                query: `SELECT *
+                      FROM spans
                       WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
                         AND trace_id = {traceId:FixedString(32)}
                         AND span_id = {spanId:FixedString(16)}
+                        ${startFromClause}
+                        ${startToClause}
+                      ORDER BY ingested_at DESC
                       LIMIT 1`,
                 query_params: {
                   organizationId: organizationId as string,
+                  projectId: projectId as string,
                   traceId,
                   spanId,
+                  ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
                 },
                 format: "JSONEachRow",
               })

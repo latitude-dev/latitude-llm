@@ -33,7 +33,10 @@ export interface SpanRepositoryShape {
 
   listByTraceId(input: {
     readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
     readonly traceId: TraceId
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
   listByProjectId(input: {
@@ -44,8 +47,11 @@ export interface SpanRepositoryShape {
 
   findBySpanId(input: {
     readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
     readonly traceId: TraceId
     readonly spanId: SpanId
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
   }): Effect.Effect<SpanDetail, NotFoundError | RepositoryError, ChSqlClient>
 
   findMessagesForTrace(input: {

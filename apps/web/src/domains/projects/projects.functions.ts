@@ -2,7 +2,7 @@ import { DatasetRepository } from "@domain/datasets"
 import { IssueProjectionRepository, listIssuesUseCase } from "@domain/issues"
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { ALERT_INCIDENT_KINDS, isValidId, OrganizationId, ProjectId } from "@domain/shared"
+import { isValidId, OrganizationId, ProjectId, projectSettingsSchema } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -100,11 +100,6 @@ export const createProject = createServerFn({ method: "POST" })
 
     return toRecord(project)
   })
-
-const projectSettingsSchema = z.object({
-  keepMonitoring: z.boolean().optional(),
-  alertNotifications: z.partialRecord(z.enum(ALERT_INCIDENT_KINDS), z.boolean()).optional(),
-})
 
 export const updateProject = createServerFn({ method: "POST" })
   .inputValidator(

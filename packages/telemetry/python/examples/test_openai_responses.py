@@ -13,9 +13,9 @@ import os
 
 from openai import OpenAI
 
-from latitude_telemetry import capture, init_latitude
+from latitude_telemetry import Latitude, capture
 
-latitude = init_latitude(
+latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations=["openai"],
@@ -77,4 +77,4 @@ def test_openai_responses_streaming():
 if __name__ == "__main__":
     test_openai_responses()
     test_openai_responses_streaming()
-    latitude["flush"]()
+    latitude.flush()

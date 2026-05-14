@@ -3,6 +3,7 @@ export type {
   AlertIncidentKind,
   AlertIncidentSourceType,
   AlertSeverity,
+  EntrySignalsSnapshot,
 } from "./entities/alert-incident.ts"
 export {
   ALERT_INCIDENT_KINDS,
@@ -12,12 +13,15 @@ export {
   alertIncidentSchema,
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
+  entrySignalsSnapshotSchema,
   SEVERITY_FOR_KIND,
 } from "./entities/alert-incident.ts"
 export type {
   AlertIncidentRepositoryShape,
   CloseOpenAlertIncidentInput,
+  FindOpenAlertIncidentInput,
   ListAlertIncidentsByProjectInRangeInput,
+  UpdateAlertIncidentExitDwellInput,
 } from "./ports/alert-incident-repository.ts"
 export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
 export type {

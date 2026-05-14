@@ -67,14 +67,16 @@ describe("LatitudeSpanProcessor", () => {
     expect(mockSpan.updateName).not.toHaveBeenCalled()
   })
 
-  it("should stamp service.name when serviceName option is set", () => {
+  it("should NOT stamp service.name as a span attribute when serviceName option is set", () => {
+    // service.name is a resource attribute per OTel semantic conventions, not a span attribute.
+    // It's applied via the exporter wrapper instead — covered by the init.test.ts integration tests.
     const processor = new LatitudeSpanProcessor(apiKey, projectSlug, { serviceName: "billing-api" })
     const mockSpan = createMockSpan()
     const ctx = context.active()
 
     processor.onStart(mockSpan as unknown as Span, ctx)
 
-    expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTR_SERVICE_NAME, "billing-api")
+    expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(ATTR_SERVICE_NAME, "billing-api")
   })
 
   it("should not stamp empty tags", () => {

@@ -44,6 +44,7 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   anthropic: ClaudeIcon, // Alternative: AnthropicIcon
   azure: AzureIcon, // Alternative: OpenaiIcon
   "azure-cognitive-services": AzureIcon,
+  claude: ClaudeIcon,
   "cloudflare-ai-gateway": CloudflareIcon,
   "cloudflare-workers-ai": CloudflareWorkersIcon,
   cohere: CohereIcon,

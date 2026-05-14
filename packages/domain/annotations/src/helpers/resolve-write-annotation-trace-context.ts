@@ -71,7 +71,10 @@ export const resolveWriteAnnotationTraceContext = (input: {
       const spanRepository = yield* SpanRepository
       const spans = yield* spanRepository.listByTraceId({
         organizationId: input.organizationId,
+        projectId: input.projectId,
         traceId: input.traceId,
+        startTimeFrom: detail.startTime,
+        startTimeTo: detail.endTime,
       })
       const resolvedSpanId = resolveLastLlmCompletionSpanId(spans)
       if (resolvedSpanId) spanId = resolvedSpanId

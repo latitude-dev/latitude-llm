@@ -80,7 +80,28 @@ function OAuthConsentPage() {
   const { toast } = useToast()
 
   const clientName = consent.client.name ?? "An OAuth client"
+  const clientIcon = consent.client.icon
   const noOrgs = consent.organizations.length === 0
+
+  /**
+   * Renders the OAuth client's icon (when present) followed by its name,
+   * inline with the surrounding text. The icon is sized relative to the
+   * current font (`h-[1em] w-[1em]`) so it reads like an emoji prefix
+   * regardless of the wrapping `Text.*` variant.
+   */
+  const clientLabel = clientIcon ? (
+    <>
+      <img
+        src={clientIcon}
+        alt=""
+        aria-hidden="true"
+        className="mr-1 inline-block h-[1em] w-[1em] rounded-sm align-[-0.15em]"
+      />
+      {clientName}
+    </>
+  ) : (
+    clientName
+  )
 
   const authorizeForOrg = async (organizationId: string) => {
     if (isSubmitting) return
@@ -155,20 +176,20 @@ function OAuthConsentPage() {
           <Text.H5 color="foregroundMuted">
             {result === null ? (
               <>
-                <Text.H5 weight="medium">{clientName}</Text.H5> will act on your behalf and have full access to the
+                <Text.H5 weight="medium">{clientLabel}</Text.H5> will act on your behalf and have full access to the
                 organization you choose below. You can revoke this access at any time from your organization's{" "}
                 <Text.H5 weight="medium">OAuth Keys</Text.H5> settings.
               </>
             ) : result.kind === "authorized" ? (
               <>
-                <Text.H5 weight="medium">{clientName}</Text.H5> has been authorized to access{" "}
+                <Text.H5 weight="medium">{clientLabel}</Text.H5> has been authorized to access{" "}
                 <Text.H5 weight="medium">{result.organizationName}</Text.H5>. You can close this page and return to{" "}
-                <Text.H5 weight="medium">{clientName}</Text.H5>.
+                <Text.H5 weight="medium">{clientLabel}</Text.H5>.
               </>
             ) : (
               <>
-                <Text.H5 weight="medium">{clientName}</Text.H5> has been denied access. You can close this page and
-                return to <Text.H5 weight="medium">{clientName}</Text.H5>.
+                <Text.H5 weight="medium">{clientLabel}</Text.H5> has been denied access. You can close this page and
+                return to <Text.H5 weight="medium">{clientLabel}</Text.H5>.
               </>
             )}
           </Text.H5>

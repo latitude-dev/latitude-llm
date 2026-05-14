@@ -81,16 +81,45 @@ export interface EventPayloads {
    * flag (which reads the open `alert_incidents` row). Drives the
    * `issue.escalating` incident's open transition (the alert-incidents
    * worker inserts the new row).
+   *
+   * `entrySignals` is the snapshot of seasonal-anomaly signals at the moment
+   * of entry, persisted onto the new `alert_incidents` row by the worker so
+   * the close-side detector can compare against the conditions that tripped
+   * open instead of recomputing live. Shape mirrors `EntrySignalsSnapshot`
+   * in `@domain/alerts` — declared inline here to keep `@domain/events`
+   * free of an `@domain/alerts` dependency (which would create a cycle).
+   * `null` only for historical replay of events emitted before the seasonal
+   * detector started snapshotting.
    */
   IssueEscalated: {
     readonly organizationId: string
     readonly projectId: string
     readonly issueId: string
     readonly escalatedAt: string
+    readonly entrySignals: {
+      readonly expected1h: number
+      readonly expected6hPerHour: number
+      readonly stddev1h: number
+      readonly stddev6hPerHour: number
+      readonly kShort: number
+      readonly kLong: number
+      readonly entryThreshold1h: number
+      readonly entryThreshold6hPerHour: number
+      readonly entryCount24h: number
+    } | null
   }
   /**
-   * Emitted by `checkIssueEscalationUseCase` when an escalating issue's
-   * recent occurrence count drops below the hysteresis exit threshold.
+   * Emitted by `checkIssueEscalationUseCase` when an escalating issue exits.
+   * `reason` discriminates the three exit paths so downstream consumers
+   * (notifications copy, observability dashboards) can distinguish a
+   * natural band-shape recovery from a forced close:
+   *   - `threshold`: the band-shape exit condition held for the full dwell.
+   *   - `absolute-rate-drop`: the 24h count fell below the entry-time count
+   *     by the configured factor (catches incidents that stayed flat while
+   *     the seasonal baseline caught up — wouldn't close on `threshold` alone).
+   *   - `timeout`: the 72h hard ceiling kicked in (backstop against
+   *     ghost incidents that never recover their snapshot conditions).
+   *
    * Drives the `issue.escalating` incident's close transition — the
    * alert-incidents worker sets `ended_at` on the open row, which is what
    * flips `lifecycle.isEscalating` back to `false` on subsequent reads.
@@ -100,6 +129,7 @@ export interface EventPayloads {
     readonly projectId: string
     readonly issueId: string
     readonly endedAt: string
+    readonly reason: "threshold" | "absolute-rate-drop" | "timeout"
   }
   /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row is
@@ -119,6 +149,12 @@ export interface EventPayloads {
    * `ended_at` is set (only sustained kinds — currently `issue.escalating` —
    * can close). Symmetric to `IncidentCreated`. Consumed by the notifications
    * worker to fire a "closed" notification for the same incident.
+   *
+   * `reason` mirrors `IssueEscalationEnded.reason` and is forwarded by the
+   * worker so observability/notification consumers can distinguish a clean
+   * band-shape exit from the backstop and timeout paths. Optional because
+   * pre-rewrite events / replays may not carry it; consumers should treat
+   * absence as "unknown" rather than "threshold".
    */
   IncidentClosed: {
     readonly organizationId: string
@@ -127,6 +163,7 @@ export interface EventPayloads {
     readonly kind: "issue.escalating"
     readonly sourceType: "issue"
     readonly sourceId: string
+    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
   }
   AnnotationDeleted: {
     readonly organizationId: string
@@ -189,6 +226,17 @@ export interface EventPayloads {
     readonly actorUserId: string
     readonly apiKeyId: string
     readonly name: string
+  }
+  /**
+   * Fired when a user approves an OAuth client to act on this organization's
+   * behalf (the consent flow's accept branch). Today nothing consumes it; it
+   * exists so future MCP-usage analytics can backfill from the outbox.
+   */
+  OAuthKeyCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly clientId: string
+    readonly clientName: string | null
   }
   DatasetCreated: {
     readonly organizationId: string

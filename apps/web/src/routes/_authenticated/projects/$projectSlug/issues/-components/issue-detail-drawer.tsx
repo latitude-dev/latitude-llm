@@ -432,8 +432,7 @@ export function IssueDetailDrawer({
                   barVariant="details"
                   states={issue?.states ?? []}
                   resolvedAt={issue?.resolvedAt ?? null}
-                  escalationOccurrenceThreshold={issue?.escalationOccurrenceThreshold ?? null}
-                  showEscalationThresholdGuide
+                  escalationThresholds={issue?.trendEscalationThresholds ?? null}
                   incidents={trendIncidents}
                 />
               </div>
