@@ -98,6 +98,9 @@ function createAuroraServerless(
   username: string,
   databaseName: string,
 ): RdsOutput {
+  const auroraPostgresVersion = "16.11"
+  const isProduction = config.name === "production"
+
   const parameterGroup = new aws.rds.ParameterGroup(`${name}-rds-params`, {
     family: "aurora-postgresql16",
     description: "Custom parameter group for Latitude",
@@ -114,42 +117,46 @@ function createAuroraServerless(
   })
 
   const cluster = new aws.rds.Cluster(`${name}-aurora`, {
+    clusterIdentifier: `${name}-aurora`,
     engine: "aurora-postgresql",
-    engineVersion: "16.4",
+    engineVersion: auroraPostgresVersion,
     databaseName: databaseName,
     masterUsername: username,
     masterPassword: password,
     dbSubnetGroupName: subnetGroup.name,
     vpcSecurityGroupIds: [securityGroup.id],
     skipFinalSnapshot: config.name === "staging",
-    finalSnapshotIdentifier: config.name === "production" ? `${name}-final-snapshot` : undefined,
+    finalSnapshotIdentifier: isProduction ? `${name}-encrypted-final-snapshot` : undefined,
     serverlessv2ScalingConfiguration: {
       minCapacity: config.rds.minAcu!,
       maxCapacity: config.rds.maxAcu!,
     },
     backupRetentionPeriod: config.rds.backupDays,
+    storageEncrypted: true,
     preferredBackupWindow: "03:00-04:00",
     enabledCloudwatchLogsExports: ["postgresql"],
     tags: {
       Name: `${name}-aurora`,
       Environment: config.name,
     },
+  }, {
+    aliases: isProduction ? [{ name: `${name}-aurora-encrypted-migration` }] : undefined,
+    protect: isProduction,
   })
 
   const instance = new aws.rds.ClusterInstance(`${name}-aurora-instance`, {
+    identifier: `${name}-aurora-instance`,
     clusterIdentifier: cluster.id,
     instanceClass: "db.serverless",
     engine: "aurora-postgresql",
-    engineVersion: "16.4",
+    engineVersion: auroraPostgresVersion,
     tags: {
       Name: `${name}-aurora-instance`,
       Environment: config.name,
     },
-  })
-
-  const secretVersion = new aws.secretsmanager.SecretVersion(`${name}-db-secret-version`, {
-    secretId: secret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${cluster.endpoint}:5432/${databaseName}`,
+  }, {
+    aliases: isProduction ? [{ name: `${name}-aurora-encrypted-migration-instance` }] : undefined,
+    protect: isProduction,
   })
 
   const adminSecret = new aws.secretsmanager.Secret(`${name}-admin-db-secret`, {
@@ -161,9 +168,38 @@ function createAuroraServerless(
     },
   })
 
+  const updateDatabaseUrlHost = (databaseUrl: pulumi.Output<string>, host: pulumi.Output<string>) =>
+    pulumi.all([databaseUrl, host]).apply(([value, targetHost]) => {
+      const url = new URL(value)
+      url.hostname = targetHost
+      url.port = "5432"
+      return url.toString()
+    })
+
+  const existingAppSecretVersion = isProduction
+    ? aws.secretsmanager.getSecretVersionOutput({ secretId: secret.id })
+    : undefined
+
+  const existingAdminSecretVersion = isProduction
+    ? aws.secretsmanager.getSecretVersionOutput({ secretId: adminSecret.id })
+    : undefined
+
+  const appSecretString = existingAppSecretVersion?.secretString
+    ? updateDatabaseUrlHost(existingAppSecretVersion.secretString, cluster.endpoint)
+    : pulumi.interpolate`postgres://${username}:${password}@${cluster.endpoint}:5432/${databaseName}`
+
+  const adminSecretString = existingAdminSecretVersion?.secretString
+    ? updateDatabaseUrlHost(existingAdminSecretVersion.secretString, cluster.endpoint)
+    : pulumi.interpolate`postgres://${username}:${password}@${cluster.endpoint}:5432/${databaseName}`
+
+  const secretVersion = new aws.secretsmanager.SecretVersion(`${name}-db-secret-version`, {
+    secretId: secret.id,
+    secretString: appSecretString,
+  })
+
   const adminSecretVersion = new aws.secretsmanager.SecretVersion(`${name}-admin-db-secret-version`, {
     secretId: adminSecret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${cluster.endpoint}:5432/${databaseName}`,
+    secretString: adminSecretString,
   })
 
   const connectionInfo = pulumi.output({
@@ -212,12 +248,14 @@ function createStandardInstance(
   })
 
   const dbInstance = new aws.rds.Instance(`${name}-postgres`, {
+    identifier: `${name}-postgres`,
     engine: "postgres",
     engineVersion: "16.6",
     instanceClass: config.rds.instanceType!,
     allocatedStorage: 20,
     maxAllocatedStorage: 100,
     storageType: "gp3",
+    storageEncrypted: true,
     dbName: databaseName,
     username: username,
     password: password,
@@ -237,7 +275,7 @@ function createStandardInstance(
 
   const secretVersion = new aws.secretsmanager.SecretVersion(`${name}-db-secret-version`, {
     secretId: secret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}`,
+    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}?uselibpqcompat=true&sslmode=require`,
   })
 
   const adminSecret = new aws.secretsmanager.Secret(`${name}-admin-db-secret`, {
@@ -251,7 +289,7 @@ function createStandardInstance(
 
   const adminSecretVersion = new aws.secretsmanager.SecretVersion(`${name}-admin-db-secret-version`, {
     secretId: adminSecret.id,
-    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}`,
+    secretString: pulumi.interpolate`postgres://${username}:${password}@${dbInstance.address}:5432/${databaseName}?uselibpqcompat=true&sslmode=require`,
   })
 
   const connectionInfo = pulumi.output({
