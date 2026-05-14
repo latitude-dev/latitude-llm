@@ -11,6 +11,7 @@ import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createMembersRoutes, membersPath } from "./members.ts"
+import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
 import { createProjectsRoutes, projectsPath } from "./projects.ts"
 import { createScoresRoutes, scoresPath } from "./scores.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
@@ -56,6 +57,9 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
 
   routes.use(apiKeysPath, createTierRateLimiter("low"))
   routes.route(apiKeysPath, createApiKeysRoutes())
+
+  routes.use(oauthKeysPath, createTierRateLimiter("low"))
+  routes.route(oauthKeysPath, createOAuthKeysRoutes())
 
   routes.use(accountPath, createTierRateLimiter("low"))
   routes.route(accountPath, createAccountRoutes())

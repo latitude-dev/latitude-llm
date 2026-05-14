@@ -49,16 +49,32 @@ const buildMetadata = () =>
     const webUrl = yield* parseEnv("LAT_WEB_URL", "string")
     return {
       resource: apiUrl,
-      // BA serves the AS metadata at `<webUrl>/api/auth/.well-known/oauth-authorization-server`;
-      // RFC 8414 lets clients derive the metadata path from the issuer, so the
-      // value here is the issuer (`<webUrl>/api/auth`) without the
-      // `.well-known/...` suffix.
-      authorization_servers: [`${webUrl}/api/auth`],
+      // Bare web origin, not `${webUrl}/api/auth` — Better Auth's OIDC plugin
+      // emits the AS metadata with `issuer = baseURL` (i.e. `${webUrl}`,
+      // without the `/api/auth` path; cf. `better-auth/dist/plugins/oidc-
+      // provider/index.mjs:53`). Strict clients (Zed) enforce RFC 8414 §3.3
+      // and reject when the issuer doesn't match the AS URL we advertise.
+      // The web app's root-level `/.well-known/oauth-authorization-server`
+      // redirect funnels probes to BA's actual `<webUrl>/api/auth/...`
+      // location, so the discovery still resolves end-to-end.
+      authorization_servers: [webUrl],
     }
   })
 
 export const registerWellKnownRoutes = ({ app }: { app: OpenAPIHono<AppEnv> }) => {
   app.openapi(oauthProtectedResourceRoute, async (c) => {
+    const metadata = await Effect.runPromise(buildMetadata())
+    return c.json(metadata, 200)
+  })
+
+  // RFC 9728 §3 path-suffixed form: when a resource lives at a non-root path
+  // (e.g. `/v1/mcp`), the metadata location is
+  // `<origin>/.well-known/oauth-protected-resource<resource-path>`. Cursor
+  // probes the unscoped form; Zed probes the path-suffixed form first.
+  // Serving the same payload at every suffix satisfies both — the metadata
+  // describes the entire `apiUrl` resource server regardless of which sub-
+  // path the client probed from.
+  app.get("/.well-known/oauth-protected-resource/*", async (c) => {
     const metadata = await Effect.runPromise(buildMetadata())
     return c.json(metadata, 200)
   })

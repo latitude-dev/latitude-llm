@@ -24,10 +24,14 @@ const BASELINE_SHARE: Record<ToolBucket, number> = {
 // Each archetype has a `gate` (minimum signal floor — below it, the
 // archetype can't fire at all) and a `score` formula mapping its signal
 // into [0, 1]. `assignPersonality` filters to gate-passers and returns
-// the highest-scoring one. The rare archetypes (Strategist, Scholar)
-// saturate earlier than the tool-mix archetypes so a strong rare signal
-// can beat a moderately-strong common one — otherwise a heavy editor
-// would always out-score a heavy planner.
+// the highest-scoring one.
+//
+// The 5 *conditional* archetypes (Strategist/Scholar/Consultant/Shipper/
+// Tester) get a multiplicative `RARE_BONUS` over their normalised score:
+// once their gate passes (which requires a real, non-trivial signal),
+// they deserve to beat a moderate (~0.5) tool-mix winner. Otherwise the
+// always-firing tool-mix archetypes drown out genuine planner / shipper /
+// tester signals at every realistic activity level.
 
 const STRATEGIST_GATE_EXCESS = 0.05
 const STRATEGIST_GATE_CALLS = 10
@@ -41,13 +45,27 @@ const SCHOLAR_SCORE_HIGH = 0.2
 
 const CONSULTANT_GATE_SESSIONS = 5
 const CONSULTANT_GATE_MAX_LINES = 200
-const CONSULTANT_SCORE_LOW = 5
-const CONSULTANT_SCORE_HIGH = 15
+// `LOW` sits below the gate floor on purpose: at exactly 5 sessions the gate
+// passes and the normalised score is `(5-4)/(8-4) = 0.25`, which then gets
+// the rarity bonus. Otherwise a borderline Consultant would score 0 and
+// always lose to any tool-mix winner.
+const CONSULTANT_SCORE_LOW = 4
+const CONSULTANT_SCORE_HIGH = 8
 
+// Shipper now reads from two complementary signals:
+//   - distinct commit SHAs over the window  → `commits` / `commitsPerSession`
+//   - git write-ops (push/merge/rebase/...) → `gitWriteOps`
+// Either can fire the gate; the score takes the max of both normalised
+// signals so squash-pushers, force-pushers, and tag-and-release flows
+// aren't penalised for low commit counts.
 const SHIPPER_GATE_COMMITS = 5
-const SHIPPER_GATE_RATIO = 1.0
-const SHIPPER_SCORE_LOW = 1.0
-const SHIPPER_SCORE_HIGH = 4.0
+const SHIPPER_GATE_WRITE_OPS = 8
+const SHIPPER_GATE_COMMITS_PER_SESSION = 1.0
+const SHIPPER_GATE_WRITE_OPS_PER_SESSION = 1.5
+const SHIPPER_COMMITS_PER_SESSION_LOW = 1.0
+const SHIPPER_COMMITS_PER_SESSION_HIGH = 2.5
+const SHIPPER_WRITE_OPS_PER_SESSION_LOW = 1.5
+const SHIPPER_WRITE_OPS_PER_SESSION_HIGH = 4.0
 
 const TESTER_GATE_TESTS = 20
 const TESTER_GATE_RATIO = 2.0
@@ -55,6 +73,12 @@ const TESTER_SCORE_LOW = 2.0
 const TESTER_SCORE_HIGH = 8.0
 
 const TOOL_MIX_SCORE_HIGH = 0.3
+
+// Multiplier applied to the 5 conditional archetypes' raw scores. Their
+// gates already require a meaningful signal floor, so once they fire we
+// want them to outrank a moderate tool-mix winner. Score is still capped
+// to [0, 1] downstream.
+const RARE_BONUS = 1.5
 
 const sumMix = (mix: ToolMix): number =>
   mix.bash + mix.read + mix.edit + mix.write + mix.search + mix.research + mix.plan + mix.other
@@ -76,6 +100,12 @@ interface AssignPersonalityInput {
   readonly filesTouched: number
   readonly commandsRun: number
   readonly commits: number
+  /**
+   * Count of git operations that mutate repo state (commit / push / merge
+   * / rebase / tag / revert / cherry-pick). Used alongside `commits` so
+   * users who squash-push or tag-release still register as shippers.
+   */
+  readonly gitWriteOps: number
   readonly testsRun: number
   /** Lines added by Edit / MultiEdit / NotebookEdit — the "+N" component. */
   readonly editAdded: number
@@ -110,7 +140,18 @@ interface Candidate {
  * stable sort — a small bias toward the rarer archetypes when scores match.
  */
 export function assignPersonality(input: AssignPersonalityInput): Personality {
-  const { toolMix, sessions, filesTouched, commandsRun, commits, testsRun, editAdded, writeLines, linesRead } = input
+  const {
+    toolMix,
+    sessions,
+    filesTouched,
+    commandsRun,
+    commits,
+    gitWriteOps,
+    testsRun,
+    editAdded,
+    writeLines,
+    linesRead,
+  } = input
   const total = sumMix(toolMix)
 
   // Guarded by the no-activity short-circuit upstream — but defend in depth
@@ -134,15 +175,21 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   const bashExcess = excessOf("bash")
 
   const commitsPerSession = sessions > 0 ? commits / sessions : 0
+  const writeOpsPerSession = sessions > 0 ? gitWriteOps / sessions : 0
   const testsPerSession = sessions > 0 ? testsRun / sessions : 0
   // Total lines of code touched this week (disjoint components — no overlap).
   const linesTouchedTotal = editAdded + writeLines
+
+  // Bound to ≤ 1.0 so a saturated conditional score doesn't run away into
+  // [1, 1.5]; the relative ordering between archetypes is still the lift
+  // that matters.
+  const applyRareBonus = (s: number) => Math.min(1, s * RARE_BONUS)
 
   const candidates: readonly Candidate[] = [
     {
       kind: "strategist",
       gatePasses: planExcess >= STRATEGIST_GATE_EXCESS && toolMix.plan >= STRATEGIST_GATE_CALLS,
-      score: normaliseScore(planExcess, STRATEGIST_SCORE_LOW, STRATEGIST_SCORE_HIGH),
+      score: applyRareBonus(normaliseScore(planExcess, STRATEGIST_SCORE_LOW, STRATEGIST_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatPercent(shareOf("plan"))} of your tool calls were planning steps`,
         `${formatCount(toolMix.plan)} TaskCreate / TaskUpdate / TodoWrite calls`,
@@ -152,7 +199,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     {
       kind: "scholar",
       gatePasses: researchExcess >= SCHOLAR_GATE_EXCESS && toolMix.research >= SCHOLAR_GATE_CALLS,
-      score: normaliseScore(researchExcess, SCHOLAR_SCORE_LOW, SCHOLAR_SCORE_HIGH),
+      score: applyRareBonus(normaliseScore(researchExcess, SCHOLAR_SCORE_LOW, SCHOLAR_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatPercent(shareOf("research"))} of your tool calls were web research`,
         `${formatCount(toolMix.research)} WebFetch / WebSearch call${toolMix.research === 1 ? "" : "s"}`,
@@ -162,7 +209,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     {
       kind: "consultant",
       gatePasses: sessions >= CONSULTANT_GATE_SESSIONS && linesTouchedTotal < CONSULTANT_GATE_MAX_LINES,
-      score: normaliseScore(sessions, CONSULTANT_SCORE_LOW, CONSULTANT_SCORE_HIGH),
+      score: applyRareBonus(normaliseScore(sessions, CONSULTANT_SCORE_LOW, CONSULTANT_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} this week`,
         linesTouchedTotal === 0
@@ -173,18 +220,30 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "shipper",
-      gatePasses: commits >= SHIPPER_GATE_COMMITS && commitsPerSession >= SHIPPER_GATE_RATIO,
-      score: normaliseScore(commitsPerSession, SHIPPER_SCORE_LOW, SHIPPER_SCORE_HIGH),
+      gatePasses:
+        (commits >= SHIPPER_GATE_COMMITS || gitWriteOps >= SHIPPER_GATE_WRITE_OPS) &&
+        (commitsPerSession >= SHIPPER_GATE_COMMITS_PER_SESSION ||
+          writeOpsPerSession >= SHIPPER_GATE_WRITE_OPS_PER_SESSION),
+      score: applyRareBonus(
+        Math.max(
+          normaliseScore(commitsPerSession, SHIPPER_COMMITS_PER_SESSION_LOW, SHIPPER_COMMITS_PER_SESSION_HIGH),
+          normaliseScore(writeOpsPerSession, SHIPPER_WRITE_OPS_PER_SESSION_LOW, SHIPPER_WRITE_OPS_PER_SESSION_HIGH),
+        ),
+      ),
       buildEvidence: () => [
-        `${formatCount(commits)} commit${commits === 1 ? "" : "s"} this week`,
-        `${commitsPerSession.toFixed(1)} commits per session, on average`,
+        commits >= gitWriteOps
+          ? `${formatCount(commits)} commit${commits === 1 ? "" : "s"} this week`
+          : `${formatCount(gitWriteOps)} git push / commit / merge operation${gitWriteOps === 1 ? "" : "s"}`,
+        commitsPerSession >= writeOpsPerSession
+          ? `${commitsPerSession.toFixed(1)} commits per session, on average`
+          : `${writeOpsPerSession.toFixed(1)} shipping actions per session, on average`,
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} of focused work`,
       ],
     },
     {
       kind: "tester",
       gatePasses: testsRun >= TESTER_GATE_TESTS && testsPerSession >= TESTER_GATE_RATIO,
-      score: normaliseScore(testsPerSession, TESTER_SCORE_LOW, TESTER_SCORE_HIGH),
+      score: applyRareBonus(normaliseScore(testsPerSession, TESTER_SCORE_LOW, TESTER_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatCount(testsRun)} test run${testsRun === 1 ? "" : "s"} this week`,
         `${testsPerSession.toFixed(1)} test runs per session, on average`,

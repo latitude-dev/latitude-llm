@@ -19,6 +19,7 @@
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/flaggers": "workspace:*",
+    "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",

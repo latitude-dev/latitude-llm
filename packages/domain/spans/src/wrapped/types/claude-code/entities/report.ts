@@ -166,8 +166,15 @@ export const reportV1Schema = z.object({
     repos: z.number().int().nonnegative(),
     /** Distinct UTC calendar days with at least one Claude Code span. Max 7. */
     streakDays: z.number().int().nonnegative(),
-    /** Count of Bash invocations that look like a test runner. */
+    /** Count of Bash segments that look like a test runner. */
     testsRun: z.number().int().nonnegative(),
+    /**
+     * Count of git operations that mutate repo state (commit / push / merge
+     * / rebase / tag / revert / cherry-pick). Sibling of `commits` (which
+     * counts distinct git-commit SHAs from span metadata). Feeds the
+     * Shipper archetype.
+     */
+    gitWriteOps: z.number().int().nonnegative(),
   }),
 
   toolMix: toolMixSchema,

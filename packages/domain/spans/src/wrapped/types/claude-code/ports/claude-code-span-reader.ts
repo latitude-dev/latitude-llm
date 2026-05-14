@@ -28,6 +28,11 @@ export interface WrappedTotalsRow {
   readonly sessions: number
   readonly toolCalls: number
   readonly filesTouched: number
+  /**
+   * Total Bash command *segments* — a single Bash tool call carrying
+   * `cd foo && grep bar && git push` contributes three. The denominator
+   * for the "1,471 commands" headline.
+   */
   readonly commandsRun: number
   readonly workspaces: number
   readonly branches: number
@@ -35,8 +40,15 @@ export interface WrappedTotalsRow {
   readonly repos: number
   /** Distinct UTC calendar days with at least one Claude Code span. Max 7. */
   readonly streakDays: number
-  /** Count of Bash invocations that look like a test-runner command. */
+  /** Count of Bash segments that look like a test-runner command. */
   readonly testsRun: number
+  /**
+   * Count of git operations that mutate repo state (`commit`/`push`/`merge`/
+   * `rebase`/`tag`/`revert`/`cherry-pick`). Sibling of `commits` (which
+   * counts distinct git-commit SHAs from span metadata). Feeds the
+   * Shipper archetype's score and gate.
+   */
+  readonly gitWriteOps: number
 }
 
 export interface LocStatsRow {
@@ -62,9 +74,58 @@ export interface SessionDurationStatsRow {
   readonly longestWorkspace: string | null
 }
 
+/**
+ * One row per group of tool calls sharing a classification key. Bash calls
+ * are pre-split into command segments by the adapter and exploded into
+ * rows keyed on `(bashPrefix, bashSecondToken)`; path-aware tools (`Edit`,
+ * `Write`, `Read`, …) get a per-row `fileDisposition` derived from the
+ * `tool_input.file_path` vs `metadata['workspace.path']` comparison.
+ *
+ * The domain-side classifier in `build-report.ts` turns each row into a
+ * `ToolBucket` (or drops it as "excluded"). The shape stays raw so the
+ * routing rules live in TS where they're unit-testable.
+ */
 export interface ToolMixRow {
   readonly toolName: string
+  /** Number of tool calls / Bash segments in this group. */
   readonly uses: number
+  /**
+   * Lowercased first token of the Bash command segment. Empty string for
+   * non-Bash rows.
+   */
+  readonly bashPrefix: string
+  /**
+   * Lowercased **first non-flag** token after the prefix — i.e. the
+   * subcommand keyword. Flag-like tokens (starting with `-`, `@`, or
+   * `.`; containing `/` or `=`; or purely numeric) are skipped during
+   * extraction. So `git -C /repo status -s` produces
+   * `bashSecondToken = "status"`, not `"-c"`, and `gh -R owner/repo pr
+   * create` produces `bashSecondToken = "pr"`, not `"owner/repo"`.
+   *
+   * Empty string for non-Bash rows or segments with no non-flag tokens
+   * after the prefix. See `extractBashTokens` for the canonical spec.
+   */
+  readonly bashSecondToken: string
+  /**
+   * Lowercased **second non-flag** token after the prefix. Used to
+   * disambiguate `gh`'s three-deep CLI: `gh pr create` vs `gh pr view`
+   * (same prefix + second, different intent). Same flag-skipping rule
+   * as `bashSecondToken`. Empty string when the segment has fewer than
+   * two non-flag tokens after the prefix.
+   */
+  readonly bashThirdToken: string
+  /**
+   * Path classification for `Edit`/`Write`/`Read`/`MultiEdit`/`NotebookEdit`/
+   * `NotebookRead` calls based on the span's `tool_input.file_path` and
+   * `metadata['workspace.path']`:
+   *
+   * - `"plan-file"`: file is `**` /`.claude/plans/<id>.md` → routes to `plan`
+   * - `"claude-noise"`: file is under `.claude/` but not `plans/` → excluded
+   * - `"external"`: file is outside the workspace (and not `.claude/`) → excluded
+   * - `"workspace"`: file is inside the workspace (the common case) → existing bucket
+   * - `""`: not a path-aware tool, or no `file_path` carried (e.g. `LS`)
+   */
+  readonly fileDisposition: "" | "workspace" | "plan-file" | "claude-noise" | "external"
 }
 
 export interface FileTouchesRow {
