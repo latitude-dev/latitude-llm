@@ -19,6 +19,7 @@ const argsBase = {
   filesTouched: 0,
   commandsRun: 0,
   commits: 0,
+  gitWriteOps: 0,
   testsRun: 0,
   editAdded: 5_000,
   writeLines: 5_000,
@@ -199,6 +200,108 @@ describe("assignPersonality (gate-then-rank)", () => {
     const strat = run({ toolMix: { ...baseMix, plan: 80, edit: 20 } })
     expect(strat.score).toBeLessThanOrEqual(1)
     expect(strat.score).toBeGreaterThan(0.5)
+  })
+
+  it("regression: heavy power user (User A) lands on Shipper, not Conductor", () => {
+    // Snapshot of the production-traced User A profile after the bash
+    // sub-classification rewrite: 1,471 bash calls collapse to ~750 in
+    // the `bash` bucket once grep / find / cd / git-status are routed
+    // away. Shipper's gitWriteOps + commitsPerSession both fire; the
+    // rarity bonus pushes it well above any tool-mix winner.
+    const result = run({
+      toolMix: {
+        ...baseMix,
+        bash: 750, // build / test / git-write / runtime invocations
+        read: 1200,
+        edit: 900,
+        write: 80,
+        search: 1100, // grep, ls, find — most of which used to be in bash
+        plan: 30,
+        research: 5,
+        other: 10,
+      },
+      sessions: 16,
+      filesTouched: 259,
+      commandsRun: 1471,
+      commits: 34,
+      gitWriteOps: 50, // commit + push + rebase across the week
+      testsRun: 44,
+      editAdded: 22_000,
+      writeLines: 1_469,
+      linesRead: 200_000,
+    })
+    expect(result.kind).toBe("shipper")
+  })
+
+  it("regression: light explorer (User B) lands on Consultant, not Conductor", () => {
+    // Snapshot of User B: 6 sessions, only 90 lines touched, 48 commands.
+    // After bash sub-classification, most of those 48 commands route
+    // away from `bash`: 8 ls + 6 grep → search, 1 cat → read, 1 curl →
+    // research, 2 excluded (open + claude). Remaining bash bucket is
+    // tiny; Consultant's gate (sessions ≥ 5 AND lines < 200) wins.
+    const result = run({
+      toolMix: {
+        ...baseMix,
+        bash: 14, // python3, git, the rest of the 48 — minus search/read/research
+        read: 50,
+        edit: 15,
+        write: 5,
+        search: 14, // ls + grep moved here
+        plan: 0,
+        research: 1, // curl
+        other: 1,
+      },
+      sessions: 6,
+      filesTouched: 7,
+      commandsRun: 48,
+      commits: 0,
+      gitWriteOps: 0,
+      testsRun: 1,
+      editAdded: 80,
+      writeLines: 10,
+      linesRead: 800,
+    })
+    expect(result.kind).toBe("consultant")
+  })
+
+  it("Shipper fires when shipping happens via `gh pr create` / `merge` even with zero git commits", () => {
+    // `gh` write triplets feed gitWriteOps the same way `git push` does.
+    // A user who works mostly through `gh pr create` + `gh pr merge`
+    // (e.g. CLI-first PR flow) should still land on Shipper.
+    const result = run({
+      toolMix: { ...baseMix, bash: 40, edit: 30, read: 30 },
+      sessions: 8,
+      commits: 0,
+      gitWriteOps: 32, // 4 per session — saturates the write-ops-per-session score
+    })
+    expect(result.kind).toBe("shipper")
+  })
+
+  it("Shipper fires on push-heavy / squash flows even with low commit count", () => {
+    // The reason we added `gitWriteOps`: a user who force-pushes / rebases
+    // / tags but has few unique commit SHAs over the window. Old algorithm
+    // missed them. With the new disjunctive gate, they still land here.
+    const result = run({
+      toolMix: { ...baseMix, bash: 40, edit: 40, read: 20 },
+      sessions: 8,
+      commits: 2, // below SHIPPER_GATE_COMMITS
+      gitWriteOps: 24, // 3 per session — clears SHIPPER_GATE_WRITE_OPS_PER_SESSION
+    })
+    expect(result.kind).toBe("shipper")
+  })
+
+  it("Conductor still wins for a genuinely shell-heavy user (bash bucket post-routing)", () => {
+    // After the rebalance, Conductor isn't dead — it's reserved for users
+    // whose `bash` bucket (after grep / cd / git-status routed away) is
+    // actually dominated by genuine shell orchestration.
+    const result = run({
+      toolMix: { ...baseMix, bash: 70, read: 20, edit: 10 },
+      sessions: 8,
+      commandsRun: 300,
+      commits: 0,
+      gitWriteOps: 0,
+    })
+    expect(result.kind).toBe("conductor")
   })
 
   it("evidence always has exactly 3 strings", () => {

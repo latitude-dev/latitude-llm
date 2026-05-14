@@ -79,30 +79,7 @@
             "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form."
           },
           "settings": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "keepMonitoring": {
-                "type": "boolean"
-              },
-              "alertNotifications": {
-                "type": "object",
-                "properties": {
-                  "issue.new": {
-                    "type": "boolean"
-                  },
-                  "issue.regressed": {
-                    "type": "boolean"
-                  },
-                  "issue.escalating": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            },
-            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+            "$ref": "#/components/schemas/ProjectSettings"
           },
           "firstTraceAt": {
             "type": [
@@ -143,6 +120,46 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "ProjectSettings": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "keepMonitoring": {
+            "type": "boolean",
+            "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted."
+          },
+          "alertNotifications": {
+            "$ref": "#/components/schemas/AlertNotificationsSetting"
+          }
+        },
+        "description": "Per-project settings overrides. `null` means inherit from the organization."
+      },
+      "AlertNotificationsSetting": {
+        "type": "object",
+        "properties": {
+          "issue.new": {
+            "type": "boolean",
+            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted."
+          },
+          "issue.regressed": {
+            "type": "boolean",
+            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted."
+          },
+          "issue.escalating": {
+            "type": "boolean",
+            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted."
+          },
+          "escalationSensitivity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted."
+          }
+        },
+        "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values."
       },
       "Error": {
         "type": "object",
@@ -205,27 +222,14 @@
             "description": "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable)."
           },
           "settings": {
-            "type": "object",
-            "properties": {
-              "keepMonitoring": {
-                "type": "boolean"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectSettings"
               },
-              "alertNotifications": {
-                "type": "object",
-                "properties": {
-                  "issue.new": {
-                    "type": "boolean"
-                  },
-                  "issue.regressed": {
-                    "type": "boolean"
-                  },
-                  "issue.escalating": {
-                    "type": "boolean"
-                  }
-                }
+              {
+                "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI."
               }
-            },
-            "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI."
+            ]
           },
           "flaggers": {
             "type": "object",
@@ -1391,6 +1395,89 @@
           "name"
         ]
       },
+      "OAuthKeyList": {
+        "type": "object",
+        "properties": {
+          "oauthKeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthKey"
+            }
+          }
+        },
+        "required": [
+          "oauthKeys"
+        ]
+      },
+      "OAuthKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable OAuth key identifier."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Identifier of the OAuth client the key was issued to."
+          },
+          "clientName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of the OAuth client."
+          },
+          "clientIcon": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Icon URL of the OAuth client."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Identifier of the user the key belongs to."
+          },
+          "userName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of the user. `null` until the user completes onboarding."
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Email of the user."
+          },
+          "lastActivityAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used."
+          },
+          "connectedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the key was connected."
+          },
+          "disabled": {
+            "type": "boolean",
+            "description": "Whether the key has been disabled."
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "clientName",
+          "clientIcon",
+          "userId",
+          "userName",
+          "userEmail",
+          "lastActivityAt",
+          "connectedAt",
+          "disabled"
+        ]
+      },
       "AccountResponse": {
         "type": "object",
         "properties": {
@@ -2510,6 +2597,160 @@
         "responses": {
           "204": {
             "description": "API key revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/oauth-keys": {
+      "get": {
+        "tags": [
+          "OAuth Keys"
+        ],
+        "x-fern-sdk-group-name": "oauthKeys",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List OAuth keys",
+        "description": "Returns every OAuth key (like MCP clients) connected to the organization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listOAuthKeys",
+        "responses": {
+          "200": {
+            "description": "List of OAuth keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthKeyList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/oauth-keys/{oauthKeyId}": {
+      "get": {
+        "tags": [
+          "OAuth Keys"
+        ],
+        "x-fern-sdk-group-name": "oauthKeys",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get OAuth key",
+        "description": "Returns a single OAuth key (like MCP clients) by id.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getOAuthKey",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "OAuth key identifier."
+            },
+            "required": true,
+            "description": "OAuth key identifier.",
+            "name": "oauthKeyId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OAuth Keys"
+        ],
+        "x-fern-sdk-group-name": "oauthKeys",
+        "x-fern-sdk-method-name": "revoke",
+        "summary": "Revoke OAuth key",
+        "description": "Revokes an OAuth key (like MCP clients). The connected client immediately loses access.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "revokeOAuthKey",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "OAuth key identifier."
+            },
+            "required": true,
+            "description": "OAuth key identifier.",
+            "name": "oauthKeyId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OAuth key revoked"
           },
           "401": {
             "description": "Unauthorized",

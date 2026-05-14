@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,4 +22,3 @@ jobs:
           pnpm_filter: "@latitude-data/sdk"
           tag_prefix: typescript-sdk
           release_name: TypeScript SDK
-          npm_token: ${{ secrets.NPM_TOKEN }}

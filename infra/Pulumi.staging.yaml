@@ -4,6 +4,8 @@ config:
   latitude-infra:domainName: latitude.so
   latitude-infra:githubOwner: latitude-dev
   latitude-infra:githubRepo: latitude-llm
+  # Pinned to avoid automatic bastion replacement when AWS publishes newer AL2023 AMIs.
+  latitude-infra:bastionAmiId: ami-00b105a12aa2a60eb
   # Temporal Cloud (workflows ECS task): set namespace before enabling the worker
   latitude-infra:temporalCloudNamespace: "latitude-llm-staging.naqqz"
   # latitude-infra:temporalCloudAddress: "eu-central-1.aws.api.temporal.io:7233"

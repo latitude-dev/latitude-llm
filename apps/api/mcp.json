@@ -1,6 +1,20 @@
 {
-  "name": "Latitude API",
-  "version": "1.0.0",
+  "name": "Latitude MCP",
+  "title": "Latitude MCP",
+  "description": "Open-source AI agent monitoring platform. Full observability into what's failing in production. Discover underlying issues, get alerts when something breaks and verify your fix worked.",
+  "version": "v1",
+  "websiteUrl": "https://latitude.so",
+  "icons": [
+    {
+      "src": "https://framerusercontent.com/images/fPQsqC1Gx3CiQElnbBSmbQVYcA.png",
+      "theme": "light"
+    },
+    {
+      "src": "https://framerusercontent.com/images/l5c1DNVxQ3iAvTDihvg9pFw2l2k.png",
+      "theme": "dark"
+    }
+  ],
+  "instructions": "All Latitude MCP methods have descriptions and input/output schemas. For any doubt visit the Latitude documentation: https://docs.latitude.so/llms.txt",
   "tools": [
     {
       "name": "createProject",
@@ -47,21 +61,33 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
+                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "alertNotifications": {
+                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string",
-                      "enum": [
-                        "issue.new",
-                        "issue.regressed",
-                        "issue.escalating"
-                      ]
+                    "properties": {
+                      "issue.new": {
+                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.regressed": {
+                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.escalating": {
+                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "escalationSensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 6
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "boolean"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -70,7 +96,7 @@
                 "type": "null"
               }
             ],
-            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+            "description": "Per-project settings overrides. `null` means inherit from the organization."
           },
           "firstTraceAt": {
             "anyOf": [
@@ -163,21 +189,33 @@
                       "type": "object",
                       "properties": {
                         "keepMonitoring": {
+                          "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                           "type": "boolean"
                         },
                         "alertNotifications": {
+                          "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string",
-                            "enum": [
-                              "issue.new",
-                              "issue.regressed",
-                              "issue.escalating"
-                            ]
+                          "properties": {
+                            "issue.new": {
+                              "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                              "type": "boolean"
+                            },
+                            "issue.regressed": {
+                              "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                              "type": "boolean"
+                            },
+                            "issue.escalating": {
+                              "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                              "type": "boolean"
+                            },
+                            "escalationSensitivity": {
+                              "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 6
+                            }
                           },
-                          "additionalProperties": {
-                            "type": "boolean"
-                          }
+                          "additionalProperties": false
                         }
                       },
                       "additionalProperties": false
@@ -186,7 +224,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+                  "description": "Per-project settings overrides. `null` means inherit from the organization."
                 },
                 "firstTraceAt": {
                   "anyOf": [
@@ -307,21 +345,33 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
+                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "alertNotifications": {
+                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string",
-                      "enum": [
-                        "issue.new",
-                        "issue.regressed",
-                        "issue.escalating"
-                      ]
+                    "properties": {
+                      "issue.new": {
+                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.regressed": {
+                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.escalating": {
+                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "escalationSensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 6
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "boolean"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -330,7 +380,7 @@
                 "type": "null"
               }
             ],
-            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+            "description": "Per-project settings overrides. `null` means inherit from the organization."
           },
           "firstTraceAt": {
             "anyOf": [
@@ -404,21 +454,33 @@
             "type": "object",
             "properties": {
               "keepMonitoring": {
+                "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                 "type": "boolean"
               },
               "alertNotifications": {
+                "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
                 "type": "object",
-                "propertyNames": {
-                  "type": "string",
-                  "enum": [
-                    "issue.new",
-                    "issue.regressed",
-                    "issue.escalating"
-                  ]
+                "properties": {
+                  "issue.new": {
+                    "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                    "type": "boolean"
+                  },
+                  "issue.regressed": {
+                    "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                    "type": "boolean"
+                  },
+                  "issue.escalating": {
+                    "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                    "type": "boolean"
+                  },
+                  "escalationSensitivity": {
+                    "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  }
                 },
-                "additionalProperties": {
-                  "type": "boolean"
-                }
+                "additionalProperties": false
               }
             },
             "additionalProperties": false
@@ -477,21 +539,33 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
+                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "alertNotifications": {
+                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string",
-                      "enum": [
-                        "issue.new",
-                        "issue.regressed",
-                        "issue.escalating"
-                      ]
+                    "properties": {
+                      "issue.new": {
+                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.regressed": {
+                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.escalating": {
+                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "escalationSensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 6
+                      }
                     },
-                    "additionalProperties": {
-                      "type": "boolean"
-                    }
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -500,7 +574,7 @@
                 "type": "null"
               }
             ],
-            "description": "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches."
+            "description": "Per-project settings overrides. `null` means inherit from the organization."
           },
           "firstTraceAt": {
             "anyOf": [
@@ -1848,6 +1922,243 @@
         },
         "required": [
           "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listOAuthKeys",
+      "title": "List OAuth keys",
+      "description": "Returns every OAuth key (like MCP clients) connected to the organization.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "oauthKeys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Stable OAuth key identifier."
+                },
+                "clientId": {
+                  "type": "string",
+                  "description": "Identifier of the OAuth client the key was issued to."
+                },
+                "clientName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Display name of the OAuth client."
+                },
+                "clientIcon": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Icon URL of the OAuth client."
+                },
+                "userId": {
+                  "type": "string",
+                  "description": "Identifier of the user the key belongs to."
+                },
+                "userName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Display name of the user. `null` until the user completes onboarding."
+                },
+                "userEmail": {
+                  "type": "string",
+                  "description": "Email of the user."
+                },
+                "lastActivityAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used."
+                },
+                "connectedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the key was connected."
+                },
+                "disabled": {
+                  "type": "boolean",
+                  "description": "Whether the key has been disabled."
+                }
+              },
+              "required": [
+                "id",
+                "clientId",
+                "clientName",
+                "clientIcon",
+                "userId",
+                "userName",
+                "userEmail",
+                "lastActivityAt",
+                "connectedAt",
+                "disabled"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "oauthKeys"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getOAuthKey",
+      "title": "Get OAuth key",
+      "description": "Returns a single OAuth key (like MCP clients) by id.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "oauthKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "OAuth key identifier."
+          }
+        },
+        "required": [
+          "oauthKeyId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable OAuth key identifier."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Identifier of the OAuth client the key was issued to."
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of the OAuth client."
+          },
+          "clientIcon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Icon URL of the OAuth client."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Identifier of the user the key belongs to."
+          },
+          "userName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display name of the user. `null` until the user completes onboarding."
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Email of the user."
+          },
+          "lastActivityAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used."
+          },
+          "connectedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the key was connected."
+          },
+          "disabled": {
+            "type": "boolean",
+            "description": "Whether the key has been disabled."
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "clientName",
+          "clientIcon",
+          "userId",
+          "userName",
+          "userEmail",
+          "lastActivityAt",
+          "connectedAt",
+          "disabled"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "revokeOAuthKey",
+      "title": "Revoke OAuth key",
+      "description": "Revokes an OAuth key (like MCP clients). The connected client immediately loses access.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "oauthKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "OAuth key identifier."
+          }
+        },
+        "required": [
+          "oauthKeyId"
         ],
         "additionalProperties": false
       }

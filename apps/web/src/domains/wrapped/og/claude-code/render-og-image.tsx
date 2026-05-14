@@ -1,8 +1,15 @@
-import { readFile } from "node:fs/promises"
-import { fileURLToPath } from "node:url"
-import type { WrappedReportRecord } from "@domain/spans"
+import type { PersonalityKind, WrappedReportRecord } from "@domain/spans"
 import { Resvg } from "@resvg/resvg-js"
 import satori from "satori"
+import architectPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/architect.png?inline"
+import conductorPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/conductor.png?inline"
+import consultantPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/consultant.png?inline"
+import detectivePng from "../../../../../public/email-branding/claude-code-wrapped/personalities/detective.png?inline"
+import scholarPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/scholar.png?inline"
+import shipperPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/shipper.png?inline"
+import strategistPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/strategist.png?inline"
+import surgeonPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/surgeon.png?inline"
+import testerPng from "../../../../../public/email-branding/claude-code-wrapped/personalities/tester.png?inline"
 import {
   TITLE_FOR_KIND,
   WRAPPED_COLORS,
@@ -41,28 +48,26 @@ const OG_HEIGHT = 630
 // orange.
 const BLACKISH_CREAM = "#2A2520"
 
-const personalityImageCache = new Map<string, string>()
-
-const readPersonalityImageAsDataUrl = async (kind: string): Promise<string> => {
-  const cached = personalityImageCache.get(kind)
-  if (cached) return cached
-  // The personality PNGs live under `apps/web/public/email-branding/...`.
-  // This module is at `apps/web/src/domains/wrapped/og/claude-code/`, so the
-  // file is five directories up from here.
-  const path = fileURLToPath(
-    new URL(`../../../../../public/email-branding/claude-code-wrapped/personalities/${kind}.png`, import.meta.url),
-  )
-  const buf = await readFile(path)
-  const dataUrl = `data:image/png;base64,${buf.toString("base64")}`
-  personalityImageCache.set(kind, dataUrl)
-  return dataUrl
+// Personality PNGs are inlined as base64 data URLs at build time. Reading
+// them from disk at request time would break in the Nitro production bundle
+// — `import.meta.url` points at a chunk under `.output/server/chunks/...`,
+// not the source location, so the relative `../public/...` traversal
+// resolves to a path that doesn't exist in the runtime image.
+const PERSONALITY_IMAGE_BY_KIND: Record<PersonalityKind, string> = {
+  architect: architectPng,
+  conductor: conductorPng,
+  consultant: consultantPng,
+  detective: detectivePng,
+  scholar: scholarPng,
+  shipper: shipperPng,
+  strategist: strategistPng,
+  surgeon: surgeonPng,
+  tester: testerPng,
 }
 
 export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Promise<Buffer> => {
-  const [{ regular, semibold }, imageDataUrl] = await Promise.all([
-    getOgFonts(),
-    readPersonalityImageAsDataUrl(record.report.personality.kind),
-  ])
+  const { regular, semibold } = await getOgFonts()
+  const imageDataUrl = PERSONALITY_IMAGE_BY_KIND[record.report.personality.kind]
 
   const archetype = TITLE_FOR_KIND[record.report.personality.kind] ?? "The Wrapped"
   const linesWritten = record.report.loc.written.toLocaleString("en-US")

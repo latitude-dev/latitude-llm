@@ -36,9 +36,11 @@ git diff --shortstat origin/main..origin/development
 echo ""
 
 # Candidate main-only commits by SHA reachability. We verify each below by
-# checking whether the files it touched still differ between main and
-# development — this catches cherry-picks that were squash-merged, which
-# `git log --cherry-pick` (patch-id based) cannot detect.
+# reverse-applying the commit's patch against an `origin/development`
+# worktree — this is what `git rebase` uses to detect already-applied
+# commits, and it catches squash-merged cherry-picks even when development
+# has additional changes on the same files (which a per-file diff check
+# would misreport as missing).
 candidate_shas=$(git log \
   --format='%H' \
   --right-only \
@@ -47,20 +49,17 @@ candidate_shas=$(git log \
   --grep='^Release -' \
   origin/development...origin/main)
 
+verify_worktree=$(mktemp -d -t release-verify.XXXXXX)
+trap 'git worktree remove --force "$verify_worktree" >/dev/null 2>&1; rm -rf "$verify_worktree"' EXIT
+git worktree add --detach --quiet "$verify_worktree" origin/development
+
 main_only_commits=""
 while IFS= read -r sha; do
   [ -z "$sha" ] && continue
-  reflected=true
-  while IFS= read -r file; do
-    [ -z "$file" ] && continue
-    if ! git diff --quiet origin/development origin/main -- "$file" 2>/dev/null; then
-      reflected=false
-      break
-    fi
-  done < <(git show --name-only --format='' "$sha")
-  if [ "$reflected" = false ]; then
-    main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
+  if git diff --binary "$sha^..$sha" | git -C "$verify_worktree" apply --check --reverse >/dev/null 2>&1; then
+    continue
   fi
+  main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
 done <<<"$candidate_shas"
 
 if [ -n "$main_only_commits" ]; then

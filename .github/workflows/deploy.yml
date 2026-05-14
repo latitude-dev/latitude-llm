@@ -82,7 +82,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
 
       - name: Run migrations
@@ -455,7 +455,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
 
       - name: Run migrations
@@ -808,6 +808,7 @@ jobs:
     needs: production-apply
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/publish-typescript-telemetry.yml
     secrets: inherit
 
@@ -815,6 +816,7 @@ jobs:
     needs: production-apply
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/publish-typescript-sdk.yml
     secrets: inherit
 
@@ -822,6 +824,7 @@ jobs:
     needs: production-apply
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/publish-claude-code-telemetry.yml
     secrets: inherit
 
@@ -829,6 +832,7 @@ jobs:
     needs: production-apply
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/publish-openclaw-telemetry.yml
     secrets: inherit
 
@@ -836,6 +840,7 @@ jobs:
     needs: production-apply
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/publish-openclaw-telemetry-cli.yml
     secrets: inherit
 

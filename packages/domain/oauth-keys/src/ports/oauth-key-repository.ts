@@ -42,6 +42,16 @@ export class OAuthKeyRepository extends Context.Service<
      */
     listForOrganization: () => Effect.Effect<readonly OAuthKey[], RepositoryError, SqlClient>
     /**
+     * Reads a single OAuth key by its `(clientId, userId)` pair, returning
+     * the same aggregated shape `listForOrganization` produces. Returns
+     * `null` when the pair doesn't resolve under the caller's organization
+     * (RLS-scoped, so cross-tenant access collapses to the same null).
+     */
+    findByPair: (input: {
+      readonly clientId: string
+      readonly userId: string
+    }) => Effect.Effect<OAuthKey | null, RepositoryError, SqlClient>
+    /**
      * Returns `true` when the given `clientId` resolves to an OAuth
      * application in the caller's organization. Implemented as an
      * RLS-scoped read — a cross-tenant client returns `false` exactly

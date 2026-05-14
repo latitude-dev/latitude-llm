@@ -15,6 +15,7 @@ export function createBastion(
   vpc: Ec2Vpc,
   publicSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
+  amiId: pulumi.Input<string>,
 ): BastionOutput {
   const ssmRole = new aws.iam.Role(`${name}-bastion-ssm-role`, {
     assumeRolePolicy: JSON.stringify({
@@ -48,24 +49,9 @@ export function createBastion(
     },
   })
 
-  const ami = aws.ec2.getAmiOutput({
-    owners: ["amazon"],
-    mostRecent: true,
-    filters: [
-      {
-        name: "name",
-        values: ["al2023-ami-2023.*-x86_64"],
-      },
-      {
-        name: "state",
-        values: ["available"],
-      },
-    ],
-  })
-
   const instance = new aws.ec2.Instance(`${name}-bastion`, {
     instanceType: "t3.nano",
-    ami: ami.id,
+    ami: amiId,
     subnetId: publicSubnets[0].id,
     vpcSecurityGroupIds: [securityGroup.id],
     iamInstanceProfile: instanceProfile.name,
