@@ -6,15 +6,14 @@
 set -e
 
 # Environment variables required:
-# AWS_ACCESS_KEY_ID - AWS access key
-# AWS_SECRET_ACCESS_KEY - AWS secret key
 # AWS_REGION - AWS region
 # S3_BUCKET - S3 bucket name for static assets
 # BUILD_ID - Unique build identifier (e.g., git commit SHA)
+# Credentials are resolved through the AWS CLI default credential chain.
 
-if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_REGION" ] || [ -z "$S3_BUCKET" ] || [ -z "$BUILD_ID" ]; then
+if [ -z "$AWS_REGION" ] || [ -z "$S3_BUCKET" ] || [ -z "$BUILD_ID" ]; then
   echo "Error: Missing required environment variables"
-  echo "Required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, S3_BUCKET, BUILD_ID"
+  echo "Required: AWS_REGION, S3_BUCKET, BUILD_ID"
   exit 1
 fi
 

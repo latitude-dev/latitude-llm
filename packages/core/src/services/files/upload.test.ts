@@ -29,6 +29,9 @@ describe('uploadFile', () => {
     workspace = w
 
     vi.spyOn(disk, 'putFile').mockResolvedValue(Result.ok(undefined))
+    vi.spyOn(disk, 'getSignedUrl').mockResolvedValue(
+      'http://localhost:3000/uploads/signed-file-url',
+    )
     // @ts-expect-error - v4 can now return an array buffer but by default it
     // returns a string so we can safely expect this
     vi.spyOn(lib, 'generateUUIDIdentifier').mockReturnValue('fake-uuid')
@@ -81,8 +84,11 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+      expect(uploadedFile.url).toBe(
+        'http://localhost:3000/uploads/signed-file-url',
+      )
+      expect(uploadedFile.latitudeFileKey).toBe(
+        `workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
   })
@@ -99,8 +105,11 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+      expect(uploadedFile.url).toBe(
+        'http://localhost:3000/uploads/signed-file-url',
+      )
+      expect(uploadedFile.latitudeFileKey).toBe(
+        `workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
   })
@@ -117,8 +126,11 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+      expect(uploadedFile.url).toBe(
+        'http://localhost:3000/uploads/signed-file-url',
+      )
+      expect(uploadedFile.latitudeFileKey).toBe(
+        `workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
   })
@@ -134,8 +146,11 @@ describe('uploadFile', () => {
     const uploadedFile = result.unwrap()
     expect(isPromptLFile(uploadedFile)).toBeTruthy()
     expect(uploadedFile.name).toBe(name)
-    expect(uploadedFile.url).toContain(
-      `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+    expect(uploadedFile.url).toBe(
+      'http://localhost:3000/uploads/signed-file-url',
+    )
+    expect(uploadedFile.latitudeFileKey).toBe(
+      `workspaces/${workspace.id}/files/fake-uuid/${name}`,
     )
   })
 
@@ -150,7 +165,10 @@ describe('uploadFile', () => {
     const uploadedFile = result.unwrap()
     expect(isPromptLFile(uploadedFile)).toBeTruthy()
     expect(uploadedFile.name).toBe(name)
-    expect(uploadedFile.url).toContain(`/custom/files/fake-uuid/${name}`)
+    expect(uploadedFile.url).toBe(
+      'http://localhost:3000/uploads/signed-file-url',
+    )
+    expect(uploadedFile.latitudeFileKey).toBe(`custom/files/fake-uuid/${name}`)
   })
 
   it('it uploads files with an unknown prefix', async () => {
@@ -164,6 +182,9 @@ describe('uploadFile', () => {
     const uploadedFile = result.unwrap()
     expect(isPromptLFile(uploadedFile)).toBeTruthy()
     expect(uploadedFile.name).toBe(name)
-    expect(uploadedFile.url).toContain(`/unknown/files/fake-uuid/${name}`)
+    expect(uploadedFile.url).toBe(
+      'http://localhost:3000/uploads/signed-file-url',
+    )
+    expect(uploadedFile.latitudeFileKey).toBe(`unknown/files/fake-uuid/${name}`)
   })
 })

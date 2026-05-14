@@ -13,7 +13,6 @@ import { configureApiRoutes } from './api'
 import { configureWebhookRoutes } from './webhook'
 import { memoryUsageMiddleware } from '$/middlewares/memoryLogger'
 import { tracerMiddleware } from '$/middlewares/tracer'
-import { env } from '@latitude-data/env'
 
 const app = createApp()
 
@@ -35,7 +34,7 @@ app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 app.use(createTrialCheckMiddleware(app))
 
-if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
+if (process.env.NODE_ENV === 'production') {
   app.use(overCapacityMiddleware())
   app.use(inflightRequestsMiddleware())
 }

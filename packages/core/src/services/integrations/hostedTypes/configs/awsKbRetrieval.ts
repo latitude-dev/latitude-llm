@@ -8,18 +8,6 @@ export default {
     package: '@modelcontextprotocol/server-aws-kb-retrieval',
   }),
   env: {
-    AWS_ACCESS_KEY_ID: {
-      label: 'AWS Access Key ID',
-      description: 'The AWS access key ID',
-      placeholder: 'AKIA...',
-      required: true,
-    },
-    AWS_SECRET_ACCESS_KEY: {
-      label: 'AWS Secret Access Key',
-      description: 'The AWS secret access key',
-      placeholder: '********...',
-      required: true,
-    },
     AWS_REGION: {
       label: 'AWS Region',
       description: 'The AWS region',
@@ -28,5 +16,5 @@ export default {
     },
   },
   envSource:
-    'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html',
+    'https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html',
 } as HostedIntegrationConfig

@@ -62,23 +62,18 @@ if (cluster.isPrimary) {
         `Worker ${process.pid} listening on http://${HOSTNAME}:${PORT}`,
       )
 
-      if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
-        cloudWatchMetrics.startPeriodicEmission()
+      if (cloudWatchMetrics.startPeriodicEmission()) {
         console.log('Started CloudWatch metrics emission for inflight requests')
       }
     },
   )
 
   process.on('SIGTERM', () => {
-    if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
-      cloudWatchMetrics.stopPeriodicEmission()
-    }
+    cloudWatchMetrics.stopPeriodicEmission()
     gracefulShutdown(server)
   })
   process.on('SIGINT', () => {
-    if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
-      cloudWatchMetrics.stopPeriodicEmission()
-    }
+    cloudWatchMetrics.stopPeriodicEmission()
     gracefulShutdown(server)
   })
 

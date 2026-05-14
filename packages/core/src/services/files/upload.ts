@@ -1,12 +1,18 @@
 import slugify from '@sindresorhus/slugify'
 import path from 'path'
-import { PromptLFile, toPromptLFile } from 'promptl-ai'
+import { isPromptLFile, PromptLFile, toPromptLFile } from 'promptl-ai'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result, TypedResult } from '../../lib/Result'
+
+const LATITUDE_FILE_SIGNED_URL_EXPIRES_IN = '15m'
+
+export type LatitudeManagedPromptLFile = PromptLFile & {
+  latitudeFileKey: string
+}
 
 function generateKey({
   filename,
@@ -28,6 +34,52 @@ function generateKey({
   return encodeURI(`${keyPrefix}/files/${keyUuid}/${keyFilename}`)
 }
 
+function toLatitudeManagedPromptLFile({
+  file,
+  key,
+  url,
+}: {
+  file: File
+  key: string
+  url: string
+}): LatitudeManagedPromptLFile {
+  return {
+    ...toPromptLFile({ file, url }),
+    latitudeFileKey: key,
+  }
+}
+
+/**
+ * Returns whether a PromptL file was uploaded to Latitude-managed private storage.
+ */
+export function isLatitudeManagedPromptLFile(
+  value: unknown,
+): value is LatitudeManagedPromptLFile {
+  return (
+    isPromptLFile(value) &&
+    'latitudeFileKey' in value &&
+    typeof value.latitudeFileKey === 'string' &&
+    value.latitudeFileKey.length > 0
+  )
+}
+
+/**
+ * Replaces the stale URL of a Latitude-managed file with a fresh signed URL.
+ */
+export async function refreshLatitudeManagedPromptLFile(
+  file: LatitudeManagedPromptLFile,
+  disk: DiskWrapper = diskFactory('private'),
+): Promise<LatitudeManagedPromptLFile> {
+  const url = await disk.getSignedUrl(file.latitudeFileKey, {
+    expiresIn: LATITUDE_FILE_SIGNED_URL_EXPIRES_IN,
+  })
+
+  return { ...file, url }
+}
+
+/**
+ * Uploads a file to private storage and returns a PromptL file with a temporary URL.
+ */
 export async function uploadFile(
   {
     file,
@@ -38,8 +90,8 @@ export async function uploadFile(
     prefix?: string
     workspace?: Workspace
   },
-  disk: DiskWrapper = diskFactory('public'),
-): Promise<TypedResult<PromptLFile, Error>> {
+  disk: DiskWrapper = diskFactory('private'),
+): Promise<TypedResult<LatitudeManagedPromptLFile, Error>> {
   const key = generateKey({ filename: file.name, prefix, workspace })
   const extension = path.extname(file.name).toLowerCase()
 
@@ -53,11 +105,11 @@ export async function uploadFile(
 
   try {
     await disk.putFile(key, file).then((r) => r.unwrap())
-    // TODO: Use temporal signed URLs, with a (micro)service
-    // acting as a reverse proxy refreshing the signed urls
-    const url = await disk.getUrl(key)
+    const url = await disk.getSignedUrl(key, {
+      expiresIn: LATITUDE_FILE_SIGNED_URL_EXPIRES_IN,
+    })
 
-    return Result.ok(toPromptLFile({ file, url }))
+    return Result.ok(toLatitudeManagedPromptLFile({ file, key, url }))
   } catch (_error) {
     return Result.error(
       new UnprocessableEntityError(`Failed to upload ${extension} file`),

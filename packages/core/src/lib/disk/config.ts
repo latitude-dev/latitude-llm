@@ -61,16 +61,14 @@ export function createDiskDriver(visibility: 'private' | 'public') {
 
   if (visibility === 'public') {
     return new S3Driver({
-      credentials: awsConfig.credentials,
       region: awsConfig.region,
-      bucket: awsConfig.publicBucket,
+      bucket: awsConfig.bucket,
       supportsACL: false,
-      visibility: 'public',
+      visibility: 'private',
     })
   }
 
   return new S3Driver({
-    credentials: awsConfig.credentials,
     region: awsConfig.region,
     bucket: awsConfig.bucket,
     supportsACL: false,

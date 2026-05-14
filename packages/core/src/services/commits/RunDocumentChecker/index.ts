@@ -15,6 +15,10 @@ import { LatitudeError } from '../../../lib/errors'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { parsePrompt } from '../../documents/parse'
+import {
+  isLatitudeManagedPromptLFile,
+  refreshLatitudeManagedPromptLFile,
+} from '../../files/upload'
 import { createRunError } from '../../runErrors/create'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
@@ -199,8 +203,18 @@ export class RunDocumentChecker {
     const fileResults = await Promise.all(
       fileParameterKeys.map(async (paramName) => {
         const value = parameters[paramName]
+        if (isLatitudeManagedPromptLFile(value)) {
+          parameters[paramName] = await refreshLatitudeManagedPromptLFile(value)
+          return Result.nil()
+        }
         if (isPromptLFile(value)) return Result.nil()
         if (Array.isArray(value) && value.every(isPromptLFile)) {
+          parameters[paramName] = await Promise.all(
+            value.map(async (file) => {
+              if (!isLatitudeManagedPromptLFile(file)) return file
+              return refreshLatitudeManagedPromptLFile(file)
+            }),
+          )
           return Result.nil()
         }
         if (typeof value !== 'string') return Result.nil()
