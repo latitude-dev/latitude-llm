@@ -69,14 +69,67 @@ const PATH_AWARE_TOOLS = new Set(["Edit", "MultiEdit", "NotebookEdit", "Write", 
 
 // Bash command-prefix routing. Lowercased; the adapter does the lowercase.
 const BASH_SEARCH_PREFIXES = new Set(["grep", "rg", "ag", "find", "ls", "tree"])
-const BASH_READ_PREFIXES = new Set(["cat", "head", "tail"])
 const BASH_RESEARCH_PREFIXES = new Set(["curl", "wget"])
-const BASH_EXCLUDED_PREFIXES = new Set(["cd", "pwd", "pushd", "popd", "clear", "exit", "open", "claude"])
+
+/**
+ * Pure output-shaping / orchestration commands. Almost always after a `|`
+ * to format something else's output (`… | tail -8`, `… | head`, `cat foo |
+ * less`), never standalone work in the Claude Code context. Excluded
+ * entirely from segment counting so they don't pad `commandsRun` or
+ * dominate the top-commands list.
+ *
+ * Includes the pure navigation commands too (`cd`, `pwd`, `open`, `claude`,
+ * …) for the same reason.
+ */
+const BASH_PLUMBING_PREFIXES = new Set([
+  "head",
+  "tail",
+  "cat",
+  "less",
+  "more",
+  "echo",
+  "printf",
+  "sed",
+  "awk",
+  "wc",
+  "sort",
+  "uniq",
+  "cut",
+  "tr",
+  "xargs",
+  "tee",
+  "cd",
+  "pwd",
+  "pushd",
+  "popd",
+  "clear",
+  "exit",
+  "open",
+  "claude",
+])
 
 // git sub-command routing.
 const GIT_SEARCH_SUBCOMMANDS = new Set(["status", "log", "diff", "show", "blame", "branch", "ls-files", "reflog"])
 const GIT_EXCLUDED_SUBCOMMANDS = new Set(["checkout", "switch", "restore", "config", "init", "remote"])
 const GIT_WRITE_SUBCOMMANDS = new Set(["commit", "push", "merge", "rebase", "tag", "revert", "cherry-pick"])
+
+// gh sub-subcommand routing. Keyed on (secondToken, thirdToken). `gh` is
+// the only command we look at three deep — its surface (`gh pr create`,
+// `gh issue list`, `gh api`) reads more like a 3-level CLI than git's
+// 2-level one, and the second token alone (`pr`, `issue`, `release`) is
+// too coarse to tell shipping from investigation apart.
+const GH_RESEARCH_SECOND_TOKENS = new Set(["issue", "api", "run", "workflow"])
+const GH_PR_RESEARCH_SUBCOMMANDS = new Set(["view", "list", "checks", "comment", "diff", "status"])
+/**
+ * gh write-ops triplets — these increment `gitWriteOps` AND stay in the
+ * `bash` bucket. Keyed by (secondToken → set of thirdToken). Anything
+ * not enumerated falls through to plain `bash`.
+ */
+const GH_WRITE_OPS: Record<string, ReadonlySet<string>> = {
+  pr: new Set(["create", "merge", "ready", "edit", "review"]),
+  release: new Set(["create", "edit", "upload"]),
+  repo: new Set(["create"]),
+}
 
 /**
  * Pure routing rule for one `ToolMixRow`. Returns the bucket the row counts
@@ -86,7 +139,7 @@ const GIT_WRITE_SUBCOMMANDS = new Set(["commit", "push", "merge", "rebase", "tag
  */
 export const classifyToolMixRow = (row: ToolMixRow): ToolBucket | "excluded" => {
   if (row.toolName === "Bash") {
-    return classifyBashSegment(row.bashPrefix, row.bashSecondToken)
+    return classifyBashSegment(row.bashPrefix, row.bashSecondToken, row.bashThirdToken)
   }
   if (PATH_AWARE_TOOLS.has(row.toolName)) {
     if (row.fileDisposition === "plan-file") return "plan"
@@ -97,23 +150,46 @@ export const classifyToolMixRow = (row: ToolMixRow): ToolBucket | "excluded" => 
   return TOOL_NAME_TO_BUCKET[row.toolName] ?? "other"
 }
 
-const classifyBashSegment = (prefix: string, secondToken: string): ToolBucket | "excluded" => {
+const classifyBashSegment = (prefix: string, secondToken: string, thirdToken: string): ToolBucket | "excluded" => {
+  if (BASH_PLUMBING_PREFIXES.has(prefix)) return "excluded"
   if (BASH_SEARCH_PREFIXES.has(prefix)) return "search"
-  if (BASH_READ_PREFIXES.has(prefix)) return "read"
   if (BASH_RESEARCH_PREFIXES.has(prefix)) return "research"
-  if (BASH_EXCLUDED_PREFIXES.has(prefix)) return "excluded"
   if (prefix === "git") {
     if (GIT_SEARCH_SUBCOMMANDS.has(secondToken)) return "search"
     if (GIT_EXCLUDED_SUBCOMMANDS.has(secondToken)) return "excluded"
     // Including GIT_WRITE_SUBCOMMANDS, GIT_NEUTRAL (add/rm/mv/stash/pull/…)
     // and unknown subcommands — stays in `bash` (genuine shell orchestration).
   }
+  if (prefix === "gh") {
+    // Read-side gh hits api.github.com, mirroring curl / wget — research.
+    if (GH_RESEARCH_SECOND_TOKENS.has(secondToken)) return "research"
+    if (secondToken === "pr" && GH_PR_RESEARCH_SUBCOMMANDS.has(thirdToken)) return "research"
+    // Everything else under gh stays in `bash` — including the write-ops
+    // triplets (which also feed `gitWriteOps`), `gh auth` / `gh config`,
+    // and `gh repo view` / `gh repo clone`.
+  }
   return "bash"
 }
 
-/** True when this row's command segment increments `gitWriteOps`. */
-export const isGitWriteSegment = (row: ToolMixRow): boolean =>
-  row.toolName === "Bash" && row.bashPrefix === "git" && GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
+/**
+ * True when this row's command segment increments `gitWriteOps`. Covers
+ * both raw `git` write-subcommands and the `gh` write-op triplets
+ * (`gh pr create`, `gh release upload`, `gh repo create`, …). Name stays
+ * `gitWriteOps`-flavoured even though it includes `gh` because the
+ * persisted field is named that way and a rename would force a schema
+ * migration for no behavioural gain.
+ */
+export const isGitWriteSegment = (row: ToolMixRow): boolean => {
+  if (row.toolName !== "Bash") return false
+  if (row.bashPrefix === "git") {
+    return GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
+  }
+  if (row.bashPrefix === "gh") {
+    const writes = GH_WRITE_OPS[row.bashSecondToken]
+    return writes !== undefined && writes.has(row.bashThirdToken)
+  }
+  return false
+}
 
 const emptyToolMix = (): ToolMix => ({
   bash: 0,

@@ -23,6 +23,7 @@ const row = (toolName: string, uses: number, extras: Partial<ToolMixRow> = {}): 
   uses,
   bashPrefix: "",
   bashSecondToken: "",
+  bashThirdToken: "",
   fileDisposition: toolName === "Bash" ? "" : (extras.fileDisposition ?? ""),
   ...extras,
 })
@@ -163,10 +164,30 @@ describe("classifyToolMixRow — Bash sub-classification", () => {
     expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "ls" }))).toBe("search")
   })
 
-  it("routes content-reading binaries (cat/head/tail) to read", () => {
-    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "cat" }))).toBe("read")
-    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "head" }))).toBe("read")
-    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "tail" }))).toBe("read")
+  it("drops shell plumbing entirely (cat/head/tail/echo/sed/awk/…)", () => {
+    // These are almost always used as `… | tail -8` or `… | sed s/x/y/`
+    // shapers — never standalone Claude work. Dropping them entirely
+    // keeps the `read` bucket clean and the top-commands surface free
+    // of "Your favourite command: tail" results.
+    for (const prefix of [
+      "cat",
+      "head",
+      "tail",
+      "less",
+      "more",
+      "echo",
+      "printf",
+      "sed",
+      "awk",
+      "wc",
+      "sort",
+      "cut",
+      "tr",
+      "xargs",
+      "tee",
+    ]) {
+      expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: prefix }))).toBe("excluded")
+    }
   })
 
   it("routes curl / wget to research", () => {
@@ -238,6 +259,45 @@ describe("classifyToolMixRow — file-path disposition", () => {
   })
 })
 
+describe("classifyToolMixRow — gh sub-subcommand routing", () => {
+  it("routes gh pr view / list / checks / comment to research (external investigation)", () => {
+    for (const third of ["view", "list", "checks", "comment", "diff", "status"]) {
+      expect(
+        classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "pr", bashThirdToken: third })),
+      ).toBe("research")
+    }
+  })
+
+  it("routes gh issue / api / run / workflow to research regardless of third token", () => {
+    for (const second of ["issue", "api", "run", "workflow"]) {
+      expect(
+        classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: second, bashThirdToken: "anything" })),
+      ).toBe("research")
+      expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: second }))).toBe("research")
+    }
+  })
+
+  it("keeps gh write-ops in bash (and feeds gitWriteOps)", () => {
+    for (const third of ["create", "merge", "ready", "edit", "review"]) {
+      expect(
+        classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "pr", bashThirdToken: third })),
+      ).toBe("bash")
+    }
+  })
+
+  it("keeps gh auth / config / repo view in bash (not shipping, not research)", () => {
+    expect(
+      classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "auth", bashThirdToken: "login" })),
+    ).toBe("bash")
+    expect(
+      classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "config", bashThirdToken: "set" })),
+    ).toBe("bash")
+    expect(
+      classifyToolMixRow(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "repo", bashThirdToken: "view" })),
+    ).toBe("bash")
+  })
+})
+
 describe("isGitWriteSegment", () => {
   it("returns true for the git write-ops subcommands", () => {
     for (const sub of ["commit", "push", "merge", "rebase", "tag", "revert", "cherry-pick"]) {
@@ -245,10 +305,40 @@ describe("isGitWriteSegment", () => {
     }
   })
 
+  it("returns true for the gh write-op triplets (gh pr create / merge / ready / edit / review)", () => {
+    for (const third of ["create", "merge", "ready", "edit", "review"]) {
+      expect(
+        isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "pr", bashThirdToken: third })),
+      ).toBe(true)
+    }
+  })
+
+  it("returns true for gh release create / edit / upload and gh repo create", () => {
+    expect(
+      isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "release", bashThirdToken: "create" })),
+    ).toBe(true)
+    expect(
+      isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "release", bashThirdToken: "upload" })),
+    ).toBe(true)
+    expect(
+      isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "repo", bashThirdToken: "create" })),
+    ).toBe(true)
+  })
+
   it("returns false for git investigation / navigation subcommands", () => {
     for (const sub of ["status", "log", "diff", "checkout", "switch", "config"]) {
       expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "git", bashSecondToken: sub }))).toBe(false)
     }
+  })
+
+  it("returns false for gh read-side calls (view / list / api / issue)", () => {
+    expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "pr", bashThirdToken: "view" }))).toBe(
+      false,
+    )
+    expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "api" }))).toBe(false)
+    expect(
+      isGitWriteSegment(row("Bash", 1, { bashPrefix: "gh", bashSecondToken: "issue", bashThirdToken: "list" })),
+    ).toBe(false)
   })
 
   it("returns false for non-git Bash segments and non-Bash rows", () => {

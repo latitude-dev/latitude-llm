@@ -130,6 +130,111 @@ const workspaceStrictPathPredicate = (workspacePathExpr: string, filePathExpr: s
 // SQL list literals for the Bash sub-classification. Lowercased.
 const GIT_WRITE_SUBCOMMANDS_SQL = `('commit','push','merge','rebase','tag','revert','cherry-pick')`
 
+/**
+ * Pure output-shaping / orchestration commands. Excluded from segment
+ * counting so they don't pollute `commandsRun` or dominate the
+ * top-commands list. Mirrors `BASH_PLUMBING_PREFIXES` in `build-report.ts`
+ * — these two lists must stay in lockstep.
+ */
+const BASH_PLUMBING_PREFIXES_SQL = `(
+  'head','tail','cat','less','more',
+  'echo','printf','sed','awk','wc','sort','uniq','cut','tr','xargs','tee',
+  'cd','pwd','pushd','popd','clear','exit','open','claude'
+)`
+
+/**
+ * gh sub-subcommand triplets that count as shipping write-ops (they
+ * increment `gitWriteOps` alongside the raw git write-subcommands).
+ * Encoded as a SQL OR predicate so the same expression can be reused
+ * across the totals query and any future per-segment aggregation.
+ */
+const GH_WRITE_OPS_PREDICATE = `(
+  (second_token = 'pr'      AND third_token IN ('create','merge','ready','edit','review'))
+  OR (second_token = 'release' AND third_token IN ('create','edit','upload'))
+  OR (second_token = 'repo'    AND third_token = 'create')
+)`
+
+/**
+ * Prefixes for which the "top commands" surface should display
+ * `prefix + first-non-flag-token` instead of just `prefix`. `git push` is
+ * a meaningfully different story from `git status`; `pnpm test` is
+ * different from `pnpm install`. For most tools, the first token is
+ * descriptive enough.
+ *
+ * `gh` gets two-deep treatment (handled separately) because its CLI is
+ * structurally 3-level (`gh pr create` vs `gh pr view`).
+ */
+const SUBCOMMAND_AWARE_PREFIXES_SQL = `(
+  'git','pnpm','npm','yarn','bun','cargo','brew','docker','kubectl',
+  'mix','rake','gradle','mvn','go','poetry','pipx','terraform',
+  'fly','railway','vercel'
+)`
+
+/**
+ * SQL expression that takes a tokens array (from `splitByChar(' ',
+ * segment)`) and the prefix, and emits the displayable pattern:
+ *
+ *   - empty if the prefix is in the plumbing set (filtered out upstream
+ *     of this helper, but defended in depth here too)
+ *   - `prefix subcommand` for known multi-action prefixes — `subcommand`
+ *     is the first non-flag-like token after the prefix
+ *   - `gh second third` for `gh` — both sub and sub-sub, again skipping
+ *     flag-like tokens
+ *   - just `prefix` otherwise
+ *
+ * "Flag-like" token = starts with `-`, `@`, `/`, or `.`, or contains `=`,
+ * or is purely numeric. These are CLI flag syntax / scoped-package args
+ * / paths / counts — none of them are subcommand keywords.
+ *
+ * Built with `arrayFirst` over `arraySlice` to walk tokens.
+ */
+const FLAG_LIKE_TOKEN_PREDICATE = `(t = ''
+  OR startsWith(t, '-')
+  OR startsWith(t, '@')
+  OR startsWith(t, '/')
+  OR startsWith(t, '.')
+  OR position(t, '=') > 0
+  OR match(t, '^[0-9]+$'))`
+
+const subcommandAwarePatternSql = (segmentExpr: string): string => `
+  multiIf(
+    -- Plumbing prefixes contribute no displayable pattern at all.
+    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) IN ${BASH_PLUMBING_PREFIXES_SQL}, '',
+
+    -- gh: two-deep extraction. Skip flag-like tokens at every level.
+    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) = 'gh',
+    arrayStringConcat(
+      arrayFilter(p -> p != '',
+        [
+          'gh',
+          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                               arraySlice(splitByChar(' ', trim(${segmentExpr})), 2)), ''),
+          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                               arraySlice(splitByChar(' ', trim(${segmentExpr})),
+                                          indexOf(splitByChar(' ', trim(${segmentExpr})),
+                                                  arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                                             arraySlice(splitByChar(' ', trim(${segmentExpr})), 2))) + 1)), '')
+        ]),
+      ' '
+    ),
+
+    -- 1-deep extraction for the known multi-action prefixes.
+    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) IN ${SUBCOMMAND_AWARE_PREFIXES_SQL},
+    arrayStringConcat(
+      arrayFilter(p -> p != '',
+        [
+          splitByChar(' ', trim(${segmentExpr}))[1],
+          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                               arraySlice(splitByChar(' ', trim(${segmentExpr})), 2)), '')
+        ]),
+      ' '
+    ),
+
+    -- Default: just the first token.
+    splitByChar(' ', trim(${segmentExpr}))[1]
+  )
+`
+
 // Shared filter parameters appended to every project-window query so the same
 // keys are used everywhere and the centralised filter stays in sync.
 const projectWindowParams = (params: {
@@ -201,6 +306,7 @@ interface ToolMixCHRow {
   readonly file_disposition: string
   readonly bash_prefix: string
   readonly bash_second_token: string
+  readonly bash_third_token: string
   readonly uses: number | string
 }
 
@@ -338,6 +444,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   SELECT
                     lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS prefix,
                     lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS second_token,
+                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 3))         AS third_token,
                     segment
                   FROM spans
                   ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
@@ -355,7 +462,12 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     AND JSONExtractString(tool_input, 'file_path') != ''
                     AND ${loCountablePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                   )                                                                                   AS files_touched,
-                  (SELECT count() FROM bash_segments)                                                 AS commands_run,
+                  -- "Commands run" excludes pure plumbing (head/tail/echo/sed/…
+                  -- and navigation cd/pwd/open/…). These are never standalone
+                  -- work; they'd inflate the headline number without telling
+                  -- a story.
+                  (SELECT countIf(prefix NOT IN ${BASH_PLUMBING_PREFIXES_SQL})
+                    FROM bash_segments)                                                               AS commands_run,
                   countDistinctIf(metadata['workspace.name'], metadata['workspace.name'] != '')       AS workspaces,
                   countDistinctIf(metadata['git.branch'],     metadata['git.branch']     != '')       AS branches,
                   countDistinctIf(metadata['git.commit'],     metadata['git.commit']     != '')       AS commits,
@@ -364,8 +476,13 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   (SELECT countIf(match(segment,
                       '(?i)(^|\\\\s)(test(\\\\s|:|$)|pytest|vitest|jest|mocha|rspec)'))
                     FROM bash_segments)                                                               AS tests_run,
-                  (SELECT countIf(prefix = 'git' AND second_token IN ${GIT_WRITE_SUBCOMMANDS_SQL})
-                    FROM bash_segments)                                                               AS git_write_ops
+                  -- Both git write-subcommands AND gh write-op triplets feed
+                  -- gitWriteOps. The persisted field name stays gitWriteOps
+                  -- (no schema migration) even though gh is now included.
+                  (SELECT countIf(
+                    (prefix = 'git' AND second_token IN ${GIT_WRITE_SUBCOMMANDS_SQL})
+                    OR (prefix = 'gh' AND ${GH_WRITE_OPS_PREDICATE})
+                  ) FROM bash_segments)                                                               AS git_write_ops
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
               `,
@@ -565,13 +682,14 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
             // first-two-token pairs in user Bash + 4 disposition values.
             const result = await client.query({
               query: `
-                SELECT tool_name, file_disposition, bash_prefix, bash_second_token, count() AS uses
+                SELECT tool_name, file_disposition, bash_prefix, bash_second_token, bash_third_token, count() AS uses
                 FROM (
                   SELECT
                     tool_name,
                     ${filePathDispositionSql("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")} AS file_disposition,
                     ''  AS bash_prefix,
-                    ''  AS bash_second_token
+                    ''  AS bash_second_token,
+                    ''  AS bash_third_token
                   FROM spans
                   WHERE ${PROJECT_WINDOW_FILTER}
                     AND operation = 'execute_tool'
@@ -584,7 +702,8 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     'Bash' AS tool_name,
                     ''     AS file_disposition,
                     lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS bash_prefix,
-                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS bash_second_token
+                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS bash_second_token,
+                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 3))         AS bash_third_token
                   FROM spans
                   ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
                                             JSONExtractString(tool_input, 'command')) AS segment
@@ -592,7 +711,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                     AND tool_name = 'Bash'
                     AND segment != ''
                 )
-                GROUP BY tool_name, file_disposition, bash_prefix, bash_second_token
+                GROUP BY tool_name, file_disposition, bash_prefix, bash_second_token, bash_third_token
               `,
               query_params: projectWindowParams(params),
               format: "JSONEachRow",
@@ -606,6 +725,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                 fileDisposition: (row.file_disposition || "") as ToolMixRow["fileDisposition"],
                 bashPrefix: row.bash_prefix,
                 bashSecondToken: row.bash_second_token,
+                bashThirdToken: row.bash_third_token,
                 uses: num(row.uses),
               })),
             ),
@@ -654,21 +774,25 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
-            // Counts segments, not whole tool calls — `cd foo && grep bar`
-            // contributes a `cd` and a `grep` rather than just the `cd`.
-            // Without the split, the most-chained-after commands (which
-            // are usually the *important* ones) get under-counted.
+            // Counts command segments (a chained `cd foo && grep bar`
+            // contributes a `cd` and a `grep`). Plumbing prefixes
+            // (tail/head/echo/sed/…) are excluded so the list reflects
+            // intentional work. For multi-action prefixes (git, pnpm,
+            // gh, …) the pattern is `prefix subcommand` instead of just
+            // the prefix — `git push` and `git status` show distinctly.
             const result = await client.query({
               query: `
-                SELECT
-                  splitByChar(' ', trim(segment))[1] AS pattern,
-                  count() AS uses
-                FROM spans
-                ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
-                                          JSONExtractString(tool_input, 'command')) AS segment
-                WHERE ${PROJECT_WINDOW_FILTER}
-                  AND tool_name = 'Bash'
-                  AND segment != ''
+                SELECT pattern, count() AS uses
+                FROM (
+                  SELECT ${subcommandAwarePatternSql("segment")} AS pattern
+                  FROM spans
+                  ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                            JSONExtractString(tool_input, 'command')) AS segment
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND tool_name = 'Bash'
+                    AND segment != ''
+                )
+                WHERE pattern != ''
                 GROUP BY pattern
                 ORDER BY uses DESC
                 LIMIT 5
@@ -791,16 +915,18 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   LIMIT 3
                 ),
                 commands AS (
-                  SELECT
-                    splitByChar(' ', trim(segment))[1] AS pattern,
-                    count() AS uses
-                  FROM spans
-                  ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
-                                            JSONExtractString(tool_input, 'command')) AS segment
-                  WHERE ${PROJECT_WINDOW_FILTER}
-                    AND metadata['workspace.name'] = {workspaceName:String}
-                    AND tool_name = 'Bash'
-                    AND segment != ''
+                  SELECT pattern, count() AS uses
+                  FROM (
+                    SELECT ${subcommandAwarePatternSql("segment")} AS pattern
+                    FROM spans
+                    ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                              JSONExtractString(tool_input, 'command')) AS segment
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND metadata['workspace.name'] = {workspaceName:String}
+                      AND tool_name = 'Bash'
+                      AND segment != ''
+                  )
+                  WHERE pattern != ''
                   GROUP BY pattern
                   ORDER BY uses DESC
                   LIMIT 3

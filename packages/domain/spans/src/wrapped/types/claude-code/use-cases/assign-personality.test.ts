@@ -264,6 +264,19 @@ describe("assignPersonality (gate-then-rank)", () => {
     expect(result.kind).toBe("consultant")
   })
 
+  it("Shipper fires when shipping happens via `gh pr create` / `merge` even with zero git commits", () => {
+    // `gh` write triplets feed gitWriteOps the same way `git push` does.
+    // A user who works mostly through `gh pr create` + `gh pr merge`
+    // (e.g. CLI-first PR flow) should still land on Shipper.
+    const result = run({
+      toolMix: { ...baseMix, bash: 40, edit: 30, read: 30 },
+      sessions: 8,
+      commits: 0,
+      gitWriteOps: 32, // 4 per session — saturates the write-ops-per-session score
+    })
+    expect(result.kind).toBe("shipper")
+  })
+
   it("Shipper fires on push-heavy / squash flows even with low commit count", () => {
     // The reason we added `gitWriteOps`: a user who force-pushes / rebases
     // / tags but has few unique commit SHAs over the window. Old algorithm

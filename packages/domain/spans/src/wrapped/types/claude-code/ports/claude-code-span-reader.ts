@@ -101,6 +101,15 @@ export interface ToolMixRow {
    */
   readonly bashSecondToken: string
   /**
+   * Lowercased third token of the Bash command segment — required for
+   * `gh` sub-subcommand classification (`gh pr create` vs `gh pr view`
+   * vs `gh issue list` — same prefix + second token, different intent).
+   * Empty string for non-Bash rows, segments with fewer than three
+   * tokens, or commands where the third token isn't structurally
+   * meaningful.
+   */
+  readonly bashThirdToken: string
+  /**
    * Path classification for `Edit`/`Write`/`Read`/`MultiEdit`/`NotebookEdit`/
    * `NotebookRead` calls based on the span's `tool_input.file_path` and
    * `metadata['workspace.path']`:
