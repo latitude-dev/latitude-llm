@@ -323,7 +323,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
                       className="h-6 w-6 inline-flex shrink-0 overflow-hidden rounded-full"
                     />
                   ) : (
-                    <Avatar name="Unknown" size="sm" />
+                    <Avatar name={row.clientName ?? "Unknown"} size="sm" />
                   )}
                   <div className="flex flex-col">
                     <Text.H5>{row.clientName ?? "Unknown"}</Text.H5>
