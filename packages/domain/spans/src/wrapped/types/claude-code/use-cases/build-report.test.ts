@@ -7,6 +7,7 @@ import {
   type AssembleReportInput,
   assembleReport,
   classifyToolMixRow,
+  extractBashTokens,
   isGitWriteSegment,
   toolBucketFor,
 } from "./build-report.ts"
@@ -153,6 +154,145 @@ describe("toolBucketFor", () => {
   it("falls back to other for unknown tools", () => {
     expect(toolBucketFor("MysteryTool")).toBe("other")
     expect(toolBucketFor("")).toBe("other")
+  })
+})
+
+describe("extractBashTokens", () => {
+  it("plain `git push origin main` → prefix=git, second=push, third=origin", () => {
+    expect(extractBashTokens("git push origin main")).toEqual({
+      prefix: "git",
+      secondToken: "push",
+      thirdToken: "origin",
+    })
+  })
+
+  it("`git -C /path status -s` → skips -C and the absolute path", () => {
+    // Claude Code emits this pattern constantly. Pre-fix, secondToken
+    // was "-c" (the literal second whitespace token) and the segment
+    // mis-classified as `bash` instead of `search`. After the fix the
+    // flag-like tokens are filtered so the meaningful subcommand
+    // surfaces.
+    expect(extractBashTokens("git -C /Users/sans/src/worktrees/repo status -s")).toEqual({
+      prefix: "git",
+      secondToken: "status",
+      thirdToken: "",
+    })
+  })
+
+  it("`gh -R owner/repo pr create --title foo` → triplet pr/create surfaces", () => {
+    expect(extractBashTokens("gh -R owner/repo pr create --title foo")).toEqual({
+      prefix: "gh",
+      secondToken: "pr",
+      thirdToken: "create",
+    })
+  })
+
+  it("`pnpm --filter @domain/spans test` → skips --filter and the scoped arg", () => {
+    expect(extractBashTokens("pnpm --filter @domain/spans test")).toEqual({
+      prefix: "pnpm",
+      secondToken: "test",
+      thirdToken: "",
+    })
+  })
+
+  it("`git --version` → no subcommand, second/third empty", () => {
+    expect(extractBashTokens("git --version")).toEqual({
+      prefix: "git",
+      secondToken: "",
+      thirdToken: "",
+    })
+  })
+
+  it("`./scripts/build.sh --release` → prefix keeps its leading dot (it IS the command)", () => {
+    // Only the *suffix* tokens are flag-filtered. The prefix is the
+    // literal first token — a script path is its own command name.
+    expect(extractBashTokens("./scripts/build.sh --release")).toEqual({
+      prefix: "./scripts/build.sh",
+      secondToken: "",
+      thirdToken: "",
+    })
+  })
+
+  it("`GIT STATUS` → both prefix and tokens are lowercased", () => {
+    expect(extractBashTokens("GIT STATUS")).toEqual({
+      prefix: "git",
+      secondToken: "status",
+      thirdToken: "",
+    })
+  })
+
+  it("`git -c user.email=x commit -m msg` → skips =-containing tokens and -m flag", () => {
+    expect(extractBashTokens("git -c user.email=x commit -m msg")).toEqual({
+      prefix: "git",
+      secondToken: "commit",
+      thirdToken: "msg",
+    })
+  })
+
+  it("`head -n 50 foo.log` → numeric `50` is skipped", () => {
+    expect(extractBashTokens("head -n 50 foo.log")).toEqual({
+      prefix: "head",
+      secondToken: "foo.log",
+      thirdToken: "",
+    })
+  })
+
+  it("collapses runs of whitespace and handles empty input", () => {
+    expect(extractBashTokens("")).toEqual({ prefix: "", secondToken: "", thirdToken: "" })
+    expect(extractBashTokens("   ")).toEqual({ prefix: "", secondToken: "", thirdToken: "" })
+    expect(extractBashTokens("git   push   origin")).toEqual({
+      prefix: "git",
+      secondToken: "push",
+      thirdToken: "origin",
+    })
+  })
+})
+
+describe("extractBashTokens + classifyToolMixRow (end-to-end on raw segments)", () => {
+  // Bridges the SQL-level extraction to the classifier — proves that a
+  // raw Claude Code Bash segment lands in the right toolMix bucket.
+  const classify = (segment: string): ReturnType<typeof classifyToolMixRow> => {
+    const t = extractBashTokens(segment)
+    return classifyToolMixRow(
+      row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken }),
+    )
+  }
+
+  it("`git -C /path status -s` lands in search (not bash)", () => {
+    expect(classify("git -C /Users/sans/src/worktrees/repo status -s")).toBe("search")
+  })
+
+  it("`git -C /path commit -m msg` lands in bash (and counts as a write-op)", () => {
+    const t = extractBashTokens("git -C /repo commit -m msg")
+    const r = row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken })
+    expect(classifyToolMixRow(r)).toBe("bash")
+    expect(isGitWriteSegment(r)).toBe(true)
+  })
+
+  it("`gh -R owner/repo pr create` is a write-op (feeds gitWriteOps)", () => {
+    const t = extractBashTokens("gh -R owner/repo pr create --title foo")
+    const r = row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken })
+    expect(classifyToolMixRow(r)).toBe("bash")
+    expect(isGitWriteSegment(r)).toBe(true)
+  })
+
+  it("`gh -R owner/repo pr view 123` is research, not a write-op", () => {
+    const t = extractBashTokens("gh -R owner/repo pr view 123")
+    const r = row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken })
+    expect(classifyToolMixRow(r)).toBe("research")
+    expect(isGitWriteSegment(r)).toBe(false)
+  })
+
+  it("`pnpm --filter @domain/spans test` is bash (genuine shell orchestration)", () => {
+    expect(classify("pnpm --filter @domain/spans test")).toBe("bash")
+  })
+
+  it("`tail -8` (raw plumbing) is excluded entirely", () => {
+    expect(classify("tail -8")).toBe("excluded")
+  })
+
+  it("`cd /Users/sans/src` is excluded (navigation)", () => {
+    expect(classify("cd /Users/sans/src")).toBe("excluded")
   })
 })
 

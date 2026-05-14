@@ -188,11 +188,24 @@ const SUBCOMMAND_AWARE_PREFIXES_SQL = `(
  *
  * Built with `arrayFirst` over `arraySlice` to walk tokens.
  */
+/**
+ * Mirrors `isFlagLikeToken` in `@domain/spans/.../build-report.ts` — both
+ * must stay in lockstep. Skips:
+ *   `-flag` / `--flag`         : CLI flags
+ *   `@scope/...`               : scoped package args
+ *   any `/`-containing token   : paths AND `owner/repo`-style slugs
+ *                                 (`gh -R owner/repo …` would otherwise
+ *                                 have `owner/repo` survive as the
+ *                                 "subcommand")
+ *   `.foo`                     : relative paths without `/`
+ *   `key=value`                : `--key=value` syntax
+ *   purely numeric             : counts (`head -n 50`)
+ */
 const FLAG_LIKE_TOKEN_PREDICATE = `(t = ''
   OR startsWith(t, '-')
   OR startsWith(t, '@')
-  OR startsWith(t, '/')
   OR startsWith(t, '.')
+  OR position(t, '/') > 0
   OR position(t, '=') > 0
   OR match(t, '^[0-9]+$'))`
 
@@ -441,10 +454,23 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
             const result = await client.query({
               query: `
                 WITH bash_segments AS (
+                  -- second_token / third_token use flag-skipping so
+                  -- \`git -C /path status -s\` matches the git_write_ops
+                  -- predicate correctly (second_token = "status", not
+                  -- the literal "-c"). Mirrors extractBashTokens in
+                  -- build-report.ts.
                   SELECT
-                    lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS prefix,
-                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS second_token,
-                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 3))         AS third_token,
+                    lowerUTF8(splitByChar(' ', trim(segment))[1])                                   AS prefix,
+                    lowerUTF8(arrayElement(
+                      arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                      1
+                    ))                                                                              AS second_token,
+                    lowerUTF8(arrayElement(
+                      arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                      2
+                    ))                                                                              AS third_token,
                     segment
                   FROM spans
                   ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
@@ -698,12 +724,28 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
 
                   UNION ALL
 
+                  -- Bash second/third tokens use flag-skipping (same rule
+                  -- as the display layer): filter out flag-like tokens
+                  -- (-flag, paths, scopes, k=v, numerics) from the
+                  -- post-prefix slice, then take the 1st / 2nd of what
+                  -- remains. So \`git -C /path status -s\` produces
+                  -- (git, status, "") and \`gh -R owner/repo pr create\`
+                  -- produces (gh, pr, create). Mirrors \`extractBashTokens\`
+                  -- in build-report.ts — both must move in lockstep.
                   SELECT
                     'Bash' AS tool_name,
                     ''     AS file_disposition,
-                    lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS bash_prefix,
-                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS bash_second_token,
-                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 3))         AS bash_third_token
+                    lowerUTF8(splitByChar(' ', trim(segment))[1])                                   AS bash_prefix,
+                    lowerUTF8(arrayElement(
+                      arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                      1
+                    ))                                                                              AS bash_second_token,
+                    lowerUTF8(arrayElement(
+                      arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                      2
+                    ))                                                                              AS bash_third_token
                   FROM spans
                   ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
                                             JSONExtractString(tool_input, 'command')) AS segment

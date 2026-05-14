@@ -95,18 +95,23 @@ export interface ToolMixRow {
    */
   readonly bashPrefix: string
   /**
-   * Lowercased second token of the Bash command segment — used to
-   * sub-classify `git` invocations (commit / push / status / …). Empty
-   * string for non-Bash rows or when the segment has only one token.
+   * Lowercased **first non-flag** token after the prefix — i.e. the
+   * subcommand keyword. Flag-like tokens (starting with `-`, `@`, or
+   * `.`; containing `/` or `=`; or purely numeric) are skipped during
+   * extraction. So `git -C /repo status -s` produces
+   * `bashSecondToken = "status"`, not `"-c"`, and `gh -R owner/repo pr
+   * create` produces `bashSecondToken = "pr"`, not `"owner/repo"`.
+   *
+   * Empty string for non-Bash rows or segments with no non-flag tokens
+   * after the prefix. See `extractBashTokens` for the canonical spec.
    */
   readonly bashSecondToken: string
   /**
-   * Lowercased third token of the Bash command segment — required for
-   * `gh` sub-subcommand classification (`gh pr create` vs `gh pr view`
-   * vs `gh issue list` — same prefix + second token, different intent).
-   * Empty string for non-Bash rows, segments with fewer than three
-   * tokens, or commands where the third token isn't structurally
-   * meaningful.
+   * Lowercased **second non-flag** token after the prefix. Used to
+   * disambiguate `gh`'s three-deep CLI: `gh pr create` vs `gh pr view`
+   * (same prefix + second, different intent). Same flag-skipping rule
+   * as `bashSecondToken`. Empty string when the segment has fewer than
+   * two non-flag tokens after the prefix.
    */
   readonly bashThirdToken: string
   /**

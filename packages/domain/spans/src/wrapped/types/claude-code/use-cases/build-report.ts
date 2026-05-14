@@ -172,6 +172,74 @@ const classifyBashSegment = (prefix: string, secondToken: string, thirdToken: st
 }
 
 /**
+ * True if a token should be skipped when looking for the meaningful
+ * subcommand keyword inside a Bash segment. Mirrors the SQL
+ * `FLAG_LIKE_TOKEN_PREDICATE` in the CH adapter — both files must move
+ * in lockstep.
+ *
+ *   `-flag` / `--flag`         : POSIX / GNU CLI flags
+ *   tokens starting with `@`   : pnpm / npm / yarn scoped package args
+ *   tokens containing `/`      : absolute paths (`/Users/.../repo`),
+ *                                relative paths (`./scripts/x`), and
+ *                                `owner/repo`-style slugs (`gh -R x/y …`)
+ *   tokens starting with `.`   : relative paths without `/` (`./bin`)
+ *   tokens containing `=`      : `--key=value` syntax
+ *   purely numeric tokens      : counts / indices (`head -n 50`)
+ *
+ * Subcommands are by convention single bare keywords (`status`, `create`,
+ * `install`, `build`), so none of these patterns produce false positives
+ * in practice.
+ */
+const isFlagLikeToken = (t: string): boolean => {
+  if (t === "") return true
+  const c = t.charAt(0)
+  if (c === "-" || c === "@" || c === ".") return true
+  if (t.includes("/")) return true
+  if (t.includes("=")) return true
+  if (/^\d+$/.test(t)) return true
+  return false
+}
+
+interface BashTokens {
+  readonly prefix: string
+  readonly secondToken: string
+  readonly thirdToken: string
+}
+
+/**
+ * Extracts `(prefix, secondToken, thirdToken)` from a Bash command
+ * segment using the same flag-skipping rule the CH adapter applies. The
+ * adapter SQL must stay in lockstep with this function; tests against
+ * this function effectively validate the SQL by proxy.
+ *
+ * - `prefix` is the literal first whitespace token, lowercased. NOT
+ *   filtered, so a script invocation like `./scripts/build.sh` keeps its
+ *   leading `.` and is treated as the command name.
+ * - `secondToken` is the **first non-flag** token after the prefix.
+ * - `thirdToken` is the **second non-flag** token after the prefix.
+ *
+ * Examples (see `build-report.test.ts` for the full grid):
+ *
+ *   `git -C /path status -s`            → (git, status, "")
+ *   `gh -R owner/repo pr create --t x`  → (gh, pr, create)
+ *   `pnpm --filter @domain/spans test`  → (pnpm, test, "")
+ *   `git --version`                     → (git, "", "")
+ *   `head -n 50 foo.log`                → (head, foo.log, "")
+ */
+export const extractBashTokens = (segment: string): BashTokens => {
+  const trimmed = segment.trim()
+  if (trimmed === "") return { prefix: "", secondToken: "", thirdToken: "" }
+  const tokens = trimmed.split(/\s+/)
+  const prefix = (tokens[0] ?? "").toLowerCase()
+  const meaningful = tokens.slice(1).filter((t) => !isFlagLikeToken(t))
+  return {
+    prefix,
+    secondToken: (meaningful[0] ?? "").toLowerCase(),
+    thirdToken: (meaningful[1] ?? "").toLowerCase(),
+  }
+}
+
+/**
  * True when this row's command segment increments `gitWriteOps`. Covers
  * both raw `git` write-subcommands and the `gh` write-op triplets
  * (`gh pr create`, `gh release upload`, `gh repo create`, …). Name stays
