@@ -143,6 +143,40 @@ const BASH_PLUMBING_PREFIXES_SQL = `(
 )`
 
 /**
+ * Generic investigation tools — route to the `search` bucket for personality
+ * purposes (a heavy grepper is a Detective) but are filtered out of the
+ * top-commands display. The display is reserved for shell orchestration
+ * the user actually drove; investigation is summarised by the `search`
+ * bucket's share.
+ */
+const BASH_SEARCH_PREFIXES_SQL = `('grep','rg','ag','find','ls','tree')`
+
+/**
+ * Git sub-commands that don't route to `bash` (i.e. `git status` /
+ * `log` / `diff` etc. → `search`; `git checkout` / `switch` etc. →
+ * `excluded`). Used by the top-commands display filter to keep only
+ * segments that route to `bash` or `research`.
+ */
+const GIT_NON_BASH_SUBCOMMANDS_SQL = `(
+  'status','log','diff','show','blame','branch','ls-files','reflog',
+  'checkout','switch','restore','config','init','remote'
+)`
+
+/**
+ * Normalises a Bash command segment before tokenisation:
+ *   1. Replace `\\<NEWLINE>` (literal backslash + newline) with a single
+ *      space — multi-line bash continuations would otherwise tokenise
+ *      as `\\<NL>` and surface as junk "commands" in the display.
+ *   2. Collapse any whitespace run (spaces, tabs, leftover newlines) to
+ *      a single space so \`splitByChar(' ', …)\` produces clean tokens.
+ *   3. Trim leading/trailing whitespace.
+ *
+ * Mirrors the JS normalisation in \`extractBashTokens\` (build-report.ts).
+ */
+const normalizeSegmentSql = (segmentExpr: string): string =>
+  `trim(replaceRegexpAll(replaceAll(${segmentExpr}, '\\\\\\n', ' '), '\\\\s+', ' '))`
+
+/**
  * gh sub-subcommand triplets that count as shipping write-ops (they
  * increment `gitWriteOps` alongside the raw git write-subcommands).
  * Encoded as a SQL OR predicate so the same expression can be reused
@@ -209,44 +243,68 @@ const FLAG_LIKE_TOKEN_PREDICATE = `(t = ''
   OR position(t, '=') > 0
   OR match(t, '^[0-9]+$'))`
 
-const subcommandAwarePatternSql = (segmentExpr: string): string => `
-  multiIf(
-    -- Plumbing prefixes contribute no displayable pattern at all.
-    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) IN ${BASH_PLUMBING_PREFIXES_SQL}, '',
+const subcommandAwarePatternSql = (segmentExpr: string): string => {
+  // Each branch needs the normalised segment, its first token (prefix),
+  // and the first non-flag token after the prefix (the subcommand
+  // candidate). Substitute these once so the multiIf body stays readable.
+  const norm = normalizeSegmentSql(segmentExpr)
+  const prefix = `lowerUTF8(splitByChar(' ', ${norm})[1])`
+  const firstNonFlagAfterPrefix = `coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                                       arraySlice(splitByChar(' ', ${norm}), 2)), '')`
+  const secondNonFlagAfterPrefix = `coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                                        arraySlice(splitByChar(' ', ${norm}),
+                                                                   indexOf(splitByChar(' ', ${norm}),
+                                                                           arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
+                                                                                      arraySlice(splitByChar(' ', ${norm}), 2))) + 1)), '')`
+  return `
+    multiIf(
+      -- Plumbing prefixes → empty (no displayable pattern at all).
+      ${prefix} IN ${BASH_PLUMBING_PREFIXES_SQL}, '',
 
-    -- gh: two-deep extraction. Skip flag-like tokens at every level.
-    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) = 'gh',
-    arrayStringConcat(
-      arrayFilter(p -> p != '',
-        [
-          'gh',
-          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                               arraySlice(splitByChar(' ', trim(${segmentExpr})), 2)), ''),
-          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                               arraySlice(splitByChar(' ', trim(${segmentExpr})),
-                                          indexOf(splitByChar(' ', trim(${segmentExpr})),
-                                                  arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                                                             arraySlice(splitByChar(' ', trim(${segmentExpr})), 2))) + 1)), '')
-        ]),
-      ' '
-    ),
+      -- Search prefixes → empty. Option C: top-commands shows only
+      -- segments routing to \`bash\` or \`research\`; investigation
+      -- tools (grep / ls / find / …) are summarised by the search
+      -- bucket's share in the personality, not by surfacing each
+      -- command in the display.
+      ${prefix} IN ${BASH_SEARCH_PREFIXES_SQL}, '',
 
-    -- 1-deep extraction for the known multi-action prefixes.
-    lowerUTF8(splitByChar(' ', trim(${segmentExpr}))[1]) IN ${SUBCOMMAND_AWARE_PREFIXES_SQL},
-    arrayStringConcat(
-      arrayFilter(p -> p != '',
-        [
-          splitByChar(' ', trim(${segmentExpr}))[1],
-          coalesce(arrayFirst(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                               arraySlice(splitByChar(' ', trim(${segmentExpr})), 2)), '')
-        ]),
-      ' '
-    ),
+      -- Git non-bash subcommands → empty. \`git status\` / \`git log\`
+      -- / \`git diff\` etc. are search; \`git checkout\` / \`switch\`
+      -- etc. are excluded. Either way they don't belong in the
+      -- top-commands display.
+      ${prefix} = 'git' AND lowerUTF8(${firstNonFlagAfterPrefix}) IN ${GIT_NON_BASH_SUBCOMMANDS_SQL}, '',
 
-    -- Default: just the first token.
-    splitByChar(' ', trim(${segmentExpr}))[1]
-  )
-`
+      -- gh: two-deep extraction (\`gh pr create\` is meaningfully
+      -- different from \`gh pr view\`). All gh segments are kept
+      -- because they route to either \`bash\` (write-ops + auth/config)
+      -- or \`research\` (read-side) — both allowed under Option C.
+      ${prefix} = 'gh',
+      arrayStringConcat(
+        arrayFilter(p -> p != '',
+          [
+            'gh',
+            ${firstNonFlagAfterPrefix},
+            ${secondNonFlagAfterPrefix}
+          ]),
+        ' '
+      ),
+
+      -- 1-deep extraction for the known multi-action prefixes.
+      ${prefix} IN ${SUBCOMMAND_AWARE_PREFIXES_SQL},
+      arrayStringConcat(
+        arrayFilter(p -> p != '',
+          [
+            splitByChar(' ', ${norm})[1],
+            ${firstNonFlagAfterPrefix}
+          ]),
+        ' '
+      ),
+
+      -- Default: just the first token.
+      splitByChar(' ', ${norm})[1]
+    )
+  `
+}
 
 // Shared filter parameters appended to every project-window query so the same
 // keys are used everywhere and the centralised filter stays in sync.
@@ -457,18 +515,20 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   -- second_token / third_token use flag-skipping so
                   -- \`git -C /path status -s\` matches the git_write_ops
                   -- predicate correctly (second_token = "status", not
-                  -- the literal "-c"). Mirrors extractBashTokens in
+                  -- the literal "-c"). Segment normalisation strips
+                  -- line continuations and collapses whitespace before
+                  -- tokenising. Mirrors extractBashTokens in
                   -- build-report.ts.
                   SELECT
-                    lowerUTF8(splitByChar(' ', trim(segment))[1])                                   AS prefix,
+                    lowerUTF8(splitByChar(' ', ${normalizeSegmentSql("segment")})[1])               AS prefix,
                     lowerUTF8(arrayElement(
                       arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                                  arraySlice(splitByChar(' ', ${normalizeSegmentSql("segment")}), 2)),
                       1
                     ))                                                                              AS second_token,
                     lowerUTF8(arrayElement(
                       arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                                  arraySlice(splitByChar(' ', ${normalizeSegmentSql("segment")}), 2)),
                       2
                     ))                                                                              AS third_token,
                     segment
@@ -730,20 +790,22 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   -- post-prefix slice, then take the 1st / 2nd of what
                   -- remains. So \`git -C /path status -s\` produces
                   -- (git, status, "") and \`gh -R owner/repo pr create\`
-                  -- produces (gh, pr, create). Mirrors \`extractBashTokens\`
-                  -- in build-report.ts — both must move in lockstep.
+                  -- produces (gh, pr, create). Segment normalisation
+                  -- strips line continuations + collapses whitespace
+                  -- first so multi-line bash commands tokenise cleanly.
+                  -- Mirrors \`extractBashTokens\` in build-report.ts.
                   SELECT
                     'Bash' AS tool_name,
                     ''     AS file_disposition,
-                    lowerUTF8(splitByChar(' ', trim(segment))[1])                                   AS bash_prefix,
+                    lowerUTF8(splitByChar(' ', ${normalizeSegmentSql("segment")})[1])               AS bash_prefix,
                     lowerUTF8(arrayElement(
                       arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                                  arraySlice(splitByChar(' ', ${normalizeSegmentSql("segment")}), 2)),
                       1
                     ))                                                                              AS bash_second_token,
                     lowerUTF8(arrayElement(
                       arrayFilter(t -> NOT ${FLAG_LIKE_TOKEN_PREDICATE},
-                                  arraySlice(splitByChar(' ', trim(segment)), 2)),
+                                  arraySlice(splitByChar(' ', ${normalizeSegmentSql("segment")}), 2)),
                       2
                     ))                                                                              AS bash_third_token
                   FROM spans

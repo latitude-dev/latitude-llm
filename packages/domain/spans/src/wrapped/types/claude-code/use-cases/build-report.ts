@@ -227,9 +227,18 @@ interface BashTokens {
  *   `head -n 50 foo.log`                → (head, foo.log, "")
  */
 export const extractBashTokens = (segment: string): BashTokens => {
-  const trimmed = segment.trim()
-  if (trimmed === "") return { prefix: "", secondToken: "", thirdToken: "" }
-  const tokens = trimmed.split(/\s+/)
+  // Normalise before tokenising:
+  //   1. Strip bash line continuations (`\<NEWLINE>`) — a multi-line
+  //      command like `foo bar \<NL>  echo continued` would otherwise
+  //      tokenise as `foo`, `bar`, `\<NL>`, `echo`, `continued`, and the
+  //      `\<NL>` token becomes a junk "command" in the top-commands
+  //      display ("\ echo").
+  //   2. Collapse any whitespace run (spaces, tabs, leftover newlines)
+  //      to a single space so `splitByChar(' ', …)` produces clean
+  //      tokens with no empty entries.
+  const normalised = segment.replace(/\\\n/g, " ").replace(/\s+/g, " ").trim()
+  if (normalised === "") return { prefix: "", secondToken: "", thirdToken: "" }
+  const tokens = normalised.split(" ")
   const prefix = (tokens[0] ?? "").toLowerCase()
   const meaningful = tokens.slice(1).filter((t) => !isFlagLikeToken(t))
   return {

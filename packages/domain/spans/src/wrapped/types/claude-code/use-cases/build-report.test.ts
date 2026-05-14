@@ -246,6 +246,39 @@ describe("extractBashTokens", () => {
       thirdToken: "origin",
     })
   })
+
+  it("strips bash line continuations (`\\<NEWLINE>`) before tokenising", () => {
+    // Claude Code emits multi-line commands like:
+    //   foo bar \
+    //     echo continued
+    // The literal char sequence stored is `foo bar \<NL>  echo continued`.
+    // Without normalisation, the `\<NL>` becomes a junk token and surfaces
+    // as `\ echo` in the top-commands display.
+    expect(extractBashTokens("foo bar \\\n  echo continued")).toEqual({
+      prefix: "foo",
+      secondToken: "bar",
+      thirdToken: "echo",
+    })
+  })
+
+  it("normalises a segment that begins with a line-continuation join", () => {
+    // After splitting on `&&` / `;` / `|`, a segment can start with `\<NL>`
+    // when the chain operator appeared at end-of-line just before the
+    // continuation. The prefix should be the first real token, not `\<NL>`.
+    expect(extractBashTokens("\\\n  echo something")).toEqual({
+      prefix: "echo",
+      secondToken: "something",
+      thirdToken: "",
+    })
+  })
+
+  it("treats embedded tabs and newlines as whitespace", () => {
+    expect(extractBashTokens("git\tpush\norigin")).toEqual({
+      prefix: "git",
+      secondToken: "push",
+      thirdToken: "origin",
+    })
+  })
 })
 
 describe("extractBashTokens + classifyToolMixRow (end-to-end on raw segments)", () => {
@@ -293,6 +326,14 @@ describe("extractBashTokens + classifyToolMixRow (end-to-end on raw segments)", 
 
   it("`cd /Users/sans/src` is excluded (navigation)", () => {
     expect(classify("cd /Users/sans/src")).toBe("excluded")
+  })
+
+  it("a line-continuation `echo` segment classifies as excluded plumbing", () => {
+    // Pre-normalisation this segment produced prefix `\<NL>` which wasn't
+    // in any classifier set → fell through to plain `bash` and showed up
+    // as "\ echo" in top-commands. After normalisation, the prefix is
+    // `echo` → plumbing → excluded.
+    expect(classify("\\\n  echo something")).toBe("excluded")
   })
 })
 
