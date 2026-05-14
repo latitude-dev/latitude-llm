@@ -1,8 +1,9 @@
 name: Publish NPM Package
 description: >-
   Compare the repo version against npm and, if different, install/build/test,
-  publish, and cut a GitHub Release. No-ops when versions match. Assumes the
-  repository has already been checked out by the caller.
+  publish with npm Trusted Publishing/provenance, and cut a GitHub Release.
+  No-ops when versions match. Assumes the repository has already been checked out
+  by the caller.
 
 inputs:
   package_path:
@@ -19,9 +20,6 @@ inputs:
     required: true
   release_name:
     description: GitHub release name prefix (e.g. TypeScript Telemetry).
-    required: true
-  npm_token:
-    description: npm publish token (pass secrets.NPM_TOKEN from the caller workflow).
     required: true
 
 runs:
@@ -85,9 +83,7 @@ runs:
     - name: Publish to npm
       if: steps.check_version.outputs.should_publish == 'true'
       shell: bash
-      run: pnpm publish --access public --filter ${{ inputs.pnpm_filter }} --no-git-checks
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm_token }}
+      run: pnpm publish --access public --provenance --filter ${{ inputs.pnpm_filter }} --no-git-checks
 
     - name: Extract changelog
       if: steps.check_version.outputs.should_publish == 'true'

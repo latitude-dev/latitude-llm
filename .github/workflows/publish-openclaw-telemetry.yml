@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,4 +22,3 @@ jobs:
           pnpm_filter: "@latitude-data/openclaw-telemetry"
           tag_prefix: openclaw-telemetry
           release_name: OpenClaw Telemetry
-          npm_token: ${{ secrets.NPM_TOKEN }}
