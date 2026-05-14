@@ -3,7 +3,7 @@ import { API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import { createAuthRateLimiter, createTierRateLimiter } from "../middleware/rate-limiter.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { accountPath, createAccountRoutes } from "./account.ts"
@@ -36,7 +36,6 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   })
 
   routes.use("*", validationErrorMiddleware)
-  routes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
   routes.use(
     "*",
     createAuthMiddleware({
