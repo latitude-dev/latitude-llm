@@ -149,7 +149,6 @@ export const env = createEnv({
     FILES_STORAGE_PATH: z.string().optional(),
     FILE_PUBLIC_PATH: z.string().optional(),
     PUBLIC_FILES_STORAGE_PATH: z.string().optional(),
-    PUBLIC_S3_BUCKET: z.string().optional(),
     S3_BUCKET: z.string().optional(),
 
     // Sentry

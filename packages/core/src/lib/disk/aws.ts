@@ -6,22 +6,20 @@ import { env } from '@latitude-data/env'
  * Create a .env.development file in packages/env/.env.development and add the following:
  *
  * S3_BUCKET=[your-bucket-name]
- * PUBLIC_S3_BUCKET=[your-public-bucket-name]
  * AWS_REGION=[your-region]
  */
 export function getAwsConfig() {
   const bucket = env.S3_BUCKET
-  const publicBucket = env.PUBLIC_S3_BUCKET
   const region = env.AWS_REGION
 
-  if (!bucket || !publicBucket || !region)
+  if (!bucket || !region) {
     throw new Error(
-      `Missing required AWS configuration variables: ${[!bucket && 'S3_BUCKET', !publicBucket && 'PUBLIC_S3_BUCKET', !region && 'AWS_REGION'].filter(Boolean).join(', ')}.`,
+      `Missing required AWS configuration variables: ${[!bucket && 'S3_BUCKET', !region && 'AWS_REGION'].filter(Boolean).join(', ')}.`,
     )
+  }
 
   return {
     region,
     bucket,
-    publicBucket,
   }
 }
