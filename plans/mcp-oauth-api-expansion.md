@@ -733,15 +733,15 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `OAuthKeyCreated` domain event emitted from `decideOAuthConsent` after BA accepts (no-op handler in `apps/workers`).
   - [x] Theme switcher moved from the navbar to the user-menu dropdown.
   - [x] Cache-invalidation on revoke (both API keys + OAuth keys): web's `deleteApiKey` routed through `revokeApiKeyUseCase`; `revokeOAuthKeyUseCase` busts every deleted access token's Redis entry. `ApiKeyCacheInvalidatorLive` lives in `@platform/api-key-auth`; new `OAuthTokenCacheInvalidatorLive` lives in `@platform/oauth-token-auth`. Session cookie cache (BA, 5-min TTL) left as-is — known trade-off; document where security-sensitive.
-
-### Outstanding
-
 - **M-OAuthKeysApi — Public OAuth Keys endpoints** (3 endpoints, prefix `/oauth-keys`, **never expose tokens**)
   - [x] `GET /` — list, `low` tier. Reuses `listOAuthKeysUseCase`. Response is the metadata-only `OAuthKey` shape — no token field of any kind.
   - [x] `GET /{oauthKeyId}` — get one by composite `${clientId}:${userId}` id, `low` tier. New `getOAuthKeyUseCase` calls `OAuthKeyRepository.findByPair` (JOIN-reads the same shape as `listForOrganization`, RLS-scoped). 404s on miss / malformed id / cross-tenant — all collapse to the same `OAuthKeyNotFoundError`.
   - [x] `DELETE /{oauthKeyId}` — revoke, mounted under the `low` tier prefix; reuses `revokeOAuthKeyUseCase` (cache-invalidates each removed token and disables the application when the last token is gone). 204 on success and on idempotent re-revoke; 404 only for cross-tenant / malformed ids.
   - [x] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint`-native. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`. Composite id parsed via `lastIndexOf(":")` since `userId` is a CUID (no colons).
   - [x] No POST / PATCH. Out-of-scope notes in the "Endpoint inventory" section.
+
+### Outstanding
+
 - **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
   - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
   - [ ] `GET /{traceId}` — get (`medium` tier)

@@ -59,7 +59,8 @@
         "pages": [
           "getting-started/introduction",
           "getting-started/quick-start-dev",
-          "getting-started/quick-start-pm"
+          "getting-started/quick-start-pm",
+          "getting-started/mcp"
         ]
       },
       {

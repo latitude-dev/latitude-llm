@@ -25,6 +25,8 @@
     "mcp:inspect": "pnpm --filter @app/api mcp:inspect",
     "sdk:check": "./fern/invoke.sh check",
     "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local --local --force",
+    "docs:dev": "cd docs && pnpm dlx mint dev",
+    "docs:check": "cd docs && pnpm dlx mint broken-links",
     "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {
