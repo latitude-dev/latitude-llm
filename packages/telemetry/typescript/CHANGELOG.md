@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.10] - 2026-05-14
+
+### Added
+
+- **Per-span project scoping** — `capture({ projectSlug })` routes the wrapping span (and its OTel children) to a specific Latitude project by stamping `latitude.project` on the span. Useful when one process emits to multiple projects (e.g. multiple agents sharing a runtime). Server-side precedence: span attribute `latitude.project` → OTEL resource attribute `latitude.project` → `X-Latitude-Project` header.
+- **Optional ctor `projectSlug`** — `new Latitude({ apiKey })` is now valid without a default project. When omitted the SDK sends no `X-Latitude-Project` header, and each `capture()` must set its own `projectSlug` (or rely on a resource/span attribute). Existing customers passing `projectSlug` in the ctor see no behavior change.
+
 ## [3.0.0-alpha.9] - 2026-05-13
 
 ### Breaking Changes

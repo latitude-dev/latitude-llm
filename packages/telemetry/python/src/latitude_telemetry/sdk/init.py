@@ -73,7 +73,7 @@ class Latitude:
         self,
         *,
         api_key: str,
-        project_slug: str,
+        project_slug: str | None = None,
         instrumentations: list[InstrumentationType] | None = None,
         disable_redact: bool = False,
         redact: RedactSpanProcessorOptions | None = None,
@@ -87,8 +87,7 @@ class Latitude:
     ):
         if not api_key or not api_key.strip():
             raise ValueError("[Latitude] api_key is required and cannot be empty")
-        if not project_slug or not project_slug.strip():
-            raise ValueError("[Latitude] project_slug is required and cannot be empty")
+        normalized_project_slug = project_slug.strip() if project_slug and project_slug.strip() else None
 
         target_provider = tracer_provider or _get_registered_tracer_provider()
 
@@ -100,7 +99,7 @@ class Latitude:
 
         self._latitude_processor = LatitudeSpanProcessor(
             api_key=api_key,
-            project_slug=project_slug,
+            project_slug=normalized_project_slug,
             options=LatitudeSpanProcessorOptions(
                 disable_batch=disable_batch,
                 disable_redact=disable_redact,
@@ -194,7 +193,7 @@ class Latitude:
 
 def init_latitude(
     api_key: str,
-    project_slug: str,
+    project_slug: str | None = None,
     instrumentations: list[InstrumentationType] | None = None,
     disable_redact: bool = False,
     redact: RedactSpanProcessorOptions | None = None,

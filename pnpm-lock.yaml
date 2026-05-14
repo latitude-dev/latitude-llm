@@ -295,9 +295,6 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../../packages/domain/billing
-      '@domain/projects':
-        specifier: workspace:^
-        version: link:../../packages/domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue

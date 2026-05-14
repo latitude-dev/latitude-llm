@@ -76,9 +76,6 @@ export class Latitude {
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")
     }
-    if (!projectSlug || projectSlug.trim() === "") {
-      throw new Error("[Latitude] projectSlug is required and cannot be empty")
-    }
 
     const targetProvider = tracerProvider ?? getRegisteredTracerProvider()
 

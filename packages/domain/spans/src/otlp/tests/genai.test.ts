@@ -96,9 +96,10 @@ const TOOL_DEFS = [
 
 const CONTEXT: TransformContext = {
   organizationId: "org_test",
-  projectId: "proj_test",
   apiKeyId: "key_test",
   ingestedAt: new Date("2026-03-16T12:00:00Z"),
+  defaultProjectId: "proj_test",
+  projectIdBySlug: new Map(),
 }
 
 // ─── Span builders (GenAI v1.37+ convention) ──────────────
@@ -382,7 +383,7 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
   }
 
   beforeAll(() => {
-    spans = transformOtlpToSpans(buildTrace(), CONTEXT)
+    spans = transformOtlpToSpans(buildTrace(), CONTEXT).spans as typeof spans
   })
 
   // ── Trace structure ───────────────────────────────────

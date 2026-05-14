@@ -16,8 +16,9 @@ describe("Latitude", () => {
     expect(() => new Latitude({ apiKey: "", projectSlug: "test" })).toThrow("apiKey is required")
   })
 
-  it("should throw if projectSlug is missing", () => {
-    expect(() => new Latitude({ apiKey: "test", projectSlug: "" })).toThrow("projectSlug is required")
+  it("accepts an empty or omitted projectSlug (per-capture scoping covers the rest)", () => {
+    expect(() => new Latitude({ apiKey: "test", projectSlug: "" })).not.toThrow()
+    expect(() => new Latitude({ apiKey: "test" })).not.toThrow()
   })
 
   it("should return provider, flush, shutdown, and ready functions", async () => {
