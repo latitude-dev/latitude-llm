@@ -113,6 +113,7 @@ const provideTestLayers = (params: {
     findOpen: () => Effect.succeed(params.openIncident ?? null),
     closeOpen: () => Effect.die("closeOpen not used"),
     listByProjectInRange: () => Effect.die("listByProjectInRange not used"),
+    listOpenByKind: () => Effect.die("listOpenByKind not used"),
     updateExitDwell: (input) =>
       Effect.sync(() => {
         dwellWrites.push(input)

@@ -77,6 +77,14 @@ export interface AlertIncidentRepositoryShape {
   listByProjectInRange(
     input: ListAlertIncidentsByProjectInRangeInput,
   ): Effect.Effect<readonly AlertIncident[], RepositoryError, SqlClient>
+  /**
+   * Returns every currently-open (`ended_at IS NULL`) incident matching `kind`,
+   * ordered ascending by `started_at`. Cross-org by design — drive through the
+   * admin Postgres client so RLS is bypassed. Backs the hourly escalation sweep:
+   * the system needs a way to find every stuck-open `issue.escalating` row
+   * regardless of which org owns it, then enqueue a per-issue recheck for each.
+   */
+  listOpenByKind(kind: AlertIncidentKind): Effect.Effect<readonly AlertIncident[], RepositoryError, SqlClient>
 }
 
 export class AlertIncidentRepository extends Context.Service<AlertIncidentRepository, AlertIncidentRepositoryShape>()(

@@ -64,6 +64,7 @@ function setup(opts: SetupOpts = {}) {
     findById: (id) =>
       id === incidentId ? Effect.succeed(incident) : Effect.fail(new NotFoundError({ entity: "AlertIncident", id })),
     listByProjectInRange: () => Effect.die("listByProjectInRange not used"),
+    listOpenByKind: () => Effect.die("listOpenByKind not used"),
   }
 
   const members: MemberWithUser[] = (opts.memberUserIds ?? [cuid("u1"), cuid("u2")]).map((uid, i) => ({
