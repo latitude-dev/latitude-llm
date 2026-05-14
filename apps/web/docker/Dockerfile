@@ -152,12 +152,8 @@ RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
   apk add --no-cache aws-cli; \
   fi
 
-RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
-  --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
-  if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
+RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
   echo "Uploading static assets to S3..."; \
-  export AWS_ACCESS_KEY_ID="$(cat /run/secrets/AWS_ACCESS_KEY_ID 2>/dev/null || echo '')" && \
-  export AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/AWS_SECRET_ACCESS_KEY 2>/dev/null || echo '')" && \
   chmod +x ./apps/web/scripts/upload-static-assets.sh && \
   cd apps/web && \
   ./scripts/upload-static-assets.sh; \

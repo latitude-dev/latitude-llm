@@ -3,6 +3,7 @@ import {
   PutMetricDataCommand,
 } from '@aws-sdk/client-cloudwatch'
 import { env } from '@latitude-data/env'
+import { captureException } from '../common/tracer'
 
 class CloudWatchMetricsService {
   private client: CloudWatchClient | null = null
@@ -15,20 +16,12 @@ class CloudWatchMetricsService {
     if (this.isConfigured()) {
       this.client = new CloudWatchClient({
         region: env.AWS_REGION || 'us-east-1',
-        credentials: {
-          accessKeyId: env.AWS_ACCESS_KEY!,
-          secretAccessKey: env.AWS_ACCESS_SECRET!,
-        },
       })
     }
   }
 
   private isConfigured(): boolean {
-    return Boolean(
-      env.NODE_ENV === 'production' &&
-        env.AWS_ACCESS_KEY &&
-        env.AWS_ACCESS_SECRET,
-    )
+    return env.NODE_ENV === 'production'
   }
 
   incrementInflightRequests(): void {
@@ -63,13 +56,13 @@ class CloudWatchMetricsService {
 
       await this.client.send(command)
     } catch (error) {
-      console.error('Failed to emit CloudWatch metric:', error)
+      captureException(error as Error)
     }
   }
 
-  startPeriodicEmission(intervalMs = 10000): void {
+  startPeriodicEmission(intervalMs = 10000): boolean {
     if (!this.isConfigured() || this.intervalId) {
-      return
+      return false
     }
 
     this.intervalId = setInterval(() => {
@@ -77,6 +70,8 @@ class CloudWatchMetricsService {
     }, intervalMs)
 
     this.intervalId.unref()
+
+    return true
   }
 
   stopPeriodicEmission(): void {

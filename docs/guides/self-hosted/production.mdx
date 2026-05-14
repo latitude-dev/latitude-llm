@@ -35,7 +35,6 @@ Make sure this network is created before running the containers with `docker com
 3. Configure your `.env` file with your production settings. The following key configurations are available:
 
 - **Traefik Settings**:
-
   - `TRAEFIK_ACME_EMAIL`: Email address used for Let's Encrypt ACME registration. Required for issuing and renewing SSL certificates. It is also used to receive expiration and renewal notifications.
   - `TRAEFIK_ADMIN_PASS`: Passwords must be hashed using MD5, SHA1, or BCrypt. Read more: https://doc.traefik.io/traefik/middlewares/http/basicauth/
     Example command to generate a password for user admin:
@@ -44,24 +43,20 @@ Make sure this network is created before running the containers with `docker com
     ```
 
 - **Database Settings**:
-
   - `POSTGRES_USER` and `POSTGRES_PASSWORD`: Database credentials
   - `DATABASE_URL`: PostgreSQL connection string
 
 - **Redis Settings**:
-
   - `QUEUE_PORT` and `QUEUE_HOST`: Redis queue configuration
   - `CACHE_PORT` and `CACHE_HOST`: Redis cache configuration
 
 - **Network Settings**:
-
   - `APP_DOMAIN`: Your domain (e.g., `latitude.so`)
   - `APP_URL`: Full URL to your application
   - `GATEWAY_HOSTNAME`: API gateway hostname
   - `GATEWAY_SSL`: Enable/disable SSL
 
 - **Email Configuration**:
-
   - `MAIL_TRANSPORT`: `smtp`, `mailgun`, `mailpit` - `default` transport is `mailpit`
   - `MAILGUN_EMAIL_DOMAIN`: Email domain for sending emails
   - `FROM_MAILER_EMAIL`: Sender email address
@@ -69,7 +64,6 @@ Make sure this network is created before running the containers with `docker com
   - `DISABLE_EMAIL_AUTHENTICATION`: Disable email authentication (optional, default: `false`)
 
   If `MAIL_TRANSPORT` is set to `smtp`, you must provide the following environment variables:
-  
   - `SMTP_HOST`: The SMTP server host (e.g., `smtp.gmail.com`)
   - `SMTP_PORT`: The SMTP port number (e.g., `465` for SMTPS or `587` for STARTTLS)
   - `SMTP_SECURE`: Set to `true` for SMTPS (`465`) or `false` for STARTTLS (`587`)
@@ -79,15 +73,12 @@ Make sure this network is created before running the containers with `docker com
   Security Considerations:
 
   **TLS/SSL Encryption**:
-   - Ensure that **SMTP** connections use TLS/SSL (via `SMTP_SECURE` set to `true` for SMTPS or `false` for STARTTLS). This is crucial for protecting your email credentials and the contents of your email.
-   - Always use a secure connection to prevent the exposure of sensitive data over the network.
+  - Ensure that **SMTP** connections use TLS/SSL (via `SMTP_SECURE` set to `true` for SMTPS or `false` for STARTTLS). This is crucial for protecting your email credentials and the contents of your email.
+  - Always use a secure connection to prevent the exposure of sensitive data over the network.
 
 - **Storage Configuration**:
-
   - `DRIVE_DISK`: Choose between `local` or `s3` for file storage
-
     1. `local` file storage configuration:
-
     - Files are stored locally on the host machine using Docker volumes.
     - Default variables used:
 
@@ -98,26 +89,11 @@ Make sure this network is created before running the containers with `docker com
       FILES_STORAGE_PATH="/app/storage/files" # e.g /app/storage/files
       PUBLIC_FILES_STORAGE_PATH="/app/apps/web/public/files" # e.g /app/storage/public/files (IMPORTANT: has to be in nextjs's public folder)
       ```
-
     2. `s3` AWS S3 storage configuration:
-
-    - With environment variables (for convenience/legacy):
-      You explicitly provide AWS credentials (AWS_ACCESS_KEY and AWS_ACCESS_SECRET) via .env file.
-      Required variables:
-
-      ```bash
-      AWS_ACCESS_KEY=your-access-key-here
-      AWS_ACCESS_SECRET=your-secret-here
-      AWS_REGION=us-east-1
-      S3_BUCKET=app-files-bucket
-      PUBLIC_S3_BUCKET=public-files-bucket
-      ```
-
-    - AWS S3 with IAM Roles (recommended):
-      No explicit AWS keys needed!
-      Use IAM Roles attached to your AWS services (ECS, EC2, Lambda).
-      Ensure AWS resource has proper IAM Role with S3 access (GetObject, PutObject, DeleteObject).
-      Only required environment variables (no keys explicitly stored):
+    - AWS S3 with IAM Roles:
+      Credentials are resolved through the AWS SDK default credential chain.
+      Use IAM roles attached to your AWS services (ECS, EC2, Lambda).
+      Ensure the AWS resource has proper IAM role permissions for S3 access (GetObject, PutObject, DeleteObject).
 
       ```bash
       AWS_REGION=us-east-1
@@ -126,7 +102,6 @@ Make sure this network is created before running the containers with `docker com
       ```
 
       How to configure IAM Role (example):
-
       1. Go to AWS IAM → Create Role.
       2. Select trusted entity type (e.g., AWS Service).
       3. Attach policy that allows access to required S3 buckets.
@@ -214,4 +189,3 @@ docker compose top
    - Use appropriate storage configuration (S3 recommended)
    - Set up proper monitoring and logging
    - Use a container orchestrator like Kubernetes, GCP or AWS ECS
-

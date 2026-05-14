@@ -8,8 +8,6 @@ import { env } from '@latitude-data/env'
  * S3_BUCKET=[your-bucket-name]
  * PUBLIC_S3_BUCKET=[your-public-bucket-name]
  * AWS_REGION=[your-region]
- * AWS_ACCESS_KEY=[your-key]
- * AWS_ACCESS_SECRET=[your-secret]
  */
 export function getAwsConfig() {
   const bucket = env.S3_BUCKET
@@ -21,19 +19,6 @@ export function getAwsConfig() {
       `Missing required AWS configuration variables: ${[!bucket && 'S3_BUCKET', !publicBucket && 'PUBLIC_S3_BUCKET', !region && 'AWS_REGION'].filter(Boolean).join(', ')}.`,
     )
 
-  const accessKeyId = env.AWS_ACCESS_KEY
-  const secretAccessKey = env.AWS_ACCESS_SECRET
-
-  if (accessKeyId && secretAccessKey) {
-    return {
-      region,
-      bucket,
-      publicBucket,
-      credentials: { accessKeyId, secretAccessKey },
-    }
-  }
-
-  // If AWS_ACCESS_KEY and AWS_ACCESS_SECRET are not set, the SDK will use AWS IAM role.
   return {
     region,
     bucket,

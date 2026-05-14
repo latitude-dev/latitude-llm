@@ -7,28 +7,8 @@ export function AmazonBedrockConfiguration() {
       <Input
         required
         type='text'
-        label='Access Key ID'
-        info='The Amazon Bedrock API Key'
-        name={buildConfigFieldName({
-          fieldNamespace: 'accessKeyId',
-        })}
-        placeholder='sk-0dfdsn23bm4m23n4MfB'
-      />
-      <Input
-        required
-        type='text'
-        label='Secret Access Key'
-        info='The Amazon Bedrock API Secret'
-        name={buildConfigFieldName({
-          fieldNamespace: 'secretAccessKey',
-        })}
-        placeholder='sk-0dfdsn23bm4m23n4MfB'
-      />
-      <Input
-        required
-        type='text'
         label='Region'
-        info='The Amazon Bedrock region'
+        info='Credentials are resolved through the AWS SDK default credential chain. In ECS, attach an IAM task role with Amazon Bedrock access.'
         name={buildConfigFieldName({
           fieldNamespace: 'region',
         })}

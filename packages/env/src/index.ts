@@ -132,8 +132,6 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
 
     // AWS
-    AWS_ACCESS_KEY: z.string().optional(),
-    AWS_ACCESS_SECRET: z.string().optional(),
     AWS_REGION: z.string().optional(),
 
     // Google Cloud Storage

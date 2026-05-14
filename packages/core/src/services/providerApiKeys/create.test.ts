@@ -132,8 +132,6 @@ describe('createProviderApiKey', () => {
       author: user,
       configuration: {
         region: 'us-east-1',
-        accessKeyId: 'fake-access-key',
-        secretAccessKey: 'fake-secret-key',
       },
     })
 
@@ -147,8 +145,6 @@ describe('createProviderApiKey', () => {
     expect(provider.defaultModel).toEqual('anthropic.claude-v2')
     expect(provider.configuration).toEqual({
       region: 'us-east-1',
-      accessKeyId: 'fake-access-key',
-      secretAccessKey: 'fake-secret-key',
     })
 
     const providers = await findAllProviderApiKeys({
@@ -201,11 +197,7 @@ describe('createProviderApiKey', () => {
       name: 'Bedrock Provider',
       defaultModel: 'anthropic.claude-v2',
       author: user,
-      // @ts-expect-error - we are testing Zod validation
-      configuration: {
-        region: 'us-east-1',
-        // Missing required accessKeyId and secretAccessKey
-      },
+      configuration: {},
     })
 
     expect(result.ok).toEqual(false)
