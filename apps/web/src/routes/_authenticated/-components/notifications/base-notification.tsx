@@ -144,17 +144,6 @@ function BaseNotificationContent({
   const { openedAt } = useNotificationFeed()
   const isUnseen = computeIsUnseen(seenAt, openedAt)
 
-  // Timestamp lives inline at the right edge of the title row. The blue unseen
-  // dot sits above it at `absolute top-2 right-2` — they don't collide because
-  // the dot is in the card's positioning context and this row is in the body
-  // column's flow. `pr-4` on the title row keeps the timestamp from running
-  // under the dot at narrow widths.
-  const timestamp = (
-    <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap" noWrap>
-      {relativeTime(createdAt)}
-    </Text.H6>
-  )
-
   return (
     <>
       {icon ? (
@@ -168,14 +157,7 @@ function BaseNotificationContent({
         </div>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {title ? (
-          <div className="flex min-w-0 items-baseline gap-2 pr-4">
-            {typeof title === "string" ? <Text.H5 noWrap>{title}</Text.H5> : title}
-            <span className="ml-auto">{timestamp}</span>
-          </div>
-        ) : (
-          <div className="flex justify-end pr-4">{timestamp}</div>
-        )}
+        {title ? typeof title === "string" ? <Text.H5>{title}</Text.H5> : title : null}
         {description ? (
           typeof description === "string" ? (
             <Text.H6 color="foregroundMuted">{description}</Text.H6>
@@ -184,6 +166,12 @@ function BaseNotificationContent({
           )
         ) : null}
         {children}
+        {/* Timestamp anchored at the bottom of the body column — separates
+            meta-info from the content above and keeps the title row free to
+            wrap naturally without competing for horizontal space. */}
+        <Text.H6 color="foregroundMuted" className="pt-1" noWrap>
+          {relativeTime(createdAt)}
+        </Text.H6>
       </div>
       {isUnseen && <div aria-hidden className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
     </>
