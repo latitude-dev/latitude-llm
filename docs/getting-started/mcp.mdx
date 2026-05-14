@@ -1,0 +1,362 @@
+---
+title: MCP Server
+description: Connect AI agents like Claude, Cursor, Codex, and Zed to your Latitude organization through the Latitude MCP server
+---
+
+## Overview
+
+The **Latitude MCP** is a remote, OAuth-authenticated, streamable HTTP [Model Context Protocol](https://modelcontextprotocol.io) server, living at `https://api.latitude.so/v1/mcp`.
+
+It is the portal that AI agents — Claude, Cursor, Codex, Gemini, Zed, OpenCode, and others — can use to read and manage your Latitude workspace.
+
+The MCP exposes everything you can do in the Latitude UI as tools — managing projects, members, keys, traces, annotations, scores, searches, issues, datasets, and more.
+
+Tools are **dynamically generated** from the Latitude API, so the catalog automatically stays in sync with the platform. For the live list of tools, their descriptions, and their input/output schemas, you can check the [API reference](https://api.latitude.so/docs)
+
+To see or revoke connected agents at any time, go to your organization's **Settings → Keys** and look at the **OAuth Keys** section. Revoking immediately cuts off the agent's access.
+
+## Installation
+
+The MCP is compatible with all the most common agents, harnesses or IDEs you use. We have built extensions for many of them, otherwise check the **Manual** section tab with the exact install steps. If your agent isn't listed below, tell your agent to add the Latitude MCP as a `Remote Streamable HTTP MCP server` with URL `https://api.latitude.so/v1/mcp` and `OAuth` enabled — those are the only two things the agent needs to know!
+
+### Cursor Desktop
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Cursor plugins marketplace](https://cursor.com/marketplace).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Go to **Cursor Settings → Tools & MCPs → Add Custom MCP**, or edit `~/.cursor/mcp.json` directly.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Connect">
+        Go back to **Cursor Settings** and click **Connect** on the `latitude` MCP.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Cursor Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Cursor CLI
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Cursor plugins marketplace](https://cursor.com/marketplace).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Edit `~/.cursor/mcp.json`.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Launch `cursor-agent`, list MCP servers, and trigger the `latitude` server's OAuth flow.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Cursor Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Claude Code Desktop
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Claude plugins directory](https://claude.com/plugins).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Go to **Settings → Developer → Edit Config** or edit `~/Library/Application Support/Claude/claude_desktop_config.json` directly.
+      </Step>
+      <Step title="Add the Latitude MCP">
+       Claude Code Desktop does not support remote OAuth MCP servers natively, so we use the `mcp-remote` bridge.
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "command": "npx",
+              "args": ["mcp-remote", "https://api.latitude.so/v1/mcp"]
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Restart Claude Code">
+        After restart, Claude Code will open a browser tab to authenticate the Latitude MCP.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Claude Code Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Claude Code CLI
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Claude plugins directory](https://claude.com/plugins).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Add the Latitude MCP">
+        Run (outside of Claude Code):
+        ```bash
+        claude mcp add --transport http latitude https://api.latitude.so/v1/mcp --scope user
+        ```
+        Or edit `~/.claude.json` directly:
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "type": "http",
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Verify installation">
+        Verify the Latitude MCP was added running:
+        ```bash
+        claude mcp list
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Run Claude Code (`claude`), type `/mcp`, select `latitude`, then **Authenticate**.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Claude Code Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Codex Desktop
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Codex plugins directory](https://developers.openai.com/codex/plugins).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Open Codex and go to **Settings → MCP Servers → Add Server**, or edit `~/.codex/config.toml`.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```toml
+        [mcp_servers.latitude]
+        transport = "http"
+        url = "https://api.latitude.so/v1/mcp"
+        ```
+      </Step>
+      <Step title="Connect">
+        Restart Codex or click **Connect** on the `latitude` MCP.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Codex Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Codex CLI
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Codex plugins directory](https://developers.openai.com/codex/plugins).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Edit `~/.codex/config.toml`.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```toml
+        [mcp_servers.latitude]
+        transport = "http"
+        url = "https://api.latitude.so/v1/mcp"
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Run Codex (`codex`), type `/mcp`, select `latitude`, then **Authenticate**.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Codex Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Gemini CLI
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Gemini extensions marketplace](https://geminicli.com/extensions/).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Edit `~/.gemini/settings.json`.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "httpUrl": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Run Gemini (`gemini`), type `/mcp`, select `latitude`, then **Authenticate**.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Gemini Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Google Antigravity
+
+<Tabs>
+  <Tab title="Plugin">
+      Install the Latitude MCP from the [Antigravity extensions marketplace](https://geminicli.com/extensions/).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Go to **Antigravity Settings → MCP servers**, or edit `~/.antigravity/mcp.json` directly.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```json
+        {
+          "mcpServers": {
+            "latitude": {
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Connect">
+        Go back to **Antigravity Settings** and click **Connect** on the `latitude` MCP.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Antigravity Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Zed
+
+<Tabs>
+  <Tab title="Plugin">
+    Install the Latitude MCP from the [Zed extensions marketplace](https://zed.dev/extensions).
+  </Tab>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Open the MCP config">
+        Go to **Agent Settings → Model Context Protocol (MCP) Servers → Add Server → Add Custom Server → Remote**, or edit `~/.config/zed/settings.json` directly.
+      </Step>
+      <Step title="Add the Latitude MCP">
+        ```json
+        {
+          "context_servers": {
+            "latitude": {
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Go back to **Agent Settings** and click **Authenticate** on the `latitude` MCP.
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this Zed Agent to access in the consent screen.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### OpenCode Desktop
+
+<Tabs>
+  <Tab title="Manual">
+    OpenCode Desktop does not currently support adding MCP servers from the desktop UI. Instead, set it up via the [OpenCode CLI](#opencode-cli) steps. After a restart you can enable it typing `/mcp`.
+  </Tab>
+</Tabs>
+
+### OpenCode CLI
+
+<Tabs>
+  <Tab title="Manual">
+    <Steps>
+      <Step title="Add the Latitude MCP">
+        Run (outside of OpenCode):
+        ```bash
+        opencode mcp add
+        ```
+        and answer the prompts with name `latitude`, type `remote`, url `https://api.latitude.so/v1/mcp`, oauth `yes`, client id `no`.<br />
+
+        Or edit `~/.config/opencode/opencode.json` directly:
+        ```json
+        {
+          "mcp": {
+            "latitude": {
+              "type": "remote",
+              "url": "https://api.latitude.so/v1/mcp"
+            }
+          }
+        }
+        ```
+      </Step>
+      <Step title="Verify installation">
+        Verify the Latitude MCP was added running:
+        ```bash
+        opencode mcp list
+        ```
+      </Step>
+      <Step title="Authenticate">
+        Run (outside of OpenCode):
+        ```bash
+        opencode mcp auth latitude
+        ```
+      </Step>
+      <Step title="Authorize">
+        Sign in (if needed) and pick the organization you want this OpenCode Agent to access in the consent screen.
+      </Step>    
+    </Steps>
+  </Tab>
+</Tabs>
