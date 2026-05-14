@@ -464,7 +464,7 @@ export function CommitChangesList({
 
   return (
     <div className='w-full h-full overflow-hidden'>
-      <ul className='flex flex-col custom-scrollbar gap-2 pt-4 px-2'>
+      <ul className='flex flex-col custom-scrollbar gap-2 pt-4 px-2 h-full overflow-y-auto'>
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <li key={i}>
