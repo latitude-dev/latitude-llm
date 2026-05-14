@@ -22,7 +22,7 @@ This skill is for durable knowledge, not changelog prose.
 ## Repository docs and specs
 
 - `dev-docs/` contains precise and exhaustive Markdown documentation for each domain or system (top-level `*.md` files).
-- `docs/` holds **ADRs** under `docs/adr/` and the **Mintlify** product docs site (`docs.json`, topical folders such as `getting-started/` and `telemetry/`, plus `images/`, `logo/`, favicons).
+- `docs/` holds the **Mintlify** product docs site (`docs.json`, topical folders such as `getting-started/` and `telemetry/`, plus `images/`, `logo/`, favicons).
 - Each domain doc file should cover how the domain or system is architected, built, designed, and structured.
 - Keep domain docs organized by domain/system (for example: `dev-docs/reliability.md`, `dev-docs/evaluations.md`, `dev-docs/annotations.md`, `dev-docs/scores.md`, `dev-docs/issues.md`, `dev-docs/simulations.md`, `dev-docs/organizations.md`, `dev-docs/projects.md`, `dev-docs/users.md`, `dev-docs/settings.md`, `dev-docs/spans.md`).
 - `specs/` is a temporary folder used while a feature or system is under construction.
