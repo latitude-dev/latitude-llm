@@ -157,7 +157,7 @@ Manual deployments must be dispatched from the matching branch:
 - Dispatch from `development` when deploying to the `staging` environment
 - Dispatch from `main` when deploying to the `production` environment
 
-The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
+The deployment workflow uses GitHub Actions OIDC authentication (no long-lived AWS access keys). Each GitHub Environment must define `AWS_DEPLOY_ROLE_ARN` as an environment variable (not a secret), pointing at the Pulumi output `outputs.githubActionsRoleArn` for the matching stack. Keep any legacy deployment IAM user in place until both staging and production deployments have been verified with the new role, then retire the user manually.
 
 ## Secret lifecycle
 
