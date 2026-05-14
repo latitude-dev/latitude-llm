@@ -90,7 +90,6 @@ const testConfig = {
 const createInput = (redis: TraceIngestionRateLimitRedis, payloadBytes: number) => ({
   redis,
   organizationId: "org-1",
-  projectId: "project-1",
   apiKeyId: "key-1",
   payloadBytes,
   config: testConfig,
@@ -136,5 +135,18 @@ describe("checkTraceIngestionRateLimit", () => {
     const result = await checkTraceIngestionRateLimit(createInput(new ThrowingRedis(), 60))
 
     expect(result).toEqual({ allowed: true })
+  })
+
+  it("rate-limits across projects within the same org+apiKey (no `projectId` in the key)", async () => {
+    // Per-span project scoping moved project resolution into the use case. The rate-limit
+    // bucket is now `org + apiKey`, matching billing's scope — two projects in the same org
+    // share the same trace-ingestion allowance.
+    const redis = new FakeRedis()
+
+    await checkTraceIngestionRateLimit(createInput(redis, 10))
+    await checkTraceIngestionRateLimit(createInput(redis, 10))
+    const third = await checkTraceIngestionRateLimit(createInput(redis, 10))
+
+    expect(third).toEqual({ allowed: false, limitedBy: "requests", retryAfterSeconds: 30 })
   })
 })

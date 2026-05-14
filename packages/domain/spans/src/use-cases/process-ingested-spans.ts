@@ -3,7 +3,7 @@ import {
   type ChSqlClient,
   getFromDisk,
   type OrganizationId,
-  type ProjectId,
+  ProjectId,
   type RepositoryError,
   StorageDisk,
   type StorageError,
@@ -63,7 +63,6 @@ function sanitizePersistedSpans(spans: readonly SpanDetail[]): readonly SpanDeta
 
 export interface ProcessIngestedSpansInput {
   readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
   readonly apiKeyId: string
   readonly contentType: string
   readonly ingestedAt: Date
@@ -80,6 +79,17 @@ export interface ProcessIngestedSpansInput {
   }
   readonly inlinePayload: string | null
   readonly fileKey: string | null
+  /**
+   * Resolved by the request handler from the `X-Latitude-Project` header. Used for spans that
+   * carry no `latitude.project` attribute on the span or its OTEL resource.
+   */
+  readonly defaultProjectId: string | null
+  /**
+   * Slug → projectId map pre-resolved by the request handler. Spans whose slug isn't in this
+   * map (and have no default) are dropped here; the request handler has already accounted
+   * for them in the OTLP `partial_success` response.
+   */
+  readonly projectIdBySlug: Readonly<Record<string, string>>
 }
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
@@ -125,14 +135,15 @@ function decodeAndTransform(
       return []
     }
 
-    return sanitizePersistedSpans(
-      transformOtlpToSpans(request, {
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        apiKeyId: input.apiKeyId,
-        ingestedAt: input.ingestedAt,
-      }),
-    )
+    const { spans } = transformOtlpToSpans(request, {
+      organizationId: input.organizationId,
+      apiKeyId: input.apiKeyId,
+      ingestedAt: input.ingestedAt,
+      defaultProjectId: input.defaultProjectId,
+      projectIdBySlug: new Map(Object.entries(input.projectIdBySlug)),
+    })
+
+    return sanitizePersistedSpans(spans)
   })
 }
 
@@ -151,7 +162,6 @@ export const processIngestedSpansUseCase =
   > =>
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
-      yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
       const payload = yield* resolvePayload(input)
       const spans = yield* decodeAndTransform(payload, input)
@@ -170,27 +180,41 @@ export const processIngestedSpansUseCase =
       const repo = yield* SpanRepository
       yield* repo.insert(persistedSpans)
 
-      const traceIds = [...new Set(persistedSpans.map((span) => span.traceId))]
+      // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
+      // Group by projectId so each TracesIngested event addresses one project at a time —
+      // downstream consumers (issues discovery, billing, flaggers, etc.) are project-scoped.
+      const traceIdsByProject = new Map<string, Set<string>>()
+      for (const span of persistedSpans) {
+        const projectKey = span.projectId as string
+        let set = traceIdsByProject.get(projectKey)
+        if (!set) {
+          set = new Set<string>()
+          traceIdsByProject.set(projectKey, set)
+        }
+        set.add(span.traceId as string)
+      }
 
-      yield* eventsPublisher.publish({
-        name: "TracesIngested",
-        organizationId: input.organizationId,
-        payload: {
+      for (const [projectIdRaw, traceIdSet] of traceIdsByProject) {
+        yield* eventsPublisher.publish({
+          name: "TracesIngested",
           organizationId: input.organizationId,
-          projectId: input.projectId,
-          traceIds,
-          ...(input.traceUsage?.context
-            ? {
-                billing: {
-                  planSlug: input.traceUsage.context.planSlug,
-                  planSource: input.traceUsage.context.planSource,
-                  periodStart: input.traceUsage.context.periodStart.toISOString(),
-                  periodEnd: input.traceUsage.context.periodEnd.toISOString(),
-                  includedCredits: input.traceUsage.context.includedCredits,
-                  overageAllowed: input.traceUsage.context.overageAllowed,
-                },
-              }
-            : {}),
-        },
-      } satisfies DomainEvent)
+          payload: {
+            organizationId: input.organizationId,
+            projectId: ProjectId(projectIdRaw),
+            traceIds: [...traceIdSet],
+            ...(input.traceUsage?.context
+              ? {
+                  billing: {
+                    planSlug: input.traceUsage.context.planSlug,
+                    planSource: input.traceUsage.context.planSource,
+                    periodStart: input.traceUsage.context.periodStart.toISOString(),
+                    periodEnd: input.traceUsage.context.periodEnd.toISOString(),
+                    includedCredits: input.traceUsage.context.includedCredits,
+                    overageAllowed: input.traceUsage.context.overageAllowed,
+                  },
+                }
+              : {}),
+          },
+        } satisfies DomainEvent)
+      }
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))
