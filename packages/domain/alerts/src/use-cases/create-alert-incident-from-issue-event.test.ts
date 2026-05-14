@@ -25,6 +25,7 @@ function createTestLayers() {
       closeOpen: () => Effect.succeed(null),
       updateExitDwell: () => Effect.void,
       listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
+      listOpenByKind: () => Effect.die("listOpenByKind not used in this test"),
     }),
   )
 

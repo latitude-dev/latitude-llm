@@ -1,4 +1,5 @@
 import type { AlertIncidentKind, AlertIncidentSourceType, AlertSeverity, EntrySignalsSnapshot } from "@domain/alerts"
+import { sql } from "drizzle-orm"
 import { index, jsonb, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -28,5 +29,10 @@ export const alertIncidents = latitudeSchema.table(
     organizationRLSPolicy("alert_incidents"),
     index("alert_incidents_project_started_at_idx").on(t.organizationId, t.projectId, t.startedAt),
     index("alert_incidents_source_idx").on(t.sourceType, t.sourceId, t.startedAt),
+    // Partial index over only the open rows, keyed on `kind`. Backs the
+    // hourly escalation sweep's `WHERE kind = ? AND ended_at IS NULL` lookup
+    // without paying for the full-table index — open incidents are a tiny
+    // fraction of total volume.
+    index("alert_incidents_open_by_kind_idx").on(t.kind).where(sql`ended_at IS NULL`),
   ],
 )

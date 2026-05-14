@@ -3,6 +3,7 @@ import {
   discoverIssueUseCase,
   refreshIssueDetailsUseCase,
   removeScoreFromIssueUseCase,
+  sweepEscalatingIssuesUseCase,
 } from "@domain/issues"
 import {
   type QueueConsumer,
@@ -32,7 +33,13 @@ import {
 import { IssueProjectionRepositoryLive, type WeaviateClient, withWeaviate } from "@platform/db-weaviate"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
+import {
+  getAdminPostgresClient,
+  getClickhouseClient,
+  getPostgresClient,
+  getRedisClient,
+  getWeaviateClient,
+} from "../clients.ts"
 
 const logger = createLogger("issues")
 
@@ -41,6 +48,12 @@ interface IssuesDeps {
   publisher: QueuePublisherShape
   workflowStarter: WorkflowStarterShape
   postgresClient?: PostgresClient
+  /**
+   * Admin Postgres client — used by the `sweepEscalating` handler to read
+   * `alert_incidents` across orgs (RLS bypass). All other handlers stay on
+   * the org-scoped `postgresClient`.
+   */
+  adminPostgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
   weaviateClient?: WeaviateClient
   redisClient?: RedisClient
@@ -51,11 +64,13 @@ export const createIssuesWorker = async ({
   publisher,
   workflowStarter,
   postgresClient,
+  adminPostgresClient,
   clickhouseClient,
   weaviateClient,
   redisClient,
 }: IssuesDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
+  const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
   const wvClient = weaviateClient ?? (await getWeaviateClient())
   const rdClient = redisClient ?? getRedisClient()
@@ -111,10 +126,11 @@ export const createIssuesWorker = async ({
     // matching transition event. The use case does not write the issue —
     // the open/closed `alert_incidents` row is the stored truth. The
     // alert-incidents worker inserts/closes that row in response to
-    // `IssueEscalated` / `IssueEscalationEnded`. Fan-out-driven: entries are
-    // caught by the throttled `issues:check-escalation` publish, exits by
-    // the debounced `issues:check-escalation-recheck` publish (both wired
-    // in `domain-events.ts` from `ScoreAssignedToIssue`).
+    // `IssueEscalated` / `IssueEscalationEnded`. Triggered by two paths:
+    // the throttled `issues:check-escalation` publish from
+    // `ScoreAssignedToIssue` (entry + active-burst exit detection), and the
+    // hourly `sweepEscalating` cron below (exit detection on quiet issues
+    // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
       checkIssueEscalationUseCase(payload).pipe(
         withPostgres(
@@ -133,6 +149,30 @@ export const createIssuesWorker = async ({
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Escalation check failed for ${payload.projectId}/${payload.issueId}`, error)),
         ),
+        withTracing,
+        Effect.asVoid,
+      ),
+    // Fired by the hourly cron. Reads every open `issue.escalating` row
+    // (across orgs, via admin Postgres) and enqueues one `checkEscalation`
+    // per incident. Separate dedupeKey from the throttled publish so a
+    // pending throttled job's jobId doesn't shadow the sweep publish — the
+    // BullMQ dedup uses dedupeKey as the jobId.
+    sweepEscalating: () =>
+      sweepEscalatingIssuesUseCase({
+        publish: (payload) =>
+          publisher.publish("issues", "checkEscalation", payload, {
+            dedupeKey: `issues:check-escalation-sweep:${payload.issueId}`,
+          }),
+      }).pipe(
+        withPostgres(AlertIncidentRepositoryLive, adminPgClient),
+        Effect.tap((result) =>
+          Effect.sync(() =>
+            logger.info(
+              `Escalation sweep: published=${result.published} failed=${result.failed} attempted=${result.attempted}`,
+            ),
+          ),
+        ),
+        Effect.tapError((error) => Effect.sync(() => logger.error("Escalation sweep failed", error))),
         withTracing,
         Effect.asVoid,
       ),

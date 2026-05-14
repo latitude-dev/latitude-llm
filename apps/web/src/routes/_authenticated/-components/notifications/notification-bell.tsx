@@ -8,15 +8,11 @@ import {
   listNotifications,
   markAllNotificationsSeen,
 } from "../../../../domains/notifications/notifications.functions.ts"
-import { NotificationFeedProvider } from "./notification-feed-context.tsx"
 import { NotificationItem } from "./notification-item.tsx"
+import { LIST_QUERY_KEY, PAGE_SIZE, UNREAD_QUERY_KEY } from "./notification-query-keys.ts"
 
 const NOTIFICATIONS_FEATURE_FLAG = "notifications"
-const PAGE_SIZE = 5
 const UNREAD_COUNT_REFETCH_INTERVAL_MS = 60_000
-const NOTIFICATIONS_QUERY_KEY = ["notifications"] as const
-const UNREAD_QUERY_KEY = [...NOTIFICATIONS_QUERY_KEY, "unread-count"] as const
-const LIST_QUERY_KEY = [...NOTIFICATIONS_QUERY_KEY, "list", PAGE_SIZE] as const
 
 function formatBadgeCount(count: number): string {
   if (count > 9) return "9+"
@@ -36,7 +32,6 @@ export function NotificationBell() {
 function NotificationBellEnabled() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [openedAt, setOpenedAt] = useState<Date | null>(null)
 
   const { data: unreadData } = useQuery({
     queryKey: UNREAD_QUERY_KEY,
@@ -60,19 +55,11 @@ function NotificationBellEnabled() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (next) {
-          // Snapshot when this open started so the feed can decide which rows
-          // to render as "unseen for this open" vs "seen on a previous open".
-          // Reset every open so the highlight state is fresh each time.
-          setOpenedAt(new Date())
-          // Mark everything seen as soon as the popover opens. Skip when
-          // there's nothing to mark so we don't churn the server with
-          // no-op POSTs on every re-open. Event handler instead of effect
-          // — per the web-frontend skill, effects shouldn't be used as
-          // command dispatchers.
-          if (unread > 0) markSeen.mutate()
-        } else {
+        if (!next) {
           // Discard cached pages so reopening starts fresh from the top.
+          // Opening doesn't mark anything seen — per-item hover handles that
+          // (see base-notification.tsx). The header's "Mark all as read"
+          // button is the explicit bulk action.
           queryClient.removeQueries({ queryKey: LIST_QUERY_KEY })
         }
       }}
@@ -99,12 +86,32 @@ function NotificationBellEnabled() {
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="w-[360px] p-0">
         {open ? (
-          <NotificationFeedProvider value={{ openedAt }}>
+          <>
+            <NotificationHeader unread={unread} onMarkAll={() => markSeen.mutate()} pending={markSeen.isPending} />
             <NotificationFeed />
-          </NotificationFeedProvider>
+          </>
         ) : null}
       </PopoverContent>
     </Popover>
+  )
+}
+
+function NotificationHeader({
+  unread,
+  onMarkAll,
+  pending,
+}: {
+  readonly unread: number
+  readonly onMarkAll: () => void
+  readonly pending: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between border-b border-border px-3 py-2">
+      <Text.H5>Notifications</Text.H5>
+      <Button type="button" variant="ghost" size="sm" onClick={onMarkAll} disabled={unread === 0 || pending}>
+        Mark all as read
+      </Button>
+    </div>
   )
 }
 

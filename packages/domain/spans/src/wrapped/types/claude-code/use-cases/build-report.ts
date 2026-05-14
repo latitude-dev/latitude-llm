@@ -72,14 +72,18 @@ const BASH_SEARCH_PREFIXES = new Set(["grep", "rg", "ag", "find", "ls", "tree"])
 const BASH_RESEARCH_PREFIXES = new Set(["curl", "wget"])
 
 /**
- * Pure output-shaping / orchestration commands. Almost always after a `|`
- * to format something else's output (`… | tail -8`, `… | head`, `cat foo |
- * less`), never standalone work in the Claude Code context. Excluded
- * entirely from segment counting so they don't pad `commandsRun` or
- * dominate the top-commands list.
+ * Tokens that look like commands but aren't. Excluded entirely from
+ * segment counting so they don't pad `commandsRun` or dominate the
+ * top-commands list. Three categories:
  *
- * Includes the pure navigation commands too (`cd`, `pwd`, `open`, `claude`,
- * …) for the same reason.
+ *   - Output shapers (`head`, `tail`, `cat`, `sed`, `awk`, …): almost
+ *     always after a `|` to format something else's output, never
+ *     standalone work in the Claude Code context.
+ *   - Navigation / shell admin (`cd`, `pwd`, `open`, `claude`, …): pure
+ *     context changes, no work.
+ *   - Bash control-flow keywords (`for`, `while`, `if`, `do`, …): bash
+ *     reserved words that surface as a segment prefix when a loop or
+ *     conditional starts the segment. Not commands.
  */
 const BASH_PLUMBING_PREFIXES = new Set([
   "head",
@@ -106,6 +110,26 @@ const BASH_PLUMBING_PREFIXES = new Set([
   "exit",
   "open",
   "claude",
+  // Bash control-flow keywords. They appear as a segment prefix when a
+  // loop or conditional is the start of a chain (`for x in *; do …` etc.)
+  // — they're not commands the user "ran." Includes both block-start
+  // keywords (`for`, `while`, `if`, `case`) and the after-`;` keywords
+  // (`do`, `done`, `then`, `else`, `fi`) for completeness.
+  "do",
+  "done",
+  "if",
+  "then",
+  "else",
+  "elif",
+  "fi",
+  "for",
+  "while",
+  "until",
+  "case",
+  "esac",
+  "in",
+  "select",
+  "function",
 ])
 
 // git sub-command routing.
@@ -226,6 +250,27 @@ interface BashTokens {
  *   `git --version`                     → (git, "", "")
  *   `head -n 50 foo.log`                → (head, foo.log, "")
  */
+/**
+ * Splits a raw Bash command string on its `&&` / `||` chain operators
+ * and returns the trimmed, non-empty segments. Mirrors
+ * `BASH_SEGMENT_REGEX` in the CH adapter — both must stay in lockstep,
+ * and tests against this function effectively pin the splitter contract.
+ *
+ * Deliberately does NOT split on `|` or `;`:
+ *   - `|` appears constantly inside grep / sed regex alternations
+ *     (`grep "foo\|bar"`), shell pipes for plumbing, and quoted strings.
+ *   - `;` appears inside SQL statements and shell loop bodies.
+ *
+ * Subshells (`$(…)`, backticks) are NOT handled — splits inside them
+ * would still happen if `&&` / `||` appeared there literally. Rare
+ * enough that the regex approach is good enough.
+ */
+export const splitBashSegments = (command: string): readonly string[] =>
+  command
+    .split(/\s*(?:&&|\|\|)\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s !== "")
+
 export const extractBashTokens = (segment: string): BashTokens => {
   // Normalise before tokenising:
   //   1. Strip bash line continuations (`\<NEWLINE>`) — a multi-line
@@ -262,8 +307,7 @@ export const isGitWriteSegment = (row: ToolMixRow): boolean => {
     return GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
   }
   if (row.bashPrefix === "gh") {
-    const writes = GH_WRITE_OPS[row.bashSecondToken]
-    return writes !== undefined && writes.has(row.bashThirdToken)
+    return GH_WRITE_OPS[row.bashSecondToken]?.has(row.bashThirdToken) === true
   }
   return false
 }

@@ -24,9 +24,7 @@ Latitude shows you **what will break next** in your AI Agent and helps you fix i
 - **[Issue-centric](https://docs.latitude.so/issues/overview#issues)**: failed traces grouped into tracked issues, with status, size, and trend.
 - **[Human-aligned evals](https://docs.latitude.so/evaluations/alignment#evaluation-alignment)**: evals built automatically from your team's judgments, with an alignment score that tracks drift from human judgment over time.
 - **[Agent-native traces](https://docs.latitude.so/observability/overview#observability-overview)**: multi-turn sessions, tool calls, and full execution paths in one view.
-- **Semantic search**: find traces by meaning, even when the exact words don't match.
-- **[Simulations](https://docs.latitude.so/simulations/overview#simulations-overview)** _(coming soon)_: replay agents against saved scenarios before shipping.
-
+- **[Semantic search](https://docs.latitude.so/search/overview#search)**: find any trace by meaning, exact matches, or roughly similar sentences. No sampling, 100% of traes are searchable.
 
 ## 📚 Table of contents
 
@@ -52,19 +50,18 @@ npm install @latitude-data/telemetry
 ### Instrument
 
 ```ts
-import { Latitude } from "@latitude-data/telemetry"
+import { Latitude } from "@latitude-data/telemetry";
 
 new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
-})
+});
 ```
 
 Every LLM call now shows up as a trace in Latitude.
 
 Python, Go, and other languages are also supported. Full setup, OTel passthrough, and self-hosting in the [getting started guide](https://docs.latitude.so/telemetry/overview).
-
 
 ## 🔌 Integrations
 
@@ -115,3 +112,4 @@ We also offer a more permissive commercial license for those who need it. Contac
 - [X / Twitter](https://x.com/trylatitude)
 
 Made with love by the Latitude Team
+

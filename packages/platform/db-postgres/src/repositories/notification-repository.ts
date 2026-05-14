@@ -136,6 +136,24 @@ export const NotificationRepositoryLive = Layer.effect(
               ),
           )
         }),
+
+      markSeen: ({ organizationId, userId, notificationId, seenAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db
+              .update(notifications)
+              .set({ seenAt })
+              .where(
+                and(
+                  eq(notifications.id, notificationId),
+                  eq(notifications.organizationId, organizationId),
+                  eq(notifications.userId, userId),
+                  isNull(notifications.seenAt),
+                ),
+              ),
+          )
+        }),
     }),
   ),
 )

@@ -113,6 +113,18 @@ export const AlertIncidentRepositoryLive = Layer.effect(
           )
           return rows.map(toDomain)
         }),
+      listOpenByKind: (kind) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(alertIncidents)
+              .where(and(eq(alertIncidents.kind, kind), isNull(alertIncidents.endedAt)))
+              .orderBy(asc(alertIncidents.startedAt)),
+          )
+          return rows.map(toDomain)
+        }),
     }),
   ),
 )

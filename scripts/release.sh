@@ -105,7 +105,24 @@ snapshot_commit=$(git commit-tree "$(git rev-parse 'origin/development^{tree}')"
   -m "Release - ${timestamp}")
 git push origin "${snapshot_commit}:refs/heads/${branch}"
 
-commits=$(git log --max-count=50 --pretty=format:'- %h %s' origin/main..origin/development)
+# The release snapshot has `origin/main` as its only parent but carries the
+# tree of `origin/development` at release time. Development's individual
+# commits never enter main's ancestry, so `origin/main..origin/development`
+# would list every commit going back to the previous release, not just what
+# is new in this one. Find the development commit whose tree matches
+# `origin/main` (the last released state) and list from there.
+main_tree=$(git rev-parse 'origin/main^{tree}')
+# awk must read the full stream rather than `exit` on first match: an early
+# exit closes stdin, `git log` gets SIGPIPE, and `set -o pipefail` would
+# abort the script after the branch push but before `gh pr create`.
+last_released_dev_sha=$(git log --format='%H %T' origin/development \
+  | awk -v t="$main_tree" 'sha == "" && $2 == t { sha = $1 } END { print sha }')
+
+if [ -z "$last_released_dev_sha" ]; then
+  last_released_dev_sha=$(git merge-base origin/main origin/development)
+fi
+
+commits=$(git log --max-count=50 --pretty=format:'- %h %s' "${last_released_dev_sha}..origin/development")
 body=$(
   cat <<EOF
 Promotes \`development\` to \`main\` for a release.
