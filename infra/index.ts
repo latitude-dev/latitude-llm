@@ -23,6 +23,7 @@ const hostedZoneId = config.get("hostedZoneId") ?? defaults.hostedZoneId
 const domainName = config.get("domainName") ?? defaults.domainName
 const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
+const bastionAmiId = config.require("bastionAmiId")
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
@@ -71,7 +72,7 @@ const rds = createRds(name, envConfig, vpc.privateSubnets, securityGroups.rds)
 
 const redis = createRedis(name, envConfig, vpc.privateSubnets, securityGroups.redis)
 
-const bastion = createBastion(name, envConfig, vpc.vpc, vpc.publicSubnets, securityGroups.bastion)
+const bastion = createBastion(name, envConfig, vpc.vpc, vpc.publicSubnets, securityGroups.bastion, bastionAmiId)
 
 const s3 = createS3(name, envConfig)
 
