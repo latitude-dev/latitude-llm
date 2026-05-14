@@ -9,6 +9,7 @@ import {
   classifyToolMixRow,
   extractBashTokens,
   isGitWriteSegment,
+  splitBashSegments,
   toolBucketFor,
 } from "./build-report.ts"
 
@@ -154,6 +155,60 @@ describe("toolBucketFor", () => {
   it("falls back to other for unknown tools", () => {
     expect(toolBucketFor("MysteryTool")).toBe("other")
     expect(toolBucketFor("")).toBe("other")
+  })
+})
+
+describe("splitBashSegments (the regex that maps to the CH adapter)", () => {
+  it("splits on && and ||", () => {
+    expect(splitBashSegments("a && b")).toEqual(["a", "b"])
+    expect(splitBashSegments("a || b")).toEqual(["a", "b"])
+    expect(splitBashSegments("a && b || c")).toEqual(["a", "b", "c"])
+  })
+
+  it("does NOT split on a literal `|` (which appears inside grep regex alternations and shell pipes)", () => {
+    // Before this fix, `grep "service.name\|api[_-]key"` was split at
+    // the `\|` mid-regex, producing junk segments like `api[_-]key\`
+    // in the top-commands list.
+    expect(splitBashSegments('grep "service.name\\|api[_-]key" file')).toEqual([
+      'grep "service.name\\|api[_-]key" file',
+    ])
+    // Shell pipes also collapse into one segment now.
+    expect(splitBashSegments("pnpm test 2>&1 | tail -8")).toEqual(["pnpm test 2>&1 | tail -8"])
+    // Multiple pipes don't split either.
+    expect(splitBashSegments("find . | xargs grep | sort")).toEqual(["find . | xargs grep | sort"])
+  })
+
+  it("does NOT split on `;` (SQL statement separators and shell loop bodies)", () => {
+    // Before this fix, `psql -c "alter …; set(x); …"` was split at the
+    // `;` mid-SQL, producing a segment starting with `set(evals_sched)`.
+    expect(splitBashSegments('psql -c "alter ...; set(x); reset();"')).toEqual([
+      'psql -c "alter ...; set(x); reset();"',
+    ])
+    // Similarly, a for-loop body stays in one segment so `do` doesn't
+    // surface as a "command."
+    expect(splitBashSegments("for x in *; do echo $x; done")).toEqual(["for x in *; do echo $x; done"])
+  })
+
+  it("trims whitespace around operators", () => {
+    expect(splitBashSegments("a  &&  b")).toEqual(["a", "b"])
+    expect(splitBashSegments("a\t&&\tb")).toEqual(["a", "b"])
+  })
+
+  it("filters out empty segments", () => {
+    expect(splitBashSegments("a &&")).toEqual(["a"])
+    expect(splitBashSegments("&& a")).toEqual(["a"])
+    expect(splitBashSegments("")).toEqual([])
+    expect(splitBashSegments("   ")).toEqual([])
+  })
+
+  it("handles the canonical mixed case: real chain operators split, embedded pipes/semicolons don't", () => {
+    // `cd .. && grep "foo\|bar" file && pnpm test | tail`
+    // → 3 segments (split on the two `&&`s, not on `\|` or `|`).
+    expect(splitBashSegments('cd .. && grep "foo\\|bar" file && pnpm test | tail')).toEqual([
+      "cd ..",
+      'grep "foo\\|bar" file',
+      "pnpm test | tail",
+    ])
   })
 })
 
@@ -334,6 +389,90 @@ describe("extractBashTokens + classifyToolMixRow (end-to-end on raw segments)", 
     // as "\ echo" in top-commands. After normalisation, the prefix is
     // `echo` → plumbing → excluded.
     expect(classify("\\\n  echo something")).toBe("excluded")
+  })
+
+  it("bash block-start keywords (`for`/`while`/`if`/`case`) classify as excluded", () => {
+    // After dropping `;` from the chain splitter, a loop or conditional
+    // is a single segment whose prefix is the block-start keyword.
+    // `for x in *; do something; done` → prefix `for`. None of these
+    // are commands the user "ran" — they're bash reserved words.
+    expect(classify("for x in *; do echo $x; done")).toBe("excluded")
+    expect(classify("while read line; do something; done < file")).toBe("excluded")
+    expect(classify("if [ -z $x ]; then echo empty; fi")).toBe("excluded")
+    expect(classify("case $x in foo) bar;; esac")).toBe("excluded")
+  })
+
+  it("after-`;` keywords (`do`/`then`/`fi`) also classify as excluded if they ever surface as a prefix", () => {
+    // Defensive: covers the edge case where some other split lands a
+    // keyword at the start of a segment. With `;` no longer in the
+    // splitter this is rare in practice, but the plumbing entry keeps
+    // the contract clean.
+    for (const kw of ["do", "done", "then", "else", "elif", "fi", "esac", "in"]) {
+      expect(classify(`${kw} something`)).toBe("excluded")
+    }
+  })
+})
+
+describe("splitter + classifier (full pipeline, raw bash → bucket)", () => {
+  // Walks raw bash command strings through the same three steps the CH
+  // adapter does at scale: split → extract tokens → classify. If ANY
+  // stage of the pipeline regresses (splitter, tokeniser, or
+  // classifier), one of these assertions fails.
+  const classifyRawCommand = (rawCommand: string): readonly ReturnType<typeof classifyToolMixRow>[] =>
+    splitBashSegments(rawCommand).map((segment) => {
+      const t = extractBashTokens(segment)
+      return classifyToolMixRow(
+        row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken }),
+      )
+    })
+
+  it("grep with `\\|` alternation is ONE search segment (not three junk segments)", () => {
+    // Pre-fix this command produced segments `grep "service.name\`,
+    // `api[_-]key\`, and `openclaw" file` — the middle one showed up as
+    // a "top command." After the splitter narrows to `&&` and `||`,
+    // it's a single segment that routes cleanly to `search`.
+    expect(classifyRawCommand('grep "service.name\\|api[_-]key\\|openclaw" file')).toEqual(["search"])
+  })
+
+  it("psql with `;` inside SQL is ONE bash segment (not junk segments per statement)", () => {
+    // Pre-fix this command split at every `;` inside the SQL, producing
+    // segments like `set(evals_sched)` as top commands. After the fix
+    // it's a single segment routed to `bash`.
+    expect(classifyRawCommand('psql -c "alter table foo; set(evals_sched); reset();"')).toEqual(["bash"])
+  })
+
+  it("`for x in *; do echo $x; done` is ONE excluded segment (not three with `do` as a command)", () => {
+    expect(classifyRawCommand("for x in *; do echo $x; done")).toEqual(["excluded"])
+  })
+
+  it("a pipe-chained command stays one segment (the first command owns it)", () => {
+    // `pnpm test | tail -8` → one segment, prefix `pnpm` → bash.
+    expect(classifyRawCommand("pnpm test 2>&1 | tail -8")).toEqual(["bash"])
+  })
+
+  it("real `&&` chains DO split into separate segments", () => {
+    // Mixed: cd (excluded), grep with embedded `\|` (search, single
+    // segment), pnpm test piped to tail (bash, single segment because
+    // pipe doesn't split anymore).
+    expect(classifyRawCommand('cd .. && grep "foo\\|bar" file && pnpm test | tail')).toEqual([
+      "excluded",
+      "search",
+      "bash",
+    ])
+  })
+
+  it('`gh pr create --title "a;b"` is ONE bash segment + gitWriteOps trigger', () => {
+    // The `;` inside the quoted title doesn't split. The whole command
+    // is recognised as `gh pr create` (write op).
+    const segments = splitBashSegments('gh pr create --title "fix: a; b"')
+    expect(segments).toHaveLength(1)
+    const t = extractBashTokens(segments[0] ?? "")
+    expect(t.prefix).toBe("gh")
+    expect(t.secondToken).toBe("pr")
+    expect(t.thirdToken).toBe("create")
+    const r = row("Bash", 1, { bashPrefix: t.prefix, bashSecondToken: t.secondToken, bashThirdToken: t.thirdToken })
+    expect(classifyToolMixRow(r)).toBe("bash")
+    expect(isGitWriteSegment(r)).toBe(true)
   })
 })
 
