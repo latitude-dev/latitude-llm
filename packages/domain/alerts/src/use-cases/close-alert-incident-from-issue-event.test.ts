@@ -26,6 +26,7 @@ function createTestLayers(opts: { closedId: string | null }) {
         }),
       updateExitDwell: () => Effect.void,
       listByProjectInRange: () => Effect.die("listByProjectInRange not used in this test"),
+      listOpenByKind: () => Effect.die("listOpenByKind not used in this test"),
     }),
   )
 

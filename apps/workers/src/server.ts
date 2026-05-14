@@ -1,6 +1,7 @@
 import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
+import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
@@ -186,7 +187,7 @@ const bootstrap = async () => {
       redisClient: ctx.redisClient,
     })
     createExportsWorker(ctx)
-    await createIssuesWorker(ctx)
+    await createIssuesWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
@@ -223,6 +224,22 @@ const bootstrap = async () => {
           "triggerWeeklyRun",
           {},
           { key: "wrapped:weekly", pattern: "0 9 * * 5", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Hourly escalation sweep. Backs up the `ScoreAssignedToIssue`-driven
+    // throttled check by reconsidering every open `issue.escalating`
+    // incident once an hour — closes incidents whose burst has aged out of
+    // the 6h window and whose scoring has gone quiet, and lets the 24h
+    // backstop + 72h timeout exits fire even when no new scores arrive.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "issues",
+          "sweepEscalating",
+          {},
+          { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

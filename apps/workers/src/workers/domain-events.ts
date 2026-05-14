@@ -1,6 +1,6 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "@domain/billing"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import { ESCALATION_CHECK_THROTTLE_MS, ESCALATION_RECHECK_DELAY_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
+import { ESCALATION_CHECK_THROTTLE_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -145,13 +145,14 @@ export const createDomainEventsWorker = ({
 
     // Throttled: the first assignment schedules the refresh for `now + 8h`,
     // and subsequent assignments within the window are dropped so a constant
-    // annotation stream cannot starve the refresh. The escalation check fans
-    // out twice in tandem: a 15-min throttled push (catches escalation
-    // STARTS quickly while activity is high) and a debounced recheck that
-    // only fires after `ESCALATION_RECHECK_DELAY_MS` of quiet on the same
-    // issue (catches escalation ENDS once scoring stops — the recent
-    // occurrence count organically drops below the exit threshold). Different
-    // dedupeKeys so the throttle and the debounce don't collide.
+    // annotation stream cannot starve the refresh. The escalation check is
+    // pushed under a 15-min throttle so it fires within at most that window
+    // of any new score — the same check evaluates BOTH entry and exit, so
+    // an actively-burning issue gets exit-evaluated every 15 minutes for
+    // free. Once activity stops, the hourly `sweepEscalating` cron takes
+    // over (see `apps/workers/src/server.ts`) — that's what guarantees the
+    // dwell / 24h backstop / 72h timeout exits actually fire when no more
+    // `ScoreAssignedToIssue` events arrive.
     ScoreAssignedToIssue: (event) =>
       Effect.all(
         [
@@ -162,10 +163,6 @@ export const createDomainEventsWorker = ({
           pub.publish("issues", "checkEscalation", event.payload, {
             dedupeKey: `issues:check-escalation:${event.payload.issueId}`,
             throttleMs: ESCALATION_CHECK_THROTTLE_MS,
-          }),
-          pub.publish("issues", "checkEscalation", event.payload, {
-            dedupeKey: `issues:check-escalation-recheck:${event.payload.issueId}`,
-            debounceMs: ESCALATION_RECHECK_DELAY_MS,
           }),
         ],
         { concurrency: "unbounded" },

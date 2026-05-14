@@ -170,6 +170,13 @@ const _registry = {
       readonly projectId: string
       readonly issueId: string
     }
+    /**
+     * Fired by the hourly cron — finds every open `issue.escalating` incident
+     * and fans out one `checkEscalation` per issue. Recovers stuck-open
+     * incidents whose 1h debounce already fired once and decided "still
+     * escalating" while the burst was still inside the 6h window.
+     */
+    sweepEscalating: Record<string, never>
     removeScore: {
       readonly organizationId: string
       readonly projectId: string

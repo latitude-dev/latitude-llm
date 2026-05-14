@@ -10,7 +10,8 @@ export {
   ESCALATION_EXIT_THRESHOLD_FACTOR,
   ESCALATION_MAX_DURATION_MS,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
-  ESCALATION_RECHECK_DELAY_MS,
+  ESCALATION_SWEEPER_KEY,
+  ESCALATION_SWEEPER_PATTERN,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
@@ -203,4 +204,9 @@ export {
   type SerializeIssueDiscoveryResult,
   serializeIssueDiscoveryUseCase,
 } from "./use-cases/serialize-issue-discovery.ts"
+export {
+  type SweepEscalatingIssuesPublish,
+  type SweepEscalatingIssuesResult,
+  sweepEscalatingIssuesUseCase,
+} from "./use-cases/sweep-escalating-issues.ts"
 export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"
