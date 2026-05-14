@@ -215,7 +215,7 @@ export interface IncidentTargetResult {
  * since incident creation) surface as `null` fields — the renderer stays
  * non-interactive in that case.
  */
-export const resolveIncidentNotificationTarget = createServerFn({ method: "GET" })
+export const getIncidentNotificationTarget = createServerFn({ method: "GET" })
   .inputValidator(z.object({ alertIncidentId: z.string() }))
   .handler(async ({ data }): Promise<IncidentTargetResult> => {
     const { organizationId } = await requireSession()

@@ -5,8 +5,8 @@ import {
   type IssueLifecycleSummaryRecord,
 } from "../../../../../../domains/issues/issues.functions.ts"
 import {
+  getIncidentNotificationTarget,
   type IncidentTargetResult,
-  resolveIncidentNotificationTarget,
 } from "../../../../../../domains/notifications/notifications.functions.ts"
 
 /**
@@ -52,7 +52,7 @@ export function useIncidentLinkFallback(
   const enabled = needsFallback && alertIncidentId !== null
   const { data } = useQuery({
     queryKey: ["notifications", "incident-target", alertIncidentId],
-    queryFn: () => resolveIncidentNotificationTarget({ data: { alertIncidentId: alertIncidentId ?? "" } }),
+    queryFn: () => getIncidentNotificationTarget({ data: { alertIncidentId: alertIncidentId ?? "" } }),
     enabled,
     staleTime: 60_000,
   })
