@@ -1,6 +1,6 @@
 import { AlertIncidentRepository } from "@domain/alerts"
 import type { QueuePublishError } from "@domain/queue"
-import { type RepositoryError, type SqlClient } from "@domain/shared"
+import type { RepositoryError, SqlClient } from "@domain/shared"
 import { Effect, Ref } from "effect"
 
 /**

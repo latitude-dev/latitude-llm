@@ -1,8 +1,4 @@
-import {
-  type AlertIncident,
-  AlertIncidentRepository,
-  type AlertIncidentRepositoryShape,
-} from "@domain/alerts"
+import { type AlertIncident, AlertIncidentRepository, type AlertIncidentRepositoryShape } from "@domain/alerts"
 import { QueuePublishError } from "@domain/queue"
 import {
   AlertIncidentId,

@@ -20,7 +20,9 @@ const baseFields = {
   exitEligibleSince: null,
 }
 
-const makeRow = (overrides: Partial<typeof alertIncidentsTable.$inferInsert>): typeof alertIncidentsTable.$inferInsert => ({
+const makeRow = (
+  overrides: Partial<typeof alertIncidentsTable.$inferInsert>,
+): typeof alertIncidentsTable.$inferInsert => ({
   ...baseFields,
   id: AlertIncidentId("a".repeat(24)),
   sourceId: "i".repeat(24),
