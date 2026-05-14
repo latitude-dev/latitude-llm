@@ -6,7 +6,7 @@ import {
   ProjectRepository,
   updateProjectUseCase,
 } from "@domain/projects"
-import { projectSettingsSchema } from "@domain/shared"
+import type { ALERT_INCIDENT_KINDS } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -39,6 +39,63 @@ const projectsFernGroup = (methodName: string) =>
     "x-fern-sdk-method-name": methodName,
   }) as const
 
+// Project-settings shape, expressed at the API layer so each field carries a
+// description (the domain `projectSettingsSchema` is description-free by
+// design). The field-by-field shape mirrors `projectSettingsSchema` from
+// `@domain/shared`; the per-alert-kind toggles are spelled out so each one is
+// individually documented for SDK / MCP consumers.
+const AlertNotificationsSettingSchema = z
+  .object({
+    "issue.new": z
+      .boolean()
+      .optional()
+      .describe("Send a notification when a new issue is discovered. Defaults to `true` when omitted."),
+    "issue.regressed": z
+      .boolean()
+      .optional()
+      .describe("Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted."),
+    "issue.escalating": z
+      .boolean()
+      .optional()
+      .describe(
+        "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+      ),
+    escalationSensitivity: z
+      .number()
+      .int()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe(
+        "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+      ),
+  })
+  .openapi("AlertNotificationsSetting")
+
+// Assert at compile time that the API schema covers every alert kind the
+// domain knows about — adding a new entry to `ALERT_INCIDENT_KINDS` makes
+// this assertion fail until we describe the new key here too.
+type _AlertKindsCovered = Exclude<
+  (typeof ALERT_INCIDENT_KINDS)[number],
+  keyof z.infer<typeof AlertNotificationsSettingSchema>
+>
+const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
+void _alertKindsAreCovered
+
+const ProjectSettingsSchema = z
+  .object({
+    keepMonitoring: z
+      .boolean()
+      .optional()
+      .describe(
+        "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+      ),
+    alertNotifications: AlertNotificationsSettingSchema.optional().describe(
+      "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+    ),
+  })
+  .openapi("ProjectSettings")
+
 const ResponseSchema = z
   .object({
     id: z.string().describe("Stable project identifier (CUID2)."),
@@ -49,11 +106,9 @@ const ResponseSchema = z
       .describe(
         "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form.",
       ),
-    settings: projectSettingsSchema
-      .nullable()
-      .describe(
-        "Per-project settings overrides. `null` means inherit from the organization. See the `ProjectSettings` schema for the available switches.",
-      ),
+    settings: ProjectSettingsSchema.nullable().describe(
+      "Per-project settings overrides. `null` means inherit from the organization.",
+    ),
     firstTraceAt: z
       .string()
       .nullable()
@@ -85,11 +140,9 @@ const UpdateRequestSchema = z
       .describe(
         "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable).",
       ),
-    settings: projectSettingsSchema
-      .optional()
-      .describe(
-        "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
-      ),
+    settings: ProjectSettingsSchema.optional().describe(
+      "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+    ),
     flaggers: z
       .partialRecord(z.enum(FLAGGER_STRATEGY_SLUGS), z.boolean())
       .optional()

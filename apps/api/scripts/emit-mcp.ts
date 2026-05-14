@@ -12,6 +12,7 @@ import { writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { OpenAPIHono, z } from "@hono/zod-openapi"
+import { MCP_INFO } from "../src/constants.ts"
 import { collectToolDescriptors } from "../src/mcp/index.ts"
 import { registerRoutes } from "../src/routes/index.ts"
 import type { AppEnv } from "../src/types.ts"
@@ -42,11 +43,7 @@ const tools = collectToolDescriptors().map((tool) => ({
   ...(tool.output ? { outputSchema: z.toJSONSchema(tool.output.schema, { target: "draft-2020-12" }) } : {}),
 }))
 
-const manifest = {
-  name: "Latitude API",
-  version: "1.0.0",
-  tools,
-}
+const manifest = { ...MCP_INFO, tools }
 
 const here = dirname(fileURLToPath(import.meta.url))
 const outPath = resolve(here, "../mcp.json")

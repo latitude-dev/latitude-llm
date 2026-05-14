@@ -63,7 +63,7 @@ export const registerMcpRoute = ({
   const toolDescriptors = collectToolDescriptors()
 
   routes.all("/mcp", async (c) => {
-    const mcpServer = new McpServer(MCP_INFO, { capabilities: { tools: {} } })
+    const mcpServer = new McpServer(MCP_INFO, { instructions: MCP_INFO.instructions, capabilities: { tools: {} } })
 
     for (const tool of toolDescriptors) {
       // Capture each descriptor in the closure — the loop variable would

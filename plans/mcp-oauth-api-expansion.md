@@ -737,11 +737,11 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
 ### Outstanding
 
 - **M-OAuthKeysApi — Public OAuth Keys endpoints** (3 endpoints, prefix `/oauth-keys`, **never expose tokens**)
-  - [ ] `GET /` — list, `low` tier. Reuses `listOAuthKeysUseCase` from `@domain/oauth-keys`. Response is the metadata-only `OAuthKey` shape (id, clientId, clientName, clientIcon, userId, userName, userEmail, lastActivityAt, connectedAt, disabled). **No `access_token` / `refresh_token` / hashed-token / masked-token field on any response.**
-  - [ ] `GET /{oauthKeyId}` — get one by composite `${clientId}:${userId}` id, `low` tier. Use-case extension: add `findById(id)` to `@domain/oauth-keys` (parses the composite, then JOIN-reads the same row shape `listForOrganization` returns, RLS-scoped). 404s on miss / cross-tenant.
-  - [ ] `DELETE /{oauthKeyId}` — revoke, `medium` tier. Parses the composite id and reuses `revokeOAuthKeyUseCase` (already cache-invalidates and disables the application when the last token is removed). 204 on success, 404 when the id doesn't resolve under the caller's org.
-  - [ ] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint` from the start. Mounted with `low` tier; the DELETE endpoint applies `medium` via the per-tier override. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`.
-  - [ ] No POST / PATCH. Out-of-scope notes already in the "Endpoint inventory" section above.
+  - [x] `GET /` — list, `low` tier. Reuses `listOAuthKeysUseCase`. Response is the metadata-only `OAuthKey` shape — no token field of any kind.
+  - [x] `GET /{oauthKeyId}` — get one by composite `${clientId}:${userId}` id, `low` tier. New `getOAuthKeyUseCase` calls `OAuthKeyRepository.findByPair` (JOIN-reads the same shape as `listForOrganization`, RLS-scoped). 404s on miss / malformed id / cross-tenant — all collapse to the same `OAuthKeyNotFoundError`.
+  - [x] `DELETE /{oauthKeyId}` — revoke, mounted under the `low` tier prefix; reuses `revokeOAuthKeyUseCase` (cache-invalidates each removed token and disables the application when the last token is gone). 204 on success and on idempotent re-revoke; 404 only for cross-tenant / malformed ids.
+  - [x] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint`-native. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`. Composite id parsed via `lastIndexOf(":")` since `userId` is a CUID (no colons).
+  - [x] No POST / PATCH. Out-of-scope notes in the "Endpoint inventory" section.
 - **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
   - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
   - [ ] `GET /{traceId}` — get (`medium` tier)
