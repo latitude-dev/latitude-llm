@@ -35,9 +35,15 @@ const QUERY_CONCURRENCY = 6
 const DEEP_DIVE_CONCURRENCY = 3
 
 /**
- * Tool-name → bucket map. Maps every Claude Code tool we ship today and
- * funnels everything else into `other` so the bucket sums always equal the
- * total tool-call count.
+ * Tool-name → bucket map. Used for two paths:
+ *   1. The non-Bash, non-path-aware classifier branch in `classifyToolMixRow`.
+ *   2. Coarse name-only mapping for `dominantTool` on the workspace deep
+ *      dive, where the display field is "what kind of tool was most-used
+ *      in this workspace" — a per-span path/command analysis would be
+ *      overkill for that bit of copy.
+ *
+ * `Bash` maps to `bash` here for case (2); the per-segment classifier in
+ * `classifyBashSegment` is what drives the toolMix shares.
  */
 const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
   Bash: "bash",
@@ -59,6 +65,209 @@ const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
 
 export const toolBucketFor = (toolName: string): ToolBucket => TOOL_NAME_TO_BUCKET[toolName] ?? "other"
 
+const PATH_AWARE_TOOLS = new Set(["Edit", "MultiEdit", "NotebookEdit", "Write", "Read", "NotebookRead"])
+
+// Bash command-prefix routing. Lowercased; the adapter does the lowercase.
+const BASH_SEARCH_PREFIXES = new Set(["grep", "rg", "ag", "find", "ls", "tree"])
+const BASH_RESEARCH_PREFIXES = new Set(["curl", "wget"])
+
+/**
+ * Pure output-shaping / orchestration commands. Almost always after a `|`
+ * to format something else's output (`… | tail -8`, `… | head`, `cat foo |
+ * less`), never standalone work in the Claude Code context. Excluded
+ * entirely from segment counting so they don't pad `commandsRun` or
+ * dominate the top-commands list.
+ *
+ * Includes the pure navigation commands too (`cd`, `pwd`, `open`, `claude`,
+ * …) for the same reason.
+ */
+const BASH_PLUMBING_PREFIXES = new Set([
+  "head",
+  "tail",
+  "cat",
+  "less",
+  "more",
+  "echo",
+  "printf",
+  "sed",
+  "awk",
+  "wc",
+  "sort",
+  "uniq",
+  "cut",
+  "tr",
+  "xargs",
+  "tee",
+  "cd",
+  "pwd",
+  "pushd",
+  "popd",
+  "clear",
+  "exit",
+  "open",
+  "claude",
+])
+
+// git sub-command routing.
+const GIT_SEARCH_SUBCOMMANDS = new Set(["status", "log", "diff", "show", "blame", "branch", "ls-files", "reflog"])
+const GIT_EXCLUDED_SUBCOMMANDS = new Set(["checkout", "switch", "restore", "config", "init", "remote"])
+const GIT_WRITE_SUBCOMMANDS = new Set(["commit", "push", "merge", "rebase", "tag", "revert", "cherry-pick"])
+
+// gh sub-subcommand routing. Keyed on (secondToken, thirdToken). `gh` is
+// the only command we look at three deep — its surface (`gh pr create`,
+// `gh issue list`, `gh api`) reads more like a 3-level CLI than git's
+// 2-level one, and the second token alone (`pr`, `issue`, `release`) is
+// too coarse to tell shipping from investigation apart.
+const GH_RESEARCH_SECOND_TOKENS = new Set(["issue", "api", "run", "workflow"])
+const GH_PR_RESEARCH_SUBCOMMANDS = new Set(["view", "list", "checks", "comment", "diff", "status"])
+/**
+ * gh write-ops triplets — these increment `gitWriteOps` AND stay in the
+ * `bash` bucket. Keyed by (secondToken → set of thirdToken). Anything
+ * not enumerated falls through to plain `bash`.
+ */
+const GH_WRITE_OPS: Record<string, ReadonlySet<string>> = {
+  pr: new Set(["create", "merge", "ready", "edit", "review"]),
+  release: new Set(["create", "edit", "upload"]),
+  repo: new Set(["create"]),
+}
+
+/**
+ * Pure routing rule for one `ToolMixRow`. Returns the bucket the row counts
+ * toward, or `"excluded"` to drop it entirely (so the toolMix denominator
+ * isn't padded by navigation/scratch noise). Mirrors the SQL classification
+ * in the CH adapter — both live here so unit tests pin the contract.
+ */
+export const classifyToolMixRow = (row: ToolMixRow): ToolBucket | "excluded" => {
+  if (row.toolName === "Bash") {
+    return classifyBashSegment(row.bashPrefix, row.bashSecondToken, row.bashThirdToken)
+  }
+  if (PATH_AWARE_TOOLS.has(row.toolName)) {
+    if (row.fileDisposition === "plan-file") return "plan"
+    if (row.fileDisposition === "claude-noise" || row.fileDisposition === "external") return "excluded"
+    // "workspace" or "" (no file_path on this call) fall through to the
+    // tool-name map.
+  }
+  return TOOL_NAME_TO_BUCKET[row.toolName] ?? "other"
+}
+
+const classifyBashSegment = (prefix: string, secondToken: string, thirdToken: string): ToolBucket | "excluded" => {
+  if (BASH_PLUMBING_PREFIXES.has(prefix)) return "excluded"
+  if (BASH_SEARCH_PREFIXES.has(prefix)) return "search"
+  if (BASH_RESEARCH_PREFIXES.has(prefix)) return "research"
+  if (prefix === "git") {
+    if (GIT_SEARCH_SUBCOMMANDS.has(secondToken)) return "search"
+    if (GIT_EXCLUDED_SUBCOMMANDS.has(secondToken)) return "excluded"
+    // Including GIT_WRITE_SUBCOMMANDS, GIT_NEUTRAL (add/rm/mv/stash/pull/…)
+    // and unknown subcommands — stays in `bash` (genuine shell orchestration).
+  }
+  if (prefix === "gh") {
+    // Read-side gh hits api.github.com, mirroring curl / wget — research.
+    if (GH_RESEARCH_SECOND_TOKENS.has(secondToken)) return "research"
+    if (secondToken === "pr" && GH_PR_RESEARCH_SUBCOMMANDS.has(thirdToken)) return "research"
+    // Everything else under gh stays in `bash` — including the write-ops
+    // triplets (which also feed `gitWriteOps`), `gh auth` / `gh config`,
+    // and `gh repo view` / `gh repo clone`.
+  }
+  return "bash"
+}
+
+/**
+ * True if a token should be skipped when looking for the meaningful
+ * subcommand keyword inside a Bash segment. Mirrors the SQL
+ * `FLAG_LIKE_TOKEN_PREDICATE` in the CH adapter — both files must move
+ * in lockstep.
+ *
+ *   `-flag` / `--flag`         : POSIX / GNU CLI flags
+ *   tokens starting with `@`   : pnpm / npm / yarn scoped package args
+ *   tokens containing `/`      : absolute paths (`/Users/.../repo`),
+ *                                relative paths (`./scripts/x`), and
+ *                                `owner/repo`-style slugs (`gh -R x/y …`)
+ *   tokens starting with `.`   : relative paths without `/` (`./bin`)
+ *   tokens containing `=`      : `--key=value` syntax
+ *   purely numeric tokens      : counts / indices (`head -n 50`)
+ *
+ * Subcommands are by convention single bare keywords (`status`, `create`,
+ * `install`, `build`), so none of these patterns produce false positives
+ * in practice.
+ */
+const isFlagLikeToken = (t: string): boolean => {
+  if (t === "") return true
+  const c = t.charAt(0)
+  if (c === "-" || c === "@" || c === ".") return true
+  if (t.includes("/")) return true
+  if (t.includes("=")) return true
+  if (/^\d+$/.test(t)) return true
+  return false
+}
+
+interface BashTokens {
+  readonly prefix: string
+  readonly secondToken: string
+  readonly thirdToken: string
+}
+
+/**
+ * Extracts `(prefix, secondToken, thirdToken)` from a Bash command
+ * segment using the same flag-skipping rule the CH adapter applies. The
+ * adapter SQL must stay in lockstep with this function; tests against
+ * this function effectively validate the SQL by proxy.
+ *
+ * - `prefix` is the literal first whitespace token, lowercased. NOT
+ *   filtered, so a script invocation like `./scripts/build.sh` keeps its
+ *   leading `.` and is treated as the command name.
+ * - `secondToken` is the **first non-flag** token after the prefix.
+ * - `thirdToken` is the **second non-flag** token after the prefix.
+ *
+ * Examples (see `build-report.test.ts` for the full grid):
+ *
+ *   `git -C /path status -s`            → (git, status, "")
+ *   `gh -R owner/repo pr create --t x`  → (gh, pr, create)
+ *   `pnpm --filter @domain/spans test`  → (pnpm, test, "")
+ *   `git --version`                     → (git, "", "")
+ *   `head -n 50 foo.log`                → (head, foo.log, "")
+ */
+export const extractBashTokens = (segment: string): BashTokens => {
+  // Normalise before tokenising:
+  //   1. Strip bash line continuations (`\<NEWLINE>`) — a multi-line
+  //      command like `foo bar \<NL>  echo continued` would otherwise
+  //      tokenise as `foo`, `bar`, `\<NL>`, `echo`, `continued`, and the
+  //      `\<NL>` token becomes a junk "command" in the top-commands
+  //      display ("\ echo").
+  //   2. Collapse any whitespace run (spaces, tabs, leftover newlines)
+  //      to a single space so `splitByChar(' ', …)` produces clean
+  //      tokens with no empty entries.
+  const normalised = segment.replace(/\\\n/g, " ").replace(/\s+/g, " ").trim()
+  if (normalised === "") return { prefix: "", secondToken: "", thirdToken: "" }
+  const tokens = normalised.split(" ")
+  const prefix = (tokens[0] ?? "").toLowerCase()
+  const meaningful = tokens.slice(1).filter((t) => !isFlagLikeToken(t))
+  return {
+    prefix,
+    secondToken: (meaningful[0] ?? "").toLowerCase(),
+    thirdToken: (meaningful[1] ?? "").toLowerCase(),
+  }
+}
+
+/**
+ * True when this row's command segment increments `gitWriteOps`. Covers
+ * both raw `git` write-subcommands and the `gh` write-op triplets
+ * (`gh pr create`, `gh release upload`, `gh repo create`, …). Name stays
+ * `gitWriteOps`-flavoured even though it includes `gh` because the
+ * persisted field is named that way and a rename would force a schema
+ * migration for no behavioural gain.
+ */
+export const isGitWriteSegment = (row: ToolMixRow): boolean => {
+  if (row.toolName !== "Bash") return false
+  if (row.bashPrefix === "git") {
+    return GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
+  }
+  if (row.bashPrefix === "gh") {
+    const writes = GH_WRITE_OPS[row.bashSecondToken]
+    return writes !== undefined && writes.has(row.bashThirdToken)
+  }
+  return false
+}
+
 const emptyToolMix = (): ToolMix => ({
   bash: 0,
   read: 0,
@@ -73,7 +282,9 @@ const emptyToolMix = (): ToolMix => ({
 const bucketise = (rows: readonly ToolMixRow[]): ToolMix => {
   const mix = emptyToolMix()
   for (const row of rows) {
-    mix[toolBucketFor(row.toolName)] += row.uses
+    const bucket = classifyToolMixRow(row)
+    if (bucket === "excluded") continue
+    mix[bucket] += row.uses
   }
   return mix
 }
@@ -203,6 +414,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     filesTouched: input.totals.filesTouched,
     commandsRun: input.totals.commandsRun,
     commits: input.totals.commits,
+    gitWriteOps: input.totals.gitWriteOps,
     testsRun: input.totals.testsRun,
     editAdded,
     writeLines,
@@ -245,6 +457,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       repos: input.totals.repos,
       streakDays: input.totals.streakDays,
       testsRun: input.totals.testsRun,
+      gitWriteOps: input.totals.gitWriteOps,
     },
     toolMix,
     loc: {

@@ -80,6 +80,7 @@ const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeS
       repos: 0,
       streakDays: 0,
       testsRun: 0,
+      gitWriteOps: 0,
     }),
   getSessionDurationStats: () => Effect.succeed({ totalDurationMs: 0, longestDurationMs: 0, longestWorkspace: null }),
   getLocStats: () => Effect.succeed({ writeLines: 0, editAdded: 0, editRemoved: 0, readLines: 0 }),

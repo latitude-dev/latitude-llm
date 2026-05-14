@@ -33,6 +33,7 @@ const sampleReport: Report = {
     repos: 1,
     streakDays: 5,
     testsRun: 9,
+    gitWriteOps: 4,
   },
   toolMix: { bash: 15, read: 25, edit: 50, write: 5, search: 5, research: 0, plan: 0, other: 0 },
   loc: {
