@@ -25,8 +25,9 @@ export function IncidentNotification({ notification }: { readonly notification: 
   const parsed = incidentNotificationPayloadSchema.safeParse(notification.payload)
   if (!parsed.success) {
     const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+    const createdAt = new Date(notification.createdAt)
     return (
-      <BaseNotification seenAt={seenAt}>
+      <BaseNotification notificationId={notification.id} seenAt={seenAt} createdAt={createdAt}>
         <Text.H6 color="foregroundMuted">Unsupported notification</Text.H6>
       </BaseNotification>
     )

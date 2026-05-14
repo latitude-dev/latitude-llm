@@ -5,6 +5,7 @@ import type {
   ListNotificationsInput,
   ListNotificationsResult,
   MarkAllNotificationsSeenInput,
+  MarkNotificationSeenInput,
   NotificationRepositoryShape,
 } from "../ports/notification-repository.ts"
 
@@ -67,6 +68,19 @@ export const createFakeNotificationRepository = () => {
       Effect.sync(() => {
         for (const r of rows) {
           if (r.organizationId === organizationId && r.userId === userId && r.seenAt === null) {
+            ;(r as { seenAt: Date | null }).seenAt = seenAt
+          }
+        }
+      }),
+    markSeen: ({ organizationId, userId, notificationId, seenAt }: MarkNotificationSeenInput) =>
+      Effect.sync(() => {
+        for (const r of rows) {
+          if (
+            r.id === notificationId &&
+            r.organizationId === organizationId &&
+            r.userId === userId &&
+            r.seenAt === null
+          ) {
             ;(r as { seenAt: Date | null }).seenAt = seenAt
           }
         }

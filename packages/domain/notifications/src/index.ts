@@ -23,6 +23,7 @@ export type {
   ListNotificationsInput as RepositoryListNotificationsInput,
   ListNotificationsResult,
   MarkAllNotificationsSeenInput as RepositoryMarkAllNotificationsSeenInput,
+  MarkNotificationSeenInput as RepositoryMarkNotificationSeenInput,
   NotificationCursor,
   NotificationRepositoryShape,
 } from "./ports/notification-repository.ts"
@@ -49,3 +50,8 @@ export type {
   MarkAllNotificationsSeenInput,
 } from "./use-cases/mark-all-notifications-seen.ts"
 export { markAllNotificationsSeenUseCase } from "./use-cases/mark-all-notifications-seen.ts"
+export type {
+  MarkNotificationSeenError,
+  MarkNotificationSeenInput,
+} from "./use-cases/mark-notification-seen.ts"
+export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
